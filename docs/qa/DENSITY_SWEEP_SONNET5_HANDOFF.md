@@ -10,8 +10,8 @@
 
 | Piece | Where | What it does |
 |---|---|---|
-| Line-metrics measurer | `scripts/job-tracker/measure_density.py` | Byte-exact render (app's own buildPayload → docx-worker `/generate-pdf` → PyMuPDF words) → per-item last-line fill, char deltas (`add_min/lo/hi`, `add_wrap`, `trim_chars`), runts (<60%), per-page sidebar gap, pages. CLI: `--app N [--doc cl] [--json out]`. |
-| Convergence loop | `scripts/job-tracker/density_fit.py` | MEASURE→TARGET→REWRITE, max 3 iters. Deterministic 1-3-word clause-boundary trims; batched LLM grow-or-shrink via cv-proxy `/v1/messages` (SSE). Gates: numbers+acronyms verbatim, banned words, dashes, wrap ceiling, adversarial no-new-claims verifier, 2-attempt cap, upstream-pin detection. Writes are text-verified, never index-trusted. CLI: `--app N [--doc cl] --apply [--json out]`. |
+| Line-metrics measurer | `scripts/job-tracker/measure_density.py` | Byte-exact render (app's own buildPayload → docx-worker `/generate-pdf` → PyMuPDF words) → per-item last-line fill, char deltas (`add_min/lo/hi`, `add_wrap`, `trim_chars`), runts (<60%), STRETCHED lines (wide justify gaps vs the column median — paragraph appeal), `quality_pct` (defect-free share, target 97.5%), per-page sidebar gap, pages. CLI: `--app N [--doc cl] [--json out]`. |
+| Convergence loop | `scripts/job-tracker/density_fit.py` | MEASURE→TARGET→REWRITE, max 4 iters, stops at 97.5% quality. Deterministic 1-3-word clause-boundary trims; batched LLM grow-or-shrink-or-respace with candidates from TWO model families (anthropic + openai via cv-proxy `x-provider`), best-fitting candidate wins, each winner fact-audited by the OTHER family. Growth may draw from the USER KERNEL digest + application context (owner 2026-07-13); shrinks prefer shorter synonyms of identical meaning; table cells are shrink-only respace (one-line rule). Gates: numbers+acronyms verbatim, banned words, dashes, wrap ceiling, cross-family no-new-claims verifier, 2-attempt cap, upstream-pin detection. Writes text-verified, never index-trusted. CLI: `--app N [--doc cl] --apply [--json out]`. Env: `ANTCV_DENSITY_MODEL` (anthropic candidate), `ANTCV_DENSITY_MODEL2` (openai candidate, default gpt-5-mini). |
 | gen-runner hook | `gen-runner.py` persist path | `--measure` now runs the loop AFTER `fit_to_pages` (fixes what ships; page budget dominates). New apps come out density-fitted automatically. |
 | Width hints (app-side) | `pwa/antcv-bullet-targets.js` SHIP 3 (1.51.375) | Enrich/Fit-it/compress prompts get a WIDTH CALIBRATION block with live chars-per-line. |
 | Column balance | `pwa/antcv-auto-pagebreak-block-001.js` `__balanceGate` (1.51.376/377) | Demotes trailing whole sidebar units to minimize the worst per-page gap; last page targets the MAIN column's bottom (gold-calibrated). Knobs `SIDEBAR_BALANCE_MAX_GAP`/`_MIN_GAIN` via `AntcvAutoPagebreak.config()`. |
@@ -25,9 +25,10 @@ For every saved application EXCEPT: **723** (owner's showcase, never touch), **6
 2. `python scripts/job-tracker/density_fit.py --app N --doc cl --apply --json out/N_cl.json`
 3. Verify byte-exact after each `--apply`: re-GET `/api/applications/N`, confirm the
    PUT landed (the CLI PUTs only on improvement; "apply skipped" is a valid outcome).
-4. Collect per app: runts before→after (rewritable and total), max sidebar gap
-   before→after, pages before→after, rewrites applied (trim vs llm), pinned count,
-   residual runts with reasons.
+4. Collect per app: QUALITY % before→after (the headline metric, target 97.5),
+   runts before→after (rewritable and total), stretched before→after, max sidebar
+   gap before→after, pages before→after, rewrites applied (trim vs llm), pinned
+   count, residual defects with reasons.
 
 Report one table + a short honest paragraph on residue classes.
 

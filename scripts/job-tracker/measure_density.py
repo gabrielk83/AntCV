@@ -54,6 +54,13 @@ FILL_LO, FILL_HI = 0.65, 0.97  # rewrite target band for the last line
 SIDEBAR_GAP_MAX = 40.0    # px (PDF pt) allowed between column bottoms per page
 LINE_BAND = 3.0           # words within this y-distance are one visual line
 PARA_GAP = 1.9            # vertical gap > PARA_GAP * line-height = new block
+# Paragraph appeal (owner 2026-07-13): justified lines with WIDE inter-word
+# gaps (the force-justify stretch artifact) are a defect like runts. A line is
+# STRETCHED when its average word gap exceeds both bounds vs the column's
+# median gap. QUALITY = share of measured items with no defect; target 97.5%.
+STRETCH_RATIO = 2.0
+STRETCH_ABS_PAD = 4.0
+QUALITY_TARGET = 97.5
 
 # Item policy: what the rewrite loop may do with a runt in each section.
 #   rewrite  — prose; trim/lengthen via the constrained rewriter
@@ -248,7 +255,14 @@ def measure(pdf_bytes, payload, style_budget=None):
     cols, pages, geo = _column_streams(doc, payload)
     used = {name: [False] * len(c["tokens"]) for name, c in cols.items()}
     report = {"pages": doc.page_count, "items": [], "runts": [], "unmatched": [],
-              "sidebar_gaps": [], "geometry": geo}
+              "stretched": [], "sidebar_gaps": [], "geometry": geo}
+
+    def _avg_gap(ln):
+        ws = ln["words"]
+        if len(ws) < 3:
+            return None
+        gaps = [max(0.0, ws[i + 1][0] - ws[i][2]) for i in range(len(ws) - 1)]
+        return sum(gaps) / len(gaps)
 
     for it in items:
         col = "sidebar" if it["loc"] == "sidebar" else "main"
@@ -286,9 +300,17 @@ def measure(pdf_bytes, payload, style_budget=None):
              "add_lo": max(0, int((FILL_LO * width - (last["x1"] - L)) / acw)),
              "add_hi": max(0, int((FILL_HI * width - (last["x1"] - L)) / acw)),
              "add_wrap": max(0, int((width - (last["x1"] - L)) / acw)),
-             "trim_chars": last_chars}
+             "trim_chars": last_chars,
+             "_gaps": [g for g in (_avg_gap(ln) for ln in lines[:-1]) if g is not None],
+             "_col": col}
         report["items"].append(m)
-        if fill < RUNT_FRAC and it["kind"] != "cell":
+        # Runt rule, gold-calibrated 2026-07-13: the owner's submitted CV keeps
+        # SHORT SINGLE-LINE sidebar entries (languages, standards, one-line
+        # labels) — those are list furniture, not defects. A single line is a
+        # runt only in the MAIN column (the owner flagged a 58% one-line
+        # bullet); a WRAPPED block's dangling last line is a runt everywhere.
+        if fill < RUNT_FRAC and it["kind"] != "cell" \
+           and (len(lines) >= 2 or it["loc"] == "main"):
             report["runts"].append(m)
 
     # column balance: per page, bottom of each column's content (measured from
@@ -311,8 +333,26 @@ def measure(pdf_bytes, payload, style_budget=None):
                                        "gap": round(gap, 1) if gap is not None else None})
     report["max_sidebar_gap"] = max((g["gap"] for g in report["sidebar_gaps"]
                                      if g["gap"] is not None), default=0.0)
+    # paragraph appeal: flag STRETCHED items (wide justify gaps) vs the
+    # column's own median inter-word gap across all matched full lines
+    for col in ("sidebar", "main"):
+        refs = sorted(g for m in report["items"] if m["_col"] == col for g in m["_gaps"])
+        ref = refs[len(refs) // 2] if refs else 0.0
+        for m in report["items"]:
+            if m["_col"] != col:
+                continue
+            thr = max(ref * STRETCH_RATIO, ref + STRETCH_ABS_PAD) if ref else 1e9
+            m["stretched"] = sum(1 for g in m["_gaps"] if g > thr)
+            if m["stretched"]:
+                report["stretched"].append(m)
+    for m in report["items"]:
+        m.pop("_gaps", None); m.pop("_col", None)
     report["runt_count"] = len(report["runts"])
     report["rewritable_runts"] = len([r for r in report["runts"] if r["policy"] != "verbatim"])
+    defect_keys = {id(m) for m in report["runts"]} | {id(m) for m in report["stretched"]}
+    report["defect_count"] = len(defect_keys)
+    n = max(1, len(report["items"]))
+    report["quality_pct"] = round(100.0 * (n - len(defect_keys)) / n, 1)
     if style_budget:
         report["page_budget"] = style_budget
         report["over_budget"] = doc.page_count > style_budget
@@ -372,6 +412,11 @@ def print_report(rep, label=""):
     print(f"── density report {label} " + "─" * max(1, 40 - len(label)))
     print(f"pages: {rep['pages']}" + (f"  (budget {rep['page_budget']}, {'OVER' if rep.get('over_budget') else 'ok'})" if rep.get("page_budget") else ""))
     print(f"items measured: {len(rep['items'])}  unmatched: {len(rep['unmatched'])}")
+    print(f"QUALITY: {rep.get('quality_pct', 0)}% defect-free (target {QUALITY_TARGET}%)  "
+          f"defects: {rep.get('defect_count', 0)} (runts {rep['runt_count']}, stretched {len(rep.get('stretched', []))})")
+    for s in rep.get("stretched", []):
+        if s not in rep["runts"]:
+            print(f"  p{s['page']} {s['loc'][:4]:>4} {s['sec']:<12} STRETCHED x{s['stretched']}  …{s['text'][-58:]}")
     print(f"runts (<{int(RUNT_FRAC*100)}% last-line fill): {rep['runt_count']}  rewritable: {rep['rewritable_runts']}")
     for r in rep["runts"]:
         tag = "" if r["policy"] != "verbatim" else " [verbatim]"

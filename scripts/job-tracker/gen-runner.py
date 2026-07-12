@@ -1388,7 +1388,8 @@ def persist_application(doc, r, res, category, language, kernel=None, measure=Fa
                         import density_fit
                         cv2, cl2, _drep = density_fit.fit_density(
                             cv, cl, _pi_from_kernel(kernel), _export_style_config(),
-                            _meta_m, language, page_budget=max_pages)
+                            _meta_m, language, page_budget=max_pages,
+                            kernel_facts=density_fit.kernel_digest(kernel, extra=r.get("jd", "")[:1200]))
                         cv[:], cl[:] = cv2, cl2
                     except Exception as e:
                         print(f"   [density] skipped ({str(e)[:80]})")

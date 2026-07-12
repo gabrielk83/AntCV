@@ -37,7 +37,7 @@ import urllib.request
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import measure_density as MD
 
-MAX_ITERS = 3
+MAX_ITERS = 4
 TRIM_MAX_CHARS = 28          # a runt line short enough to pull back deterministically
 # Personality-carrying sections: never trim deterministically (a clause there —
 # the team joke, a work-style note — is content the standing deliverable rules
@@ -45,6 +45,18 @@ TRIM_MAX_CHARS = 28          # a runt line short enough to pull back determinist
 NO_TRIM_SECTIONS = {"interests", "profile", "work_style", "accessibility"}
 LLM_MODEL = os.environ.get("ANTCV_DENSITY_MODEL", "claude-sonnet-5")
 PROXY = os.environ.get("ANTCV_PROXY", "https://cv-proxy.karp-gabriel-a.workers.dev").rstrip("/")
+# Multi-model pass (owner 2026-07-13): candidates come from TWO model families;
+# each accepted rewrite is fact-audited by the OTHER family (a verifier that
+# does not share the writer's blind spots is more restrictive). gpt-5-mini is
+# the proven cheap cross-family model (cost-quality benchmark 2026-07-11).
+CANDIDATE_PROVIDERS = [
+    ("anthropic", LLM_MODEL),
+    ("openai", os.environ.get("ANTCV_DENSITY_MODEL2", "gpt-5-mini")),
+    ("mistral", os.environ.get("ANTCV_DENSITY_MODEL3", "mistral-large-latest")),
+]
+VERIFY_BY = {"anthropic": ("openai", "gpt-5-mini"),
+             "openai": ("anthropic", LLM_MODEL),
+             "mistral": ("anthropic", LLM_MODEL)}
 
 # clause-boundary candidates for the deterministic trim, by language
 _BOUNDS = {"default": [", ", "; ", " ("], "zh": ["，", "、", "；", ", "]}
@@ -125,82 +137,54 @@ def _sse_text(raw):
             d = ev.get("delta") or {}
             if d.get("type") == "text_delta":
                 text += d.get("text", "")
+            # OpenAI-style stream chunk
+            for ch in ev.get("choices") or []:
+                dd = ch.get("delta") or {}
+                if isinstance(dd.get("content"), str):
+                    text += dd["content"]
     return text
 
-def llm_refit(items, language="en", model=LLM_MODEL):
-    """items: [{id, text, sec, kind, add_lo, add_hi, cut_lo, cut_hi}] ->
-    {id: new_text}. One batched call. Each item may be fixed EITHER way
-    (owner's bidirectional rule: green = lengthen, red = pull back): grow by
-    [add_lo, add_hi] chars from facts already present, or shrink by
-    [cut_lo, cut_hi] chars by tightening wording. Anything failing the
-    fact/length/banned gates is dropped (the original stays)."""
-    if not items:
-        return {}
+def _post_llm(provider, model, system, user, max_tokens=3000, timeout=120):
+    """POST to cv-proxy /v1/messages with x-provider routing. Returns the
+    model's text, tolerating all three response shapes the proxy emits:
+    anthropic SSE deltas, OpenAI-style SSE chunks, plain chat.completion JSON."""
     gr = MD._gen_runner()
-    lang_name = {"en": "English", "da": "Danish", "es": "Spanish", "zh": "Simplified Chinese"}.get(language, "English")
-    sys_p = (
-        "You re-fit CV/cover-letter lines so each ends on a FULL typeset line. "
-        "STRICT RULES: never invent facts, numbers, tools, employers, or claims. "
-        "When growing, only elaborate what the line already states: name the mechanism or "
-        "scope it implies, unpack a compressed phrase. If a budget cannot be met without "
-        "inventing a new claim, return the item's text UNCHANGED instead. When shrinking, "
-        "tighten wording only; drop no fact. "
-        "Keep every number, proper noun, certification code, and technical "
-        f"term EXACTLY. Write in {lang_name}. Never use em or en dashes; use a hyphen or comma. "
-        "Avoid: spearhead, leverage, robust, passionate, committed, cutting-edge, world-class, "
-        "results-driven, dynamic, innovative, synergy. "
-        "Return ONLY valid JSON: {\"items\":[{\"id\":\"...\",\"text\":\"...\"}]}"
-    )
-    asks = []
-    for it in items:
-        a = {"id": it["id"], "where": f"{it['sec']} {it['kind']}", "text": it["text"]}
-        if it["add_hi"] >= it["add_lo"] and it["add_lo"] >= 2:
-            a["grow_by_chars"] = [it["add_lo"], it["add_hi"]]
-        if it.get("cut_hi", 0) >= it.get("cut_lo", 0) and it.get("cut_lo", 0) >= 2:
-            a["shrink_by_chars"] = [it["cut_lo"], it["cut_hi"]]
-        if it.get("context"):
-            a["verified_facts_you_may_draw_from"] = it["context"]
-        if it.get("feedback"):
-            a["previous_attempt_failed"] = it["feedback"]
-        asks.append(a)
-    user = ("Each item's text currently ends on a short dangling last line. Fix EACH item by "
-            "EITHER growing its text by between grow_by_chars[0] and grow_by_chars[1] EXTRA "
-            "characters OR shrinking it by between shrink_by_chars[0] and shrink_by_chars[1] "
-            "characters (whichever reads better; only offered directions are allowed). The exact "
-            "char budget matters: outside it the line still dangles or wraps a new short line. "
-            "Same meaning, same facts.\n"
-            + json.dumps({"items": asks}, ensure_ascii=False))
-    body = {"model": model, "max_tokens": 3000, "stream": True, "system": sys_p,
-            "messages": [{"role": "user", "content": user}]}
+    body = {"model": model, "max_tokens": max_tokens, "stream": True,
+            "system": system, "messages": [{"role": "user", "content": user}]}
     req = urllib.request.Request(PROXY + "/v1/messages", data=json.dumps(body).encode(),
                                  method="POST",
                                  headers={"Content-Type": "application/json",
                                           "Authorization": "Bearer " + _token(),
-                                          "x-provider": "anthropic",
+                                          "x-provider": provider,
                                           "Origin": gr.ORIGIN, "User-Agent": gr.UA})
-    try:
-        with urllib.request.urlopen(req, timeout=120) as r:
-            raw = r.read().decode("utf-8", "replace")
-            text = _sse_text(raw) if "event-stream" in (r.headers.get("Content-Type") or "") else raw
-    except Exception as e:
-        print(f"   [density] lengthen call failed ({str(e)[:80]}) — trims only this round")
-        return {}
-    m = re.search(r"\{.*\}", text, re.S)
-    if not m:
-        return {}, {it["id"]: "no JSON in model reply" for it in items}
-    try:
-        out = json.loads(m.group(0))
-    except Exception:
-        return {}, {it["id"]: "unparseable model reply" for it in items}
-    by_id = {it["id"]: it for it in items}
-    accepted, failed = {}, {}
-    for row in out.get("items") or []:
-        it = by_id.get(row.get("id"))
-        new = _norm(row.get("text"))
-        if not it or not new:
-            continue
-        old = it["text"]
-        delta = len(new) - len(old)
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        raw = r.read().decode("utf-8", "replace")
+    if raw.lstrip().startswith("{"):
+        try:
+            obj = json.loads(raw)
+            ch = (obj.get("choices") or [{}])[0]
+            msg = (ch.get("message") or {}).get("content")
+            if isinstance(msg, str):
+                return msg
+            content = obj.get("content")
+            if isinstance(content, list):   # anthropic non-stream shape
+                return "".join(b.get("text", "") for b in content if isinstance(b, dict))
+        except Exception:
+            pass
+    return _sse_text(raw)
+
+def _gate_candidate(it, new, language, gr):
+    """Length + fact + style gates for one candidate. Returns (ok, reason)."""
+    old = it["text"]
+    delta = len(new) - len(old)
+    mode = it.get("mode", "refit")
+    if mode == "respace":
+        # paragraph-appeal fix: small re-wording either way, never past wrap
+        hi = min(15, max(0, it.get("add_wrap", 15) - 2))
+        lo = -18 if it["kind"] == "cell" else -12
+        band_ok = (lo <= delta <= (0 if it["kind"] == "cell" else hi)) and new != old
+        reason = f"length change {delta:+d} outside the re-space band [{lo},{hi}]"
+    else:
         # grow floor = clearing the 60% runt line (add_min), not the stated
         # 65% target — landing between the two already de-runts the item.
         # Ceiling = the WRAP point: growth past it spills a NEW short line and
@@ -210,64 +194,165 @@ def llm_refit(items, language="en", model=LLM_MODEL):
         shrink_ok = it.get("cut_lo", 0) >= 2 and \
             (-(it.get("cut_hi", 0) + 12) <= delta <= -(it.get("cut_lo", 0) - 2)) and \
             len(new) >= 0.45 * len(old) and not _ends_dangling(new, language)
-        if not (grow_ok or shrink_ok):
-            failed[it["id"]] = (f"your text changed the length by {delta:+d} chars, outside "
-                                f"every allowed band — hit the char budget exactly")
+        band_ok = grow_ok or shrink_ok
+        reason = (f"your text changed the length by {delta:+d} chars, outside "
+                  f"every allowed band — hit the char budget exactly")
+    if not band_ok:
+        return False, reason
+    if _numbers(new) != _numbers(old) or set(_acronyms(old)) - set(_acronyms(new)):
+        return False, "a number or acronym was changed or lost — keep all facts verbatim"
+    if gr.banned_hits(new) or "—" in new or "–" in new:
+        return False, "used a banned word or an em/en dash"
+    return True, ""
+
+def llm_refit(items, language="en", facts=""):
+    """items: [{id, text, sec, kind, mode, add_*, cut_*, context, feedback}] ->
+    ({id: new_text}, {id: reason}). Candidates are gathered from TWO model
+    families (CANDIDATE_PROVIDERS), gated, the best-fitting candidate wins per
+    item, and each winner is fact-audited by the OTHER family (owner 2026-07-13:
+    more-restrictive cross-model inputs). `facts` = the user-kernel digest the
+    rewrites may draw from (owner: everything in the kernel is fair game)."""
+    if not items:
+        return {}, {}
+    gr = MD._gen_runner()
+    lang_name = {"en": "English", "da": "Danish", "es": "Spanish", "zh": "Simplified Chinese"}.get(language, "English")
+    sys_p = (
+        "You re-fit CV/cover-letter lines so each ends on a FULL typeset line with even "
+        "word spacing. STRICT RULES: never invent facts, numbers, tools, employers, or "
+        "claims. When growing, draw ONLY from what the line states or from the VERIFIED "
+        "CANDIDATE FACTS block. If a budget cannot be met without inventing, return the "
+        "item's text UNCHANGED instead. When shrinking, prefer replacing words with "
+        "SHORTER SYNONYMS of identical meaning; drop no fact. For re-space items, re-word "
+        "so the justified lines break evenly (avoid one very long word forcing wide gaps). "
+        "Keep every number, proper noun, certification code, and technical "
+        f"term EXACTLY. Write in {lang_name}. Never use em or en dashes; use a hyphen or comma. "
+        "Avoid: spearhead, leverage, robust, passionate, committed, cutting-edge, world-class, "
+        "results-driven, dynamic, innovative, synergy. "
+        "Return ONLY valid JSON: {\"items\":[{\"id\":\"...\",\"text\":\"...\"}]}"
+    )
+    asks = []
+    for it in items:
+        # ABSOLUTE length windows (2026-07-13): models miss relative "+N chars"
+        # deltas by a handful; "your output must be LEN1-LEN2 characters" lands
+        # far more often. Offer every allowed window explicitly.
+        n = len(it["text"])
+        a = {"id": it["id"], "where": f"{it['sec']} {it['kind']}", "text": it["text"],
+             "current_length_chars": n}
+        windows = []
+        if it.get("mode") == "respace":
+            lo = -18 if it["kind"] == "cell" else -12
+            hi = 0 if it["kind"] == "cell" else min(15, max(0, it.get("add_wrap", 15) - 2))
+            a["fix"] = ("re-space: this block justifies with WIDE word gaps; re-word (shorter "
+                        "synonyms, similar-length words) so lines break with even spacing")
+            windows.append([n + lo, n + hi])
+        else:
+            if it["add_hi"] >= it["add_lo"] and it["add_lo"] >= 2:
+                cap = min(it["add_hi"], max(it.get("add_wrap", it["add_hi"]) - 2, it["add_lo"]))
+                windows.append([n + it["add_lo"], n + max(it["add_lo"], cap)])
+            if it.get("cut_hi", 0) >= it.get("cut_lo", 0) and it.get("cut_lo", 0) >= 2:
+                windows.append([n - it["cut_hi"], n - it["cut_lo"]])
+        a["rewritten_length_must_be_within_one_of"] = windows
+        if it.get("context"):
+            a["role_facts"] = it["context"]
+        if it.get("feedback"):
+            a["previous_attempt_failed"] = it["feedback"]
+        asks.append(a)
+    user = ("Fix EACH item. Its rewritten text's TOTAL LENGTH IN CHARACTERS (count them, "
+            "including spaces and punctuation) must land inside ONE of the item's "
+            "rewritten_length_must_be_within_one_of windows [min,max]. A longer window "
+            "means grow by elaborating from the item, role_facts, or the VERIFIED "
+            "CANDIDATE FACTS; a shorter window means shrink using shorter synonyms with "
+            "identical meaning. Outside every window the typeset line still dangles or "
+            "wraps a new short line, so count before you answer. Same meaning, same facts.\n"
+            + ("VERIFIED CANDIDATE FACTS (you may draw from these to grow any item):\n" + facts + "\n"
+               if facts else "")
+            + json.dumps({"items": asks}, ensure_ascii=False))
+    by_id = {it["id"]: it for it in items}
+    # gather gated candidates per item from each provider family
+    cands = {}    # id -> list of (new_text, provider, band_dist)
+    failed = {}
+    for provider, model in CANDIDATE_PROVIDERS:
+        try:
+            text = _post_llm(provider, model, sys_p, user)
+        except Exception as e:
+            print(f"   [density] {provider} candidates failed ({str(e)[:70]})")
             continue
-        if _numbers(new) != _numbers(old) or set(_acronyms(old)) - set(_acronyms(new)):
-            failed[it["id"]] = "a number or acronym was changed or lost — keep all facts verbatim"
+        m = re.search(r"\{.*\}", text, re.S)
+        if not m:
             continue
-        if gr.banned_hits(new) or "—" in new or "–" in new:
-            failed[it["id"]] = "used a banned word or an em/en dash"
+        try:
+            out = json.loads(m.group(0))
+        except Exception:
             continue
-        accepted[it["id"]] = new
+        for row in out.get("items") or []:
+            it = by_id.get(row.get("id"))
+            new = _norm(row.get("text"))
+            if not it or not new:
+                continue
+            ok, reason = _gate_candidate(it, new, language, gr)
+            if not ok:
+                failed.setdefault(it["id"], reason)
+                continue
+            # rank: distance from the middle of the aimed band (0 = perfect)
+            delta = len(new) - len(it["text"])
+            if it.get("mode") == "respace":
+                dist = abs(delta)
+            elif delta >= 0:
+                dist = abs(delta - (it["add_lo"] + it["add_hi"]) / 2.0)
+            else:
+                dist = abs(-delta - (it.get("cut_lo", 0) + it.get("cut_hi", 0)) / 2.0)
+            cands.setdefault(it["id"], []).append((new, provider, dist))
+    accepted, src = {}, {}
+    for iid, lst in cands.items():
+        lst.sort(key=lambda t: t[2])
+        accepted[iid] = lst[0][0]
+        src[iid] = lst[0][1]
+        failed.pop(iid, None)
     for it in items:
         if it["id"] not in accepted and it["id"] not in failed:
             failed[it["id"]] = "no usable rewrite returned"
-    # adversarial fact gate: a grown line may only ELABORATE, never CLAIM.
-    # (Observed leak: "now in commercial devices" grew into "sold across
-    # multiple product lines" — plausible, invented.) One batched check.
+    # adversarial fact gate, CROSS-FAMILY: a grown line may only ELABORATE,
+    # never CLAIM. Each winner is audited by the OTHER model family.
     if accepted:
-        vetoed = verify_no_new_claims(
-            {k: ((by_id[k]["text"] +
-                  (" || VERIFIED CONTEXT THE REWRITE MAY USE: " + by_id[k]["context"]
-                   if by_id[k].get("context") else "")), v)
-             for k, v in accepted.items()},
-            model=model)
-        for k in vetoed:
-            failed[k] = "the rewrite asserted a NEW claim not present in the original — " + vetoed[k]
-            accepted.pop(k, None)
+        by_verifier = {}
+        for iid in list(accepted.keys()):
+            vprov, vmodel = VERIFY_BY.get(src.get(iid, "anthropic"), ("openai", "gpt-5-mini"))
+            by_verifier.setdefault((vprov, vmodel), {})[iid] = (
+                by_id[iid]["text"]
+                + (" || ROLE FACTS THE REWRITE MAY USE: " + by_id[iid]["context"]
+                   if by_id[iid].get("context") else "")
+                + (" || KERNEL FACTS THE REWRITE MAY USE: " + facts[:1500] if facts else ""),
+                accepted[iid])
+        for (vprov, vmodel), pairs in by_verifier.items():
+            vetoed = verify_no_new_claims(pairs, provider=vprov, model=vmodel)
+            for k, what in vetoed.items():
+                failed[k] = "the rewrite asserted a NEW claim not present in the original — " + what
+                accepted.pop(k, None)
     return accepted, failed
 
-def verify_no_new_claims(pairs, model=LLM_MODEL):
-    """pairs: {id: (old, new)}. Returns {id: reason} for rewrites that assert
-    anything the original does not state or directly imply. Fails CLOSED for
-    items the verifier flags, OPEN for a broken verifier call (the length and
-    number/acronym gates still hold)."""
-    gr = MD._gen_runner()
+def verify_no_new_claims(pairs, provider="anthropic", model=LLM_MODEL):
+    """pairs: {id: (old_plus_allowed_context, new)}. Returns {id: reason} for
+    rewrites asserting anything the original + allowed facts do not state or
+    directly imply. Fails CLOSED for items the verifier flags, OPEN for a
+    broken verifier call (the length and number/acronym gates still hold).
+    `provider` is chosen CROSS-FAMILY from the writer (VERIFY_BY)."""
     sys_p = ("You are a strict fact auditor for CV lines. For each pair decide whether NEW "
-             "asserts any fact, scope, outcome, or qualifier that OLD does not state or "
-             "directly imply. Elaborating a term already present (naming what a cited "
-             "standard covers, unpacking an abbreviation) is OK. New commercial outcomes, "
-             "quantities, scopes, audiences, or achievements are NOT. Return ONLY JSON: "
+             "asserts any fact, scope, outcome, or qualifier that OLD (including any "
+             "'FACTS THE REWRITE MAY USE' blocks inside it) does not state or directly "
+             "imply. Elaborating a term already present (naming what a cited standard "
+             "covers, unpacking an abbreviation) is OK, and so is content grounded in the "
+             "provided FACTS blocks. New commercial outcomes, quantities, scopes, "
+             "audiences, or achievements are NOT. Return ONLY JSON: "
              "{\"items\":[{\"id\":\"...\",\"new_claim\":false}|{\"id\":\"...\",\"new_claim\":true,\"what\":\"...\"}]}")
     asks = [{"id": k, "old": o, "new": n} for k, (o, n) in pairs.items()]
-    body = {"model": model, "max_tokens": 1200, "stream": True, "system": sys_p,
-            "messages": [{"role": "user", "content": json.dumps({"items": asks}, ensure_ascii=False)}]}
-    req = urllib.request.Request(PROXY + "/v1/messages", data=json.dumps(body).encode(),
-                                 method="POST",
-                                 headers={"Content-Type": "application/json",
-                                          "Authorization": "Bearer " + _token(),
-                                          "x-provider": "anthropic",
-                                          "Origin": gr.ORIGIN, "User-Agent": gr.UA})
     try:
-        with urllib.request.urlopen(req, timeout=90) as r:
-            raw = r.read().decode("utf-8", "replace")
-            text = _sse_text(raw) if "event-stream" in (r.headers.get("Content-Type") or "") else raw
+        text = _post_llm(provider, model, sys_p,
+                         json.dumps({"items": asks}, ensure_ascii=False),
+                         max_tokens=1400, timeout=90)
         m = re.search(r"\{.*\}", text, re.S)
         out = json.loads(m.group(0)) if m else {}
     except Exception as e:
-        print(f"   [density] claim-verify unavailable ({str(e)[:60]}) — keeping gated rewrites")
+        print(f"   [density] claim-verify ({provider}) unavailable ({str(e)[:60]}) — keeping gated rewrites")
         return {}
     return {row["id"]: str(row.get("what") or "unspecified")
             for row in out.get("items") or []
@@ -318,11 +403,29 @@ def write_back(sections_root, measured_text, new_text):
     return 1
 
 # ── the loop ─────────────────────────────────────────────────────────────────
+def kernel_digest(kernel, extra=""):
+    """Compact fact pool the rewrites may draw from (owner 2026-07-13:
+    everything supported by the user kernel + additional information)."""
+    if not kernel:
+        return (extra or "")[:1500]
+    gr = MD._gen_runner()
+    try:
+        prof = gr.compact_profile(kernel)
+    except Exception:
+        prof = {}
+    blob = json.dumps(prof, ensure_ascii=False, separators=(",", ":"))
+    out = blob[:4000]
+    if extra:
+        out += " || APPLICATION CONTEXT: " + _norm(extra)[:1500]
+    return out
+
 def fit_density(cv, cl, pi, style_config, meta, language, doc="cv",
-                max_iters=MAX_ITERS, page_budget=None, verbose=True):
-    """Mutates cv/cl toward zero rewritable runts. Returns
-    (cv, cl, {'before': rep0, 'after': repN, 'log': [...]}) — cv/cl are the
-    BEST state seen (never worse than the input)."""
+                max_iters=MAX_ITERS, page_budget=None, verbose=True,
+                kernel_facts=""):
+    """Mutates cv/cl toward the QUALITY_TARGET (97.5% of measured items free of
+    runt AND stretch defects). Returns (cv, cl, {'before','after','log',
+    'rewrites','pinned'}) — cv/cl are the BEST state seen (never worse than
+    the input)."""
     gr = MD._gen_runner()
     log = []
     def _payload(cur_cv, cur_cl):
@@ -362,8 +465,21 @@ def fit_density(cv, cl, pi, style_config, meta, language, doc="cv",
                     pinned.append({"sec": sec, "text": old_key[:80]})
                     attempts[old_key] = {"n": 99, "feedback": "pinned upstream"}
             pending = {}
-        targets = [r for r in rep["runts"] if r["policy"] in ("rewrite", "listedit")
-                   and attempts.get(_norm(r["text"]), {}).get("feedback") != "pinned upstream"]
+        if rep.get("quality_pct", 0) >= MD.QUALITY_TARGET:
+            break
+        live = lambda r: attempts.get(_norm(r["text"]), {}).get("feedback") != "pinned upstream"
+        targets = [r for r in rep["runts"] if r["policy"] in ("rewrite", "listedit") and live(r)]
+        runt_ids = {id(r) for r in targets}
+        # paragraph appeal (owner 2026-07-13): stretched-but-not-runt items go
+        # through the same machinery in `respace` mode. Table cells qualify —
+        # they are generated content and shrink-only synonym swaps keep the
+        # one-line-per-cell rule.
+        respace = [r for r in rep.get("stretched", [])
+                   if id(r) not in runt_ids and live(r)
+                   and (r["policy"] in ("rewrite", "listedit") or r["kind"] == "cell")]
+        for r in respace:
+            r["mode"] = "respace"
+        targets = targets + respace
         if not targets:
             break
         cpl_of = lambda r: max(20.0, (r["trim_chars"] + r["add_hi"]) / 0.97) if r["add_hi"] else 60.0
@@ -374,8 +490,9 @@ def fit_density(cv, cl, pi, style_config, meta, language, doc="cv",
                 continue   # two failed LLM rounds — leave it, report honestly
             # red/green split: a short dangling line pulls back deterministically;
             # everything else goes to the batched LLM re-fit, which may grow
-            # (from facts already in the line) OR tighten wording — bidirectional.
-            if r["lines"] >= 2 and r["trim_chars"] <= TRIM_MAX_CHARS \
+            # (from facts in the line/role/kernel) OR tighten wording — bidirectional.
+            if r.get("mode") != "respace" and r["lines"] >= 2 \
+               and r["trim_chars"] <= TRIM_MAX_CHARS \
                and r["sec"] not in NO_TRIM_SECTIONS:
                 new = trim_text(r["text"], r["trim_chars"], cpl_of(r), language)
                 if new:
@@ -400,6 +517,7 @@ def fit_density(cv, cl, pi, style_config, meta, language, doc="cv",
                 except Exception:
                     context = ""
             ask = {"id": f"i{i}", "text": r["text"], "sec": r["sec"], "kind": r["kind"],
+                   "mode": r.get("mode", "refit"),
                    "context": context,
                    "add_min": r.get("add_min", r["add_lo"]),
                    "add_lo": r["add_lo"], "add_hi": r["add_hi"],
@@ -409,7 +527,7 @@ def fit_density(cv, cl, pi, style_config, meta, language, doc="cv",
                    "cut_lo": r["trim_chars"] if may_shrink else 0,
                    "cut_hi": (r["trim_chars"] + int(0.35 * cpl)) if may_shrink else 0,
                    "feedback": seen.get("feedback")}
-            if ask["add_lo"] >= 2 or ask["cut_lo"] >= 2:
+            if ask["mode"] == "respace" or ask["add_lo"] >= 2 or ask["cut_lo"] >= 2:
                 asks.append(ask)
         for r, new in trims:
             n = write_back(root, r["text"], new)
@@ -418,7 +536,7 @@ def fit_density(cv, cl, pi, style_config, meta, language, doc="cv",
                 rewrites.append({"sec": r["sec"], "how": "trim", "old": r["text"], "new": new})
                 pending[_norm(r["text"])] = r["sec"]
         if asks:
-            got, failed = llm_refit(asks, language=language)
+            got, failed = llm_refit(asks, language=language, facts=kernel_facts)
             for ask in asks:
                 new = got.get(ask["id"])
                 if new and write_back(root, ask["text"], new):
@@ -443,15 +561,20 @@ def fit_density(cv, cl, pi, style_config, meta, language, doc="cv",
         rep, payload = _measure(cv, cl)
         if rep is None:
             break
-        # page budget dominates: a density gain that adds a page is a loss
+        # page budget dominates; then total DEFECTS (runts + stretched = the
+        # paragraph-appeal quality metric), then runts, then column balance
         def _key(rp):
             return (rp["pages"] > page_budget if page_budget else False,
+                    rp.get("defect_count", rp["runt_count"]),
                     rp["rewritable_runts"], rp["runt_count"], abs(rp["max_sidebar_gap"]))
         if _key(rep) < _key(best[2]):
             best = (copy.deepcopy(cv), copy.deepcopy(cl), rep)
     final_cv, final_cl, after = best
-    log.append(f"result: runts {before['rewritable_runts']} -> {after['rewritable_runts']} "
+    log.append(f"result: QUALITY {before.get('quality_pct', 0)} -> {after.get('quality_pct', 0)}% "
+               f"(target {MD.QUALITY_TARGET}%), "
+               f"runts {before['rewritable_runts']} -> {after['rewritable_runts']} "
                f"(all: {before['runt_count']} -> {after['runt_count']}), "
+               f"stretched {len(before.get('stretched', []))} -> {len(after.get('stretched', []))}, "
                f"max sidebar gap {before['max_sidebar_gap']:.0f} -> {after['max_sidebar_gap']:.0f}px, "
                f"pages {before['pages']} -> {after['pages']}"
                + (f"; {len(pinned)} item(s) pinned upstream (fixture pins/overrides — "
@@ -488,8 +611,9 @@ def main():
     language = a.get("jd_language") or "en"
     sc = gr._export_style_config()
 
+    facts = kernel_digest(kernel, extra=str(a.get("supporting_context") or ""))
     cv2, cl2, out = fit_density(cv, cl, pi, sc, meta, language, doc=args.doc,
-                                max_iters=args.iters)
+                                max_iters=args.iters, kernel_facts=facts)
     if out["before"]:
         MD.print_report(out["before"], f"app {args.app} {args.doc} BEFORE")
         MD.print_report(out["after"], f"app {args.app} {args.doc} AFTER")

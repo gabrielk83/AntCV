@@ -305,11 +305,11 @@ CV_SECTIONS = [
 ]
 CL_SECTIONS = [
     ("cl_opening",          "Opening",           "Write the COVER LETTER OPENING line (1-2 first-person sentences): a specific, engaging hook that names the role and gives a genuine, concrete reason this candidate is drawn to it - NOT a flat 'I am applying for the X position at Y'. Calm professional register, no filler, no greeting line, no name."),
-    ("cl_who_i_am",         "WHO I AM",          "Write the COVER LETTER WHO I AM section (2-4 first-person sentences)."),
-    ("cl_what_i_bring",     "WHAT I BRING",      "Generate the COVER LETTER WHAT I BRING table (4-6 rows 'Focus Area | Strategic Expertise'), forward-looking, focus areas drawn from THIS job description."),
-    ("cl_why_this_position","WHY THIS POSITION", "Write the COVER LETTER WHY THIS POSITION section (2-4 sentences specific to this role and company)."),
-    ("cl_how_i_would_contribute","HOW I WOULD CONTRIBUTE","Write the COVER LETTER HOW I WOULD CONTRIBUTE section (3-6 verb-led bullets)."),
-    ("cl_foundation",       "FOUNDATION",        "Write the COVER LETTER FOUNDATION section: two short paragraphs labelled 'Hands-on:' and 'Professionally:'."),
+    ("cl_who_i_am",         "WHO I AM",          "Write the COVER LETTER WHO I AM section: 2-3 SHORT first-person sentences, at most ~55 words total (3-4 lines). Tight and readable, no run-ons."),
+    ("cl_what_i_bring",     "WHAT I BRING",      "Write the COVER LETTER WHAT I BRING section as: (1) ONE short lead-in line naming what the candidate brings, ending with a colon (e.g. 'Structure across scope, suppliers, and validation:'); then (2) 4-5 rows, one per line, each 'Focus Area | Strategic Expertise' (the expertise cell max ~90 chars), forward-looking and drawn from THIS job description. Return the lead-in line first, then the rows."),
+    ("cl_why_this_position","WHY THIS POSITION", "Write the COVER LETTER WHY THIS POSITION section: 2-3 SHORT sentences specific to this role and company, at most ~50 words (3-4 lines). Tight and readable."),
+    ("cl_how_i_would_contribute","HOW I WOULD CONTRIBUTE","Write the COVER LETTER HOW I WOULD CONTRIBUTE section in THREE parts, in this exact order and format: (1) ONE lead-in sentence (~12-18 words) that frames the first priorities and ENDS WITH A COLON; (2) 3-4 SHORT verb-led action bullets, one per line, each starting with '- '; (3) a FINAL line starting with 'Goal:' naming the concrete outcome the team gains. Return only those lines."),
+    ("cl_foundation",       "FOUNDATION",        "Write the COVER LETTER FOUNDATION section: two SHORT lines labelled 'Hands-on:' and 'Professionally:', each ONE sentence of at most ~30 words."),
     ("cl_closure",          "Closure",           "Write the COVER LETTER CLOSURE (1-2 first-person sentences): a warm, confident sign-off that INVITES a conversation and points at the concrete value the candidate would bring to THIS employer. Do NOT restate why the candidate is drawn to the role (the opening already does that); focus on the invitation and the value. Not generic boilerplate. No 'Sincerely'/signature line, no name."),
     ("cl_slogan",           "SLOGAN",            "Write ONE short personal cover-letter SLOGAN (max ~10 words, a single line): a specific, brand/fit-derived statement of the value THIS candidate brings to THIS employer. Not a generic tagline, no company name, no quotation marks. Return ONLY the line."),
 ]
@@ -587,13 +587,16 @@ def _ov_find(arr, sid):
     return None
 
 def _ov_table(md):
+    """Parse 2-col rows in EITHER markdown ('| A | B |') OR plain ('A | B') form.
+    The quick model emits both; requiring a leading '|' silently dropped the
+    plain 'Focus Area | Strategic Expertise' rows (WHAT I BRING / CORE)."""
     rows = []
     for ln in (md or "").split("\n"):
         ln = ln.strip()
-        if not ln.startswith("|"): continue
+        if "|" not in ln: continue
         cells = [c.strip() for c in ln.strip("|").split("|")]
-        if all(set(c) <= set("-: ") for c in cells): continue  # separator
-        rows.append(cells)
+        if all(set(c) <= set("-: ") for c in cells): continue  # separator row
+        if len([c for c in cells if c]) >= 2: rows.append(cells)
     return rows
 
 def _ov_outcomes(md):
@@ -717,6 +720,15 @@ def _cap_line(s, maxlen=155):
         p = win.rfind(sep)
         if p >= maxlen * 0.55: return win[:p].rstrip(" ,;:-")
     return win.rsplit(" ", 1)[0].rstrip(" ,;:-")
+def _cap_para(s, maxlen=330):
+    """Keep a cover-letter PARAGRAPH readable (~3-4 lines): trim to the last full
+    sentence under maxlen (owner: 'too long, >3-4 lines per paragraph')."""
+    s = (s or "").strip()
+    if len(s) <= maxlen: return s
+    win = s[:maxlen]
+    p = max(win.rfind(". "), win.rfind("! "), win.rfind("? "))
+    if p >= maxlen * 0.5: return win[:p + 1].strip()
+    return win.rsplit(" ", 1)[0].rstrip(" ,;:-") + "."
 def _yr(years, first=False):
     ys = re.findall(r"\b(19\d\d|20\d\d)\b", years or "")
     if ys: return int(ys[0] if first else ys[-1])
@@ -1077,11 +1089,13 @@ def build_structured_sections(sk, sections, company, role, language="en"):
             items = s.get("items") or [{"b": "", "t": ""}]
             items = list(items); items[0] = {**items[0], "t": text}
             s["items"] = items
-    set_lead(cl, "who", gen("cl_who_i_am"))
-    set_lead(cl, "why", gen("cl_why_this_position"))
+    # who / why: capped to ~3-4 lines (owner: paragraphs too long).
+    set_lead(cl, "who", _cap_para(gen("cl_who_i_am"), 300))
+    set_lead(cl, "why", _cap_para(gen("cl_why_this_position"), 280))
 
     ho, pro, intro = _ov_foundation(raw("cl_foundation"))
-    ho = "" if _is_scaffold(ho) else ho; pro = "" if _is_scaffold(pro) else pro
+    ho = "" if _is_scaffold(ho) else _cap_para(ho, 200)
+    pro = "" if _is_scaffold(pro) else _cap_para(pro, 200)
     f = _ov_find(cl, "foundation")
     if f and (ho or pro):
         items = [{"b": "Foundation", "t": intro or "I connect what I do best with the outcomes this employer is after.", "bullets": []}]
@@ -1089,27 +1103,41 @@ def build_structured_sections(sk, sections, company, role, language="en"):
         if pro: items.append({"b": "Professionally", "t": pro, "mk": True})
         f["items"] = items
 
-    # what_i_bring: a 2-col table -> labelled bullets.
-    brows = [rr for rr in _ov_table(raw("cl_what_i_bring"))
+    # what_i_bring: a LEAD-IN line + 2-col rows -> intro item + labelled bullets.
+    braw = raw("cl_what_i_bring")
+    brows = [rr for rr in _ov_table(braw)
              if rr and rr[0].strip().lower() != "focus area" and not any(_is_scaffold(x) for x in rr)]
+    bintro = ""
+    for ln in braw.split("\n"):                       # first NO-pipe, non-scaffold line = the lead-in
+        t = ln.strip()
+        if t and "|" not in t and not _is_scaffold(t):
+            bintro = _cap_line(sanitize_text(t), 130); break
     bs = _ov_find(cl, "bring")
     if bs and brows:
-        items = [{"b": "What I bring", "t": "", "bullets": []}]
+        items = [{"b": "What I bring", "t": bintro, "bullets": []}]
         for rr in brows:
-            if len(rr) >= 2: items.append({"b": sanitize_text(rr[0]), "t": sanitize_text(rr[1]), "mk": True})
+            if len(rr) >= 2: items.append({"b": sanitize_text(rr[0]), "t": _cap_line(sanitize_text(rr[1]), 100), "mk": True})
         if len(items) > 1: bs["items"] = items
-    # how_i_would_contribute: a BULLET list (its prompt asks for 3-6 verb-led
-    # bullets, NOT a table) -> labelled bullets. Parsing it as a table (the old
-    # behaviour) silently dropped every real bullet run.
-    contrib = gen("cl_how_i_would_contribute")
+    # how_i_would_contribute: LEAD-IN sentence (colon) + 3-4 action bullets + a
+    # 'Goal:' line (owner: the intro line, the sentence after it, and the goal
+    # lead-in were all missing). Parse each part out of the generated lines.
+    craw = gen("cl_how_i_would_contribute")
     cs = _ov_find(cl, "contribute")
-    if cs and contrib:
-        blines = [re.sub(r"^[-*•]\s+", "", ln).strip() for ln in contrib.split("\n")
-                  if ln.strip() and not ln.strip().startswith("|")]
-        blines = [sanitize_text(b) for b in blines if b and not _is_scaffold(b)]
-        if blines:
-            items = [{"b": "How I would contribute", "t": "", "bullets": []}]
-            items += [{"b": "", "t": b, "mk": True} for b in blines]
+    if cs and craw:
+        cintro, goal, cbul = "", "", []
+        for ln in craw.split("\n"):
+            t = ln.strip()
+            if not t or t.startswith("|") or _is_scaffold(t): continue
+            mg = re.match(r"(?i)^\**\s*goal\s*\**\s*[:\-]\s*(.+)$", t)
+            if mg: goal = _cap_line(sanitize_text(mg.group(1)), 130); continue
+            if re.match(r"^[-*•]\s+", t):
+                cbul.append(_cap_line(sanitize_text(re.sub(r"^[-*•]\s+", "", t)), 150)); continue
+            if not cintro: cintro = _cap_line(sanitize_text(t), 150)   # first prose line = the lead-in
+        if cbul:
+            items = [{"b": "How I would contribute",
+                      "t": cintro or "In the first months I would focus on a few concrete priorities:", "bullets": []}]
+            items += [{"b": "", "t": b, "mk": True} for b in cbul]
+            if goal: items.append({"b": "Goal", "t": goal, "bullets": []})
             cs["items"] = items
 
     # Greeting: clean, JOB-language furniture (no hiring-manager name captured;
@@ -1120,13 +1148,13 @@ def build_structured_sections(sk, sections, company, role, language="en"):
     # (never the skeleton's bracket scaffolding).
     op = _ov_find(cl, "opening")
     if op:
-        op_t = gen("cl_opening").strip() or _furn(language, "opening", company, role)
+        op_t = _cap_para(gen("cl_opening").strip(), 280) or _furn(language, "opening", company, role)
         items = op.get("items") or [{"b": "", "t": ""}]
         items = list(items); items[0] = {**items[0], "b": "", "t": op_t}
         op["items"] = items
     cz = _ov_find(cl, "closure")
     if cz:
-        cz["content"] = gen("cl_closure").strip() or _furn(language, "closure", company, role)
+        cz["content"] = _cap_para(gen("cl_closure").strip(), 260) or _furn(language, "closure", company, role)
 
     # FINAL SWEEP (defence in depth): drop any generated CL section that STILL
     # carries scaffolding (e.g. who/why/bring/contribute the model left empty),

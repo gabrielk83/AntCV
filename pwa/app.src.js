@@ -3144,7 +3144,7 @@
         icon: e.icon,
       }));
   }
-  function pe(e, t = !1, n = !1) {
+  function pe(e, t = !1, n = !1, __rl = "") {
     const o = [],
       r = [e.city, e.country].filter(Boolean).join(", "),
       a = e.location || r;
@@ -3160,7 +3160,7 @@
       // day): Danish local form ("2300, København S") when the app is DANISH or
       // the JOB is in Denmark; otherwise the location follows the app language
       // (a China-job zh app localizes it; a Sweden-job en app keeps English).
-      const __keepDa = (() => { try { const L = String(localStorage.getItem("language") || "en").replace(/"/g, "").slice(0, 2); if ("da" === L) return true; const jd = String(localStorage.getItem("antcv:app:kernel:jdText") || "") + " " + String(localStorage.getItem("antcv:lastJdText") || ""); return /(danmark|denmark|københavn|copenhagen|aarhus|århus|odense|aalborg|ballerup|birkerød|smørum|dk-\d{4})/i.test(jd); } catch (_) { return true; } })();
+      const __keepDa = (() => { try { const L = String(__rl || localStorage.getItem("language") || "en").replace(/"/g, "").slice(0, 2); if ("da" === L) return true; const jd = String(localStorage.getItem("antcv:app:kernel:jdText") || "") + " " + String(localStorage.getItem("antcv:lastJdText") || ""); return /(danmark|denmark|københavn|copenhagen|aarhus|århus|odense|aalborg|ballerup|birkerød|smørum|dk-\d{4})/i.test(jd); } catch (_) { return true; } })();
       if (!__keepDa) return s.replace(/københavn/gi, "Copenhagen");
       if (!/copenhagen|københavn/i.test(s)) return s;
       s = s
@@ -3186,7 +3186,7 @@
     // zh dict holds 哥本哈根/欧盟公民 — the builder pushed RAW values, never dict-
     // routed). Route the two text values through ye(); on zh also swap the city
     // name inside composite location strings ("2300, København S" → "2300, 哥本哈根 S").
-    const __ctL = (() => { try { return String(localStorage.getItem("language") || "en").replace(/"/g, "").slice(0, 2); } catch (_) { return "en"; } })();
+    const __ctL = (() => { try { return String(__rl || localStorage.getItem("language") || "en").replace(/"/g, "").slice(0, 2); } catch (_) { return "en"; } })();
     const __ctF = (v) => {
       try {
         if ("string" != typeof v || !v) return v;
@@ -3199,9 +3199,11 @@
       (a || n) &&
         o.push([
           "⌂",
-          // LOCALFORM-DA-ALWAYS-001: the location is NOT dict-routed (__ctF) —
-          // "2300, København S" stays Danish on every ribbon incl. zh.
-          __localForm(t ? a || "København, Danmark" : a || "Copenhagen, Denmark"),
+          // CL-IDENTITY-LANG-001 (owner 2026-07-12, supersedes LOCALFORM-DA-ALWAYS-001):
+          // the location IS dict-routed now — a zh ribbon shows "2300, 哥本哈根 S";
+          // __keepDa still holds the Danish form on da apps / Denmark jobs (exact-dict
+          // misses leave the string untouched, so Latin ribbons are unaffected).
+          __ctF(__localForm(t ? a || "København, Danmark" : a || "Copenhagen, Denmark")),
         ]),
       e.citizenship && o.push(["★", __ctF(e.citizenship)]),
       e.email && o.push(["@", e.email]),
@@ -4949,6 +4951,8 @@
         "(Cont.)": "（续）",
         "Cont.": "续",
         "EU Citizen": "欧盟公民",
+        "EU-borger": "欧盟公民",
+        "Ciudadano UE": "欧盟公民",
         // OWNER-PINNED-ZH-001 (owner 2026-07-11): exact-match guaranteed renderings.
         "Copenhagen": "哥本哈根",
         "København": "哥本哈根",
@@ -28693,7 +28697,7 @@
             },
             w = ie(),
             v = [];
-          v.push(...pe(w, e, !0));
+          v.push(...pe(w, e, !0, je));
           const x =
               v.length > 0
                 ? v
@@ -28773,7 +28777,7 @@
             // CL-CLOSING-EDIT-001 (owner 2026-06-29): editable sign-off closing; EN default is
             // "At your service," (the Nordic template), override via antcv:clClosing. Parity with
             // the worker closeWord + the React preview.
-            const i = (() => { try { const ov = String(localStorage.getItem("antcv:clClosing") || "").trim(); if (ov && ov !== "At your service,") return ov; } catch (_) {} return ({ da: "Med venlig hilsen,", es: "Atentamente,", zh: "此致敬礼，", he: "בברכה,", am: "ከሰላምታ ጋር,", ar: "مع خالص التقدير," })[je] || "At your service,"; })(),
+            const i = (() => { try { const ov = String(localStorage.getItem("antcv:clClosing") || "").trim(); if (ov && ov !== "At your service," && !(({ zh: 1, he: 1, am: 1, ar: 1 })[je] && !/[一-鿿㐀-䶿֐-׿؀-ۿሀ-፿]/.test(ov))) return ov; } catch (_) {} return ({ da: "Med venlig hilsen,", es: "Atentamente,", zh: "此致敬礼，", he: "בברכה,", am: "ከሰላምታ ጋር,", ar: "مع خالص التقدير," })[je] || "At your service,"; })(),
               l = a.filter(
                 (e) => e.on && "closure" !== e.id && "jd_questions" !== e.id,
               ),
@@ -28804,7 +28808,7 @@
                     }
                   }
                 } catch (_) {}
-                var sn = (() => { try { var ov = String(localStorage.getItem("antcv:clSignName") || "").trim(); if (ov) return ov; } catch (_) {} var fn = String(w.name || "").trim(); return fn ? fn.split(/\s+/)[0] : (e ? "Dit navn" : "Your Name"); })();
+                var sn = (() => { try { var ov = String(localStorage.getItem("antcv:clSignName") || "").trim(); if (({ zh: 1, he: 1, am: 1, ar: 1 })[je] && (!ov || !/[一-鿿㐀-䶿֐-׿؀-ۿሀ-፿]/.test(ov))) { var lv = String(localStorage.getItem("antcv:clSignName_" + je) || "").trim(); lv && (ov = lv); } if (ov) return ov; } catch (_) {} var fn = String(w.name || "").trim(); return fn ? fn.split(/\s+/)[0] : (e ? "Dit navn" : "Your Name"); })();
                 var na = (() => { try { var a2 = String(localStorage.getItem("antcv:clSignNameAlign") || "center").replace(/["']/g, "").toLowerCase(); return ("left" === a2 || "right" === a2 || "center" === a2) ? a2 : "center"; } catch (_) { return "center"; } })();
                 var ca = (() => { try { var a4 = String(localStorage.getItem("antcv:clClosingAlign") || "center").replace(/["']/g, "").toLowerCase(); return ("left" === a4 || "right" === a4 || "center" === a4) ? a4 : "center"; } catch (_) { return "center"; } })();
                 // CL-SIGNOFF-ALIGN-001 (owner 2026-06-29): order closing -> NAME -> signature; the
@@ -28813,7 +28817,7 @@
               })(),
               g = 5;
             P =
-              `<table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${(() => { try { if (localStorage.getItem("antcv:clSloganHidden") === "1") return ""; var st = String(localStorage.getItem("antcv:clSlogan") || "").trim(); if (!st || /^\[/.test(st)) st = String(io.subtitle || "").trim(); st = st.replace(/\s*\|\s*/g, " • ").trim(); if (!st || /^\[/.test(st)) return ""; var sa = String(localStorage.getItem("antcv:clSloganAlign") || "center").replace(/["']/g, "").toLowerCase(); if (sa !== "left" && sa !== "right" && sa !== "center") sa = "center"; return '<p style="font-family:\'Cabin\',' + d + ';font-size:11pt;font-weight:700;letter-spacing:.08em;text-align:' + sa + ';color:' + (t.mainLineColor || "#01746E") + ';margin:0 0 12pt">' + st.toUpperCase() + '</p>'; } catch (_) { return ""; } })()}${l.map(b).join("")}${u}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table>` +
+              `<table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${(() => { try { if (localStorage.getItem("antcv:clSloganHidden") === "1") return ""; var st = String((io && io.cl_slogan) || "").trim(); if (!st || /^\[/.test(st)) st = String(localStorage.getItem("antcv:clSlogan") || "").trim(); if (!st || /^\[/.test(st)) st = String(io.subtitle || "").trim(); st = st.replace(/\s*\|\s*/g, " • ").trim(); if (!st || /^\[/.test(st)) return ""; var sa = String(localStorage.getItem("antcv:clSloganAlign") || "center").replace(/["']/g, "").toLowerCase(); if (sa !== "left" && sa !== "right" && sa !== "center") sa = "center"; return '<p style="font-family:\'Cabin\',' + d + ';font-size:11pt;font-weight:700;letter-spacing:.08em;text-align:' + sa + ';color:' + (t.mainLineColor || "#01746E") + ';margin:0 0 12pt">' + st.toUpperCase() + '</p>'; } catch (_) { return ""; } })()}${l.map(b).join("")}${u}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table>` +
               (c
                 ? `<div style="page-break-before:always;mso-page-break-before:always;break-before:page"><table width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="${n}" style="width:100%;border-collapse:collapse;background:${n};page-break-after:avoid;mso-page-break-after:avoid"><tr><td bgcolor="${n}" style="background:${n};padding:14pt 16pt 8pt;text-align:center">${N}${_}${$}</td></tr></table><table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${b(c)}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table></div>`
                 : "");
@@ -30009,7 +30013,7 @@
           }
           const E = [];
           if (
-            (pe(y, "da" === je, !1).forEach(([e, t]) => E.push(e + " " + t)),
+            (pe(y, "da" === je, !1, je).forEach(([e, t]) => E.push(e + " " + t)),
             E.length)
           ) {
             x.push(
@@ -30043,7 +30047,7 @@
                 u(
                   // CL-CLOSING-EDIT-001 (owner 2026-06-29): EN sign-off default is "At your service,"
                   // (Nordic template). Inline-docx fallback path (worker-down); default only.
-                  (() => { try { const ov = String(localStorage.getItem("antcv:clClosing") || "").trim(); if (ov && ov !== "At your service,") return ov; } catch (_) {} return ({
+                  (() => { try { const ov = String(localStorage.getItem("antcv:clClosing") || "").trim(); if (ov && ov !== "At your service," && !(({ zh: 1, he: 1, am: 1, ar: 1 })[je] && !/[一-鿿㐀-䶿֐-׿؀-ۿሀ-፿]/.test(ov))) return ov; } catch (_) {} return ({
                     da: "Med venlig hilsen,",
                     es: "Atentamente,",
                     zh: "此致敬礼，",
@@ -30058,7 +30062,7 @@
               S.push(
                 u(
                   // CL-SIGNNAME-001: editable sign-off name, default = first word of the full name.
-                  (() => { try { var ov = String(localStorage.getItem("antcv:clSignName") || "").trim(); if (ov) return ov; } catch (_) {} var fn = String(y.name || "").trim(); return fn ? fn.split(/\s+/)[0] : (l ? "Dit navn" : "Your Name"); })(),
+                  (() => { try { var ov = String(localStorage.getItem("antcv:clSignName") || "").trim(); if (({ zh: 1, he: 1, am: 1, ar: 1 })[je] && (!ov || !/[一-鿿㐀-䶿֐-׿؀-ۿሀ-፿]/.test(ov))) { var lv = String(localStorage.getItem("antcv:clSignName_" + je) || "").trim(); lv && (ov = lv); } if (ov) return ov; } catch (_) {} var fn = String(y.name || "").trim(); return fn ? fn.split(/\s+/)[0] : (l ? "Dit navn" : "Your Name"); })(),
                   "CV_SignatureName",
                   { spacingBefore: 0, spacingAfter: 60 },
                 ),
@@ -30125,7 +30129,7 @@
                 ),
               ));
           const $ = [];
-          (N && pe(w, "da" === je, !1).forEach(([e, t]) => $.push(e + " " + t)),
+          (N && pe(w, "da" === je, !1, je).forEach(([e, t]) => $.push(e + " " + t)),
             $.length
               ? (k.push(
                   `<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="6" w:color="${C}" w:space="0"/></w:pBdr><w:shd w:val="clear" w:color="auto" w:fill="${v}"/><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/></w:pPr></w:p>`,
@@ -44172,7 +44176,7 @@
           d = "topbar" === (i.specialisation || "topbar"),
           p = "topbar" === (i.contact || "topbar"),
           u = [];
-        p && u.push(...pe(a, "da" === je, !1));
+        p && u.push(...pe(a, "da" === je, !1, je));
         const m =
             u.length > 0
               ? // LINKEDIN-CLICK-001 (owner 2026-06-12): the LinkedIn entry
@@ -45593,7 +45597,8 @@
                   (() => {
                     try {
                       if (localStorage.getItem("antcv:clSloganHidden") === "1") return null;
-                      var st = String(localStorage.getItem("antcv:clSlogan") || "").trim();
+                      var st = String((io && io.cl_slogan) || "").trim();
+                      if (!st || /^\[/.test(st)) st = String(localStorage.getItem("antcv:clSlogan") || "").trim();
                       if (!st || /^\[/.test(st)) st = String((io && io.subtitle) || "").trim();
                       st = st.replace(/\s*\|\s*/g, " • ").trim();
                       if (!st || /^\[/.test(st)) return null;
@@ -45740,12 +45745,12 @@
                     React.createElement(
                       "div",
                       { style: { textAlign: (() => { try { var a4 = String(localStorage.getItem("antcv:clClosingAlign") || "center").replace(/["']/g, "").toLowerCase(); return ("left" === a4 || "right" === a4 || "center" === a4) ? a4 : "center"; } catch (_) { return "center"; } })() } },
-                      (() => { try { const ov = String(localStorage.getItem("antcv:clClosing") || "").trim(); if (ov && ov !== "At your service,") return ov; } catch (_) {} return ({ da: "Med venlig hilsen,", es: "Atentamente,", zh: "此致敬礼，", he: "בברכה,", am: "ከሰላምታ ጋር,", ar: "مع خالص التقدير," })[je] || "At your service,"; })(),
+                      (() => { try { const ov = String(localStorage.getItem("antcv:clClosing") || "").trim(); if (ov && ov !== "At your service," && !(({ zh: 1, he: 1, am: 1, ar: 1 })[je] && !/[一-鿿㐀-䶿֐-׿؀-ۿሀ-፿]/.test(ov))) return ov; } catch (_) {} return ({ da: "Med venlig hilsen,", es: "Atentamente,", zh: "此致敬礼，", he: "בברכה,", am: "ከሰላምታ ጋር,", ar: "مع خالص التقدير," })[je] || "At your service,"; })(),
                     ),
                     React.createElement(
                       "div",
                       { style: { fontWeight: 700, marginTop: 14, textAlign: (() => { try { var a3 = String(localStorage.getItem("antcv:clSignNameAlign") || "center").replace(/["']/g, "").toLowerCase(); return ("left" === a3 || "right" === a3 || "center" === a3) ? a3 : "center"; } catch (_) { return "center"; } })() } },
-                      (() => { try { var ov = String(localStorage.getItem("antcv:clSignName") || "").trim(); if (ov) return ov; } catch (_) {} var fn = String(a.name || "").trim(); return fn ? fn.split(/\s+/)[0] : ("da" === je ? "Dit navn" : "Your Name"); })(),
+                      (() => { try { var ov = String(localStorage.getItem("antcv:clSignName") || "").trim(); if (({ zh: 1, he: 1, am: 1, ar: 1 })[je] && (!ov || !/[一-鿿㐀-䶿֐-׿؀-ۿሀ-፿]/.test(ov))) { var lv = String(localStorage.getItem("antcv:clSignName_" + je) || "").trim(); lv && (ov = lv); } if (ov) return ov; } catch (_) {} var fn = String(a.name || "").trim(); return fn ? fn.split(/\s+/)[0] : ("da" === je ? "Dit navn" : "Your Name"); })(),
                     ),
                     window.__antcvClSigEl ? window.__antcvClSigEl() : null,
                   ),
@@ -45841,12 +45846,12 @@
                             React.createElement(
                               "div",
                               { style: { cursor: "text", textAlign: (() => { try { var a4 = String(localStorage.getItem("antcv:clClosingAlign") || "center").replace(/["']/g, "").toLowerCase(); return ("left" === a4 || "right" === a4 || "center" === a4) ? a4 : "center"; } catch (_) { return "center"; } })() }, contentEditable: true, suppressContentEditableWarning: true, spellCheck: false, title: "Click to edit the sign-off line", onBlur: (ev) => { try { localStorage.setItem("antcv:clClosing", String(ev.currentTarget.textContent || "").trim()); window.dispatchEvent(new CustomEvent("antcv:sections-updated", { detail: { reason: "cl-signoff-inline" } })); } catch (_) {} } },
-                              (() => { try { const ov = String(localStorage.getItem("antcv:clClosing") || "").trim(); if (ov && ov !== "At your service,") return ov; } catch (_) {} return ({ da: "Med venlig hilsen,", es: "Atentamente,", zh: "此致敬礼，", he: "בברכה,", am: "ከሰላምታ ጋር,", ar: "مع خالص التقدير," })[je] || "At your service,"; })(),
+                              (() => { try { const ov = String(localStorage.getItem("antcv:clClosing") || "").trim(); if (ov && ov !== "At your service," && !(({ zh: 1, he: 1, am: 1, ar: 1 })[je] && !/[一-鿿㐀-䶿֐-׿؀-ۿሀ-፿]/.test(ov))) return ov; } catch (_) {} return ({ da: "Med venlig hilsen,", es: "Atentamente,", zh: "此致敬礼，", he: "בברכה,", am: "ከሰላምታ ጋር,", ar: "مع خالص التقدير," })[je] || "At your service,"; })(),
                             ),
                             React.createElement(
                               "div",
                               { style: { cursor: "text", fontWeight: 700, marginTop: 14, textAlign: (() => { try { var a3 = String(localStorage.getItem("antcv:clSignNameAlign") || "center").replace(/["']/g, "").toLowerCase(); return ("left" === a3 || "right" === a3 || "center" === a3) ? a3 : "center"; } catch (_) { return "center"; } })() }, contentEditable: true, suppressContentEditableWarning: true, spellCheck: false, title: "Click to edit your name", onBlur: (ev) => { try { localStorage.setItem("antcv:clSignName", String(ev.currentTarget.textContent || "").replace(/\s+/g, " ").trim()); window.dispatchEvent(new CustomEvent("antcv:sections-updated", { detail: { reason: "cl-signoff-inline" } })); } catch (_) {} } },
-                              (() => { try { var ov = String(localStorage.getItem("antcv:clSignName") || "").trim(); if (ov) return ov; } catch (_) {} var fn = String(a.name || "").trim(); return fn ? fn.split(/\s+/)[0] : ("da" === je ? "Dit navn" : "Your Name"); })(),
+                              (() => { try { var ov = String(localStorage.getItem("antcv:clSignName") || "").trim(); if (({ zh: 1, he: 1, am: 1, ar: 1 })[je] && (!ov || !/[一-鿿㐀-䶿֐-׿؀-ۿሀ-፿]/.test(ov))) { var lv = String(localStorage.getItem("antcv:clSignName_" + je) || "").trim(); lv && (ov = lv); } if (ov) return ov; } catch (_) {} var fn = String(a.name || "").trim(); return fn ? fn.split(/\s+/)[0] : ("da" === je ? "Dit navn" : "Your Name"); })(),
                             ),
                             window.__antcvClSigEl ? window.__antcvClSigEl() : null,
                           ),

@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.372-askai-sse';
+const CACHE = 'antcv-1.51.373-cl-identity-lang';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

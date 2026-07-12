@@ -25187,7 +25187,19 @@ function buildTwoColumnDocument(ctx) {
   // AI-WATERMARK-EXPORT-LOCATION-001 (1.14.79): the floating sentinel (zero layout
   // footprint, page-anchored) ships in the LAST rendered content — the last main slot
   // normally, or the full-width overflow block when balance-overflow re-flows it.
-  if (!__overflowActive) {
+  // AI-NOTICE-1PAGE-BODY-001 (owner 2026-07-12, family AI-NOTICE-BOTTOM-CLOUDCONVERT-001:
+  // the visible AI-notice frame VANISHED on the 1-page zh CV). The in-cell sentinel relies
+  // on LibreOffice CLAMPING the float into its containing CELL fragment. On a multi-page
+  // doc the split row's page fragment extends to the page bottom, so the 806pt box lands
+  // inside it. On a SINGLE-slot doc the body row ends at its atLeast minimum (~630pt body
+  // -> cell bottom ~790pt): the 806pt target falls OUTSIDE the cell and LibreOffice DROPS
+  // the frame entirely (repro: app 723 zh 1-page, notice text absent from the PDF). For
+  // single-slot docs carry the sentinel at BODY level after the table instead — page
+  // margins are 0, so the body frame IS the page frame and the explicit margin-left/
+  // margin-top page offsets resolve exactly (no cell to clamp to). Multi-slot docs keep
+  // the owner-verified in-cell routing (AI-NOTICE-SIDEBAR-ANCHOR-001) untouched.
+  const __aiWmBodyLevel = !__overflowActive && __renderSlots.length <= 1;
+  if (!__overflowActive && !__aiWmBodyLevel) {
     const __lastRendered = __renderSlots.length ? __renderSlots[__renderSlots.length - 1] : 0;
     // AI-NOTICE-SIDEBAR-ANCHOR-001 (owner 2026-07-01): CloudConvert/LibreOffice anchor the
     // floating VML notice to its CONTAINING COLUMN frame and IGNORE
@@ -25221,6 +25233,13 @@ function buildTwoColumnDocument(ctx) {
       if (__i > 0) docChildren.push(__contBreakPara(__i));
       docChildren.push(makePageTable(sidebarPages[p] || [], mainPages[p] || [], p === 0));
     });
+  }
+  // AI-NOTICE-1PAGE-BODY-001: the single-slot body-level carrier (see above). The
+  // sentinel paragraph is 1-twip exact-height, so it adds no visible flow; if the
+  // conversion still overflows past the worker's 1-slot estimate the carrier trails
+  // the content onto the TRUE last page - better than the old page-0 in-cell drop.
+  if (__aiWmBodyLevel) {
+    docChildren.push(buildAiDisclosureHangingTextbox(ctx, { side: ctx.__aiWmCorner || "right", onDark: false }));
   }
   // AI-WATERMARK-EXPORT-LOCATION-001 fix (1.14.78): body-level sentinel carrier,
   // appended AFTER the final page table (not inside a cell). postProcessDocx swaps its
@@ -28318,7 +28337,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.144-rtl-layout-mirror";
+var VERSION = "1.14.145-ai-notice-1page";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

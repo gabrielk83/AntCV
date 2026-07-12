@@ -24845,6 +24845,36 @@ function buildTwoColumnDocument(ctx) {
     mainChildren = assembleColumn(mainSecs, /*isSidebar*/ false);
   }
   if (photoMainBottom) mainChildren.push(buildPhotoParagraph(ctx, photoMainBottom));
+  // LO-NESTED-TABLE-DROP-001 (1.14.150): grow each __antcvSecSep separator whose
+  // NEXT sibling is another nested table from 1 to 10 twips, so LibreOffice's
+  // forced row-split can no longer collapse it (a collapsed separator makes the
+  // adjacent wrappers behave like ONE merged table and LO silently DROPS every
+  // wrapper after the first in that run — see renderSection). Trailing
+  // separators (next sibling is a paragraph, a page-break marker, or nothing)
+  // stay at 1 twip. The added height is refunded from the SIDEBAR cell's TOP
+  // margin (LO normalizes the row content top to the LARGEST cell margin, so
+  // this refunds BOTH columns at once) — this exact recipe (sep 10 pre-table
+  // only + sidebar-top refund) was verified lossless on all repro payloads via
+  // POST /diag/convert-docx, INCLUDING the knife-edge true-one-pager (v13 stays
+  // 1 page). Two rejected variants for the record: a heading-before refund sits
+  // INSIDE the inter-table gap and re-triggered the drop; a cell-BOTTOM refund
+  // shifted the split position and re-triggered it on v12/v14. The drop is
+  // split-position-sensitive — do not "simplify" this geometry without
+  // re-running the /diag/convert-docx matrix.
+  const __growSeps = (children) => {
+    let n = 0;
+    for (let i = 0; i < children.length - 1; i++) {
+      const el = children[i];
+      const next = children[i + 1];
+      if (el && el.__antcvSecSep && next instanceof Table) {
+        children[i] = new Paragraph({ spacing: { before: 0, after: 0, line: 10, lineRule: "exact" }, children: [] });
+        n++;
+      }
+    }
+    return n;
+  };
+  const __sbSepGrown = __growSeps(sidebarChildren);
+  __growSeps(mainChildren);
   if (photoInHeader) {
     const headerInnerW = PAGE_W - 720;
     const wrappedHeader = buildPhotoRowTable(ctx, photoInHeader, headerCell.slice(), headerInnerW);
@@ -24960,7 +24990,8 @@ function buildTwoColumnDocument(ctx) {
     // 1.14.121 +100 here pushed BOTH columns down and kept the 5pt gap (owner's
     // 16:17Z export). The alignment spacer now lives in the sidebar PARAGRAPH
     // stream (makePageTable, continuation pages only).
-    margins: { top: Math.max(0, 240 + __vDelta), bottom: Math.max(0, 240 + __vDelta), left: sbLR, right: sbLR },
+    // LO-NESTED-TABLE-DROP-001: top refunds the separator growth (see __growSeps).
+    margins: { top: Math.max(0, 240 + __vDelta - 9 * __sbSepGrown), bottom: Math.max(0, 240 + __vDelta), left: sbLR, right: sbLR },
     children: els && els.length ? els : [emptyParagraph()]
   });
   // 1.14.47 — indent-controls export parity: the main column's edge padding
@@ -26692,7 +26723,23 @@ function renderSection(s, ctx, isSidebar) {
     // EXPERIENCE) repeat on page 2 above the experience continuation. A
     // near-zero-height separator keeps the tables distinct, so each section's
     // OWN heading repeats (EXPERIENCE shows its own title when it spans).
-    new Paragraph({ spacing: { before: 0, after: 0, line: 1, lineRule: "exact" }, children: [] })
+    // LO-NESTED-TABLE-DROP-001 (owner 2026-07-13, app 723 zh 1-page CV; worker
+    // 1.14.150): line:1 is TOO SHORT for LibreOffice/CloudConvert when this
+    // separator sits BETWEEN two nested wrapper tables. If the page's content
+    // runs a hair past the sheet and LO force-splits the outer body row, LO
+    // collapses the ≤5-twip separator — adjacent section wrappers behave like
+    // ONE merged table and every wrapper after the first in that run is
+    // silently DROPPED from the render (repro: v10 payload lost core_comp + the
+    // whole sidebar tail after TOOLS; v12/v14 lost core_comp; Word renders the
+    // same docx losslessly). The paragraph is emitted at line:1 here and grown
+    // to line:10 by buildTwoColumnDocument ONLY where the next element is
+    // another table (the __antcvSecSep tag marks it) — the measured safe recipe;
+    // see the LO-NESTED-TABLE-DROP-001 block there for the geometry refund.
+    (() => {
+      const __sep = new Paragraph({ spacing: { before: 0, after: 0, line: 1, lineRule: "exact" }, children: [] });
+      __sep.__antcvSecSep = true;
+      return __sep;
+    })()
   ];
 }
 __name(renderSection, "renderSection");
@@ -28384,7 +28431,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.149-diag-convert";
+var VERSION = "1.14.150-lo-sep-guard";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

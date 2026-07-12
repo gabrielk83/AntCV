@@ -17424,7 +17424,18 @@
                     }
                   }
                 } catch (_) {}
-                const e = await oo.getShowcase((() => { try { var p = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; p = p.personalInfo || p; var __st = String((p.writingPrefs || {}).style || "").trim().toLowerCase(); var __lg = String(localStorage.getItem("language") || "en").toLowerCase().replace(/[^a-z]/g, "").slice(0,2) || "en"; return __st ? __st + "|" + __lg : ""; } catch (_) { return ""; } })());
+                // KERNEL-AUTOGEN-ON-MISS-001 (1.51.369): recall chain step 3.
+                // Category recall (above) missed; if the style|lang kernel slot
+                // is ALSO empty, generate the kernel now via the existing
+                // _antcvGenerateKernelShowcase path (overlay/watchdog/persist
+                // are its own; the direct-PUT commit re-fills the slot so the
+                // next recall hits). Guards: one attempt per style|lang per
+                // session (sessionStorage flag), never during fresh-start,
+                // never while a generation is in flight. Auth is guaranteed
+                // here: the enclosing effect returns early when !Y.email.
+                const __kk9 = (() => { try { var p = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; p = p.personalInfo || p; var __st = String((p.writingPrefs || {}).style || "").trim().toLowerCase(); var __lg = String(localStorage.getItem("language") || "en").toLowerCase().replace(/[^a-z]/g, "").slice(0,2) || "en"; return __st ? __st + "|" + __lg : ""; } catch (_) { return ""; } })();
+                const __autogen9 = () => { try { if (!__kk9) return; if (window.AntcvIsFreshStart && window.AntcvIsFreshStart()) return; if (u.get("kernelShowcaseInProgress", !1)) return; if ("function" != typeof window._antcvGenerateKernelShowcase) return; var __fl9 = "antcv_kernel_autogen_" + __kk9; if (sessionStorage.getItem(__fl9)) return; sessionStorage.setItem(__fl9, "1"); console.log("[KERNEL-AUTOGEN-001] no " + __kk9 + " kernel — generating it first"); setTimeout(function () { try { window._antcvGenerateKernelShowcase({ force: !0 }); } catch (_) {} }, 0); } catch (_) {} };
+                const e = await oo.getShowcase(__kk9);
                 if (o) return;
                 // 1.50.277: mark restore ATTEMPTED on every non-cancelled
                 // outcome (no slot / empty slot / real slot) so the Cs() regen
@@ -17433,7 +17444,7 @@
                 try {
                   sessionStorage.setItem("antcv_showcase_restore_attempted", "1");
                 } catch (_) {}
-                if (!e || !e.showcase) return;
+                if (!e || !e.showcase) return __autogen9();
                 // 1.50.274: ignore an empty/corrupted slot (empty sections +
                 // real meta) — restoring it produced the headline-only husk.
                 // Returning here lets the normal flow regenerate the showcase
@@ -17445,6 +17456,7 @@
                       "[v1.50.274 KERNEL-CLOUD-PERSIST] ignoring showcase slot: empty/corrupted sections — will regenerate from kernel",
                     );
                   } catch (_) {}
+                  __autogen9();
                   return;
                 }
                 const t = e.showcase;

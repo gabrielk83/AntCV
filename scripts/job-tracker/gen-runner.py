@@ -328,7 +328,9 @@ def _user_turn(profile_json, meta, section_ask):
         lines.append("")
     if meta.get("signals"):
         lines.append("=== ADDITIONAL SIGNALS (owner-supplied framing; subordinate) ===")
-        lines.append(str(meta["signals"])[:2500]); lines.append("")
+        # 8000, up from 2500: attached signal materials (SIGNAL-MATERIALS-001)
+        # ride in this block and would not survive the old cap.
+        lines.append(str(meta["signals"])[:8000]); lines.append("")
     if meta.get("support"):
         lines.append("=== ROLE INTEL (needs / bring / signals; subordinate) ===")
         lines.append(json.dumps(meta["support"])[:2500]); lines.append("")
@@ -498,6 +500,18 @@ def cmd_run(args):
         except Exception as _e:
             print(f"   [active-guard] could not read current active ({_e})")
     support = doc.get("support") or {}; signals = doc.get("signals") or {}
+    sigfiles = doc.get("sigfiles") or {}  # SIGNAL-MATERIALS-001: per-row attached materials (extracted text)
+    def _signals_for(uk):
+        """Typed signals + attached signal-material texts, composed the same way
+        the JobTracker island composes them (signalsBlockOf)."""
+        parts = []
+        s = str(signals.get(uk) or "").strip()
+        if s: parts.append(s)
+        for f in (sigfiles.get(uk) or []):
+            if isinstance(f, dict) and f.get("text"):
+                parts.append("--- attached signal material: %s ---\n%s"
+                             % (f.get("name") or "file", str(f["text"])[:3000]))
+        return "\n".join(parts) or None
     results_index = []
     for r in todo:
         uk = r["uk"]
@@ -505,7 +519,7 @@ def cmd_run(args):
         rsch = research(r["company"], r["role"]) if getattr(args, "research", True) else ""
         if rsch: print("   research: %d findings" % len(rsch.splitlines()))
         meta = {"company": r["company"], "role": r["role"], "jd": r["jd"],
-                "signals": signals.get(uk), "support": support.get(uk),
+                "signals": _signals_for(uk), "support": support.get(uk),
                 "research": rsch, "language": language}
         sections, model = build_plan(profile, meta, r["tier"])
         print(f"\n== {uk} [{r['tier']}] {r['company']} / {r['role']} — {len(sections)} sections, model={model}")

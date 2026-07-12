@@ -44,6 +44,38 @@ const TIERS: Record<string, Tier> = {
 const tierOf = (band: string): Tier => TIERS[(band || '').toUpperCase()] || { key: '', label: '', accent: '#999', tint: '#f3f3f3', desc: '' };
 const isTop5 = (r: Row) => (Number(r[0]) || 99) <= 5;
 
+// Extract plain text from an uploaded file. Plain-text reads directly; PDFs and
+// images/scans go through the app's multi-tier extractor (window.AntcvExtractPDFText:
+// PDF.js text → LLM document → vision OCR). Shared by add-JD-from-file and the
+// per-row signal-material attach. Throws with a user-facing message on failure.
+async function extractFileText(file: File, setStatus: (s: string) => void): Promise<string> {
+  const name = (file.name || '').toLowerCase();
+  if (/\.(txt|md|csv|json|text)$/.test(name) || (file.type || '').startsWith('text/')) {
+    return (await file.text()).trim();
+  }
+  const extract = (window as unknown as { AntcvExtractPDFText?: (f: File) => Promise<{ text?: string; method?: string; warning?: string | null }> }).AntcvExtractPDFText;
+  if (typeof extract !== 'function') throw new Error('The app\'s PDF/OCR extractor isn\'t loaded yet — reload the page, or use a .txt file.');
+  setStatus('Extracting text (PDF.js → LLM → OCR)…');
+  const r = await extract(file);
+  if (r && r.warning) console.info('[JobTracker] extract:', r.method, r.warning);
+  return String((r && r.text) || '').trim();
+}
+
+// SIGNAL-MATERIALS-001: the EFFECTIVE signals for a row = the typed Signals text
+// + the extracted text of every attached signal material. This composed block is
+// what every consumer sees: the ADDITIONAL SIGNALS block in supporting_context
+// (→ the upload panel's additional info + the in-app JD analysis), the Top-5
+// fit % / card / Ask-AI, and (server-side, same shape) the nightly gen-runner.
+function signalsBlockOf(d: TrackerDoc | null, uk: string): string {
+  const parts: string[] = [];
+  const manual = ((d?.signals || {})[uk] || '').trim();
+  if (manual) parts.push(manual);
+  for (const f of (d?.sigfiles || {})[uk] || []) {
+    if (f && f.text) parts.push('--- attached signal material: ' + (f.name || 'file') + ' ---\n' + f.text);
+  }
+  return parts.join('\n');
+}
+
 export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
   const [doc, setDocState] = useState<TrackerDoc | null>(null);
   const [rev, setRev] = useState(0);
@@ -133,6 +165,36 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
   }
   const signalsOf = (uk: string) => (doc?.signals || {})[uk] || '';
   function setSignals(uk: string, v: string): void { if (!doc) return; setDocState({ ...doc, signals: { ...(doc.signals || {}), [uk]: v } }); setDirty(true); }
+  // SIGNAL-MATERIALS-001: per-row attached signal materials (📎 in the Signals
+  // column). Only the EXTRACTED TEXT is stored (capped), never the file bytes —
+  // the tracker doc is one shared JSON and every PUT re-writes it whole.
+  const sigFilesOf = (uk: string) => (doc?.sigfiles || {})[uk] || [];
+  const sigRef = useRef<HTMLInputElement>(null);
+  const sigUkRef = useRef<string>('');
+  const [sigBusy, setSigBusy] = useState<string | null>(null);
+  async function attachSignalFile(uk: string, file: File): Promise<void> {
+    setSigBusy(uk); setErr(null);
+    try {
+      let text = await extractFileText(file, setNote);
+      // Keep the downstream ADDITIONAL SIGNALS block parseable: the app slices
+      // it at a blank line + ALL-CAPS header, so collapse blank lines; cap size.
+      text = text.replace(/\r/g, '').replace(/\n{2,}/g, '\n').trim().slice(0, 6000);
+      if (text.length < 40) { setErr('Could not extract enough text from ' + file.name + ' — try a clearer scan or a .txt.'); return; }
+      const entry = { name: file.name || 'file', text, added: Date.now() };
+      setDocState((d) => (d ? { ...d, sigfiles: { ...(d.sigfiles || {}), [uk]: [...((d.sigfiles || {})[uk] || []), entry] } } : d));
+      setDirty(true);
+      setNote('Attached "' + entry.name + '" (' + text.length + ' chars) as signal material — feeds Top-5, JD analysis and generation. Save to keep it.');
+    } catch (e) { setErr(String((e as Error).message || e)); }
+    finally { setSigBusy(null); if (sigRef.current) sigRef.current.value = ''; }
+  }
+  function removeSignalFile(uk: string, i: number): void {
+    setDocState((d) => {
+      if (!d) return d;
+      const list = ((d.sigfiles || {})[uk] || []).filter((_, j) => j !== i);
+      return { ...d, sigfiles: { ...(d.sigfiles || {}), [uk]: list } };
+    });
+    setDirty(true);
+  }
   const hasArtifact = (uk: string) => !!doc?.artifacts?.[uk]?.application_id;
   // Nightly queue (⏰): on by default until the row has been generated; explicit toggle wins.
   const nightlyOn = (uk: string) => { const q = doc?.queue?.[uk]; return q === undefined ? !hasArtifact(uk) : q; };
@@ -147,7 +209,8 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     const rs = (doc?.rows || []).slice().sort((a, b) => (Number(a[0]) || 99) - (Number(b[0]) || 99));
     const lines = rs.map((r) => {
       const uk = r[11]; const fit = ((doc?.support || {})[uk] || '').split('\n').find((l) => l.startsWith('FIT:')) || '';
-      return `#${r[0]} ${r[1]} — ${r[2]} | ${r[3]} | ${tierOf(r[12]).label} | ${r[8]} | ${((doc?.jd || {})[uk] || '').length > 200 ? 'JD✓' : 'no JD'}${fit ? ' | ' + fit.slice(0, 90) : ''}`;
+      const sig = signalsBlockOf(doc, uk).replace(/\n+/g, ' ');
+      return `#${r[0]} ${r[1]} — ${r[2]} | ${r[3]} | ${tierOf(r[12]).label} | ${r[8]} | ${((doc?.jd || {})[uk] || '').length > 200 ? 'JD✓' : 'no JD'}${fit ? ' | ' + fit.slice(0, 90) : ''}${sig ? ' | SIGNALS: ' + sig.slice(0, 90) : ''}`;
     });
     const env = (doc?.envelope || []).map((e) => e[0] + ': ' + e[1]).join('; ');
     return 'DREAM ENVELOPE: ' + env + '\n\nJOB LIST (' + rs.length + ' roles):\n' + lines.join('\n');
@@ -290,18 +353,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
   async function addFromFile(file: File): Promise<void> {
     setAdding(true); setErr(null); setNote(null);
     try {
-      const name = (file.name || '').toLowerCase();
-      let text = '';
-      if (/\.(txt|md|csv|json|text)$/.test(name) || (file.type || '').startsWith('text/')) {
-        text = (await file.text()).trim();
-      } else {
-        const extract = (window as unknown as { AntcvExtractPDFText?: (f: File) => Promise<{ text?: string; method?: string; warning?: string | null }> }).AntcvExtractPDFText;
-        if (typeof extract !== 'function') { setErr('The app\'s PDF/OCR extractor isn\'t loaded yet — reload the page, or upload a .txt / use the URL.'); return; }
-        setNote('Extracting text (PDF.js → LLM → OCR)…');
-        const r = await extract(file);
-        text = String((r && r.text) || '').trim();
-        if (r && r.warning) console.info('[JobTracker] extract:', r.method, r.warning);
-      }
+      const text = await extractFileText(file, setNote);
       if (text.length < 100) { setErr('Could not extract enough text from that file. Try a clearer scan, the regular uploader, or paste the text.'); return; }
       const company = window.prompt('Company?') || '';
       const role = window.prompt('Role / title?', file.name.replace(/\.[a-z0-9]+$/i, '')) || '';
@@ -340,7 +392,8 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
         if (webBrief) d = { ...d, webintel: { ...(d.webintel || {}), [uk]: webBrief } };
       }
       const envText = (d.envelope || []).map((e) => e[0] + ': ' + e[1] + (e[2] ? ' — ' + e[2] : '')).join('\n');
-      const ownerSig = (d.signals || {})[uk] || '';
+      // SIGNAL-MATERIALS-001: typed signals + attached-material text, composed.
+      const ownerSig = signalsBlockOf(d, uk);
       // TARGET-FACTS-001: a this-ROLE calibration snapshot — the per-row facts the
       // (general) Dream Envelope doesn't carry: priority tier, fit angle, this
       // role's location/mobility, and its risk flag, plus the comp/seniority
@@ -442,6 +495,9 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
               onChange={(e) => { const f = e.target.files?.[0]; if (f) void addFromFile(f); }} />
             <button onClick={() => fileRef.current?.click()} disabled={adding} title="Upload a JD file — PDF, text, or image/scan (OCR)"
               style={{ ...btn('#eef1f6', NAVY), border: '1px solid #c3ccdb', fontSize: 15, padding: '5px 10px' }}>📎</button>
+            {/* SIGNAL-MATERIALS-001: shared picker for the per-row Signals 📎 (sigUkRef holds the target row) */}
+            <input ref={sigRef} type="file" accept=".txt,.md,.json,.text,.csv,.pdf,image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" style={{ display: 'none' }}
+              onChange={(e) => { const f = e.target.files?.[0]; if (f && sigUkRef.current) void attachSignalFile(sigUkRef.current, f); }} />
           </div>
         )}
 
@@ -471,7 +527,21 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
                       <td style={cell}><select value={r[8]} onChange={(e) => editRow(uk, 8, e.target.value)} style={{ fontSize: 12, width: '100%' }}>{TRACKED_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}{!TRACKED_STATUSES.includes(r[8]) && r[8] ? <option value={r[8]}>{r[8]}</option> : null}</select></td>
                       <td style={cell}><textarea value={r[9]} onChange={(e) => editRow(uk, 9, e.target.value)} onFocus={() => setExpandRow(uk)} rows={expandRow === uk ? 5 : 2} style={ta} /></td>
                       <td style={cell}><textarea value={r[10]} onChange={(e) => editRow(uk, 10, e.target.value)} onFocus={() => setExpandRow(uk)} rows={expandRow === uk ? 5 : 2} style={ta} /></td>
-                      <td style={cell}><textarea value={signalsOf(uk)} onChange={(e) => setSignals(uk, e.target.value)} onFocus={() => setExpandRow(uk)} rows={expandRow === uk ? 5 : 2} placeholder="extra signals for generation…" style={ta} /></td>
+                      <td style={cell}>
+                        <textarea value={signalsOf(uk)} onChange={(e) => setSignals(uk, e.target.value)} onFocus={() => setExpandRow(uk)} rows={expandRow === uk ? 5 : 2} placeholder="extra signals for generation…" style={ta} />
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, alignItems: 'center', marginTop: 2 }}>
+                          {sigFilesOf(uk).map((f, i) => (
+                            <span key={i} title={(f.text || '').slice(0, 500)} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: '#eef1f6', border: '1px solid #cfd8e6', borderRadius: 4, padding: '1px 5px', fontSize: 10.5, color: '#334', maxWidth: '100%' }}>
+                              📄 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 86 }}>{f.name}</span>
+                              <button onClick={() => removeSignalFile(uk, i)} aria-label={'Remove ' + f.name} title="Remove this signal material"
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 10.5, color: '#96a', lineHeight: 1 }}>✕</button>
+                            </span>
+                          ))}
+                          <button onClick={() => { sigUkRef.current = uk; sigRef.current?.click(); }} disabled={sigBusy === uk}
+                            title="Attach signal material — PDF, text or image/scan; the extracted text feeds Top-5, JD analysis and generation"
+                            style={{ background: 'transparent', border: '1px dashed #b7c2d4', borderRadius: 4, cursor: 'pointer', fontSize: 12, padding: '0 5px', lineHeight: '17px', color: '#556' }}>{sigBusy === uk ? '…' : '📎'}</button>
+                        </div>
+                      </td>
                       <td style={{ ...cell, whiteSpace: 'nowrap' }}>
                         <button onClick={() => setGen(uk, genOf(uk) === 'high' ? 'quick' : 'high')} title="Generation quality — tap to switch"
                           style={{ background: genOf(uk) === 'high' ? '#fff3cf' : '#eef1f6', color: genOf(uk) === 'high' ? '#8a6d00' : '#556', border: '1px solid #cfd8e6', borderRadius: 5, cursor: 'pointer', fontSize: 11, fontWeight: 700, padding: '2px 4px', display: 'block', width: '100%', marginBottom: 3 }}>{genOf(uk) === 'high' ? '★ High' : '⚡ Quick'}</button>
@@ -609,7 +679,10 @@ function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, onDrop,
   const hasJd = ((doc?.jd || {})[uk] || '').length > 200;
   const saved = doc?.artifacts?.[uk]?.application_id;
   const url = doc?.urls?.[uk];
-  const pct = fitPercent(row[12], rawSupport + ' ' + ((doc?.jd || {})[uk] || ''), cluster);
+  // SIGNAL-MATERIALS-001: owner signals (typed + attached materials) count
+  // toward the fit estimate and surface on the card.
+  const sigBlock = signalsBlockOf(doc, uk);
+  const pct = fitPercent(row[12], rawSupport + ' ' + ((doc?.jd || {})[uk] || '') + ' ' + sigBlock, cluster);
   const fs = (d: number, m: number) => (mobile ? m : d); // font-size: bigger on mobile
 
   function editItem(si: number, ii: number, field: 'need' | 'bring' | 'insight', v: string): void {
@@ -627,7 +700,9 @@ function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, onDrop,
       const jd = (doc?.jd || {})[uk] || '';
       const sys = 'You refine a candidate\'s "What I bring" bullets for a job application. For EACH numbered need, return an improved one-sentence bullet that answers the need using the candidate\'s angle — concrete, specific, correct spelling and grammar, no fluff. Return ONLY a numbered list using the SAME numbers, one bullet per line, nothing else.';
       const list = flat.map((f, i) => (i + 1) + '. NEED: ' + f.need + '  CURRENT: ' + (f.bring || '(none)')).join('\n');
-      const user = 'Role: ' + row[1] + ' — ' + row[2] + (jd ? '\nJD excerpt:\n' + jd.slice(0, 1200) : '') + '\n\nImprove each "I bring":\n' + list;
+      const user = 'Role: ' + row[1] + ' — ' + row[2] + (jd ? '\nJD excerpt:\n' + jd.slice(0, 1200) : '')
+        + (sigBlock ? '\nOWNER SIGNALS (extra context the candidate supplied for this role):\n' + sigBlock.slice(0, 900) : '')
+        + '\n\nImprove each "I bring":\n' + list;
       const out = await askAI(user, sys, 700);
       const map: Record<number, string> = {};
       out.split('\n').forEach((line) => { const m = line.match(/^\s*(\d+)[.)]\s*(.+)/); if (m) map[parseInt(m[1], 10)] = m[2].trim().replace(/^["']|["']$/g, ''); });
@@ -672,6 +747,7 @@ function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, onDrop,
         </div>
         {p.fit && <Line icon="🎯" label="Fit" text={p.fit} color="#2a3244" size={fs(12.5, 14.5)} />}
         {p.flag && <Line icon="⚠️" label="Flag" text={p.flag} color="#8a4b12" size={fs(12.5, 14.5)} />}
+        {sigBlock && <Line icon="📌" label="Signals" text={sigBlock.replace(/\n+/g, ' · ').slice(0, 240)} color="#3a4d6b" size={fs(12, 13.5)} />}
         {p.sections.map((s, si) => (
           <div key={si} style={{ marginTop: 11 }}>
             <div style={{ fontSize: fs(11, 13), fontWeight: 800, color: t.accent, letterSpacing: 0.3, textTransform: 'uppercase', marginBottom: 5 }}>{s.title}</div>

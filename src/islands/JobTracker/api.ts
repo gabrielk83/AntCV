@@ -45,6 +45,7 @@ export interface TrackerDoc {
   brandfit?: Record<string, boolean>;   // per-row: brand-fit the CV/CL to the employer
   brand?: Record<string, { navy?: string; accent?: string; source?: string }>; // sampled employer brand colours
   signals?: Record<string, string>;     // per-row owner-added Additional Signals (on top of auto-collected)
+  sigfiles?: Record<string, { name: string; text: string; added?: number }[]>; // per-row attached signal materials (extracted text, capped)
   support?: Record<string, string>;
   webintel?: Record<string, string>;    // per-row distilled web research on the employer (HOLISTIC + SPECIFIC), cached
   scores?: Record<string, { fit?: number; rank?: number; why?: string }>;

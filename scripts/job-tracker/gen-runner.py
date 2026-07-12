@@ -251,17 +251,30 @@ def guess_category(role, jd):
     # Returns ONLY ids in REAL_CATEGORIES (== the relay's CATEGORIES set);
     # anything else the relay rewrites to 'unsolicited'. Fallback is
     # 'consulting' (a valid generic white-collar id), never 'other'/'unsolicited'.
-    t = (str(role) + " " + str(jd)).lower()
+    rt = str(role).lower()                      # ROLE TITLE = the authoritative signal
+    t = (str(role) + " " + str(jd)).lower()     # combined = fallback only
+    def rhas(*ks): return any(k in rt for k in ks)
     def has(*ks): return any(k in t for k in ks)
+    # 1) ROLE-TITLE routing FIRST. The old code scanned role+JD together, so an
+    # optical/process-engineer JD that merely MENTIONS "research"/"data" got
+    # mis-routed to research_phd / data_analytics (the 2026-07-12 defect: NKT
+    # 'Optical Engineer II' persisted as research_phd, 'Senior Process Engineer'
+    # as data_analytics). The title decides; the JD body only breaks ties.
+    if rhas("product manager", "product owner", "product / project", "produkt"): return "product_management"
+    if rhas("project manager", "programme manager", "program manager", "project steering", "head of project", "projektleder"): return "program_management"
+    if rhas("data scientist", "data analyst", "data engineer", "analytics engineer", "business intelligence"): return "data_analytics"
+    if rhas("scientist", "phd", "postdoc", "researcher"): return "research_phd"
+    if rhas("software", "developer", "backend", "frontend", "full stack", "full-stack"): return "engineering_software"
+    if rhas("manufacturing", "operations", "supply"): return "operations"
+    # quality/audit/regulatory titles are operations even when they say 'engineer'
+    if rhas("quality", "auditor", "audit", "regulatory", "compliance"): return "operations"
+    if rhas("optical", "optics", "photonic", "engineer", "hardware", "system", "r&d"): return "engineering_hardware"
+    # 2) Fallback to combined text for whatever the title did not decide.
     if has("product manager", "product owner", "senior pm", " pm,"): return "product_management"
     if has("project manager", "programme manager", "program manager", "project steering", "head of project"): return "program_management"
-    if has("research", "scientist", "phd", "postdoc"): return "research_phd"
-    # engineering BEFORE data_analytics: an optical/process-engineer JD often
-    # mentions "data" incidentally — that must not route it to data_analytics
-    # (the 2026-07-12 gemini batch mis-routed nkt optical/process rows). Keep
-    # data_analytics to analytics-SPECIFIC role titles, not a bare "data" token.
     if has("optical", "optics", "photonic", "process engineer", "hardware", "lead engineer", "development engineer", "test engineer", "system"): return "engineering_hardware"
     if has("analytics engineer", "data scientist", "data analyst", "data engineer", "business intelligence", " bi ", "analytics"): return "data_analytics"
+    if has("research", "scientist", "phd", "postdoc"): return "research_phd"
     if has("software", "developer", "backend", "frontend"): return "engineering_software"
     if has("quality", "regulatory", "audit", "iso ", "compliance", "operations", "supply", "service excellence", "business excellence", "manufacturing"): return "operations"
     if has("cfo", "controller", "finance", "accounting", "treasury"): return "finance"
@@ -338,7 +351,7 @@ def build_plan(profile, meta, tier):
     return secs, model
 
 # ── drive gen-job ──────────────────────────────────────────────────
-def drive(sections, provider, model, source_cv, jd_text, max_steps=80):
+def drive(sections, provider, model, source_cv, jd_text, max_steps=80, skip_coherence=False):
     c, b = _req(PROXY, "/job/create", "POST", {
         "sections": sections, "provider": provider, "model": model,
         "meta": {"runner": "gen-runner"}, "source_cv": source_cv, "jd_text": jd_text,
@@ -347,6 +360,7 @@ def drive(sections, provider, model, source_cv, jd_text, max_steps=80):
         return {"error": f"create_failed {c} {str(b)[:200]}"}
     jid = b["job_id"]
     view = None
+    skipped_coh = False
     for _ in range(max_steps):
         c, view = _req(PROXY, "/job/step", "POST", {"job_id": jid})
         if c != 200:
@@ -354,9 +368,21 @@ def drive(sections, provider, model, source_cv, jd_text, max_steps=80):
         st = view.get("status")
         if st in ("done", "error", "cancelled"):
             break
+        # COHERENCE-HOMOGENISATION-GUARD: when the last section finishes the job
+        # enters status 'coherence' with every section done and filled in its
+        # PRE-REPAIR state; the NEXT step runs the cross-section repair, which on
+        # weak (quick-tier) models homogenises prose sections into the one table
+        # section's "Focus Area | Strategic Expertise" shape (the 2026-07-12
+        # persisted-batch defect). Stop here and keep the pre-repair sections.
+        if skip_coherence and st == "coherence":
+            skipped_coh = True
+            break
         time.sleep(0.4)
-    out = {"job_id": jid, "status": view.get("status") if view else "unknown",
-           "sections": {}, "coherence": (view or {}).get("coherence"),
+    raw_status = view.get("status") if view else "unknown"
+    out = {"job_id": jid,
+           "status": "done" if (skipped_coh and raw_status == "coherence") else raw_status,
+           "sections": {},
+           "coherence": {"state": "skipped_by_runner"} if skipped_coh else (view or {}).get("coherence"),
            "totals": (view or {}).get("totals")}
     for s in (view or {}).get("sections", []):
         out["sections"][s["id"]] = {"title": s.get("title"), "state": s.get("state"),
@@ -461,7 +487,8 @@ def cmd_run(args):
         # unless the caller pinned --provider to something non-default.
         prov = _prov_for(model) if args.provider == "anthropic" else args.provider
         res = drive(sections, prov, model,
-                    source_cv=json.dumps(profile, ensure_ascii=False)[:38000], jd_text=r["jd"])
+                    source_cv=json.dumps(profile, ensure_ascii=False)[:38000], jd_text=r["jd"],
+                    skip_coherence=(r["tier"] != "high"))
         dt = round(time.time() - t0, 1)
         pexh = provider_exhausted(res)
         if pexh:
@@ -575,18 +602,110 @@ def load_skeleton():
         print(f"   [skeleton] not usable ({e})")
     return None
 
-def build_structured_sections(sk, sections, company, role):
+# ── content guards + language furniture + Nordic compaction ─────────
+_SCAFFOLD_RE = re.compile(r"\[[^\]\n]{3,}\]")
+def _is_scaffold(text):
+    """True if text is empty or STILL carries the me() skeleton's instructional
+    bracket-scaffolding ('[INTRO LINE ...]', '[Role title]', '[Focus area 1]',
+    '[CLOSURE ...]'). Such text must NEVER be persisted — the overlay must fall
+    back to clean furniture instead of the raw template."""
+    t = (text or "").strip()
+    if not t:
+        return True
+    for m in _SCAFFOLD_RE.findall(t):
+        if any(ch.isalpha() for ch in m[1:-1]):
+            return True
+    return False
+
+def _is_table_blob(text):
+    """True if a (prose-intended) generated section came back as a markdown
+    table — the coherence-homogenisation signature. Prose slots reject it."""
+    lines = [l for l in (text or "").split("\n") if l.strip()]
+    if not lines:
+        return False
+    piped = sum(1 for l in lines if l.strip().startswith("|"))
+    return piped >= 1 and piped >= len(lines) - 1
+
+def _strip_scaffold(text):
+    """Last-resort: remove any residual '[...]' scaffolding tokens from a string."""
+    if not text:
+        return text
+    return re.sub(r"\s*" + _SCAFFOLD_RE.pattern + r"\s*", " ", text).strip()
+
+# Clean, language-correct cover-letter furniture (used only when a generated
+# slot is empty/scaffold/table — never overrides good generated prose). Owner
+# rule: greet only a named hiring manager; none is captured, so a neutral team
+# greeting in the JOB's language (LANG-FURNITURE-001, 2026-07-12).
+_FURNITURE = {
+    "en": {"greeting": "Dear Hiring Team,",
+           "opening":  "I am writing regarding the {role} position at {company}.",
+           "closure":  "I would welcome the chance to discuss how I can contribute to {company}."},
+    "da": {"greeting": "Kære ansættelsesteam,",
+           "opening":  "Jeg skriver angående stillingen som {role} hos {company}.",
+           "closure":  "Jeg vil meget gerne tale om, hvordan jeg kan bidrage til {company}."},
+    "sv": {"greeting": "Hej,",
+           "opening":  "Jag skriver angående tjänsten som {role} på {company}.",
+           "closure":  "Jag skulle gärna diskutera hur jag kan bidra till {company}."},
+}
+def _furn(language, key, company, role):
+    f = _FURNITURE.get(language) or _FURNITURE["en"]
+    return f[key].format(role=role, company=company)
+
+# Nordic-Minimal compaction targets (~1.5-2 pages). Trims the verbose MAIN-column
+# blocks; leaves the short sidebar furniture intact. Tunable; logs what it cut
+# (NORDIC-COMPACT-001, 2026-07-12 — owner: the persisted batch ran 3-5 pages).
+_NORDIC = {"exp_roles": 4, "exp_bullets": 3, "richblock_items": 6,
+           "outcomes": 4, "core_rows": 5}
+def compact_for_nordic(cv, cl, limits=None):
+    lim = {**_NORDIC, **(limits or {})}
+    cut = []
+    for s in cv:
+        sid, typ = s.get("id"), s.get("type")
+        if typ == "experience" and isinstance(s.get("roles"), list):
+            if len(s["roles"]) > lim["exp_roles"]:
+                cut.append(f"experience roles {len(s['roles'])}->{lim['exp_roles']}")
+                s["roles"] = s["roles"][:lim["exp_roles"]]
+            for role in s["roles"]:
+                b = role.get("bullets")
+                if isinstance(b, list) and len(b) > lim["exp_bullets"]:
+                    role["bullets"] = b[:lim["exp_bullets"]]
+        elif sid == "outcomes" and isinstance(s.get("items"), list) and len(s["items"]) > lim["outcomes"]:
+            cut.append(f"outcomes {len(s['items'])}->{lim['outcomes']}"); s["items"] = s["items"][:lim["outcomes"]]
+        elif sid == "core_comp" and isinstance(s.get("rows"), list) and len(s["rows"]) > lim["core_rows"] + 1:
+            cut.append(f"core_comp rows {len(s['rows'])-1}->{lim['core_rows']}"); s["rows"] = s["rows"][:lim["core_rows"] + 1]
+        elif typ == "rich_block" and isinstance(s.get("items"), list):
+            # count only real items (skip group headers); items may be dicts or
+            # plain strings (e.g. certs). Cap the visible items, keep group headers.
+            def _isgrp(i): return isinstance(i, dict) and i.get("grp")
+            reals = [i for i in s["items"] if not _isgrp(i)]
+            if len(reals) > lim["richblock_items"]:
+                kept, seen = [], 0
+                for i in s["items"]:
+                    if _isgrp(i): kept.append(i); continue
+                    if seen < lim["richblock_items"]: kept.append(i); seen += 1
+                cut.append(f"{sid} items {len(reals)}->{lim['richblock_items']}"); s["items"] = kept
+    return cut
+
+def build_structured_sections(sk, sections, company, role, language="en"):
     """Overlay the 8 generated sections onto a copy of the me() skeleton,
     converting each into the app's native structured shape. Returns (cv, cl)."""
     cv = copy.deepcopy(sk["cv"]); cl = copy.deepcopy(sk["cl"])
     def raw(sid): return (sections.get(sid) or {}).get("result") or ""
     def txt(sid): return sanitize_text(raw(sid))
+    def gen(sid):
+        """Generated text for a PROSE slot, or '' if the model returned nothing,
+        scaffolding, or a homogenised table (never persist those)."""
+        t = txt(sid)
+        return "" if (_is_scaffold(t) or _is_table_blob(t)) else t
 
-    # profile (+ split a trailing 'Work style:' line into work_style)
-    prof = txt("cv_profile")
-    m = re.search(r"\n\s*Work style\s*:\s*(.+)$", prof, re.I | re.S)
+    # profile (+ split a trailing 'Work style:' line into work_style). Empty ->
+    # keep the skeleton's REAL default profile/work_style (they are real content,
+    # not scaffolding), so a failed section never blanks the CV.
+    prof = gen("cv_profile")
     ws = None
-    if m: ws = sanitize_text(m.group(1)); prof = prof[:m.start()].strip()
+    if prof:
+        m = re.search(r"\n\s*Work style\s*:\s*(.+)$", prof, re.I | re.S)
+        if m: ws = sanitize_text(m.group(1)); prof = prof[:m.start()].strip()
     p = _ov_find(cv, "profile")
     if p and prof: p["items"] = [{"b": "", "t": prof, "bullets": []}]
     if ws:
@@ -595,16 +714,21 @@ def build_structured_sections(sk, sections, company, role):
             if w.get("type") == "rich_block": w["items"] = [{"b": "", "t": ws, "bullets": []}]
             else: w["content"] = ws
 
-    oc = _ov_outcomes(raw("cv_outcomes"))
+    ocr = raw("cv_outcomes")
+    oc = [] if (_is_scaffold(ocr) or _is_table_blob(ocr)) else _ov_outcomes(ocr)
     o = _ov_find(cv, "outcomes")
-    if o and oc: o["items"] = oc
+    if o and oc: o["items"] = oc   # empty -> keep skeleton's real default outcomes
 
-    rows = _ov_table(raw("cv_core"))
+    # core_comp: the skeleton default is PLACEHOLDER rows ('[Focus area 1]'),
+    # so it must be filled by generation or DROPPED — never persist placeholders.
+    rows = [rr for rr in _ov_table(raw("cv_core"))
+            if rr and rr[0].strip().lower() != "focus area" and not any(_is_scaffold(x) for x in rr)]
     c = _ov_find(cv, "core_comp")
-    if c and rows:
-        hdr = ["Focus Area", "Strategic Expertise"]
-        body = [[sanitize_text(x) for x in rr] for rr in rows if [x.lower() for x in rr[:1]] != ["focus area"]]
-        c["rows"] = [hdr] + body
+    if c:
+        if rows:
+            c["rows"] = [["Focus Area", "Strategic Expertise"]] + [[sanitize_text(x) for x in rr] for rr in rows]
+        else:
+            cv = [s for s in cv if s.get("id") != "core_comp"]
 
     def set_lead(arr, sid, text):
         s = _ov_find(arr, sid)
@@ -612,10 +736,11 @@ def build_structured_sections(sk, sections, company, role):
             items = s.get("items") or [{"b": "", "t": ""}]
             items = list(items); items[0] = {**items[0], "t": text}
             s["items"] = items
-    set_lead(cl, "who", txt("cl_who_i_am"))
-    set_lead(cl, "why", txt("cl_why_this_position"))
+    set_lead(cl, "who", gen("cl_who_i_am"))
+    set_lead(cl, "why", gen("cl_why_this_position"))
 
     ho, pro, intro = _ov_foundation(raw("cl_foundation"))
+    ho = "" if _is_scaffold(ho) else ho; pro = "" if _is_scaffold(pro) else pro
     f = _ov_find(cl, "foundation")
     if f and (ho or pro):
         items = [{"b": "Foundation", "t": intro or "I connect what I do best with the outcomes this employer is after.", "bullets": []}]
@@ -623,35 +748,66 @@ def build_structured_sections(sk, sections, company, role):
         if pro: items.append({"b": "Professionally", "t": pro, "mk": True})
         f["items"] = items
 
-    for gid, clid, head in [("cl_what_i_bring", "bring", "What I bring"),
-                            ("cl_how_i_would_contribute", "contribute", "How I would contribute")]:
-        trows = _ov_table(raw(gid))
-        s = _ov_find(cl, clid)
-        if s and trows:
-            body = [rr for rr in trows if rr[0].lower() != "focus area"]
-            items = [{"b": head, "t": "", "bullets": []}]
-            for rr in body:
-                if len(rr) >= 2: items.append({"b": sanitize_text(rr[0]), "t": sanitize_text(rr[1]), "mk": True})
-            if len(items) > 1: s["items"] = items
+    # what_i_bring: a 2-col table -> labelled bullets.
+    brows = [rr for rr in _ov_table(raw("cl_what_i_bring"))
+             if rr and rr[0].strip().lower() != "focus area" and not any(_is_scaffold(x) for x in rr)]
+    bs = _ov_find(cl, "bring")
+    if bs and brows:
+        items = [{"b": "What I bring", "t": "", "bullets": []}]
+        for rr in brows:
+            if len(rr) >= 2: items.append({"b": sanitize_text(rr[0]), "t": sanitize_text(rr[1]), "mk": True})
+        if len(items) > 1: bs["items"] = items
+    # how_i_would_contribute: a BULLET list (its prompt asks for 3-6 verb-led
+    # bullets, NOT a table) -> labelled bullets. Parsing it as a table (the old
+    # behaviour) silently dropped every real bullet run.
+    contrib = gen("cl_how_i_would_contribute")
+    cs = _ov_find(cl, "contribute")
+    if cs and contrib:
+        blines = [re.sub(r"^[-*•]\s+", "", ln).strip() for ln in contrib.split("\n")
+                  if ln.strip() and not ln.strip().startswith("|")]
+        blines = [sanitize_text(b) for b in blines if b and not _is_scaffold(b)]
+        if blines:
+            items = [{"b": "How I would contribute", "t": "", "bullets": []}]
+            items += [{"b": "", "t": b, "mk": True} for b in blines]
+            cs["items"] = items
 
-    # Greeting stays clean furniture: no hiring-manager name is captured, and the
-    # owner rule is to greet only a named hiring manager (antcv-deliverable-standards).
+    # Greeting: clean, JOB-language furniture (no hiring-manager name captured;
+    # owner rule = greet only a named manager).
     g = _ov_find(cl, "greeting")
-    if g: g["content"] = "Dear Hiring Team,"
-    # Opening + closure are now GENERATED (fall back to furniture if the section
-    # came back empty). Opening is a rich_block (replace items[0].t, keep headlineOff);
-    # closure is a plain-content section.
-    gen_open = txt("cl_opening").strip()
+    if g: g["content"] = _furn(language, "greeting", company, role)
+    # Opening + closure are GENERATED; fall back to clean JOB-language furniture
+    # (never the skeleton's bracket scaffolding).
     op = _ov_find(cl, "opening")
     if op:
-        op_t = gen_open or f"I am applying for the {role} position at {company}."
+        op_t = gen("cl_opening").strip() or _furn(language, "opening", company, role)
         items = op.get("items") or [{"b": "", "t": ""}]
         items = list(items); items[0] = {**items[0], "b": "", "t": op_t}
         op["items"] = items
-    gen_close = txt("cl_closure").strip()
     cz = _ov_find(cl, "closure")
     if cz:
-        cz["content"] = gen_close or f"I would welcome the chance to discuss how I can contribute to {company} as {role}."
+        cz["content"] = gen("cl_closure").strip() or _furn(language, "closure", company, role)
+
+    # FINAL SWEEP (defence in depth): drop any generated CL section that STILL
+    # carries scaffolding (e.g. who/why/bring/contribute the model left empty),
+    # and strip any residual '[...]' token from surviving text. This guarantees
+    # no instructional template ('[INTRO LINE ...]') ever reaches a persisted app.
+    GEN_CL = {"opening", "who", "why", "bring", "contribute", "foundation", "closure"}
+    def _sec_text(s):
+        if s.get("content"): return str(s["content"])
+        return " ".join(str((i or {}).get("t", "")) for i in (s.get("items") or []))
+    kept_cl = []
+    for s in cl:
+        if s.get("id") in GEN_CL and _is_scaffold(_sec_text(s)):
+            continue  # drop a section left as pure scaffolding
+        kept_cl.append(s)
+    cl = kept_cl
+    for arr in (cv, cl):
+        for s in arr:
+            if isinstance(s.get("content"), str) and _SCAFFOLD_RE.search(s["content"]):
+                s["content"] = _strip_scaffold(s["content"])
+            for i in (s.get("items") or []):
+                if isinstance(i, dict) and isinstance(i.get("t"), str) and _SCAFFOLD_RE.search(i["t"]):
+                    i["t"] = _strip_scaffold(i["t"])
     return cv, cl
 
 def persist_application(doc, r, res, category, language):
@@ -663,7 +819,12 @@ def persist_application(doc, r, res, category, language):
     company, role = str(r["company"]), str(r["role"])
     sk = load_skeleton()
     if sk:
-        cv, cl = build_structured_sections(sk, res["sections"], company, role)
+        cv, cl = build_structured_sections(sk, res["sections"], company, role, language=language)
+        # Nordic-Minimal length: the full skeleton runs 3-5 pages; compact the
+        # verbose main-column blocks to ~1.5-2 pages (quick tier == Nordic).
+        if r["tier"] != "high":
+            cut = compact_for_nordic(cv, cl)
+            if cut: print(f"   [nordic] compacted: {', '.join(cut)}")
         print(f"   [skeleton] overlaid: cv={len(cv)} cl={len(cl)} sections (full-fidelity)")
     else:
         print("   [skeleton] MISSING ~/.antcv/cv_skeleton.json — falling back to flat text blocks (low fidelity)")

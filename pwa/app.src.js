@@ -40234,9 +40234,9 @@
                                       "span",
                                       null,
                                       e.updated_at
-                                        ? new Date(
-                                            e.updated_at,
-                                          ).toLocaleDateString()
+                                        ? new Date(e.updated_at).toLocaleDateString() +
+                                          " " +
+                                          new Date(e.updated_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
                                         : "",
                                     ),
                                   ),

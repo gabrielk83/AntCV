@@ -995,6 +995,66 @@ def compact_jd_aware(cv, cl, jd, language="en"):
 def compact_for_nordic(cv, cl, limits=None):
     return compact_jd_aware(cv, cl, "", "en")
 
+# ── PERSIST-SCRUB-DK-001 (owner 2026-07-12) ──────────────────────────────────
+# Two persist-time corrections applied to the final section set:
+#  (a) DK rows: open-ended year ranges close at 2026 — '2022 - 2026 (present)'
+#      and '2023 - present' both persist as '<start> - 2026' (owner 805
+#      Teledyne review: Danish rows carry closed years, no '(present)').
+#  (b) Pan Idræt is an INTEREST (foreningsarbejde), not an experience role
+#      (pan-idraet-placement semantic constraint): drop the role, make the
+#      rugby interest line name the club. ROLE-keeping exceptions: Danish
+#      public-sector (e.g. KOMBIT) and sports-tech (e.g. Trackman) employers.
+_DK_JD_RE = re.compile(r"danmark|denmark|danish|dansk|københavn|copenhagen|aarhus|århus|odense|aalborg|dk-\d{4}", re.I)
+_PAN_KEEP_RE = re.compile(r"trackman|sports?[ -]?tech|idræt|idraet|kombit|kommune|kommunal|styrelse|ministeri|forbund|\bdgi\b", re.I)
+_PAN_RE = re.compile(r"pan idr", re.I)
+_RUGBY_INTEREST = {
+    "da": {"b": "Rugby & inklusiv sport", "t": "Rugbyholddrift hos Pan Idræt (foreningsarbejde), assisterende træner, bogstaveligt talt en holdspiller"},
+    "en": {"b": "Rugby & inclusive sport", "t": "Rugby team operations at Pan Idræt (volunteer club work), assistant coach, literally a team player"},
+}
+def _dk_row(r, language):
+    blob = str(r.get("company") or "") + " " + str(r.get("jd") or "")
+    return language == "da" or bool(_DK_JD_RE.search(blob))
+
+def _ensure_rugby_interest(cv, language):
+    want = _RUGBY_INTEREST.get(language, _RUGBY_INTEREST["en"])
+    sec = next((s for s in cv if s.get("id") == "interests" and isinstance(s.get("items"), list)), None)
+    if sec is None:
+        return "interests section missing (rugby line not placed)"
+    for it in sec["items"]:
+        if isinstance(it, dict) and _PAN_RE.search(str(it.get("b", "")) + " " + str(it.get("t", ""))):
+            return None                                    # already names the club
+    for it in sec["items"]:
+        if isinstance(it, dict) and re.search(r"rugby", str(it.get("b", "")) + " " + str(it.get("t", "")), re.I):
+            it["b"], it["t"] = want["b"], want["t"]        # upgrade the generic rugby line
+            return "rugby interest line now names Pan Idræt"
+    sec["items"].insert(0, {"b": want["b"], "t": want["t"], "bullets": []})
+    return "rugby interest line added"
+
+def scrub_for_persist(cv, r, language):
+    notes = []
+    dk = _dk_row(r, language)
+    keep_pan = bool(_PAN_KEEP_RE.search(str(r.get("company") or "") + " " + str(r.get("jd") or "")))
+    for s in cv:
+        if s.get("type") != "experience" or not isinstance(s.get("roles"), list):
+            continue
+        if dk:
+            for role in s["roles"]:
+                y = str(role.get("years") or "")
+                if y and re.search(r"present|\bnu\b|至今", y, re.I):
+                    m = re.search(r"\b(19|20)\d\d\b", y)
+                    role["years"] = (m.group(0) + " - 2026") if m else "2026"
+                    if role["years"] != y:
+                        notes.append(f"years {y!r} -> {role['years']!r}")
+        if not keep_pan:
+            n0 = len(s["roles"])
+            s["roles"] = [x for x in s["roles"] if not _PAN_RE.search(str(x.get("company") or "") + " " + str(x.get("title") or ""))]
+            if len(s["roles"]) != n0:
+                notes.append("Pan Idræt role -> interest (placement rule)")
+                msg = _ensure_rugby_interest(cv, language)
+                if msg:
+                    notes.append(msg)
+    return notes
+
 # ── MEASURE-AND-FIT: render the real PDF, count pages, tighten to budget ─────
 # The AntCV way is measure-don't-guess. After JD-relevance compaction, render the
 # CV through the docx-worker's /generate-pdf (CloudConvert, the SAME renderer the
@@ -1306,6 +1366,9 @@ def persist_application(doc, r, res, category, language, kernel=None, measure=Fa
         if True:
             cut = compact_jd_aware(cv, cl, r["jd"], language)
             if cut: print(f"   [nordic] {'; '.join(cut)}")
+            # PERSIST-SCRUB-DK-001: closed DK years + Pan Idræt placement rule.
+            scrub = scrub_for_persist(cv, r, language)
+            if scrub: print(f"   [scrub] {'; '.join(scrub)}")
             # MEASURE-AND-FIT: render the real PDF, tighten if it overflows the
             # page budget (measure-don't-guess; catches the outliers a char
             # heuristic misses — e.g. cmc rendered 3 pages pre-fit).

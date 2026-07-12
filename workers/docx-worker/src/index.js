@@ -24439,7 +24439,7 @@ async function generateDocx(payload) {
   // FURNITURE-LANG-001 (extends FURNITURE-ZH-001): localize the two worker-injected
   // labels (per-role "Results:" lead + AI-assisted footer) and give the AI notice a
   // script-capable face so its non-Latin text doesn't box out. Falls back to English.
-  const __RESULTS = { da: "Resultat: ", es: "Resultado: ", zh: "\u6210\u679C\uFF1A", he: "\u05EA\u05D5\u05E6\u05D0\u05D5\u05EA: ", ar: "\u0627\u0644\u0646\u062A\u0627\u0626\u062C: ", am: "\u12CD\u1324\u1276\u127D: " };
+  const __RESULTS = { da: "Resultater: ", es: "Resultados: ", zh: "\u6210\u679C\uFF1A", he: "\u05EA\u05D5\u05E6\u05D0\u05D5\u05EA: ", ar: "\u0627\u0644\u0646\u062A\u0627\u0626\u062C: ", am: "\u12CD\u1324\u1276\u127D: " };
   const __AINOTICE = {
     da: "AI-assisteret - forfatteren bevarer ansvaret for indholdet.",
     es: "Asistido por IA - el autor conserva la responsabilidad del contenido.",
@@ -24452,7 +24452,7 @@ async function generateDocx(payload) {
   style._resultsLabel = __RESULTS[lang] || "Results: ";
   style._aiNotice = __AINOTICE[lang] || "AI-assisted - author retains responsibility for content.";
   style._aiFont = SCRIPT_FONT[lang] || "Calibri";
-  const CONT_SUFFIX = { en: "(CONT.)", da: "(FORTS.)", es: "(CONT.)", zh: "\uFF08\u7EED\uFF09", he: "(\u05D4\u05DE\u05E9\u05DA)", ar: "(\u062A\u0627\u0628\u0639)", am: "(\u1240\u1323\u12ED)" };
+  const CONT_SUFFIX = { en: "(CONT.)", da: "(fortsat)", es: "(continuaci\u00F3n)", zh: "\uFF08\u7EED\uFF09", he: "(\u05D4\u05DE\u05E9\u05DA)", ar: "(\u062A\u0627\u0628\u0639)", am: "(\u1240\u1323\u12ED)" };
   const contSuffix = CONT_SUFFIX[lang] || CONT_SUFFIX.en;
   const layout = payload.layout || (payload.doc === "cl" ? "linear" : "two_column");
   const headerAlign = {

@@ -98,6 +98,13 @@ test('Fit-it/compress prompts with no system carrier get the block on the marked
   assert.equal(JSON.parse(out).messages[0].content.includes('WIDTH CALIBRATION'), true);
 });
 
+test('GEN-WIDTH-CALIBRATION-001: every generation prompt (COMPRESSION-TIGHT carrier) gets calibrated', () => {
+  const api = load(new Map());
+  const genSys = 'You are AntCV… COMPRESSION — WRITE TIGHT (owner 2026-06-30): every CV experience bullet…';
+  const out = api._maybeInjectWidthHint(JSON.stringify({ system: genSys, messages: [{ role: 'user', content: 'JD…' }] }));
+  assert.equal(JSON.parse(out).system.includes('WIDTH CALIBRATION'), true);
+});
+
 test('idempotent + inert on unrelated traffic', () => {
   const api = load(new Map());
   const body = JSON.stringify({ system: ENRICH_SYS, messages: [] });

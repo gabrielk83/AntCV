@@ -769,6 +769,13 @@
   const WIDTH_MARKERS = [
     'DIMENSION-AWARE BULLET LENGTH',
     'Compress this CV/cover letter section',
+    // GEN-WIDTH-CALIBRATION-001 (owner 2026-07-13: "integration also to the
+    // app's generations in all levels"): the unconditional COMPRESSION-TIGHT
+    // push rides EVERY generation prompt (fast/balanced/thorough, targeted +
+    // unsolicited), so matching it puts the live chars-per-line calibration
+    // into all of them. Calibration is prompt-only and cheap — it stays on at
+    // every speed level; only SHIP 4's measured windows are speed-gated.
+    'COMPRESSION — WRITE TIGHT',
   ];
   const WIDTH_BLOCK_TAG = 'WIDTH CALIBRATION';
   const PAGE_W_DXA = 11906;      // A4, zero page margins (worker model)

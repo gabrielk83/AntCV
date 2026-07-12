@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.359-per-app-identity';
+  const TARGET_VERSION = '1.51.360-open-jd-visible';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.359-per-app-identity',
     '1.51.358-role-twins',
     '1.51.357-translate-target',
     '1.51.356-identity-heal',

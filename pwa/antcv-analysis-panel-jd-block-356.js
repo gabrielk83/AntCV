@@ -76,7 +76,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.51.54-upper-reorg';
+  var VERSION = '1.51.360-open-jd-visible';
   if (window.__antcvAnalysisPanelJdBlock356 === VERSION) return;
   window.__antcvAnalysisPanelJdBlock356 = VERSION;
 
@@ -182,6 +182,9 @@
       run: 'Analysér JD', running: 'Analyserer…',
       reading: 'Læser {file}…',
       fileErr: 'Filfejl: {err}',
+      urlPh: '🔗 Indsæt JD-URL (HR-on, Workday, Greenhouse, Lever, LinkedIn…)',
+      fetching: 'Henter JD…',
+      urlErr: 'Kunne ikke hente jobopslaget fra URL’en.',
       noProxy: 'Proxy-URL er ikke konfigureret. Åbn Indstillinger.',
       jdShort: 'Indsæt et jobopslag på mindst 50 tegn.',
       compareHint: 'Sammenlign det genererede CV med et eksisterende jobopslag.',
@@ -198,6 +201,9 @@
       run: 'Analyse JD', running: 'Analysing…',
       reading: 'Reading {file}…',
       fileErr: 'File error: {err}',
+      urlPh: '🔗 Paste JD URL (HR-on, Workday, Greenhouse, Lever, LinkedIn…)',
+      fetching: 'Fetching JD…',
+      urlErr: 'Could not fetch the job description from that URL.',
       noProxy: 'Proxy URL is not configured. Open Settings.',
       jdShort: 'Paste a job description of at least 50 characters.',
       compareHint: 'Compare the generated CV against an existing job description.',
@@ -225,6 +231,8 @@
       + '#' + BLOCK_ID + ' .apjb-uplabel{font-size:11px;color:#6b7280;font-weight:600;}'
       + '#' + BLOCK_ID + ' .apjb-upbtn{font-size:11px;font-weight:600;padding:4px 10px;background:#fff;color:#283556;border:1px solid #283556;border-radius:4px;cursor:pointer;}'
       + '#' + BLOCK_ID + ' .apjb-upbtn:hover{background:#f5f5f5;}'
+      + '#' + BLOCK_ID + ' .apjb-url{flex:1 1 160px;min-width:0;padding:5px 8px;font-family:Georgia,serif;font-size:11px;color:#333;border:1px solid #d0d2d6;border-radius:4px;box-sizing:border-box;}'
+      + '#' + BLOCK_ID + ' .apjb-url:focus{outline:none;border-color:#01B7BB;box-shadow:0 0 0 3px rgba(1,183,187,.18);}'
       + '#' + BLOCK_ID + ' .apjb-status{font-size:11px;color:#6b7280;margin-top:4px;min-height:14px;}'
       + '#' + BLOCK_ID + ' .apjb-run{margin-top:10px;padding:9px 16px;font-size:12.5px;font-weight:700;color:#fff;background:#00746E;border:none;border-radius:6px;cursor:pointer;}'
       + '#' + BLOCK_ID + ' .apjb-run:hover{background:#01B7BB;}'
@@ -375,6 +383,13 @@
     wrap.appendChild(el('div', { className: 'apjb-hint' }, hasAnalysis ? t.compareHint : t.emptyHint));
 
     var ta = el('textarea', { className: 'apjb-textarea', placeholder: t.jdLabel + '…' });
+    // OPEN-JD-VISIBLE-001 (owner 2026-07-12): an application opened from the
+    // Job Tracker (or any cloud restore) mirrors its JD in antcv:lastJdText —
+    // prefill it here so the analysis eats the SAME JD without a re-paste.
+    try {
+      var lastJd = String(localStorage.getItem('antcv:lastJdText') || '').trim();
+      if (lastJd.length >= 50) ta.value = lastJd;
+    } catch (_) {}
     wrap.appendChild(ta);
 
     var status = el('div', { className: 'apjb-status' });
@@ -417,8 +432,12 @@
     }
     // v1.50.153 — single "Upload JD" button (replaces the PDF/Word/Image trio).
     // Accepts every supported format incl. JSON; the OS picker filters by it.
+    // OPEN-JD-VISIBLE-001: a JD-URL input sits next to it — same placeholder
+    // and same /api/fetch-jd-url pipeline as the main upload-step URL field.
+    // "Analyse JD" fetches the URL first when the textarea is empty.
+    var urlInput = el('input', { className: 'apjb-url', type: 'url', placeholder: t.urlPh });
     var uprow = el('div', { className: 'apjb-uprow' },
-      upBtn(t.uploadJd, '.pdf,.doc,.docx,.txt,.json,image/*'), fileInput);
+      upBtn(t.uploadJd, '.pdf,.doc,.docx,.txt,.json,image/*'), urlInput, fileInput);
     wrap.appendChild(uprow);
     wrap.appendChild(status);
 
@@ -432,6 +451,37 @@
       var proxyUrl = readProxyUrl();
       if (!proxyUrl) { errBox.textContent = t.noProxy; errBox.style.display = 'block'; return; }
       var jd = (ta.value || '').trim();
+      // OPEN-JD-VISIBLE-001: URL given + no pasted text → fetch the JD from the
+      // URL first (same proxy endpoint as the main "Fetch JD" flow), fill the
+      // textarea, then continue straight into the analysis.
+      var jdUrl = (urlInput.value || '').trim();
+      if (jdUrl && jd.length < 50) {
+        runBtn.disabled = true; runBtn.textContent = t.fetching;
+        try {
+          var fres = await fetch(proxyUrl + '/api/fetch-jd-url', {
+            method: 'POST', credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: jdUrl }),
+          });
+          var fjson = null;
+          try { fjson = await fres.json(); } catch (_) {}
+          if (fres.ok && fjson && fjson.ok !== false && fjson.text && String(fjson.text).trim().length >= 50) {
+            ta.value = String(fjson.text);
+            jd = ta.value.trim();
+            status.textContent = '';
+          } else {
+            errBox.textContent = t.urlErr + ((fjson && (fjson.error || fjson.wall_hint)) ? ' ' + (fjson.error || fjson.wall_hint) : '');
+            errBox.style.display = 'block';
+            return;
+          }
+        } catch (e) {
+          errBox.textContent = t.urlErr + ' ' + String((e && e.message) || e);
+          errBox.style.display = 'block';
+          return;
+        } finally {
+          runBtn.disabled = false; runBtn.textContent = t.run;
+        }
+      }
       if (jd.length < 50) { errBox.textContent = t.jdShort; errBox.style.display = 'block'; return; }
       var cvSections = readSections('cv_pwa_sections');
       var clSections = readSections('cl_pwa_sections');
@@ -497,6 +547,11 @@
       } finally {
         runBtn.disabled = false; runBtn.textContent = t.run;
       }
+    });
+
+    // Enter in the URL field = fetch + analyse (one keystroke, same handler).
+    urlInput.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter') { ev.preventDefault(); runBtn.click(); }
     });
 
     wrap.appendChild(runBtn);

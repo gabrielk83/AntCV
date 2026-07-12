@@ -16687,10 +16687,18 @@
                             wa(e.meta.styleConfig);
                           } catch (e) {}
                         }
-                        if (e.rationale && "object" == typeof e.rationale)
-                          try {
-                            bo(e.rationale);
-                          } catch (e) {}
+                        // OPEN-JD-VISIBLE-001 (owner 2026-07-12): a tracker-seeded
+                        // application carries the whole brief (Dream Envelope, ROLE
+                        // INTEL, web research, owner signals) in supporting_context —
+                        // fold it into the rationale so generation's PRIOR RUN
+                        // CONTEXT block sees it. An existing rationale value wins.
+                        try {
+                          var __rt = e.rationale && "object" == typeof e.rationale ? e.rationale : null,
+                            __sc = "string" == typeof e.supporting_context && e.supporting_context.trim() ? e.supporting_context : "";
+                          if (__sc && (!__rt || !String(__rt.supporting_context || "").trim()))
+                            __rt = Object.assign({}, __rt || {}, { supporting_context: __sc });
+                          if (__rt) bo(__rt);
+                        } catch (e) {}
                         if ("string" == typeof e.jd_text && e.jd_text) {
                           // 1.50.253: when the loaded row is the
                           // UNSOLICITED kernel (category or jd_company
@@ -16752,10 +16760,34 @@
                             try {
                               Vt("");
                             } catch (e) {}
-                          else
+                          else if (__foreignDevice)
                             try {
-                              Vt(__foreignDevice ? "" : e.jd_text);
+                              Vt("");
                             } catch (e) {}
+                          else {
+                            // OPEN-JD-VISIBLE-001 (owner 2026-07-12): a targeted row's
+                            // JD used to be dumped into the SIGNALS textarea (Vt) — the
+                            // drop-zone stayed empty and generation ran JD-less in
+                            // unsolicited framing (the sig-stale guard excluded it).
+                            // Seed the real JD-file states instead (same shape as the
+                            // URL-fetch path) so the JD preview renders over the
+                            // drop-zone and Generate uses the cached extraction, keep
+                            // the JD in Un.current as the cloud-write fallback, and
+                            // give the signals textarea the owner-added signals parsed
+                            // out of supporting_context.
+                            try {
+                              var __jl = String((((e.jd_company || "") + (e.jd_company && e.jd_role ? " — " : "") + (e.jd_role || "")).trim()) || "Job description").slice(0, 120);
+                              Dt({ name: __jl, kind: "restore", size: String(e.jd_text).length, source: "cloud-restore" });
+                              Ft({ text: e.jd_text, method: "restored", pages: 1, fileName: __jl });
+                              Un.current = e.jd_text;
+                            } catch (e) {}
+                            try {
+                              var __sm = String(e.supporting_context || "").match(/ADDITIONAL SIGNALS \(owner-added\):\s*\n?([\s\S]*?)(?=\n\n[A-Z][A-Z -]{2,}[:(]|$)/);
+                              Vt(__sm ? String(__sm[1] || "").trim() : "");
+                            } catch (e) {
+                              try { Vt(""); } catch (e) {}
+                            }
+                          }
                           // JD-CLOUD-VISIBILITY-001 (owner 2026-06-15): mirror the
                           // restored JD into antcv:lastJdText so JD-aware per-role
                           // outcome visibility works cross-machine WITHOUT a regen.
@@ -22037,10 +22069,15 @@
                       });
                     } catch (e) {}
                 }
-                if (e.rationale && "object" == typeof e.rationale)
-                  try {
-                    bo(e.rationale);
-                  } catch (e) {}
+                // OPEN-JD-VISIBLE-001: same supporting_context → rationale fold
+                // as the cold-start restore (see occ-1 above).
+                try {
+                  var __rt2 = e.rationale && "object" == typeof e.rationale ? e.rationale : null,
+                    __sc2 = "string" == typeof e.supporting_context && e.supporting_context.trim() ? e.supporting_context : "";
+                  if (__sc2 && (!__rt2 || !String(__rt2.supporting_context || "").trim()))
+                    __rt2 = Object.assign({}, __rt2 || {}, { supporting_context: __sc2 });
+                  if (__rt2) bo(__rt2);
+                } catch (e) {}
                 if ("string" == typeof e.jd_text && e.jd_text) {
                   // 1.50.253 (read-from-cloud path): same unsolicited-row
                   // clamp as the cold-start cloud-restore. When the row is
@@ -22126,10 +22163,27 @@
                     console.log(
                       "[cloud-restore] manual-save sentinel suppressed (not written to Xo)",
                     );
-                  } else
+                  } else if (__foreignDevice2)
                     try {
-                      Vt(__foreignDevice2 ? "" : e.jd_text);
+                      Vt("");
                     } catch (e) {}
+                  else {
+                    // OPEN-JD-VISIBLE-001: same JD-file seeding as the cold-start
+                    // restore (see occ-1) — JD preview over the drop-zone, owner
+                    // signals into the signals textarea.
+                    try {
+                      var __jl2 = String((((e.jd_company || "") + (e.jd_company && e.jd_role ? " — " : "") + (e.jd_role || "")).trim()) || "Job description").slice(0, 120);
+                      Dt({ name: __jl2, kind: "restore", size: String(e.jd_text).length, source: "read-button" });
+                      Ft({ text: e.jd_text, method: "restored", pages: 1, fileName: __jl2 });
+                      Un.current = e.jd_text;
+                    } catch (e) {}
+                    try {
+                      var __sm2 = String(e.supporting_context || "").match(/ADDITIONAL SIGNALS \(owner-added\):\s*\n?([\s\S]*?)(?=\n\n[A-Z][A-Z -]{2,}[:(]|$)/);
+                      Vt(__sm2 ? String(__sm2[1] || "").trim() : "");
+                    } catch (e) {
+                      try { Vt(""); } catch (e) {}
+                    }
+                  }
                   // JD-CLOUD-VISIBILITY-001 (owner 2026-06-15): mirror the restored
                   // JD into antcv:lastJdText (cross-machine JD-aware visibility).
                   try { localStorage.setItem("antcv:lastJdText", (__isUnsolicited || __foreignDevice2 || t || n) ? "" : (e.jd_text || "")); } catch (e) {}
@@ -25484,7 +25538,16 @@
             // restore fills the signals textarea from the active row's jd_text,
             // mirrored in antcv:lastJdText) must not enter the prompt — the
             // "unsolicited CL full of NIL content" leak.
-            const __antcvSigTxt = Un.current || Ut;
+            // OPEN-JD-VISIBLE-001: when Un.current is just the restored JD
+            // (mirrored verbatim in antcv:lastJdText), the "Additional signals"
+            // block must carry the REAL signals textarea (Ut), not echo the JD.
+            const __antcvSigTxt = (() => {
+              try {
+                const t = String(localStorage.getItem("antcv:lastJdText") || "").trim();
+                if (Un.current && t.length >= 30 && String(Un.current).trim() === t) return Ut;
+              } catch (e) {}
+              return Un.current || Ut;
+            })();
             const __antcvSigStale = (() => {
               try {
                 if (c && String(c).trim()) return !1;

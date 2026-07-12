@@ -151,9 +151,15 @@ test('both restore paths carry the foreign-device guard in BOTH bundles', () => 
   assert.equal(count(src, '_pointer_device_id') >= 2, true, 'src: both restore blocks read the pointer stamp');
   assert.equal(count(app, '_pointer_device_id') >= 2, true, 'app.js: both restore blocks read the pointer stamp');
   assert.equal(count(src, 'JD-SCOPE-OCC2-GUARD-001'), 1, 'src occ-2 guard marker');
-  assert.equal(count(src, 'Vt(__foreignDevice2 ? "" : e.jd_text)'), 1, 'src occ-2 Vt guarded');
+  // OPEN-JD-VISIBLE-001 (owner 2026-07-12): the targeted branch now seeds the
+  // JD-file states (Dt/Ft + Un.current) instead of dumping jd_text into the
+  // signals textarea. The foreign-device guard survives as an explicit clamp
+  // branch that must come BEFORE the seeding block.
+  assert.equal(count(src, '} else if (__foreignDevice2)'), 1, 'src occ-2 foreign-device clamp branch');
+  assert.equal(count(src, 'source: "read-button"'), 1, 'src occ-2 seeds the JD-file states');
   assert.equal(count(src, '(__isUnsolicited || __foreignDevice2 || t || n)'), 1, 'src occ-2 mirror guarded');
-  assert.equal(count(app, 'cn(__antcvFd2?"":e.jd_text)'), 1, 'app.js occ-2 Vt guarded');
+  assert.equal(count(app, 'if(__antcvFd2)try{cn("")}catch(e){}'), 1, 'app.js occ-2 foreign-device clamp branch');
+  assert.equal(count(app, 'source:"read-button"'), 1, 'app.js occ-2 seeds the JD-file states');
   assert.equal(count(app, '"antcv:lastJdText",o||__antcvFd2||r||a?'), 1, 'app.js occ-2 mirror guarded');
 });
 

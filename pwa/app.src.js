@@ -40258,6 +40258,17 @@
                                                       ? {
                                                           ...(io || {}),
                                                           ...n.meta,
+                                                          // PER-APP-IDENTITY-RESTORE-001 (owner 2026-07-12: "even clean
+                                                          // apps not loading the correct slogan / application line /
+                                                          // specification"): when a saved app HAS a meta object the old
+                                                          // code spread ONLY meta, so identity fields missing from meta
+                                                          // (the gen-runner writes a minimal meta) inherited the PREVIOUS
+                                                          // app's company/role/subtitle/slogan. Always fall back to the
+                                                          // authoritative per-app columns for these.
+                                                          company: n.meta.company || n.jd_company || "",
+                                                          role: n.meta.role || n.jd_role || "",
+                                                          subtitle: n.subtitle || n.meta.subtitle || "",
+                                                          cl_slogan: n.meta.cl_slogan || n.meta.slogan || (io && io.cl_slogan) || "",
                                                         }
                                                       : {
                                                           ...(io || {}),

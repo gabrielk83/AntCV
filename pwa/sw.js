@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.358-role-twins';
+const CACHE = 'antcv-1.51.359-per-app-identity';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

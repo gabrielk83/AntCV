@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.376-sidebar-balance';
+const CACHE = 'antcv-1.51.377-balance-lastpage';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

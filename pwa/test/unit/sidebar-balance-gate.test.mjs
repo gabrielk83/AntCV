@@ -126,6 +126,22 @@ test('inert on 1-page docs, when disabled, and below the gap threshold', () => {
   assert.equal(gate(mk(), MAIN_2PG, mkHeights(80), GROUPS, 800, 900, 600, 60).length, 0, 'below threshold');
 });
 
+test('LAST-PAGE RULE: sidebar targets the main bottom, not the page cap', () => {
+  // gold-calibrated: main ends 400px into page 2 -> the sidebar's page-2
+  // deficit is judged against 400, not nCap 900. Gaps: p1 = 800-720 = 80,
+  // p2 = 400-320 = 80 -> already balanced, NO move (without the rule the
+  // p2 gap would read 580 and group C would be dragged down).
+  const paged = mkPaged({
+    'tools:0': 1, 'tools:1': 1, 'tools:2': 1, 'tools:3': 1, 'tools:4': 1, 'tools:5': 1,
+    'tools:6': 1, 'tools:7': 1, 'tools:8': 1,
+    'langs:0': 2, 'langs:1': 2, 'langs:2': 2, 'langs:3': 2,
+  });
+  const heights = mkHeights(80);
+  heights['exp|0'] = 700; heights['exp|1'] = 400;   // main column block heights
+  const moves = gate(paged, MAIN_2PG, heights, GROUPS, 800, 900, 160, 60);
+  assert.equal(moves.length, 0, 'balanced against the main bottom — no move');
+});
+
 test('wiring: post-process block + config knobs + export are present', () => {
   assert.equal(src.includes('SIDEBAR-BALANCE-001 post-process'), true);
   assert.equal(src.split('__balanceGate(__sPaged, __mPaged').length - 1, 1, 'invoked once');

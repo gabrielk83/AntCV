@@ -334,15 +334,26 @@
   var SIDEBAR_BALANCE_MAX_GAP = 160;  // px: act only while some page's gap exceeds this. 0 disables.
   var SIDEBAR_BALANCE_MIN_GAIN = 60;  // px: a move must shave at least this off the worst gap
   // PURE decision core (unit-tested in pwa/test/unit/sidebar-balance-gate.test.mjs):
-  // sPaged/mPaged = [{sid,key,page}] (sPaged mutated in place); heights = {"sid|key":px};
-  // groupsBySid = {sid:[{key,start}]}; p1Cap/nCap = per-page sidebar budgets.
-  // Returns the applied moves [{unit,from,to,h}].
+  // sPaged/mPaged = [{sid,key,page}] (sPaged mutated in place); heights covers BOTH
+  // columns' blocks ({"sid|key":px}); groupsBySid = {sid:[{key,start}]}; p1Cap/nCap =
+  // per-page sidebar budgets. Returns the applied moves [{unit,from,to,h}].
+  // LAST-PAGE RULE (gold Trackman calibration 2026-07-13): the owner's gold
+  // submission does NOT fill its final page — both columns end ~45% down,
+  // TOGETHER. So the last page's target is the MAIN column's own bottom there,
+  // never the full page cap (filling the sidebar past the main's end just moves
+  // the imbalance to the other side).
   function __balanceGate(sPaged, mPaged, heights, groupsBySid, p1Cap, nCap, maxGapCfg, minGain) {
     var lastMain = 1;
     (mPaged || []).forEach(function (b) { if (b.page > lastMain) lastMain = b.page; });
     if (lastMain < 2 || !(maxGapCfg > 0)) return [];
     var h = function (b) { return heights[b.sid + '|' + b.key] || 0; };
-    var cap = function (p) { return p === 1 ? p1Cap : nCap; };
+    var mainFillLast = 0;
+    (mPaged || []).forEach(function (b) { if (b.page === lastMain) mainFillLast += h(b); });
+    var cap = function (p) {
+      if (p === 1) return p1Cap;
+      if (p === lastMain && mainFillLast > 0) return Math.min(nCap, mainFillLast);
+      return nCap;
+    };
     // column-DATA-order units: per sid, either its labeled groups (preamble blocks
     // before the first group bind to the first group) or the whole section.
     var units = [], unitBySidStart = {};
@@ -1403,6 +1414,7 @@
             try {
               var bHeights = {};
               __uniBlocks.sidebar.forEach(function (b) { bHeights[b.sid + '|' + b.key] = Math.max(0, b.bottom - b.top); });
+              __uniBlocks.main.forEach(function (b) { bHeights[b.sid + '|' + b.key] = Math.max(0, b.bottom - b.top); });
               var bGroups = {};
               __sPaged.forEach(function (b) {
                 if (bGroups[b.sid]) return;

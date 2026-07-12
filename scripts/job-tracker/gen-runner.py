@@ -759,21 +759,74 @@ def _merge_roles(roles):
     return out
 
 _VOL_RE = re.compile(r"forening|volunteer|frivillig|\bcouncil\b|representative|pan idr", re.I)
-def _select_roles(roles, jdkw, keep=6):
-    if len(roles) <= keep: return roles
+def _score_roles(roles, jdkw):
     scored = []
     for r in roles:
         txt = " ".join([r.get("title", ""), r.get("company", "")] + (r.get("bullets") or []) + [r.get("results") or ""])
         vol = bool(_VOL_RE.search(r.get("title", "") + " " + r.get("company", "")))
-        # Force-keep only the current PROFESSIONAL role; a current VOLUNTEER role
-        # (Pan Idraet rugby) competes on JD relevance so it surfaces for people/
-        # sports employers and drops for pure-technical/finance ones.
         cur = 1 if ((r.get("isCurrent") or re.search(r"present|nu\b", (r.get("years") or ""), re.I)) and not vol) else 0
         scored.append((r, _rel(txt, jdkw), cur, _yr(r.get("years"))))
-    forced = [t for t in scored if t[2]]                       # always keep current role(s)
+    return scored
+
+def _select_roles(roles, jdkw, keep=6):
+    if len(roles) <= keep: return roles
+    scored = _score_roles(roles, jdkw)
+    forced = [t for t in scored if t[2]]                       # always keep the current PROFESSIONAL role
     rest = sorted([t for t in scored if not t[2]], key=lambda t: (-t[1], -t[3]))
     chosen = forced + rest[:max(0, keep - len(forced))]
     return [t[0] for t in sorted(chosen, key=lambda t: -t[3])]  # reverse-chronological
+
+_EC_TITLE = {"en": "Earlier career", "da": "Tidligere karriere", "sv": "Tidigare karriär"}
+def _earlier_career(dropped, language="en"):
+    """Collapse the dropped tail roles into ONE condensed 'Earlier career' entry
+    (owner: never just drop the early roles). One compact line per role. Returns
+    None if there is nothing worth summarising (<2 dropped)."""
+    real = [r for r in dropped if (r.get("title") or "").strip()]
+    if len(real) < 2:
+        return None
+    ds = sorted(real, key=lambda r: -_yr(r.get("years")))       # newest-first within the block
+    starts = [_yr(r.get("years"), first=True) for r in real if _yr(r.get("years"), first=True)]
+    span = f"{min(starts) if starts else ''} - {max(_yr(r.get('years')) for r in real)}"
+    bullets = []
+    for r in ds[:4]:
+        head = r.get("title", "").strip()
+        co = r.get("company", "").strip()
+        yr = (r.get("years") or "").strip()
+        line = head + (f", {co}" if co else "") + (f" ({yr})" if yr else "")
+        desc = _cap_line(r.get("results") or (r.get("bullets") or [""])[0] or "", 60)
+        bullets.append(_cap_line(line + (f" - {desc}" if desc else ""), 150))
+    return {"id": "earlier-career", "title": _EC_TITLE.get(language, _EC_TITLE["en"]),
+            "company": "", "location": "", "years": span, "isCurrent": False, "on": True,
+            "bullets": bullets, "results": None}
+
+def _is_early(r):
+    """A genuinely-early role: not current and ended >=~10y ago (<=2015). A
+    recent role that merely lost on relevance (e.g. current volunteering) is NOT
+    'earlier career' — it just drops."""
+    cur = r.get("isCurrent") or re.search(r"present|nu\b", (r.get("years") or ""), re.I)
+    return (not cur) and 0 < _yr(r.get("years")) <= 2015
+
+def _select_and_summarize(roles, jdkw, keep=6, language="en"):
+    """Keep the top JD-ranked roles in full; collapse the dropped EARLY roles into
+    one 'Earlier career' entry so breadth is preserved, not lost. Recent roles that
+    lose on relevance just drop. Earlier career always sorts last. <=keep total."""
+    if len(roles) <= keep:
+        return roles
+    scored = _score_roles(roles, jdkw)
+    forced = [t for t in scored if t[2]]
+    rest = sorted([t for t in scored if not t[2]], key=lambda t: (-t[1], -t[3]))
+    # Detailed set reserves one slot for Earlier career; the early roles it leaves
+    # out (relative to that SAME top-(keep-1) set) are what the summary collapses.
+    detailed = forced + rest[:max(0, (keep - 1) - len(forced))]
+    core_ids = {id(t[0]) for t in detailed}
+    early_dropped = [t[0] for t in scored if id(t[0]) not in core_ids and _is_early(t[0])]
+    ec = _earlier_career(early_dropped, language)
+    if ec:
+        result = [t[0] for t in detailed] + [ec]
+    else:
+        result = [t[0] for t in (forced + rest[:max(0, keep - len(forced))])]  # no early tail -> keep `keep` detailed
+    # reverse-chronological, Earlier career pinned last
+    return sorted(result[:keep], key=lambda r: (1 if r.get("id") == "earlier-career" else 0, -_yr(r.get("years"))))
 
 def _fit_role(role, jdkw, max_bullets=3, cap=155):
     bl = role.get("bullets") or []
@@ -823,10 +876,13 @@ def compact_jd_aware(cv, cl, jd, language="en"):
         sid, typ = s.get("id"), s.get("type")
         if typ == "experience" and isinstance(s.get("roles"), list):
             n0 = len(s["roles"])
-            roles = _select_roles(_merge_roles(s["roles"]), jdkw, keep=6)
-            for r in roles: _fit_role(r, jdkw, max_bullets=3, cap=155)
+            roles = _select_and_summarize(_merge_roles(s["roles"]), jdkw, keep=6, language=language)
+            for r in roles:
+                if r.get("id") != "earlier-career":            # keep the summary compact, verbatim
+                    _fit_role(r, jdkw, max_bullets=3, cap=155)
             s["roles"] = roles
-            cut.append(f"experience {n0}->{len(roles)} roles (merged + JD-ranked, <=3 bullets + result)")
+            has_ec = any(r.get("id") == "earlier-career" for r in roles)
+            cut.append(f"experience {n0}->{len(roles)} roles (merged + JD-ranked{', +Earlier career' if has_ec else ''}, <=3 bullets + result)")
         elif sid == "outcomes" and isinstance(s.get("items"), list) and len(s["items"]) > 4:
             s["items"] = s["items"][:4]; cut.append("outcomes ->4")
         elif sid == "core_comp" and isinstance(s.get("rows"), list) and len(s["rows"]) > 6:

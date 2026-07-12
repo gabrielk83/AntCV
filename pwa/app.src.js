@@ -18229,6 +18229,11 @@
                           // language on a zh/es export. Walk each item's b (lead label),
                           // t (content) and bullets, plus a group label if present —
                           // mirrors the labeled_list/bullets shapes already handled.
+                          // TRANSLATE-RICHBLOCK-CONTENT-001 (owner 2026-07-12): a
+                          // rich_block can carry its prose in a BARE content field (the
+                          // generated PROFILE does) — items-only collection left it in
+                          // the source language on every translate pass.
+                          if ("rich_block" === e.type) n(["content"], e.content);
                           if ("rich_block" === e.type)
                             (e.items || []).forEach((it, i) => {
                               if (it && "object" == typeof it) {
@@ -18366,8 +18371,18 @@
                             });
                           if ("spec_block" === t.id) continue;
                           if ("name_block" === t.id && !_isWide) continue;
-                          for (const r of n(t))
+                          for (const r of n(t)) {
+                            // TRANSLATE-ROLE-ID-APPLY-001 (owner 2026-07-12): tag role
+                            // paths with the role's stable id — the async apply runs
+                            // minutes later and normalize/dedupe reorder or drop roles
+                            // mid-flight, so index-addressed writes landed on the wrong
+                            // role (or were skipped) and experience stayed untranslated.
+                            if (Array.isArray(r.path) && "roles" === r.path[0]) {
+                              const __rr = (t.roles || [])[r.path[1]];
+                              if (__rr && null != __rr.id) r.rid = String(__rr.id);
+                            }
                             o.push({ doc: _d, sid: t.id, ...r });
+                          }
                         }
                       const r = [];
                       // LANG-TRANSLATE-RENDER-SOURCES-001: collect the SUBTITLE and SLOGAN
@@ -18628,7 +18643,16 @@
                             }
                             const r = t[e.doc],
                               a = r.findIndex((t) => t.id === e.sid);
-                            a < 0 || (r[a] = u(r[a], e.path, _final));
+                            if (a < 0) return;
+                            // TRANSLATE-ROLE-ID-APPLY-001: re-resolve the role index by
+                            // its stable id; skip (never mis-apply) if the role vanished.
+                            let __p = e.path;
+                            if (null != e.rid && "roles" === __p[0]) {
+                              const __ri = (r[a].roles || []).findIndex((x) => x && String(x.id) === String(e.rid));
+                              if (__ri < 0) return;
+                              if (__ri !== __p[1]) __p = ["roles", __ri, ...__p.slice(2)];
+                            }
+                            r[a] = u(r[a], __p, _final);
                           }),
                           t
                         );

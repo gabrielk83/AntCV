@@ -689,15 +689,20 @@ export function buildPayload({
       if (!cvRole || /^(application|ansøgning)\s*:/i.test(stored)) return stored;
       const cvCo = (meta.company || '').trim();
       const isDA2 = (language === 'da');
-      const coLabel = cvCo && !/^(unsolicited|open application|n\/a)$/i.test(cvCo) ? cvCo : (isDA2 ? 'Uopfordret' : 'Unsolicited');
-      return (isDA2 ? 'Ansøgning: ' : 'Application: ') + cvRole + ' \u2014 ' + coLabel;
+      // SUBTITLE-ZH-001 (owner 2026-07-12): zh header furniture: 申请: prefix +
+      // 主动申请 as the unsolicited label (UNSOL-PILLAR-LANG-001's zh variant),
+      // so a Chinese CV band carries no English furniture.
+      const isZH2 = (language === 'zh');
+      const coLabel = cvCo && !/^(unsolicited|open application|n\/a)$/i.test(cvCo) ? cvCo : (isDA2 ? 'Uopfordret' : (isZH2 ? '主动申请' : 'Unsolicited'));
+      return (isDA2 ? 'Ansøgning: ' : (isZH2 ? '申请: ' : 'Application: ')) + cvRole + ' \u2014 ' + coLabel;
     }
     const role = stripFounder((meta.role || '').trim());
     const company = (meta.company || '').trim();
     const isDA = (language === 'da');
-    const prefix = isDA ? 'Ansøgning: ' : 'Application: ';
+    const isZH = (language === 'zh');   // SUBTITLE-ZH-001
+    const prefix = isDA ? 'Ansøgning: ' : (isZH ? '申请: ' : 'Application: ');
     if (!role && !company) {
-      return prefix + (isDA ? '[rolle og virksomhed]' : '[role and company]');
+      return prefix + (isDA ? '[rolle og virksomhed]' : (isZH ? '[职位与公司]' : '[role and company]'));
     }
     const sep = (role && company) ? ' \u2014 ' : '';
     return `${prefix}${role}${sep}${company}`;
@@ -769,15 +774,45 @@ export function buildPayload({
       // v1.40.142 — pass through photoPosition so worker v1.14.0+ can
       // place the photo correctly. Read from localStorage with
       // tolerant unwrapping (some app.js versions JSON-wrap the value).
+      // PHOTO-ZH-ID-STYLE-001 (owner 2026-07-12): China-market (zh) exports
+      // default to a SMALL ID-style photo at the TOP-RIGHT (Chinese CV
+      // convention), not the Nordic sidebar/bridge medallion. 'main-right' is
+      // the top-right placement the worker renders >=105px (a 115px float,
+      // square text-wrap, tight 4px/7.5px air) — 'header-right' is a fixed
+      // 82px, below the owner's 105px floor. DEFAULT only — an explicitly
+      // stored localStorage photoPosition still wins.
       ...(typeof readPhotoPosition === 'function'
-        ? { photoPosition: readPhotoPosition() }
+        ? { photoPosition: (function () {
+            var v = readPhotoPosition();
+            if (language === 'zh') {
+              try { if (!localStorage.getItem('photoPosition')) v = 'main-right'; } catch (_) {}
+            }
+            return v;
+          })() }
         : {}),
       // v1.50.56 — photo shape for worker-side picture geometry. Worker
       // v1.15+ maps this to a:prstGeom prst (ellipse/roundRect/rect/
       // hexagon/pentagon). Older workers ignore the field and keep the
       // legacy circle behaviour.
+      // PHOTO-ZH-ID-STYLE-001 (owner 2026-07-12): zh exports default the
+      // geometry to SQUARE (rect prstGeom — the pipeline's photo box is
+      // square, so a true 一寸 portrait ratio is not renderable worker-side).
+      // An explicit personalInfo.photoShape still wins; the package default
+      // (usually circle) no longer decides a zh export.
       ...(typeof readPhotoShape === 'function'
-        ? { photoShape: readPhotoShape() }
+        ? { photoShape: (function () {
+            var v = readPhotoShape();
+            if (language === 'zh') {
+              try {
+                var piRaw = localStorage.getItem('personalInfo');
+                var piObj = piRaw ? JSON.parse(piRaw) : {};
+                var ex = piObj && typeof piObj.photoShape === 'string' ? piObj.photoShape.trim().toLowerCase() : '';
+                var OK = ['circle', 'rounded', 'rounded-square', 'square', 'hexagon', 'pentagon'];
+                if (OK.indexOf(ex) === -1) v = 'square';
+              } catch (_) { v = 'square'; }
+            }
+            return v;
+          })() }
         : {}),
       // 1.50.368 / worker 1.14.51 — bridge mode forwards the EFFECTIVE
       // medallion diameter (slider px × the native 1.3 bridge scale, same
@@ -792,6 +827,13 @@ export function buildPayload({
           let raw = localStorage.getItem('photoSize');
           let n = Number(typeof raw === 'string' ? raw.replace(/["']/g, '') : raw);
           if (!Number.isFinite(n) || n < 60 || n > 220) n = 120;
+          // PHOTO-ZH-ID-STYLE-001: zh default diameter 105px (owner floor —
+          // "105 is the smallest reasonable"). Default only: an explicitly
+          // stored photoSize still wins. (The worker currently renders the
+          // main-left/right float at a fixed 115px and header-left/right at
+          // 82px regardless; this forward matters for sidebar/bridge and any
+          // future worker that honours photoSizePx everywhere.)
+          if (language === 'zh' && !raw) n = 105;
           if (pos === 'band-overlap') n = Math.min(220, Math.round(1.3 * n));
           return { photoSizePx: n };
         } catch (_) { return {}; }
@@ -842,7 +884,11 @@ export function buildPayload({
           // standing line. Forward the slogan = the override OR the INCOMING meta.subtitle (the real
           // standing / role-smart line, e.g. "Processes • Products • People"), so it never falls back
           // to the app label.
-          const ov = String(localStorage.getItem('antcv:clSlogan') || '').trim();
+          let ov = String(localStorage.getItem('antcv:clSlogan') || '').trim();
+          // CL-SLOGAN-ZH-001 (owner 2026-07-12): on a zh export a stored
+          // Latin-only slogan (e.g. the Danish standing line) must not beat
+          // the app's own Chinese meta.cl_slogan. CJK-carrying overrides win.
+          if (language === 'zh' && ov && !/[一-鿿]/.test(ov)) ov = '';
           // SLOGAN-SMART-STATEMENT-001 (owner 2026-07-04): on a TARGETED app the
           // chain is override -> the gen's meta.cl_slogan (the smart statement) ->
           // NOTHING (slogan_hidden, so the WORKER's own subtitle fallback never
@@ -870,7 +916,12 @@ export function buildPayload({
         try {
           if (doc !== 'cl') return {};
           const out = {};
-          const ov = String(localStorage.getItem('antcv:clClosing') || '').trim();
+          let ov = String(localStorage.getItem('antcv:clClosing') || '').trim();
+          // CL-CLOSING-ZH-001 (owner 2026-07-12): a zh CL must end 此致敬礼
+          // style. A stored Latin-only closing (the EN/Nordic default "At your
+          // service,") would override the worker's zh default; on a zh export
+          // only a CJK-carrying closing is forwarded.
+          if (language === 'zh' && ov && !/[一-鿿]/.test(ov)) ov = '';
           if (ov) out.cl_closing = ov;
           const al = String(localStorage.getItem('antcv:clClosingAlign') || 'center').replace(/["']/g, '').toLowerCase();
           out.cl_closing_align = (al === 'left' || al === 'right' || al === 'center') ? al : 'center';
@@ -883,7 +934,13 @@ export function buildPayload({
         try {
           if (doc !== 'cl') return {};
           const out = {};
-          const ov = String(localStorage.getItem('antcv:clSignName') || '').trim();
+          let ov = String(localStorage.getItem('antcv:clSignName') || '').trim();
+          // CL-SIGNNAME-ZH-001 (owner 2026-07-12): the babel layer maintains a
+          // per-language sign name (antcv:clSignName_zh = 加百列). On a zh
+          // export it beats the Latin default so the sign-off is Chinese.
+          if (language === 'zh') {
+            try { const zv = String(localStorage.getItem('antcv:clSignName_zh') || '').trim(); if (zv) ov = zv; } catch (_) {}
+          }
           if (ov) out.cl_sign_name = ov;
           const al = String(localStorage.getItem('antcv:clSignNameAlign') || 'center').replace(/["']/g, '').toLowerCase();
           out.cl_sign_name_align = (al === 'left' || al === 'right' || al === 'center') ? al : 'center';

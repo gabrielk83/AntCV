@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.370-top5-refill-research';
+const CACHE = 'antcv-1.51.371-zh-photo-square';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

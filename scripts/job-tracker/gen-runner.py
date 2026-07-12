@@ -260,7 +260,11 @@ def guess_category(role, jd):
     # mis-routed to research_phd / data_analytics (the 2026-07-12 defect: NKT
     # 'Optical Engineer II' persisted as research_phd, 'Senior Process Engineer'
     # as data_analytics). The title decides; the JD body only breaks ties.
-    if rhas("product manager", "product owner", "product / project", "produkt"): return "product_management"
+    # PM / PO titles win FIRST — 'Service Excellence PM' and 'Technical BA /
+    # Proxy PO' are product roles, so they must beat the 'excellence'/'BA' rules
+    # below that would otherwise catch their other title tokens.
+    if rhas("product manager", "product owner", "proxy po", "product / project", "produkt",
+            " po ", "po,", " pm", "pm,", "pm "): return "product_management"
     if rhas("project manager", "programme manager", "program manager", "project steering", "head of project", "projektleder"): return "program_management"
     if rhas("data scientist", "data analyst", "data engineer", "analytics engineer", "business intelligence"): return "data_analytics"
     if rhas("scientist", "phd", "postdoc", "researcher"): return "research_phd"
@@ -268,6 +272,11 @@ def guess_category(role, jd):
     if rhas("manufacturing", "operations", "supply"): return "operations"
     # quality/audit/regulatory titles are operations even when they say 'engineer'
     if rhas("quality", "auditor", "audit", "regulatory", "compliance"): return "operations"
+    if rhas("business excellence", "process excellence", "service excellence", "lean", "six sigma"): return "operations"
+    # business/technical analyst titles are consulting, NOT engineering — must be
+    # decided by the title before the generic 'system'/'engineer' fallback below,
+    # or a BA JD that mentions 'system' mis-routes to engineering_hardware.
+    if rhas("business analyst", "ba -", " ba ", "ba,", "reinsurance", "consultant", "advisor"): return "consulting"
     if rhas("optical", "optics", "photonic", "engineer", "hardware", "system", "r&d"): return "engineering_hardware"
     # 2) Fallback to combined text for whatever the title did not decide.
     if has("product manager", "product owner", "senior pm", " pm,"): return "product_management"

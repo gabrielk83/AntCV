@@ -1031,6 +1031,15 @@
       if (!r || ph(r)) return false;
       var t = norm(r.title || r.role);
       if (!t) return false;                           // unnamed PI slot -> skip
+      // ROLE-COVERS-001 (gen-runner merged / 'Earlier career' entries): such an
+      // entry declares the source kernel-role ids it covers via __covers, so its
+      // constituents are ALREADY represented and must NOT be re-added (the year
+      // span differs from the merged entry, so _samePosition alone misses them —
+      // the 6-role compaction was doubling back to 13 on open). Owner option (b).
+      var rid = r.id != null ? String(r.id) : '';
+      if (rid && roles.some(function (s) {
+        return s && Array.isArray(s.__covers) && s.__covers.map(String).indexOf(rid) >= 0;
+      })) return false;
       return !roles.some(function (s) { return s && _samePosition(s, r); });
     }).map(function (r) {
       var o = {}; KEEP.forEach(function (k) { if (r[k] !== undefined) o[k] = r[k]; });

@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.361-analysis-on-open';
+const CACHE = 'antcv-1.51.362-role-covers';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

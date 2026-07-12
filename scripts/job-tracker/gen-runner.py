@@ -757,6 +757,10 @@ def _merge_roles(roles):
                 if k not in seen: seen.add(k); bl.append(b)
         head["bullets"] = bl
         head["results"] = next((p.get("results") for p in ps if p.get("results")), None)
+        # Declare the source kernel-role ids this merged entry covers, so the
+        # app's role backfill/dedup recognises it and does NOT re-add the
+        # constituents (ROLE-DOUBLING fix, option b).
+        head["__covers"] = [p.get("id") for p in present if p.get("id")]
         first_id = next(r.get("id") for r in roles if r.get("id") in ids)
         for r in present:
             clusters[r.get("id")] = (first_id, head if r.get("id") == first_id else None)
@@ -809,7 +813,10 @@ def _earlier_career(dropped, language="en"):
         bullets.append(_cap_line(line + (f" - {desc}" if desc else ""), 150))
     return {"id": "earlier-career", "title": _EC_TITLE.get(language, _EC_TITLE["en"]),
             "company": "", "location": "", "years": span, "isCurrent": False, "on": True,
-            "bullets": bullets, "results": None}
+            "bullets": bullets, "results": None,
+            # source kernel-role ids this summary covers, so the app's role
+            # backfill does not re-add them (ROLE-DOUBLING fix, option b).
+            "__covers": [r.get("id") for r in real if r.get("id")]}
 
 def _is_early(r):
     """A genuinely-early role: not current and ended >=~10y ago (<=2015). A

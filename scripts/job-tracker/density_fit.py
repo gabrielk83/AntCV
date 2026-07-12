@@ -443,9 +443,11 @@ def fit_density(cv, cl, pi, style_config, meta, language, doc="cv",
         rep, payload = _measure(cv, cl)
         if rep is None:
             break
-        key = (rep["rewritable_runts"], rep["runt_count"], abs(rep["max_sidebar_gap"]))
-        bkey = (best[2]["rewritable_runts"], best[2]["runt_count"], abs(best[2]["max_sidebar_gap"]))
-        if key < bkey:
+        # page budget dominates: a density gain that adds a page is a loss
+        def _key(rp):
+            return (rp["pages"] > page_budget if page_budget else False,
+                    rp["rewritable_runts"], rp["runt_count"], abs(rp["max_sidebar_gap"]))
+        if _key(rep) < _key(best[2]):
             best = (copy.deepcopy(cv), copy.deepcopy(cl), rep)
     final_cv, final_cl, after = best
     log.append(f"result: runts {before['rewritable_runts']} -> {after['rewritable_runts']} "

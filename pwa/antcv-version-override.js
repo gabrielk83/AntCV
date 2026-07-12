@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.374-zh-name-photo';
+  const TARGET_VERSION = '1.51.375-width-hints';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.374-zh-name-photo',
     '1.51.373-cl-identity-lang',
     '1.51.372-askai-sse',
     '1.51.371-zh-photo-square',

@@ -69,7 +69,7 @@
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.40.136';
+  const SCRIPT_VERSION = '1.51.375';
   const STORAGE_KEY = 'antcv:bullet-targets';
   const STYLE_ID = 'antcv-bullet-targets-styles';
   const STRIP_MARKER = 'data-antcv-bullet-target-strip';
@@ -711,7 +711,10 @@
           const opts = args[1] || (args[0] && args[0].method ? args[0] : null);
           const bodyText = readStringBody(opts);
           if (bodyText) {
-            const modified = maybeInjectIntoBody(bodyText);
+            // SHIP 3 first (width calibration), SHIP 2 second (per-bullet
+            // locks) — both are append-only to the same system prompt.
+            const widthMod = maybeInjectWidthHint(bodyText);
+            const modified = maybeInjectIntoBody(widthMod || bodyText) || widthMod;
             if (modified) {
               // Build a fresh opts object so we don't mutate the
               // caller's reference. Preserve everything else.
@@ -744,9 +747,147 @@
     window.fetch = wrapped;
   }
 
+  // ════════════════════════════════════════════════════════════════
+  // SHIP 3 — WIDTH-TARGET-HINTS-001 (GOLD-TARGET-LAYOUT-DENSITY-001,
+  // v1.51.375)
+  // ════════════════════════════════════════════════════════════════
+  //
+  // The DIMENSION-AWARE BULLET LENGTH blocks in app.js's enrich prompts
+  // hardcode "Calibri 10.5pt ≈ 64-68 chars per line" — blind to the
+  // CURRENT sidebar ratio, indents, and body font, so bullets tuned to
+  // those numbers land as 2-3-word runt lines whenever the layout
+  // differs. This ship measures the real chars-per-line for the live
+  // main column (same DXA model as antcv-orphan-export-preflight
+  // mirrors from the docx-worker) and appends a WIDTH CALIBRATION
+  // block that overrides the hardcoded figures. It also fires on the
+  // Fit-it/compress prompts, which carry no width guidance at all.
+  //
+  // No app.js change: the same fetch wrapper as SHIP 2.
+
+  const WIDTH_MARKERS = [
+    'DIMENSION-AWARE BULLET LENGTH',
+    'Compress this CV/cover letter section',
+  ];
+  const WIDTH_BLOCK_TAG = 'WIDTH CALIBRATION';
+  const PAGE_W_DXA = 11906;      // A4, zero page margins (worker model)
+  const PX_PER_DXA = 1 / 15;
+  const DEFAULT_BODY_PT = 10.5;  // worker main-body default
+
+  let cplCache = { sig: null, cpl: 0 };
+
+  function readJsonLs(key, fallback) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) return fallback;
+      const v = JSON.parse(raw);
+      return v == null ? fallback : v;
+    } catch (_) { return fallback; }
+  }
+
+  function currentGeometry() {
+    const sc = readJsonLs('styleConfig', {}) || {};
+    let ratio = parseFloat(localStorage.getItem('cvSidebarRatio'));
+    if (!(ratio > 0.1 && ratio < 0.7)) ratio = 0.36;
+    const num = (v, d) => (typeof v === 'number' && isFinite(v) ? v : d);
+    return {
+      ratio: ratio,
+      mainEdgeIndent: num(sc.mainEdgeIndent, 14),   // px
+      bulletIndent: num(sc.bulletIndent, 20),       // px
+      seamGap: num(sc.seamGap, 6),                  // px
+      font: (typeof sc.mainBodyFont === 'string' && sc.mainBodyFont) || 'Calibri',
+      pt: DEFAULT_BODY_PT,
+    };
+  }
+
+  // chars-per-line for a main-column bullet at the live geometry.
+  // Width mirrors the worker: cellW = PAGE_W − sidebar − 2·edgeIndent −
+  // seam; bullet text width = cellW − bulletIndent. Char width comes
+  // from a canvas measurement of CV-like prose at the export font size
+  // (pt → px at 4/3, the same conversion the export preflight uses).
+  function measureCharsPerLine() {
+    const g = currentGeometry();
+    const sig = [g.ratio, g.mainEdgeIndent, g.bulletIndent, g.seamGap, g.font, g.pt].join('|');
+    if (cplCache.sig === sig && cplCache.cpl > 0) return cplCache.cpl;
+    let avg = 0;
+    try {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return 0;
+      ctx.font = (g.pt * 4 / 3) + 'px "' + g.font + '", Calibri, sans-serif';
+      const sample = 'Design and characterise low-light optical systems, supplier ' +
+                     'qualification plans and measured validation procedures for production.';
+      avg = ctx.measureText(sample).width / sample.length;
+    } catch (_) { return 0; }
+    if (!(avg > 0)) return 0;
+    const cellWpx = (PAGE_W_DXA - Math.round(PAGE_W_DXA * g.ratio)
+                     - 2 * g.mainEdgeIndent * 15 - g.seamGap * 15) * PX_PER_DXA;
+    const bulletWpx = cellWpx - g.bulletIndent;
+    const cpl = Math.round(bulletWpx / avg);
+    if (!(cpl > 20 && cpl < 200)) return 0;
+    cplCache = { sig: sig, cpl: cpl };
+    return cpl;
+  }
+
+  function buildWidthBlock(cpl) {
+    const g = currentGeometry();
+    const b = (linesMinusOne, frac) => Math.round((linesMinusOne + frac) * cpl);
+    const r = {
+      l1: [b(0, 0.70), b(0, 0.97)],
+      l2: [b(1, 0.70), b(1, 0.97)],
+      l3: [b(2, 0.70), b(2, 0.97)],
+    };
+    return '\n\n' + WIDTH_BLOCK_TAG + ' (measured from the CURRENT column width and body font — ' +
+      'these numbers OVERRIDE any chars-per-line figures above): one full rendered line here = ' +
+      cpl + ' chars (' + g.font + ' ' + g.pt + 'pt, main column at the live sidebar ratio ' + g.ratio + '). ' +
+      'Every bullet/paragraph must END ON A FULL LINE: its last line must reach at least 60% of ' +
+      'the column width. Valid total lengths: 1-LINE = ' + r.l1[0] + '-' + r.l1[1] + ' chars; ' +
+      '2-LINE = ' + r.l2[0] + '-' + r.l2[1] + ' chars; 3-LINE = ' + r.l3[0] + '-' + r.l3[1] + ' chars. ' +
+      'FORBIDDEN dead zones: ' + (r.l1[1] + 3) + '-' + (r.l2[0] - 3) + ' and ' +
+      (r.l2[1] + 3) + '-' + (r.l3[0] - 3) + ' chars — those wrap into a short dangling last line.';
+  }
+
+  // Append the calibration block to the request's system prompt. Handles
+  // both prompt carriers: an OpenAI-style {role:"system"} message and an
+  // Anthropic-style top-level `system` string (the compress cascade uses
+  // provider-specific bodies). Returns the modified body string or null.
+  function maybeInjectWidthHint(bodyText) {
+    if (typeof bodyText !== 'string') return null;
+    let marked = false;
+    for (const m of WIDTH_MARKERS) {
+      if (bodyText.indexOf(m) >= 0) { marked = true; break; }
+    }
+    if (!marked || bodyText.indexOf(WIDTH_BLOCK_TAG) >= 0) return null;
+    const cpl = measureCharsPerLine();
+    if (!cpl) return null;
+    let body;
+    try { body = JSON.parse(bodyText); } catch (_) { return null; }
+    if (!body || typeof body !== 'object') return null;
+    const block = buildWidthBlock(cpl);
+    if (typeof body.system === 'string' && body.system) {
+      body.system += block;
+      return JSON.stringify(body);
+    }
+    if (Array.isArray(body.messages)) {
+      const si = body.messages.findIndex(m => m && m.role === 'system' && typeof m.content === 'string');
+      if (si >= 0) {
+        body.messages[si] = { ...body.messages[si], content: body.messages[si].content + block };
+        return JSON.stringify(body);
+      }
+      // no system carrier: the marker lives in a user turn (compress) —
+      // append there so the calibration still reaches the model.
+      const ui = body.messages.findIndex(m => m && m.role === 'user' &&
+        typeof m.content === 'string' && WIDTH_MARKERS.some(t => m.content.indexOf(t) >= 0));
+      if (ui >= 0) {
+        body.messages[ui] = { ...body.messages[ui], content: body.messages[ui].content + block };
+        return JSON.stringify(body);
+      }
+    }
+    return null;
+  }
+
   function bootSidecar() {
     init();                  // styles + panel strip injection (SHIP 1)
-    instrumentFetchOnce();   // fetch interceptor (SHIP 2)
+    instrumentFetchOnce();   // fetch interceptor (SHIP 2 + SHIP 3)
   }
 
   if (document.readyState === 'loading') {
@@ -775,5 +916,10 @@
     _maybeInjectIntoBody: maybeInjectIntoBody,
     _isLlmProxyUrl: isLlmProxyUrl,
     _instrumentFetchOnce: instrumentFetchOnce,
+    // SHIP 3 internals exposed for tests
+    _currentGeometry: currentGeometry,
+    _measureCharsPerLine: measureCharsPerLine,
+    _buildWidthBlock: buildWidthBlock,
+    _maybeInjectWidthHint: maybeInjectWidthHint,
   };
 })();

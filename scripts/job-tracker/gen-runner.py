@@ -1378,6 +1378,20 @@ def persist_application(doc, r, res, category, language, kernel=None, measure=Fa
                 if pages is not None:
                     tail = (" [" + "; ".join(steps) + "]") if steps else ""
                     print(f"   [measure] CV renders {pages} page(s) (budget {max_pages}){tail}")
+                # GOLD-TARGET-LAYOUT-DENSITY-001: after the page budget settles,
+                # drive the SHIPPING content to line density — no runt last
+                # lines (<60% fill). Runs on what fit_to_pages kept, so no LLM
+                # work is wasted on content the budget then drops; its own
+                # page-budget guard never trades a page for a runt.
+                if pages is not None:
+                    try:
+                        import density_fit
+                        cv2, cl2, _drep = density_fit.fit_density(
+                            cv, cl, _pi_from_kernel(kernel), _export_style_config(),
+                            _meta_m, language, page_budget=max_pages)
+                        cv[:], cl[:] = cv2, cl2
+                    except Exception as e:
+                        print(f"   [density] skipped ({str(e)[:80]})")
         print(f"   [skeleton] overlaid: cv={len(cv)} cl={len(cl)} sections (full-fidelity)")
     else:
         print("   [skeleton] MISSING ~/.antcv/cv_skeleton.json — falling back to flat text blocks (low fidelity)")

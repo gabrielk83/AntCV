@@ -42,7 +42,15 @@ const TIERS: Record<string, Tier> = {
   D9D9D9: { key: '—', label: 'Archive', accent: '#777777', tint: '#D0D0D0', desc: 'Closed / archived' },
 };
 const tierOf = (band: string): Tier => TIERS[(band || '').toUpperCase()] || { key: '', label: '', accent: '#999', tint: '#f3f3f3', desc: '' };
-const isTop5 = (r: Row) => (Number(r[0]) || 99) <= 5;
+// TOP5-REFILL-001: a dropped/closed/rejected row must LEAVE the Top-5 panel and
+// the next-best live row (by rank) takes its place, so the panel always shows 5
+// live candidates. "Closed" = the archive band, an archived/rejected/withdrawn
+// tracked status, or a "Dropped (…)" flag written by dropFromTop5. Rank alone
+// (the old `rank <= 5`) kept dropped rows pinned in the panel forever.
+const isClosedRow = (r: Row): boolean =>
+  String(r[12] || '').toUpperCase() === 'D9D9D9'
+  || /rejected|archive|closed|withdrawn/i.test(String(r[8] || ''))
+  || /^dropped\b/i.test(String(r[10] || ''));
 
 // Extract plain text from an uploaded file. Plain-text reads directly; PDFs and
 // images/scans go through the app's multi-tier extractor (window.AntcvExtractPDFText:
@@ -74,6 +82,38 @@ function signalsBlockOf(d: TrackerDoc | null, uk: string): string {
     if (f && f.text) parts.push('--- attached signal material: ' + (f.name || 'file') + ' ---\n' + f.text);
   }
   return parts.join('\n');
+}
+
+// RESEARCH-MERGE-001: JD-sourced ROLE INTEL + web-sourced COMPANY RESEARCH go
+// to generation as ONE coherent research block. The JD intel leads (it is the
+// authoritative source for what the role needs); the web brief follows with any
+// line that merely restates a JD-intel fact removed (verbatim containment or
+// ≥80% token overlap), so the generator reads one non-duplicating structure
+// instead of two blocks repeating each other. The inner labels stay ("ROLE
+// INTEL (from the JD)" / "COMPANY RESEARCH (from the web)") — prompts and the
+// nightly runner know them. Input isolation holds: this block lives in
+// supporting_context only, NEVER merged into the JD block.
+function mergeResearchBlock(roleIntel: string, webBrief: string): string {
+  const intel = (roleIntel || '').trim();
+  let web = (webBrief || '').trim();
+  if (!intel && !web) return '';
+  if (intel && web) {
+    const norm = (s: string) => s.toLowerCase().replace(/[^a-zà-ú0-9]+/gi, ' ').replace(/\s+/g, ' ').trim();
+    const intelNorm = ' ' + norm(intel) + ' ';
+    const intelWords = new Set(norm(intel).split(' ').filter((w) => w.length > 3));
+    web = web.split('\n').filter((raw) => {
+      const n = norm(raw.replace(/^[-•▸*]\s*/, '').replace(/^(HOLISTIC|SPECIFIC):?\s*/i, ''));
+      if (!n || n.length < 24) return true;                 // keep labels + short lines
+      if (intelNorm.includes(' ' + n + ' ')) return false;  // verbatim repeat of JD intel
+      const ws = n.split(' ').filter((w) => w.length > 3);
+      return !(ws.length >= 6 && ws.filter((w) => intelWords.has(w)).length / ws.length >= 0.8); // near-repeat
+    }).join('\n').replace(/\n{3,}/g, '\n\n').trim();
+    if (!web.replace(/^\s*(HOLISTIC|SPECIFIC):?\s*$/gim, '').trim()) web = ''; // dedup left only scaffolding
+  }
+  let out = '\n\nROLE AND COMPANY RESEARCH (one merged, non-duplicating brief — for tailoring the cover-letter WHY and the CV emphasis; EMPLOYER context, NOT candidate facts; each fact appears once; verify before asserting anything specific):';
+  if (intel) out += '\nROLE INTEL (from the JD):\n' + intel;
+  if (web) out += '\nCOMPANY RESEARCH (from the web):\n' + web;
+  return out;
 }
 
 export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
@@ -122,7 +162,10 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     r.sort((a, b) => (Number(a[0]) || 99) - (Number(b[0]) || 99));
     return r;
   }, [doc]);
-  const top5 = useMemo(() => rows.filter(isTop5).slice(0, 5), [rows]);
+  // TOP5-REFILL-001: the 5 best LIVE rows (rows are rank-sorted above). Closed/
+  // dropped rows fall out and the next rank auto-promotes into the panel.
+  const top5 = useMemo(() => rows.filter((r) => !isClosedRow(r)).slice(0, 5), [rows]);
+  const top5Keys = useMemo(() => new Set(top5.map((r) => r[11])), [top5]);
 
   function editRow(uk: string, idx: number, value: string): void {
     if (!doc) return;
@@ -133,8 +176,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
   // quality (they're the priority applications), the rest to Quick.
   const genOf = (uk: string) => {
     const g = (doc?.gen || {})[uk]; if (g) return g;
-    const r = (doc?.rows || []).find((x) => x[11] === uk);
-    return r && (Number(r[0]) || 99) <= 5 ? 'high' : 'quick';
+    return top5Keys.has(uk) ? 'high' : 'quick'; // live Top-5 (TOP5-REFILL-001), not raw rank
   };
   function setGen(uk: string, q: string): void { if (!doc) return; setDocState({ ...doc, gen: { ...(doc.gen || {}), [uk]: q } }); setDirty(true); }
   const brandOf = (uk: string) => !!(doc?.brandfit || {})[uk];
@@ -303,17 +345,21 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
   // generation, not just the JD-sourced ROLE INTEL. Best-effort: returns '' on any
   // failure and never blocks Open. Employer context only — never candidate facts.
   async function webCompanyBrief(company: string, role: string): Promise<string> {
+    let items: { title: string; link: string; snippet: string }[] = [];
+    try { items = await research(company + ' ' + role + ' company mission products strategy recent', 5); } catch { /* research() already degrades to [] */ }
+    if (!items.length) return '';
+    const src = items.map((it) => '- ' + it.title + ': ' + (it.snippet || '') + ' (' + it.link + ')').join('\n');
+    // ASKAI-404-001 lesson: never let a failed DISTIL step throw away found
+    // research — if the LLM hop fails, deliver the raw findings instead of ''.
     try {
-      const items = await research(company + ' ' + role + ' company mission products strategy recent', 5);
-      if (!items.length) return '';
-      const src = items.map((it) => '- ' + it.title + ': ' + (it.snippet || '') + ' (' + it.link + ')').join('\n');
       const sys = 'You research a target EMPLOYER from web excerpts for a job application. Output a COMPACT brief in EXACTLY this format, nothing else:\n'
         + 'HOLISTIC: <2-3 lines — what the company is/does, its market, direction/strategy, culture signals; only what the excerpts support>\n'
         + 'SPECIFIC:\n- <2-4 bullets of concrete, current needs/signals relevant to THIS role — products, tech, hiring drivers, recent moves>\n'
         + 'Use ONLY facts present in the excerpts; if they are thin, say so plainly. No candidate content. Never invent facts.';
       const out = await askAI('Company: ' + company + '\nRole: ' + role + '\n\nWEB EXCERPTS:\n' + src, sys, 500);
-      return (out && /HOLISTIC|SPECIFIC/i.test(out)) ? out.trim() : '';
-    } catch { return ''; }
+      if (out && /HOLISTIC|SPECIFIC/i.test(out)) return out.trim();
+    } catch { /* fall through to raw findings */ }
+    return 'HOLISTIC: (raw web findings — the AI distil step was unavailable; treat as leads and verify before use)\nSPECIFIC:\n' + src;
   }
 
   // Re-run employer web research for one row and cache it (Top-5 card ↻ button).
@@ -413,8 +459,9 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
       const targetFacts = tf.length ? '\n\nTARGET FACTS (calibration only — use to set altitude, emphasis and tone; NEVER copy verbatim into the CV or cover letter, and never state the salary figure or the tier):\n• ' + tf.join('\n• ') : '';
       const supporting = 'TARGET-ROLE GUIDELINES (Dream Envelope):\n' + envText
         + targetFacts
-        + '\n\nROLE INTEL (from the JD):\n' + ((d.support || {})[uk] || '')
-        + (webBrief ? '\n\nCOMPANY RESEARCH (from the web — holistic context + specific needs, for tailoring the cover-letter WHY and the CV emphasis; this is EMPLOYER context, NOT candidate facts; verify before asserting anything specific):\n' + webBrief : '')
+        // RESEARCH-MERGE-001: one merged, deduped research block (JD role intel
+        // + web company research) instead of two blocks restating each other.
+        + mergeResearchBlock((d.support || {})[uk] || '', webBrief)
         + (ownerSig ? '\n\nADDITIONAL SIGNALS (owner-added):\n' + ownerSig : '')
         + ((d.brandfit || {})[uk] ? '\n\nBRAND-FIT: style the CV and cover letter to the employer\'s brand identity'
             + ((d.brand || {})[uk] && ((d.brand || {})[uk].navy || (d.brand || {})[uk].accent)
@@ -515,7 +562,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
               <thead><tr>{['#', 'Tier', 'Company', 'Role', 'Location', 'JD', 'Tracked', 'Next action', 'Flag / notes', 'Signals', 'Generate'].map((h) => <th key={h} style={th}>{h}</th>)}</tr></thead>
               <tbody>
                 {rows.map((r) => {
-                  const uk = r[11]; const t = tierOf(r[12]); const hasJd = ((doc?.jd || {})[uk] || '').length > 200; const star = isTop5(r);
+                  const uk = r[11]; const t = tierOf(r[12]); const hasJd = ((doc?.jd || {})[uk] || '').length > 200; const star = top5Keys.has(uk);
                   return (
                     <tr key={uk} style={{ background: t.tint }}>
                       <td style={{ ...cell, textAlign: 'center', fontWeight: 700, borderLeft: '4px solid ' + t.accent }}>{star ? '★' : ''}{r[0]}</td>
@@ -674,7 +721,7 @@ function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, onDrop,
   const [researching, setResearching] = useState(false);
   useEffect(() => { if (!webDirty) setWeb(rawWeb); }, [rawWeb, webDirty]);
   async function saveWebEdit(): Promise<void> { setSavingWeb(true); try { if (await onSaveWeb(uk, web)) setWebDirty(false); } finally { setSavingWeb(false); } }
-  async function doResearch(): Promise<void> { setResearching(true); try { const w = await onResearch(uk, row[1], row[2]); if (w) { setWeb(w); setWebDirty(false); } else alert('No web research found — check the proxy URL / Brave key in Settings.'); } catch (e) { alert('Research failed: ' + String((e as Error).message || e)); } finally { setResearching(false); } }
+  async function doResearch(): Promise<void> { setResearching(true); try { const w = await onResearch(uk, row[1], row[2]); if (w) { setWeb(w); setWebDirty(false); } else alert('Web search returned no results for "' + row[1] + '" — try again in a moment; if it persists, check the proxy URL and any BYOK Brave key in Settings → API Keys.'); } catch (e) { alert('Research failed: ' + String((e as Error).message || e)); } finally { setResearching(false); } }
 
   const hasJd = ((doc?.jd || {})[uk] || '').length > 200;
   const saved = doc?.artifacts?.[uk]?.application_id;

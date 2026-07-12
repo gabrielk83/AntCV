@@ -142,10 +142,14 @@ export async function setActive(applicationId: number): Promise<void> {
 }
 
 // Ask-AI (low tier): reuse the app's own LLM path — POST an Anthropic-style
-// /v1/messages to the relay (same credentialed cookie + provider routing the app
-// uses). Returns the model's text. Used to fine-tune a "What I bring" line.
+// body to the ROOT of the configured proxy, exactly like the vanilla app does.
+// ASKAI-404-001: the relay's LLM endpoint is POST / (path === '/'); it 404s
+// /v1/messages, which silently killed every island AI call (webCompanyBrief →
+// "No web research found", analyzeJd → empty intel, refineAll, Ask-AI chat)
+// whenever proxyBase() resolved to the relay. The cv-proxy accepts the root
+// POST too, so root works for both bases. Returns the model's text.
 export async function askAI(userText: string, system: string, maxTokens = 320): Promise<string> {
-  const res = await fetch(proxyBase() + '/v1/messages', {
+  const res = await fetch(proxyBase() + '/', {
     method: 'POST', credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: maxTokens, system, messages: [{ role: 'user', content: userText }] }),
@@ -181,8 +185,16 @@ export async function research(q: string, num = 4): Promise<{ title: string; lin
     // blank → the relay falls back to its shared BRAVE_API_KEY secret.
     let braveKey = '';
     try { braveKey = JSON.parse(localStorage.getItem('braveKey') || '""') || ''; } catch { /* */ }
-    const res = await call('/api/research', { method: 'POST', body: JSON.stringify({ q, num, ...(braveKey ? { braveKey } : {}) }) });
-    const j = await res.json().catch(() => ({}));
+    const post = (withKey: boolean) => call('/api/research', { method: 'POST', body: JSON.stringify({ q, num, ...(withKey && braveKey ? { braveKey } : {}) }) });
+    let res = await post(true);
+    let j = await res.json().catch(() => ({}));
+    // BYOK-BRAVE-FALLBACK-001: a stale/invalid user key (relay answers 502
+    // "Brave 401/422") must not blank research — retry once on the relay's
+    // shared key before giving up.
+    if (braveKey && !(j && j.ok && Array.isArray(j.items))) {
+      res = await post(false);
+      j = await res.json().catch(() => ({}));
+    }
     return (j && j.ok && Array.isArray(j.items)) ? j.items : [];
   } catch { return []; }
 }

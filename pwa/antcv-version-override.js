@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.369-kernel-autogen';
+  const TARGET_VERSION = '1.51.370-top5-refill-research';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.369-kernel-autogen',
     '1.51.368-category-recall',
     '1.51.367-i18n-conditional-da',
     '1.51.366-location-danish',

@@ -417,15 +417,35 @@ def provider_exhausted(res):
             return b[:220]
     return None
 
+# Conservative whole-word swaps for the banned buzzwords the writing belts are
+# meant to block but the cheap quick model (gpt-5-mini) still leaks. Only the
+# unambiguous, safe-to-replace ones are mapped (owner banned-words standard); a
+# semantic-heavy word is left for a human rather than mangled. Case is preserved
+# for a capitalised first letter.
+_BANNED_SWAP = {
+    "leverage": "use", "leveraging": "using", "leveraged": "used",
+    "robust": "reliable", "spearhead": "lead", "spearheaded": "led",
+    "cutting-edge": "advanced", "world-class": "leading",
+    "results-driven": "outcome-focused", "passionate": "committed",
+}
+def _swap_banned(text):
+    def repl(m):
+        w = m.group(0); low = w.lower(); sub = _BANNED_SWAP[low]
+        return sub[:1].upper() + sub[1:] if w[:1].isupper() else sub
+    for bad in _BANNED_SWAP:
+        text = re.sub(r"(?<![\w-])" + re.escape(bad) + r"(?![\w-])", repl, text, flags=re.I)
+    return text
+
 def sanitize_text(text):
-    """Deterministic last-layer scrub before a section is PERSISTED. The
-    writing belts still occasionally emit a banned em/en dash (the
-    'one layer isn't enough' class — emdash-hyphen-three-layers memory);
-    the LLM path cannot be trusted to be the only guard. Owner rule:
-    ALWAYS a plain hyphen. Collapse the spaced em/en dash to ' - '."""
+    """Deterministic last-layer scrub before a section is PERSISTED. The writing
+    belts still occasionally emit a banned em/en dash OR a banned buzzword (the
+    'one layer isn't enough' class — emdash-hyphen-three-layers memory); the LLM
+    path cannot be trusted to be the only guard. Owner rules: ALWAYS a plain
+    hyphen; never a banned buzzword."""
     if not text: return text
     t = text.replace(" — ", " - ").replace(" – ", " - ")
     t = t.replace("—", "-").replace("–", "-")
+    t = _swap_banned(t)
     return t
 
 # ── commands ───────────────────────────────────────────────────────

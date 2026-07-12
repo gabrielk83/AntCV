@@ -71,7 +71,9 @@ SECTION_POLICY = {
     "experience": "rewrite", "interests": "rewrite",
     "tools": "listedit", "regulatory": "listedit", "additional": "listedit",
     "core_comp": "verbatim",   # one-line-per-cell rule, owned by the table fitter
-    "certs": "verbatim", "education": "verbatim", "pubs": "verbatim",
+    # pubs: owner 2026-07-13 — REORDERING the elements is approved (title/
+    # authors/venue/year may shuffle; every word must survive verbatim)
+    "certs": "verbatim", "education": "verbatim", "pubs": "reorder",
     "recommendations": "verbatim", "languages": "verbatim",
     "accessibility": "verbatim",
     # CL prose sections

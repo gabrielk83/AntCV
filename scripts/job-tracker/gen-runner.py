@@ -941,7 +941,7 @@ def _fit_role(role, jdkw, max_bullets=3, cap=155):
     if res: role["results"] = _cap_line(res, cap)
     return role
 
-def _filter_sidebar_block(sec, jdkw, keep_min=4, keep_max=7):
+def _filter_sidebar_block(sec, jdkw, keep_min=4, keep_max=7, protect=()):
     items = sec.get("items") or []
     isgrp = lambda it: isinstance(it, dict) and it.get("grp")
     txt = lambda it: (it.get("b", "") + " " + it.get("t", "")) if isinstance(it, dict) else str(it)
@@ -949,6 +949,8 @@ def _filter_sidebar_block(sec, jdkw, keep_min=4, keep_max=7):
     if len(reals) <= keep_min: return 0
     ranked = sorted(reals, key=lambda x: -_rel(txt(x[1]), jdkw))
     keep = set()
+    for i, it in reals:                       # owner-pinned entries survive any cut
+        if any(p.lower() in txt(it).lower() for p in protect): keep.add(i)
     for rank, (i, it) in enumerate(ranked):
         if rank < keep_min or _rel(txt(it), jdkw) > 0: keep.add(i)
         if len(keep) >= keep_max: break
@@ -987,7 +989,14 @@ def compact_jd_aware(cv, cl, jd, language="en"):
         elif sid == "core_comp" and isinstance(s.get("rows"), list) and len(s["rows"]) > 6:
             s["rows"] = s["rows"][:6]; cut.append("core ->5")
         elif typ == "rich_block" and s.get("loc") == "sidebar" and sid in ("tools", "regulatory", "certs"):
-            removed = _filter_sidebar_block(s, jdkw)
+            # BABOK-RELEVANCE-001 (owner 2026-07-13): BABOK stays for program /
+            # requirement-heavy roles and enterprise-architect-related JDs.
+            protect = ()
+            if sid == "certs" and re.search(
+                    r"program\s+manag|programme\s+manag|requirement|enterprise\s+architect|business\s+analy",
+                    jd or "", re.I):
+                protect = ("BABOK",)
+            removed = _filter_sidebar_block(s, jdkw, protect=protect)
             if removed: cut.append(f"{sid} sidebar -{removed} JD-irrelevant")
     return cut
 

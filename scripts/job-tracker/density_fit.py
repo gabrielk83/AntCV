@@ -43,6 +43,15 @@ TRIM_MAX_CHARS = 28          # a runt line short enough to pull back determinist
 # the team joke, a work-style note — is content the standing deliverable rules
 # protect). The LLM path handles them with fact gates.
 NO_TRIM_SECTIONS = {"interests", "profile", "work_style", "accessibility"}
+# Owner-approved deterministic substitutions (2026-07-13): exact pairs only,
+# applied to a wrapped runt (any policy, incl. verbatim certs) when the saved
+# chars pull its dangling line back.
+COMPACT_SUBS = [("Uni. of Toronto", "UofToronto"),
+                ("University of Toronto", "UofToronto")]
+# Re-space length windows per section (owner 2026-07-13: the profile block may
+# move well beyond the default +-12).
+RESPACE_BAND = {"profile": (-30, 30), "work_style": (-30, 30)}
+RESPACE_DEFAULT = (-12, 15)
 LLM_MODEL = os.environ.get("ANTCV_DENSITY_MODEL", "claude-sonnet-5")
 PROXY = os.environ.get("ANTCV_PROXY", "https://cv-proxy.karp-gabriel-a.workers.dev").rstrip("/")
 # Multi-model pass (owner 2026-07-13): candidates come from TWO model families;
@@ -178,11 +187,22 @@ def _gate_candidate(it, new, language, gr):
     old = it["text"]
     delta = len(new) - len(old)
     mode = it.get("mode", "refit")
+    if mode == "reorder":
+        # pubs: order/punctuation may change, every word must survive (owner-
+        # approved reordering; token multiset equality IS the fact gate here)
+        import collections
+        if collections.Counter(MD._tok(new)) != collections.Counter(MD._tok(old)):
+            return False, "reorder changed, added, or dropped a word — reorder only"
+        if not (-8 <= delta <= 8) or new == old:
+            return False, f"reorder length drift {delta:+d} outside [-8,8]"
+        return True, ""
     if mode == "respace":
-        # paragraph-appeal fix: small re-wording either way, never past wrap
-        hi = min(15, max(0, it.get("add_wrap", 15) - 2))
-        lo = -18 if it["kind"] == "cell" else -12
-        band_ok = (lo <= delta <= (0 if it["kind"] == "cell" else hi)) and new != old
+        # paragraph-appeal fix: re-wording either way, never past wrap
+        blo, bhi = ((-18, 0) if it["kind"] == "cell"
+                    else RESPACE_BAND.get(it["sec"], RESPACE_DEFAULT))
+        hi = min(bhi, max(0, it.get("add_wrap", bhi) - 2))
+        lo = blo
+        band_ok = (lo <= delta <= hi) and new != old
         reason = f"length change {delta:+d} outside the re-space band [{lo},{hi}]"
     else:
         # grow floor = clearing the 60% runt line (add_min), not the stated
@@ -191,6 +211,18 @@ def _gate_candidate(it, new, language, gr):
         # the loop chases its tail (observed on 1-line sidebar labels).
         grow_cap = min(it["add_hi"] + 18, max(it.get("add_wrap", it["add_hi"] + 18) - 2, it["add_lo"]))
         grow_ok = it["add_lo"] >= 2 and (it.get("add_min", it["add_lo"]) - 2 <= delta <= grow_cap)
+        if grow_ok and delta > 0:
+            # TAIL RULE: added chars must land on the LAST rendered line — a
+            # mid-text insertion hits the band yet leaves the dangling line
+            # untouched (observed: profile grew an inner sentence 4 rounds
+            # running with zero fill change). The edit must start in the final
+            # 40% of the original text.
+            cp = 0
+            while cp < min(len(old), len(new)) and old[cp] == new[cp]:
+                cp += 1
+            if cp < 0.6 * len(old):
+                return False, ("the growth was inserted MID-TEXT so the short last line is "
+                               "unchanged — extend the FINAL clause / end of the text instead")
         shrink_ok = it.get("cut_lo", 0) >= 2 and \
             (-(it.get("cut_hi", 0) + 12) <= delta <= -(it.get("cut_lo", 0) - 2)) and \
             len(new) >= 0.45 * len(old) and not _ends_dangling(new, language)
@@ -220,10 +252,12 @@ def llm_refit(items, language="en", facts=""):
         "You re-fit CV/cover-letter lines so each ends on a FULL typeset line with even "
         "word spacing. STRICT RULES: never invent facts, numbers, tools, employers, or "
         "claims. When growing, draw ONLY from what the line states or from the VERIFIED "
-        "CANDIDATE FACTS block. If a budget cannot be met without inventing, return the "
-        "item's text UNCHANGED instead. When shrinking, prefer replacing words with "
-        "SHORTER SYNONYMS of identical meaning; drop no fact. For re-space items, re-word "
-        "so the justified lines break evenly (avoid one very long word forcing wide gaps). "
+        "CANDIDATE FACTS block, and EXTEND THE END of the text (the final clause) — an "
+        "insertion mid-text leaves the short last line unchanged. If a budget cannot be "
+        "met without inventing, return the item's text UNCHANGED instead. When shrinking, "
+        "prefer replacing words with SHORTER SYNONYMS of identical meaning; drop no fact. "
+        "For re-space items, re-word so the justified lines break evenly (avoid one very "
+        "long word forcing wide gaps). "
         "Keep every number, proper noun, certification code, and technical "
         f"term EXACTLY. Write in {lang_name}. Never use em or en dashes; use a hyphen or comma. "
         "Avoid: spearhead, leverage, robust, passionate, committed, cutting-edge, world-class, "
@@ -239,9 +273,15 @@ def llm_refit(items, language="en", facts=""):
         a = {"id": it["id"], "where": f"{it['sec']} {it['kind']}", "text": it["text"],
              "current_length_chars": n}
         windows = []
-        if it.get("mode") == "respace":
-            lo = -18 if it["kind"] == "cell" else -12
-            hi = 0 if it["kind"] == "cell" else min(15, max(0, it.get("add_wrap", 15) - 2))
+        if it.get("mode") == "reorder":
+            a["fix"] = ("reorder ONLY: shuffle the elements (authors / title / venue / year) "
+                        "and separators so the last line fills; every word must survive "
+                        "verbatim — nothing added, nothing dropped, nothing reworded")
+            windows.append([n - 8, n + 8])
+        elif it.get("mode") == "respace":
+            blo, bhi = ((-18, 0) if it["kind"] == "cell"
+                        else RESPACE_BAND.get(it["sec"], RESPACE_DEFAULT))
+            lo, hi = blo, min(bhi, max(0, it.get("add_wrap", bhi) - 2))
             a["fix"] = ("re-space: this block justifies with WIDE word gaps; re-word (shorter "
                         "synonyms, similar-length words) so lines break with even spacing")
             windows.append([n + lo, n + hi])
@@ -316,6 +356,8 @@ def llm_refit(items, language="en", facts=""):
     if accepted:
         by_verifier = {}
         for iid in list(accepted.keys()):
+            if by_id[iid].get("mode") == "reorder":
+                continue   # token-multiset equality is a stronger gate than the auditor
             vprov, vmodel = VERIFY_BY.get(src.get(iid, "anthropic"), ("openai", "gpt-5-mini"))
             by_verifier.setdefault((vprov, vmodel), {})[iid] = (
                 by_id[iid]["text"]
@@ -374,6 +416,42 @@ def _iter_texts(node, path=()):
             elif isinstance(v, (dict, list)):
                 yield from _iter_texts(v, path + (i,))
 
+_FIXTURE_BACKED_UP = False
+
+def write_back_fixture(old_norm, new_text):
+    """Owner-approved MILD pin-source edit (2026-07-13): when an item's payload
+    text is sourced from the export-settings fixture (antcv:outcomesGuard /
+    antcv:resultsOverride and friends) a cv_sections write is a no-op — apply
+    the SAME gated rewrite to the fixture string instead. Unique-match only,
+    whitespace/NBSP-tolerant, JSON-validated after the splice, one .bak backup
+    per run. Returns True when exactly one site changed."""
+    global _FIXTURE_BACKED_UP
+    if '"' in new_text or "\\" in new_text:
+        return False                       # never risk breaking the JSON string
+    path = MD._gen_runner()._EXPORT_SETTINGS
+    try:
+        raw = open(path, encoding="utf-8").read()
+    except Exception:
+        return False
+    pat = re.compile("[\\s ]+".join(re.escape(w) for w in old_norm.split(" ")))
+    hits = list(pat.finditer(raw))
+    if len(hits) != 1:
+        return False
+    new_raw = raw[:hits[0].start()] + new_text + raw[hits[0].end():]
+    try:
+        json.loads(new_raw)                # the fixture must stay valid JSON
+    except Exception:
+        return False
+    if not _FIXTURE_BACKED_UP:
+        try:
+            import shutil
+            shutil.copyfile(path, path + ".bak")
+        except Exception:
+            pass
+        _FIXTURE_BACKED_UP = True
+    open(path, "w", encoding="utf-8").write(new_raw)
+    return True
+
 def write_back(sections_root, measured_text, new_text):
     """Find measured_text in the stored sections by normalised equality (or a
     unique lead-in split 'B t' -> item {b:B, t:t}) and replace it. Returns the
@@ -421,7 +499,7 @@ def kernel_digest(kernel, extra=""):
 
 def fit_density(cv, cl, pi, style_config, meta, language, doc="cv",
                 max_iters=MAX_ITERS, page_budget=None, verbose=True,
-                kernel_facts=""):
+                kernel_facts="", fix_pins=True):
     """Mutates cv/cl toward the QUALITY_TARGET (97.5% of measured items free of
     runt AND stretch defects). Returns (cv, cl, {'before','after','log',
     'rewrites','pinned'}) — cv/cl are the BEST state seen (never worse than
@@ -458,17 +536,42 @@ def fit_density(cv, cl, pi, style_config, meta, language, doc="cv",
         # PIN DETECTION: an item we rewrote last round whose OLD text is still
         # in this round's measured payload was overridden upstream (fixture
         # pins, resultsOverride, export merges) — a section write is a no-op.
+        # Owner-approved follow-up: apply the SAME gated rewrite to the fixture
+        # pin source; only when that also fails is the item reported pinned.
         if pending:
             now = {_norm(r["text"]) for r in rep["items"]}
-            for old_key, sec in pending.items():
+            for old_key, info in pending.items():
                 if old_key in now:
-                    pinned.append({"sec": sec, "text": old_key[:80]})
+                    if fix_pins and info.get("new") and write_back_fixture(old_key, info["new"]):
+                        rewrites.append({"sec": info["sec"], "how": "pin-fix",
+                                         "old": old_key, "new": info["new"]})
+                        if verbose:
+                            print(f"   [density] pin-fix {info['sec']}: fixture source updated")
+                        continue
+                    pinned.append({"sec": info["sec"], "text": old_key[:80]})
                     attempts[old_key] = {"n": 99, "feedback": "pinned upstream"}
             pending = {}
         if rep.get("quality_pct", 0) >= MD.QUALITY_TARGET:
             break
         live = lambda r: attempts.get(_norm(r["text"]), {}).get("feedback") != "pinned upstream"
-        targets = [r for r in rep["runts"] if r["policy"] in ("rewrite", "listedit") and live(r)]
+        # owner-approved deterministic substitutions run FIRST — they also
+        # apply to verbatim items (that is their point: pre-cleared rewordings)
+        for r in rep["runts"]:
+            if r["lines"] < 2 or not live(r):
+                continue
+            for pat, sub in COMPACT_SUBS:
+                if pat in r["text"] and (len(pat) - len(sub)) >= r["trim_chars"] - 2:
+                    new = r["text"].replace(pat, sub, 1)
+                    if write_back(root, r["text"], new):
+                        rewrites.append({"sec": r["sec"], "how": "sub", "old": r["text"], "new": new})
+                        pending[_norm(r["text"])] = {"sec": r["sec"], "new": new}
+                    break
+        targets = [r for r in rep["runts"]
+                   if r["policy"] in ("rewrite", "listedit", "reorder") and live(r)
+                   and _norm(r["text"]) not in pending]
+        for r in targets:
+            if r["policy"] == "reorder":
+                r["mode"] = "reorder"
         runt_ids = {id(r) for r in targets}
         # paragraph appeal (owner 2026-07-13): stretched-but-not-runt items go
         # through the same machinery in `respace` mode. Table cells qualify —
@@ -491,7 +594,7 @@ def fit_density(cv, cl, pi, style_config, meta, language, doc="cv",
             # red/green split: a short dangling line pulls back deterministically;
             # everything else goes to the batched LLM re-fit, which may grow
             # (from facts in the line/role/kernel) OR tighten wording — bidirectional.
-            if r.get("mode") != "respace" and r["lines"] >= 2 \
+            if r.get("mode") not in ("respace", "reorder") and r["lines"] >= 2 \
                and r["trim_chars"] <= TRIM_MAX_CHARS \
                and r["sec"] not in NO_TRIM_SECTIONS:
                 new = trim_text(r["text"], r["trim_chars"], cpl_of(r), language)
@@ -534,7 +637,7 @@ def fit_density(cv, cl, pi, style_config, meta, language, doc="cv",
             applied += n
             if n:
                 rewrites.append({"sec": r["sec"], "how": "trim", "old": r["text"], "new": new})
-                pending[_norm(r["text"])] = r["sec"]
+                pending[_norm(r["text"])] = {"sec": r["sec"], "new": new}
         if asks:
             got, failed = llm_refit(asks, language=language, facts=kernel_facts)
             for ask in asks:
@@ -542,7 +645,14 @@ def fit_density(cv, cl, pi, style_config, meta, language, doc="cv",
                 if new and write_back(root, ask["text"], new):
                     applied += 1
                     rewrites.append({"sec": ask["sec"], "how": "llm", "old": ask["text"], "new": new})
-                    pending[_norm(ask["text"])] = ask["sec"]
+                    pending[_norm(ask["text"])] = {"sec": ask["sec"], "new": new}
+                elif new and fix_pins and write_back_fixture(_norm(ask["text"]), new):
+                    # the text never existed in cv_sections — it is sourced from
+                    # the fixture pins directly (owner-approved mild pin edit)
+                    applied += 1
+                    rewrites.append({"sec": ask["sec"], "how": "pin-fix", "old": ask["text"], "new": new})
+                    if verbose:
+                        print(f"   [density] pin-fix {ask['sec']}: fixture source updated")
                 else:
                     key = _norm(ask["text"])
                     prev = attempts.get(key, {"n": 0})
@@ -557,7 +667,12 @@ def fit_density(cv, cl, pi, style_config, meta, language, doc="cv",
         if verbose:
             print("   [density] " + log[-1])
         if applied == 0:
-            break
+            # an all-rejected round still produced per-item feedback — retry
+            # once more while any asked item has attempts left
+            retryable = any(attempts.get(_norm(a["text"]), {}).get("n", 0) < 2 for a in asks)
+            if not (asks and retryable):
+                break
+            continue
         rep, payload = _measure(cv, cl)
         if rep is None:
             break
@@ -618,7 +733,7 @@ def main():
         MD.print_report(out["before"], f"app {args.app} {args.doc} BEFORE")
         MD.print_report(out["after"], f"app {args.app} {args.doc} AFTER")
     if args.json:
-        json.dump({k: out[k] for k in ("before", "after", "log")},
+        json.dump({k: out.get(k) for k in ("before", "after", "log", "rewrites", "pinned")},
                   open(args.json, "w", encoding="utf-8"), indent=1, ensure_ascii=False)
     if args.apply and out["after"] and out["before"] and \
        out["after"]["rewritable_runts"] < out["before"]["rewritable_runts"]:

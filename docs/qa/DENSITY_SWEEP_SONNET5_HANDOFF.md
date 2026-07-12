@@ -54,6 +54,21 @@ Report one table + a short honest paragraph on residue classes.
 - Token: `~/.antcv/token` (self-refreshes). Fixture: `~/.antcv/export_settings.json`
   must exist (it does on the desktop box).
 
+## Owner-approved reword rules (2026-07-13, already wired — do not re-ask)
+
+- **Pin edits (mild)**: pinned texts live in the fixture's `antcv:outcomesGuard` /
+  `antcv:resultsOverride` (GLOBAL across apps). `write_back_fixture` applies the
+  gated rewrite there automatically (`fix_pins=True` default; unique match,
+  JSON-validated, `.bak` backup beside the fixture).
+- **"Uni. of Toronto" → "UofToronto"** when it clears a wrapped runt
+  (`COMPACT_SUBS`, applies to verbatim certs too).
+- **Pubs reordering**: policy `reorder` — elements/punctuation may shuffle, every
+  word must survive (token-multiset gate, auditor skipped).
+- **BABOK relevance**: protected from the JD-relevance cert cut on program /
+  requirement-heavy / enterprise-architect JDs (gen-runner BABOK-RELEVANCE-001).
+- **Profile/work_style respace window**: ±30 chars (other sections ±12/+15,
+  cells shrink-only).
+
 ## Known residue classes (expected, report don't chase)
 
 - **Pinned upstream**: payload text sourced from fixture pins/overrides

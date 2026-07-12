@@ -28384,7 +28384,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.148-spine-header";
+var VERSION = "1.14.149-diag-convert";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);
@@ -28434,6 +28434,9 @@ var index_default = {
       }
       if (url.pathname === "/api/jd/pdf-to-docx" && request.method === "POST") {
         return await handlePdfToDocx(request, origin, env2);
+      }
+      if (url.pathname === "/diag/convert-docx" && request.method === "POST") {
+        return await handleDiagConvertDocx(request, origin, env2);
       }
       return json({ error: "not found", path: url.pathname }, 404, origin, env2);
     } catch (err2) {
@@ -28668,6 +28671,52 @@ async function handleGeneratePdf(request, origin, env2) {
   return new Response(pdfResult.buffer, { status: 200, headers });
 }
 __name(handleGeneratePdf, "handleGeneratePdf");
+async function handleDiagConvertDocx(request, origin, env2) {
+  // DIAG-CONVERT-DOCX-001 (2026-07-13, SINGLE-SLOT-LO-DROP-001 investigation): raw
+  // DOCX body -> PDF through the SAME CloudConvert pipeline /generate-pdf uses, so
+  // structural pagination fixes can be A/B-tested against the REAL converter. Local
+  // LibreOffice builds (version + font set differ) render the same docx losslessly
+  // and CANNOT reproduce converter-specific drops, which is why every "can't check
+  // the LibreOffice render headlessly" note in this file existed. Same gates as
+  // /generate-pdf: optional WORKER_SECRET, allowed-origin, BYOK key precedence.
+  if (env2.WORKER_SECRET) {
+    const presented = request.headers.get("X-AntCV-Secret") || "";
+    if (presented !== env2.WORKER_SECRET) {
+      return json({ error: "unauthorized" }, 401, origin, env2);
+    }
+  }
+  const provider = pdfProvider(env2);
+  if (!provider) {
+    return json({ error: "pdf_not_configured", provider: null }, 503, origin, env2);
+  }
+  const buf = new Uint8Array(await request.arrayBuffer());
+  const MAX_DOCX = 2 * 1024 * 1024;
+  if (!buf.length) return json({ error: "empty body" }, 400, origin, env2);
+  if (buf.length > MAX_DOCX) {
+    return json({ error: "docx too large", max_bytes: MAX_DOCX, received_bytes: buf.length }, 413, origin, env2);
+  }
+  if (!(buf[0] === 80 && buf[1] === 75)) {
+    return json({ error: "not a docx (zip) body" }, 400, origin, env2);
+  }
+  const ccKey = (request.headers.get("X-CloudConvert-Key") || "").trim() || env2.CLOUDCONVERT_API_KEY;
+  let pdfResult;
+  try {
+    pdfResult = await convertDocxToPdf(buf, ccKey, { filename: "diag" });
+  } catch (e) {
+    console.error("[docx-worker] diag convert failed", e);
+    return json({ error: "pdf_conversion_failed", message: String(e.message || e) }, 502, origin, env2);
+  }
+  return new Response(pdfResult.buffer, {
+    status: 200,
+    headers: {
+      ...corsHeaders(origin, env2),
+      "Content-Type": "application/pdf",
+      "Content-Disposition": 'attachment; filename="diag.pdf"',
+      "X-AntCV-Pdf-JobId": pdfResult.jobId
+    }
+  });
+}
+__name(handleDiagConvertDocx, "handleDiagConvertDocx");
 function isAnalyticsExportPath(pathname) {
   return [
     "/analytics/export",

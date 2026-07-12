@@ -23907,37 +23907,26 @@ function postProcessDocx(input, opts = {}) {
       aiNoticeInjected = true;
       if (__aiWmIdx > 8) break;
     }
-    // SIDEBAR-SPINE-VML-001: swap every per-page spine sentinel for a
-    // PAGE-ANCHORED full-height colored rect behind the sidebar column, so the
-    // color reaches the true page edge without touching row pagination (the
-    // anti-blank-page atLeast minimums stay). Explicit page-relative offsets
-    // (LibreOffice/CloudConvert ignores position keywords), negative z-index
-    // (behind text + cell shading), one unique shape id per page.
-    const SPINE_RE = /<w:r\b[^>]*>(?:(?!<\/w:r>)[\s\S])*?__ANTCV_SPINE_(left|right)__(?:(?!<\/w:r>)[\s\S])*?<\/w:r>/;
+    // SIDEBAR-SPINE-VML-001 (owner 2026-07-13, "sidebar color is many times not
+    // reaching end of page"): a PAGE-ANCHORED full-height colored rect behind
+    // the sidebar column, hosted in the HEADER part — the layer the DEMO
+    // watermark proves renders behind content on EVERY page in Word AND
+    // LibreOffice/CloudConvert. (A body-cell-anchored negative-z rect was
+    // tried first and the converter dropped it — pixel-verified white.) The
+    // header hosts ONE shape that repeats per page; the anti-blank-page
+    // atLeast row minimums stay untouched, zero pagination impact.
     const __spineColor = (opts && opts.spineColor ? String(opts.spineColor).trim().replace(/[^0-9A-Fa-f]/g, "") : "").slice(0, 6);
     const __spineW = opts && Number.isFinite(opts.spineWidthPt) ? Math.max(40, Math.min(400, Math.round(opts.spineWidthPt))) : 0;
-    let __spineIdx = 0;
-    let spineMatch;
-    while ((spineMatch = xml2.match(SPINE_RE))) {
-      if (!__spineColor || !__spineW) {
-        // no styling forwarded — strip the sentinel run so no stray text ships
-        xml2 = xml2.replace(SPINE_RE, "");
-        continue;
-      }
-      const __sMl = spineMatch[1] === "right" ? Math.round(PAGE_W / 20) - __spineW : 0;
-      xml2 = xml2.replace(
-        SPINE_RE,
-        '<w:r><w:rPr><w:noProof/></w:rPr><w:pict>' +
-        '<v:rect id="AntCVSpine' + __spineIdx + '" o:spid="_x0000_s' + (6097 + __spineIdx) + '" style="position:absolute;margin-left:' + __sMl + 'pt;margin-top:0;width:' + __spineW + 'pt;height:842pt;' +
-        'mso-position-horizontal-relative:page;mso-position-vertical-relative:page;z-index:-251655000;mso-wrap-style:square" fillcolor="#' + __spineColor + '" stroked="f">' +
-        '<w10:wrap anchorx="page" anchory="page"/></v:rect></w:pict></w:r>'
-      );
-      __spineIdx++;
-      if (__spineIdx > 12) break;
-    }
+    const __spineMl = opts && opts.spineSide === "right" ? Math.round(PAGE_W / 20) - __spineW : 0;
+    const spineRun = (__spineColor && __spineW)
+      ? ('<w:r><w:rPr><w:noProof/></w:rPr><w:pict>' +
+         '<v:rect id="AntCVSpine" o:spid="_x0000_s6097" style="position:absolute;margin-left:' + __spineMl + 'pt;margin-top:0;width:' + __spineW + 'pt;height:842pt;' +
+         'mso-position-horizontal-relative:page;mso-position-vertical-relative:page;z-index:-251656000;mso-wrap-style:square" fillcolor="#' + __spineColor + '" stroked="f">' +
+         '<w10:wrap anchorx="page" anchory="page"/></v:rect></w:pict></w:r>')
+      : "";
     const hasWm = !!(opts && opts.watermark && String(opts.watermark).trim());
     const headerBgHex = (opts && opts.headerBg ? String(opts.headerBg).trim().replace(/[^0-9A-Fa-f]/g, "") : "").slice(0, 6);
-    if (hasWm || headerBgHex) {
+    if (hasWm || headerBgHex || spineRun) {
       const wm = hasWm ? String(opts.watermark).trim().replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" })[c]) : "";
       const watermarkRun = hasWm ? '<w:r><w:rPr><w:noProof/></w:rPr><w:pict><v:shapetype id="_x0000_t136" coordsize="21600,21600" o:spt="136" adj="10800" path="m@7,l@8,m@5,21600l@6,21600e"><v:formulas><v:f eqn="sum #0 0 10800"/><v:f eqn="prod #0 2 1"/><v:f eqn="sum 21600 0 @1"/><v:f eqn="sum 0 0 @2"/><v:f eqn="sum 21600 0 @3"/><v:f eqn="if @0 @3 0"/><v:f eqn="if @0 21600 @1"/><v:f eqn="if @0 0 @2"/><v:f eqn="if @0 @4 21600"/><v:f eqn="mid @5 @6"/><v:f eqn="mid @8 @5"/><v:f eqn="mid @7 @8"/><v:f eqn="mid @6 @7"/><v:f eqn="sum @6 0 @5"/></v:formulas><v:path o:extrusionok="f" gradientshapeok="t" o:connecttype="custom" o:connectlocs="@9,0;@10,10800;@11,21600;@12,10800" o:connectangles="270,180,90,0" textpathok="t"/><v:textpath on="t" fitshape="t"/><v:handles><v:h position="#0,bottomRight" xrange="6629,14971"/></v:handles><o:lock v:ext="edit" text="t" shapetype="t"/></v:shapetype><v:shape id="AntCVWatermark" type="#_x0000_t136" style="position:absolute;margin-left:0;margin-top:0;width:468pt;height:117pt;rotation:-30;z-index:-251654144;mso-position-horizontal:center;mso-position-horizontal-relative:margin;mso-position-vertical:center;mso-position-vertical-relative:margin" fillcolor="#D0D0D0" stroked="f"><v:fill opacity=".4"/><v:textpath style="font-family:&quot;Arial&quot;;font-size:1pt" string="' + wm + '"/><w10:wrap anchorx="margin" anchory="margin"/></v:shape></w:pict></w:r>' : "";
       // 1.14.20: HEADER-based Word watermark (the standard, robust approach). The
@@ -23965,7 +23954,7 @@ function postProcessDocx(input, opts = {}) {
         // a strip). line stays 40 (2pt, a multiple of 0.5pt). The demo watermark run
         // is absolutely-positioned VML, independent of the 1pt para font, so it is
         // unaffected and still floats over every page.
-        '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="40" w:lineRule="exact"/><w:rPr><w:sz w:val="2"/><w:szCs w:val="2"/></w:rPr></w:pPr>' + watermarkRun + '</w:p></w:hdr>';
+        '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="40" w:lineRule="exact"/><w:rPr><w:sz w:val="2"/><w:szCs w:val="2"/></w:rPr></w:pPr>' + spineRun + watermarkRun + '</w:p></w:hdr>';
       files["word/header1.xml"] = strToU8(headerXml);
       // Relationship (choose a non-colliding rId).
       const relsName = "word/_rels/document.xml.rels";
@@ -24590,8 +24579,10 @@ async function generateDocx(payload) {
   let markersRemaining = 0;
   try {
     const result = postProcessDocx(raw, { watermark: payload.watermark || "", photoShape: resolvePhotoShape(payload), headerBg: (style && style.headerBg) || "", aiNotice: style && style._aiNotice, aiFont: style && style._aiFont,
-      // SIDEBAR-SPINE-VML-001: color + width for the per-page full-height rect
-      spineColor: (style && style.sidebarBg) || "",
+      // SIDEBAR-SPINE-VML-001: full-height header-hosted rect behind the
+      // sidebar (two-column CVs only; kill: style_config sidebarSpine:false)
+      spineColor: (layout === "two_column" && ctx.sidebarSpine && style && style.sidebarBg) || "",
+      spineSide: (style && (style._rtl || style.sidebarPosition === "right")) ? "right" : "left",
       spineWidthPt: Math.round(PAGE_W * (Number(payload.sidebar_ratio) > 0.1 && Number(payload.sidebar_ratio) < 0.7 ? Number(payload.sidebar_ratio) : 0.36) / 20) });
     buffer2 = result.buffer;
     replacements = result.replacements || 0;
@@ -25148,25 +25139,13 @@ function buildTwoColumnDocument(ctx) {
     // to the largest cell margin (both columns moved in the owner's 1.14.121
     // export). Instead lead the SIDEBAR paragraph stream with an exact-height
     // 100-twip spacer on continuation pages only; page 1 is untouched.
-    const __sbBase = (!withHeader && sbEls && sbEls.length)
+    const sb = (!withHeader && sbEls && sbEls.length)
       ? [new Paragraph({
           spacing: { before: 0, after: 0, line: 100, lineRule: "exact" },
           shading: { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" },
           children: []
         }), ...sbEls]
-      : (sbEls || []);
-    // SIDEBAR-SPINE-VML-001: one zero-footprint (1-twip, sidebar-colored text)
-    // sentinel per PAGE at the top of the sidebar cell; postProcessDocx swaps
-    // each for a page-anchored full-height colored rect behind the column.
-    // Side mirrors the visual sidebar position (RTL docs flip it right).
-    const __spineSide = (ctx.style._rtl || style.sidebarPosition === "right") ? "right" : "left";
-    const sb = ctx.sidebarSpine
-      ? [new Paragraph({
-          spacing: { before: 0, after: 0, line: 1, lineRule: "exact" },
-          shading: { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" },
-          children: [new TextRun({ text: "__ANTCV_SPINE_" + __spineSide + "__", size: 2, color: style.sidebarBg || "FFFFFF" })]
-        }), ...__sbBase]
-      : __sbBase;
+      : sbEls;
     return new Table({
       width: { size: PAGE_W, type: WidthType.DXA },
       columnWidths: colWidths,

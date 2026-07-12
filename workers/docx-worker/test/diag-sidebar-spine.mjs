@@ -71,13 +71,15 @@ const basePayload = (extraStyle = {}) => ({
 let fail = 0;
 const check = (name, cond) => { log((cond ? 'PASS' : 'FAIL') + '  ' + name); if (!cond) fail++; };
 
-// ── default ON ───────────────────────────────────────────────────────────────
+// ── default ON: the spine lives in the HEADER part (the layer the DEMO
+// watermark proves renders on EVERY page through LibreOffice/CloudConvert —
+// a body-cell-anchored negative-z rect was pixel-verified DROPPED there) ─────
 {
   const buf = await gen(basePayload());
+  const hdr = unzipEntry(buf, 'word/header1.xml').toString('utf8');
   const xml = unzipEntry(buf, 'word/document.xml').toString('utf8');
-  check('no sentinel text survives', xml.indexOf('__ANTCV_SPINE_') < 0);
-  const rects = xml.match(/<v:rect id="AntCVSpine\d+"[^>]*>/g) || [];
-  check('one spine rect per page (2)', rects.length === 2, rects.length);
+  const rects = hdr.match(/<v:rect id="AntCVSpine"[^>]*>/g) || [];
+  check('one spine rect in the header part', rects.length === 1, rects.length);
   check('page-anchored', rects.every(r => r.includes('mso-position-horizontal-relative:page') && r.includes('mso-position-vertical-relative:page')));
   check('full page height 842pt', rects.every(r => r.includes('height:842pt')));
   check('behind content (negative z)', rects.every(r => /z-index:-\d+/.test(r)));
@@ -85,7 +87,7 @@ const check = (name, cond) => { log((cond ? 'PASS' : 'FAIL') + '  ' + name); if 
   // 0.36 * 11906 twips = 4286 -> /20 = 214pt (rounded by the caller)
   check('width ~= ratio * page (214pt)', rects.every(r => /width:21[3-5]pt/.test(r)));
   check('left side (margin-left:0)', rects.every(r => r.includes('margin-left:0pt')));
-  check('unique shape ids', new Set(rects.map(r => (r.match(/o:spid="([^"]+)"/) || [])[1])).size === rects.length);
+  check('no spine leakage into the body', xml.indexOf('AntCVSpine') < 0 && xml.indexOf('__ANTCV_SPINE_') < 0);
   // the anti-blank-page pins MUST stay (sidebar-fill-gap-is-antiblank-slack)
   check('PAGE1_BODY_MIN pin 12600 intact', /w:val="12600"/.test(xml));
   check('CONT_BODY_MIN pin 15538 intact', /w:val="15538"/.test(xml));
@@ -95,9 +97,19 @@ const check = (name, cond) => { log((cond ? 'PASS' : 'FAIL') + '  ' + name); if 
 {
   const p = basePayload({ sidebarSpine: false });
   const buf = await gen(p);
-  const xml = unzipEntry(buf, 'word/document.xml').toString('utf8');
-  check('sidebarSpine:false -> no rects', (xml.match(/AntCVSpine/g) || []).length === 0);
-  check('sidebarSpine:false -> no sentinels either', xml.indexOf('__ANTCV_SPINE_') < 0);
+  const hdr = unzipEntry(buf, 'word/header1.xml').toString('utf8');
+  check('sidebarSpine:false -> no spine rect', hdr.indexOf('AntCVSpine') < 0);
+}
+
+// ── CL (linear layout) never gets a spine ────────────────────────────────────
+{
+  const p = basePayload();
+  p.doc = 'cl'; p.layout = 'linear';
+  p.sections = [{ id: 'greeting', title: '', loc: 'main', on: true, type: 'text', content: 'Dear X,' }];
+  const buf = await gen(p);
+  let hdr = '';
+  try { hdr = unzipEntry(buf, 'word/header1.xml').toString('utf8'); } catch (_) {}
+  check('linear/CL doc -> no spine rect', hdr.indexOf('AntCVSpine') < 0);
 }
 
 log(fail === 0 ? 'ALL GREEN' : fail + ' FAILURE(S)');

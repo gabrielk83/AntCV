@@ -44,7 +44,7 @@
 #   python gen-runner.py run --persist         # also save real applications + doc writeback
 # Flags: --row UK (repeatable) | --max-high N (5) | --max-quick M (10)
 #        --kernel-file PATH | --out DIR | --provider anthropic | --dry (plan only, no LLM)
-import os, sys, json, time, argparse, urllib.request, urllib.error, re, copy
+import os, sys, json, time, argparse, urllib.request, urllib.error, urllib.parse, re, copy
 
 RELAY = os.environ.get("ANTCV_RELAY", "https://antcv-access-relay.karp-gabriel-a.workers.dev").rstrip("/")
 PROXY = os.environ.get("ANTCV_PROXY", "https://cv-proxy.karp-gabriel-a.workers.dev").rstrip("/")
@@ -292,6 +292,59 @@ def guess_category(role, jd):
     if has("business analyst", "reinsurance", " ba ", "consult", "advisor", "specialist"): return "consulting"
     return "consulting"
 
+# ── CATEGORY-RECALL-001: prior same-category application digest ─────
+# Generation recall prefers the most-recent SAVED application of the same
+# category over the generic style|lang kernel: its tone/altitude is already
+# tuned to the category. The relay's GET /api/applications?category=&latest=1
+# returns the newest row WITH cv_sections. The digest is SUBORDINATE
+# reference material only — never a source of facts (identity lock wins).
+
+def _digest_strings(node, out, limit):
+    """Collect visible text strings from an app-native section tree."""
+    if len(out) >= limit: return
+    if isinstance(node, str):
+        s = node.strip()
+        if s and not s.startswith("data:"): out.append(s)
+    elif isinstance(node, list):
+        for v in node: _digest_strings(v, out, limit)
+    elif isinstance(node, dict):
+        for k in ("title", "label", "text", "t", "b", "lead", "body", "result",
+                  "left", "right", "content", "rows", "bullets", "items", "children"):
+            if k in node: _digest_strings(node[k], out, limit)
+
+def prior_app_digest(category):
+    """Fetch the newest same-category saved application and compress its
+    cv profile/outcomes/core into a ~2000-char plain-text digest, or None."""
+    try:
+        c, b = _req(RELAY, "/api/applications?category=%s&latest=1"
+                    % urllib.parse.quote(str(category)))
+    except Exception as e:
+        print(f"   [prior-app] fetch failed ({e})"); return None
+    if c != 200: return None
+    app = (b or {}).get("application")
+    if not isinstance(app, dict): return None
+    cv = app.get("cv_sections")
+    if not cv: return None
+    # keep only profile/outcome/competenc/core-flavoured sections when the
+    # shape allows it; otherwise digest the whole tree.
+    picked = cv
+    if isinstance(cv, list):
+        want = ("profile", "outcome", "core", "competenc", "specialis", "specializ")
+        hits = [s for s in cv if isinstance(s, dict) and any(
+            w in str(s.get("id", "")).lower() + str(s.get("title", "")).lower() for w in want)]
+        if hits: picked = hits
+    out = []
+    _digest_strings(picked, out, 400)
+    text = " | ".join(out)
+    # sanitize: drop control chars, collapse whitespace, cap ~2000 chars
+    text = re.sub(r"[\x00-\x08\x0b-\x1f\x7f]", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()[:2000]
+    if not text: return None
+    header = "role: %s @ %s (category %s, saved %s)" % (
+        app.get("jd_role") or "?", app.get("jd_company") or "?",
+        app.get("category") or category, app.get("updated_at") or "?")
+    return header + "\n" + text
+
 # ── section plan ───────────────────────────────────────────────────
 # Each section: an Anthropic /v1/messages body. The user turn carries the
 # profile + JD + signals + the section ask (trigger words match
@@ -337,6 +390,13 @@ def _user_turn(profile_json, meta, section_ask):
     if meta.get("research"):
         lines.append("=== RECENT WEB RESEARCH on the employer (Google CSE; SUBORDINATE — may be dated, verify; NEVER a source of the candidate's identity/history) ===")
         lines.append(str(meta["research"])[:2500]); lines.append("")
+    if meta.get("prior_app"):
+        # CATEGORY-RECALL-001: tone/altitude reference from the newest saved
+        # same-category application. Subordinate — the identity lock and the
+        # CANDIDATE PROFILE above stay the only source of facts.
+        lines.append("=== PRIOR SAME-CATEGORY APPLICATION (tone/altitude reference; never a source of facts) ===")
+        lines.append("Match its register, altitude, and density. Do NOT copy sentences, and do NOT import any fact, employer, number, or claim from it that is absent from the CANDIDATE PROFILE.")
+        lines.append(str(meta["prior_app"])[:2000]); lines.append("")
     _langname = {"da": "Danish", "en": "English", "sv": "Swedish"}.get(meta.get("language"), meta.get("language"))
     lines.append("OUTPUT LANGUAGE: write this section in " + str(_langname) + ".")
     lines.append("TASK: " + section_ask)
@@ -518,9 +578,15 @@ def cmd_run(args):
         language = detect_language(r["jd"])
         rsch = research(r["company"], r["role"]) if getattr(args, "research", True) else ""
         if rsch: print("   research: %d findings" % len(rsch.splitlines()))
+        # CATEGORY-RECALL-001: category is decided BEFORE the plan is built so
+        # the newest same-category saved application can ride along as a
+        # subordinate tone/altitude reference (never a source of facts).
+        cat = guess_category(r["role"], r["jd"])
+        prior = prior_app_digest(cat)
+        if prior: print(f"   [prior-app] same-category ({cat}) reference attached ({len(prior)} chars)")
         meta = {"company": r["company"], "role": r["role"], "jd": r["jd"],
                 "signals": _signals_for(uk), "support": support.get(uk),
-                "research": rsch, "language": language}
+                "research": rsch, "language": language, "prior_app": prior}
         sections, model = build_plan(profile, meta, r["tier"])
         print(f"\n== {uk} [{r['tier']}] {r['company']} / {r['role']} — {len(sections)} sections, model={model}")
         if args.dry:
@@ -561,7 +627,7 @@ def cmd_run(args):
         print(f"   review bundle -> {bpath}")
         results_index.append({"uk": uk, "status": res["status"], "done": ndone, "bundle": bpath})
         if args.persist and res["status"] in ("done",):
-            persist_application(doc, r, res, guess_category(r["role"], r["jd"]), language,
+            persist_application(doc, r, res, cat, language,
                                 kernel=kernel, measure=getattr(args, "measure", True) and not args.dry,
                                 max_pages=getattr(args, "max_pages", 2))
     idx_path = os.path.join(args.out, "index.json")

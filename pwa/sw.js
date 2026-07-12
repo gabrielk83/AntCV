@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.367-i18n-conditional-da';
+const CACHE = 'antcv-1.51.368-category-recall';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

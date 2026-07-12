@@ -17403,6 +17403,27 @@
           return (
             (async () => {
               try {
+                // CATEGORY-RECALL-001 (1.51.368): before falling back to the
+                // style|lang kernel showcase, prefer the newest SAVED
+                // application of the active JD's category (meta.category on
+                // the loaded app) as the hydrate source. Sections only —
+                // never its meta, so no cross-company contamination.
+                try {
+                  const __mm2 = u.get("meta", null);
+                  const __cat = (__mm2 && "object" == typeof __mm2 && "string" == typeof __mm2.category && __mm2.category.trim()) ? __mm2.category.trim().toLowerCase() : "";
+                  if (__cat) {
+                    const __cr = await oo._call("/api/applications?category=" + encodeURIComponent(__cat) + "&latest=1");
+                    const __ca = __cr && __cr.ok && __cr.application;
+                    const __cs = __ca ? { cv: Array.isArray(__ca.cv_sections) ? __ca.cv_sections : [], cl: Array.isArray(__ca.cl_sections) ? __ca.cl_sections : [] } : null;
+                    if (!o && __cs && __antcvHasRealSections(__cs)) {
+                      try { sessionStorage.setItem("antcv_showcase_restore_attempted", "1"); } catch (_) {}
+                      try { u.set("sections", __cs); } catch (_) {}
+                      try { ao({ cv: __cs.cv, cl: __cs.cl }); } catch (_) {}
+                      try { console.log("[CATEGORY-RECALL-001] hydrated from latest '" + __cat + "' application " + (__ca.id || "?") + " - kernel showcase fallback skipped"); } catch (_) {}
+                      return;
+                    }
+                  }
+                } catch (_) {}
                 const e = await oo.getShowcase((() => { try { var p = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; p = p.personalInfo || p; var __st = String((p.writingPrefs || {}).style || "").trim().toLowerCase(); var __lg = String(localStorage.getItem("language") || "en").toLowerCase().replace(/[^a-z]/g, "").slice(0,2) || "en"; return __st ? __st + "|" + __lg : ""; } catch (_) { return ""; } })());
                 if (o) return;
                 // 1.50.277: mark restore ATTEMPTED on every non-cancelled

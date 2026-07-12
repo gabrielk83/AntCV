@@ -1,6 +1,6 @@
 import { insertLlmCall, aggregateHealth, getLatestHealth, pruneOld, insertQualitySignal } from './telemetry.js';
 
-const VERSION='1.3.10';
+const VERSION='1.3.11';
 // antcv-access-relay — auth + hardening
 // =====================================
 // Public-facing relay with built-in user authentication.
@@ -35,7 +35,7 @@ const VERSION='1.3.10';
 // Required binding (declare in wrangler.toml):
 //   KV_BINDING        KV namespace (stores OTPs, rate counters, prefs, signals)
 
-const RELAY_VERSION = 'auth-30-langrenders';
+const RELAY_VERSION = 'auth-31-category-recall';
 const SESSION_TTL_SECONDS    = 7 * 24 * 60 * 60;       // 7 days
 // Refresh whenever the token has < 6 days left (i.e. it's more than 1 day old),
 // so ANY request past the first day rotates it to a fresh 7-day token via the
@@ -2711,6 +2711,39 @@ async function handleApiApplications(request, env) {
   const m = request.method;
 
   if (m === 'GET') {
+    // CATEGORY-RECALL-001: ?category=<id>&latest=1 returns the single
+    // newest application in that category WITH its generated sections
+    // (cv_sections/cl_sections), so generation recall can prefer a real
+    // same-category application over the style|lang kernel showcase.
+    // Rows that were saved but never generated (cv_sections IS NULL)
+    // are skipped — an empty shell is worse than the kernel fallback.
+    const url = new URL(request.url);
+    if (url.searchParams.get('latest') === '1') {
+      const rawCat = url.searchParams.get('category');
+      const category = normalizeCategory(rawCat);
+      if (rawCat && !CATEGORIES.has(String(rawCat).trim().toLowerCase())) {
+        return jsonResponse(
+          { error: 'unknown_category', category: rawCat },
+          400, request, env, refresh
+        );
+      }
+      try {
+        const row = await env.DB.prepare(
+          'SELECT * FROM application ' +
+          'WHERE user_hash = ? AND category = ? AND cv_sections IS NOT NULL ' +
+          'ORDER BY updated_at DESC LIMIT 1'
+        ).bind(userHash, category).first();
+        return jsonResponse(
+          { ok: true, category, application: shapeApplicationRow(row) },
+          200, request, env, refresh
+        );
+      } catch (e) {
+        return jsonResponse(
+          { error: 'd1_read_failed', message: String(e && e.message || e) },
+          500, request, env, refresh
+        );
+      }
+    }
     try {
       const res = await env.DB.prepare(
         'SELECT id, jd_company, jd_role, category, jd_language, updated_at ' +

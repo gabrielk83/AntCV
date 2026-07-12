@@ -860,44 +860,58 @@ def _pi_from_kernel(kernel, subtitle=""):
             "linkedin": idy.get("linkedin", ""),
             "specialization": subtitle or idy.get("specialization", "")}
 
-def _worker_map_section(s):
-    """Map an app-native section to the docx-worker schema (rich_block, which the
-    worker does not accept, becomes text for prose slots / labeled_list for
-    grouped detail). Approximate but close enough for a page-fit signal."""
-    typ, sid = s.get("type"), s.get("id")
-    if typ in ("text", "text_inline", "bullets", "table", "experience", "list", "list_italic", "labeled_list", "education"):
-        return {**s, "on": True}
-    if typ == "rich_block":
-        items = s.get("items") or []
-        base = {"id": sid, "title": s.get("title", ""), "loc": s.get("loc", "main"), "on": True}
-        if sid in ("profile", "work_style"):
-            parts = []
-            for it in items:
-                if isinstance(it, dict) and not it.get("grp"):
-                    b, t = it.get("b", ""), it.get("t", "")
-                    parts.append((b + ": " + t) if (b and t) else (b or t))
-            return {**base, "type": "text", "content": "\n".join(p for p in parts if p)}
-        li = []
-        for it in items:
-            if isinstance(it, dict):
-                li.append({"l": (it.get("t", "") or "").upper(), "v": ""} if it.get("grp")
-                          else {"l": it.get("b", ""), "v": it.get("t", "")})
-            else:
-                li.append({"l": "", "v": str(it)})
-        return {**base, "type": "labeled_list", "items": li}
-    return {"id": sid, "title": s.get("title", ""), "loc": s.get("loc", "main"), "on": True,
-            "type": "text", "content": ""}
+# BYTE-EXACT payload: run the app's OWN buildPayload (pwa/antcv-docx-client.js)
+# in Node with a localStorage shim seeded from a captured settings fixture. This
+# produces the identical worker payload the PWA sends (rich_block sections, the
+# real style/package/gaps/sidebar_ratio/photo/item_pages), so the measured page
+# count MATCHES the app's export — not an approximation. Requires: node, the
+# fixture (~/.antcv/export_settings.json, captured once from a live session), and
+# the docx-client module. Missing any -> byte-exact render unavailable (None).
+import subprocess, tempfile, shutil
+_REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_HARNESS = os.path.join(_REPO, "scripts", "job-tracker", "render_payload.mjs")
+_DOCX_CLIENT_SRC = os.path.join(_REPO, "pwa", "antcv-docx-client.js")
+_EXPORT_SETTINGS = os.environ.get("ANTCV_EXPORT_SETTINGS") or os.path.join(os.path.expanduser("~"), ".antcv", "export_settings.json")
+_DOCX_CLIENT_MJS = None
+def _docx_client_mjs():
+    """Node imports ESM only from .mjs; keep a temp .mjs copy of the module."""
+    global _DOCX_CLIENT_MJS
+    if _DOCX_CLIENT_MJS and os.path.exists(_DOCX_CLIENT_MJS):
+        return _DOCX_CLIENT_MJS
+    if not os.path.exists(_DOCX_CLIENT_SRC):
+        return None
+    dst = os.path.join(tempfile.gettempdir(), "antcv-docx-client.mjs")
+    shutil.copyfile(_DOCX_CLIENT_SRC, dst)
+    _DOCX_CLIENT_MJS = dst
+    return dst
 
-def render_cv_pages(cv, pi, language):
-    """Return the rendered CV page count via docx-worker /generate-pdf, or None
-    if measurement is unavailable (no fitz / worker error)."""
+def _build_payload_exact(cv, cl, pi, style_config, meta, language):
+    """Return the byte-exact docx-worker payload via the Node harness, or None."""
+    mjs = _docx_client_mjs()
+    if not (mjs and os.path.exists(_HARNESS) and os.path.exists(_EXPORT_SETTINGS) and shutil.which("node")):
+        return None
+    job = {"sections": {"cv": cv, "cl": cl}, "personalInfo": pi, "styleConfig": style_config,
+           "doc": "cv", "meta": meta, "language": language if language in ("en", "da", "es", "zh") else "en"}
+    env = {**os.environ, "ANTCV_DOCX_CLIENT": mjs, "ANTCV_SETTINGS": _EXPORT_SETTINGS}
+    try:
+        p = subprocess.run(["node", _HARNESS], input=json.dumps(job).encode("utf-8"),
+                           capture_output=True, timeout=60, env=env)
+        if p.returncode != 0:
+            print(f"   [measure] payload build failed: {p.stderr.decode('utf-8', 'replace')[:120]}")
+            return None
+        return json.loads(p.stdout.decode("utf-8"))
+    except Exception as e:
+        print(f"   [measure] payload build error ({str(e)[:80]})")
+        return None
+
+def render_cv_pages(cv, cl, pi, style_config, meta, language):
+    """Byte-exact CV page count via the app's buildPayload -> /generate-pdf ->
+    PyMuPDF. None if measurement is unavailable."""
     if not _HAVE_FITZ:
         return None
-    ws = [_worker_map_section(s) for s in cv if s.get("on", True) is not False]
-    payload = {"schema_version": "1.0", "doc": "cv",
-               "language": language if language in ("en", "da") else "en",
-               "layout": "two_column", "filename": "fit", "personal_info": pi,
-               "meta": {}, "sections": ws, "font_sizes": {"mainBody": 10.5}, "sidebar_ratio": 0.33}
+    payload = _build_payload_exact(cv, cl, pi, style_config, meta, language)
+    if payload is None:
+        return None
     try:
         data = json.dumps(payload).encode()
         req = urllib.request.Request(DOCX_WORKER + "/generate-pdf", data=data, method="POST",
@@ -930,10 +944,20 @@ def _tighten_once(cv, jd, level):
         return f"experience->{len(exp['roles'])} roles"
     return "none"
 
-def fit_to_pages(cv, jd, pi, language, max_pages=2, max_iters=4):
-    """Render, and if over the page budget, tighten + re-render until it fits.
-    Returns (final_pages, steps)."""
-    pages = render_cv_pages(cv, pi, language)
+def _export_style_config():
+    """The user's live styleConfig from the captured export-settings fixture (its
+    spacing/size tokens drive pagination). Empty {} if the fixture is absent."""
+    try:
+        s = json.load(open(_EXPORT_SETTINGS, encoding="utf-8"))
+        return json.loads(s.get("styleConfig") or "{}")
+    except Exception:
+        return {}
+
+def fit_to_pages(cv, cl, jd, pi, meta, language, max_pages=2, max_iters=4):
+    """Byte-exact render; if over the page budget, tighten + re-render until it
+    fits. Returns (final_pages, steps)."""
+    style_config = _export_style_config()
+    pages = render_cv_pages(cv, cl, pi, style_config, meta, language)
     if pages is None:
         return None, []
     steps = []
@@ -943,7 +967,7 @@ def fit_to_pages(cv, jd, pi, language, max_pages=2, max_iters=4):
         what = _tighten_once(cv, jd, it)
         if what == "none":
             break
-        pages = render_cv_pages(cv, pi, language)
+        pages = render_cv_pages(cv, cl, pi, style_config, meta, language)
         steps.append(f"{what} -> {pages}pg")
     return pages, steps
 
@@ -1112,7 +1136,8 @@ def persist_application(doc, r, res, category, language, kernel=None, measure=Fa
             # page budget (measure-don't-guess; catches the outliers a char
             # heuristic misses — e.g. cmc rendered 3 pages pre-fit).
             if measure:
-                pages, steps = fit_to_pages(cv, r["jd"], _pi_from_kernel(kernel), language, max_pages=max_pages)
+                _meta_m = {"subtitle": "", "role": str(r["role"]), "company": str(r["company"])}
+                pages, steps = fit_to_pages(cv, cl, r["jd"], _pi_from_kernel(kernel), _meta_m, language, max_pages=max_pages)
                 if pages is not None:
                     tail = (" [" + "; ".join(steps) + "]") if steps else ""
                     print(f"   [measure] CV renders {pages} page(s) (budget {max_pages}){tail}")

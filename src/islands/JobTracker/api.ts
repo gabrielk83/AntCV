@@ -154,8 +154,27 @@ export async function askAI(userText: string, system: string, maxTokens = 320): 
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: maxTokens, system, messages: [{ role: 'user', content: userText }] }),
   });
-  const j = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error((j && (j.error?.message || j.error || j.message)) || ('HTTP ' + res.status));
+  const raw = await res.text();
+  const parse = (s: string) => { try { return JSON.parse(s); } catch { return null; } };
+  if (!res.ok) {
+    const j = parse(raw);
+    throw new Error((j && (j.error?.message || j.error || j.message)) || ('HTTP ' + res.status));
+  }
+  // ASKAI-SSE-001: the cv-proxy FORCES stream:true on non-demo Anthropic root
+  // calls (index.js "body.stream = (demo || writingStyleRequest) ? false : true"),
+  // so a BYOK/owner call answers as text/event-stream, not JSON. Buffer the
+  // whole stream (small max_tokens) and join the content_block_delta text.
+  if (/^event:|^data:/m.test(raw.slice(0, 400)) || (res.headers.get('content-type') || '').includes('event-stream')) {
+    let out = '';
+    for (const line of raw.split('\n')) {
+      if (!line.startsWith('data:')) continue;
+      const d = parse(line.slice(5).trim());
+      if (d && d.type === 'content_block_delta' && d.delta && typeof d.delta.text === 'string') out += d.delta.text;
+      if (d && d.type === 'error') throw new Error(String(d.error?.message || 'stream error'));
+    }
+    return out.trim();
+  }
+  const j = parse(raw) || {};
   if (Array.isArray(j.content)) return j.content.map((c: { text?: string }) => c?.text || '').join('').trim();
   return String(j.completion || j.text || '').trim();
 }

@@ -219,8 +219,11 @@
   }
 
   function T() {
-    var da = readLanguage() === 'da';
-    return da ? {
+    // ANALYSIS-PANEL-I18N-001 (owner 2026-07-12): labels in EVERY app language
+    // (was en/da only). The panel language follows the opened application; a
+    // language without a dict here falls back to English — when a new language
+    // is added in Settings, add its block to LABELS below.
+    var DA = {
       heading: 'Analysér mod et jobopslag',
       jdLabel: 'Jobopslag (indsæt teksten)',
       upload: 'Eller upload:', uploadJd: '⬆ Upload jobopslag',
@@ -239,7 +242,8 @@
       recruiter: 'Rekrutterer', redFlags: 'Røde flag', questions: 'Spørgsmål at stille',
       noRecruiter: 'Ingen tydelig rekrutterer fundet.', noRedFlags: 'Ingen røde flag fundet.',
       noQuestions: 'Ingen forslag til spørgsmål.', done: 'Analyse opdateret.',
-    } : {
+    };
+    var EN = {
       heading: 'Analyse against a job description',
       jdLabel: 'Job description (paste here)',
       upload: 'Or upload:', uploadJd: '⬆ Upload JD',
@@ -259,6 +263,89 @@
       noRecruiter: 'No clear recruiter info found.', noRedFlags: 'No red flags found.',
       noQuestions: 'No suggested questions.', done: 'Analysis updated.',
     };
+    var ES = {
+      heading: 'Analizar contra una oferta de empleo',
+      jdLabel: 'Oferta de empleo (pegar aquí)',
+      upload: 'O subir:', uploadJd: '⬆ Subir oferta',
+      pdf: 'PDF', word: 'Word', image: 'Imagen',
+      run: 'Analizar oferta', running: 'Analizando…',
+      reading: 'Leyendo {file}…',
+      fileErr: 'Error de archivo: {err}',
+      urlPh: '🔗 Pegar URL de la oferta (HR-on, Workday, Greenhouse, Lever, LinkedIn…)',
+      fetching: 'Obteniendo la oferta…',
+      urlErr: 'No se pudo obtener la oferta desde esa URL.',
+      noProxy: 'La URL del proxy no está configurada. Abre Configuración.',
+      jdShort: 'Pega una oferta de al menos 50 caracteres.',
+      compareHint: 'Compara el CV generado con una oferta de empleo existente.',
+      emptyHint: 'Pega o sube una oferta de empleo para ejecutar el análisis.',
+      fitScore: 'Puntuación de ajuste', strengths: 'Fortalezas', gaps: 'Carencias',
+      recruiter: 'Reclutador', redFlags: 'Señales de alerta', questions: 'Preguntas para hacer',
+      noRecruiter: 'No se encontró información clara del reclutador.', noRedFlags: 'Sin señales de alerta.',
+      noQuestions: 'Sin preguntas sugeridas.', done: 'Análisis actualizado.',
+    };
+    var ZH = {
+      heading: '对照职位描述进行分析',
+      jdLabel: '职位描述（粘贴到此处）',
+      upload: '或上传：', uploadJd: '⬆ 上传职位描述',
+      pdf: 'PDF', word: 'Word', image: '图片',
+      run: '分析职位描述', running: '分析中…',
+      reading: '正在读取 {file}…',
+      fileErr: '文件错误：{err}',
+      urlPh: '🔗 粘贴职位链接（HR-on、Workday、Greenhouse、Lever、LinkedIn…）',
+      fetching: '正在获取职位描述…',
+      urlErr: '无法从该链接获取职位描述。',
+      noProxy: '未配置代理地址。请打开设置。',
+      jdShort: '请粘贴至少 50 个字符的职位描述。',
+      compareHint: '将生成的简历与现有职位描述进行对比。',
+      emptyHint: '粘贴或上传职位描述以运行分析。',
+      fitScore: '匹配度', strengths: '优势', gaps: '差距',
+      recruiter: '招聘负责人', redFlags: '风险提示', questions: '建议提问',
+      noRecruiter: '未找到明确的招聘负责人信息。', noRedFlags: '未发现风险提示。',
+      noQuestions: '暂无建议提问。', done: '分析已更新。',
+    };
+    var HE = {
+      heading: 'ניתוח מול תיאור משרה',
+      jdLabel: 'תיאור המשרה (הדביקו כאן)',
+      upload: 'או העלאה:', uploadJd: '⬆ העלאת תיאור משרה',
+      pdf: 'PDF', word: 'Word', image: 'תמונה',
+      run: 'ניתוח משרה', running: 'מנתח…',
+      reading: 'קורא את {file}…',
+      fileErr: 'שגיאת קובץ: {err}',
+      urlPh: '🔗 הדביקו קישור למשרה (HR-on, Workday, Greenhouse, Lever, LinkedIn…)',
+      fetching: 'מוריד את תיאור המשרה…',
+      urlErr: 'לא ניתן להוריד את תיאור המשרה מהקישור.',
+      noProxy: 'כתובת הפרוקסי אינה מוגדרת. פתחו הגדרות.',
+      jdShort: 'הדביקו תיאור משרה של 50 תווים לפחות.',
+      compareHint: 'השוו את קורות החיים שנוצרו מול תיאור משרה קיים.',
+      emptyHint: 'הדביקו או העלו תיאור משרה כדי להריץ את הניתוח.',
+      fitScore: 'ציון התאמה', strengths: 'חוזקות', gaps: 'פערים',
+      recruiter: 'מגייס/ת', redFlags: 'דגלים אדומים', questions: 'שאלות לשאול',
+      noRecruiter: 'לא נמצא מידע ברור על המגייס.', noRedFlags: 'לא נמצאו דגלים אדומים.',
+      noQuestions: 'אין שאלות מוצעות.', done: 'הניתוח עודכן.',
+    };
+    var AM = {
+      heading: 'ከሥራ ማስታወቂያ ጋር ማነጻጸር',
+      jdLabel: 'የሥራ ማስታወቂያ (እዚህ ይለጥፉ)',
+      upload: 'ወይም ይጫኑ:', uploadJd: '⬆ የሥራ ማስታወቂያ ይጫኑ',
+      pdf: 'PDF', word: 'Word', image: 'ምስል',
+      run: 'ማስታወቂያ ተንትን', running: 'በመተንተን ላይ…',
+      reading: '{file} በማንበብ ላይ…',
+      fileErr: 'የፋይል ስህተት: {err}',
+      urlPh: '🔗 የማስታወቂያ አገናኝ ይለጥፉ (HR-on, Workday, Greenhouse, Lever, LinkedIn…)',
+      fetching: 'ማስታወቂያውን በማምጣት ላይ…',
+      urlErr: 'ከዚያ አገናኝ ማስታወቂያውን ማምጣት አልተቻለም።',
+      noProxy: 'የፕሮክሲ አድራሻ አልተዋቀረም። ቅንብሮችን ይክፈቱ።',
+      jdShort: 'ቢያንስ 50 ቁምፊ ያለው ማስታወቂያ ይለጥፉ።',
+      compareHint: 'የተፈጠረውን CV ካለ የሥራ ማስታወቂያ ጋር ያነጻጽሩ።',
+      emptyHint: 'ትንተናውን ለማካሄድ ማስታወቂያ ይለጥፉ ወይም ይጫኑ።',
+      fitScore: 'የመመጣጠን ውጤት', strengths: 'ጥንካሬዎች', gaps: 'ክፍተቶች',
+      recruiter: 'ቀጣሪ', redFlags: 'ማስጠንቀቂያዎች', questions: 'መጠየቅ ያለባቸው ጥያቄዎች',
+      noRecruiter: 'ግልጽ የቀጣሪ መረጃ አልተገኘም።', noRedFlags: 'ማስጠንቀቂያ አልተገኘም።',
+      noQuestions: 'የተጠቆሙ ጥያቄዎች የሉም።', done: 'ትንተናው ተዘምኗል።',
+    };
+    var LABELS = { da: DA, es: ES, zh: ZH, he: HE, am: AM };
+    var L = String(readLanguage() || 'en').slice(0, 2);
+    return LABELS[L] ? Object.assign({}, EN, LABELS[L]) : EN;
   }
 
   function injectStyles() {

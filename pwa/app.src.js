@@ -3156,9 +3156,12 @@
     // other cities pass through untouched.
     const __localForm = (v) => {
       let s = String(v || "").trim();
-      // LOCALFORM-DA-ALWAYS-001 (owner 2026-07-12, REVERSES LOCALFORM-DA-ONLY-001):
-      // a Denmark location renders its DANISH local form ("2300, København S")
-      // in EVERY application language — the address is a proper noun, not prose.
+      // LOCALFORM-DA-CONDITIONAL-001 (owner 2026-07-12, refines DA-ALWAYS same
+      // day): Danish local form ("2300, København S") when the app is DANISH or
+      // the JOB is in Denmark; otherwise the location follows the app language
+      // (a China-job zh app localizes it; a Sweden-job en app keeps English).
+      const __keepDa = (() => { try { const L = String(localStorage.getItem("language") || "en").replace(/"/g, "").slice(0, 2); if ("da" === L) return true; const jd = String(localStorage.getItem("antcv:app:kernel:jdText") || "") + " " + String(localStorage.getItem("antcv:lastJdText") || ""); return /(danmark|denmark|københavn|copenhagen|aarhus|århus|odense|aalborg|ballerup|birkerød|smørum|dk-\d{4})/i.test(jd); } catch (_) { return true; } })();
+      if (!__keepDa) return s.replace(/københavn/gi, "Copenhagen");
       if (!/copenhagen|københavn/i.test(s)) return s;
       s = s
         .replace(/copenhagen/gi, "København")
@@ -33501,9 +33504,9 @@
                         React.createElement(
                           "b",
                           { style: { color: "#7c3aed" } },
-                          "⇥ Compressed",
+                          "⇥ Fit-it",
                         ),
-                        " — LLM rewrites it 15-25% tighter, keeps numbers and proper nouns",
+                        " — LLM re-fits the text tighter (15-25%), keeps numbers and proper nouns",
                       ),
                       React.createElement(
                         "li",
@@ -33524,6 +33527,16 @@
                           "↶ Undone",
                         ),
                         " — up to 5 levels of undo per session",
+                      ),
+                      React.createElement(
+                        "li",
+                        null,
+                        React.createElement(
+                          "b",
+                          { style: { color: "#01B7BB" } },
+                          "🤖 Ask AI",
+                        ),
+                        " — the assistant in the editor and job list: ask questions, request edits",
                       ),
                     ),
                     g(

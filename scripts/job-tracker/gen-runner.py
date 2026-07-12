@@ -1233,8 +1233,11 @@ def persist_application(doc, r, res, category, language, kernel=None, measure=Fa
     if sk:
         cv, cl = build_structured_sections(sk, res["sections"], company, role, language=language)
         # Nordic-Minimal (~1.75 pages) via JD-relevance: merge + rank experience
-        # to <=6 roles, hide JD-irrelevant sidebar detail (quick tier == Nordic).
-        if r["tier"] != "high":
+        # to <=6 roles, hide JD-irrelevant sidebar detail. COMPACT-ALL-TIERS-001
+        # (owner 2026-07-12): high tier used to skip this gate entirely and
+        # persisted the full 12-role skeleton (apps 666/807-initial) — every
+        # tier now compacts; the page budget is the governor, not the tier.
+        if True:
             cut = compact_jd_aware(cv, cl, r["jd"], language)
             if cut: print(f"   [nordic] {'; '.join(cut)}")
             # MEASURE-AND-FIT: render the real PDF, tighten if it overflows the

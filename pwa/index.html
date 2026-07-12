@@ -369,7 +369,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.337-babel-native';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.366-location-danish';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.367-i18n-conditional-da';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -408,10 +408,10 @@
         auth.src = 'antcv-auth.js?v=1.51.92-analytics-401-scope';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.51.366-location-danish';
+          app.src = 'app.js?v=1.51.367-i18n-conditional-da';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.366-location-danish';
+            vo.src = 'antcv-version-override.js?v=1.51.367-i18n-conditional-da';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -1086,7 +1086,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      renders them; retires the JD-analysis FAB once the matching app.js
      release is detected live. Companion app.js render blocks ship via deploy. -->
 <script src="antcv-analysis-merge-344.js?v=1.51.54-upper-reorg" defer></script>
-<script src="antcv-analysis-panel-jd-block-356.js?v=1.51.361-analysis-on-open" defer></script>
+<script src="antcv-analysis-panel-jd-block-356.js?v=1.51.367-i18n-conditional-da" defer></script>
 <!-- v1.50.146: Analysis report — enhances the panel with assumptions /
      confidence review / recommendations, and exports the analysis as a
      branded, AI-watermarked PDF (client-side print). Reads `rationale`
@@ -1125,7 +1125,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-personal-dedup-hide.js?v=1.50.861" defer></script>
 <script src="antcv-settings-sync-extra.js?v=1.51.323-babel-cloud-cache" defer></script>
   <script src="antcv-babel-relang.js?v=1.51.355-relang-single-flight" defer></script>
-  <script src="antcv-identity-lang-heal.js?v=1.51.366-location-danish" defer></script>
+  <script src="antcv-identity-lang-heal.js?v=1.51.367-i18n-conditional-da" defer></script>
 <script src="antcv-cl-cloud-sync-extra.js?v=1.51.164" defer></script>
 <script src="antcv-cl-prose-loss-guard-985.js?v=1.51.334-unsol-pillar" defer></script>
 <!-- GEN-UNSOL-STALE-JD-001 Patch D: scrub a KNOWN PRIOR targeted company from unsolicited prose (employer names protected). Kill antcv:disable-unsol-company-scrub. -->

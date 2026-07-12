@@ -24,6 +24,19 @@
   var VERSION = '1.51.356-identity-heal';
   if (window.__antcvIdentityLangHeal === VERSION) return;
   window.__antcvIdentityLangHeal = VERSION;
+
+  // LOCALFORM-DA-CONDITIONAL-001 (owner 2026-07-12): translate-prompt hook read
+  // by app.js at translate time (`${window.__antcvDaTermsRule()}` in the babel
+  // prompt). When the app is Danish OR the job is in Denmark, babel keeps the
+  // Danish institution terms verbatim; otherwise they translate normally.
+  window.__antcvDaTermsRule = function () {
+    try {
+      var L = String(localStorage.getItem('language') || 'en').replace(/"/g, '').slice(0, 2);
+      var jd = String(localStorage.getItem('antcv:app:kernel:jdText') || '') + ' ' + String(localStorage.getItem('antcv:lastJdText') || '');
+      var keep = L === 'da' || /(danmark|denmark|københavn|copenhagen|aarhus|århus|odense|aalborg|ballerup|birkerød|smørum|dk-\d{4})/i.test(jd);
+      return keep ? '- Keep the Danish terms "foreningsarbejde" and "Ingeniørforening" VERBATIM (Denmark-based application).\n' : '';
+    } catch (_) { return ''; }
+  };
   try { if (localStorage.getItem('antcv:disable-identity-heal') === '1') return; } catch (_) {}
 
   var WIDE_RE = /[一-鿿㐀-䶿֐-׿؀-ۿሀ-፿]/;
@@ -102,10 +115,18 @@
     var changed = false;
     var gab = isGabriel(pi);
     var zhPins = { name: '柯葛顺·加百列·亚历山大', city: '哥本哈根', citizenship: '欧盟公民' };
-    // LOCALFORM-DA-ALWAYS-001 (owner 2026-07-12): 'location' removed from the
-    // to-wide swap — a Danish postal location ("2300, København S") stays Danish
-    // on every ribbon incl. zh. (from-wide healing back to Latin still applies.)
-    ['name', 'city', 'citizenship', 'specialization'].forEach(function (f) {
+    // LOCALFORM-DA-CONDITIONAL-001 (owner 2026-07-12, refines DA-ALWAYS): the
+    // Danish location ("2300, København S") stays Danish only when the app is
+    // Danish OR the JOB is in Denmark; a China-job zh app localizes it.
+    var __keepDaLoc = (function () {
+      try {
+        var L = String(localStorage.getItem('language') || 'en').replace(/"/g, '').slice(0, 2);
+        if (L === 'da') return true;
+        var jd = String(localStorage.getItem('antcv:app:kernel:jdText') || '') + ' ' + String(localStorage.getItem('antcv:lastJdText') || '');
+        return /(danmark|denmark|københavn|copenhagen|aarhus|århus|odense|aalborg|ballerup|birkerød|smørum|dk-\d{4})/i.test(jd);
+      } catch (_) { return true; }
+    })();
+    ['name', 'city', 'citizenship', 'specialization'].concat(__keepDaLoc ? [] : ['location']).forEach(function (f) {
       var cur = pi[f];
       if ('string' != typeof cur || !cur.trim() || WIDE_RE.test(cur)) return;
       var stash = pi['__zh_' + f];
@@ -117,9 +138,9 @@
     });
     if (Array.isArray(pi.contactItems)) pi.contactItems.forEach(function (ci, i) {
       if (!ci || 'string' != typeof ci.value || !ci.value.trim() || WIDE_RE.test(ci.value)) return;
-      // LOCALFORM-DA-ALWAYS-001: a Danish postal location contact item never
-      // swaps to a wide-script rendering.
-      if (/^\d{4},?\s/.test(ci.value) || /københavn/i.test(ci.value)) return;
+      // LOCALFORM-DA-CONDITIONAL-001: a Danish postal location contact item only
+      // stays Danish when the app is Danish or the job is in Denmark.
+      if (__keepDaLoc && (/^\d{4},?\s/.test(ci.value) || /københavn/i.test(ci.value))) return;
       if ('string' == typeof ci.__zh && WIDE_RE.test(ci.__zh)) {
         ci.__latin = ci.value; ci.value = ci.__zh; changed = true; log.push('contact' + i);
       }

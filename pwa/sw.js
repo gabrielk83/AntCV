@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.366-location-danish';
+const CACHE = 'antcv-1.51.367-i18n-conditional-da';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

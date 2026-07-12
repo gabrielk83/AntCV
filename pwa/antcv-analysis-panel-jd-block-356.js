@@ -76,13 +76,26 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.51.360-open-jd-visible';
+  var VERSION = '1.51.361-analysis-on-open';
   if (window.__antcvAnalysisPanelJdBlock356 === VERSION) return;
   window.__antcvAnalysisPanelJdBlock356 = VERSION;
 
   var BLOCK_ID = 'antcv-analysis-panel-jd-block';
   var STYLE_ID = 'antcv-analysis-panel-jd-block-css';
   var RATIONALE_KEY = 'rationale';
+  // OPEN-ANALYSIS-AUTORUN-001: fingerprint of the last auto-analysed JD, so
+  // each JD gets AT MOST one automatic run (reopens and panel re-injections
+  // never re-spend the LLM calls).
+  var AUTORUN_KEY = 'antcv:apjbAutoAnalysed';
+  function jdFingerprint(s) {
+    s = String(s || '');
+    var h = 0;
+    for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+    return s.length + ':' + h;
+  }
+  function rationaleHasAnalysis(r) {
+    return !!(r && (r.summary || r.strengths || r.gaps || r.fit_score !== undefined || r.recruiter !== undefined));
+  }
 
   // Empty-state message fragments (EN + DA), lowercase for compare.
   var EMPTY_MARKERS = [
@@ -126,6 +139,39 @@
       var p = JSON.parse(raw);
       return Array.isArray(p) ? p : null;
     } catch (_) { return null; }
+  }
+  // OPEN-ANALYSIS-AUTORUN-001: the app's live section store ({cv,cl}) — the
+  // ACTIVE application's own content, unlike the legacy cv_pwa_sections
+  // mirror which can lag behind an application switch.
+  function readLiveSections() {
+    try {
+      var raw = localStorage.getItem('sections');
+      if (!raw) return null;
+      var p = JSON.parse(raw);
+      return p && typeof p === 'object' && (Array.isArray(p.cv) || Array.isArray(p.cl)) ? p : null;
+    } catch (_) { return null; }
+  }
+  // Template skeletons carry "[placeholder]" strings — a section list only
+  // counts as a real CV/CL when some content string is NOT a placeholder.
+  function sectionsHaveContent(list) {
+    if (!Array.isArray(list) || !list.length) return false;
+    var KEYS = ['content', 'text', 't', 'items', 'rows', 'left', 'right', 'intro', 'closing'];
+    var found = false;
+    function walk(v) {
+      if (found || v == null) return;
+      if (typeof v === 'string') {
+        var q = v.trim();
+        if (q && q.charAt(0) !== '[') found = true;
+        return;
+      }
+      if (Array.isArray(v)) { for (var i = 0; i < v.length; i++) walk(v[i]); return; }
+      if (typeof v === 'object') { for (var k = 0; k < KEYS.length; k++) { if (KEYS[k] in v) walk(v[KEYS[k]]); } }
+    }
+    for (var i = 0; i < list.length; i++) {
+      var s = list[i];
+      if (s && s.on !== false) walk(s);
+    }
+    return found;
   }
   function readLanguage() {
     try {
@@ -376,7 +422,7 @@
   function buildBlock() {
     var t = T();
     var rationale = readRationale();
-    var hasAnalysis = !!(rationale && (rationale.summary || rationale.strengths || rationale.gaps || rationale.fit_score !== undefined || rationale.recruiter !== undefined));
+    var hasAnalysis = rationaleHasAnalysis(rationale);
 
     var wrap = el('div', { id: BLOCK_ID });
     wrap.appendChild(el('div', { className: 'apjb-heading' }, t.heading));
@@ -483,8 +529,21 @@
         }
       }
       if (jd.length < 50) { errBox.textContent = t.jdShort; errBox.style.display = 'block'; return; }
-      var cvSections = readSections('cv_pwa_sections');
-      var clSections = readSections('cl_pwa_sections');
+      // OPEN-ANALYSIS-AUTORUN-001: the ACTIVE application's live sections win;
+      // the legacy cv_pwa_sections mirror is only consulted when no live store
+      // exists at all. A live store WITHOUT real content (fresh template after
+      // a Job-Tracker Open) means this application has no CV yet — the fit
+      // half is skipped instead of scoring the JD against a template or a
+      // PREVIOUS application's leftovers; the JD-analysis half still runs.
+      var live = readLiveSections();
+      var cvSections = null, clSections = null;
+      if (live) {
+        if (sectionsHaveContent(live.cv)) cvSections = live.cv;
+        if (sectionsHaveContent(live.cl)) clSections = live.cl;
+      } else {
+        cvSections = readSections('cv_pwa_sections');
+        clSections = readSections('cl_pwa_sections');
+      }
 
       runBtn.disabled = true; runBtn.textContent = t.running;
       try {
@@ -493,7 +552,9 @@
         if (clSections) rfBody.cl_sections = clSections;
 
         var rf = window.AntcvRecheckFit;
-        var pFit = postRecheckFit(proxyUrl, rfBody).catch(function () { return null; });
+        var pFit = cvSections
+          ? postRecheckFit(proxyUrl, rfBody).catch(function () { return null; })
+          : Promise.resolve(null);
         var pJd = (rf && typeof rf._postJdAnalysis === 'function')
           ? rf._postJdAnalysis(proxyUrl, { jd_text: jd, candidate_summary: summaryStr, search_recruiter: true }).catch(function () { return null; })
           : Promise.resolve(null);
@@ -541,6 +602,21 @@
           errBox.style.display = 'block';
         } else {
           okBox.textContent = t.done; okBox.style.display = 'block';
+          // OPEN-ANALYSIS-AUTORUN-001: persist the analysis on the application
+          // ROW (partial PUT — the relay whitelists rationale). The restore
+          // applies the row's rationale LAST, so a local-only merge would be
+          // clobbered on the next Open; landing it on the row makes the
+          // analysis reappear in the panel every time the app is reopened.
+          try {
+            var appId = window.AntcvJdScope && window.AntcvJdScope.getCurrentAppId && window.AntcvJdScope.getCurrentAppId();
+            if (appId && /^\d+$/.test(String(appId))) {
+              fetch(proxyUrl + '/api/applications/' + appId, {
+                method: 'PUT', credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rationale: merged }),
+              }).catch(function () {});
+            }
+          } catch (_) {}
         }
       } catch (e) {
         errBox.textContent = String((e && e.message) || e); errBox.style.display = 'block';
@@ -558,6 +634,27 @@
     wrap.appendChild(errBox);
     wrap.appendChild(okBox);
     wrap.appendChild(results);
+
+    // OPEN-ANALYSIS-AUTORUN-001 (owner 2026-07-12: "if we already have a JD
+    // analysis I expect ... I would see the JD analysis content in the
+    // analysis panel"). An application opened with a JD but no analysis
+    // fields in its rationale gets ONE automatic Analyse JD run, so the
+    // panel fills itself instead of showing the empty state. Decision is
+    // deferred + re-read so a cloud restore that lands a real rationale a
+    // beat later wins (then nothing runs); the fingerprint key caps it at
+    // one run per JD ever.
+    setTimeout(function () {
+      try {
+        if (rationaleHasAnalysis(readRationale())) return;
+        var jdNow = (ta.value || '').trim();
+        if (jdNow.length < 50) return;
+        var fp = jdFingerprint(jdNow);
+        if (localStorage.getItem(AUTORUN_KEY) === fp) return;
+        localStorage.setItem(AUTORUN_KEY, fp);
+        runBtn.click();
+      } catch (_) {}
+    }, 2500);
+
     return wrap;
   }
 

@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.360-open-jd-visible';
+const CACHE = 'antcv-1.51.361-analysis-on-open';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

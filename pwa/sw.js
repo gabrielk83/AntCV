@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.375-width-hints';
+const CACHE = 'antcv-1.51.376-sidebar-balance';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

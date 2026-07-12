@@ -317,6 +317,94 @@
     });
     return nextStick;
   }
+  // SIDEBAR-BALANCE-001 (GOLD-TARGET-LAYOUT-DENSITY-001 A2, owner 2026-07-12): both
+  // columns must bottom out together — the classic defect is a near-full page-1
+  // sidebar and a page-2 sidebar that ends far above the main column (one big blank
+  // band under the last group). The per-column __uniPaginate fills each page greedily,
+  // which always dumps the whole deficit on the LAST page. This gate re-distributes:
+  // demote the TRAILING whole unit (a labeled group, or a whole ungrouped section) of
+  // an earlier page down one page whenever that strictly reduces the WORST per-page
+  // sidebar gap. Moves are whole-unit (group header travels with its rows — no
+  // stranded headings), data-order-preserving (only the last unit of a page moves,
+  // landing above the next page's first unit), and fit-checked against the
+  // destination cap. Deterministic + idempotent: a move must strictly improve the
+  // max gap, so re-running on balanced input is a no-op (no preview flap). The
+  // anti-blank-page slack (worker row minimums) is untouched — this only picks WHICH
+  // page a group renders on, never how tall the rows are.
+  var SIDEBAR_BALANCE_MAX_GAP = 160;  // px: act only while some page's gap exceeds this. 0 disables.
+  var SIDEBAR_BALANCE_MIN_GAIN = 60;  // px: a move must shave at least this off the worst gap
+  // PURE decision core (unit-tested in pwa/test/unit/sidebar-balance-gate.test.mjs):
+  // sPaged/mPaged = [{sid,key,page}] (sPaged mutated in place); heights = {"sid|key":px};
+  // groupsBySid = {sid:[{key,start}]}; p1Cap/nCap = per-page sidebar budgets.
+  // Returns the applied moves [{unit,from,to,h}].
+  function __balanceGate(sPaged, mPaged, heights, groupsBySid, p1Cap, nCap, maxGapCfg, minGain) {
+    var lastMain = 1;
+    (mPaged || []).forEach(function (b) { if (b.page > lastMain) lastMain = b.page; });
+    if (lastMain < 2 || !(maxGapCfg > 0)) return [];
+    var h = function (b) { return heights[b.sid + '|' + b.key] || 0; };
+    var cap = function (p) { return p === 1 ? p1Cap : nCap; };
+    // column-DATA-order units: per sid, either its labeled groups (preamble blocks
+    // before the first group bind to the first group) or the whole section.
+    var units = [], unitBySidStart = {};
+    var order = [];   // sids in column order of first appearance
+    var seen = {};
+    sPaged.forEach(function (b) { if (!seen[b.sid]) { seen[b.sid] = 1; order.push(b.sid); } });
+    order.forEach(function (sid) {
+      var blocks = sPaged.filter(function (b) { return b.sid === sid; })
+        .sort(function (a, b) { return (parseInt(a.key, 10) || 0) - (parseInt(b.key, 10) || 0); });
+      var groups = (groupsBySid && groupsBySid[sid]) || [];
+      if (!groups.length) {
+        units.push({ unit: sid, blocks: blocks });
+        return;
+      }
+      groups.forEach(function (g, gi) {
+        var lo = gi === 0 ? -1 : g.start;   // preamble binds to the first group
+        var hi = gi + 1 < groups.length ? groups[gi + 1].start : Infinity;
+        var gBlocks = blocks.filter(function (b) {
+          var k = parseInt(b.key, 10) || 0; return k > lo - 1 && k < hi && (gi > 0 ? k >= g.start : true);
+        });
+        if (gBlocks.length) units.push({ unit: g.key, blocks: gBlocks });
+      });
+    });
+    var moves = [];
+    for (var iter = 0; iter < 8; iter++) {
+      var fill = {};
+      sPaged.forEach(function (b) { fill[b.page] = (fill[b.page] || 0) + h(b); });
+      var gaps = {}, worst = 0, worstPage = 0;
+      for (var p = 1; p <= lastMain; p++) {
+        gaps[p] = Math.max(0, cap(p) - (fill[p] || 0));
+        if (gaps[p] > worst) { worst = gaps[p]; worstPage = p; }
+      }
+      if (worst <= maxGapCfg) break;
+      // candidate: on each page a < worstPage, the LAST unit fully on page a,
+      // provided page a keeps at least one other unit.
+      var best = null;
+      for (var a = 1; a < lastMain; a++) {
+        var onA = units.filter(function (u) {
+          return u.blocks.length && u.blocks.every(function (b) { return b.page === a; });
+        });
+        if (onA.length < 2) continue;                       // never empty a page
+        var u = onA[onA.length - 1];                        // trailing unit, data order
+        var uh = u.blocks.reduce(function (s, b) { return s + h(b); }, 0);
+        if (!(uh > 0)) continue;
+        if ((fill[a + 1] || 0) + uh > cap(a + 1)) continue; // must FIT below
+        // simulate: does the global worst gap strictly improve?
+        var g2 = {};
+        for (var q = 1; q <= lastMain; q++) g2[q] = gaps[q];
+        g2[a] = Math.max(0, cap(a) - ((fill[a] || 0) - uh));
+        g2[a + 1] = Math.max(0, cap(a + 1) - ((fill[a + 1] || 0) + uh));
+        var newWorst = 0;
+        for (var q2 = 1; q2 <= lastMain; q2++) if (g2[q2] > newWorst) newWorst = g2[q2];
+        if (newWorst <= worst - minGain && (!best || newWorst < best.newWorst)) {
+          best = { u: u, from: a, to: a + 1, uh: uh, newWorst: newWorst };
+        }
+      }
+      if (!best) break;
+      best.u.blocks.forEach(function (b) { b.page = best.to; });
+      moves.push({ unit: best.u.unit, from: best.from, to: best.to, h: best.uh });
+    }
+    return moves;
+  }
   // Measure the profile photo's height (the reserve the sidebar's page 1 loses to it). 0 when
   // there is no photo (then the sidebar band falls back to PAGE1_BAND).
   function __photoReserve() {
@@ -1307,6 +1395,37 @@
             } catch (e) { /* never abort the pagination pass */ }
           })();
         }
+        // SIDEBAR-BALANCE-001 post-process: spread the sidebar's deficit across the
+        // main column's pages instead of one blank band on the last page. Decision
+        // core = __balanceGate (pure, unit-tested); this block only builds inputs.
+        if (SIDEBAR_BALANCE_MAX_GAP > 0) {
+          (function () {
+            try {
+              var bHeights = {};
+              __uniBlocks.sidebar.forEach(function (b) { bHeights[b.sid + '|' + b.key] = Math.max(0, b.bottom - b.top); });
+              var bGroups = {};
+              __sPaged.forEach(function (b) {
+                if (bGroups[b.sid]) return;
+                var secData = null;
+                for (var z = 0; z < (list || []).length; z++) { if (list[z] && list[z].id === b.sid) { secData = list[z]; break; } }
+                if (!secData || !Array.isArray(secData.items)) { bGroups[b.sid] = []; return; }
+                var groups = [], seenLbl = {};
+                secData.items.forEach(function (it, i) {
+                  if (it && it.grp != null && it.grp !== '') {
+                    var lbl = String(it.grp === true ? (it.t || '') : it.grp).replace(/\s+/g, ' ').trim().toLowerCase();
+                    var n = (seenLbl[lbl] = (seenLbl[lbl] || 0) + 1);
+                    groups.push({ key: b.sid + '#' + lbl + (n > 1 ? '#' + n : ''), start: i });
+                  }
+                });
+                bGroups[b.sid] = groups;
+              });
+              var bNCap = __uniLimit / SIDEBAR_PREVIEW_INFLATE;
+              var bP1Cap = Math.max(300, __uniLimit - __sbBand1);
+              __balanceGate(__sPaged, __mPaged, bHeights, bGroups, bP1Cap, bNCap,
+                            SIDEBAR_BALANCE_MAX_GAP, SIDEBAR_BALANCE_MIN_GAIN);
+            } catch (e) { /* never abort the pagination pass */ }
+          })();
+        }
         var __reSidebar = __mapFromPaged(__sPaged, false);
         var __reMainItems = __mapFromPaged(__mPaged, false);
         var __reRole = __mapFromPaged(__mPaged, true);
@@ -1763,6 +1882,7 @@
   window.AntcvAutoPagebreak = {
     version: VERSION,
     _promoteMarginGate: __promoteMarginGate,
+    _balanceGate: __balanceGate,
     run: function () { lastWritten = null; lastSourceFp = null; schedule(); },
     _compute: compute,
     // SIDEBAR-SHRINK-RECLAIM-001 runtime A/B knobs (console-tunable):
@@ -1770,7 +1890,7 @@
     //   AntcvAutoPagebreak.config({ HYST_STABLE:80 })  // looser stable band
     config: function (o) {
       try {
-        if (!o) return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING, PAGE1_BAND: PAGE1_BAND, MAIN_PDF_LINE_BONUS: MAIN_PDF_LINE_BONUS, MAIN_PAGE_N_BAND: MAIN_PAGE_N_BAND, SIDEBAR_PAGE1_BAND: SIDEBAR_PAGE1_BAND, KEEP_WHOLE_FRAC: KEEP_WHOLE_FRAC, FORCE_LAST_GRP_FRAC: FORCE_LAST_GRP_FRAC, SIDEBAR_PROMOTE_MARGIN: SIDEBAR_PROMOTE_MARGIN };
+        if (!o) return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING, PAGE1_BAND: PAGE1_BAND, MAIN_PDF_LINE_BONUS: MAIN_PDF_LINE_BONUS, MAIN_PAGE_N_BAND: MAIN_PAGE_N_BAND, SIDEBAR_PAGE1_BAND: SIDEBAR_PAGE1_BAND, KEEP_WHOLE_FRAC: KEEP_WHOLE_FRAC, FORCE_LAST_GRP_FRAC: FORCE_LAST_GRP_FRAC, SIDEBAR_PROMOTE_MARGIN: SIDEBAR_PROMOTE_MARGIN, SIDEBAR_BALANCE_MAX_GAP: SIDEBAR_BALANCE_MAX_GAP, SIDEBAR_BALANCE_MIN_GAIN: SIDEBAR_BALANCE_MIN_GAIN };
         if (typeof o.ONE_PASS === 'boolean') ONE_PASS = o.ONE_PASS;
         if (typeof o.HYST_STABLE === 'number') HYST_STABLE = o.HYST_STABLE;
         if (typeof o.HYST_TIGHT === 'number') HYST_TIGHT = o.HYST_TIGHT;
@@ -1778,6 +1898,8 @@
         if (typeof o.SNAP_GAP_MAX === 'number') SNAP_GAP_MAX = o.SNAP_GAP_MAX;
         if (typeof o.SIDEBAR_PREVIEW_INFLATE === 'number' && o.SIDEBAR_PREVIEW_INFLATE >= 1 && o.SIDEBAR_PREVIEW_INFLATE <= 2) SIDEBAR_PREVIEW_INFLATE = o.SIDEBAR_PREVIEW_INFLATE;
         if (typeof o.SIDEBAR_PROMOTE_MARGIN === 'number' && o.SIDEBAR_PROMOTE_MARGIN >= 0 && o.SIDEBAR_PROMOTE_MARGIN <= 400) SIDEBAR_PROMOTE_MARGIN = o.SIDEBAR_PROMOTE_MARGIN;
+        if (typeof o.SIDEBAR_BALANCE_MAX_GAP === 'number' && o.SIDEBAR_BALANCE_MAX_GAP >= 0 && o.SIDEBAR_BALANCE_MAX_GAP <= 1200) SIDEBAR_BALANCE_MAX_GAP = o.SIDEBAR_BALANCE_MAX_GAP;
+        if (typeof o.SIDEBAR_BALANCE_MIN_GAIN === 'number' && o.SIDEBAR_BALANCE_MIN_GAIN >= 0 && o.SIDEBAR_BALANCE_MIN_GAIN <= 600) SIDEBAR_BALANCE_MIN_GAIN = o.SIDEBAR_BALANCE_MIN_GAIN;
         if (typeof o.SIDEBAR_NPAGE === 'boolean') SIDEBAR_NPAGE = o.SIDEBAR_NPAGE;
         if (typeof o.SIDEBAR_UNIFIED === 'boolean') SIDEBAR_UNIFIED = o.SIDEBAR_UNIFIED;
         if (typeof o.ABSOLUTE_PAGING === 'boolean') ABSOLUTE_PAGING = o.ABSOLUTE_PAGING;
@@ -1788,7 +1910,7 @@
         if (typeof o.KEEP_WHOLE_FRAC === 'number' && o.KEEP_WHOLE_FRAC > 0 && o.KEEP_WHOLE_FRAC <= 1) KEEP_WHOLE_FRAC = o.KEEP_WHOLE_FRAC;
         if (typeof o.FORCE_LAST_GRP_FRAC === 'number' && o.FORCE_LAST_GRP_FRAC >= 0 && o.FORCE_LAST_GRP_FRAC <= 1) FORCE_LAST_GRP_FRAC = o.FORCE_LAST_GRP_FRAC;
         lastSourceFp = null; schedule();
-        return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING, PAGE1_BAND: PAGE1_BAND, MAIN_PDF_LINE_BONUS: MAIN_PDF_LINE_BONUS, MAIN_PAGE_N_BAND: MAIN_PAGE_N_BAND, SIDEBAR_PAGE1_BAND: SIDEBAR_PAGE1_BAND, KEEP_WHOLE_FRAC: KEEP_WHOLE_FRAC, FORCE_LAST_GRP_FRAC: FORCE_LAST_GRP_FRAC, SIDEBAR_PROMOTE_MARGIN: SIDEBAR_PROMOTE_MARGIN };
+        return { ONE_PASS: ONE_PASS, HYST_STABLE: HYST_STABLE, HYST_TIGHT: HYST_TIGHT, RECHECK_MS: RECHECK_MS, SNAP_GAP_MAX: SNAP_GAP_MAX, SIDEBAR_PREVIEW_INFLATE: SIDEBAR_PREVIEW_INFLATE, SIDEBAR_NPAGE: SIDEBAR_NPAGE, SIDEBAR_UNIFIED: SIDEBAR_UNIFIED, ABSOLUTE_PAGING: ABSOLUTE_PAGING, PAGE1_BAND: PAGE1_BAND, MAIN_PDF_LINE_BONUS: MAIN_PDF_LINE_BONUS, MAIN_PAGE_N_BAND: MAIN_PAGE_N_BAND, SIDEBAR_PAGE1_BAND: SIDEBAR_PAGE1_BAND, KEEP_WHOLE_FRAC: KEEP_WHOLE_FRAC, FORCE_LAST_GRP_FRAC: FORCE_LAST_GRP_FRAC, SIDEBAR_PROMOTE_MARGIN: SIDEBAR_PROMOTE_MARGIN, SIDEBAR_BALANCE_MAX_GAP: SIDEBAR_BALANCE_MAX_GAP, SIDEBAR_BALANCE_MIN_GAIN: SIDEBAR_BALANCE_MIN_GAIN };
       } catch (_) { return null; }
     },
     // Manual reset of auto breaks (e.g. from console) if a stale break

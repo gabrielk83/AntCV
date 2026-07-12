@@ -547,7 +547,9 @@ def cmd_run(args):
         print(f"   review bundle -> {bpath}")
         results_index.append({"uk": uk, "status": res["status"], "done": ndone, "bundle": bpath})
         if args.persist and res["status"] in ("done",):
-            persist_application(doc, r, res, guess_category(r["role"], r["jd"]), language)
+            persist_application(doc, r, res, guess_category(r["role"], r["jd"]), language,
+                                kernel=kernel, measure=getattr(args, "measure", True) and not args.dry,
+                                max_pages=getattr(args, "max_pages", 2))
     idx_path = os.path.join(args.out, "index.json")
     json.dump(results_index, open(idx_path, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     print(f"\nindex -> {idx_path}")
@@ -838,6 +840,113 @@ def compact_jd_aware(cv, cl, jd, language="en"):
 def compact_for_nordic(cv, cl, limits=None):
     return compact_jd_aware(cv, cl, "", "en")
 
+# ── MEASURE-AND-FIT: render the real PDF, count pages, tighten to budget ─────
+# The AntCV way is measure-don't-guess. After JD-relevance compaction, render the
+# CV through the docx-worker's /generate-pdf (CloudConvert, the SAME renderer the
+# app uses) and count pages with PyMuPDF. If it overflows the page budget, tighten
+# and re-render until it fits. Needs `fitz` locally + network to the docx-worker;
+# if either is missing the loop is skipped (never blocks a persist).
+DOCX_WORKER = os.environ.get("ANTCV_DOCX_WORKER", "https://docx-worker.karp-gabriel-a.workers.dev").rstrip("/")
+try:
+    import fitz  # PyMuPDF
+    _HAVE_FITZ = True
+except Exception:
+    _HAVE_FITZ = False
+
+def _pi_from_kernel(kernel, subtitle=""):
+    idy = _asdict(kernel.get("identity")) if isinstance(kernel, dict) else {}
+    return {"name": idy.get("name", ""), "email": idy.get("email", ""), "phone": idy.get("phone", ""),
+            "location": idy.get("location", ""), "citizenship": idy.get("citizenship", ""),
+            "linkedin": idy.get("linkedin", ""),
+            "specialization": subtitle or idy.get("specialization", "")}
+
+def _worker_map_section(s):
+    """Map an app-native section to the docx-worker schema (rich_block, which the
+    worker does not accept, becomes text for prose slots / labeled_list for
+    grouped detail). Approximate but close enough for a page-fit signal."""
+    typ, sid = s.get("type"), s.get("id")
+    if typ in ("text", "text_inline", "bullets", "table", "experience", "list", "list_italic", "labeled_list", "education"):
+        return {**s, "on": True}
+    if typ == "rich_block":
+        items = s.get("items") or []
+        base = {"id": sid, "title": s.get("title", ""), "loc": s.get("loc", "main"), "on": True}
+        if sid in ("profile", "work_style"):
+            parts = []
+            for it in items:
+                if isinstance(it, dict) and not it.get("grp"):
+                    b, t = it.get("b", ""), it.get("t", "")
+                    parts.append((b + ": " + t) if (b and t) else (b or t))
+            return {**base, "type": "text", "content": "\n".join(p for p in parts if p)}
+        li = []
+        for it in items:
+            if isinstance(it, dict):
+                li.append({"l": (it.get("t", "") or "").upper(), "v": ""} if it.get("grp")
+                          else {"l": it.get("b", ""), "v": it.get("t", "")})
+            else:
+                li.append({"l": "", "v": str(it)})
+        return {**base, "type": "labeled_list", "items": li}
+    return {"id": sid, "title": s.get("title", ""), "loc": s.get("loc", "main"), "on": True,
+            "type": "text", "content": ""}
+
+def render_cv_pages(cv, pi, language):
+    """Return the rendered CV page count via docx-worker /generate-pdf, or None
+    if measurement is unavailable (no fitz / worker error)."""
+    if not _HAVE_FITZ:
+        return None
+    ws = [_worker_map_section(s) for s in cv if s.get("on", True) is not False]
+    payload = {"schema_version": "1.0", "doc": "cv",
+               "language": language if language in ("en", "da") else "en",
+               "layout": "two_column", "filename": "fit", "personal_info": pi,
+               "meta": {}, "sections": ws, "font_sizes": {"mainBody": 10.5}, "sidebar_ratio": 0.33}
+    try:
+        data = json.dumps(payload).encode()
+        req = urllib.request.Request(DOCX_WORKER + "/generate-pdf", data=data, method="POST",
+                                     headers={"Content-Type": "application/json", "User-Agent": UA, "Origin": ORIGIN})
+        with urllib.request.urlopen(req, timeout=150) as r:
+            pdf = r.read()
+        return fitz.open(stream=pdf, filetype="pdf").page_count
+    except Exception as e:
+        print(f"   [measure] render skipped ({str(e)[:80]})")
+        return None
+
+def _tighten_once(cv, jd, level):
+    """Apply one progressively-stronger cut to bring the CV under budget."""
+    jdkw = _jd_kw(jd)
+    exp = next((s for s in cv if s.get("type") == "experience"), None)
+    if level == 1:  # trim the sidebar harder
+        for s in cv:
+            if s.get("type") == "rich_block" and s.get("loc") == "sidebar" and s.get("id") in ("tools", "regulatory", "certs"):
+                _filter_sidebar_block(s, jdkw, keep_min=3, keep_max=5)
+        return "sidebar->5"
+    if level == 2 and exp and len(exp.get("roles", [])) > 4:  # drop the lowest-ranked role
+        exp["roles"] = _select_roles(exp["roles"], jdkw, keep=len(exp["roles"]) - 1)
+        return f"experience->{len(exp['roles'])} roles"
+    if level == 3 and exp:  # 2 bullets per role
+        for r in exp["roles"]:
+            r["bullets"] = (r.get("bullets") or [])[:2]
+        return "bullets->2"
+    if exp and len(exp.get("roles", [])) > 4:
+        exp["roles"] = _select_roles(exp["roles"], jdkw, keep=len(exp["roles"]) - 1)
+        return f"experience->{len(exp['roles'])} roles"
+    return "none"
+
+def fit_to_pages(cv, jd, pi, language, max_pages=2, max_iters=4):
+    """Render, and if over the page budget, tighten + re-render until it fits.
+    Returns (final_pages, steps)."""
+    pages = render_cv_pages(cv, pi, language)
+    if pages is None:
+        return None, []
+    steps = []
+    it = 0
+    while pages and pages > max_pages and it < max_iters:
+        it += 1
+        what = _tighten_once(cv, jd, it)
+        if what == "none":
+            break
+        pages = render_cv_pages(cv, pi, language)
+        steps.append(f"{what} -> {pages}pg")
+    return pages, steps
+
 def build_structured_sections(sk, sections, company, role, language="en"):
     """Overlay the 8 generated sections onto a copy of the me() skeleton,
     converting each into the app's native structured shape. Returns (cv, cl)."""
@@ -984,7 +1093,7 @@ def _format_slogan(text):
         return ""
     return _cap_line(t, 90)
 
-def persist_application(doc, r, res, category, language):
+def persist_application(doc, r, res, category, language, kernel=None, measure=False, max_pages=2):
     """POST a real application, PUT a FULL me()-shaped section set (sidebar +
     experience + furniture) with the 8 generated sections overlaid by id/shape.
     Falls back to flat {type:text} blocks only if the skeleton fixture is
@@ -999,6 +1108,14 @@ def persist_application(doc, r, res, category, language):
         if r["tier"] != "high":
             cut = compact_jd_aware(cv, cl, r["jd"], language)
             if cut: print(f"   [nordic] {'; '.join(cut)}")
+            # MEASURE-AND-FIT: render the real PDF, tighten if it overflows the
+            # page budget (measure-don't-guess; catches the outliers a char
+            # heuristic misses — e.g. cmc rendered 3 pages pre-fit).
+            if measure:
+                pages, steps = fit_to_pages(cv, r["jd"], _pi_from_kernel(kernel), language, max_pages=max_pages)
+                if pages is not None:
+                    tail = (" [" + "; ".join(steps) + "]") if steps else ""
+                    print(f"   [measure] CV renders {pages} page(s) (budget {max_pages}){tail}")
         print(f"   [skeleton] overlaid: cv={len(cv)} cl={len(cl)} sections (full-fidelity)")
     else:
         print("   [skeleton] MISSING ~/.antcv/cv_skeleton.json — falling back to flat text blocks (low fidelity)")
@@ -1040,6 +1157,8 @@ def main():
         p.add_argument("--max-high", type=int, default=5)
         p.add_argument("--max-quick", type=int, default=10)
         p.add_argument("--persist", action="store_true", help="save real applications + doc writeback")
+        p.add_argument("--no-measure", dest="measure", action="store_false", help="skip the render-and-fit page-budget loop (needs PyMuPDF + docx-worker)")
+        p.add_argument("--max-pages", type=int, default=2, help="CV page budget for the render-and-fit loop (default 2)")
         p.add_argument("--dry", action="store_true", help="build the plan only; no LLM calls")
         p.add_argument("--no-research", dest="research", action="store_false", help="skip Google-CSE employer research")
     args = ap.parse_args()

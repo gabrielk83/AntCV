@@ -56,7 +56,7 @@
     var cands = [pi.name, pi.__latin_name, pi.__zh_name];
     for (var i = 0; i < cands.length; i++) {
       var n = String(cands[i] || '');
-      if (/gabriel/i.test(n) || n.indexOf('加百列') >= 0) return true; // 加百列
+      if (/gabriel/i.test(n) || n.indexOf('加布里埃尔') >= 0 || n.indexOf('加百列') >= 0) return true; // 加布里埃尔 (current) / 加百列 (legacy)
     }
     return false;
   }
@@ -68,8 +68,10 @@
       ['哥本哈根南', kbh + ' S'],          // 哥本哈根南
       ['哥本哈根', kbh],                        // 哥本哈根
       ['欧盟公民', L === 'da' ? 'EU-borger' : 'EU Citizen'], // 欧盟公民
-      ['柯葛顺·加百列·亚历山大', 'Gabriel Alexander Karp-Gershon'], // full zh name pin
-      ['加百列', 'Gabriel'],                        // 加百列
+      ['加布里埃尔·亚历山大·卡普·格申', 'Gabriel Alexander Karp-Gershon'], // full zh name pin (owner 2026-07-12)
+      ['柯葛顺·加百列·亚历山大', 'Gabriel Alexander Karp-Gershon'], // legacy zh name pin (pre-2026-07-12 stored data)
+      ['加布里埃尔', 'Gabriel'],                    // 加布里埃尔 (current sign name)
+      ['加百列', 'Gabriel'],                        // 加百列 (legacy sign name)
       ['丹麦', L === 'da' ? 'Danmark' : 'Denmark'],     // 丹麦
     ];
   }
@@ -114,7 +116,7 @@
     // owner-pinned identity renderings).
     var changed = false;
     var gab = isGabriel(pi);
-    var zhPins = { name: '柯葛顺·加百列·亚历山大', city: '哥本哈根', citizenship: '欧盟公民' };
+    var zhPins = { name: '加布里埃尔·亚历山大·卡普·格申', city: '哥本哈根', citizenship: '欧盟公民' };
     // LOCALFORM-DA-CONDITIONAL-001 (owner 2026-07-12, refines DA-ALWAYS): the
     // Danish location ("2300, København S") stays Danish only when the app is
     // Danish OR the JOB is in Denmark; a China-job zh app localizes it.
@@ -164,8 +166,8 @@
         if (!WIDE_RE.test(sn)) return false;
         var snL = localStorage.getItem('antcv:clSignName_latin');
         if (!snL || WIDE_RE.test(snL)) {
-          // pin fallback, Gabriel only (加百列 -> Gabriel)
-          if (sn.indexOf('加百列') < 0) return false;
+          // pin fallback, Gabriel only (加布里埃尔 / legacy 加百列 -> Gabriel)
+          if (sn.indexOf('加布里埃尔') < 0 && sn.indexOf('加百列') < 0) return false;
           snL = 'Gabriel';
         }
         localStorage.setItem('antcv:clSignName_zh', sn);

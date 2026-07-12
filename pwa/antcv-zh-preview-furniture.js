@@ -49,12 +49,12 @@
       var p = JSON.parse(localStorage.getItem('personalInfo') || '{}') || {}; p = p.personalInfo || p;
       var nm = String((p || {}).name || '').trim().replace(/\s+/g, ' ');
       var ZH = {
-        'Gabriel Alexander Karp-Gershon': '柯葛顺·加百列·亚历山大',
-        'Gabriel Alexander Karp Gershon': '柯葛顺·加百列·亚历山大',
-        'Gabriel Karp-Gershon': '柯葛顺·加百列·亚历山大',
-        'Gabriel Karp Gershon': '柯葛顺·加百列·亚历山大',
+        'Gabriel Alexander Karp-Gershon': '加布里埃尔·亚历山大·卡普·格申',
+        'Gabriel Alexander Karp Gershon': '加布里埃尔·亚历山大·卡普·格申',
+        'Gabriel Karp-Gershon': '加布里埃尔·亚历山大·卡普·格申',
+        'Gabriel Karp Gershon': '加布里埃尔·亚历山大·卡普·格申',
       };
-      return nm && ZH[nm] ? { en: nm, zh: ZH[nm], surname: '柯葛顺' } : null;
+      return nm && ZH[nm] ? { en: nm, zh: ZH[nm], surname: '卡普·格申' } : null;
     } catch (_) { return null; }
   }
   // Subtitle / specialization furniture (owner-specific line; exact match only).

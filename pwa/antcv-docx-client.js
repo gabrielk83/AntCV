@@ -741,16 +741,16 @@ export function buildPayload({
   // candidate name must render in Chinese, not Latin. Name-GUARDED to Gabriel's
   // exact stored name (and close variants) so it can NEVER rewrite another
   // candidate's name (same no-fabrication discipline as LOCALFORM-* above —
-  // Anita's export must be untouched). Surname-first per Chinese convention:
-  // 柯 (Karp) 葛顺 (Gershon) · 加百列 (Gabriel) · 亚历山大 (Alexander).
+  // Anita's export must be untouched). Owner-picked form (2026-07-12), given
+  // names first: 加布里埃尔 (Gabriel) · 亚历山大 (Alexander) · 卡普 (Karp) · 格申 (Gershon).
   const localizeName = (n, lang) => {
     if (lang !== 'zh') return n;
     const key = String(n || '').trim().replace(/\s+/g, ' ');
     const ZH = {
-      'Gabriel Alexander Karp-Gershon': '柯葛顺·加百列·亚历山大',
-      'Gabriel Alexander Karp Gershon': '柯葛顺·加百列·亚历山大',
-      'Gabriel Karp-Gershon':           '柯葛顺·加百列·亚历山大',
-      'Gabriel Karp Gershon':           '柯葛顺·加百列·亚历山大',
+      'Gabriel Alexander Karp-Gershon': '加布里埃尔·亚历山大·卡普·格申',
+      'Gabriel Alexander Karp Gershon': '加布里埃尔·亚历山大·卡普·格申',
+      'Gabriel Karp-Gershon':           '加布里埃尔·亚历山大·卡普·格申',
+      'Gabriel Karp Gershon':           '加布里埃尔·亚历山大·卡普·格申',
     };
     return ZH[key] || n;
   };
@@ -936,7 +936,7 @@ export function buildPayload({
           const out = {};
           let ov = String(localStorage.getItem('antcv:clSignName') || '').trim();
           // CL-SIGNNAME-ZH-001 (owner 2026-07-12): the babel layer maintains a
-          // per-language sign name (antcv:clSignName_zh = 加百列). On a zh
+          // per-language sign name (antcv:clSignName_zh = 加布里埃尔). On a zh
           // export it beats the Latin default so the sign-off is Chinese.
           if (language === 'zh') {
             try { const zv = String(localStorage.getItem('antcv:clSignName_zh') || '').trim(); if (zv) ov = zv; } catch (_) {}

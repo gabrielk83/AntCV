@@ -753,7 +753,8 @@ def main():
         json.dump({k: out.get(k) for k in ("before", "after", "log", "rewrites", "pinned")},
                   open(args.json, "w", encoding="utf-8"), indent=1, ensure_ascii=False)
     if args.apply and out["after"] and out["before"] and \
-       out["after"]["rewritable_runts"] < out["before"]["rewritable_runts"]:
+       (out["after"].get("defect_count", out["after"]["runt_count"])
+        < out["before"].get("defect_count", out["before"]["runt_count"])):
         c2, b2 = gr._req(gr.RELAY, f"/api/applications/{args.app}", "PUT",
                          {"cv_sections": cv2, "cl_sections": cl2})
         print(f"applied: PUT {c2}")

@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.357-translate-target';
+  const TARGET_VERSION = '1.51.358-role-twins';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.357-translate-target',
     '1.51.356-identity-heal',
     '1.51.355-relang-single-flight',
     '1.51.354-gen-keys-capture',

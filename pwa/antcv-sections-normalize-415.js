@@ -159,6 +159,17 @@
     var end = present ? 9999 : (n.length ? Math.max.apply(null, n) : start);
     return start + '-' + end;
   }
+  // GEN-ID-CANON-MATCH-001 helper: same start year; ends equal, or one side is
+  // open-ended (present/nu/至今 → 9999) while the other ends this year or last
+  // ("2022 - 2026" vs "2022 - present" is the same tenure written two ways).
+  function _yrLoose(ya, yb) {
+    var ka = _yrKey(ya).split('-'), kb = _yrKey(yb).split('-');
+    if (ka[0] !== kb[0] || ka[0] === '0') return false;
+    var ea = +ka[1], eb = +kb[1];
+    if (ea === eb) return true;
+    var hi = Math.max(ea, eb), lo = Math.min(ea, eb);
+    return hi === 9999 && lo >= (new Date().getFullYear() - 1);
+  }
   function _samePosition(a, b) {
     if (!a || !b) return false;
     // SAME-ID-SAME-POSITION-001 (owner 2026-07-12 "you kept english and danish
@@ -167,6 +178,25 @@
     // gen role and its English PI source share the id; title/year text
     // comparison can never see that across Latin↔Latin languages.
     if (a.id != null && b.id != null && String(a.id) === String(b.id)) return true;
+    // BASE-ID-SAME-POSITION-001 (owner 2026-07-12, 25 visible roles): the
+    // completeness backfill re-adds a role under a SUFFIXED id (innoviz-ccr-2,
+    // mepro-tl-3) when the stored title is in another LANGUAGE (its compare is
+    // translation-blind). The id ROOT is the language-agnostic identity: same
+    // root = the same position in two renderings.
+    if (a.id != null && b.id != null) {
+      var __ba = String(a.id).replace(/-\d+$/, ''), __bb = String(b.id).replace(/-\d+$/, '');
+      if (__ba && __ba === __bb) return true;
+    }
+    // GEN-ID-CANON-MATCH-001: a generation emits schema ids (r1..r10) for the
+    // same positions the canon knows by name (kanzen). Same company key (company
+    // names are keep-verbatim invariants) + the same tenure (strict start, loose
+    // open end) = the same position. Start-year strictness keeps the Innoviz
+    // CCR/SA split (different starts, same company) apart.
+    var __gA = /^r\d+$/.test(String(a.id || '')), __gB = /^r\d+$/.test(String(b.id || ''));
+    if (__gA !== __gB) {
+      var __cka = _companyKey(a.company), __ckb = _companyKey(b.company);
+      if (__cka && __cka === __ckb && _yrLoose(a.years, b.years)) return true;
+    }
     if (_yrKey(a.years) !== _yrKey(b.years)) return false;
     var ra = a.title || a.role, rb = b.title || b.role;
     var ta = _titleCore(ra), tb = _titleCore(rb);
@@ -257,9 +287,34 @@
         var wantWide = (function () { try { var L = String(localStorage.getItem('language') || 'en').replace(/"/g, '').slice(0, 2); return L === 'zh' || L === 'he' || L === 'am' || L === 'ar'; } catch (_) { return false; } })();
         if (_isWideTitle(b.title) !== wantWide) continue; // only drop i when j is the wanted rendering
       } else {
-        if (!ta || !tb || ta !== tb) continue; // ROLE-DECOMP-001: exact-title dup only (was containment)
-        if (_companyKey(a.company) !== _companyKey(b.company)) continue; // COMPANY-VARIANT-KEY-001
-        if (!overlap(a.years, b.years)) continue;
+        // BASE-ID-DEDUP-001 + GEN-ID-CANON-MATCH-001 (owner 2026-07-12, 25 VISIBLE
+        // roles): same-Latin cross-LANGUAGE twins (da title vs en title) never hit
+        // the exact-title rule. Same id root (innoviz-ccr vs innoviz-ccr-2), or a
+        // gen schema id (r1) vs the canonical id at the same company/tenure, is
+        // the same position. Survivor = richer bullets; tie → the canonical
+        // (suffixless, non-schema) id. Bullets are NOT moved across (they may be
+        // in another language; the id-resolved translate pass heals the survivor).
+        var __idA = String(a.id == null ? '' : a.id), __idB = String(b.id == null ? '' : b.id);
+        var __sameRoot = __idA && __idB && __idA !== __idB && __idA.replace(/-\d+$/, '') === __idB.replace(/-\d+$/, '');
+        var __genPair = /^r\d+$/.test(__idA) !== /^r\d+$/.test(__idB) &&
+          _companyKey(a.company) && _companyKey(a.company) === _companyKey(b.company) &&
+          _yrLoose(a.years, b.years);
+        if (__genPair) {
+          // Survivor must be the CANONICAL id — the Results pin machinery keys
+          // on it (id:kanzen). Adopt the gen twin's fresh title + bullets: they
+          // are the tailored rendering; the identity (id, canonical years) stays.
+          if (/^r\d+$/.test(__idB)) continue;
+          if (nbul(a) > 0) { b.title = a.title || b.title; b.bullets = a.bullets; }
+        } else if (__sameRoot) {
+          var __synthA = /-\d+$/.test(__idA);
+          var __synthB = /-\d+$/.test(__idB);
+          if (nbul(b) < nbul(a)) continue;                       // survivor must not be poorer
+          if (nbul(b) === nbul(a) && __synthB && !__synthA) continue; // tie: keep the suffixless id
+        } else {
+          if (!ta || !tb || ta !== tb) continue; // ROLE-DECOMP-001: exact-title dup only (was containment)
+          if (_companyKey(a.company) !== _companyKey(b.company)) continue; // COMPANY-VARIANT-KEY-001
+          if (!overlap(a.years, b.years)) continue;
+        }
       }
       drop[i] = true;
       if (a.on !== false) b.on = true;

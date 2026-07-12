@@ -455,7 +455,7 @@ def sanitize_text(text):
     hyphen; never a banned buzzword."""
     if not text: return text
     t = text.replace(" — ", " - ").replace(" – ", " - ")
-    t = t.replace("—", "-").replace("–", "-")
+    t = t.replace("—", "-").replace("–", "-").replace("‑", "-").replace("‐", "-")
     t = _swap_banned(t)
     return t
 

@@ -301,6 +301,7 @@ CV_SECTIONS = [
     ("cv_profile",          "PROFILE",           "Write the CV PROFILE section (2-3 tight sentences + optional 'Work style:' clause) for this candidate résumé."),
     ("cv_outcomes",         "SELECTED OUTCOMES", "Generate the CV SELECTED OUTCOMES section: 5-6 verb-led outcomes, each with a bold lead and a body. Return one per line as 'LEAD / body'."),
     ("cv_core",             "CORE COMPETENCIES", "Generate the CV CORE COMPETENCIES table: 6 rows, each 'Focus Area | Strategic Expertise'. Backward-looking, role-independent."),
+    ("cv_specialization",   "SPECIALISATION",    "Write the CV SPECIALISATION / positioning line for the header: AT MOST THREE short concepts separated by ' • ' (a bullet), tailored to THIS role's domain and drawn from the candidate's real strengths. NOT a sentence, no company name, no punctuation at the end. Return ONLY the line."),
 ]
 CL_SECTIONS = [
     ("cl_opening",          "Opening",           "Write the COVER LETTER OPENING line (1-2 first-person sentences): a specific, engaging hook that names the role and gives a genuine, concrete reason this candidate is drawn to it - NOT a flat 'I am applying for the X position at Y'. Calm professional register, no filler, no greeting line, no name."),
@@ -310,6 +311,7 @@ CL_SECTIONS = [
     ("cl_how_i_would_contribute","HOW I WOULD CONTRIBUTE","Write the COVER LETTER HOW I WOULD CONTRIBUTE section (3-6 verb-led bullets)."),
     ("cl_foundation",       "FOUNDATION",        "Write the COVER LETTER FOUNDATION section: two short paragraphs labelled 'Hands-on:' and 'Professionally:'."),
     ("cl_closure",          "Closure",           "Write the COVER LETTER CLOSURE (1-2 first-person sentences): a warm, confident sign-off that INVITES a conversation and points at the concrete value the candidate would bring to THIS employer. Do NOT restate why the candidate is drawn to the role (the opening already does that); focus on the invitation and the value. Not generic boilerplate. No 'Sincerely'/signature line, no name."),
+    ("cl_slogan",           "SLOGAN",            "Write ONE short personal cover-letter SLOGAN (max ~10 words, a single line): a specific, brand/fit-derived statement of the value THIS candidate brings to THIS employer. Not a generic tagline, no company name, no quotation marks. Return ONLY the line."),
 ]
 
 def _user_turn(profile_json, meta, section_ask):
@@ -683,37 +685,158 @@ def _furn(language, key, company, role):
 # Nordic-Minimal compaction targets (~1.5-2 pages). Trims the verbose MAIN-column
 # blocks; leaves the short sidebar furniture intact. Tunable; logs what it cut
 # (NORDIC-COMPACT-001, 2026-07-12 — owner: the persisted batch ran 3-5 pages).
-_NORDIC = {"exp_roles": 4, "exp_bullets": 3, "richblock_items": 6,
-           "outcomes": 4, "core_rows": 5}
-def compact_for_nordic(cv, cl, limits=None):
-    lim = {**_NORDIC, **(limits or {})}
+# ── JD-relevance engine (the heart of a TAILORED CV) ────────────────
+# A Nordic CV must fit ~1.75 pages AND lead with what THIS employer cares about.
+# So compaction is relevance-driven, not first-N truncation: rank the candidate's
+# real experience + sidebar detail against the JD, merge same-employer roles to
+# preserve breadth in fewer entries, keep <=6 roles each with <=3 JD-relevant
+# bullets + one result, and hide sidebar items the JD does not touch.
+_STOP = set("""the a an and or of to in for with on at by from as is are be was were will would can
+could should may might have has had do does did been being this that these those your our we you i it
+its their they them then than into over under above below across per via not no all any each both more
+most other some such only own same so up out off about who what which when where how why us job jobs
+role roles position candidate company companies team teams work working works experience years year
+strong ability able etc use used using make making made new help join want looking seek seeking apply
+you're we're our within across using""".split())
+def _toks(text):
+    return [w for w in re.findall(r"[a-zçæøåéüö][a-z0-9+/#.-]{2,}", (text or "").lower()) if w not in _STOP]
+def _jd_kw(jd):
+    from collections import Counter
+    return Counter(_toks(jd))
+def _rel(text, jdkw):
+    return sum(jdkw.get(t, 0) for t in set(_toks(text)))
+def _cap_line(s, maxlen=155):
+    """Limit a bullet/result to ~2 rendered lines, trimming at a clause or word
+    boundary (owner: 'limit line lengths')."""
+    s = (s or "").strip()
+    if len(s) <= maxlen: return s
+    win = s[:maxlen]
+    for sep in (". ", "; ", ", "):
+        p = win.rfind(sep)
+        if p >= maxlen * 0.55: return win[:p].rstrip(" ,;:-")
+    return win.rsplit(" ", 1)[0].rstrip(" ,;:-")
+def _yr(years, first=False):
+    ys = re.findall(r"\b(19\d\d|20\d\d)\b", years or "")
+    if ys: return int(ys[0] if first else ys[-1])
+    return 0 if first else (2026 if re.search(r"present|nu\b", (years or ""), re.I) else 0)
+
+# Same-employer adjacent roles collapse into ONE entry (title carries both, dates
+# span). Preserves career breadth while cutting the role count toward <=6.
+_ROLE_MERGE = [
+    (["innoviz-sa", "innoviz-ccr"], "System Architect / Change Request Lead"),
+    (["mepro-eng", "mepro-tl"],     "R&D Electro-Optics Engineer / Team Leader"),
+    (["tau-research", "tau-teaching"], "Research & Teaching Assistant"),
+]
+def _merge_roles(roles):
+    clusters = {}
+    for ids, title in _ROLE_MERGE:
+        present = [r for r in roles if r.get("id") in ids]
+        if len(present) < 2: continue
+        ps = sorted(present, key=lambda r: _yr(r.get("years")), reverse=True)
+        head = dict(ps[0]); head["title"] = title
+        starts = [_yr(p.get("years"), first=True) for p in present if _yr(p.get("years"), first=True)]
+        head["years"] = f"{min(starts) if starts else _yr(ps[-1].get('years'),True)} - {max(_yr(p.get('years')) for p in present)}"
+        seen, bl = set(), []
+        for p in ps:
+            for b in (p.get("bullets") or []):
+                k = b.strip()[:40].lower()
+                if k not in seen: seen.add(k); bl.append(b)
+        head["bullets"] = bl
+        head["results"] = next((p.get("results") for p in ps if p.get("results")), None)
+        first_id = next(r.get("id") for r in roles if r.get("id") in ids)
+        for r in present:
+            clusters[r.get("id")] = (first_id, head if r.get("id") == first_id else None)
+    out = []
+    for r in roles:
+        rid = r.get("id")
+        if rid in clusters:
+            _fid, head = clusters[rid]
+            if head is not None: out.append(head)   # emit merged head once, in place
+        else:
+            out.append(r)
+    return out
+
+_VOL_RE = re.compile(r"forening|volunteer|frivillig|\bcouncil\b|representative|pan idr", re.I)
+def _select_roles(roles, jdkw, keep=6):
+    if len(roles) <= keep: return roles
+    scored = []
+    for r in roles:
+        txt = " ".join([r.get("title", ""), r.get("company", "")] + (r.get("bullets") or []) + [r.get("results") or ""])
+        vol = bool(_VOL_RE.search(r.get("title", "") + " " + r.get("company", "")))
+        # Force-keep only the current PROFESSIONAL role; a current VOLUNTEER role
+        # (Pan Idraet rugby) competes on JD relevance so it surfaces for people/
+        # sports employers and drops for pure-technical/finance ones.
+        cur = 1 if ((r.get("isCurrent") or re.search(r"present|nu\b", (r.get("years") or ""), re.I)) and not vol) else 0
+        scored.append((r, _rel(txt, jdkw), cur, _yr(r.get("years"))))
+    forced = [t for t in scored if t[2]]                       # always keep current role(s)
+    rest = sorted([t for t in scored if not t[2]], key=lambda t: (-t[1], -t[3]))
+    chosen = forced + rest[:max(0, keep - len(forced))]
+    return [t[0] for t in sorted(chosen, key=lambda t: -t[3])]  # reverse-chronological
+
+def _fit_role(role, jdkw, max_bullets=3, cap=155):
+    bl = role.get("bullets") or []
+    order = sorted(range(len(bl)), key=lambda i: -_rel(bl[i], jdkw))[:max_bullets]
+    top = [bl[i] for i in sorted(order)]                        # keep original narrative order
+    res = role.get("results")
+    if not res:                                                 # every role gets >=1 result
+        rest = [b for b in bl if b not in top] or top or bl
+        withnum = [b for b in rest if re.search(r"\d", b)]
+        res = withnum[0] if withnum else (rest[0] if rest else None)
+        if res in top and len(top) > 1: top = [b for b in top if b != res]
+    role["bullets"] = [_cap_line(b, cap) for b in top]
+    if res: role["results"] = _cap_line(res, cap)
+    return role
+
+def _filter_sidebar_block(sec, jdkw, keep_min=4, keep_max=7):
+    items = sec.get("items") or []
+    isgrp = lambda it: isinstance(it, dict) and it.get("grp")
+    txt = lambda it: (it.get("b", "") + " " + it.get("t", "")) if isinstance(it, dict) else str(it)
+    reals = [(i, it) for i, it in enumerate(items) if not isgrp(it)]
+    if len(reals) <= keep_min: return 0
+    ranked = sorted(reals, key=lambda x: -_rel(txt(x[1]), jdkw))
+    keep = set()
+    for rank, (i, it) in enumerate(ranked):
+        if rank < keep_min or _rel(txt(it), jdkw) > 0: keep.add(i)
+        if len(keep) >= keep_max: break
+    if len(keep) >= len(reals): return 0
+    out, cur_grp, buf = [], None, []
+    def emit():
+        if buf:
+            if cur_grp is not None: out.append(cur_grp)
+            out.extend(buf)
+    for idx, it in enumerate(items):
+        if isgrp(it): emit(); cur_grp, buf = it, []
+        elif idx in keep: buf.append(it)
+    emit()
+    sec["items"] = out
+    return len(reals) - len(keep)
+
+def compact_jd_aware(cv, cl, jd, language="en"):
+    """Relevance-driven Nordic compaction (~1.75 pages): merge + JD-rank
+    experience to <=6 roles (<=3 bullets + a result each, capped lines), trim
+    outcomes/core, and hide sidebar detail the JD does not touch."""
+    jdkw = _jd_kw(jd)
     cut = []
     for s in cv:
         sid, typ = s.get("id"), s.get("type")
         if typ == "experience" and isinstance(s.get("roles"), list):
-            if len(s["roles"]) > lim["exp_roles"]:
-                cut.append(f"experience roles {len(s['roles'])}->{lim['exp_roles']}")
-                s["roles"] = s["roles"][:lim["exp_roles"]]
-            for role in s["roles"]:
-                b = role.get("bullets")
-                if isinstance(b, list) and len(b) > lim["exp_bullets"]:
-                    role["bullets"] = b[:lim["exp_bullets"]]
-        elif sid == "outcomes" and isinstance(s.get("items"), list) and len(s["items"]) > lim["outcomes"]:
-            cut.append(f"outcomes {len(s['items'])}->{lim['outcomes']}"); s["items"] = s["items"][:lim["outcomes"]]
-        elif sid == "core_comp" and isinstance(s.get("rows"), list) and len(s["rows"]) > lim["core_rows"] + 1:
-            cut.append(f"core_comp rows {len(s['rows'])-1}->{lim['core_rows']}"); s["rows"] = s["rows"][:lim["core_rows"] + 1]
-        elif typ == "rich_block" and isinstance(s.get("items"), list):
-            # count only real items (skip group headers); items may be dicts or
-            # plain strings (e.g. certs). Cap the visible items, keep group headers.
-            def _isgrp(i): return isinstance(i, dict) and i.get("grp")
-            reals = [i for i in s["items"] if not _isgrp(i)]
-            if len(reals) > lim["richblock_items"]:
-                kept, seen = [], 0
-                for i in s["items"]:
-                    if _isgrp(i): kept.append(i); continue
-                    if seen < lim["richblock_items"]: kept.append(i); seen += 1
-                cut.append(f"{sid} items {len(reals)}->{lim['richblock_items']}"); s["items"] = kept
+            n0 = len(s["roles"])
+            roles = _select_roles(_merge_roles(s["roles"]), jdkw, keep=6)
+            for r in roles: _fit_role(r, jdkw, max_bullets=3, cap=155)
+            s["roles"] = roles
+            cut.append(f"experience {n0}->{len(roles)} roles (merged + JD-ranked, <=3 bullets + result)")
+        elif sid == "outcomes" and isinstance(s.get("items"), list) and len(s["items"]) > 4:
+            s["items"] = s["items"][:4]; cut.append("outcomes ->4")
+        elif sid == "core_comp" and isinstance(s.get("rows"), list) and len(s["rows"]) > 6:
+            s["rows"] = s["rows"][:6]; cut.append("core ->5")
+        elif typ == "rich_block" and s.get("loc") == "sidebar" and sid in ("tools", "regulatory", "certs"):
+            removed = _filter_sidebar_block(s, jdkw)
+            if removed: cut.append(f"{sid} sidebar -{removed} JD-irrelevant")
     return cut
+
+# Back-compat alias (older call sites); the JD-aware path is preferred.
+def compact_for_nordic(cv, cl, limits=None):
+    return compact_jd_aware(cv, cl, "", "en")
 
 def build_structured_sections(sk, sections, company, role, language="en"):
     """Overlay the 8 generated sections onto a copy of the me() skeleton,
@@ -839,6 +962,28 @@ def build_structured_sections(sk, sections, company, role, language="en"):
                     i["t"] = _strip_scaffold(i["t"])
     return cv, cl
 
+# Standing 3-concept specialisation line (SPEC-CATCHY-001) per language — the
+# clean fallback when the generated line is empty/scaffold/unusable.
+_STANDING_SPEC = {"en": "Processes • Products • People",
+                  "da": "Processer • Produkter • Mennesker",
+                  "sv": "Processer • Produkter • Människor"}
+def _format_spec(text, language):
+    """Normalise a generated specialisation line to at most three ' • '-joined
+    concepts in the JD language; fall back to the standing line if unusable."""
+    t = sanitize_text((text or "").strip()).strip(" .\"'")
+    t = re.sub(r"\s*[•·|/]\s*", " | ", t)
+    t = re.sub(r"\s+[-–—]\s+", " | ", t)
+    parts = [p.strip() for p in t.split("|") if p.strip() and not _is_scaffold(p)]
+    if not parts:
+        return _STANDING_SPEC.get(language, _STANDING_SPEC["en"])
+    return " • ".join(parts[:3])
+def _format_slogan(text):
+    t = sanitize_text((text or "").strip()).strip(" .\"'")
+    t = (t.split("\n")[0]).strip()
+    if not t or _is_scaffold(t):
+        return ""
+    return _cap_line(t, 90)
+
 def persist_application(doc, r, res, category, language):
     """POST a real application, PUT a FULL me()-shaped section set (sidebar +
     experience + furniture) with the 8 generated sections overlaid by id/shape.
@@ -849,11 +994,11 @@ def persist_application(doc, r, res, category, language):
     sk = load_skeleton()
     if sk:
         cv, cl = build_structured_sections(sk, res["sections"], company, role, language=language)
-        # Nordic-Minimal length: the full skeleton runs 3-5 pages; compact the
-        # verbose main-column blocks to ~1.5-2 pages (quick tier == Nordic).
+        # Nordic-Minimal (~1.75 pages) via JD-relevance: merge + rank experience
+        # to <=6 roles, hide JD-irrelevant sidebar detail (quick tier == Nordic).
         if r["tier"] != "high":
-            cut = compact_for_nordic(cv, cl)
-            if cut: print(f"   [nordic] compacted: {', '.join(cut)}")
+            cut = compact_jd_aware(cv, cl, r["jd"], language)
+            if cut: print(f"   [nordic] {'; '.join(cut)}")
         print(f"   [skeleton] overlaid: cv={len(cv)} cl={len(cl)} sections (full-fidelity)")
     else:
         print("   [skeleton] MISSING ~/.antcv/cv_skeleton.json — falling back to flat text blocks (low fidelity)")
@@ -861,11 +1006,18 @@ def persist_application(doc, r, res, category, language):
               for sid, s in res["sections"].items() if sid.startswith("cv_")]
         cl = [{"id": sid, "title": s["title"], "type": "text", "content": sanitize_text(s.get("result") or ""), "loc": "main"}
               for sid, s in res["sections"].items() if sid.startswith("cl_")]
+    # Target-language header furniture: specialisation -> subtitle (app renders
+    # t.subtitle before the global personalInfo.specialization); slogan -> meta.
+    spec = _format_spec((res["sections"].get("cv_specialization") or {}).get("result"), language)
+    slogan = _format_slogan((res["sections"].get("cl_slogan") or {}).get("result"))
+    _meta = {"source": "gen-runner", "tier": r["tier"], "urlkey": uk}
+    if slogan: _meta["slogan"] = slogan
     c, b = _req(RELAY, "/api/applications", "POST", {
         "jd_text": r["jd"], "jd_company": str(r["company"]), "jd_role": str(r["role"]),
         "category": category, "jd_language": language, "save_as_new": True,
-        "meta": {"source": "gen-runner", "tier": r["tier"], "urlkey": uk},
+        "subtitle": spec, "meta": _meta,
     })
+    print(f"   [lang] subtitle={spec!r} slogan={slogan!r}")
     if c != 200 or not (b.get("application") or {}).get("id"):
         print(f"   persist POST failed: {c} {str(b)[:160]}"); return
     app_id = b["application"]["id"]

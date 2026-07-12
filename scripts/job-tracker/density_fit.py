@@ -233,8 +233,10 @@ def _gate_candidate(it, new, language, gr):
         return False, reason
     if _numbers(new) != _numbers(old) or set(_acronyms(old)) - set(_acronyms(new)):
         return False, "a number or acronym was changed or lost — keep all facts verbatim"
-    if gr.banned_hits(new) or "—" in new or "–" in new:
-        return False, "used a banned word or an em/en dash"
+    if gr.banned_hits(new) or any(ch in new for ch in "—–‐‑"):
+        # em/en dash AND the U+2010/2011 unicode hyphens (a model emitted
+        # "electro<U+2010>optical" on the NVIDIA regen) — ASCII hyphen only
+        return False, "used a banned word or a non-ASCII dash/hyphen"
     return True, ""
 
 def llm_refit(items, language="en", facts="", n_families=None):

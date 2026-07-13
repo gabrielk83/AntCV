@@ -1,6 +1,6 @@
 import { insertLlmCall, aggregateHealth, getLatestHealth, pruneOld, insertQualitySignal } from './telemetry.js';
 
-const VERSION='1.3.11';
+const VERSION='1.3.12';
 // antcv-access-relay — auth + hardening
 // =====================================
 // Public-facing relay with built-in user authentication.
@@ -35,7 +35,7 @@ const VERSION='1.3.11';
 // Required binding (declare in wrangler.toml):
 //   KV_BINDING        KV namespace (stores OTPs, rate counters, prefs, signals)
 
-const RELAY_VERSION = 'auth-32-photo-library';
+const RELAY_VERSION = 'auth-33-cse-brave';
 const SESSION_TTL_SECONDS    = 7 * 24 * 60 * 60;       // 7 days
 // Refresh whenever the token has < 6 days left (i.e. it's more than 1 day old),
 // so ANY request past the first day rotates it to a fresh 7-day token via the
@@ -4219,7 +4219,8 @@ const method = request.method;
 
   // CSE-PROXY-001 (owner 2026-07-05): the weekly demand-tuning job
   // (CLUSTER-QUAL-001 §7.6 — a SCHEDULED CLAUDE CODE SESSION, not this Worker)
-  // needs Google Custom Search results scoped to job-market sites
+  // needs web-search results (Brave preferred, Google CSE fallback — see
+  // CSE-PROXY-GOOGLE-ENTITLEMENT-001) scoped to job-market sites
   // (Jobindex.dk, Glassdoor, LinkedIn jobs, etc. — see
   // docs/deployment/google-cse-setup.md) without ever holding the real,
   // billable Google API key. SAME pattern as /api/security-alert above: the
@@ -4234,15 +4235,38 @@ const method = request.method;
     if (!env.CSE_PROXY_TOKEN || tok !== env.CSE_PROXY_TOKEN) {
       return jsonResponse({ error: 'unauthorized' }, 401, request, env);
     }
-    if (!env.GOOGLE_CSE_KEY) {
-      return jsonResponse({ error: 'GOOGLE_CSE_KEY not set on relay' }, 503, request, env);
-    }
     const url = new URL(request.url);
     const q = String(url.searchParams.get('q') || '').trim().slice(0, 300);
     if (!q) return jsonResponse({ error: 'missing q' }, 400, request, env);
     const siteSearch = String(url.searchParams.get('siteSearch') || '').trim().slice(0, 100);
     const dateRestrict = String(url.searchParams.get('dateRestrict') || 'm3').trim().slice(0, 10);
     const num = Math.min(10, Math.max(1, parseInt(url.searchParams.get('num'), 10) || 10));
+
+    // CSE-PROXY-GOOGLE-ENTITLEMENT-001: Google CSE 403s on a Google-side
+    // entitlement hold (Support case open since 2026-07-10). PREFERRED backend
+    // is now Brave Search, same as /api/research below — try it first whenever
+    // BRAVE_API_KEY is set; fall through to Google CSE only without it.
+    if (env.BRAVE_API_KEY) {
+      const bUrl = new URL('https://api.search.brave.com/res/v1/web/search');
+      bUrl.searchParams.set('q', siteSearch ? ('site:' + siteSearch + ' ' + q) : q);
+      bUrl.searchParams.set('count', String(num));
+      const fr = /y/.test(dateRestrict) ? 'py' : (/m/.test(dateRestrict) ? 'pm' : (/w/.test(dateRestrict) ? 'pw' : ''));
+      if (fr) bUrl.searchParams.set('freshness', fr);
+      try {
+        const res = await fetch(bUrl.toString(), { headers: { 'Accept': 'application/json', 'Accept-Encoding': 'gzip', 'X-Subscription-Token': env.BRAVE_API_KEY } });
+        if (!res.ok) { const b = await res.text().catch(() => ''); return jsonResponse({ error: `Brave ${res.status}: ${b.slice(0, 300)}` }, 502, request, env); }
+        const data = await res.json();
+        const results = (data && data.web && Array.isArray(data.web.results)) ? data.web.results : [];
+        const items = results.slice(0, num).map((it) => ({ title: it.title, link: it.url, snippet: it.description || '' }));
+        return jsonResponse({ ok: true, source: 'brave', items, total_results: null }, 200, request, env);
+      } catch (e) { return jsonResponse({ error: 'Brave: ' + String(e && e.message || e) }, 502, request, env); }
+    }
+
+    // Fallback backend: Google CSE (blocked by the entitlement hold above
+    // until Google resolves the Support case).
+    if (!env.GOOGLE_CSE_KEY) {
+      return jsonResponse({ error: 'no search backend: set BRAVE_API_KEY (preferred) or GOOGLE_CSE_KEY on the relay' }, 503, request, env);
+    }
     // CSE ID is not sensitive (it's embedded in the public cse.js widget
     // snippet Google itself generates) — safe as a plain constant.
     const CSE_ID = '67ce5387bc18f4028';

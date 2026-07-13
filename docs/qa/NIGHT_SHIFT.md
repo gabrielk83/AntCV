@@ -29,7 +29,6 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 ## ACTIVE CLAIMS
 
 <!-- SHIFT:BEGIN — one JSON object per line; managed by scripts/shift.mjs, safe to hand-edit a line if a session died without releasing -->
-{"id":"sh_mrjqn9z3_egii","started":"2026-07-13T21:32:26.563Z","host":"GabyPC2","worktree":null,"branch":"fix-overflow-oscillation","range":"1.51.701-1.51.720","task":"overflow-oscillation-damp","beat":"2026-07-13T21:32:26.683Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

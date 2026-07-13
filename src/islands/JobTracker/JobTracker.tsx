@@ -8,6 +8,7 @@ import {
   fetchClusterTop20, askAI, fitPercent, fetchBrandColors, research, TRACKED_STATUSES, type TrackerDoc, type Row,
 } from './api';
 import { computeTier, orderTop5 } from './rank';
+import { CLUSTER_REFRESH_MS, reconcileSnapshot, shouldRefetchOnFocus } from './clusterRefresh';
 
 const NAVY = '#1F3864';
 const today = () => new Date().toISOString().slice(0, 10);
@@ -178,7 +179,33 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     finally { setLoading(false); }
   }, []);
   useEffect(() => { void load(); }, [load]);
-  useEffect(() => { void fetchClusterTop20().then((c) => setCluster(c.top20 || [])).catch(() => { /* */ }); }, []);
+  // TOP5-PERIODIC-RESCORE-001 (JOBTRACKER-TOP5-PERIODIC-RESCORE-001, OPEN_REGISTER
+  // row 77): the cluster demand snapshot is a ranking INPUT (rank.ts fitScore /
+  // orderTop5), but it used to be fetched ONCE here and never refreshed — so the
+  // Top-5 could not drift with the weekly cluster-demand refresh while the panel
+  // stayed open. Re-fetch on a LOW-frequency schedule (hourly background check +
+  // on window focus once >24h stale) and re-rank ONLY when the snapshot content
+  // hash actually changes, so identical states never reshuffle the Top-5
+  // (ranking-stability, OPEN_REGISTER row 76). No busy timers / per-minute polls.
+  const clusterHashRef = useRef('');
+  const clusterFetchedAtRef = useRef(0);
+  useEffect(() => {
+    let alive = true;
+    const refresh = () => fetchClusterTop20().then((c) => {
+      if (!alive) return;
+      clusterFetchedAtRef.current = Date.now();
+      const next = c.top20 || [];
+      const { hash, changed } = reconcileSnapshot(clusterHashRef.current, next);
+      if (!changed) return;            // demand unchanged -> no re-rank (stable Top-5)
+      clusterHashRef.current = hash;
+      setCluster(next);
+    }).catch(() => { /* keep the last snapshot on any failure */ });
+    void refresh();                                                    // on mount
+    const iv = setInterval(() => { void refresh(); }, CLUSTER_REFRESH_MS);  // hourly
+    const onFocus = () => { if (shouldRefetchOnFocus(clusterFetchedAtRef.current, Date.now())) void refresh(); };
+    window.addEventListener('focus', onFocus);
+    return () => { alive = false; clearInterval(iv); window.removeEventListener('focus', onFocus); };
+  }, []);
 
   const rows = useMemo<Row[]>(() => {
     const r = (doc?.rows || []).slice();

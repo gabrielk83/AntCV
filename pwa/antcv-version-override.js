@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.580-detection-gap';
+  const TARGET_VERSION = '1.51.599';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.580-detection-gap',
     '1.51.579-cluster-fuse',
     '1.51.578-cost-tiebreak',
     '1.51.538-compress-openai-drop',

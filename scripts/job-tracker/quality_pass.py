@@ -80,17 +80,33 @@ def rule_certs(cv, jd, report):
     sporty = bool(_SPORT_JD.search(jd or ""))
     changed = 0
     items = []
+    def _strip_year(v):
+        # "(University of Toronto, 2020)" -> "(University of Toronto)";
+        # "Concussion Management (2024)" -> "Concussion Management"
+        n = re.sub(r",\s*(19|20)\d{2}\s*\)", ")", v)
+        n = re.sub(r"\s*\(\s*(19|20)\d{2}\s*\)\s*$", "", n)
+        return _YEAR_SUFFIX.sub("", n).rstrip(" ,")
     for it in sec["items"]:
+        if isinstance(it, str):                       # certs are often bare strings
+            new = _strip_year(it)
+            if new != it:
+                changed += 1
+            items.append(new)
+            continue
         if isinstance(it, dict) and not it.get("grp"):
             for k in ("b", "t"):
                 v = it.get(k)
-                if isinstance(v, str) and _YEAR_SUFFIX.search(v):
-                    it[k] = _YEAR_SUFFIX.sub("", v).rstrip(" ,")
-                    changed += 1
+                if isinstance(v, str):
+                    new = _strip_year(v)
+                    if new != v:
+                        it[k] = new
+                        changed += 1
         items.append(it)
-    reals = [(i, it) for i, it in enumerate(items) if isinstance(it, dict) and not it.get("grp")]
+    sec["items"] = items
+    reals = [(i, it) for i, it in enumerate(items)
+             if isinstance(it, str) or (isinstance(it, dict) and not it.get("grp"))]
     def score(it):
-        t = (str(it.get("b", "")) + " " + str(it.get("t", "")))
+        t = it if isinstance(it, str) else (str(it.get("b", "")) + " " + str(it.get("t", "")))
         s = gr._rel(t, jdkw)
         if "babok" in t.lower() and re.search(r"program|requirement|architect|business analy", jd or "", re.I):
             s += 5
@@ -105,15 +121,32 @@ def rule_certs(cv, jd, report):
         for extra in rugby_kept[1:]:
             keep_idx.discard(extra)
         if len(keep_idx) < len(reals):
+            real_idx = {i for i, _ in reals}
             sec["items"] = [it for i, it in enumerate(items)
-                            if not (isinstance(it, dict) and not it.get("grp")) or i in keep_idx]
+                            if i not in real_idx or i in keep_idx]
             report.append(f"certs: kept {len(keep_idx)}/{len(reals)} by relevance (rugby-class demoted)")
     if changed:
         report.append(f"certs: stripped years x{changed}")
 
 
 def rule_education(cv, language, report):
-    """R2: FVU Dansk compresses to one short line."""
+    """R2: FVU Dansk compresses to one short entry. Education items use
+    {deg, sch} keys the generic walker does not visit."""
+    for sec in cv:
+        if sec.get("type") != "education" or not isinstance(sec.get("items"), list):
+            continue
+        for it in sec["items"]:
+            if not isinstance(it, dict):
+                continue
+            joined = str(it.get("deg", "")) + " " + str(it.get("sch", ""))
+            if "FVU" in joined:
+                da = language == "da"
+                if it.get("deg", "").startswith("FVU"):
+                    it["deg"] = "FVU Dansk"
+                if "KVUC" in str(it.get("sch", "")):
+                    it["sch"] = "KVUC, i gang" if da else "KVUC, ongoing"
+                report.append("education: FVU line compressed")
+    # generic text fields still get the regex form (rich_block variants)
     for _p, holder, key, text in list(_txt_fields({"cv": cv})):
         if isinstance(text, str) and _FVU.search(text):
             short = _FVU_SHORT.get("da" if language == "da" else "en")

@@ -38,7 +38,7 @@ Branch: `claude/antcv-roadmap-bugs-L9Sqa`. Compiled 2026-06-04.
 
 ## Session 2026-07-13 roll-up (newest — SETTINGS-PERSONAL-DEDUP-001 duplicate personal fields)
 
-App-level ship 1.51.438-personal-dedup (isolated shift worktree, lane 1.51.438-1.51.457; draft PR). Prose detail:
+App-level ship 1.51.438-personal-dedup (isolated shift worktree, lane 1.51.438-1.51.457, released after merge; PR #344 MERGED 2026-07-13 — PWA auto-deploys from main). Prose detail:
 ACTIVE_BUGS 2026-07-13 entry + OPEN_REGISTER row 87.
 
 | ID | Tag | Item | Next action |

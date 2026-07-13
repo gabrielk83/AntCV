@@ -2239,28 +2239,47 @@ async function persistQualifications(env, { userHash, applicationId, category, q
 // < a single real 'required' JD qual (1.0), so real user-JD signal still
 // overtakes research as it accumulates (spec §4 / CLUSTER-DEMAND-GLOBAL-001).
 //
-// Idempotent per cluster: DELETE this cluster's existing source='research' rows
-// (real 'jd' rows are untouched), then INSERT the fresh set — matching the
-// delete+insert recomputeClusterTop20 itself uses. The caller inserts ALL
-// clusters FIRST, then recomputes each, so cross-cluster shared_clusters sees
-// the fresh set.
+// UNION per cluster ("fuse ... so nothing is lost", owner 2026-07-13): a naive
+// delete+insert would silently DROP a qualification the weekly research curated
+// out of the new top-20 (e.g. pm_process 'Obsolescence management', swapped for
+// the AI item). Instead: read this cluster's CURRENT research quals first, then
+// after inserting the fresh rank-scaled set, RE-INSERT any prior research qual
+// NOT in the fresh set at a FLOOR weight (RETAINED_RESEARCH_WEIGHT, strictly
+// below rank-20's 0.02). So a dropped qual is never lost from
+// application_qualification — it persists in the data and can RESURFACE if a
+// later week re-includes it — but its floor weight keeps it below every fresh
+// item, so recomputeClusterTop20's top-20 still surfaces the current 20. Real
+// 'jd' rows are untouched throughout. The caller inserts ALL clusters FIRST,
+// then recomputes each, so cross-cluster shared_clusters sees the fresh set.
 const KNOWN_CLUSTERS = new Set(Object.values(CATEGORY_TO_CLUSTER));
+const RETAINED_RESEARCH_WEIGHT = RESEARCH_WEIGHT / 40; // 0.01 < rank-20 weight (0.02)
 async function insertResearchQualifications(env, clusterId, top20, dateMs) {
   if (!hasD1(env)) return 0;
   if (!KNOWN_CLUSTERS.has(clusterId)) return 0;
   if (!Array.isArray(top20) || !top20.length) return 0;
 
+  // Snapshot the cluster's current research quals BEFORE the delete, so any
+  // dropped from the new list can be retained (union) rather than lost.
+  const priorByCanon = new Map();
+  const prior = await env.DB.prepare(
+    "SELECT qual_canonical, MAX(qual_text) AS qual_text FROM application_qualification " +
+    "WHERE user_hash = ? AND cluster_id = ? AND source = 'research' GROUP BY qual_canonical"
+  ).bind(GLOBAL_USER_HASH, clusterId).all();
+  for (const r of (prior && prior.results) || []) priorByCanon.set(r.qual_canonical, r.qual_text);
+
   await d1RunWithRetry(env.DB.prepare(
     "DELETE FROM application_qualification WHERE user_hash = ? AND cluster_id = ? AND source = 'research'"
   ).bind(GLOBAL_USER_HASH, clusterId));
 
+  const freshCanon = new Set();
   let inserted = 0;
   for (let i = 0; i < top20.length; i++) {
     const item = top20[i] || {};
     const text = String(item.q != null ? item.q : (item.text != null ? item.text : '')).trim();
     if (!text) continue;
     const canonical = qualCanonical(text);
-    if (!canonical) continue;
+    if (!canonical || freshCanon.has(canonical)) continue;
+    freshCanon.add(canonical);
     // rank: prefer the item's own r (1..N), else its array position; clamp 1..20.
     let rank = parseInt(item.r, 10);
     if (!Number.isFinite(rank) || rank < 1) rank = i + 1;
@@ -2272,7 +2291,19 @@ async function insertResearchQualifications(env, clusterId, top20, dateMs) {
     ).bind(null, GLOBAL_USER_HASH, clusterId, text.slice(0, 200), canonical, weight, 'research', dateMs));
     inserted++;
   }
-  return inserted;
+
+  // Retain prior research quals dropped from the new list at the floor weight —
+  // the union that makes this writer lossless across a weekly curation.
+  let retained = 0;
+  for (const [canon, text] of priorByCanon) {
+    if (freshCanon.has(canon)) continue;
+    await d1RunWithRetry(env.DB.prepare(
+      'INSERT INTO application_qualification (application_id, user_hash, cluster_id, qual_text, qual_canonical, weight, source, created_at) ' +
+      'VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+    ).bind(null, GLOBAL_USER_HASH, clusterId, String(text || '').slice(0, 200), canon, RETAINED_RESEARCH_WEIGHT, 'research', dateMs));
+    retained++;
+  }
+  return inserted + retained;
 }
 
 // ---- CLUSTER-QUAL-001 stage 2: fit scoring (spec section 3.3) --------------

@@ -464,8 +464,7 @@ def drive(sections, provider, model, source_cv, jd_text, max_steps=80, skip_cohe
     return out
 
 # ── banned-word check (report only) ────────────────────────────────
-BANNED_SAMPLE = ["spearhead", "leverage", "robust", "passionate", "committed",
-                 "cutting-edge", "world-class", "results-driven", "—", "–"]
+BANNED_SAMPLE = (_GOLD.get("banned_words") or ["spearhead", "leverage", "robust", "passionate", "committed", "cutting-edge", "world-class", "results-driven"]) + ["—", "–"]
 def banned_hits(text):
     t = (text or "").lower()
     return [w for w in BANNED_SAMPLE if w in t]
@@ -809,9 +808,20 @@ def _clean_cut(win):
     if t and t[-1] not in ".!?:)":
         t += "."
     return t
-def _cap_line(s, maxlen=148):
+# GOLD-RULES-SITE-001: caps + banned words read from the single control site
+# (pwa/gold-rules.json); literals are fallbacks.
+try:
+    _GOLD = json.load(open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "pwa", "gold-rules.json"), encoding="utf-8"))
+except Exception:
+    _GOLD = {}
+_GOLD_CAPS = _GOLD.get("caps") or {}
+_BULLET_CAP = int(_GOLD_CAPS.get("bullet_chars", 148))
+_PARA_CAP = int(_GOLD_CAPS.get("paragraph_chars", 330))
+
+def _cap_line(s, maxlen=None):
     """Limit a bullet/result to ~2 rendered lines, trimming at a clause or word
     boundary (owner: 'limit line lengths') — always a CLEAN, period-closed end."""
+    maxlen = maxlen or _BULLET_CAP
     s = (s or "").strip()
     if len(s) <= maxlen: return s
     win = s[:maxlen]
@@ -819,9 +829,10 @@ def _cap_line(s, maxlen=148):
         p = win.rfind(sep)
         if p >= maxlen * 0.55: return _clean_cut(win[:p])
     return _clean_cut(win.rsplit(" ", 1)[0])
-def _cap_para(s, maxlen=330):
+def _cap_para(s, maxlen=None):
     """Keep a cover-letter PARAGRAPH readable (~3-4 lines): trim to the last full
     sentence under maxlen (owner: 'too long, >3-4 lines per paragraph')."""
+    maxlen = maxlen or _PARA_CAP
     s = (s or "").strip()
     if len(s) <= maxlen: return s
     win = s[:maxlen]

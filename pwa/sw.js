@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.391-photo-fuse';
+const CACHE = 'antcv-1.51.392-row-fixes';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

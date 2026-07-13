@@ -22146,6 +22146,13 @@
                       });
                     } catch (e) {}
                 }
+                // BRAND-FIT-READBUTTON-PALETTE-001 (register row 80): the Read-button
+                // restore also APPLIES the tracker-sampled palette (occ-1 parity —
+                // BRAND-FIT-OPEN-001 only covered the cold-start restore).
+                if (e.meta && e.meta.styleConfig && "object" == typeof e.meta.styleConfig)
+                  try {
+                    wa(e.meta.styleConfig);
+                  } catch (e) {}
                 // BRAND-FIT-OPEN-002: same brand-fit checkbox arming as occ-1.
                 try {
                   var __bf2 = (e.meta && e.meta.styleConfig && "object" == typeof e.meta.styleConfig) || /\n\nBRAND-FIT:/.test(String(e.supporting_context || ""));

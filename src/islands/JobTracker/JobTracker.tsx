@@ -85,6 +85,28 @@ function signalsBlockOf(d: TrackerDoc | null, uk: string): string {
   return parts.join('\n');
 }
 
+// SAVE-409-MERGE-001: rebase this session's edits onto a newer server doc after
+// a rev conflict. Server doc is the base (rows/keys added elsewhere survive —
+// e.g. discovery rows, app-written rationale/scores); local wins per row-key
+// where this session has data. Deliberate last-writer-wins on shared keys: the
+// pre-existing behaviour on conflict was to DROP every local edit, so any
+// overlap here is strictly less lossy.
+function mergeDocs(server: TrackerDoc, local: TrackerDoc): TrackerDoc {
+  const out: TrackerDoc = { ...server };
+  const MAPS = ['urls', 'jd', 'gen', 'queue', 'brandfit', 'brand', 'signals', 'sigfiles', 'support', 'webintel', 'scores', 'artifacts', 'discovered', 'pin', 'park'];
+  for (const k of MAPS) {
+    const sv = (server as Record<string, unknown>)[k] as Record<string, unknown> | undefined;
+    const lv = (local as Record<string, unknown>)[k] as Record<string, unknown> | undefined;
+    if (lv && typeof lv === 'object') (out as Record<string, unknown>)[k] = { ...(sv || {}), ...lv };
+  }
+  const lmap = new Map((local.rows || []).map((r) => [r[11], r]));
+  const skeys = new Set((server.rows || []).map((r) => r[11]));
+  out.rows = (server.rows || []).map((r) => lmap.get(r[11]) || r);
+  for (const r of local.rows || []) if (!skeys.has(r[11])) out.rows.push(r);
+  if (local.envelope) out.envelope = local.envelope;
+  return out;
+}
+
 // RESEARCH-MERGE-001: JD-sourced ROLE INTEL + web-sourced COMPANY RESEARCH go
 // to generation as ONE coherent research block. The JD intel leads (it is the
 // authoritative source for what the role needs); the web brief follows with any
@@ -299,7 +321,24 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
   const persist = useCallback(async (next: TrackerDoc, quiet = false): Promise<boolean> => {
     const res = await putDoc(next, rev);
     if (res.ok) { setRev(res.rev || rev + 1); setDocState(next); setDirty(false); if (!quiet) setNote('Saved ✓'); return true; }
-    if (res.conflict) { setErr('Changed elsewhere — reloaded latest, re-apply your edit.'); setDocState(res.serverDoc || next); setRev(res.serverRev || rev); setDirty(false); return false; }
+    if (res.conflict) {
+      // SAVE-409-MERGE-001 (register row 79): the app bumps the doc rev behind
+      // the island (auto JD-analysis persists rationale onto the row after
+      // Open), so a plain 409 used to REPLACE local state with the server doc —
+      // silently dropping typed-but-unsaved edits (e.g. signals entered right
+      // before pressing Open). Rebase ONCE onto the server doc (server-added
+      // rows/keys survive, this session's edits win) and re-PUT.
+      if (res.serverDoc) {
+        const rebased = mergeDocs(res.serverDoc, next);
+        const res2 = await putDoc(rebased, res.serverRev ?? null);
+        if (res2.ok) {
+          setRev(res2.rev || (res.serverRev || rev) + 1); setDocState(rebased); setDirty(false);
+          if (!quiet) setNote('Saved ✓ (merged a concurrent update)');
+          return true;
+        }
+      }
+      setErr('Changed elsewhere — reloaded latest, re-apply your edit.'); setDocState(res.serverDoc || next); setRev(res.serverRev || rev); setDirty(false); return false;
+    }
     setErr(res.error || 'save failed'); return false;
   }, [rev]);
 

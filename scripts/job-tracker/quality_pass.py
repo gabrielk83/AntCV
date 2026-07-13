@@ -550,6 +550,109 @@ def compress_slogan(slogan, language, report, use_llm=True):
     return t
 
 
+
+# JD-RELEVANCE-VISIBILITY-001 (owner 2026-07-13 round 3): content whose
+# relevance depends on the JD is GATED, never deleted.
+_NANO_JD = re.compile(r"semiconductor|nanotech|\bnano\b|MEMS|NEMS|wafer|clean.?room|thin.?film|\bSEM\b|electron microscop|materials (science|engineer)|failure analysis", re.I)
+_ACADEMIC_JD = re.compile(r"academi|research (scientist|engineer|fellow)|deep.?research|clean.?room|postdoc|PhD|publication|laborator", re.I)
+_EM_TOKENS = re.compile(r",?\s*(SEM|HRSEM|electrical probe stations)\b", re.I)
+
+def rule_jd_relevance(cv, jd, language, report):
+    dk = language == "da" or bool(_DK_CONTEXT.search(jd or ""))
+    # (a) "and Danish" recommendations only for Denmark/Danish positions
+    for sec in cv:
+        if sec.get("id") != "recommendations":
+            continue
+        for it in sec.get("items") or []:
+            if isinstance(it, dict) and not dk and "and Danish" in str(it.get("sch", "")):
+                it["sch"] = it["sch"].replace("International and Danish", "International")
+                report.append("recommendations: 'and Danish' dropped (position not DK/da)")
+    # (b) electron-microscopy instruments only on nano/semiconductor JDs
+    if not _NANO_JD.search(jd or ""):
+        for sec in cv:
+            if sec.get("id") != "tools":
+                continue
+            for it in sec.get("items") or []:
+                if isinstance(it, dict) and str(it.get("b", "")).strip().lower() == "instruments":
+                    t = str(it.get("t", ""))
+                    if _EM_TOKENS.search(t):
+                        it.setdefault("t_full", t)          # preserved, never deleted
+                        new = _EM_TOKENS.sub("", t)
+                        new = re.sub(r",\s*,", ",", new).strip(" ,")
+                        it["t"] = new
+                        report.append("tools: SEM/HRSEM/probe stations gated out (not a nano/semiconductor JD; t_full preserved)")
+    # (c) the Nanomanipulator publication hides on non-academic JDs (native
+    #     list_italic hidden map - the render chain already honors it)
+    if not _ACADEMIC_JD.search(jd or ""):
+        for sec in cv:
+            if sec.get("id") != "pubs" or not isinstance(sec.get("items"), list):
+                continue
+            hid = dict(sec.get("hidden") or {})
+            for i, it in enumerate(sec["items"]):
+                if isinstance(it, str) and "Nanomanipulator" in it and not hid.get(str(i)):
+                    hid[str(i)] = True
+                    report.append("pubs: Nanomanipulator publication HIDDEN (non-academic JD)")
+            if hid:
+                sec["hidden"] = hid
+    # (d) owner wording: Cultural exchange -> Culture & community
+    for sec in cv:
+        if sec.get("id") != "interests":
+            continue
+        for it in sec.get("items") or []:
+            if isinstance(it, dict) and str(it.get("b", "")).strip() == "Cultural exchange":
+                it["b"] = "Culture & community"
+                it["t"] = "language, food & games"
+                report.append("interests: 'Culture & community: language, food & games' (owner wording)")
+
+
+
+def rule_research_link(cv, report):
+    """RESEARCH-LINK-TO-PUBS-001 (owner 2026-07-13): when a PUBLICATIONS section
+    exists, the 'Research outputs: Details via [Google Scholar](url)' line is
+    redundant in ADDITIONAL INFO - surface the Scholar link as the publications
+    masterSite link instead, and drop it from additional (hide the section if it
+    becomes its sole item)."""
+    pubs = next((s for s in cv if s.get("id") == "pubs"), None)
+    add = next((s for s in cv if s.get("id") == "additional"), None)
+    if not pubs or not pubs.get("items") or not add or not isinstance(add.get("items"), list):
+        return
+    kept = []
+    moved = False
+    for it in add["items"]:
+        v = str(it.get("v", "")) if isinstance(it, dict) else ""
+        m = re.search(r"\[([^\]]+)\]\((https?://[^)]+)\)", v)
+        is_research = m and ("scholar" in m.group(2).lower() or "research" in str(it.get("l", "")).lower())
+        if is_research and not (pubs.get("masterSite") or {}).get("on"):
+            pubs["masterSite"] = {"on": True, "label": m.group(1), "url": m.group(2)}
+            moved = True
+            continue          # drop this item from additional
+        kept.append(it)
+    if moved:
+        add["items"] = kept
+        if not kept:
+            add["on"] = False   # sole item moved -> hide the empty section
+        report.append("research link: Google Scholar -> pubs masterSite; additional " + ("hidden" if not kept else "trimmed"))
+
+
+def rule_lone_group(cv, report):
+    """LONE-GROUP-HEADING-HIDE-001 (owner 2026-07-13): a subsection with only
+    ONE group shows no group heading - the heading is furniture when there is
+    nothing to distinguish. hidden flag, never deleted."""
+    for sec in cv:
+        items = sec.get("items")
+        if not isinstance(items, list):
+            continue
+        grps = [it for it in items if isinstance(it, dict) and it.get("grp")]
+        if len(grps) == 1 and not grps[0].get("hidden"):
+            grps[0]["hidden"] = True
+            report.append(f"{sec.get('id')}: lone group heading '{str(grps[0].get('t'))[:28]}' hidden")
+        elif len(grps) > 1:
+            for it in grps:               # multi-group: headings show again
+                if it.get("hidden"):
+                    it.pop("hidden", None)
+                    report.append(f"{sec.get('id')}: group heading '{str(it.get('t'))[:28]}' unhidden (multi-group)")
+
+
 def rule_bullet_periods(cv, report):
     """Owner screenshot 2026-07-13: bullets ending without terminal punctuation
     ("...defence-grade products", "...optical microscopy") are visible leaks."""
@@ -657,6 +760,9 @@ def apply_all(cv, cl, jd, kernel, language="en", use_llm=True):
     rule_results_numeric(cv, kernel, jd, report, language=language)
     _restore_forening(cv, jd, language, report)
     rule_pubs(cv, report)
+    rule_jd_relevance(cv, jd, language, report)
+    rule_lone_group(cv, report)
+    rule_research_link(cv, report)
     rule_bullet_periods(cv, report)
     rule_cl_prose(cl, cv, kernel_facts, language, report, use_llm=use_llm)
     return report

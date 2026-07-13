@@ -331,5 +331,11 @@
   "slogan": {
     "max_words": 9,
     "_doc": "CL slogan/headline: at most 9 words so it never wraps to a 2nd line (owner 2026-07-13, app 810 was 12 words and slid)."
+  },
+  "jd_relevance": {
+    "_doc": "owner 2026-07-13 round 3: JD-gated content visibility",
+    "recommendations_drop_danish": "outside Denmark and non-da language, 'International and Danish recommendations' reads 'International recommendations'",
+    "instruments_em_gate": "SEM/HRSEM/electrical probe stations only for semiconductor/nano/MEMS/materials/cleanroom JDs (electron microscopy is not an optical-design instrument); removed tokens preserved in t_full",
+    "nanomanipulator_pub_gate": "the Nanomanipulator (Microsystem Technologies) publication HIDES via the pubs section hidden map unless the JD is academic/deep-research/cleanroom"
   }
 }

@@ -278,6 +278,61 @@
     return copy;
   }
 
+  // MERGED-TITLE-ORDER-001 (owner, repeatedly: "Electro-Optics Team Leader &
+  // R&D Electro-Optics Engineer" must read "Electro-Optics Engineer & Team
+  // Leader"). The merge rule is CORE (IC) function FIRST, the management
+  // descriptor second, with a repeated domain phrase collapsed. The gen prompt
+  // says this but the LLM leaks the wrong order, and roleCanonTitles SKIPS
+  // merged titles (more &-segments than the single canon), so nothing enforced
+  // it. Deterministic reorder here — runs on every experience title.
+  var _MGMT_RE = /\b(team\s+lead(?:er)?|lead(?:er)?|manager|head|chief|director|coordinator|supervisor)\b/i;
+  var _IC_RE = /\b(engineer|architect|scientist|developer|specialist|analyst|designer|researcher|consultant|expert|administrator|assistant|representative|guard)\b/i;
+  function _reorderTitle(t) {
+    var s = String(t == null ? '' : t);
+    if (s.indexOf(' & ') < 0) return t;
+    var segs = s.split(' & ').map(function (x) { return x.trim(); }).filter(Boolean);
+    if (segs.length < 2) return t;
+    var firstIc = -1, firstMg = -1, i;
+    for (i = 0; i < segs.length; i++) {
+      if (firstIc < 0 && _IC_RE.test(segs[i])) firstIc = i;
+      if (firstMg < 0 && _MGMT_RE.test(segs[i])) firstMg = i;
+    }
+    if (firstIc < 0 || firstMg < 0 || firstIc < firstMg) return t; // absent or already IC-first
+    var ic = [], mg = [], other = [];
+    segs.forEach(function (seg) {
+      if (_IC_RE.test(seg)) ic.push(seg);
+      else if (_MGMT_RE.test(seg)) mg.push(seg);
+      else other.push(seg);
+    });
+    var ordered = ic.concat(other, mg);
+    // word-level dedup: drop, from each following segment, words already in the
+    // lead (the shared domain), but always keep the role-kind keyword.
+    var inLead = {};
+    ordered[0].toLowerCase().split(/\s+/).forEach(function (w) { inLead[w] = 1; });
+    for (i = 1; i < ordered.length; i++) {
+      var kept = ordered[i].split(/\s+/).filter(function (w) {
+        return !inLead[w.toLowerCase()] || _MGMT_RE.test(w) || _IC_RE.test(w);
+      });
+      if (kept.length) ordered[i] = kept.join(' ');
+    }
+    return ordered.join(' & ');
+  }
+  function reorderMergedTitles(cv) {
+    var xi = cv.findIndex(function (e) { return e && e.type === 'experience' && Array.isArray(e.roles); });
+    if (xi < 0) return null;
+    var changed = false;
+    var roles = cv[xi].roles.map(function (r) {
+      if (!r || r.title == null) return r;
+      var nt = _reorderTitle(r.title);
+      if (nt !== r.title) { changed = true; return Object.assign({}, r, { title: nt }); }
+      return r;
+    });
+    if (!changed) return null;
+    var copy = cv.slice();
+    copy[xi] = Object.assign({}, copy[xi], { roles: roles });
+    return copy;
+  }
+
   // BABEL-RICHBLOCK-RESIDUE-001: see the call site in the pipeline. Wide ribbon
   // only; drops pure-Latin lead-in rows (Foundation/Hands-on/Professionally)
   // from a rich_block that already carries a wide-script item.
@@ -1816,6 +1871,8 @@
       // ROLE-CANON-LANG-001: canonical per-language titles AFTER dedupe has
       // collapsed twins, so the survivor gets the ribbon-language canon title.
       var rct = roleCanonTitles(cv); if (rct) { cv = rct; changed = true; }
+      // MERGED-TITLE-ORDER-001: core (IC) function FIRST in a merged title.
+      var rmt = reorderMergedTitles(cv); if (rmt) { cv = rmt; changed = true; }
       var ro = canonicalRoleOrder(cv); if (ro) { cv = ro; changed = true; }
       var bo = canonicalBulletOrder(cv); if (bo) { cv = bo; changed = true; }
       var f = stripFounder(cv); if (f) { cv = f; changed = true; }

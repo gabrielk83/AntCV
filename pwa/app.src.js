@@ -1586,6 +1586,87 @@
       .sort((e, t) => t.s - e.s)[0].p;
     return { provider: s, model: null == (r = S[s]) ? void 0 : r.model };
   }
+  // ROW 74C — visibility-aware abort budget (SSE background stall).
+  // Pure state machine: foreground-only elapsed does NOT count time while the
+  // tab is hidden, so a briefly-backgrounded gen isn't killed by wall-clock and
+  // gets to resume on foreground. An absolute wall ceiling still aborts a truly
+  // dead stream. Injected `now` keeps this testable under node:vm.
+  function __antcvMakeAbortBudget(fgLimit, wallLimit, now) {
+    const start = now();
+    let bankedFg = 0,
+      lastResume = start; // ms of last foreground resume, or null while hidden
+    return {
+      onHidden() {
+        if (lastResume != null) {
+          bankedFg += now() - lastResume;
+          lastResume = null;
+        }
+      },
+      onVisible() {
+        if (lastResume == null) lastResume = now();
+      },
+      check() {
+        const wall = now() - start,
+          fg = bankedFg + (lastResume != null ? now() - lastResume : 0);
+        return fg >= fgLimit || wall >= wallLimit;
+      },
+    };
+  }
+  // Wires the pure budget to document visibility + a low-freq interval that
+  // fires ctl.abort(). Kill-switch localStorage 'antcv:disable-bg-timeout-pause'
+  // === '1' restores the exact old fixed 10-min setTimeout. Returns { clear }.
+  function __antcvAbortBudget(ctl) {
+    const FG = 6e5, // 10 min foreground-only
+      WALL = 12e5; // 20 min absolute wall-clock ceiling
+    let disabled = false;
+    try {
+      disabled =
+        localStorage.getItem("antcv:disable-bg-timeout-pause") === "1";
+    } catch (e) {}
+    if (disabled) {
+      const to = setTimeout(() => {
+        try {
+          ctl.abort();
+        } catch (e) {}
+      }, FG);
+      return {
+        clear() {
+          clearTimeout(to);
+        },
+      };
+    }
+    const budget = __antcvMakeAbortBudget(FG, WALL, () => Date.now());
+    try {
+      if (typeof document !== "undefined" && document.hidden) budget.onHidden();
+    } catch (e) {}
+    const onVis = () => {
+      try {
+        document.hidden ? budget.onHidden() : budget.onVisible();
+      } catch (e) {}
+    };
+    try {
+      document.addEventListener("visibilitychange", onVis);
+    } catch (e) {}
+    const iv = setInterval(() => {
+      if (budget.check()) {
+        try {
+          ctl.abort();
+        } catch (e) {}
+        clearInterval(iv);
+        try {
+          document.removeEventListener("visibilitychange", onVis);
+        } catch (e) {}
+      }
+    }, 5e3);
+    return {
+      clear() {
+        clearInterval(iv);
+        try {
+          document.removeEventListener("visibilitychange", onVis);
+        } catch (e) {}
+      },
+    };
+  }
   async function q(e, t) {
     var n, o, r, a, i, l, s, c;
     (p("Anthropic"), await U());
@@ -1607,7 +1688,7 @@
     const f = await b();
     try {
       const p = new AbortController(),
-        u = setTimeout(() => p.abort(), 6e5);
+        u = __antcvAbortBudget(p);
       let m;
       const f = JSON.stringify({
           model: "claude-opus-4-8",
@@ -1636,7 +1717,7 @@
           signal: p.signal,
         });
       } catch (e) {
-        if ((clearTimeout(u), "AbortError" === e.name))
+        if ((u.clear(), "AbortError" === e.name))
           throw new Error(
             "Request was interrupted — this usually happens when the app is backgrounded or the screen locks on Android. Try keeping the app visible while it runs, or retry the operation.",
           );
@@ -1651,7 +1732,7 @@
         );
       }
       if (!m.ok) {
-        clearTimeout(u);
+        u.clear();
         const e = await m.text().catch(() => "");
         if (405 === m.status)
           throw new Error(
@@ -1706,7 +1787,7 @@
             }
           }
         } catch (e) {
-          if ((clearTimeout(u), n.length > 500))
+          if ((u.clear(), n.length > 500))
             return (
               console.warn(
                 `[v23] Stream interrupted after ${n.length} chars — returning partial for JSON repair`,
@@ -1720,7 +1801,7 @@
               )
             : e;
         }
-        clearTimeout(u);
+        u.clear();
         try {
           const e = n.match(/"input_tokens"\s*:\s*(\d+)/),
             t = n.match(/"output_tokens"\s*:\s*(\d+)/g);
@@ -1733,7 +1814,7 @@
         } catch (e) {}
         return n;
       }
-      clearTimeout(u);
+      u.clear();
       const w = await m.json();
       return (
         (O = {

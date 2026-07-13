@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.393-photo-strip';
+const CACHE = 'antcv-1.51.394-role-canon-lang';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

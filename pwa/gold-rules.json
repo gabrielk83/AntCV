@@ -1,5 +1,5 @@
 {
-  "version": "1.3.0",
+  "version": "1.4.0",
   "_note": "GOLD RULES - the ONE machine-readable control site for every AntCV generation (owner 2026-07-13). Narrative + enforcement map: docs/qa/GOLD_STANDARD_LOCKER.md. Consumers: pwa/antcv-bullet-targets.js (prompt block on every generation/Fit-it/Enhance call), scripts/job-tracker/{quality_pass,density_fit,measure_density,gen-runner}.py (persist + sweep enforcement). Served at antcv.pages.dev/gold-rules.json so workers can fetch it (proxy prompt-augment wiring = open follow-up). Change values HERE; code reads them.",
   "density": {
     "runt_fraction": 0.6,
@@ -26,7 +26,8 @@
     "certs_max": 4,
     "role_bullets_max": 3,
     "photo_library_max": 4,
-    "table_label_max_chars": 28
+    "table_label_max_chars": 28,
+    "table_label_hard_chars": 34
   },
   "results": {
     "require_metric": true,
@@ -199,5 +200,24 @@
   },
   "tables": {
     "narrow_cell_cascade": "a table cell rendering 3+ lines, or 2+ lines averaging ~1 word per line, is INVALID (owner 2026-07-13, Tech Mahindra focus-area cell) - hard-compress the label first; widening tableRatio is the second lever if the other column tolerates it"
+  },
+  "roles": {
+    "_note": "ROLE CONTROL (owner 2026-07-13 'make sure your work fits in the golden gating matrix role control ... I want also danish spanish and chinese canon'). Identity: the stable canonical role id is the LANGUAGE-AGNOSTIC identity (SAME-ID 1.51.353, BASE-ID + GEN-ID 1.51.358) - a suffixed backfill twin (<id>-2) or a gen schema id (r1..) at the same company/tenure is the SAME position; exactly ONE role per canonical id survives dedupe, canonical id wins (the Results pins key on it). Titles: per-language RENDERINGS of that identity come from canon_titles below - deterministic, so LLM title drift can never fork a position across languages. Enforced by antcv-sections-normalize-415.js roleCanonTitles (runs after dedupe on en/da/es/zh ribbons; he/am/ar keep the translate output); mirror-drift gated by pwa/test/unit/gold-role-canon.test.mjs. A merged title with MORE '&'-segments than the canon (deliberate merge-or-split structure) is never overwritten.",
+    "one_visible_per_canonical_id": true,
+    "canon_titles": {
+      "kanzen": { "en": "Product / Project Expert", "da": "Produkt- og projektekspert", "es": "Experto en Producto y Proyectos", "zh": "产品/项目专家" },
+      "innoviz-ccr": { "en": "Change Request Lead", "da": "Ansvarlig for ændringsanmodninger", "es": "Líder de Solicitudes de Cambio", "zh": "变更请求负责人" },
+      "innoviz-sa": { "en": "System Architect", "da": "Systemarkitekt", "es": "Arquitecto de Sistemas", "zh": "系统架构师" },
+      "sirin": { "en": "Senior Optics & Electro-Optics Engineer", "da": "Senioringeniør i optik og elektrooptik", "es": "Ingeniero Sénior de Óptica y Electroóptica", "zh": "高级光学与电光工程师" },
+      "mepro-tl": { "en": "Electro-Optics Team Leader", "da": "Teamleder for elektrooptik", "es": "Líder del Equipo de Electroóptica", "zh": "电光团队负责人" },
+      "mepro-eng": { "en": "R&D Electro-Optics Engineer", "da": "Udviklingsingeniør i elektrooptik", "es": "Ingeniero de I+D en Electroóptica", "zh": "电光研发工程师" },
+      "tau-security": { "en": "Security Guard, Student Dormitories", "da": "Vagt i studenterboliger", "es": "Guardia de Seguridad, Residencias Estudiantiles", "zh": "学生宿舍保安" },
+      "tau-research": { "en": "Research Assistant", "da": "Videnskabelig assistent", "es": "Asistente de Investigación", "zh": "研究助理" },
+      "tau-teaching": { "en": "Teaching Assistant", "da": "Undervisningsassistent", "es": "Asistente de Docencia", "zh": "助教" },
+      "tau-council": { "en": "Students Council Representative", "da": "Studenterrepræsentant", "es": "Representante del Consejo Estudiantil", "zh": "学生会代表" },
+      "idf": { "en": "Computer Systems Administrator", "da": "It-systemadministrator", "es": "Administrador de Sistemas Informáticos", "zh": "计算机系统管理员" },
+      "volunteer-wolves": { "en": "Team Operations Manager (foreningsarbejde)", "da": "Team Operations Manager (foreningsarbejde)", "es": "Gerente de Operaciones del Equipo (voluntariado)", "zh": "球队运营经理（协会志愿工作）" },
+      "early-career": { "en": "Earlier career", "da": "Tidligere karriere", "es": "Trayectoria inicial", "zh": "早期职业" }
+    }
   }
 }

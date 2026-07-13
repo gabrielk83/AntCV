@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.60-empty-optional-leak';
+  var VERSION = '1.51.394-role-canon-lang';
   if (window.__antcvSectionsNormalize === VERSION) return;
   window.__antcvSectionsNormalize = VERSION;
 
@@ -215,6 +215,69 @@
     return false;
   }
 
+  // ROLE-CANON-LANG-001 (owner 2026-07-13 "make sure your work fits in the golden
+  // gating matrix role control ... I want also danish spanish and chinese canon"):
+  // canonical role titles per language live in gold-rules.json `roles.canon_titles`
+  // (the ONE control site, GOLD-RULES-SITE-001); this embedded copy is the
+  // fetch-failure fallback, mirror-drift-gated by
+  // pwa/test/unit/gold-role-canon.test.mjs. The stable role id is the IDENTITY
+  // (SAME-ID/BASE-ID/GEN-ID-SAME-POSITION); the title is a per-language
+  // RENDERING — deterministic from this table, so LLM title drift
+  // ("Videnskabelig assistent" vs "Forskningsassistent") can never fork the
+  // same position across languages. Strict JSON between the markers.
+  var ROLE_CANON_FALLBACK = /* GOLD-ROLES-MIRROR-BEGIN */ {
+    "kanzen": { "en": "Product / Project Expert", "da": "Produkt- og projektekspert", "es": "Experto en Producto y Proyectos", "zh": "产品/项目专家" },
+    "innoviz-ccr": { "en": "Change Request Lead", "da": "Ansvarlig for ændringsanmodninger", "es": "Líder de Solicitudes de Cambio", "zh": "变更请求负责人" },
+    "innoviz-sa": { "en": "System Architect", "da": "Systemarkitekt", "es": "Arquitecto de Sistemas", "zh": "系统架构师" },
+    "sirin": { "en": "Senior Optics & Electro-Optics Engineer", "da": "Senioringeniør i optik og elektrooptik", "es": "Ingeniero Sénior de Óptica y Electroóptica", "zh": "高级光学与电光工程师" },
+    "mepro-tl": { "en": "Electro-Optics Team Leader", "da": "Teamleder for elektrooptik", "es": "Líder del Equipo de Electroóptica", "zh": "电光团队负责人" },
+    "mepro-eng": { "en": "R&D Electro-Optics Engineer", "da": "Udviklingsingeniør i elektrooptik", "es": "Ingeniero de I+D en Electroóptica", "zh": "电光研发工程师" },
+    "tau-security": { "en": "Security Guard, Student Dormitories", "da": "Vagt i studenterboliger", "es": "Guardia de Seguridad, Residencias Estudiantiles", "zh": "学生宿舍保安" },
+    "tau-research": { "en": "Research Assistant", "da": "Videnskabelig assistent", "es": "Asistente de Investigación", "zh": "研究助理" },
+    "tau-teaching": { "en": "Teaching Assistant", "da": "Undervisningsassistent", "es": "Asistente de Docencia", "zh": "助教" },
+    "tau-council": { "en": "Students Council Representative", "da": "Studenterrepræsentant", "es": "Representante del Consejo Estudiantil", "zh": "学生会代表" },
+    "idf": { "en": "Computer Systems Administrator", "da": "It-systemadministrator", "es": "Administrador de Sistemas Informáticos", "zh": "计算机系统管理员" },
+    "volunteer-wolves": { "en": "Team Operations Manager (foreningsarbejde)", "da": "Team Operations Manager (foreningsarbejde)", "es": "Gerente de Operaciones del Equipo (voluntariado)", "zh": "球队运营经理（协会志愿工作）" },
+    "early-career": { "en": "Earlier career", "da": "Tidligere karriere", "es": "Trayectoria inicial", "zh": "早期职业" }
+  } /* GOLD-ROLES-MIRROR-END */;
+  var __roleCanon = ROLE_CANON_FALLBACK;
+  try {
+    fetch('gold-rules.json?v=' + VERSION, { cache: 'no-cache' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) { if (j && j.roles && j.roles.canon_titles) __roleCanon = j.roles.canon_titles; })
+      .catch(function () {});
+  } catch (_) {}
+  function __roleCanonTitle(id, L) {
+    var e = __roleCanon[String(id == null ? '' : id).replace(/-\d+$/, '')];
+    if (!e) return null;
+    return e[L] || e.en || null;
+  }
+  function roleCanonTitles(cv) {
+    var L = 'en';
+    try { L = String(localStorage.getItem('language') || 'en').replace(/"/g, '').slice(0, 2); } catch (_) {}
+    if (L !== 'en' && L !== 'da' && L !== 'es' && L !== 'zh') return null; // he/am/ar: keep the translate output
+    var xi = cv.findIndex(function (e) { return e && e.type === 'experience' && Array.isArray(e.roles); });
+    if (xi < 0) return null;
+    var changed = false;
+    var roles = cv[xi].roles.map(function (r) {
+      if (!r || r.id == null) return r;
+      var e = __roleCanon[String(r.id).replace(/-\d+$/, '')];
+      if (!e) return r;
+      var want = e[L];
+      if (!want || r.title === want) return r;
+      // A merged title with MORE "&"-segments than the canon is a deliberate
+      // merge-or-split structure (gen prompt rule) — never overwrite it.
+      var segs = function (t) { return String(t == null ? '' : t).split(' & ').length; };
+      if (segs(r.title) > segs(e.en)) return r;
+      changed = true;
+      return Object.assign({}, r, { title: want });
+    });
+    if (!changed) return null;
+    var copy = cv.slice();
+    copy[xi] = Object.assign({}, copy[xi], { roles: roles });
+    return copy;
+  }
+
   // BABEL-RICHBLOCK-RESIDUE-001: see the call site in the pipeline. Wide ribbon
   // only; drops pure-Latin lead-in rows (Foundation/Hands-on/Professionally)
   // from a rich_block that already carries a wide-script item.
@@ -381,9 +444,12 @@
     // zh form; other wide ribbons keep whatever the translate produced (no forcing).
     var __cwL = 'en';
     try { __cwL = String(localStorage.getItem('language') || 'en').replace(/"/g, '').slice(0, 2); } catch (_) {}
-    var TITLE = __cwL === 'zh' ? '球队运营经理（协会志愿工作）'
-      : (__cwL === 'he' || __cwL === 'am' || __cwL === 'ar') ? null
-        : 'Team Operations Manager (foreningsarbejde)';
+    // ROLE-CANON-LANG-001: the CW canonical title now comes from the gold-rules
+    // roles.canon_titles table (en/da/es/zh; unknown Latin languages fall back
+    // to the en canon, matching the old behavior); he/am/ar keep the translate
+    // output (null = leave the rendered title alone).
+    var TITLE = (__cwL === 'he' || __cwL === 'am' || __cwL === 'ar') ? null
+      : (__roleCanonTitle('volunteer-wolves', __cwL) || 'Team Operations Manager (foreningsarbejde)');
     var COMPANY = 'Pan Idræt';
     var CW_BULLET = 'Operations and assistant-coaching for Copenhagen Wolves RFC, an inclusive amateur rugby club under Pan Idræt.';
     var keep = cwIdx[0];
@@ -1747,6 +1813,9 @@
       var fe = foundedToEstablished(cv); if (fe) { cv = fe; changed = true; }
       var pt = stripPatentFromRoles(cv); if (pt) { cv = pt; changed = true; }
       var d = dedupeRoles(cv); if (d) { cv = d; changed = true; }
+      // ROLE-CANON-LANG-001: canonical per-language titles AFTER dedupe has
+      // collapsed twins, so the survivor gets the ribbon-language canon title.
+      var rct = roleCanonTitles(cv); if (rct) { cv = rct; changed = true; }
       var ro = canonicalRoleOrder(cv); if (ro) { cv = ro; changed = true; }
       var bo = canonicalBulletOrder(cv); if (bo) { cv = bo; changed = true; }
       var f = stripFounder(cv); if (f) { cv = f; changed = true; }

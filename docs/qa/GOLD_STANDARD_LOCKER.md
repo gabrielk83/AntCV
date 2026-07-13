@@ -45,6 +45,14 @@
 | København + Danish forms stay when the app is Danish OR the JD is Denmark-based — including exports | LOCALFORM-DA-CONDITIONAL-EXPORT-001 (docx-client, meta.jd_dk) |
 | Photo present in every export (cloud prefs /photo); signature syncs to cloud (backfill) and rides headless exports once present | EXPORT-PARITY-001 (harness); SIGNATURE-CLOUD-BACKFILL-001 (sync sidecars) |
 
+## 3b. Role control (identity + per-language canon)
+
+| Rule | Enforcement |
+|---|---|
+| The stable canonical role id is the LANGUAGE-AGNOSTIC identity: a suffixed backfill twin (`<id>-2`) or a gen schema id (`r1..`) at the same company/tenure is the SAME position — exactly ONE role per canonical id after dedupe, the canonical id survives (the Results pins key on it) | SAME-ID-SAME-POSITION-001 (1.51.353) + BASE-ID/GEN-ID-SAME-POSITION (1.51.358) in `antcv-sections-normalize-415.js` `_samePosition` + `dedupeRoles` |
+| Role TITLES are per-language RENDERINGS of that identity — canonical en/da/es/zh titles live in `gold-rules.json roles.canon_titles` (the ONE control site) and are applied deterministically on en/da/es/zh ribbons after dedupe; he/am/ar keep the translate output; a merged title with MORE &-segments than the canon is a deliberate merge-or-split structure and is never overwritten | ROLE-CANON-LANG-001 (1.51.394) `roleCanonTitles` in normalize-415 (gold-fetch + mirrored fallback); mirror-drift + owner pins + typography gated by `pwa/test/unit/gold-role-canon.test.mjs` (in the suite) |
+| Merged "Earlier career" entries declare their constituents (`__covers`) so the completeness backfill never re-adds them; the backfill's duplicate check is id-based, so cross-LANGUAGE twins can no longer accumulate | ROLE-COVERS-001 (1.51.362) + the id rules above |
+
 ## 4. Accessibility — BEFORE any branding
 
 | Rule | Enforcement |

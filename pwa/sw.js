@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.394-role-canon-lang';
+const CACHE = 'antcv-1.51.395-jd-remove-sticky';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

@@ -16808,7 +16808,21 @@
                             // the JD in Un.current as the cloud-write fallback, and
                             // give the signals textarea the owner-added signals parsed
                             // out of supporting_context.
-                            try {
+                            // JD-REMOVE-STICKY-001 (owner 2026-07-13): if the user
+                            // pressed "✕ Remove" on THIS jd, do NOT re-seed it on a
+                            // plain refresh. A tracker Open/Reopen writes
+                            // antcv:lastJdText=jd just before its reload — that match
+                            // is a deliberate re-stage: clear the tombstone and seed
+                            // normally. Signals seeding below stays either way.
+                            var __jdTomb = function (jt) {
+                              try {
+                                var t = localStorage.getItem("antcv:jdRemoved") || "";
+                                if (!t || t !== jt.length + ":" + jt.slice(0, 48)) return !1;
+                                if ((localStorage.getItem("antcv:lastJdText") || "") === jt) return localStorage.removeItem("antcv:jdRemoved"), !1;
+                                return !0;
+                              } catch (e) { return !1; }
+                            }(e.jd_text);
+                            if (!__jdTomb) try {
                               var __jl = String((((e.jd_company || "") + (e.jd_company && e.jd_role ? " — " : "") + (e.jd_role || "")).trim()) || "Job description").slice(0, 120);
                               Dt({ name: __jl, kind: "restore", size: String(e.jd_text).length, source: "cloud-restore" });
                               Ft({ text: e.jd_text, method: "restored", pages: 1, fileName: __jl });
@@ -16826,7 +16840,7 @@
                           // outcome visibility works cross-machine WITHOUT a regen.
                           // Unsolicited / general-context / manual-save rows carry no
                           // real JD → clear the mirror.
-                          try { localStorage.setItem("antcv:lastJdText", (__isUnsolicited || __foreignDevice || t || n) ? "" : (e.jd_text || "")); } catch (e) {}
+                          try { localStorage.setItem("antcv:lastJdText", (__isUnsolicited || __foreignDevice || t || n || __jdTomb) ? "" : (e.jd_text || "")); } catch (e) {}
                         } else {
                           // No jd_text at all — make sure the textarea
                           // is empty (1.50.253: covers the case where a
@@ -22268,6 +22282,10 @@
                     // OPEN-JD-VISIBLE-001: same JD-file seeding as the cold-start
                     // restore (see occ-1) — JD preview over the drop-zone, owner
                     // signals into the signals textarea.
+                    // JD-REMOVE-STICKY-001: an EXPLICIT "Read from Cloud" click is a
+                    // deliberate re-pull — it overrides a prior ✕ Remove and clears
+                    // the tombstone.
+                    try { localStorage.removeItem("antcv:jdRemoved"); } catch (e) {}
                     try {
                       var __jl2 = String((((e.jd_company || "") + (e.jd_company && e.jd_role ? " — " : "") + (e.jd_role || "")).trim()) || "Job description").slice(0, 120);
                       Dt({ name: __jl2, kind: "restore", size: String(e.jd_text).length, source: "read-button" });
@@ -42307,6 +42325,18 @@
                     "button",
                     {
                       onClick: () => {
+                        // JD-REMOVE-STICKY-001 (owner 2026-07-13): remember WHICH jd
+                        // was removed so cloud-restore doesn't re-seed it on the next
+                        // refresh. A tracker Open/Reopen stages antcv:lastJdText=jd
+                        // right before its reload — the cloud-restore guard treats
+                        // that match as a deliberate re-stage and clears this
+                        // tombstone; a DIFFERENT jd never matches it. The cloud row's
+                        // jd_text is NOT touched — the tracker still owns the JD.
+                        try {
+                          var __rj = String((zt && zt.text) || "");
+                          if (__rj) localStorage.setItem("antcv:jdRemoved", __rj.length + ":" + __rj.slice(0, 48));
+                          localStorage.setItem("antcv:lastJdText", "");
+                        } catch (e) {}
                         (Dt(null), Ft(null));
                       },
                       style: {

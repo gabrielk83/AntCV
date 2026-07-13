@@ -78,10 +78,14 @@ test('an out-of-range ratio is dropped (not forwarded)', () => {
   assert.equal(t.tableRatio, undefined);
 });
 
-test('CV Core Competencies forwards its own width (6630 base) + cvTableRatio', () => {
+test('CV Core Competencies forwards its own width (7689 base) + cvTableRatio', () => {
+  // TABLE-GEOMETRY-PARITY-001 (row 25, 2026-07-13): CV base = mainW-288 = 7689,
+  // the current worker renderCompetencyTable defaultCvW. Was 6630 (stale
+  // MAIN_W-640 centered geometry), which forwarded a table ~14% narrower than
+  // both the preview and the worker default on a width drag.
   const p = payloadCV({ core_comp: 120 }, 0.35);
   const t = p.sections.find((s) => s.id === 'core_comp');
-  assert.equal(t.tableWidth, Math.round(6630 * 1.2)); // 7956
+  assert.equal(t.tableWidth, Math.round(7689 * 1.2)); // 9227
   assert.equal(t.tableRatio, 0.35);
 });
 

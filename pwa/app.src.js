@@ -5595,7 +5595,15 @@
           _.bulletMarkSize != null ? _.bulletMarkSize : _.bulletContent,
         ),
         sb: N(_.sbBody),
-        tbl: N(_.mainTblCell),
+        // TABLE-GEOMETRY-PARITY-001 (row 25, 2026-07-13): render the competency
+        // cell at the TRUE 10pt (4/3 * pt = 13.333px @96dpi) instead of the
+        // rounded 13px. round(1.333*10)=13 = 0.975x true, so preview labels
+        // measured 2.56% narrower than the exported Carlito 10pt -> the owner
+        // dragged the splitter ~0.5pp below the ratio the PDF needs -> PDF wrapped
+        // to 2 lines. Unrounded here (this table only; $.tbl is used solely by the
+        // competency table render) makes the preview one-line threshold match the
+        // export. No worker/geometry change.
+        tbl: (4 / 3) * _.mainTblCell,
         tblH: N(_.mainTblH),
         exp: N(_.expSubHead),
         head: N(S ? _.sbHead : _.mainHead),

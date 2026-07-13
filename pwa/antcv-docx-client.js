@@ -39,7 +39,7 @@
 // being exported and convert to dxa relative to the worker's per-doc
 // defaults:
 //
-//   CV (two_column): 6630 dxa default (MAIN_W - 640, ~4.6")
+//   CV (two_column): 7689 dxa default (mainW - 288, ~5.3"; worker defaultCvW)
 //   CL (linear):     9602 dxa default (PAGE_W - 2304, ~6.67")
 //
 // Returns null when no section has a non-default width — letting the
@@ -256,9 +256,12 @@ export function computeTableWidthDxa(docSections, docType) {
   // (`width: pct%` of the body column) and the worker defaultClW ((PAGE_W-400)*0.9)
   // measure against - so a width set/decreased in the preview exports at the SAME
   // proportion. The old 9602 (PAGE_W - 2304, ~80% of page) made every dragged
-  // width export much narrower than the preview showed. CV keeps its 6630 main-col
-  // reference.
-  const defaultDxa = (docType === 'cl') ? 11506 : 6630;
+  // width export much narrower than the preview showed. CV uses its 7689 main-col
+  // reference (mainW-288, the current worker renderCompetencyTable defaultCvW).
+  // TABLE-GEOMETRY-PARITY-001 (row 25, 2026-07-13): was 6630 (stale MAIN_W-640
+  // centered geometry) -> a CV width drag forwarded a table ~14% narrower than
+  // both the preview and the worker default.
+  const defaultDxa = (docType === 'cl') ? 11506 : 7689;
   return Math.round(defaultDxa * (maxPct / 100));
 }
 
@@ -396,7 +399,7 @@ export async function exportDocxViaWorker({
   // percentages into personalInfo.stylePrefs.tableWidthPct; this maps
   // them to a single dxa override the worker honours. If the user
   // hasn't dragged any table, this is null and the worker falls back
-  // to its per-doc defaults (6630 dxa CV, 9602 dxa CL). The injected
+  // to its per-doc defaults (7689 dxa CV = mainW-288, CL defaultClW). The injected
   // value rides through buildStyle's passthrough list.
   const docSectionsForWidth = (sections && sections[doc])
     || (Array.isArray(sections) ? sections : []);
@@ -2565,7 +2568,7 @@ function normalizeSections(raw) {
           const _isClTable = s.id === 'bring';
           const _pct = _pctMap[s.id];
           if (typeof _pct === 'number' && isFinite(_pct) && Math.abs(_pct - (_isClTable ? 90 : 100)) >= 1) {
-            _twDxa = Math.round((_isClTable ? 11506 : 6630) * (_pct / 100)); // CL ref = usable body width (PAGE_W-400), matches preview + worker defaultClW
+            _twDxa = Math.round((_isClTable ? 11506 : 7689) * (_pct / 100)); // CL ref = usable body width (PAGE_W-400); CV ref = mainW-288 (7689), the current worker renderCompetencyTable defaultCvW (PREVIEW-PDF-GEOMETRY-001). Old 6630 = stale MAIN_W-640 centered geometry -> width drags forwarded a table ~14% narrower than preview/export (TABLE-GEOMETRY-PARITY-001, row 25).
           }
           const _rk = _isClTable ? 'clTableRatio' : 'cvTableRatio';
           let _rRaw = (typeof localStorage !== 'undefined') ? localStorage.getItem(_rk) : null;

@@ -513,10 +513,19 @@ export function scoreHealth(metrics, costCtx = null) {
               : s >= 0.30 ? 'degraded'
               : 'down';
   let health = s, cost_penalty = 0;
-  if (costCtx && status === 'ok') {
-    // clamp so an 'ok' provider never drops below the 0.85 floor from cost alone
-    cost_penalty = Math.min(costPenalty(costCtx.costPerCall, costCtx.minCostPerCall), s - 0.85);
-    health = s - cost_penalty;
+  // Adequacy for the tie-break is judged on SUCCESS, not status: the cost-sensitive
+  // tasks (compress/long_context/consensus_*) are inherently high-latency, so they
+  // sit at 'warning' on quality alone — gating on status==='ok' made the tie-break
+  // NEVER fire on exactly the tasks it targets (RELAY-COST-TIEBREAK-001 v1 was inert
+  // in production, 2026-07-13). Two providers that both succeed are equal-quality
+  // enough for cost to decide. STATUS stays quality-only (unchanged for the
+  // dashboard); health_score is the cost-aware ROUTING signal the client seed reads.
+  // Clamp health >= 0.30 so a pricey provider is at worst 'degraded', never 'down'
+  // (which must mean broken). The cheapest-adequate provider gets penalty 0, so it
+  // keeps its quality score and always ranks above its pricier equals.
+  if (costCtx && metrics.success_rate >= 0.85) {
+    cost_penalty = costPenalty(costCtx.costPerCall, costCtx.minCostPerCall);
+    health = Math.max(0.30, s - cost_penalty);
   }
   return { health_score: Number(health.toFixed(3)), status, cost_penalty: Number(cost_penalty.toFixed(3)) };
 }
@@ -589,25 +598,18 @@ export async function aggregateHealth(env, now = Math.floor(Date.now() / 1000)) 
       b.retry_sum += Math.max(0, (r.retry_attempt || 1) - 1);
     }
 
-    // RELAY-COST-TIEBREAK-001: cheapest ADEQUATE (quality-'ok') cost-per-call per
-    // cost-sensitive task — the floor the cost tie-break scores every other
-    // provider against. Uses the quality-only score so an inadequate provider
-    // can never set an artificially low floor.
+    // RELAY-COST-TIEBREAK-001: cheapest ADEQUATE cost-per-call per cost-sensitive
+    // task — the floor the cost tie-break scores every other provider against.
+    // Adequacy is judged on SUCCESS RATE (>= 0.85), NOT quality status: these tasks
+    // are inherently high-latency ('warning' on quality alone), so a status gate
+    // would leave the floor empty and the whole tie-break inert. A hard-failing
+    // provider still can't set an artificially low floor.
     const minCostByTask = new Map();
     for (const b of buckets.values()) {
       if (!COST_SENSITIVE_TASKS.has(b.task) || !(b.calls > 0)) continue;
       const cpc = b.cost_sum / b.calls;
       if (!(cpc > 0)) continue;
-      const s0 = b.latencies.slice().sort((x, y) => x - y);
-      const q = scoreHealth({
-        success_rate: b.successes / b.calls,
-        p95_latency_ms: percentile(s0, 0.95),
-        placeholder_leak_rate: b.leak_calls / b.calls,
-        fabrication_rate: b.fab_calls / b.calls,
-        banned_word_rate: b.banned_calls / b.calls,
-        retry_rate: b.retry_sum / b.calls,
-      });
-      if (q.status !== 'ok') continue;   // only adequate providers set the floor
+      if ((b.successes / b.calls) < 0.85) continue;   // only adequate providers set the floor
       const cur = minCostByTask.get(b.task);
       if (cur == null || cpc < cur) minCostByTask.set(b.task, cpc);
     }

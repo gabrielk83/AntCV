@@ -34,23 +34,34 @@ test('big cost ratio -> FULL bounded penalty, still ok, never below 0.85', () =>
   assert.ok(r.health_score >= 0.85);
 });
 
-test('cost penalty is STATUS-gated: an inadequate provider gets none', () => {
-  const bad = { ...PERFECT, success_rate: 0.5 }; // -0.4 -> 0.6 -> 'warning'
+test('tie-break is SUCCESS-gated: a hard-failing provider (success<0.85) gets none', () => {
+  const bad = { ...PERFECT, success_rate: 0.5 }; // -0.4 -> 0.6 -> 'warning', and <0.85 success
   const r = scoreHealth(bad, { costPerCall: 1, minCostPerCall: 0.001 });
   assert.equal(r.cost_penalty, 0);
   assert.equal(r.status, 'warning');
   assert.equal(r.health_score, 0.6);
 });
 
-test('penalty clamped so a quality-dinged-but-ok provider never crosses 0.85', () => {
-  // one retry ding -> quality 0.9 (still ok). A huge cost ratio would want 0.15,
-  // but clamp to (0.9 - 0.85) = 0.05 so status stays ok.
-  const dinged = { ...PERFECT, retry_rate: 0.5 }; // -0.1 -> 0.9
-  const r = scoreHealth(dinged, { costPerCall: 10, minCostPerCall: 0.001 });
-  assert.equal(r.status, 'ok');
-  assert.ok(r.health_score >= 0.85);
-  assert.equal(r.health_score, 0.85);
-  assert.equal(r.cost_penalty, 0.05);
+test('WARNING-band (high-latency but succeeding) provider STILL tie-breaks by cost', () => {
+  // the production case: compress/long_context sit at quality 0.7 (p95>30s) but
+  // succeed 100% — v1 gated on status==='ok' and was inert here; now it fires.
+  const slow = { ...PERFECT, p95_latency_ms: 90000 }; // -0.3 -> 0.7 'warning', success 1.0
+  const cheap = scoreHealth(slow, { costPerCall: 0.00007, minCostPerCall: 0.00007 });
+  assert.equal(cheap.cost_penalty, 0);          // cheapest: no penalty
+  assert.equal(cheap.health_score, 0.7);
+  const pricey = scoreHealth(slow, { costPerCall: 0.12395, minCostPerCall: 0.00007 });
+  assert.equal(pricey.cost_penalty, COST_TIEBREAK_MAX); // ~1700x -> full penalty
+  assert.equal(pricey.health_score, Number((0.7 - COST_TIEBREAK_MAX).toFixed(3))); // 0.55
+  assert.equal(pricey.status, 'warning');       // status stays quality-only
+  // a >0.10 gap below the cheapest -> the client seed demotes the pricey one
+  assert.ok(cheap.health_score - pricey.health_score >= 0.10);
+});
+
+test('health never driven below 0.30 by cost (a pricey provider is at worst degraded, never down)', () => {
+  const dinged = { ...PERFECT, p95_latency_ms: 90000, retry_rate: 0.5 }; // 1 -0.3 -0.1 = 0.6 'warning'
+  const r = scoreHealth(dinged, { costPerCall: 100, minCostPerCall: 0.0001 }); // huge ratio
+  assert.ok(r.health_score >= 0.30);
+  assert.equal(r.health_score, Number(Math.max(0.30, 0.6 - COST_TIEBREAK_MAX).toFixed(3))); // 0.45
 });
 
 test('costPenalty pure fn: monotonic, bounded, 0 at ratio<=1', () => {

@@ -250,22 +250,31 @@ def rule_core_comp(cv, jd, report):
         keep = ranked[:_cap_rows]
         sec["rows"] = [rows[0]] + [r for r in data if r in keep]
         report.append(f"core_comp: rows {len(data)} -> {_cap_rows} by JD relevance")
-    # NARROW-CELL-CASCADE-001: hard-compress LABELS past the site cap - a
-    # long label in the narrow focus column cascades to one-word rows. Drop
-    # trailing ", X" / " & X" segments until it fits; never mid-word.
+    # NARROW-CELL-CASCADE-001 lever 1 (persist-time, render-free). Two
+    # deterministic compressions only - anything subtler is the measured
+    # ladder's job (density_fit) so valid 2-line labels are never mutilated:
+    #  a) strip a header-echo prefix ("Focus Area: X" under a "Focus Area"
+    #     header cell is pure furniture duplication);
+    #  b) past the HARD threshold (certain 3-line cascade shapes, site
+    #     table_label_hard_chars) drop trailing ,/& segments down to the
+    #     target cap, but keep at least 12 chars of meaning.
     _lcap = int((_G.get("caps") or {}).get("table_label_max_chars", 28))
+    _lhard = int((_G.get("caps") or {}).get("table_label_hard_chars", 34))
+    _hdr = str((sec["rows"][0][0] if sec["rows"] and sec["rows"][0] else "") or "").strip()
     for row in sec["rows"][1:]:
         lab = str(row[0] or "")
-        if len(lab) > _lcap:
-            newlab = lab
+        newlab = lab
+        if _hdr and newlab.lower().startswith(_hdr.lower() + ":"):
+            newlab = newlab[len(_hdr) + 1:].strip()
+        if len(newlab) > _lhard:
             while len(newlab) > _lcap:
                 m2 = re.search(r"^(.*?)(?:\s*[,&]\s*|\s+&\s+)[^,&]+$", newlab)
-                if not m2 or not m2.group(1).strip():
+                if not m2 or len(m2.group(1).strip()) < 12:
                     break
                 newlab = m2.group(1).strip()
-            if newlab != lab and len(newlab) >= 8:
-                row[0] = newlab
-                report.append(f"core_comp: label compressed '{lab[:26]}' -> '{newlab}'")
+        if newlab != lab and len(newlab) >= 8:
+            row[0] = newlab
+            report.append(f"core_comp: label compressed '{lab[:32]}' -> '{newlab}'")
     fixed = 0
     for row in sec["rows"][1:]:
         for ci in range(1, len(row)):       # labels (c0) stay untouched
@@ -449,6 +458,44 @@ def rule_bullet_periods(cv, report):
         report.append(f"punctuation: {n} bullet/result terminal period(s) added")
 
 
+
+# ── PUB-CANONICAL-ORDER-001 (owner batch 2026-07-13): the worker's
+# PUB-CHAIN-001 renders "TITLE + YEAR only" on non-academic CVs by splitting
+# each citation at the first em/en dash or colon. A JOURNAL-FIRST entry
+# ("Microsystem Technologies, 2010 - <title/authors>") therefore renders the
+# JOURNAL as the title and DROPS the real title (808/810 content loss).
+# Normalize to the canonical shape its siblings use: "Title - Authors,
+# Journal, Year" (ASCII hyphen only, no colon) so the splitter leaves it whole.
+_PUB_JOURNAL_FIRST = re.compile(
+    r"^([A-Z][^,:]{3,60}),\s*((?:19|20)\d\d)\s*[-\u2013\u2014]\s*(.+)$")
+
+def _canon_pub(item):
+    m = _PUB_JOURNAL_FIRST.match(str(item).strip())
+    if not m:
+        return None
+    journal, year, rest = m.group(1).strip(), m.group(2), m.group(3).strip()
+    for ch in "\u2013\u2014\u2010\u2011":
+        rest = rest.replace(ch, "-")
+    # authors-first sub-shape: "Surname, X., Surname, Y.: Title."
+    mc = re.match(r"^((?:[A-Z][\w'\u00c0-\u024f-]+,\s*[A-Z]\.(?:[A-Z]\.)?,?\s*)+):\s*(.+?)\.?$", rest)
+    if mc:
+        authors, title = mc.group(1).rstrip(", "), mc.group(2).strip()
+        return f"{title} - {authors}, {journal}, {year}"
+    return f"{rest} - {journal}, {year}" if " - " not in rest else f"{rest}, {journal}, {year}"
+
+def rule_pubs(cv, report):
+    for sec in cv or []:
+        if not isinstance(sec, dict) or sec.get("id") != "pubs":
+            continue
+        items = sec.get("items") or []
+        for i, it in enumerate(items):
+            if not isinstance(it, str):
+                continue
+            fixed = _canon_pub(it)
+            if fixed and fixed != it:
+                items[i] = fixed
+                report.append(f"pubs: journal-first citation reordered -> '{fixed[:60]}'")
+
 def apply_all(cv, cl, jd, kernel, language="en", use_llm=True):
     """Run every rule in place. Returns the report list."""
     report = []
@@ -459,6 +506,7 @@ def apply_all(cv, cl, jd, kernel, language="en", use_llm=True):
     rule_core_comp(cv, jd, report)
     rule_results_numeric(cv, kernel, jd, report, language=language)
     _restore_forening(cv, jd, language, report)
+    rule_pubs(cv, report)
     rule_bullet_periods(cv, report)
     rule_cl_prose(cl, cv, kernel_facts, language, report, use_llm=use_llm)
     return report

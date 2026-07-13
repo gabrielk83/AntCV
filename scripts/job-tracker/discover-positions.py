@@ -164,10 +164,13 @@ def cmd_add(args):
             fit = str(c.get("fit") or "").strip()
             jd = str(c.get("jd") or "").strip()
             # row schema: [rank,company,role,location,commute,group,fit,posting,
-            #              tracked,next,flag,urlkey,band]
+            #              tracked,next,flag,urlkey,band]. band (index 12) is the
+            # row FILL COLOUR the Weekly Tracker sheet round-trips (6-hex, default
+            # green E2EFDA); PROPOSED rows get light amber FFF2CC so they stand
+            # apart from tracked/applied rows in the sheet at a glance.
             doc["rows"].append([
                 next_rank, company, role, loc, "", "Proposed", fit, url,
-                today, "Review", "🔎", uk, "proposed"])
+                today, "Review", "🔎", uk, "FFF2CC"])
             next_rank += 1
             if url:
                 doc["urls"][uk] = url

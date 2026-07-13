@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.438-personal-dedup';
+const CACHE = 'antcv-1.51.478-demand-seed-refresh';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

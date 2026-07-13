@@ -44,32 +44,57 @@ add re-evaluates automatically. Change the ordering from slice-by-rank to
   so the discovery ledger never re-surfaces it and future discovery sees the "why".
 - Top-5 excludes closed (reject/archive) and parked; pins always in.
 
-### R3 — auto-tier manual adds
-New pure `computeTier(jd, company, role, doc, cluster)` → band:
-1. Location gate first: on-site abroad → T3; conditional far-DK (Jutland/Fyn) → cap T2.
-2. Domain tokens: strong EO / photonics / optical-systems → T1; product / PM /
-   requirements / QC / change-control / technical-BA → T2; off-domain → T3.
-3. Blend with cluster-fit strength (`scoreFit`).
-Deterministic, offline, no LLM call on add. Applied in `appendRow` (covers URL + PDF).
+### R3 — auto-tier manual adds (HYBRID: deterministic baseline + LLM refine)
+Two layers (owner-approved 2026-07-13):
+- **Instant baseline — pure `computeTier(jd, company, role, doc, cluster)` → band:**
+  1. Location gate first: on-site abroad → T3; conditional far-DK (Jutland/Fyn) → cap T2.
+  2. Domain tokens: strong EO / photonics / optical-systems → T1; product / PM /
+     requirements / QC / change-control / technical-BA → T2; off-domain → T3.
+  3. Blend with cluster-fit strength (`scoreFit`).
+  Deterministic, offline — the row is usable immediately and this is the permanent
+  FALLBACK when the LLM is unreachable (provider down/quota — same class as the nightly
+  billing exhaustion). Applied in `appendRow` (URL + PDF).
+- **Async LLM refine** (see R4 enrichment): may UPGRADE/adjust the band with semantic
+  judgment (reads meaning not keywords; weighs the EO-vs-PM envelope tension). Never
+  blocks the add; on failure the deterministic band stands.
 
 ### R4 — auto-fill the row on manual add (URL or PDF)
-Extend `appendRow` to parity with discovery + learn from the list:
-- **tier** = R3 `computeTier` (was flat T2).
-- **next step** = state-aware default: `'Review & tailor'` when a JD is present (not bare
-  `'Not started'`).
-- **link to JD** = `doc.urls[uk]` (already for URL; PDF adds keep the file as a signal).
-- **brand** = auto `fetchBrandColors(url, company)` → `doc.brand[uk]`, set `brandfit[uk]`
-  when colours are found (today it is a manual toggle).
-- **top5** = automatic via R1.
-- **learn from previous applications**: seed `gen[uk]` (tier hint) and any conventional
-  fields from the most similar prior row (same `categoryFor`/cluster) so a new add
-  inherits the list's established conventions instead of blank defaults.
+Extend `appendRow` to parity with discovery + learn from the list. **Split by layer so
+ranking stays stable and the row is instantly usable:**
 
-## Design decisions (defaults)
-- Tier + fit scoring are **deterministic** (cluster + tokens + envelope) — fast, free,
-  predictable; no LLM on add. An LLM refine can come later behind an explicit button.
+INSTANT (deterministic, in `appendRow`):
+- **tier** = R3 baseline `computeTier` (was flat T2).
+- **fit SCORE for Top-5 ranking = deterministic** (`fitScore`, R1). Ranking must be
+  STABLE — the Top-5 must not jitter between identical states — so the score that orders
+  Top-5 is never the LLM's.
+- **next step** = state-aware default: `'Review & tailor'` when a JD is present.
+- **link to JD** = `doc.urls[uk]`.
+- **top5** = automatic via R1.
+- **learn from previous applications**: seed `gen[uk]` + conventional fields from the most
+  similar prior same-`categoryFor`/cluster row.
+
+ASYNC LLM REFINE (runs inside the enrichment that ALREADY fires on add — `analyzeJd` →
+research → `webintel`; low marginal cost, graceful degradation already built in):
+- refine **tier** (R3 layer 2), then re-run the deterministic `fitScore` on the refined
+  band so ranking stays deterministic;
+- extract from the JD prose: **location, hybrid/remote, salary band, seniority, hiring-
+  manager name, deadline**;
+- generate a **why/fit** one-liner + a tailored **next-step**;
+- flag **envelope conflicts** (salary < ~55k, on-site abroad, draining-factor hits).
+- **brand** = auto `fetchBrandColors(url, company)` → `doc.brand[uk]` + set `brandfit[uk]`
+  when colours are found (today a manual toggle) — network, so it lives in the async pass.
+- All refine outputs are guarded: never fabricate (omit an unknown field); a failed refine
+  leaves the instant baseline intact.
+
+## Design decisions (defaults, owner-approved)
+- **Hybrid, not either/or.** Fit *score* for Top-5 ordering = DETERMINISTIC (stability).
+  Tier + semantic auto-fill (why, next-step, extracted location/comp/deadline/hiring-
+  manager, conflicts) = LLM REFINE, async, inside the existing `analyzeJd` enrichment,
+  with the deterministic tier as instant baseline + permanent fallback. Row usable
+  instantly; LLM upgrades it a second later without blocking; no hard provider dependency.
 - New doc fields, all back-compatible (absent = today's behavior): `pin{uk:bool}`,
-  `park{uk:bool}`, `discovered[key].status/reason`.
+  `park{uk:bool}`, `discovered[key].status/reason`, and refine outputs under existing
+  per-uk stores (`support`/`signals` for the why + extracted facts; `gen` for tier hint).
 - The discovery helper already sets `fit_tier`; both paths converge on the same band
   semantics, so a proposed lead and a manual add rank on one scale.
 

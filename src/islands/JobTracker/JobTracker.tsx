@@ -760,7 +760,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
                       onContextMenu={(e) => onRowContextMenu(e, r)}
                       onTouchStart={(e) => onRowTouchStart(e, r)} onTouchEnd={cancelLongPress} onTouchMove={cancelLongPress} onTouchCancel={cancelLongPress}>
                       <td className="jt-ranktoggle" onClick={() => toggleTop5Membership(uk)}
-                        title={star ? 'In Top-5 — click to park out (stays in the list). Right-click / long-press for more.' : 'Click to pin into Top-5. Right-click / long-press for more.'}
+                        title={star ? 'In Top-5 — click to park out (stays in the list). Right-click / long-press to reject.' : 'Click to pin into Top-5. Right-click / long-press to reject.'}
                         style={{ ...cell, textAlign: 'center', fontWeight: 700, borderLeft: '4px solid ' + t.accent, cursor: 'pointer', userSelect: 'none' }}>{star ? '★' : ''}{r[0]}</td>
                       <td style={{ ...cell }}><span style={{ background: t.accent, color: '#fff', borderRadius: 4, padding: '1px 6px', fontSize: 11, fontWeight: 700 }}>{t.label}</span></td>
                       <td style={{ ...cell, fontWeight: 600 }}>{r[1]}</td>
@@ -822,16 +822,12 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
 
         {/* JOBTRACKER-TOP5-CONTROLS-001: row context menu (right-click / long-press) */}
         {ctxMenu && (() => {
-          const inTop5 = top5Keys.has(ctxMenu.uk);
           const left = Math.max(6, Math.min(ctxMenu.x, (window.innerWidth || 1200) - 210));
           const top = Math.max(6, Math.min(ctxMenu.y, (window.innerHeight || 800) - 150));
           return (
             <div role="menu" onClick={(e) => e.stopPropagation()} onContextMenu={(e) => e.preventDefault()}
               style={{ position: 'fixed', left, top, zIndex: 100000, background: '#fff', border: '1px solid #c3ccdb', borderRadius: 8, boxShadow: '0 8px 28px rgba(0,0,0,0.28)', padding: 4, minWidth: 190 }}>
               <div style={{ padding: '5px 12px 6px', fontSize: 11, fontWeight: 700, color: '#889', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 210 }}>{ctxMenu.row[1] || 'Row'}</div>
-              <button className="jt-ctxitem" onClick={() => { toggleTop5Membership(ctxMenu.uk); setCtxMenu(null); }}>
-                {inTop5 ? '⏸ Park — out of Top-5 (stays in list)' : '★ Pin into Top-5'}
-              </button>
               <button className="jt-ctxitem" style={{ color: '#7a2618' }} onClick={() => { const r = ctxMenu.row; setCtxMenu(null); void rejectRow(r); }}>
                 ✕ Reject…
               </button>

@@ -15,8 +15,11 @@
  *     sync) runs exactly as for a manual upload. No app.js changes.
  *   - ✕ on a thumbnail — remove from the library (never touches the active
  *     photo).
- *   - the native "Reset" button ALSO empties the library (the app already
- *     restores the embedded default ant as the active photo).
+ *   - "↺ Reset" — rendered in the strip UNDER "＋ Add photos…" in the same
+ *     button style (owner 2026-07-13, PHOTO-STRIP-RESET-001); it drives the
+ *     app's own (hidden) Reset button — which restores the embedded default
+ *     ant — and empties the library. The native Reset stays in the DOM
+ *     (hidden) as the reset mechanism.
  *
  * Storage: localStorage 'antcv:photoLibrary' = JSON [{id, ts, dataUrl}].
  * Cloud: round-trips through /api/prefs as the allowlisted 'photoLibrary'
@@ -32,7 +35,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.51.391';
+  var VERSION = '1.51.393';
   if (window.__antcvPhotoLibrary === VERSION) return;
   window.__antcvPhotoLibrary = VERSION;
 
@@ -203,22 +206,33 @@
     b.addEventListener('click', function (ev) { ev.preventDefault(); ev.stopPropagation(); onClick(); });
     return b;
   }
-  // PHOTO-BTN-FUSE-001: "＋ Add photos…" covers the single-change case (first
-  // added photo becomes active), so the app's single-file "Change photo" button
-  // is redundant — hide it. Runs every render sweep because React re-creates
-  // the button on re-render.
-  function hideNativeChangePhoto(panel) {
+  // PHOTO-BTN-FUSE-001 + PHOTO-STRIP-RESET-001: the strip owns the visible
+  // controls, so the app's single-file "Change photo" and its "Reset" are
+  // hidden (never removed — Reset stays as the reset mechanism the strip
+  // button clicks). Runs every render sweep because React re-creates the
+  // buttons on re-render. Strip-owned buttons are skipped.
+  function hideNativeButtons(panel) {
     var btns = panel.querySelectorAll('button');
     for (var i = 0; i < btns.length; i++) {
       var b = btns[i];
-      if ((b.textContent || '').trim() === 'Change photo' && b.style.display !== 'none') b.style.display = 'none';
+      if (b.closest && b.closest('[' + STRIP_MARK + ']')) continue;
+      var t = (b.textContent || '').trim();
+      if ((t === 'Change photo' || t === 'Reset') && b.style.display !== 'none') b.style.display = 'none';
     }
+  }
+  function findNativeReset(panel) {
+    var btns = panel.querySelectorAll('button');
+    for (var i = 0; i < btns.length; i++) {
+      var b = btns[i];
+      if ((b.textContent || '').trim() === 'Reset' && !(b.closest && b.closest('[' + STRIP_MARK + ']'))) return b;
+    }
+    return null;
   }
   function render() {
     if (disabled()) return;
     var panel = findPanel();
     if (!panel || !panel.parentElement) return;
-    hideNativeChangePhoto(panel);
+    hideNativeButtons(panel);
     var existing = panel.parentElement.querySelector('[' + STRIP_MARK + ']');
     var entries = lib();
     var sig = entries.map(function (e) { return e.id; }).join(',');
@@ -228,11 +242,6 @@
     var strip = document.createElement('div');
     strip.setAttribute(STRIP_MARK, sig);
     strip.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0 2px 0;';
-
-    var label = document.createElement('span');
-    label.textContent = 'Library:';
-    label.style.cssText = 'font-size:10px;font-weight:600;color:rgba(255,255,255,0.45);letter-spacing:0.3px;';
-    strip.appendChild(label);
 
     entries.forEach(function (e) {
       var wrap = document.createElement('span');
@@ -256,12 +265,22 @@
 
     // Always offered — it is the ONE upload control now (PHOTO-BTN-FUSE-001).
     // At MAX_ENTRIES, adding evicts the oldest entries (newest-first slice).
+    // Add + Reset stack in a column (Reset UNDER Add, same style — owner
+    // 2026-07-13); column flex stretches both to the same width.
     var multi = document.createElement('input');
     multi.type = 'file'; multi.accept = 'image/*'; multi.multiple = true;
     multi.style.display = 'none';
     multi.addEventListener('change', function () { addFiles(multi.files, true); multi.value = ''; });
-    strip.appendChild(multi);
-    strip.appendChild(btn('＋ Add photos…', 'Upload one or more photos (saved to the library, compressed for cloud sync; first becomes active)', function () { multi.click(); }));
+    var col = document.createElement('span');
+    col.style.cssText = 'display:inline-flex;flex-direction:column;gap:4px;';
+    col.appendChild(multi);
+    col.appendChild(btn('＋ Add photos…', 'Upload one or more photos (saved to the library, compressed for cloud sync; first becomes active)', function () { multi.click(); }));
+    col.appendChild(btn('↺ Reset', 'Restore the default photo and empty the library', function () {
+      var native = findNativeReset(panel);
+      if (native) native.click();   // app restores the embedded default ant
+      if (lib().length) save([]);
+    }));
+    strip.appendChild(col);
     panel.appendChild(strip);
   }
 

@@ -160,6 +160,19 @@ fallback is: proceed with plain WebSearch research only (reduced Nordic/Danish
 site-scoped coverage), same as the 2026-07-10 run did, and note it in that
 week's PR.
 
+**Update 2026-07-13 — Brave-first workaround shipped in code (relay
+`auth-33-cse-brave` / 1.3.12).** `/api/cse-search` now mirrors
+`/api/research`'s backend order: **Brave Search first** whenever
+`BRAVE_API_KEY` is set on access-relay (it already is — it powers
+`/api/research`), Google CSE only as the fallback when no Brave key exists.
+Same query mapping as `/api/research`: `siteSearch` becomes a `site:` prefix,
+`dateRestrict` (`y*/m*/w*`) maps to Brave `freshness` (`py/pm/pw`), items come
+back as `{title, link, snippet}`. The `CSE_PROXY_TOKEN` gate is unchanged.
+**Not live until a manual Worker deploy**: `.github/workflows/deploy.yml` →
+workflow_dispatch, mode=deploy, confirm=access-relay. Until that deploy runs,
+production still serves the Google-only handler and still 403s. The Google
+Support case stays open — it now only affects the fallback path.
+
 ## 7. KNOWN BUG (found 2026-07-10, still OPEN) — `GOOGLE_CSE_ID` secret is dead code
 
 `workers/access-relay/src/index.js`'s `/api/cse-search` handler does **not**
@@ -187,6 +200,11 @@ This happened to be harmless during the 2026-07-10 investigation (the hardcoded
 Not fixed in this doc-only session (weekly demand-tuning runs don't touch
 Worker code) — flagged here + in `docs/qa/MASTER_BACKLOG.md` for a proper code
 session to pick up.
+
+**Note 2026-07-13:** with the Brave-first change in §6, the hardcoded `cx`
+(and `GOOGLE_CSE_ID`) only matter on the Google fallback path, which is dead
+in production while `BRAVE_API_KEY` is set. Bug stays open but drops in
+urgency.
 
 ---
 

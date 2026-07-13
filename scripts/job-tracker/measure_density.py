@@ -183,14 +183,22 @@ def _column_streams(doc, payload):
     ordered token streams with line refs + per-page column extents."""
     ratio = float(payload.get("sidebar_ratio") or 0.36)
     side = ((payload.get("style") or {}).get("sidebarPosition") or "left").lower()
+    # LINEAR-STREAM-001 (owner 2026-07-13, the CL density no-op): a one-column
+    # document (cover letters, layout "linear") has NO sidebar boundary —
+    # splitting its words at the phantom ratio shredded every sentence across
+    # two token streams and nothing ever matched (vacuous 100% quality).
+    linear = (payload.get("layout") == "linear") or (payload.get("doc") == "cl")
     W = doc[0].rect.width
-    bound = W * ratio if side == "left" else W * (1 - ratio)
+    bound = 0 if linear else (W * ratio if side == "left" else W * (1 - ratio))
     cols = {"sidebar": {"tokens": [], "lines": []}, "main": {"tokens": [], "lines": []}}
     pages = []
     for pno in range(doc.page_count):
         words = doc[pno].get_text("words")
         sb, mn = [], []
         for w in words:
+            if linear:
+                mn.append(w)
+                continue
             mid = (w[0] + w[2]) / 2
             left = mid < bound
             (sb if (left == (side == "left")) else mn).append(w)

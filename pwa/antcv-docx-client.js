@@ -2234,6 +2234,7 @@ function normalizeSections(raw) {
   let itemPagesMap = {};
   let autoPagesMap = {};
   let autoPagesRaw = {};   // 1.50.295: auto breaks, used ONLY for whole-unit main-column paths (experience roles + table rows)
+  let autoBulletPagesRaw = {};   // ROLE-SPLIT-CONT-001: per-bullet split for a role taller than a page
   try {
     if (typeof localStorage !== 'undefined') {
       const raw = localStorage.getItem('antcv:itemPages');
@@ -2275,6 +2276,17 @@ function normalizeSections(raw) {
         const parsedAuto = JSON.parse(rawAuto);
         if (parsedAuto && typeof parsedAuto === 'object' && !Array.isArray(parsedAuto)) {
           autoPagesRaw = parsedAuto;
+        }
+      }
+      // ROLE-SPLIT-CONT-001 (row 87d): the measurer's per-BULLET split for an
+      // experience role taller than a whole page. { expId: { roleIdx: { bulletIdx: page } } }.
+      // Forwarded to the worker as role.bullet_pages (mirrors role.page from autoPagesRaw).
+      // Empty "{}" for every existing doc (no role is currently taller than a page) → inert.
+      const rawBullet = localStorage.getItem('antcv:autoBulletPages');
+      if (rawBullet) {
+        const parsedBullet = JSON.parse(rawBullet);
+        if (parsedBullet && typeof parsedBullet === 'object' && !Array.isArray(parsedBullet)) {
+          autoBulletPagesRaw = parsedBullet;
         }
       }
     }
@@ -2600,6 +2612,9 @@ function normalizeSections(raw) {
         // a monotonic cascade; auto key is the ORIGINAL index in the unfiltered roles.
         const allRoles = Array.isArray(s.roles) ? s.roles : [];
         const autoR = (s.id && autoPagesRaw && typeof autoPagesRaw[s.id] === 'object') ? autoPagesRaw[s.id] : null;
+        // ROLE-SPLIT-CONT-001: per-role bullet split map (role taller than a page),
+        // keyed by the same ORIGINAL role index (oi) as the role.page map.
+        const autoBP = (s.id && autoBulletPagesRaw && typeof autoBulletPagesRaw[s.id] === 'object') ? autoBulletPagesRaw[s.id] : null;
         let runPage = 1;
         const roles = allRoles.filter(r => r && r.on !== false).map(r => {
           const oi = allRoles.indexOf(r);
@@ -2609,6 +2624,11 @@ function normalizeSections(raw) {
             if (Number.isFinite(ap) && ap >= 1) pg = Math.max(pg, ap);
           }
           if (pg < runPage) pg = runPage; else runPage = pg;
+          // ROLE-SPLIT-CONT-001: forward the bullet split for this role. Only a plain
+          // object with >=1 numeric entry is forwarded; the worker guards bl.length>=2
+          // and a real (>=2 groups) break, so a spurious/empty map is a safe no-op.
+          const bp = autoBP && autoBP[String(oi)] && typeof autoBP[String(oi)] === 'object' ? autoBP[String(oi)] : null;
+          const bpValid = bp && Object.keys(bp).some(k => Number(bp[k]) >= 2);
           return {
             id: r.id || '',
             title: r.title || '',
@@ -2616,6 +2636,7 @@ function normalizeSections(raw) {
             years: r.years || '',
             bullets: Array.isArray(r.bullets) ? r.bullets.map(String).filter(Boolean) : [],
             ...(pg >= 2 ? { page: pg } : {}),
+            ...(bpValid ? { bullet_pages: bp } : {}),
             // OUTCOMES-MODE-001: per-role results line (set by
             // applyOutcomesMode when the display mode is 'results').
             ...(typeof r.results === 'string' && r.results.trim()

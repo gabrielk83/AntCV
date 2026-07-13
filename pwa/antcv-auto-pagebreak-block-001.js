@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.51.66-early-break-tune3';
+  var VERSION = '1.51.659-role-split-cont';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -89,6 +89,19 @@
   // at it. The export client keeps reading antcv:autoPages unchanged. Owner-chosen
   // decouple (2026-06-08): preview fills A4, export stays exactly as it was.
   var PREVIEW_KEY = 'antcv:autoPagesPreview';
+  // ROLE-SPLIT-CONT-001 (row 87d, 1.51.659): per-BULLET page map for an EXPERIENCE
+  // role that is TALLER THAN A WHOLE PAGE — a case the whole-role greedy walk below
+  // deliberately leaves unbroken (a role that starts at the page top and still
+  // overflows cannot be whole-moved). Shape: { expId: { roleIdx: { bulletIdx: page } } }
+  // keyed by the role's ORIGINAL index (data-antcv-role-index, == docx-client's
+  // allRoles.indexOf) and the bullet's index within the role's bullets array. The
+  // docx-client reads this and forwards it as role.bullet_pages; the DEPLOYED worker
+  // (docx-worker 1.14.154-role-split-cont) expands the role into a head + one
+  // "PROFESSIONAL EXPERIENCE (CONT.)" continuation per page boundary. EXPORT-line
+  // only (measured against USABLE_PDF, like role.page). INERT for every existing doc:
+  // no role is currently taller than a page, so no bullet_pages is ever emitted and
+  // antcv:autoBulletPages stays "{}" → byte-identical export payload.
+  var BULLET_KEY = 'antcv:autoBulletPages';
   var SECTIONS_KEY = 'sections';
   var PAGE_H = 1123;       // A4 preview page-box ≈ 1123px at 96dpi
   var SAFETY = 70;         // crowd margin: count near-edge units as overflow
@@ -685,8 +698,64 @@
     } catch (_) { return ''; }
   }
 
+  // ROLE-SPLIT-CONT-001 kill switch (default ON). Set
+  // localStorage['antcv:disable-bullet-split']='1' to suppress the per-bullet
+  // split entirely (revert to the pre-1.51.659 leave-tall-role-unbroken behaviour).
+  function bulletSplitEnabled() {
+    try { return localStorage.getItem('antcv:disable-bullet-split') !== '1'; }
+    catch (_) { return true; }
+  }
+
+  // ROLE-SPLIT-CONT-001: measure the per-bullet page split for ONE experience role
+  // that is taller than a whole page. The role's bullets are DOM-tagged
+  // data-antcv-row-path="roles.{t}.bullets.{n}" as descendants of the role wrapper;
+  // we read `n` (the bullet index within the role's bullets array) and greedily fill
+  // page-boxes of height `pageLimit`, mirroring the atomic-role greedy walk above.
+  //   pageTop   = viewport-top of the page the role's HEAD sits on
+  //   pageLimit = the export usable page height (USABLE_PDF)
+  //   startPage = the page number the head sits on (>=1)
+  // A bullet moves to the next page ONLY when its BOTTOM crosses the current page
+  // line AND it is not the first block on the page (the CONSERVATIVE split: the last
+  // bullet that FITS stays on the page; the first bullet that OVERFLOWS + all after
+  // move down — never split-index-too-high, which the worker proved orphans a bullet
+  // and appends a blank page). The (top - pageTop) > 1 guard makes a single bullet
+  // taller than a page stay put (no infinite push). Returns
+  //   { map: { bulletIdx: page }, endPage, endTop }  or null when nothing overflows.
+  function measureBulletSplit(roleEl, pageTop, pageLimit, startPage, autoKey) {
+    try {
+      var bEls = roleEl.querySelectorAll('[' + ITEM_PATH_ATTR + '*=".bullets."]');
+      if (!bEls || !bEls.length) return null;
+      var map = null;
+      var bpTop = pageTop;
+      var bpPage = startPage;
+      for (var i = 0; i < bEls.length; i++) {
+        var el = bEls[i];
+        if (!visible(el)) continue;
+        var m = /\.bullets\.(\d+)\b/.exec(String(el.getAttribute(ITEM_PATH_ATTR) || ''));
+        if (!m) continue;
+        var bi = Number(m[1]);
+        var rc = el.getBoundingClientRect();
+        // page-1 gets the MAIN_PDF_LINE_BONUS (it loses the candidate header band —
+        // same asymmetry the whole-role walk applies), pages 2+ do not.
+        var pLine = pageLimit + ((autoKey === AUTO_KEY && bpPage === 1) ? MAIN_PDF_LINE_BONUS : 0);
+        if ((rc.bottom - bpTop) > pLine && (rc.top - bpTop) > 1) {
+          bpPage++;
+          bpTop = rc.top;               // the next page begins at this bullet's top
+          if (bi >= 0 && bpPage >= 2 && bpPage <= 6) (map = map || {})[String(bi)] = bpPage;
+        }
+      }
+      if (!map) return null;
+      return { map: map, endPage: bpPage, endTop: bpTop };
+    } catch (_) { return null; }
+  }
+
   function compute(usableBase, autoKey, tight) {
     var doc = activeDoc();
+    // ROLE-SPLIT-CONT-001: reset the export bullet-split accumulator at the START of
+    // the EXPORT pass only (compute runs once per key; the preview pass leaves it as
+    // computed so run() reads the export values). Cleared every pass so a doc that no
+    // longer has a tall role emits "{}" (byte-identical, inert).
+    if (autoKey === AUTO_KEY) __pendingBulletMap = {};
     var list = sectionsFor(doc);
     if (!list.length) return readJson(autoKey, {});
 
@@ -1065,14 +1134,35 @@
           for (var ri = 0; ri < roleEls.length; ri++) {
             if (!visible(roleEls[ri])) continue;
             var __rr = roleEls[ri].getBoundingClientRect();
+            var __pLim = __expLimit + ((autoKey === AUTO_KEY && __curPage === 1) ? MAIN_PDF_LINE_BONUS : 0);
+            var __rmi = parseInt(roleEls[ri].getAttribute('data-antcv-role-index'), 10);
+            // ROLE-SPLIT-CONT-001 (row 87d): a role TALLER THAN A WHOLE PAGE can never
+            // be made to fit by a whole-role move (moving it to a fresh page still
+            // overflows), so the greedy walk used to leave it unbroken — its tail
+            // bullets spilled past the page line with NO "(CONT.)" header in the export.
+            // Instead, split it PER BULLET on the current page (it starts right after the
+            // section header / prior role, and its overflow flows to page __curPage+1…).
+            // EXPORT pass only + kill-switchable; the whole-role branch below is untouched
+            // for every normal role.
+            if (autoKey === AUTO_KEY && bulletSplitEnabled()
+                && (__rr.bottom - __rr.top) > __pLim
+                && (__rr.bottom - __pageTop) > __pLim) {
+              var __bp = measureBulletSplit(roleEls[ri], __pageTop, __expLimit, __curPage, autoKey);
+              if (__bp && __bp.map && __rmi >= 0 && expSec.id) {
+                (__pendingBulletMap[expSec.id] = __pendingBulletMap[expSec.id] || {})[String(__rmi)] = __bp.map;
+                // advance the cursor so a FOLLOWING role paginates from where this tall
+                // role actually ended (it consumed __bp.endPage - __curPage extra pages).
+                __curPage = __bp.endPage;
+                __pageTop = __bp.endTop;
+                continue;
+              }
+            }
             // Role overflows the current page AND isn't the very first block on it (a role
             // taller than a whole page can't move — leave it to avoid an infinite push).
-            var __pLim = __expLimit + ((autoKey === AUTO_KEY && __curPage === 1) ? MAIN_PDF_LINE_BONUS : 0);
             if ((__rr.bottom - __pageTop) > __pLim && (__rr.top - __pageTop) > 1) {
               __curPage++;
               __pageTop = __rr.top;   // the next page begins at this role's top
-              var rmi = parseInt(roleEls[ri].getAttribute('data-antcv-role-index'), 10);
-              if (rmi >= 1) (__expMap = __expMap || {})[String(rmi)] = __curPage;
+              if (__rmi >= 1) (__expMap = __expMap || {})[String(__rmi)] = __curPage;
             }
           }
           if (__expMap) { map[expSec.id] = __expMap;
@@ -1587,6 +1677,10 @@
 
   var lastWritten = null;
   var lastWrittenPreview = null;   // 1.50.316: separate change-guard for the preview map
+  // ROLE-SPLIT-CONT-001: the export bullet-split map compute() accumulates on the
+  // AUTO_KEY pass, and its change-guard. Written to BULLET_KEY by run().
+  var __pendingBulletMap = {};
+  var lastWrittenBullets = null;
   var lastSourceFp = null;   // 1.50.269: source fingerprint of last compute
   var writeTimes = [];
   var brokenUntil = 0;
@@ -1734,11 +1828,16 @@
 
       var nextExport = JSON.stringify(mapExport);
       var nextPreview = JSON.stringify(mapPreview);
+      // ROLE-SPLIT-CONT-001: the bullet-split map compute() accumulated on the export
+      // pass (empty "{}" unless a role is taller than a page).
+      var nextBullets = JSON.stringify(__pendingBulletMap || {});
       var curExport = localStorage.getItem(AUTO_KEY) || '{}';
       var curPreview = localStorage.getItem(PREVIEW_KEY) || '{}';
+      var curBullets = localStorage.getItem(BULLET_KEY) || '{}';
       var exportChanged = nextExport !== curExport && nextExport !== lastWritten;
       var previewChanged = nextPreview !== curPreview && nextPreview !== lastWrittenPreview;
-      if (!exportChanged && !previewChanged) { lastWritten = nextExport; lastWrittenPreview = nextPreview; return; }
+      var bulletsChanged = nextBullets !== curBullets && nextBullets !== lastWrittenBullets;
+      if (!exportChanged && !previewChanged && !bulletsChanged) { lastWritten = nextExport; lastWrittenPreview = nextPreview; lastWrittenBullets = nextBullets; return; }
 
       // Circuit breaker backstop: > 8 distinct write-cycles in 4s → back off 8s
       // AND freeze the fingerprint so we stop recomputing.
@@ -1755,6 +1854,7 @@
 
       if (exportChanged) { localStorage.setItem(AUTO_KEY, nextExport); lastWritten = nextExport; }
       if (previewChanged) { localStorage.setItem(PREVIEW_KEY, nextPreview); lastWrittenPreview = nextPreview; }
+      if (bulletsChanged) { localStorage.setItem(BULLET_KEY, nextBullets); lastWrittenBullets = nextBullets; }
       cooldownUntil = now + 1500;   // 1.50.287: don't re-measure our own pagination for 1.5s
       try {
         window.dispatchEvent(new CustomEvent('antcv:auto-pages-changed', {
@@ -1939,8 +2039,11 @@
         // the next compute writes fresh in both targets.
         localStorage.setItem(AUTO_KEY, '{}');
         localStorage.setItem(PREVIEW_KEY, '{}');
+        localStorage.setItem(BULLET_KEY, '{}');   // ROLE-SPLIT-CONT-001
         lastWritten = '{}';
         lastWrittenPreview = '{}';
+        lastWrittenBullets = '{}';
+        __pendingBulletMap = {};
         lastSourceFp = null;
         __breakBornAt = {};   // MAINBAR-FLIP-FIX-001
         window.dispatchEvent(new CustomEvent('antcv:auto-pages-changed',

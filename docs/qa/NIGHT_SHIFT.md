@@ -42,3 +42,11 @@ _No active claims when the block above is empty. Each line is
   that gets you the latest code also gets you the latest claims. No side database.
 - **Version-range reservation, not a global lock** — sessions run fully in parallel; they
   only agree not to step on each other's version numbers + to work in separate worktrees.
+- **Reads are origin-authoritative** — `status`/`next-version`/`claim` read the ledger from
+  `origin/main` (fetch + `git show`), NOT the local working copy, so a session with uncommitted
+  WIP (which can't `pull --rebase`) still sees every active claim and can't double-claim a range.
+- **Released ranges are not reused** — the high-water mark advances past every claimed range
+  (release/claim commit subjects carry the range end), so numbers are burned rather than recycled.
+  This is deliberate: a never-reused number can never collide with an in-flight deploy of the old one.
+
+All scheduled/recurring routines are bound by this too — see `docs/qa/SCHEDULED_ROUTINES.md`.

@@ -1,5 +1,7 @@
 # NIGHTLY WORK ORDER — preview button audit + PDF parity (register row 23)
 
+> **NIGHT SHIFT (parallel-session safety):** before editing, `git pull --rebase origin main` then `node scripts/shift.mjs claim --task "<what>"` and work in the printed `git worktree`; use version numbers only inside your claimed range; `node scripts/shift.mjs release` when done. See `docs/qa/NIGHT_SHIFT.md`.
+
 Owner order (2026-07-03): "Check ALL buttons for activity on the preview — e.g. on the
 region where the CV and CL are visualised — and check that the correct positions of
 CJLR, colors, roller etc. are passed to PDF generation."

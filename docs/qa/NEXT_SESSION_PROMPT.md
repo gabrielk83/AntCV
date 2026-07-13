@@ -1,5 +1,7 @@
 # Next session — AntCV (start here)
 
+> **NIGHT SHIFT (parallel-session safety):** before editing, `git pull --rebase origin main` then `node scripts/shift.mjs claim --task "<what>"` and work in the printed `git worktree`; use version numbers only inside your claimed range; `node scripts/shift.mjs release` when done. See `docs/qa/NIGHT_SHIFT.md`.
+
 **Authoritative current state + closed/open lists: `docs/qa/SESSION_LOG_2026-07-01.md`.** Read it
 first. PWA `1.51.29`, docx-worker `1.14.110` (unchanged this run), access-relay `1.3.2`, suite
 551/551. Two independent sessions worked the same backlog concurrently 2026-07-01 and both landed

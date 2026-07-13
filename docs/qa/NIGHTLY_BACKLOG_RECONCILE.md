@@ -1,5 +1,7 @@
 # STANDING nightly order — backlog reconciliation (owner 2026-07-03)
 
+> **NIGHT SHIFT (parallel-session safety):** before editing, `git pull --rebase origin main` then `node scripts/shift.mjs claim --task "<what>"` and work in the printed `git worktree`; use version numbers only inside your claimed range; `node scripts/shift.mjs release` when done. See `docs/qa/NIGHT_SHIFT.md`.
+
 Owner: "make sure nightly also covers the most recent open vs closed backlog —
 older open stuff that is still open." Every nightly run (local antcv-nightly AND
 the cloud Routine) reserves ONE slot for this, in addition to its dated tasks.

@@ -100,5 +100,20 @@ if [ "$CODE" -eq 1 ]; then
     exit 1
 fi
 
+# ── Soft NIGHT SHIFT reminder (warn only, NEVER blocks) ───────────────────────
+# If this push carries a versioned pwa change but there is no active shift claim
+# for this session, remind the author to reserve a version range so parallel
+# sessions don't collide on numbers (docs/qa/NIGHT_SHIFT.md). Best-effort: any
+# problem silently skips. This never affects the exit code.
+GITDIR=$(git rev-parse --absolute-git-dir 2>/dev/null)
+if [ -n "$GITDIR" ] && [ ! -s "$GITDIR/shift-session-id" ]; then
+    if git diff --name-only "$RANGE" -- pwa/ 2>/dev/null | grep -q .; then
+        printf '\n\033[33mpre-push: NIGHT SHIFT reminder — pushing a pwa change with no active shift claim.\033[0m\n' >&2
+        printf 'Parallel sessions collide on version numbers without a claim. Consider:\n' >&2
+        printf '  node scripts/shift.mjs claim --task "<what>"   (docs/qa/NIGHT_SHIFT.md)\n' >&2
+        printf '(warning only — the push continues)\n\n' >&2
+    fi
+fi
+
 # CODE 0 (clean) or any other code (usage/infra error) → allow the push.
 exit 0

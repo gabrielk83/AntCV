@@ -1,5 +1,7 @@
 # NIGHTLY WORK ORDER — JD capture PDF (URL-fetched JDs)
 
+> **NIGHT SHIFT (parallel-session safety):** before editing, `git pull --rebase origin main` then `node scripts/shift.mjs claim --task "<what>"` and work in the printed `git worktree`; use version numbers only inside your claimed range; `node scripts/shift.mjs release` when done. See `docs/qa/NIGHT_SHIFT.md`.
+
 Owner brief (2026-07-02): "if JD is fetched from URL, offer a service (a checkbox in
 the settings menu) of: exporting a PDF copy of the JD, which also includes the
 website URL, the contact person details, the company name and address (find the

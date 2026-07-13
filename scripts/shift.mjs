@@ -63,16 +63,31 @@ function sync() {
 }
 
 // ---- ledger read/write -----------------------------------------------------
+function parseClaims(text) {
+  const b = text.indexOf(BEGIN), e = text.indexOf(END);
+  if (b === -1 || e === -1) return [];
+  const beginLineEnd = text.indexOf('\n', b) + 1;
+  return text.slice(beginLineEnd, e).split('\n').map((l) => l.trim()).filter((l) => l.startsWith('{'))
+    .map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+}
 function readLedger() {
   if (!existsSync(LEDGER)) { console.error('ledger missing: ' + LEDGER); process.exit(1); }
   const text = readFileSync(LEDGER, 'utf8');
   const b = text.indexOf(BEGIN), e = text.indexOf(END);
   if (b === -1 || e === -1) { console.error('ledger markers not found'); process.exit(1); }
   const beginLineEnd = text.indexOf('\n', b) + 1;
-  const inner = text.slice(beginLineEnd, e);
-  const claims = inner.split('\n').map((l) => l.trim()).filter((l) => l.startsWith('{'))
-    .map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
-  return { text, beginLineEnd, e, claims };
+  return { text, beginLineEnd, e, claims: parseClaims(text) };
+}
+// WIP-PROOF READ: the authoritative claim list is what is on origin/main, NOT the local
+// working copy. A session with uncommitted changes can't `pull --rebase`, so the local
+// ledger goes stale and a naive read lets two sessions grab the same range. This reads
+// origin's ledger directly (fetch + `git show`), independent of any local WIP; it falls
+// back to the local file only when origin is unreachable. All commands base their
+// active-claim view on this, then write the full fresh set (± their own row) locally.
+function originLedgerClaims() {
+  git('fetch origin', { quiet: true });
+  const txt = git('show origin/main:docs/qa/NIGHT_SHIFT.md', { quiet: true });
+  return txt != null ? parseClaims(txt) : readLedger().claims;
 }
 function writeLedger(claims) {
   const { text, beginLineEnd, e } = readLedger();
@@ -146,11 +161,8 @@ function commitPush(msg, noPush) {
 
 // ---- commands --------------------------------------------------------------
 function cmdClaim() {
-  const synced = sync();
-  if (!synced) console.error('[shift] warning: could not sync origin/main — claiming against local ledger only');
   const size = parseInt(arg('size', '20'), 10) || 20;
-  let { claims } = readLedger();
-  const active = claims.filter((c) => c.id !== sessionId());
+  const active = originLedgerClaims().filter((c) => c.id !== sessionId());
   let range = arg('range', null);
   if (range) {
     if (!/^1\.51\.\d+-1\.51\.\d+$/.test(range)) { console.error('range must look like 1.51.260-1.51.279'); process.exit(1); }
@@ -160,7 +172,7 @@ function cmdClaim() {
     range = nextFreeRange(active, size);
   }
   const id = sessionId(true);
-  claims = active.concat([{
+  const claims = active.concat([{
     id, started: nowIso(), host: os.hostname(),
     worktree: arg('worktree', null) || null,
     branch: git('rev-parse --abbrev-ref HEAD', { quiet: true }) || null,
@@ -178,10 +190,10 @@ function cmdClaim() {
   console.log(`\nHeartbeat: node scripts/shift.mjs beat   ·   Release: node scripts/shift.mjs release`);
 }
 
-function cmdStatus() { sync(); printTable(readLedger().claims); }
+function cmdStatus() { printTable(originLedgerClaims()); }
 
 function cmdNextVersion() {
-  const { claims } = readLedger();
+  const claims = originLedgerClaims();
   if (arg('range', false)) { console.log(nextFreeRange(claims, parseInt(arg('size', '20'), 10) || 20)); return; }
   const mine = claims.find((c) => c.id === sessionId());
   if (!mine) { console.log(nextFreeRange(claims, 1)); return; }
@@ -190,8 +202,7 @@ function cmdNextVersion() {
 
 function cmdBeat() {
   const id = sessionId(); if (!id) { console.error('no session id — run claim first'); process.exit(1); }
-  sync();
-  const { claims } = readLedger();
+  const claims = originLedgerClaims();
   const mine = claims.find((c) => c.id === id);
   if (!mine) { console.error('no active claim for this session'); process.exit(1); }
   mine.beat = nowIso();
@@ -202,10 +213,9 @@ function cmdBeat() {
 
 function cmdRelease() {
   const id = sessionId(); if (!id) { console.error('no session id — nothing to release'); process.exit(1); }
-  sync();
-  let { claims } = readLedger();
-  const mine = claims.find((c) => c.id === id);
-  claims = claims.filter((c) => c.id !== id);
+  const all = originLedgerClaims();
+  const mine = all.find((c) => c.id === id);
+  const claims = all.filter((c) => c.id !== id);
   writeLedger(claims);
   commitPush(`chore(shift): release ${mine ? mine.range : id}`, arg('no-push', false));
   try { if (existsSync(IDFILE)) unlinkSync(IDFILE); } catch {}   // delete, don't blank — see sessionId()
@@ -213,14 +223,13 @@ function cmdRelease() {
 }
 
 function cmdReap() {
-  sync();
   const parsed = parseFloat(arg('hours', '6'));
   const hours = Number.isFinite(parsed) ? parsed : 6;   // 0 is valid (reap all past claims)
   const cutoff = Date.now() - hours * 3600 * 1000;
-  let { claims } = readLedger();
-  const dead = claims.filter((c) => new Date(c.beat || c.started).getTime() < cutoff);
+  const all = originLedgerClaims();
+  const dead = all.filter((c) => new Date(c.beat || c.started).getTime() < cutoff);
   if (!dead.length) { console.log('nothing to reap'); return; }
-  claims = claims.filter((c) => new Date(c.beat || c.started).getTime() >= cutoff);
+  const claims = all.filter((c) => new Date(c.beat || c.started).getTime() >= cutoff);
   writeLedger(claims);
   commitPush(`chore(shift): reap ${dead.length} stale claim(s)`, arg('no-push', false));
   console.log('reaped: ' + dead.map((c) => c.range).join(', '));

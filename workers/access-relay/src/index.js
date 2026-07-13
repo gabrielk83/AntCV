@@ -906,6 +906,139 @@ async function d1RunWithRetry(stmt, tries = 4, baseMs = 50) {
   throw lastErr;
 }
 
+// =====================================================================
+//  LANG-EXPAND-001 (kernel v2 §3, register row 8c) — lazy per-language
+//  KERNEL projection. Pure, testable helpers live here; the HTTP handler
+//  + route are below. NON-DESTRUCTIVE: a NEW table (kernel_language_view),
+//  a NEW route; nothing existing is touched. English is passthrough (no
+//  model call). Other languages build a single cross-lingual prompt that
+//  mirrors the §3 LANG-CROSS-001 policy shipped in app.src.js and cache
+//  the result keyed by user × language (invalidated by a kernel edit via
+//  source_sig).
+// =====================================================================
+
+// Target languages the projection tier accepts. English is the canonical
+// kernel language → passthrough (identity projection, no model call).
+const KERNEL_LANG_VIEW_LANGS = ['en', 'da', 'es', 'zh', 'de', 'fr', 'sv', 'nb', 'nl', 'it', 'pt'];
+
+// Normalize a requested language code to a bare ISO-639-1 lowercase tag, or
+// null if unsupported. Accepts 'es', 'ES', 'es-ES', 'zh-Hans' etc.
+function normalizeKernelLangCode(lang) {
+  if (!lang || typeof lang !== 'string') return null;
+  const base = lang.trim().toLowerCase().split(/[-_]/)[0];
+  return KERNEL_LANG_VIEW_LANGS.includes(base) ? base : null;
+}
+
+// Stable per-role key = "company|title" lowercased — the SAME keying the
+// STORED WORK HISTORY builder (KERNEL-V2-READER-001, app.src.js) uses to
+// attach langInvariantTokens, so a projection round-trips onto the roles.
+function kernelRoleKey(role) {
+  if (!role || typeof role !== 'object') return '';
+  const company = String(role.company || '').trim();
+  const title = String(role.role || role.title || '').trim();
+  const key = (company + '|' + title).toLowerCase();
+  return key === '|' ? '' : key;
+}
+
+// Build the single cross-lingual projection prompt for a kernel + target
+// language. Returns { system, user } (provider-neutral; the handler wraps
+// them into the proxy's chat shape). Encodes the §3 invariant classes
+// verbatim rule, per-role langInvariantTokens DO-NOT-TRANSLATE lists, and
+// the roleTitlePolicy (default cross; da keeps idiomatic English). Pure —
+// no I/O, unit-tested directly.
+function buildKernelLanguageProjectionPrompt(kernel, lang) {
+  const roles = (kernel && Array.isArray(kernel.experience)) ? kernel.experience : [];
+  const compact = roles.map((r) => {
+    const key = kernelRoleKey(r);
+    if (!key) return null;
+    const toks = Array.isArray(r.langInvariantTokens)
+      ? r.langInvariantTokens.filter((t) => t && typeof t === 'string' && t.trim()).slice(0, 12)
+      : [];
+    const scope = Array.isArray(r.scope) ? r.scope.filter((s) => s && typeof s === 'string' && s.trim()) : [];
+    const outcomes = Array.isArray(r.outcomes)
+      ? r.outcomes.map((o) => (o && typeof o === 'object')
+          ? { title: String(o.title || ''), result: String(o.result || '') }
+          : null).filter(Boolean)
+      : [];
+    return {
+      key,
+      roleTitle: String(r.role || r.title || '').trim(),
+      company: String(r.company || '').trim(),
+      scope,
+      outcomes,
+      doNotTranslate: toks,
+    };
+  }).filter(Boolean);
+
+  const daNote = lang === 'da'
+    ? ' Because the target is DANISH, keep the SOURCE English role title wherever the English term is the idiomatic professional usage (e.g. "Change Control Lead" stays English on a Danish CV).'
+    : '';
+
+  const system =
+    'You translate a CV kernel into a target language for later reuse. ' +
+    'Follow the AntCV LANG-CROSS-001 policy EXACTLY and return STRICT JSON only — no prose, no markdown fences.\n' +
+    'TARGET LANGUAGE: ' + lang + '.\n' +
+    'TRANSLATE naturally and directly into the target language: role scope / responsibilities, and outcome RESULTS. Write directly in the target language, never English-then-translated.\n' +
+    'KEEP INVARIANT — reproduce VERBATIM, never translate or transliterate: company names; patent numbers; ALL metrics and numerals (30%, 10x, $2M, 5-person, ~25); tool / framework / standard / protocol names (Jira, SQL, Power BI, ASPICE, ISO 26262, FMEA, MBSE); and quoted publication / patent TITLES.\n' +
+    'ROLE TITLES cross by default (use the natural target-language equivalent).' + daNote + '\n' +
+    'For any role with a "doNotTranslate" list, reproduce every listed token verbatim in the translated output.\n' +
+    'Preserve the "key" of every role unchanged. Preserve array lengths and order. Do NOT invent, add, drop, or reorder roles, scope lines, or outcomes.';
+
+  const user =
+    'Return JSON of the form {"language":"' + lang + '","experience":[{"key":"...","roleTitle":"...","scope":["..."],"outcomes":[{"title":"...","result":"..."}]}]}. ' +
+    'Translate ONLY roleTitle (per policy), scope[] and outcomes[].result; keep outcomes[].title, company and key as anchors. ' +
+    'Source kernel roles:\n' + JSON.stringify({ experience: compact });
+
+  return { system, user };
+}
+
+// English (or an empty kernel) → identity projection, no model needed.
+function identityKernelProjection(kernel, lang) {
+  const roles = (kernel && Array.isArray(kernel.experience)) ? kernel.experience : [];
+  return {
+    language: lang,
+    experience: roles.map((r) => ({
+      key: kernelRoleKey(r),
+      roleTitle: String(r.role || r.title || '').trim(),
+      scope: Array.isArray(r.scope) ? r.scope.filter((s) => s && typeof s === 'string') : [],
+      outcomes: Array.isArray(r.outcomes)
+        ? r.outcomes.map((o) => (o && typeof o === 'object')
+            ? { title: String(o.title || ''), result: String(o.result || '') }
+            : null).filter(Boolean)
+        : [],
+    })).filter((r) => r.key),
+  };
+}
+
+// Extract the projection JSON object from a raw model response body
+// ({choices:[{message:{content}}]} OpenAI/Mistral, or {content:[{text}]}
+// Anthropic). Tolerates a leading/trailing fence. Returns null on failure.
+function parseKernelLangModelResponse(rawJson) {
+  if (!rawJson || typeof rawJson !== 'object') return null;
+  let text = '';
+  if (Array.isArray(rawJson.choices) && rawJson.choices[0] && rawJson.choices[0].message) {
+    text = String(rawJson.choices[0].message.content || '');
+  } else if (Array.isArray(rawJson.content) && rawJson.content[0]) {
+    text = String(rawJson.content[0].text || '');
+  } else if (typeof rawJson.text === 'string') {
+    text = rawJson.text;
+  }
+  if (!text) return null;
+  const m = text.match(/\{[\s\S]*\}/);
+  if (!m) return null;
+  try {
+    const obj = JSON.parse(m[0]);
+    if (obj && Array.isArray(obj.experience)) return obj;
+  } catch (_) {}
+  return null;
+}
+
+// SHA-256 hex of a string — the cache invalidation signature for a kernel.
+async function sha256Hex(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(str || '')));
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 // kernel v2 §4: POST/PUT /api/profile/kernel-v2 — persist the ingested v2 kernel
 // into the STAGING column user_kernel.kernel_v2. NON-DESTRUCTIVE: the v1
 // identity/history/preferences are left untouched (the live generation path keeps
@@ -947,6 +1080,131 @@ async function handleApiKernelV2(request, env) {
     'ON CONFLICT(user_hash) DO UPDATE SET kernel_v2 = excluded.kernel_v2, updated_at = excluded.updated_at'
   ).bind(userHash, json, now, now)); // D1-WRITE-RETRY-001
   return jsonResponse({ ok: true, roles: kernel.experience.length, bytes: json.length }, 200, request, env);
+}
+
+// LANG-EXPAND-001 (kernel v2 §3, register row 8c): GET/POST
+// /api/profile/kernel-language-view — the lazy per-language KERNEL
+// projection tier. Auth = same session identity as /api/profile/kernel-v2.
+//
+//   GET  ?lang=xx           → the cached projection for the user's current
+//                             kernel_v2 (or {projection:null} if none / stale).
+//   POST { language, force? } → cache-check (by user × lang, invalidated when
+//                             the kernel_v2 SHA-256 changes); on miss, load
+//                             kernel_v2, build the LANG-CROSS-001 projection
+//                             prompt, call the LLM via the SAME proxy-forward
+//                             path extract-kernel uses, cache + return it.
+//                             English (or empty kernel) short-circuits to the
+//                             identity projection — no model call.
+//
+// The table (kernel_language_view) is created lazily so the route self-
+// provisions on a DB that predates the schema bump. KERNEL-LANG-VIEW-TABLE.
+async function ensureKernelLangViewTable(env) {
+  await env.DB.prepare(
+    'CREATE TABLE IF NOT EXISTS kernel_language_view (' +
+    'user_hash TEXT NOT NULL, language TEXT NOT NULL, projection TEXT NOT NULL, ' +
+    'source_sig TEXT NOT NULL, generated_at INTEGER NOT NULL, ' +
+    'PRIMARY KEY (user_hash, language))'
+  ).run();
+}
+
+async function handleApiKernelLanguageView(request, env) {
+  const id = await identityFromRequest(request, env);
+  if (!id) {
+    return jsonResponse({ error: 'unauthenticated', hint: 'Sign in first.' }, 401, request, env);
+  }
+  if (!hasD1(env)) {
+    return jsonResponse({ error: 'no-d1' }, 503, request, env);
+  }
+  const userHash = await userHashFromEmail(id.email);
+  const url = new URL(request.url);
+
+  // Resolve the requested language (query for GET, body for POST).
+  let wantLang = url.searchParams.get('lang');
+  let force = url.searchParams.get('force') === '1';
+  let body = null;
+  if (request.method === 'POST' || request.method === 'PUT') {
+    try { body = await request.json(); } catch (_) {
+      return jsonResponse({ error: 'bad-json' }, 400, request, env);
+    }
+    if (body && typeof body === 'object') {
+      if (body.language) wantLang = body.language;
+      if (body.force === true) force = true;
+    }
+  } else if (request.method !== 'GET') {
+    return jsonResponse({ error: 'method-not-allowed' }, 405, request, env);
+  }
+  const lang = normalizeKernelLangCode(wantLang);
+  if (!lang) {
+    return jsonResponse({ error: 'bad-language', hint: 'expects an ISO 639-1 code in ' + KERNEL_LANG_VIEW_LANGS.join('/') }, 422, request, env);
+  }
+
+  await ensureKernelLangViewTable(env);
+
+  // Load the current kernel_v2 + compute its signature (drives cache freshness).
+  const krow = await env.DB.prepare('SELECT kernel_v2 FROM user_kernel WHERE user_hash = ? LIMIT 1').bind(userHash).first();
+  let kernel = null; try { kernel = (krow && krow.kernel_v2) ? JSON.parse(krow.kernel_v2) : null; } catch (_) { kernel = null; }
+  if (!kernel || !Array.isArray(kernel.experience) || !kernel.experience.length) {
+    return jsonResponse({ error: 'no-kernel', hint: 'Upload / build a kernel first (POST /api/profile/kernel-v2).' }, 404, request, env);
+  }
+  const sig = await sha256Hex(JSON.stringify(kernel));
+
+  // Cache lookup — a hit for the SAME signature is authoritative.
+  const cached = await env.DB.prepare(
+    'SELECT projection, source_sig, generated_at FROM kernel_language_view WHERE user_hash = ? AND language = ? LIMIT 1'
+  ).bind(userHash, lang).first();
+  if (cached && cached.source_sig === sig && !force) {
+    let projection = null; try { projection = JSON.parse(cached.projection); } catch (_) {}
+    return jsonResponse({ ok: true, cached: true, language: lang, projection, generated_at: cached.generated_at }, 200, request, env);
+  }
+
+  // GET never triggers generation — it only reports a fresh cache (or null).
+  if (request.method === 'GET') {
+    return jsonResponse({ ok: true, cached: false, language: lang, projection: null, stale: !!cached }, 200, request, env);
+  }
+
+  // English (or an all-empty kernel) → identity projection, no model call.
+  let projection;
+  if (lang === 'en') {
+    projection = identityKernelProjection(kernel, lang);
+  } else {
+    // Build the cross-lingual prompt and run it through the proxy chat
+    // endpoint, mirroring handleApiProfileExtractKernel's forward path.
+    const { system, user } = buildKernelLanguageProjectionPrompt(kernel, lang);
+    let modelJson = null;
+    try {
+      const ctx = await getUpstreamContext(request, env);
+      const upstreamUrl = buildUpstreamUrl(env, url, '/v1/chat/completions', ctx.mode);
+      const payload = JSON.stringify({
+        model: 'claude-haiku-4-5',
+        max_tokens: 4000,
+        temperature: 0,
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: user },
+        ],
+      });
+      const upstreamResp = await rawForward(
+        new Request(url.toString(), { method: 'POST', headers: request.headers, body: payload }),
+        env, upstreamUrl, 'POST', new TextEncoder().encode(payload), ctx.mode
+      );
+      if (upstreamResp && upstreamResp.ok) {
+        const raw = await upstreamResp.json().catch(() => null);
+        modelJson = parseKernelLangModelResponse(raw);
+      }
+    } catch (_) { modelJson = null; }
+    if (!modelJson) {
+      return jsonResponse({ error: 'projection-failed', hint: 'The language model did not return a usable projection; try again.' }, 502, request, env);
+    }
+    projection = { language: lang, experience: Array.isArray(modelJson.experience) ? modelJson.experience : [] };
+  }
+
+  const now = Date.now();
+  await d1RunWithRetry(env.DB.prepare(
+    'INSERT INTO kernel_language_view (user_hash, language, projection, source_sig, generated_at) ' +
+    'VALUES (?, ?, ?, ?, ?) ' +
+    'ON CONFLICT(user_hash, language) DO UPDATE SET projection = excluded.projection, source_sig = excluded.source_sig, generated_at = excluded.generated_at'
+  ).bind(userHash, lang, JSON.stringify(projection), sig, now)); // D1-WRITE-RETRY-001
+  return jsonResponse({ ok: true, cached: false, language: lang, projection, generated_at: now }, 200, request, env);
 }
 
 // v2.5: GET/PUT /api/prefs — user prefs (proxyUrl/photo/apiKeys) + adminDemo
@@ -4753,6 +5011,9 @@ const method = request.method;
   }
   if (path === '/api/profile/kernel-v2') {
     return handleApiKernelV2(request, env);
+  }
+  if (path === '/api/profile/kernel-language-view') {
+    return handleApiKernelLanguageView(request, env);
   }
   if (path === '/api/profile/extract-kernel') {
     return handleApiProfileExtractKernel(request, env);

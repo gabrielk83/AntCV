@@ -84,8 +84,22 @@ Each week the head of every role converges toward the best measured cost-quality
 inadequate provider can never win. The dated reports form an audit trail of the function's evolution;
 a regression (quality dips after a flip) is visible next week and reverts via the logged rollback.
 
-### Not yet automated
-The scoring + `MODEL_ROLES` edit is defined as an agent procedure here, not a self-modifying script.
-A future step is a `scripts/relay-cost-quality-tune.mjs` that pulls the aggregates, computes the
-per-role heads, and emits the proposed `MODEL_ROLES` diff for an agent/owner to approve + ship —
-keeping a human/agent gate on a change that affects every user's generation.
+### Automation — `scripts/relay-cost-quality-tune.mjs`
+The scoring + proposal is implemented as `scripts/relay-cost-quality-tune.mjs`. It reads the
+current `MODEL_ROLES` from `workers/proxy/wrangler.toml`, pulls the week's health snapshot
+(`GET /api/llm-health?window=all` via `ANTCV_RELAY_URL` + `ANTCV_ADMIN_TOKEN`, or `--data
+<snapshot.json>` offline), applies the score + guardrails above, and **emits the proposed
+`MODEL_ROLES` diff + per-role rationale** — it does NOT deploy. Weekly run:
+
+```
+ANTCV_RELAY_URL=… ANTCV_ADMIN_TOKEN=… node scripts/relay-cost-quality-tune.mjs      # dry-run diff
+node scripts/relay-cost-quality-tune.mjs --data health.json --apply                 # write both wrangler.toml (still no deploy)
+# then review the diff, deploy proxy + demo-proxy via deploy.yml, verify /health, log before→after + rollback
+```
+
+Flags: `--floor` (adequacy success-rate floor, default 0.90), `--margin` (cost-quality hysteresis,
+default 0.10), `--min-calls` (sample floor, default 20), `--window`, `--apply`, `--json`. The
+scoring core (`scoreRows` / `proposeRoles`) is pure + unit-tested (`scripts/tests/relay-cost-quality-tune.test.mjs`,
+8 cases: cheaper-wins, hysteresis-holds, floor/min-sample/known-provider guardrails, no-data→keep).
+The **apply + deploy stays agent/owner-gated** — a change to `MODEL_ROLES` affects every user's
+generation, so the script never ships on its own.

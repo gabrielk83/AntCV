@@ -21971,13 +21971,33 @@
                   ? arguments[0]._iterAttempt
                   : 1,
               k = !1;
+            let _curOrphans = {};
             const C = 7;
             if (S < C)
               try {
                 await new Promise((e) => setTimeout(e, 200 + 100 * (S - 1)));
                 const t = (Pi || []).find((t) => t.id === e);
                 if (t) {
-                  const n = Gi([t]);
+                  const n0 = Gi([t]) || [];
+                  // ANTI-OSCILLATION-001 (owner 2026-07-13, "compression
+                  // oscillation might be blocking generations"): a dead-zone
+                  // bullet (67-105 chars: too long for 1 line, too short to
+                  // fill 2) produces the SAME runt every pass, so the 7x LLM
+                  // loop flaps compressed<->extended and stalls. Only re-flag a
+                  // bullet that is NEW or whose runt actually SHRANK vs the last
+                  // attempt; a stuck bullet is accepted. This can only reduce
+                  // futile iterations, never create a worse state, and still
+                  // lets a genuinely-progressing bullet keep going toward 1 line.
+                  const _prevO =
+                    (arguments[0] && arguments[0]._prevOrphans) || {};
+                  const _oKey = (o) =>
+                    o.sid + "|" + o.field + "|" + (null == o.idx ? "" : o.idx);
+                  _curOrphans = {};
+                  n0.forEach((o) => (_curOrphans[_oKey(o)] = o.words));
+                  const n = n0.filter((o) => {
+                    const p = _prevO[_oKey(o)];
+                    return null == p || o.words < p;
+                  });
                   if (n && n.length > 0) {
                     k = !0;
                     const t = n
@@ -22009,7 +22029,7 @@
                   const o = { ...n };
                   return (delete o[a], t && delete o[e], o);
                 }),
-                ll({ sectionId: e, roleId: t, _iterAttempt: S + 1 })
+                ll({ sectionId: e, roleId: t, _iterAttempt: S + 1, _prevOrphans: _curOrphans })
               );
             alert(
               `✓ Compressed ${R} — ${v.tag} pass, ${v.s.pct.toFixed(1)}% reduction${S > 1 ? ` (after ${S} iterations)` : ""}${v.s.missing ? ` ⚠ ${v.s.missing} number(s) may have dropped, review` : ""}.`,

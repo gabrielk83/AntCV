@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.397-matrix-rowspec';
+  const TARGET_VERSION = '1.51.418-photo-carousel';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.397-matrix-rowspec',
     '1.51.396-matrix-containment',
     '1.51.395-jd-remove-sticky',
     '1.51.394-role-canon-lang',

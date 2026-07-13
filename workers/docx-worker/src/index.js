@@ -23971,7 +23971,20 @@ function postProcessDocx(input, opts = {}) {
         // a strip). line stays 40 (2pt, a multiple of 0.5pt). The demo watermark run
         // is absolutely-positioned VML, independent of the 1pt para font, so it is
         // unaffected and still floats over every page.
-        '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="40" w:lineRule="exact"/><w:rPr><w:sz w:val="2"/><w:szCs w:val="2"/></w:rPr></w:pPr>' + spineRun + watermarkRun + '</w:p></w:hdr>';
+        // TOP-STRIP-MATCH-BAND-001 (owner 2026-07-13 round 3: "when you have a
+        // colored candidate section, paint the upper part of page 1 the SAME
+        // colour, 1pt font, so it does not look strange"). The header sits in the
+        // top margin ABOVE the candidate band; leaving it white left a strange
+        // white gap over a dark/brand band. Now, ONLY when a real headerBg is
+        // forwarded (a branded/coloured candidate section), shade the header
+        // paragraph with that exact colour so the top strip reads as one piece
+        // with the band. sz stays 1pt (sz=2); the line grows so the shaded strip
+        // is tall enough to cover the margin. No headerBg (neutral) -> unchanged
+        // invisible 1pt header (avoids the HEADER-NAVY-STRIP mismatch glitch).
+        '<w:p><w:pPr>' +
+        (headerBgHex ? '<w:shd w:val="clear" w:color="auto" w:fill="' + headerBgHex + '"/>' : '') +
+        '<w:spacing w:before="0" w:after="0" w:line="' + (headerBgHex ? '220' : '40') + '" w:lineRule="exact"/>' +
+        '<w:rPr><w:sz w:val="2"/><w:szCs w:val="2"/></w:rPr></w:pPr>' + spineRun + watermarkRun + '</w:p></w:hdr>';
       files["word/header1.xml"] = strToU8(headerXml);
       // Relationship (choose a non-colliding rId).
       const relsName = "word/_rels/document.xml.rels";
@@ -26854,7 +26867,7 @@ function headingParagraph(title2, ctx, isSidebar, noRule, sec) {
     // the grid too far down. BUT after:0 collapsed the heading's own underline INTO the table
     // top border (owner 2026-07-08 "you lost the horizontal line"). Keep a small after (24 =
     // 1.2pt) so the underline stays visible + distinct while the grid still sits close.
-    spacing: { before: __beforeDxa, after: isSidebar ? 30 : (sec && sec.type === "table" ? 120 : 40) },
+    spacing: { before: __beforeDxa, after: isSidebar ? 30 : (sec && sec.type === "table" ? 24 : 40) },
     // keepNext: heading must stay glued to whatever follows it, so a
     // heading never appears alone at the bottom of a page with its
     // content pushed to the next page. keepLines: never split the
@@ -27379,6 +27392,13 @@ function renderCompetencyTable(s, ctx) {
     if (chunkIdx > 0) {
       out.push(pbBreakPara());
       if (s.title && !(ctx.style && ctx.style.contHeadlines === false)) out.push(headingParagraph(String(s.title || "").toUpperCase() + " " + (ctx.contSuffix || "(CONT.)"), ctx, false));
+    } else {
+      // TABLE-TITLE-PRESPACE-001 (owner 2026-07-13 round 3: "6pt spacing for
+      // the table title — separation of the horizontal line BEFORE the table").
+      // A dedicated PRESPACE paragraph pushes the grid 6pt below the heading's
+      // underline; the heading keeps its own tight after-space so the line
+      // stays attached to the title (not floated down into the gap).
+      out.push(new Paragraph({ spacing: { before: 0, after: 0, line: 120, lineRule: "exact" }, children: [] }));
     }
     out.push(makeTable(chunk.rows, chunk.start));
     out.push(new Paragraph({ spacing: { before: 0, after: 40, line: 20, lineRule: "exact" }, children: [] }));

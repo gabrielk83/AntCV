@@ -571,6 +571,9 @@ def _cloud_prefs():
                     sig[ls_key] = sv
             if sig.get("antcv:signatureB64", "").startswith("data:image"):
                 _CLOUD_PREFS["sig"] = sig
+            pp = prefs.get("photoPosition")
+            if isinstance(pp, str) and pp.strip():
+                _CLOUD_PREFS["photoPosition"] = pp.strip()
         except Exception:
             pass
     return _CLOUD_PREFS
@@ -653,10 +656,16 @@ def payload_for_app(app_id, doc="cv"):
 _MERGED_SETTINGS = {"path": None}
 
 def _settings_path(gr):
-    """The fixture path, with cloud signature keys merged in when present
-    (the localStorage shim then serves them to buildPayload)."""
+    """The fixture path, with cloud signature keys + the owner's photoPosition
+    merged in (the localStorage shim then serves them to buildPayload).
+    PHOTO-PLACEMENT-PARITY-001 (owner 2026-07-13: "my default figure placement
+    is sidebar bridge - why are you not following it?"): the captured fixture had
+    a STALE photoPosition ("sidebar-top"); the live cloud pref is the owner's
+    real default ('band-overlap' = the bridge). Without it the harness placed the
+    figure differently from the app and mis-estimated sidebar element positions."""
     sig = _cloud_prefs()["sig"]
-    if not sig:
+    photo_pos = _cloud_prefs().get("photoPosition")
+    if not sig and not photo_pos:
         return gr._EXPORT_SETTINGS
     if _MERGED_SETTINGS["path"] and os.path.exists(_MERGED_SETTINGS["path"]):
         return _MERGED_SETTINGS["path"]
@@ -664,6 +673,8 @@ def _settings_path(gr):
         import tempfile
         store = json.load(open(gr._EXPORT_SETTINGS, encoding="utf-8"))
         store.update(sig)
+        if photo_pos:
+            store["photoPosition"] = photo_pos       # docx-client reads localStorage.photoPosition
         p = os.path.join(tempfile.gettempdir(), "antcv-export-settings-merged.json")
         json.dump(store, open(p, "w", encoding="utf-8"))
         _MERGED_SETTINGS["path"] = p

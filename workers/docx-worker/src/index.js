@@ -23981,9 +23981,14 @@ function postProcessDocx(input, opts = {}) {
         // with the band. sz stays 1pt (sz=2); the line grows so the shaded strip
         // is tall enough to cover the margin. No headerBg (neutral) -> unchanged
         // invisible 1pt header (avoids the HEADER-NAVY-STRIP mismatch glitch).
+        // CRITICAL (owner 2026-07-13): the strip stays 1 PIXEL with MINIMUM
+        // paragraph spacing (a fat header strip pushes every page's content down
+        // and reads as a band on continuation pages). Shade it the band colour
+        // when branded so the 1px sliver at the very top matches the candidate
+        // band instead of a white glitch; never grow the line.
         '<w:p><w:pPr>' +
         (headerBgHex ? '<w:shd w:val="clear" w:color="auto" w:fill="' + headerBgHex + '"/>' : '') +
-        '<w:spacing w:before="0" w:after="0" w:line="' + (headerBgHex ? '220' : '40') + '" w:lineRule="exact"/>' +
+        '<w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/>' +
         '<w:rPr><w:sz w:val="2"/><w:szCs w:val="2"/></w:rPr></w:pPr>' + spineRun + watermarkRun + '</w:p></w:hdr>';
       files["word/header1.xml"] = strToU8(headerXml);
       // Relationship (choose a non-colliding rId).

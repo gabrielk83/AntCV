@@ -100,6 +100,13 @@ _MARKERS = "▪•·◦‣–—*"
 def _norm(s):
     s = unicodedata.normalize("NFKC", str(s or ""))
     s = s.replace(" ", " ")
+    # DASH-MATCH-001: stored sections may still hold en/em/unicode dashes
+    # and curly quotes while the render belt emits ASCII - the matcher must
+    # see them as the SAME token (808/810 pubs false "unmatched", 2026-07-13)
+    for _ch in "\u2013\u2014\u2010\u2011":
+        s = s.replace(_ch, "-")
+    s = s.replace("\u2019", "'").replace("\u2018", "'")
+    s = s.replace("\u201c", '"').replace("\u201d", '"')
     return re.sub(r"\s+", " ", s).strip()
 
 def _tok(s):
@@ -386,7 +393,9 @@ def measure(pdf_bytes, payload, style_budget=None):
         toks = _tok(it["text"])
         hit = _match_item(stream["tokens"], toks, used[col])
         if not hit:
-            if it["kind"] == "cell" and (" " + _flat(it["text"]) + " ") in doc_flat:
+            _alnum = lambda t: re.sub(r"[^0-9a-z\u00c0-\u024f\u4e00-\u9fff]", "", t.lower())
+            if it["kind"] == "cell" and ((" " + _flat(it["text"]) + " ") in doc_flat
+                                         or _alnum(it["text"]) in _alnum(doc_flat)):
                 report["items"].append({**{k: it[k] for k in ("sec", "path", "kind", "loc", "text", "policy")},
                                         "page": 0, "lines": 1, "fill": 1.0, "add_min": 0,
                                         "add_lo": 0, "add_hi": 0, "add_wrap": 0,

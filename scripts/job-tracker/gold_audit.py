@@ -81,11 +81,19 @@ def audit_app(app_id, out_dir):
                 x0, y0, x1, y1 = fa[0][:4]
                 mat = fitz.Matrix(4, 4)
                 lum = lambda c: 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2]
+                # The glyph rect holds BOTH fill and ink pixels; the strip
+                # left of the word is pure fill. Ink may be lighter OR darker
+                # than the fill, so contrast = the larger of (glyph max - bg)
+                # and (bg - glyph min). Min-only was blind to white-on-navy
+                # (its darkest glyph-rect pixel IS the fill -> delta 0).
                 pix = p1.get_pixmap(matrix=mat, clip=fitz.Rect(x0, y0, x1, y1))
-                mins = min(lum(pix.pixel(i, j)) for i in range(pix.width) for j in range(pix.height))
+                lums = [lum(pix.pixel(i, j)) for i in range(pix.width) for j in range(pix.height)]
+                gmin, gmax = min(lums), max(lums)
                 bgp = p1.get_pixmap(matrix=mat, clip=fitz.Rect(max(0, x0 - 8), y0, x0 - 2, y1))
-                bg = max(lum(bgp.pixel(i, j)) for i in range(bgp.width) for j in range(bgp.height))
-                checks["header_ink"] = "OK" if abs(bg - mins) > 60 else f"FAIL ({int(mins)}vs{int(bg)})"
+                bgl = [lum(bgp.pixel(i, j)) for i in range(bgp.width) for j in range(bgp.height)]
+                bg = sum(bgl) / len(bgl)
+                delta = max(gmax - bg, bg - gmin)
+                checks["header_ink"] = "OK" if delta > 60 else f"FAIL (glyph {int(gmin)}-{int(gmax)} vs bg {int(bg)})"
             # spine to page bottom
             payload, _a2 = MD.payload_for_app(app_id, doc="cv")
             style = payload.get("style") or {}

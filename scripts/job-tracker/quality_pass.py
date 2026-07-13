@@ -250,6 +250,22 @@ def rule_core_comp(cv, jd, report):
         keep = ranked[:_cap_rows]
         sec["rows"] = [rows[0]] + [r for r in data if r in keep]
         report.append(f"core_comp: rows {len(data)} -> {_cap_rows} by JD relevance")
+    # NARROW-CELL-CASCADE-001: hard-compress LABELS past the site cap - a
+    # long label in the narrow focus column cascades to one-word rows. Drop
+    # trailing ", X" / " & X" segments until it fits; never mid-word.
+    _lcap = int((_G.get("caps") or {}).get("table_label_max_chars", 28))
+    for row in sec["rows"][1:]:
+        lab = str(row[0] or "")
+        if len(lab) > _lcap:
+            newlab = lab
+            while len(newlab) > _lcap:
+                m2 = re.search(r"^(.*?)(?:\s*[,&]\s*|\s+&\s+)[^,&]+$", newlab)
+                if not m2 or not m2.group(1).strip():
+                    break
+                newlab = m2.group(1).strip()
+            if newlab != lab and len(newlab) >= 8:
+                row[0] = newlab
+                report.append(f"core_comp: label compressed '{lab[:26]}' -> '{newlab}'")
     fixed = 0
     for row in sec["rows"][1:]:
         for ci in range(1, len(row)):       # labels (c0) stay untouched

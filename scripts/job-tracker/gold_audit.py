@@ -103,6 +103,8 @@ def audit_app(app_id, out_dir):
             # content completeness + density quality (token audit on the file bytes)
             rep = MD.measure(open(pdfs[0], "rb").read(), payload)
             checks["content_complete"] = "OK" if not rep["unmatched"] else f"FAIL: {len(rep['unmatched'])}"
+            casc = rep.get("cell_cascades", [])
+            checks["cell_cascade"] = "OK" if not casc else f"FAIL: {len(casc)} cell(s)"
             checks["quality_pct"] = rep["quality_pct"]
     return checks
 

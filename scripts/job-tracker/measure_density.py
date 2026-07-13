@@ -269,6 +269,90 @@ def _match_item(tokens, item_toks, used):
     return None
 
 # ── measurement ──────────────────────────────────────────────────────────────
+def _table_cell_scan(doc, payload, report):
+    """NARROW-CELL-CASCADE-001 geometric monitor. For every table row cell,
+    locate its token sequence in the rendered words (continuation lines are
+    left-aligned to the first token's x0) and count the lines it spans.
+    Invalid: a cell over cell_max_lines, or one word per line across 2+ lines
+    of a 3+-word label. Also records the VALUE column's max line count so the
+    tableRatio-widening lever can prove the other column tolerates a change."""
+    import re as _re
+    _cml = int((_GD.get("cell_max_lines") or 2))
+    _nrm = lambda s: _re.sub(r"[^\w&+/%.,]", "", str(s).lower())
+
+    bands_by_page = []
+    for pno in range(doc.page_count):
+        ws = sorted(doc[pno].get_text("words"), key=lambda w: (w[1], w[0]))
+        bands = []
+        for w in ws:
+            if bands and abs(w[1] - bands[-1][0]) <= 3.0:
+                bands[-1][1].append(w)
+            else:
+                bands.append([w[1], [w]])
+        for b in bands:
+            b[1].sort(key=lambda w: w[0])
+        bands_by_page.append(bands)
+
+    def _cell_lines(text):
+        toks = [_nrm(t) for t in str(text).split() if _nrm(t)]
+        if not toks:
+            return None
+        best = None
+        for bands in bands_by_page:
+            for bi, (y, bws) in enumerate(bands):
+                for wi, w in enumerate(bws):
+                    if _nrm(w[4]) != toks[0]:
+                        continue
+                    anchor = w[0]
+                    ti, cb, cw, used = 1, bi, wi + 1, 1
+                    ok = True
+                    while ti < len(toks):
+                        if cw < len(bands[cb][1]) and _nrm(bands[cb][1][cw][4]) == toks[ti]:
+                            ti += 1; cw += 1
+                            continue
+                        nxt = None
+                        for nb in range(cb + 1, min(cb + 3, len(bands))):
+                            if bands[nb][0] - bands[cb][0] > 30:
+                                break
+                            j = next((k for k, z in enumerate(bands[nb][1])
+                                      if abs(z[0] - anchor) <= 3.0 and _nrm(z[4]) == toks[ti]), None)
+                            if j is not None:
+                                nxt = (nb, j)
+                                break
+                        if nxt is None:
+                            ok = False
+                            break
+                        cb, cw = nxt[0], nxt[1] + 1
+                        ti += 1; used += 1
+                    if ok and (best is None or used < best):
+                        best = used
+        return best
+
+    vmax = 0
+    for sec in (payload.get("sections") or []):
+        if not isinstance(sec, dict) or sec.get("type") != "table" or sec.get("on") is False:
+            continue
+        rows = sec.get("rows") or []
+        for row in rows[1:]:
+            if not isinstance(row, (list, tuple)) or not row:
+                continue
+            lab = str(row[0] or "")
+            n_lab = _cell_lines(lab)
+            toks = len(lab.split())
+            if n_lab is not None:
+                wpl = toks / n_lab
+                if n_lab > _cml or (n_lab >= 2 and toks >= 3 and wpl <= 1.2):
+                    report.setdefault("cell_cascades", []).append(
+                        {"sec": sec.get("id") or sec.get("type"), "kind": "cell",
+                         "loc": "main", "text": lab, "lines": n_lab,
+                         "cell_cascade": n_lab, "policy": "listedit"})
+            for v in row[1:]:
+                n_v = _cell_lines(v)
+                if n_v is not None:
+                    vmax = max(vmax, n_v)
+    report["table_values_max_lines"] = vmax
+
+
 def measure(pdf_bytes, payload, style_budget=None):
     """Measure a rendered PDF against its payload. Returns the report dict."""
     import fitz
@@ -385,9 +469,15 @@ def measure(pdf_bytes, payload, style_budget=None):
                 report["stretched"].append(m)
     for m in report["items"]:
         m.pop("_gaps", None); m.pop("_col", None)
+    # NARROW-CELL-CASCADE-001 (owner 2026-07-13, Tech Mahindra focus cell: a
+    # label wrapping to 3 rows of one word each is invalid). Table cells
+    # interleave in the extraction stream, so the item matcher above has no
+    # geometry for them — this GEOMETRIC scan finds each cell's token sequence
+    # directly (left-aligned wrap continuation) and counts its rendered lines.
+    _table_cell_scan(doc, payload, report)
     report["runt_count"] = len(report["runts"])
     report["rewritable_runts"] = len([r for r in report["runts"] if r["policy"] != "verbatim"])
-    defect_keys = {id(m) for m in report["runts"]} | {id(m) for m in report["stretched"]}
+    defect_keys = {id(m) for m in report["runts"]} | {id(m) for m in report["stretched"]} | {id(m) for m in report.get("cell_cascades", [])}
     report["defect_count"] = len(defect_keys)
     n = max(1, len(report["items"]))
     report["quality_pct"] = round(100.0 * (n - len(defect_keys)) / n, 1)
@@ -483,14 +573,16 @@ def payload_for_app(app_id, doc="cv"):
     # carries its own meta.styleConfig (future), it wins outright.
     sc_full = gr._export_style_config()
     app_sc = app_meta.get("styleConfig")
+    _GEOMETRY = {"mainEdgeIndent", "bulletIndent", "bulletMarkerGap", "seamGap",
+                 "bodyEdgePad", "sidebarEdgePad", "mainSectionGap",
+                 "sidebarSectionGap", "bodySectionGap", "candidateGap",
+                 "expTense", "tableFirstColBold"}
+    sc = {k: v for k, v in (sc_full or {}).items() if k in _GEOMETRY}
     if isinstance(app_sc, dict) and app_sc:
-        sc = app_sc
-    else:
-        _GEOMETRY = {"mainEdgeIndent", "bulletIndent", "bulletMarkerGap", "seamGap",
-                     "bodyEdgePad", "sidebarEdgePad", "mainSectionGap",
-                     "sidebarSectionGap", "bodySectionGap", "candidateGap",
-                     "expTense", "tableFirstColBold"}
-        sc = {k: v for k, v in (sc_full or {}).items() if k in _GEOMETRY}
+        # per-app keys win over the neutral geometry (MERGE, not replace: a
+        # single persisted key like the cascade-fix tableRatio must not strip
+        # the rest of the geometry)
+        sc = {**sc, **app_sc}
     job = {"sections": {"cv": cv, "cl": cl}, "personalInfo": pi, "styleConfig": sc,
            "doc": doc, "meta": meta,
            "language": lang if lang in ("en", "da", "es", "zh") else "en"}

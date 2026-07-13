@@ -1,5 +1,5 @@
 {
-  "version": "1.2.0",
+  "version": "1.3.0",
   "_note": "GOLD RULES - the ONE machine-readable control site for every AntCV generation (owner 2026-07-13). Narrative + enforcement map: docs/qa/GOLD_STANDARD_LOCKER.md. Consumers: pwa/antcv-bullet-targets.js (prompt block on every generation/Fit-it/Enhance call), scripts/job-tracker/{quality_pass,density_fit,measure_density,gen-runner}.py (persist + sweep enforcement). Served at antcv.pages.dev/gold-rules.json so workers can fetch it (proxy prompt-augment wiring = open follow-up). Change values HERE; code reads them.",
   "density": {
     "runt_fraction": 0.6,
@@ -16,7 +16,8 @@
     "respace_profile": [
       -30,
       30
-    ]
+    ],
+    "cell_max_lines": 2
   },
   "caps": {
     "bullet_chars": 148,
@@ -24,7 +25,8 @@
     "core_comp_data_rows": 2,
     "certs_max": 4,
     "role_bullets_max": 3,
-    "photo_library_max": 4
+    "photo_library_max": 4,
+    "table_label_max_chars": 28
   },
   "results": {
     "require_metric": true,
@@ -161,6 +163,7 @@
     "GOLD CONTENT RULES (hard requirements):",
     " - Every Results line states a CHANGE metric (a percentage, multiplier, from->to, time/volume/money delta) with its mechanism. A team size or site description is a bullet, never a Result.",
     " - Core-competency tables: at most 2 rows, the highest-impact ones; every cell a complete clause, one line where possible.",
+    " - Table first-column labels stay SHORT (about 28 chars max): a label that wraps to three lines or one-word rows in its cell is invalid; compress the label instead.",
     " - Every bullet and sentence ends COMPLETE with terminal punctuation - never a dangling connector or preposition (\"...traceable from\"), never a cut enumeration (\"...optics, electronics, mechanical.\").",
     " - Name partner/client companies only when the job description itself signals them; otherwise describe the relationship (\"an ODM partner\").",
     " - Certificates carry no years; order them by relevance to this job.",
@@ -193,5 +196,8 @@
     "credential-forward": 1,
     "nordic-minimal": 2,
     "default": 2
+  },
+  "tables": {
+    "narrow_cell_cascade": "a table cell rendering 3+ lines, or 2+ lines averaging ~1 word per line, is INVALID (owner 2026-07-13, Tech Mahindra focus-area cell) - hard-compress the label first; widening tableRatio is the second lever if the other column tolerates it"
   }
 }

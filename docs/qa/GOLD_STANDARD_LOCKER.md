@@ -25,6 +25,7 @@
 |---|---|
 | A Results line states a CHANGE metric (%, ×, →, time/volume/money delta) + mechanism; team sizes/site descriptions are bullets, never Results | RESULTS-OUTCOME-METRIC-001 (quality_pass; kernel selectedOutcomes pool, position-matched); GOLD CONTENT RULES gen-prompt block |
 | Core-competency table: 2 highest-impact rows; complete-clause cells | quality_pass rule_core_comp (cap 2); gen prompt block |
+| NARROW-CELL-CASCADE-001: no table cell over 2 rendered lines; no one-word-per-line wrap of a 3+-word label (owner 2026-07-13, Tech Mahindra focus cell). Levers: label hard-compress first, then tableRatio widen (0.28/0.31/0.34) gated on the value column holding its line count | measure_density _table_cell_scan (geometric — cells have no stream geometry); quality_pass label cap (site caps.table_label_max_chars 28); density_fit ratio ladder + per-app meta.styleConfig persist; gold_audit cell_cascade; prompt block line |
 | No truncations anywhere: every cut ends at a clause boundary with terminal punctuation; never a dangling connector/preposition ("…traceable from", "…while producing") | CAP-CLEAN-CUT-001 (gen-runner _cap_line/_cap_para); quality_pass prose rules + rule_bullet_periods; density trim guards |
 | Partner/client names only with a JD signal; else "an ODM partner" | quality_pass _PARTNER_NAMES; gen prompt block |
 | Certificates: no years; JD-relevance-ranked; rugby-class (coaching/concussion) last unless a sports JD; max 4; BABOK survives program/requirements/EA JDs | quality_pass rule_certs; gen-runner BABOK-RELEVANCE-001 |

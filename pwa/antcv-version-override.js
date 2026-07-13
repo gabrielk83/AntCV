@@ -58,11 +58,14 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.387-gold-unify';
+  const TARGET_VERSION = '1.51.390-photo-fuse';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.389-cell-cascade',
+    '1.51.388-jt-autofill',
+    '1.51.387-gold-unify',
     '1.51.386-stale-list',
     '1.51.385-gold-site',
     '1.51.384-gen-gold-rules',

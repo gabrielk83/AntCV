@@ -69,7 +69,7 @@
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.51.378';
+  const SCRIPT_VERSION = '1.51.389';
   const STORAGE_KEY = 'antcv:bullet-targets';
   const STYLE_ID = 'antcv-bullet-targets-styles';
   const STRIP_MARKER = 'data-antcv-bullet-target-strip';
@@ -862,7 +862,7 @@
 
   // ── GOLD-RULES-SITE-001: the single control site (/gold-rules.json) ──────
   var goldRules = null;
-  var GOLD_FALLBACK_BLOCK = "GOLD CONTENT RULES (hard requirements):\n - Every Results line states a CHANGE metric (a percentage, multiplier, from->to, time/volume/money delta) with its mechanism. A team size or site description is a bullet, never a Result.\n - Core-competency tables: at most 2 rows, the highest-impact ones; every cell a complete clause, one line where possible.\n - Every bullet and sentence ends COMPLETE with terminal punctuation - never a dangling connector or preposition (\"...traceable from\"), never a cut enumeration (\"...optics, electronics, mechanical.\").\n - Name partner/client companies only when the job description itself signals them; otherwise describe the relationship (\"an ODM partner\").\n - Certificates carry no years; order them by relevance to this job.\n - Interests and sidebar one-liners stay compact (drop filler words); keep personality lines intact but never pad them.";
+  var GOLD_FALLBACK_BLOCK = "GOLD CONTENT RULES (hard requirements):\n - Every Results line states a CHANGE metric (a percentage, multiplier, from->to, time/volume/money delta) with its mechanism. A team size or site description is a bullet, never a Result.\n - Core-competency tables: at most 2 rows, the highest-impact ones; every cell a complete clause, one line where possible.\n - Table first-column labels stay SHORT (about 28 chars max): a label that wraps to three lines or one-word rows in its cell is invalid; compress the label instead.\n - Every bullet and sentence ends COMPLETE with terminal punctuation - never a dangling connector or preposition (\"...traceable from\"), never a cut enumeration (\"...optics, electronics, mechanical.\").\n - Name partner/client companies only when the job description itself signals them; otherwise describe the relationship (\"an ODM partner\").\n - Certificates carry no years; order them by relevance to this job.\n - Interests and sidebar one-liners stay compact (drop filler words); keep personality lines intact but never pad them.";
   function goldPromptBlock() {
     if (goldRules && Array.isArray(goldRules.prompt_block) && goldRules.prompt_block.length) {
       return goldRules.prompt_block.join('\n');

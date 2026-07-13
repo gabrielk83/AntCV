@@ -58,6 +58,24 @@ CREATE TABLE IF NOT EXISTS language_view (
   FOREIGN KEY (application_id) REFERENCES application(id) ON DELETE CASCADE
 );
 
+-- LANG-EXPAND-001 (kernel v2 §3, register row 8c): the lazy per-language
+-- projection of the USER KERNEL (kernel_v2) — distinct from language_view
+-- above, which caches per-APPLICATION generated output. This caches the
+-- kernel's translated stable prose (role scope, outcome results) + role
+-- titles per crossPolicy, so es/zh generation can start from a native-
+-- language kernel instead of translating on the fly every run. Keyed by
+-- user × language. source_sig = SHA-256 of the kernel_v2 JSON it was built
+-- from, so a kernel edit invalidates the cached projection.
+CREATE TABLE IF NOT EXISTS kernel_language_view (
+  user_hash         TEXT NOT NULL,
+  language          TEXT NOT NULL,          -- ISO 639-1 target (es, zh, da, ...)
+  projection        TEXT NOT NULL,          -- JSON: { language, experience:[{key,roleTitle,scope[],outcomes[]}] }
+  source_sig        TEXT NOT NULL,          -- SHA-256(kernel_v2 JSON) the projection was built from
+  generated_at      INTEGER NOT NULL,
+  PRIMARY KEY (user_hash, language),
+  FOREIGN KEY (user_hash) REFERENCES user_kernel(user_hash) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS active_application (
   user_hash         TEXT PRIMARY KEY,
   application_id    INTEGER,

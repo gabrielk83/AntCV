@@ -29,10 +29,32 @@ def _hex_rgb(hexstr):
     return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
 
 
+# BANNED-DASH-MEASURE-001: deliverable-standards §6/§7 — "measure the RENDERED
+# PDF for —/–, footer/AI-notice included; ALWAYS a plain hyphen." The runner's
+# sanitize_text scrubs these on persist, but a leak can still reach the page via
+# skeleton furniture, a stale style fixture (clSlogan), or a pre-gate app. The
+# only trustworthy check is on the rendered glyphs, so scan them here.
+_BANNED_SEPARATORS = {
+    0x2010: "U+2010", 0x2011: "U+2011", 0x2012: "U+2012", 0x2013: "U+2013(en-dash)",
+    0x2014: "U+2014(em-dash)", 0x2015: "U+2015", 0x2212: "U+2212(minus)",
+}
+
+
+def scan_banned_dashes(pdf_doc):
+    hits = {}
+    for pno in range(pdf_doc.page_count):
+        for ch in pdf_doc[pno].get_text():
+            name = _BANNED_SEPARATORS.get(ord(ch))
+            if name:
+                hits[name] = hits.get(name, 0) + 1
+    return hits
+
+
 def verify_pdf(pdf_bytes, payload, doc):
     import fitz
     d = fitz.open(stream=pdf_bytes, filetype="pdf")
-    out = {"pages": d.page_count, "blank_pages": [], "notice_last_page": None, "spine_bottom": None}
+    out = {"pages": d.page_count, "blank_pages": [], "notice_last_page": None,
+           "spine_bottom": None, "banned_dashes": scan_banned_dashes(d)}
     for pno in range(d.page_count):
         words = d[pno].get_text("words")
         if len(words) < 5:
@@ -86,6 +108,8 @@ def main():
                     flags.append("NO-NOTICE")
                 if doc == "cv" and v["spine_bottom"] is False:
                     flags.append(f"SPINE-GAP avg={v.get('_spine_avg')} want={v.get('_spine_want')}")
+                if v["banned_dashes"]:
+                    flags.append("BANNED-DASH " + ",".join(f"{k}x{n}" for k, n in v["banned_dashes"].items()))
                 rows.append((app_id, doc, name, v["pages"], "OK" if not flags else "; ".join(flags)))
                 print(f"{app_id} {doc}: {name}  pages={v['pages']}  {'OK' if not flags else '; '.join(flags)}")
             except Exception as e:

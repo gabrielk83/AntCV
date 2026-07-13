@@ -26854,7 +26854,7 @@ function headingParagraph(title2, ctx, isSidebar, noRule, sec) {
     // the grid too far down. BUT after:0 collapsed the heading's own underline INTO the table
     // top border (owner 2026-07-08 "you lost the horizontal line"). Keep a small after (24 =
     // 1.2pt) so the underline stays visible + distinct while the grid still sits close.
-    spacing: { before: __beforeDxa, after: isSidebar ? 30 : (sec && sec.type === "table" ? 24 : 40) },
+    spacing: { before: __beforeDxa, after: isSidebar ? 30 : (sec && sec.type === "table" ? 120 : 40) },
     // keepNext: heading must stay glued to whatever follows it, so a
     // heading never appears alone at the bottom of a page with its
     // content pushed to the next page. keepLines: never split the
@@ -27287,7 +27287,7 @@ function renderCompetencyTable(s, ctx) {
         // CORECOMP-TABLE-CELL-PAD-001 (owner 2026-07-03): text sat on the cell
         // borders in the PDF; L/R 90 (6px) -> 150 (10px). Preview padding is
         // bumped to match (TABLE-WRAP-PARITY-001 kept).
-        margins: { top: 130, bottom: 130, left: 150, right: 150 },
+        margins: { top: 130, bottom: 130, left: 150, right: 300 },
         verticalAlign: VerticalAlign.CENTER,
         children: [new Paragraph({
           alignment: headerAlignT,
@@ -27317,7 +27317,7 @@ function renderCompetencyTable(s, ctx) {
         // CORECOMP-TABLE-CELL-PAD-001 (owner 2026-07-03): text sat on the cell
         // borders in the PDF; L/R 90 (6px) -> 150 (10px). Preview padding is
         // bumped to match (TABLE-WRAP-PARITY-001 kept).
-        margins: { top: 130, bottom: 130, left: 150, right: 150 },
+        margins: { top: 130, bottom: 130, left: 150, right: 300 },
         children: [new Paragraph({
           // TABLE-WRAP-PARITY-001: the preview renders the expertise cell
           // LEFT-aligned; the export's JUSTIFIED stretched word gaps into

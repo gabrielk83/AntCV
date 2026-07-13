@@ -45,6 +45,29 @@ const TIERS: Record<string, Tier> = {
   D9D9D9: { key: '—', label: 'Archive', accent: '#777777', tint: '#D0D0D0', desc: 'Closed / archived' },
 };
 const tierOf = (band: string): Tier => TIERS[(band || '').toUpperCase()] || { key: '', label: '', accent: '#999', tint: '#f3f3f3', desc: '' };
+
+// JOBLIST-FILTER-001: the Legend doubles as the Job List's row filter. Every
+// tier/status swatch (T1/T2/T3/In progress/Archive) plus ★ Top-5 and ✅ JD
+// stored is a checkbox. Default = every tier checked EXCEPT Archive (so closed
+// roles stay hidden until asked for), ★/✅ unchecked (no extra restriction).
+// Stored in sessionStorage — NOT localStorage — so the choice survives while
+// the app stays open (reopening the Job Tracker, re-renders) but resets back
+// to the default the next time the app is started (new tab/session).
+const BAND_KEYS = ['DDEBF7', 'E2EFDA', 'FCE4D6', 'FFF2CC', 'D9D9D9'];
+const FILTER_STORAGE_KEY = 'antcv:jobtracker:legendFilter';
+interface JLFilters { bands: string[]; top5Only: boolean; jdOnly: boolean; }
+function defaultJLFilters(): JLFilters { return { bands: BAND_KEYS.filter((b) => b !== 'D9D9D9'), top5Only: false, jdOnly: false }; }
+function loadJLFilters(): JLFilters {
+  try {
+    const raw = sessionStorage.getItem(FILTER_STORAGE_KEY);
+    if (!raw) return defaultJLFilters();
+    const p = JSON.parse(raw);
+    if (!p || !Array.isArray(p.bands)) return defaultJLFilters();
+    return { bands: p.bands.filter((b: string) => BAND_KEYS.includes(b)), top5Only: !!p.top5Only, jdOnly: !!p.jdOnly };
+  } catch { return defaultJLFilters(); }
+}
+function saveJLFilters(f: JLFilters): void { try { sessionStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(f)); } catch { /* best-effort */ } }
+
 // TOP5-REFILL-001: a dropped/closed/rejected row must LEAVE the Top-5 panel and
 // the next-best live row (by rank) takes its place, so the panel always shows 5
 // live candidates. "Closed" = the archive band, an archived/rejected/withdrawn
@@ -156,6 +179,17 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
   const [isMobile, setIsMobile] = useState(false);
   const [cluster, setCluster] = useState<{ qual: string }[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
+  // JOBLIST-FILTER-001: legend-driven filter state. Read sessionStorage exactly
+  // once (on first render) via a ref, then keep it in React state; every
+  // change re-writes sessionStorage so it survives this session but resets on
+  // the next app start (see loadJLFilters/saveJLFilters above).
+  const initJLFilters = useRef<JLFilters | null>(null);
+  if (initJLFilters.current === null) initJLFilters.current = loadJLFilters();
+  const [filterBands, setFilterBands] = useState<Set<string>>(() => new Set(initJLFilters.current!.bands));
+  const [filterTop5, setFilterTop5] = useState<boolean>(() => initJLFilters.current!.top5Only);
+  const [filterJd, setFilterJd] = useState<boolean>(() => initJLFilters.current!.jdOnly);
+  useEffect(() => { saveJLFilters({ bands: Array.from(filterBands), top5Only: filterTop5, jdOnly: filterJd }); }, [filterBands, filterTop5, filterJd]);
+  function toggleBandFilter(b: string): void { setFilterBands((s) => { const n = new Set(s); if (n.has(b)) n.delete(b); else n.add(b); return n; }); }
 
   // Narrow viewports get a stacked card list — a wide fixed table pushes the
   // Next-action / Flag columns off-screen in portrait (only reachable in
@@ -219,6 +253,17 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
   // current Top-5 (a new lead that outscores #5 enters on the spot).
   const top5 = useMemo(() => (doc ? orderTop5(rows, doc, cluster, isClosedRow) : []), [rows, doc, cluster]);
   const top5Keys = useMemo(() => new Set(top5.map((r) => r[11])), [top5]);
+  // JOBLIST-FILTER-001: rows shown in the List table, after the legend filter.
+  // A row whose tier band isn't one of the 5 known swatches always shows —
+  // there's no legend item to hide it by.
+  const filteredRows = useMemo(() => rows.filter((r) => {
+    const band = String(r[12] || '').toUpperCase();
+    if (BAND_KEYS.includes(band) && !filterBands.has(band)) return false;
+    const uk = r[11];
+    if (filterTop5 && !top5Keys.has(uk)) return false;
+    if (filterJd && !(((doc?.jd || {})[uk] || '').length > 200)) return false;
+    return true;
+  }), [rows, filterBands, filterTop5, filterJd, top5Keys, doc]);
 
   function editRow(uk: string, idx: number, value: string): void {
     if (!doc) return;
@@ -740,7 +785,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
           </div>
         )}
 
-        <Legend />
+        <Legend bands={filterBands} onToggleBand={toggleBandFilter} top5Only={filterTop5} onToggleTop5={() => setFilterTop5((v) => !v)} jdOnly={filterJd} onToggleJd={() => setFilterJd((v) => !v)} />
 
         {(err || note) && <div style={{ padding: '6px 16px', fontSize: 12, color: err ? '#b3261e' : '#2e7d32', background: err ? '#fdecea' : '#eaf5ea' }}>{err || note}</div>}
 
@@ -753,7 +798,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
               </colgroup>
               <thead><tr>{['#', 'Tier', 'Company', 'Role', 'Location', 'JD', 'Tracked', 'Next action', 'Flag / notes', 'Signals', 'Generate'].map((h) => <th key={h} style={th}>{h}</th>)}</tr></thead>
               <tbody>
-                {rows.map((r) => {
+                {filteredRows.map((r) => {
                   const uk = r[11]; const t = tierOf(r[12]); const hasJd = ((doc?.jd || {})[uk] || '').length > 200; const star = top5Keys.has(uk);
                   return (
                     <tr key={uk} style={{ background: t.tint }}
@@ -803,7 +848,9 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
                     </tr>
                   );
                 })}
-                {rows.length === 0 && <tr><td style={cell} colSpan={11}>No rows yet — paste a job URL or upload a JD file above.</td></tr>}
+                {filteredRows.length === 0 && (
+                  <tr><td style={cell} colSpan={11}>{rows.length === 0 ? 'No rows yet — paste a job URL or upload a JD file above.' : 'No rows match the current legend filter — check more boxes above.'}</td></tr>
+                )}
               </tbody>
             </table>
           ) : (
@@ -817,7 +864,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
           )}
         </div>
         <div style={{ padding: '6px 16px', fontSize: 11, color: '#667', borderTop: '1px solid #e3e8f0' }}>
-          {rows.length} roles · {jdCount} with JD · ★ = Top 5 · edits sync to your Excel.
+          {filteredRows.length}{filteredRows.length !== rows.length ? ' of ' + rows.length : ''} roles shown · {jdCount} with JD · ★ = Top 5 · edits sync to your Excel.
         </div>
 
         {/* JOBTRACKER-TOP5-CONTROLS-001: row context menu (right-click / long-press) */}
@@ -855,18 +902,35 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
   );
 }
 
-function Legend(): JSX.Element {
+// JOBLIST-FILTER-001: the legend IS the Job List filter — every swatch/icon is
+// a checkbox. Unchecking a tier hides those rows from the table below;
+// unchecking ★/✅ has no effect until CHECKED (they narrow, they don't widen).
+function Legend({ bands, onToggleBand, top5Only, onToggleTop5, jdOnly, onToggleJd }: {
+  bands: Set<string>; onToggleBand: (b: string) => void;
+  top5Only: boolean; onToggleTop5: () => void; jdOnly: boolean; onToggleJd: () => void;
+}): JSX.Element {
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, padding: '7px 16px', borderBottom: '1px solid #e3e8f0', background: '#fbfcfe', fontSize: 11, color: '#445', alignItems: 'center' }}>
-      <strong style={{ color: NAVY }}>Legend:</strong>
-      {['DDEBF7', 'E2EFDA', 'FCE4D6', 'FFF2CC', 'D9D9D9'].map((b) => { const t = TIERS[b]; return (
-        <span key={b} style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ width: 13, height: 13, borderRadius: 3, background: t.tint, border: '1px solid ' + t.accent, display: 'inline-block' }} />
-          <b style={{ color: t.accent }}>{t.label}</b> {t.desc}
-        </span>
-      ); })}
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><b>★</b> Top 5</span>
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><b>✅</b> JD stored</span>
+      <strong style={{ color: NAVY }}>Legend / filter:</strong>
+      {['DDEBF7', 'E2EFDA', 'FCE4D6', 'FFF2CC', 'D9D9D9'].map((b) => {
+        const t = TIERS[b]; const on = bands.has(b);
+        return (
+          <label key={b} title={on ? 'Shown — click to hide ' + t.label + ' rows' : 'Hidden — click to show ' + t.label + ' rows'}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 5, cursor: 'pointer', opacity: on ? 1 : 0.45 }}>
+            <input type="checkbox" checked={on} onChange={() => onToggleBand(b)} style={{ width: 13, height: 13, margin: 0 }} />
+            <span style={{ width: 13, height: 13, borderRadius: 3, background: t.tint, border: '1px solid ' + t.accent, display: 'inline-block' }} />
+            <b style={{ color: t.accent }}>{t.label}</b> {t.desc}
+          </label>
+        );
+      })}
+      <label title={top5Only ? 'Showing only Top-5 rows — click to show all tiers again' : 'Click to show ONLY Top-5 rows'}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', opacity: top5Only ? 1 : 0.75 }}>
+        <input type="checkbox" checked={top5Only} onChange={onToggleTop5} style={{ width: 13, height: 13, margin: 0 }} /><b>★</b> Top 5
+      </label>
+      <label title={jdOnly ? 'Showing only rows with a stored JD — click to show all' : 'Click to show ONLY rows with a stored JD'}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', opacity: jdOnly ? 1 : 0.75 }}>
+        <input type="checkbox" checked={jdOnly} onChange={onToggleJd} style={{ width: 13, height: 13, margin: 0 }} /><b>✅</b> JD stored
+      </label>
     </div>
   );
 }

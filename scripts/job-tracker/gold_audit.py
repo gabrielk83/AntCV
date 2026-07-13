@@ -19,6 +19,49 @@ import quality_pass as QP
 G = MD.gold_rules()
 
 
+def role_canon_issues(cv, lang, gold):
+    """ROLE-CANON-AUDIT-LEG-001 (register rows 82/86f): the persist/export leg of
+    the client's normalize-415 roleCanonTitles. Two assertions over the exported
+    experience roles:
+
+      1. every rendered role title == the doc-language canon
+         (gold-rules roles.canon_titles[<base-id>][lang]); and
+      2. no two VISIBLE roles share one canonical identity
+         (one_visible_per_canonical_id).
+
+    Identity = the language-agnostic role id with its numeric backfill suffix
+    stripped (kanzen-2 -> kanzen). he/am/ar keep the translate output, so the
+    title check is skipped for them (mirrors normalize-415). A deliberately
+    MERGED title carrying MORE " & "-segments than the canon.en is a merge-or-
+    split structure the client never overwrites — so it must NOT false-fail here
+    either. Returns (title_mismatches, duplicate_ids)."""
+    canon = ((gold.get("roles") or {}).get("canon_titles")) or {}
+    exp = next((s for s in cv if isinstance(s, dict) and s.get("type") == "experience"), None)
+    roles = (exp.get("roles") if exp else None) or []
+    L = lang if lang in ("en", "da", "es", "zh") else None
+    segs = lambda t: len(str(t if t is not None else "").split(" & "))
+    mismatches, seen = [], {}
+    for r in roles:
+        if not isinstance(r, dict) or r.get("id") is None:
+            continue
+        base = re.sub(r"-\d+$", "", str(r.get("id")))
+        e = canon.get(base)
+        if not e:
+            continue  # only positions the control site actually pins
+        seen[base] = seen.get(base, 0) + 1
+        if L is None:
+            continue
+        want = e.get(L) or e.get("en")
+        title = r.get("title")
+        if not want or title == want:
+            continue
+        if segs(title) > segs(e.get("en")):
+            continue  # deliberate merge — never overwritten, never a fail
+        mismatches.append(f"{base}:{str(title)[:20]}!={str(want)[:20]}")
+    dups = [f"{k}x{v}" for k, v in seen.items() if v > 1]
+    return mismatches, dups
+
+
 def audit_app(app_id, out_dir):
     import fitz
     gr = MD._gen_runner()
@@ -45,6 +88,9 @@ def audit_app(app_id, out_dir):
     certs = next((s for s in cv if s.get("id") == "certs"), None)
     blob = json.dumps(certs.get("items", []), ensure_ascii=False) if certs else ""
     checks["certs_no_years"] = "OK" if not re.search(r"\(?(19|20)\d{2}\)?", blob) else "FAIL"
+    rc_mis, rc_dup = role_canon_issues(cv, lang, G)
+    checks["role_canon"] = "OK" if not rc_mis else "FAIL: " + ",".join(rc_mis)
+    checks["role_no_dup_canon"] = "OK" if not rc_dup else "FAIL: " + ",".join(rc_dup)
 
     # ── PDF-level assertions ─────────────────────────────────────────────────
     for doc in ("cv", "cl"):

@@ -541,19 +541,55 @@ _PUB_JOURNAL_FIRST = re.compile(
     # year forms: "Journal, 2010 - ..." AND "Journal (2010) - ..." (806 variant)
     r"^([A-Z][^,:()]{3,60})\s*[,(]\s*((?:19|20)\d\d)\)?\s*[-\u2013\u2014]\s*(.+)$")
 
+# PUB-AUTHORS-FIRST-001 (owner batch 2026-07-13, apps 804/797): the
+# Nanomanipulator citation is stored authors-first WITHOUT the colon that the
+# journal-first sub-shape splits on \u2014 "Surname, I., Surname, I., Title \u2026 -
+# Journal, Year". PUB-CHAIN-001's splitter cuts at the ' - ' and would render
+# the AUTHORS as the title. Reorder to the sibling canonical shape
+# "Title - Authors, Journal, Year". An author unit is "Surname, I.," (or
+# "Surname, I.I.,") \u2014 the trailing comma both separates authors AND marks the
+# author-block end; the title then runs to a SPACED "-" or an en/em dash so a
+# hyphenated title word ("electro-optics") is never a split point.
+_PUB_AUTHORS_FIRST = re.compile(
+    r"^((?:[A-Z][\w'\u00c0-\u024f-]+,\s*[A-Z]\.(?:[A-Z]\.)?,\s*)+)"
+    r"([A-Z].+?)(?:\s+-\s+|\s*[\u2013\u2014]\s*)(.+)$")
+
+def _pub_words(s):
+    """Word-token multiset (case-folded) \u2014 the guard that every word survives a
+    reorder. Punctuation (commas, dashes, periods) is dropped, so a pure
+    reordering is multiset-invariant while a regex that ate a chunk is not."""
+    return sorted(re.findall(r"\w+", str(s).lower()))
+
 def _canon_pub(item):
-    m = _PUB_JOURNAL_FIRST.match(str(item).strip())
-    if not m:
-        return None
-    journal, year, rest = m.group(1).strip(), m.group(2), m.group(3).strip()
-    for ch in "\u2013\u2014\u2010\u2011":
-        rest = rest.replace(ch, "-")
-    # authors-first sub-shape: "Surname, X., Surname, Y.: Title."
-    mc = re.match(r"^((?:[A-Z][\w'\u00c0-\u024f-]+,\s*[A-Z]\.(?:[A-Z]\.)?,?\s*)+):\s*(.+?)\.?$", rest)
-    if mc:
-        authors, title = mc.group(1).rstrip(", "), mc.group(2).strip()
-        return f"{title} - {authors}, {journal}, {year}"
-    return f"{rest} - {journal}, {year}" if " - " not in rest else f"{rest}, {journal}, {year}"
+    s = str(item).strip()
+    m = _PUB_JOURNAL_FIRST.match(s)
+    if m:
+        journal, year, rest = m.group(1).strip(), m.group(2), m.group(3).strip()
+        for ch in "\u2013\u2014\u2010\u2011":
+            rest = rest.replace(ch, "-")
+        # authors-first sub-shape: "Surname, X., Surname, Y.: Title."
+        mc = re.match(r"^((?:[A-Z][\w'\u00c0-\u024f-]+,\s*[A-Z]\.(?:[A-Z]\.)?,?\s*)+):\s*(.+?)\.?$", rest)
+        if mc:
+            authors, title = mc.group(1).rstrip(", "), mc.group(2).strip()
+            return f"{title} - {authors}, {journal}, {year}"
+        return f"{rest} - {journal}, {year}" if " - " not in rest else f"{rest}, {journal}, {year}"
+    # authors-first, no colon (804/797 Nanomanipulator variant)
+    ma = _PUB_AUTHORS_FIRST.match(s)
+    if ma:
+        authors = ma.group(1).rstrip(", ")
+        title = ma.group(2).strip().rstrip(",")
+        rest = ma.group(3).strip()
+        for ch in "\u2013\u2014\u2010\u2011":
+            title = title.replace(ch, "-")
+        out = f"{title} - {authors}, {rest}"
+        # GUARD (DASH-MATCH-001 idempotency precedent): only accept the reorder
+        # when the word-token multiset is preserved \u2014 every word survives \u2014 so a
+        # mis-parse can never silently drop content. The reordered output starts
+        # with the title, so a re-run no longer matches this authors-first shape:
+        # idempotent, and rule_pubs reports only on an actual change.
+        if _pub_words(out) == _pub_words(s):
+            return out
+    return None
 
 def rule_pubs(cv, report):
     for sec in cv or []:

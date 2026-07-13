@@ -49,7 +49,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.812-main-overflow-detect';
+  var VERSION = '1.51.701-osc-damp';
   if (window.__antcvMainOverflow364 === VERSION) return;
   window.__antcvMainOverflow364 = VERSION;
 
@@ -249,6 +249,16 @@
   // Only persist + pulse when the meaningful fields change, so we never spin
   // the localStorage write or wake listeners on a no-op re-measure.
   var lastKey = null;
+  // OSCILLATION-DAMP-001 (owner 2026-07-13): a consumer of main-overflow-changed
+  // toggles a page-break that flips usablePx back, re-firing us in a bistable A<->B
+  // loop that never settles (main-thread storm, endless "fits over" logs, forced
+  // reflow / touch-delay violations). Detect an A,B,A,B,A alternation between exactly
+  // two states and FREEZE on the current one (stop pulsing) until a genuinely
+  // different THIRD state appears. Kill: antcv:disable-overflow-osc-damp.
+  var recentSigs = [];
+  var dampedSig = null;
+  var oscDampOff = false;
+  try { oscDampOff = localStorage.getItem('antcv:disable-overflow-osc-damp') === '1'; } catch (_) {}
   function sigOf(s) {
     return [s.verdict, s.pageTarget, s.overshootLines, s.totalMainPx, s.rows].join('|');
   }
@@ -258,6 +268,22 @@
       var s = measure();
       var sig = sigOf(s);
       if (sig === lastKey) return;
+      if (!oscDampOff) {
+        if (dampedSig !== null) {
+          // frozen: stay quiet while the layout keeps flipping between the two
+          // known states; wake only on a THIRD, genuinely-different state.
+          if (recentSigs.indexOf(sig) !== -1) { lastKey = sig; return; }
+          dampedSig = null; recentSigs = [];
+        }
+        recentSigs.push(sig); if (recentSigs.length > 5) recentSigs.shift();
+        if (recentSigs.length === 5 &&
+            recentSigs[0] === recentSigs[2] && recentSigs[2] === recentSigs[4] &&
+            recentSigs[1] === recentSigs[3] && recentSigs[0] !== recentSigs[1]) {
+          dampedSig = sig; lastKey = sig;
+          try { console.warn('[main-overflow-364] oscillation damped — bistable pagination flip frozen (antcv:disable-overflow-osc-damp=1 to disable)'); } catch (_) {}
+          return; // stop dispatching -> breaks the storm
+        }
+      }
       lastKey = sig;
       try { localStorage.setItem(OUT_KEY, JSON.stringify(s)); } catch (_) {}
       try {

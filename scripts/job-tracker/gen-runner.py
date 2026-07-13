@@ -790,16 +790,35 @@ def _jd_kw(jd):
     return Counter(_toks(jd))
 def _rel(text, jdkw):
     return sum(jdkw.get(t, 0) for t in set(_toks(text)))
+# CAP-CLEAN-CUT-001 (owner 2026-07-13): the raw word-boundary fallback in the
+# caps was a TRUNCATION FACTORY — "…10 days while producing", "…traceable
+# from" (no terminal period, dangling connector/preposition). Every cut now
+# ends CLEAN: clause boundary preferred, dangling words walked back, terminal
+# period restored (visible-leak floor, line-distribution-guidelines rule 10).
+_DANGLING_WORDS = {"and", "or", "with", "for", "of", "to", "in", "on", "via", "the",
+                   "a", "an", "plus", "from", "into", "under", "across", "while",
+                   "og", "eller", "med", "til", "i", "på", "samt", "en", "et", "fra", "af"}
+def _clean_cut(win):
+    """Trim a hard-capped window back to a clean end: strip separators, walk
+    back dangling connectors/prepositions, close with a period."""
+    t = win.rstrip(" ,;:-")
+    words = t.split(" ")
+    while len(words) > 3 and words[-1].strip(".,;:()").lower() in _DANGLING_WORDS:
+        words.pop()
+    t = " ".join(words).rstrip(" ,;:-")
+    if t and t[-1] not in ".!?:)":
+        t += "."
+    return t
 def _cap_line(s, maxlen=155):
     """Limit a bullet/result to ~2 rendered lines, trimming at a clause or word
-    boundary (owner: 'limit line lengths')."""
+    boundary (owner: 'limit line lengths') — always a CLEAN, period-closed end."""
     s = (s or "").strip()
     if len(s) <= maxlen: return s
     win = s[:maxlen]
     for sep in (". ", "; ", ", "):
         p = win.rfind(sep)
-        if p >= maxlen * 0.55: return win[:p].rstrip(" ,;:-")
-    return win.rsplit(" ", 1)[0].rstrip(" ,;:-")
+        if p >= maxlen * 0.55: return _clean_cut(win[:p])
+    return _clean_cut(win.rsplit(" ", 1)[0])
 def _cap_para(s, maxlen=330):
     """Keep a cover-letter PARAGRAPH readable (~3-4 lines): trim to the last full
     sentence under maxlen (owner: 'too long, >3-4 lines per paragraph')."""
@@ -808,7 +827,7 @@ def _cap_para(s, maxlen=330):
     win = s[:maxlen]
     p = max(win.rfind(". "), win.rfind("! "), win.rfind("? "))
     if p >= maxlen * 0.5: return win[:p + 1].strip()
-    return win.rsplit(" ", 1)[0].rstrip(" ,;:-") + "."
+    return _clean_cut(win.rsplit(" ", 1)[0])
 def _yr(years, first=False):
     ys = re.findall(r"\b(19\d\d|20\d\d)\b", years or "")
     if ys: return int(ys[0] if first else ys[-1])

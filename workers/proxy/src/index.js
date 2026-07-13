@@ -31,7 +31,7 @@ const VERSION='3.8.3-gemini-flash-ramble';
 // Logs every check to ANALYTICS KV for later analytics download.
 // See ./supervisor.js.
 
-import { augmentBodyText } from './prompt-augment.js';
+import { augmentBodyTextAsync } from './prompt-augment.js';
 import {
   parseWritingStyleRequest,
   buildStyleSystemPreamble,
@@ -800,7 +800,10 @@ async function handleRequest(request, env = {}) {
   // breadcrumbs panel for observability.
   let augTask = null;
   try {
-    const augResult = augmentBodyText(bodyText);
+    // Async so it can also pull the SERVED gold-rules.json control block
+    // (PROXY-GOLD-RULES-FETCH-001); fail-soft — a gold-fetch error degrades to
+    // task augmentation only, and augmentation failure passes the body through.
+    const augResult = await augmentBodyTextAsync(bodyText);
     bodyText = augResult.bodyText;
     augTask = augResult.task;
   } catch (e) {

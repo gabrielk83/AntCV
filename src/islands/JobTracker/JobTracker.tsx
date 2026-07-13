@@ -8,6 +8,8 @@ import {
   fetchClusterTop20, askAI, fitPercent, fetchBrandColors, research, TRACKED_STATUSES, type TrackerDoc, type Row,
 } from './api';
 import { computeTier, orderTop5 } from './rank';
+import { top5ClickAction } from './top5controls';
+import { CLUSTER_REFRESH_MS, reconcileSnapshot, shouldRefetchOnFocus } from './clusterRefresh';
 
 const NAVY = '#1F3864';
 const today = () => new Date().toISOString().slice(0, 10);
@@ -178,7 +180,33 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     finally { setLoading(false); }
   }, []);
   useEffect(() => { void load(); }, [load]);
-  useEffect(() => { void fetchClusterTop20().then((c) => setCluster(c.top20 || [])).catch(() => { /* */ }); }, []);
+  // TOP5-PERIODIC-RESCORE-001 (JOBTRACKER-TOP5-PERIODIC-RESCORE-001, OPEN_REGISTER
+  // row 77): the cluster demand snapshot is a ranking INPUT (rank.ts fitScore /
+  // orderTop5), but it used to be fetched ONCE here and never refreshed — so the
+  // Top-5 could not drift with the weekly cluster-demand refresh while the panel
+  // stayed open. Re-fetch on a LOW-frequency schedule (hourly background check +
+  // on window focus once >24h stale) and re-rank ONLY when the snapshot content
+  // hash actually changes, so identical states never reshuffle the Top-5
+  // (ranking-stability, OPEN_REGISTER row 76). No busy timers / per-minute polls.
+  const clusterHashRef = useRef('');
+  const clusterFetchedAtRef = useRef(0);
+  useEffect(() => {
+    let alive = true;
+    const refresh = () => fetchClusterTop20().then((c) => {
+      if (!alive) return;
+      clusterFetchedAtRef.current = Date.now();
+      const next = c.top20 || [];
+      const { hash, changed } = reconcileSnapshot(clusterHashRef.current, next);
+      if (!changed) return;            // demand unchanged -> no re-rank (stable Top-5)
+      clusterHashRef.current = hash;
+      setCluster(next);
+    }).catch(() => { /* keep the last snapshot on any failure */ });
+    void refresh();                                                    // on mount
+    const iv = setInterval(() => { void refresh(); }, CLUSTER_REFRESH_MS);  // hourly
+    const onFocus = () => { if (shouldRefetchOnFocus(clusterFetchedAtRef.current, Date.now())) void refresh(); };
+    window.addEventListener('focus', onFocus);
+    return () => { alive = false; clearInterval(iv); window.removeEventListener('focus', onFocus); };
+  }, []);
 
   const rows = useMemo<Row[]>(() => {
     const r = (doc?.rows || []).slice();
@@ -282,7 +310,41 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     setDocState({ ...doc, park: { ...(doc.park || {}), [uk]: on }, ...(on ? { pin: { ...(doc.pin || {}), [uk]: false } } : {}) });
     setDirty(true);
   }
+  // JOBTRACKER-TOP5-CONTROLS-001: the rank-number cell is the primary pin/park
+  // control. Clicking it toggles Top-5 membership — OUT → togglePin (the old ★
+  // button's behaviour), IN → togglePark (the old ⏸ button's behaviour). Routes
+  // through the EXISTING mutations by current membership; invents no new state.
+  function toggleTop5Membership(uk: string): void {
+    if (top5ClickAction(top5Keys.has(uk)) === 'pin') togglePin(uk); else togglePark(uk);
+  }
   const [expandRow, setExpandRow] = useState<string | null>(null);
+  // JOBTRACKER-TOP5-CONTROLS-001: right-click (desktop) or long-press (~500ms,
+  // touch) on a row opens a small context menu at the pointer whose "Reject…"
+  // entry runs the SAME reject-with-reason flow the removed ✕ button did. Pin/
+  // Park are included for discoverability; the rank-number click stays primary.
+  const [ctxMenu, setCtxMenu] = useState<{ uk: string; row: Row; x: number; y: number } | null>(null);
+  const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelLongPress = useCallback(() => {
+    if (longPressRef.current != null) { clearTimeout(longPressRef.current); longPressRef.current = null; }
+  }, []);
+  function openCtxMenuAt(x: number, y: number, row: Row): void { setCtxMenu({ uk: row[11], row, x, y }); }
+  function onRowContextMenu(e: React.MouseEvent, row: Row): void { e.preventDefault(); openCtxMenuAt(e.clientX, e.clientY, row); }
+  function onRowTouchStart(e: React.TouchEvent, row: Row): void {
+    const t = e.touches[0]; if (!t) return;
+    const x = t.clientX, y = t.clientY;
+    cancelLongPress();
+    longPressRef.current = setTimeout(() => openCtxMenuAt(x, y, row), 500);
+  }
+  // Dismiss the context menu on any outside click, scroll, or Escape.
+  useEffect(() => {
+    if (!ctxMenu) return;
+    const close = () => setCtxMenu(null);
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); setCtxMenu(null); } };
+    window.addEventListener('click', close);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('keydown', onKey, true);
+    return () => { window.removeEventListener('click', close); window.removeEventListener('scroll', close, true); window.removeEventListener('keydown', onKey, true); };
+  }, [ctxMenu]);
   // Single floating "Ask AI" assistant for the whole job list.
   const [chatOpen, setChatOpen] = useState(false);
   const [chatQ, setChatQ] = useState('');
@@ -648,8 +710,9 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,22,40,0.55)', zIndex: 99999, display: 'flex' }}
-      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}>
+      onKeyDown={(e) => { if (e.key === 'Escape' && !ctxMenu) onClose(); }}>
       <div style={{ position: 'relative', background: '#fff', margin: '2vh auto', width: 'min(1180px, 97vw)', height: '96vh', borderRadius: 10, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 12px 48px rgba(0,0,0,0.4)' }}>
+        <style>{'.jt-ranktoggle{transition:background .12s}.jt-ranktoggle:hover{background:rgba(46,93,168,0.14)!important;box-shadow:inset 0 0 0 1px rgba(46,93,168,0.28)}.jt-ctxitem{display:block;width:100%;text-align:left;background:transparent;border:none;cursor:pointer;padding:7px 12px;border-radius:5px;font-size:13px;white-space:nowrap}.jt-ctxitem:hover{background:#eef1f6}'}</style>
         <div style={{ background: NAVY, color: '#fff', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
           <strong style={{ fontSize: 15 }}>📋 Job Tracker</strong>
           <span style={{ opacity: 0.8, fontSize: 12 }}>rev {rev}{dirty ? ' · unsaved' : ''}</span>
@@ -693,8 +756,12 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
                 {rows.map((r) => {
                   const uk = r[11]; const t = tierOf(r[12]); const hasJd = ((doc?.jd || {})[uk] || '').length > 200; const star = top5Keys.has(uk);
                   return (
-                    <tr key={uk} style={{ background: t.tint }}>
-                      <td style={{ ...cell, textAlign: 'center', fontWeight: 700, borderLeft: '4px solid ' + t.accent }}>{star ? '★' : ''}{r[0]}</td>
+                    <tr key={uk} style={{ background: t.tint }}
+                      onContextMenu={(e) => onRowContextMenu(e, r)}
+                      onTouchStart={(e) => onRowTouchStart(e, r)} onTouchEnd={cancelLongPress} onTouchMove={cancelLongPress} onTouchCancel={cancelLongPress}>
+                      <td className="jt-ranktoggle" onClick={() => toggleTop5Membership(uk)}
+                        title={star ? 'In Top-5 — click to park out (stays in the list). Right-click / long-press for more.' : 'Click to pin into Top-5. Right-click / long-press for more.'}
+                        style={{ ...cell, textAlign: 'center', fontWeight: 700, borderLeft: '4px solid ' + t.accent, cursor: 'pointer', userSelect: 'none' }}>{star ? '★' : ''}{r[0]}</td>
                       <td style={{ ...cell }}><span style={{ background: t.accent, color: '#fff', borderRadius: 4, padding: '1px 6px', fontSize: 11, fontWeight: 700 }}>{t.label}</span></td>
                       <td style={{ ...cell, fontWeight: 600 }}>{r[1]}</td>
                       <td style={cell}>{r[2]}</td>
@@ -732,14 +799,6 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
                           </label>
                           {doc?.urls?.[uk] ? <a href={doc.urls[uk]} target="_blank" rel="noreferrer" title="Open posting" style={{ color: t.accent, fontWeight: 700, fontSize: 14 }}>↗</a> : null}
                         </div>
-                        <div style={{ display: 'flex', gap: 6, justifyContent: 'center', alignItems: 'center', marginTop: 3 }}>
-                          <button onClick={() => togglePin(uk)} title={pinnedOf(uk) ? 'Pinned to Top-5 — tap to unpin' : 'Pin to Top-5'}
-                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 13, opacity: pinnedOf(uk) ? 1 : 0.3, padding: 0, color: '#B58A00' }}>★</button>
-                          <button onClick={() => togglePark(uk)} title={parkedOf(uk) ? 'Parked (out of Top-5) — tap to unpark' : 'Park — out of Top-5, stays in the list'}
-                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 12, opacity: parkedOf(uk) ? 1 : 0.3, padding: 0 }}>⏸</button>
-                          <button onClick={() => void rejectRow(r)} title="Reject with a reason (archives + stops discovery re-proposing)"
-                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 12, opacity: 0.5, padding: 0, color: '#7a2618' }}>✕</button>
-                        </div>
                       </td>
                     </tr>
                   );
@@ -760,6 +819,25 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
         <div style={{ padding: '6px 16px', fontSize: 11, color: '#667', borderTop: '1px solid #e3e8f0' }}>
           {rows.length} roles · {jdCount} with JD · ★ = Top 5 · edits sync to your Excel.
         </div>
+
+        {/* JOBTRACKER-TOP5-CONTROLS-001: row context menu (right-click / long-press) */}
+        {ctxMenu && (() => {
+          const inTop5 = top5Keys.has(ctxMenu.uk);
+          const left = Math.max(6, Math.min(ctxMenu.x, (window.innerWidth || 1200) - 210));
+          const top = Math.max(6, Math.min(ctxMenu.y, (window.innerHeight || 800) - 150));
+          return (
+            <div role="menu" onClick={(e) => e.stopPropagation()} onContextMenu={(e) => e.preventDefault()}
+              style={{ position: 'fixed', left, top, zIndex: 100000, background: '#fff', border: '1px solid #c3ccdb', borderRadius: 8, boxShadow: '0 8px 28px rgba(0,0,0,0.28)', padding: 4, minWidth: 190 }}>
+              <div style={{ padding: '5px 12px 6px', fontSize: 11, fontWeight: 700, color: '#889', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 210 }}>{ctxMenu.row[1] || 'Row'}</div>
+              <button className="jt-ctxitem" onClick={() => { toggleTop5Membership(ctxMenu.uk); setCtxMenu(null); }}>
+                {inTop5 ? '⏸ Park — out of Top-5 (stays in list)' : '★ Pin into Top-5'}
+              </button>
+              <button className="jt-ctxitem" style={{ color: '#7a2618' }} onClick={() => { const r = ctxMenu.row; setCtxMenu(null); void rejectRow(r); }}>
+                ✕ Reject…
+              </button>
+            </div>
+          );
+        })()}
 
         {/* single floating Ask-AI assistant for the whole list */}
         {chatOpen && (

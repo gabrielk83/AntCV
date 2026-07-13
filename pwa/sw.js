@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.387-gold-unify';
+const CACHE = 'antcv-1.51.388-jt-autofill';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

@@ -71,6 +71,23 @@ this routine changes the *starting* choice based on the week's evidence.
 
 ### The weekly procedure
 1. **SYNC + CLAIM** a shift range (this deploys a worker → coordinate), work in a worktree.
+1a. **MODEL-TABLE FRESHNESS AUDIT (owner 2026-07-13 — do this BEFORE scoring; the tune is only
+   as honest as its cost table).** The whole routine scores on `cost_per_call`, so a stale price
+   table silently corrupts every decision. Confirm the models AntCV actually PINS are each present
+   and correctly priced in BOTH `workers/proxy/src/demo-enforcement.js` and
+   `workers/demo-proxy/src/demo-enforcement.js` `RATES`, and present in each `multi-llm.js`
+   `PROVIDER_MODELS` cascade. `rateFor()` matches the LONGEST substring key, so a model with no
+   explicit entry silently resolves to a shorter neighbour (the trap: `claude-opus-4-8` →
+   legacy `claude-opus-4` [15,75] = 3x over; `gpt-5.5` → `gpt-5` [1.25,10] = ~24x under). The
+   current pins to verify: flagship/thorough gen `claude-opus-4-8`; default openai gen
+   `gpt-5.4-mini` + thorough-tier `gpt-5.5`; preferred cascade `claude-sonnet-5` (see the model-pins
+   note in this routine's scheduled prompt + `docs/qa/LLM_ROUTER_PROPOSAL_2026-07-11.md`). Cross-check
+   the new head you intend to flip TO is also priced. `node --test workers/proxy/test/model-table-freshness.test.mjs`
+   (mirrored in demo-proxy) pins opus-4-8 + gpt-5.5 + gpt-5.4-mini + sonnet-5; if a pin changed and the
+   test is red, FIX the table (add/correct the explicit key at the verified public rate, longest-key-wins)
+   and extend the test in the SAME run — this is a required modification the routine executes, not
+   an optional check. Prices carry an inline date comment; re-verify against the provider's public
+   pricing page when you touch one. A wrong rate here is a silent, compounding tuning error.
 2. **Pull** the last 7 days from `llm_provider_health` + `llm_quality_signals` per role
    (extract / parse_jd / compress / gen / coherence / translate / analysis / supervisor).
 3. **Score** each provider per role: `costQuality = adequacy_pass_rate / cost_per_call`

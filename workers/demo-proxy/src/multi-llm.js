@@ -123,6 +123,7 @@ const PROVIDER_MODELS = {
     // Current flagship + 4.x family (2025-2026)
     'claude-sonnet-5',           // 2026-07 preferred: best speed/intelligence, drop-in for 4.6. Adaptive thinking is ON by default -> we send thinking:disabled (see callAnthropic); NO sampling params anywhere in AntCV, so no 400.
     'claude-sonnet-4-20250514',  // stable, current production default for this proxy
+    'claude-opus-4-8',           // 2026-07 flagship (AntCV gen pin since 1.51.332) — supersedes 4-7
     'claude-opus-4-7',           // 2026-04 flagship, available with appropriate tier
     'claude-sonnet-4-6',         // 2026-02 mainline
     'claude-haiku-4-5',          // fast/cheap current

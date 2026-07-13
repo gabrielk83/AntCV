@@ -16,6 +16,21 @@
 | Width hints (app-side) | `pwa/antcv-bullet-targets.js` SHIP 3 (1.51.375) | Enrich/Fit-it/compress prompts get a WIDTH CALIBRATION block with live chars-per-line. |
 | Column balance | `pwa/antcv-auto-pagebreak-block-001.js` `__balanceGate` (1.51.376/377) | Demotes trailing whole sidebar units to minimize the worst per-page gap; last page targets the MAIN column's bottom (gold-calibrated). Knobs `SIDEBAR_BALANCE_MAX_GAP`/`_MIN_GAIN` via `AntcvAutoPagebreak.config()`. |
 
+## Export-side update (2026-07-13, after this hand-off was written)
+
+docx-worker **1.14.150-lo-sep-guard** fixed LO-NESTED-TABLE-DROP-001 (see the
+ACTIVE_BUGS banner): knife-edge exports could silently DROP whole sections
+(core_comp, sidebar tail) in the CloudConvert render while the preview and the
+docx looked complete. Two consequences for this sweep:
+
+1. **Rendered-PDF page counts are now an honest signal.** Before the fix, a
+   "1-page" render could be a lossy render. Do not trust cached PDFs produced
+   before 1.14.150 — re-render anything you compare against.
+2. **`POST /diag/convert-docx`** (1.14.149) converts a raw DOCX body through the
+   REAL CloudConvert pipeline (same gates as `/generate-pdf`, 2 MB cap). Use it
+   whenever a layout question needs the true converter — local LibreOffice
+   renders differently and cannot reproduce converter-specific behavior.
+
 ## The sweep
 
 For every saved application EXCEPT: **723** (owner's showcase, never touch), **670**

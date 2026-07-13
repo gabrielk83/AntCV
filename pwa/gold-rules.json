@@ -1,5 +1,5 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "_note": "GOLD RULES - the ONE machine-readable control site for every AntCV generation (owner 2026-07-13). Narrative + enforcement map: docs/qa/GOLD_STANDARD_LOCKER.md. Consumers: pwa/antcv-bullet-targets.js (prompt block on every generation/Fit-it/Enhance call), scripts/job-tracker/{quality_pass,density_fit,measure_density,gen-runner}.py (persist + sweep enforcement). Served at antcv.pages.dev/gold-rules.json so workers can fetch it (proxy prompt-augment wiring = open follow-up). Change values HERE; code reads them.",
   "density": {
     "runt_fraction": 0.6,
@@ -27,8 +27,10 @@
     "photo_library_max": 4
   },
   "results": {
-    "require_change_metric": true,
-    "change_metric_pattern": "%|×|x\\d|→|->| to \\d|\\d\\s*(?:days?|dage|weeks?|months?|hours?|hrs?|units?|percent|pct)|\\$\\s?\\d|\\d\\s?(?:M|K|mio\\.?|mn)\\b|DKK|EUR|USD|NIS",
+    "require_metric": true,
+    "rule": "a Results line needs a QUANTIFIED OUTCOME OR SCOPE (change metric, or number+object of an action verb like '100 users across 150 machines'); digits that only DESCRIBE the role context (team size, site counts, years) do not qualify",
+    "descriptor_digit_pattern": "\\d+\\s*[-]?\\s*(?:person|member|man|people|headcount)\\b|\\b(?:19|20)\\d{2}\\b",
+    "legacy_change_metric_pattern": "%|×|x\\d|→|->| to \\d|\\d\\s*(?:days?|dage|weeks?|months?|hours?|hrs?|units?|percent|pct)|\\$\\s?\\d|\\d\\s?(?:M|K|mio\\.?|mn)\\b|DKK|EUR|USD|NIS",
     "descriptors_are_bullets": "team sizes, site names, headcounts and years are role bullets, never Results"
   },
   "partners": {

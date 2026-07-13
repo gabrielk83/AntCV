@@ -48,15 +48,23 @@ _NUM = re.compile(r"\d")
 # line must show a CHANGE metric — a percentage, multiplier, from→to, a
 # time/volume/money delta — not merely contain a digit (team sizes, years and
 # site counts are descriptors).
-_CHANGE_METRIC = re.compile(
-    r"%|×|x\d|→|->| to \d|\d\s*(?:days?|dage|weeks?|months?|hours?|hrs?|units?|percent|pct)"
-    r"|\$\s?\d|\d\s?(?:M|K|mio\.?|mn)\b|DKK|EUR|USD|NIS", re.I)
+# v2 (owner 2026-07-13, the IDF case): "100 users across 150 machines" IS a
+# quantified outcome - the old change-metric whitelist rejected it. Inverted
+# rule: digits QUALIFY unless every digit is descriptor-shaped (team size,
+# headcount, calendar year). Pattern lives in gold-rules.json results.
+_DESCRIPTOR_DIGIT = re.compile(
+    (_G.get("results") or {}).get("descriptor_digit_pattern")
+    or r"\d+\s*[-]?\s*(?:person|member|man|people|headcount)\b|\b(?:19|20)\d{2}\b", re.I)
 # Partner/ODM names only with a strong JD signal (owner 2026-07-13: "do not
 # mention Sigma-Connectivity directly if no strong signal").
 _PARTNER_NAMES = [("Sigma-Connectivity", "an ODM partner"), ("Sigma Connectivity", "an ODM partner")]
 
 def _is_outcome(text):
-    return bool(_NUM.search(text)) and bool(_CHANGE_METRIC.search(text))
+    t = str(text or "")
+    if not _NUM.search(t):
+        return False
+    stripped = _DESCRIPTOR_DIGIT.sub(" ", t)
+    return bool(_NUM.search(stripped))   # any NON-descriptor digit qualifies
 
 # R3 — owner-specified compressions. SHAPE LESSON (owner caught it twice):
 # interests are rich_block {b: label, t: value} SPLITS and additional is a

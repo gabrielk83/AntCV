@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.384-gen-gold-rules';
+const CACHE = 'antcv-1.51.385-gold-site';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

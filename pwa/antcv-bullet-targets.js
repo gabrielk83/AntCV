@@ -853,19 +853,38 @@
       '2-LINE = ' + r.l2[0] + '-' + r.l2[1] + ' chars; 3-LINE = ' + r.l3[0] + '-' + r.l3[1] + ' chars. ' +
       'FORBIDDEN dead zones: ' + (r.l1[1] + 3) + '-' + (r.l2[0] - 3) + ' and ' +
       (r.l2[1] + 3) + '-' + (r.l3[0] - 3) + ' chars — those wrap into a short dangling last line.' +
-      // GEN-QUALITY-RULES-001 (owner 2026-07-13, "make sure the modifications
-      // are not just in these 21 but in ALL AntCV generations"): the persist-
-      // time rules as GENERATION constraints, riding the same carrier so every
-      // in-app generation at every speed level obeys them up front.
-      '\nGOLD CONTENT RULES (hard requirements):' +
-      '\n - Every Results line states a CHANGE metric (a percentage, multiplier, from->to, ' +
-      'time/volume/money delta) with its mechanism. A team size or site description is a bullet, never a Result.' +
-      '\n - Core-competency tables: at most 2 rows, the highest-impact ones; every cell a complete clause, one line where possible.' +
-      '\n - Every bullet and sentence ends COMPLETE with terminal punctuation — never a dangling ' +
-      'connector or preposition ("...traceable from"), never a cut enumeration ("...optics, electronics, mechanical.").' +
-      '\n - Name partner/client companies only when the job description itself signals them; otherwise describe the relationship ("an ODM partner").' +
-      '\n - Certificates carry no years; order them by relevance to this job.' +
-      '\n - Interests and sidebar one-liners stay compact (drop filler words); keep personality lines intact but never pad them.';
+      // GEN-QUALITY-RULES-001 + GOLD-RULES-SITE-001 (owner 2026-07-13: "we
+      // need one site that controls every antcv generation"): the block text
+      // comes from /gold-rules.json — the single machine-readable control
+      // site — with this inline copy only as the fetch-failure fallback.
+      '\n' + goldPromptBlock();
+  }
+
+  // ── GOLD-RULES-SITE-001: the single control site (/gold-rules.json) ──────
+  var goldRules = null;
+  var GOLD_FALLBACK_BLOCK =
+    'GOLD CONTENT RULES (hard requirements):' +
+    '\n - Every Results line states a CHANGE metric (a percentage, multiplier, from->to, ' +
+    'time/volume/money delta) with its mechanism. A team size or site description is a bullet, never a Result.' +
+    '\n - Core-competency tables: at most 2 rows, the highest-impact ones; every cell a complete clause, one line where possible.' +
+    '\n - Every bullet and sentence ends COMPLETE with terminal punctuation — never a dangling ' +
+    'connector or preposition ("...traceable from"), never a cut enumeration ("...optics, electronics, mechanical.").' +
+    '\n - Name partner/client companies only when the job description itself signals them; otherwise describe the relationship ("an ODM partner").' +
+    '\n - Certificates carry no years; order them by relevance to this job.' +
+    '\n - Interests and sidebar one-liners stay compact (drop filler words); keep personality lines intact but never pad them.';
+  function goldPromptBlock() {
+    if (goldRules && Array.isArray(goldRules.prompt_block) && goldRules.prompt_block.length) {
+      return goldRules.prompt_block.join('\n');
+    }
+    return GOLD_FALLBACK_BLOCK;
+  }
+  function loadGoldRules() {
+    try {
+      fetch('gold-rules.json?v=' + SCRIPT_VERSION, { cache: 'no-cache' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (j) { if (j && j.prompt_block) goldRules = j; })
+        .catch(function () {});
+    } catch (_) {}
   }
 
   // ── SHIP 4 — per-bullet MEASURED windows (GOLD-TARGET-LAYOUT-DENSITY-001,
@@ -1014,7 +1033,8 @@
 
   function bootSidecar() {
     init();                  // styles + panel strip injection (SHIP 1)
-    instrumentFetchOnce();   // fetch interceptor (SHIP 2 + SHIP 3)
+    instrumentFetchOnce();   // fetch interceptor (SHIP 2 + SHIP 3 + SHIP 4)
+    loadGoldRules();         // GOLD-RULES-SITE-001: the single control site
   }
 
   if (document.readyState === 'loading') {

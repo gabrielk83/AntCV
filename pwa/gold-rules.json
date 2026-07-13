@@ -1,0 +1,84 @@
+{
+  "version": "1.0.0",
+  "_note": "GOLD RULES — the ONE machine-readable control site for every AntCV generation (owner 2026-07-13). Narrative + enforcement map: docs/qa/GOLD_STANDARD_LOCKER.md. Consumers: pwa/antcv-bullet-targets.js (prompt block on every generation/Fit-it/Enhance call), scripts/job-tracker/{quality_pass,density_fit,measure_density,gen-runner}.py (persist + sweep enforcement). Served at antcv.pages.dev/gold-rules.json so workers can fetch it (proxy prompt-augment wiring = open follow-up). Change values HERE; code reads them.",
+  "density": {
+    "runt_fraction": 0.60,
+    "fill_band": [0.65, 0.97],
+    "quality_target_pct": 97.5,
+    "sidebar_gap_max_pt": 40,
+    "respace_default": [-12, 15],
+    "respace_profile": [-30, 30]
+  },
+  "caps": {
+    "bullet_chars": 148,
+    "paragraph_chars": 330,
+    "core_comp_data_rows": 2,
+    "certs_max": 4,
+    "role_bullets_max": 3,
+    "photo_library_max": 4
+  },
+  "results": {
+    "require_change_metric": true,
+    "change_metric_pattern": "%|×|x\\d|→|->| to \\d|\\d\\s*(?:days?|dage|weeks?|months?|hours?|hrs?|units?|percent|pct)|\\$\\s?\\d|\\d\\s?(?:M|K|mio\\.?|mn)\\b|DKK|EUR|USD|NIS",
+    "descriptors_are_bullets": "team sizes, site names, headcounts and years are role bullets, never Results"
+  },
+  "partners": {
+    "name_only_with_jd_signal": true,
+    "generic_replacements": { "Sigma-Connectivity": "an ODM partner", "Sigma Connectivity": "an ODM partner" }
+  },
+  "certs": {
+    "strip_years": true,
+    "relevance_ranked": true,
+    "rugby_class_last_unless_sports_jd": ["rugby", "coaching", "concussion"],
+    "babok_protected_jd_pattern": "program|requirement|architect|business analy"
+  },
+  "compressions": [
+    ["Languages, food culture and board games shared with friends", "Languages, food, board games"],
+    ["Languages, food culture and board games", "Languages, food, board games"],
+    ["Technology, society and systems thinking books and essays", "Technology and systems thinking"],
+    ["Technology, society and systems thinking", "Technology and systems thinking"],
+    ["technology, society and systems thinking", "technology and systems thinking"],
+    ["Teknologi, samfund og systemtænkning", "Teknologi og systemtænkning"],
+    ["Stability and calm under pressure", "Calm under pressure"],
+    ["Details available via Google Scholar", "Details via Google Scholar"],
+    ["Detaljer tilgængelige via Google Scholar", "Detaljer via Google Scholar"]
+  ],
+  "protected_content": {
+    "grow_only_sections": ["interests", "accessibility"],
+    "phrases": ["literally a team player", "(foreningsarbejde)", "feline strategic napping experts"],
+    "dk_context_restore": { "interests_rugby_prefix": "Team operations at Pan Idræt (foreningsarbejde)" }
+  },
+  "sentence_health": {
+    "terminal_punctuation_required": true,
+    "never_final_words": ["and", "or", "og", "eller", "samt", "med", "the", "a", "an", "und", "from", "into", "of", "under", "across", "versus", "via", "toward", "towards", "fra", "af", "mod"],
+    "no_dangling_enumerations": true
+  },
+  "typography": {
+    "ascii_hyphen_only": true,
+    "banned_separators": ["‐", "‑", "‒", "–", "—", "―", "−"]
+  },
+  "identity": {
+    "citizenship_canonical": "EU citizen",
+    "cv_banner": "specialization triad; Application line only when the stored subtitle is empty (CLs keep it)",
+    "slogan_override_needs_ownership_stamp": true,
+    "dk_jd_keeps_danish_forms": true
+  },
+  "accessibility": {
+    "contrast_before_brand": true,
+    "min_contrast": 3.0,
+    "note": "every text ink luminance-checked against its fill, ON TOP of any sampled company brand; adjust the ink, never skip the check"
+  },
+  "brand": {
+    "per_app_only": true,
+    "note": "brand palettes apply only to apps marked to that brand (per-app styleConfig); unmarked apps render the neutral package palette"
+  },
+  "prompt_block": [
+    "GOLD CONTENT RULES (hard requirements):",
+    " - Every Results line states a CHANGE metric (a percentage, multiplier, from->to, time/volume/money delta) with its mechanism. A team size or site description is a bullet, never a Result.",
+    " - Core-competency tables: at most 2 rows, the highest-impact ones; every cell a complete clause, one line where possible.",
+    " - Every bullet and sentence ends COMPLETE with terminal punctuation - never a dangling connector or preposition (\"...traceable from\"), never a cut enumeration (\"...optics, electronics, mechanical.\").",
+    " - Name partner/client companies only when the job description itself signals them; otherwise describe the relationship (\"an ODM partner\").",
+    " - Certificates carry no years; order them by relevance to this job.",
+    " - Interests and sidebar one-liners stay compact (drop filler words); keep personality lines intact but never pad them."
+  ]
+}

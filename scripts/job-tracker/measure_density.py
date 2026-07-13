@@ -48,10 +48,22 @@ def _gen_runner():
     spec.loader.exec_module(mod)
     return mod
 
+# ── GOLD-RULES-SITE-001: the single control site (pwa/gold-rules.json) ──────
+# Owner 2026-07-13: "we need one site that controls every antcv generation."
+# All thresholds below read from it; the literals are fetch-failure fallbacks.
+_REPO = os.path.dirname(os.path.dirname(_HERE))
+def gold_rules():
+    try:
+        return json.load(open(os.path.join(_REPO, "pwa", "gold-rules.json"), encoding="utf-8"))
+    except Exception:
+        return {}
+_G = gold_rules()
+
 # ── thresholds (owner spec 2026-07-12 red/green screenshots) ─────────────────
-RUNT_FRAC = 0.60          # last line below this fill = runt (owner threshold)
-FILL_LO, FILL_HI = 0.65, 0.97  # rewrite target band for the last line
-SIDEBAR_GAP_MAX = 40.0    # px (PDF pt) allowed between column bottoms per page
+_GD = _G.get("density") or {}
+RUNT_FRAC = float(_GD.get("runt_fraction", 0.60))
+FILL_LO, FILL_HI = (_GD.get("fill_band") or [0.65, 0.97])[:2]
+SIDEBAR_GAP_MAX = float(_GD.get("sidebar_gap_max_pt", 40.0))  # px (PDF pt) between column bottoms
 LINE_BAND = 3.0           # words within this y-distance are one visual line
 PARA_GAP = 1.9            # vertical gap > PARA_GAP * line-height = new block
 # Paragraph appeal (owner 2026-07-13): justified lines with WIDE inter-word
@@ -60,7 +72,7 @@ PARA_GAP = 1.9            # vertical gap > PARA_GAP * line-height = new block
 # median gap. QUALITY = share of measured items with no defect; target 97.5%.
 STRETCH_RATIO = 2.0
 STRETCH_ABS_PAD = 4.0
-QUALITY_TARGET = 97.5
+QUALITY_TARGET = float(_GD.get("quality_target_pct", 97.5))
 
 # Item policy: what the rewrite loop may do with a runt in each section.
 #   rewrite  — prose; trim/lengthen via the constrained rewriter

@@ -35,6 +35,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import measure_density as MD
 import density_fit as DF
 
+# GOLD-RULES-SITE-001: the single control site (pwa/gold-rules.json) — caps,
+# patterns and wordings read from it; module literals are fallbacks.
+_G = MD.gold_rules()
+
 _SPORT_JD = re.compile(r"sport|rugby|coach|community|idr[æa]t|club|athlet", re.I)
 _RUGBY_CERT = re.compile(r"rugby|coaching|concussion", re.I)
 _YEAR_SUFFIX = re.compile(r"\s*[\(,]\s*(19|20)\d{2}\s*\)?\s*$")
@@ -58,7 +62,7 @@ def _is_outcome(text):
 # interests are rich_block {b: label, t: value} SPLITS and additional is a
 # labeled_list {l, v} — full-line pairs never match, so every pair here is a
 # SUBSTRING of the VALUE field alone (label + URL survive around it).
-LINE_COMPRESS = [
+LINE_COMPRESS = [tuple(p) for p in (_G.get("compressions") or [])] or [
     ("Languages, food culture and board games shared with friends",
      "Languages, food, board games"),
     ("Languages, food culture and board games", "Languages, food, board games"),
@@ -231,12 +235,13 @@ def rule_core_comp(cv, jd, report):
     rows = sec["rows"]
     # owner 2026-07-13 (NVIDIA review): "the table has 3!! rows - should have
     # been 2" — keep only the TWO highest-impact rows.
-    if len(rows) > 3:                        # header + 2
+    _cap_rows = int((_G.get("caps") or {}).get("core_comp_data_rows", 2))
+    if len(rows) > _cap_rows + 1:             # header + cap
         data = rows[1:]
         ranked = sorted(data, key=lambda r: -gr._rel(" ".join(map(str, r)), jdkw))
-        keep = ranked[:2]
+        keep = ranked[:_cap_rows]
         sec["rows"] = [rows[0]] + [r for r in data if r in keep]
-        report.append(f"core_comp: rows {len(data)} -> 2 by JD relevance")
+        report.append(f"core_comp: rows {len(data)} -> {_cap_rows} by JD relevance")
     fixed = 0
     for row in sec["rows"][1:]:
         for ci in range(1, len(row)):       # labels (c0) stay untouched

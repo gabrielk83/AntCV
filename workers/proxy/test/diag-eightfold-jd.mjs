@@ -104,6 +104,32 @@ globalThis.fetch = async (u) => {
   ok(/html-fallback/.test(String(j.rewrite || '')), 'rewrite note records the html-fallback');
 }
 
+// ── (6): JD-FETCH-HOST-001 — branded eightfold host, NO ?domain= param ─────
+// jobs.nvidia.com/careers/job/<id> shared WITHOUT the ?domain= param used to
+// miss the eightfold rewrite (host is not *.eightfold.ai), fetch the SPA shell,
+// and return the theme blob or a wrong/featured job. The /careers/job/<digits>
+// path alone must now trigger the position API with a domain derived from the
+// registrable host (jobs.nvidia.com → nvidia.com).
+{
+  let captured6 = null;
+  globalThis.fetch = async (u) => {
+    captured6 = String(u);
+    return new Response(JSON.stringify(API_JSON), { status: 200, headers: { 'content-type': 'application/json' } });
+  };
+  const req = new Request('https://proxy/api/fetch-jd-url', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ url: 'https://jobs.nvidia.com/careers/job/893395051166' }),
+  });
+  const res = await handleFetchJdUrl(req, {}, () => ({}));
+  const j = await res.json().catch(() => ({}));
+  ok(/\/api\/apply\/v2\/jobs\/893395051166\?domain=nvidia\.com/.test(captured6),
+    'no-?domain host still rewrote to position API with derived domain: ' + captured6);
+  ok(res.status === 200 && j.ok === true && j.extracted_via === 'eightfold-json',
+    'no-?domain path returned the JSON JD, not the SPA shell');
+  ok(/Characterise optical transceivers/.test(j.text || ''),
+    'no-?domain path carried the correct JD body');
+}
+
 globalThis.fetch = realFetch;
 
 // ── LIVE probe (best-effort; does not affect pass/fail) ───────────────────

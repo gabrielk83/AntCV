@@ -154,17 +154,22 @@ function rewriteJobUrl(u) {
   // "Test Engineer - Photonic", JD-FETCH-EIGHTFOLD-GARBLED-001). The public
   // position API on the SAME origin returns the posting as JSON without auth:
   //   <origin>/api/apply/v2/jobs/<id>?domain=<brand-domain>
-  // Signature = a /careers/job/<digits> path AND an eightfold marker (the
-  // ?domain= query param that eightfold links always carry, or a *.eightfold.ai
-  // host). High-precision; the handler also falls back to the HTML pipeline if
-  // the API doesn't yield a usable description, so a false positive is harmless.
+  // Signature = a /careers/job/<digits> path. The ?domain= query param and the
+  // *.eightfold.ai host are strong markers but NOT required: a branded eightfold
+  // host (jobs.nvidia.com) shared without the ?domain= param used to miss this
+  // rewrite, fetch the SPA shell, and return the theme blob or a WRONG/featured
+  // job from the bootstrap state (JD-FETCH-HOST-001). The /careers/job/<digits>
+  // path is itself high-precision, and the handler falls back to the HTML
+  // pipeline whenever the position API doesn't yield a usable description, so a
+  // false positive on a non-eightfold /careers/job/<n> path is harmless. When
+  // ?domain= is absent we derive the brand domain from the registrable host
+  // (jobs.nvidia.com → nvidia.com), which is what eightfold's API expects.
   {
     const m = /\/careers\/job\/(\d{4,})/.exec(u.pathname);
-    const domainParam = u.searchParams.get('domain');
-    const isEightfold = !!m && (!!domainParam || host.endsWith('eightfold.ai'));
+    const isEightfold = !!m;
     if (isEightfold) {
       const id = m[1];
-      let domain = domainParam;
+      let domain = u.searchParams.get('domain');
       if (!domain) {
         const parts = host.split('.');
         domain = parts.length >= 2 ? parts.slice(-2).join('.') : host;

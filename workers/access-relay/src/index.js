@@ -834,6 +834,16 @@ const KERNEL_PREFS_OBJ_FIELDS = new Set([
   // client (antcv-babel-relang.js) hard-caps its size before writing, so this can
   // never bloat the prefs blob.
   'langRenders',
+  // CUSTOM-LLM-OVERHAUL-001 remaining leg (relay persist): customLlms — the
+  // owner's registered custom LLM endpoints [{id,label,baseUrl,model,pricing,
+  // status,audit,addedAt}] that antcv-llm-lab-408.js keeps in localStorage
+  // ('antcv:customLlms'). It was LOCAL-ONLY, so a fresh device/session lost the
+  // whole registry. Arrays satisfy typeof === 'object' so the OBJ validator
+  // passes them. SECRETS BOUNDARY: the client STRIPS each record's `key` (the
+  // provider API secret) before pushing here — provider secrets stay in the
+  // KV-only `apiKeys` field / device-local, never in D1 preferences. The client
+  // caps entry count + size before writing, so this can't bloat the blob.
+  'customLlms',
 ]);
 
 function isInKernelAllowlist(field) {

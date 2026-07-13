@@ -185,18 +185,24 @@ def rule_education(cv, language, report):
             joined = str(it.get("deg", "")) + " " + str(it.get("sch", ""))
             if "FVU" in joined:
                 da = language == "da"
+                before = (it.get("deg"), it.get("sch"))
                 if it.get("deg", "").startswith("FVU"):
                     it["deg"] = "FVU Dansk"
                 if "KVUC" in str(it.get("sch", "")):
                     it["sch"] = "KVUC, i gang" if da else "KVUC, ongoing"
-                report.append("education: FVU line compressed")
+                # report only on ACTUAL change - idempotent re-runs were
+                # logging "compressed" on every app (2026-07-13 noise)
+                if (it.get("deg"), it.get("sch")) != before:
+                    report.append("education: FVU line compressed")
     # generic text fields still get the regex form (rich_block variants)
     for _p, holder, key, text in list(_txt_fields({"cv": cv})):
         if isinstance(text, str) and _FVU.search(text):
             short = _FVU_SHORT.get("da" if language == "da" else "en")
             new = _FVU.sub(short, text).strip(" .")
-            holder[key] = new if new.endswith(short) or short in new else short
-            report.append("education: FVU line compressed")
+            new = new if new.endswith(short) or short in new else short
+            if new != text:
+                holder[key] = new
+                report.append("education: FVU line compressed")
 
 
 def rule_line_compress(root, report):
@@ -260,10 +266,11 @@ def rule_core_comp(cv, jd, report):
     #     target cap, but keep at least 12 chars of meaning.
     _lcap = int((_G.get("caps") or {}).get("table_label_max_chars", 28))
     _lhard = int((_G.get("caps") or {}).get("table_label_hard_chars", 34))
+    _lmap = {k: v for k, v in ((_G.get("compressions_labels") or {}).items()) if not k.startswith("_")}
     _hdr = str((sec["rows"][0][0] if sec["rows"] and sec["rows"][0] else "") or "").strip()
     for row in sec["rows"][1:]:
         lab = str(row[0] or "")
-        newlab = lab
+        newlab = _lmap.get(lab, lab)   # site synonym map first (lever 1b)
         if _hdr and newlab.lower().startswith(_hdr.lower() + ":"):
             newlab = newlab[len(_hdr) + 1:].strip()
         if len(newlab) > _lhard:
@@ -347,6 +354,12 @@ def rule_results_numeric(cv, kernel, jd_text_for_partner, report, language="en")
 
 
 _DANGLING_ENUM = re.compile(r",\s*[\w&/-]+\s*,\s*[\w&/-]+\s*\.\s*$")
+# never-final words from the control site (fallback = the same list inline);
+# shared by the detector AND the deterministic connector-trim fallback
+_NEVER_FINAL = set((_G.get("sentence_health") or {}).get("never_final_words")
+                   or ["and", "or", "og", "eller", "samt", "med", "the", "a", "an",
+                       "und", "from", "into", "of", "under", "across", "versus",
+                       "via", "toward", "towards", "fra", "af", "mod"])
 
 def _prose_issues(text, language):
     issues = []
@@ -362,10 +375,7 @@ def _prose_issues(text, language):
     # ("...risks identified and traceable from." is a truncation; "act on."
     # stays valid relative-clause English)
     last = t.rstrip(".!?").split()[-1].lower() if t.rstrip(".!?").split() else ""
-    if last in {"and", "or", "og", "eller", "samt", "med", "the", "a", "an", "und",
-                "from", "into", "of", "under", "across", "versus", "via", "toward",
-                "towards", "fra", "af", "mod"} \
-       and not t.rstrip().endswith(":"):
+    if last in _NEVER_FINAL and not t.rstrip().endswith(":"):
         issues.append("ends on a dangling connector/truncation")
     return issues
 
@@ -433,6 +443,22 @@ def rule_cl_prose(cl, cv, kernel_facts, language, report, use_llm=True):
         report.append(f"prose: repaired ({'; '.join(t['issues'])})")
     for i, t in enumerate(targets):
         if f"p{i}" not in accepted:
+            # DETERMINISTIC FALLBACK (owner 2026-07-13, 808/790: the LLM
+            # repair can fail its own gates): a sentence ending on trailing
+            # never-final connectors is honestly fixable by TRIMMING them
+            # back to the clause boundary - no fabrication, always clean.
+            txt = t["text"]
+            _nf = _NEVER_FINAL | DF._CONNECTORS.get(language, set()) | DF._CONNECTORS["en"]
+            words = txt.rstrip(" .").split()
+            trimmed = 0
+            while words and words[-1].lower().strip(",;") in _nf:
+                words.pop()
+                trimmed += 1
+            if trimmed and len(words) >= 5:
+                new = " ".join(words).rstrip(",;") + "."
+                t["holder"][t["key"]] = new
+                report.append(f"prose: repaired by connector trim (-{trimmed}w) — …{new[-50:]}")
+                continue
             report.append(f"prose: UNREPAIRED ({'; '.join(t['issues'])}) — …{t['text'][-50:]}")
 
 
@@ -467,7 +493,8 @@ def rule_bullet_periods(cv, report):
 # Normalize to the canonical shape its siblings use: "Title - Authors,
 # Journal, Year" (ASCII hyphen only, no colon) so the splitter leaves it whole.
 _PUB_JOURNAL_FIRST = re.compile(
-    r"^([A-Z][^,:]{3,60}),\s*((?:19|20)\d\d)\s*[-\u2013\u2014]\s*(.+)$")
+    # year forms: "Journal, 2010 - ..." AND "Journal (2010) - ..." (806 variant)
+    r"^([A-Z][^,:()]{3,60})\s*[,(]\s*((?:19|20)\d\d)\)?\s*[-\u2013\u2014]\s*(.+)$")
 
 def _canon_pub(item):
     m = _PUB_JOURNAL_FIRST.match(str(item).strip())

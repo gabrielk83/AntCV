@@ -773,18 +773,11 @@ def main():
     args = ap.parse_args()
 
     gr = MD._gen_runner()
-    c, resp = gr._req(gr.RELAY, f"/api/applications/{args.app}")
-    if c != 200:
-        sys.exit(f"app fetch failed: {c}")
-    a = resp.get("application") or resp
-    def _j(v): return json.loads(v) if isinstance(v, str) else (v or [])
-    cv, cl = _j(a.get("cv_sections")), _j(a.get("cl_sections"))
+    # EXPORT-PARITY: the fit must render EXACTLY what exports render — the
+    # full fixture styleConfig (brand fonts/colors) wraps differently and hid
+    # 793's cell cascade from this CLI while the export audit saw it
+    cv, cl, pi, sc, meta, language, a = MD.job_context_for_app(args.app)
     kernel = gr.load_kernel()
-    pi = gr._pi_from_kernel(kernel, a.get("subtitle") or "")
-    meta = {"subtitle": a.get("subtitle") or "", "role": a.get("jd_role") or "",
-            "company": a.get("jd_company") or ""}
-    language = a.get("jd_language") or "en"
-    sc = gr._export_style_config()
 
     facts = kernel_digest(kernel, extra=str(a.get("supporting_context") or ""))
     cv2, cl2, out = fit_density(cv, cl, pi, sc, meta, language, doc=args.doc,
@@ -797,8 +790,12 @@ def main():
         json.dump({k: out.get(k) for k in ("before", "after", "log", "rewrites", "pinned")},
                   open(args.json, "w", encoding="utf-8"), indent=1, ensure_ascii=False)
     if args.apply and out["after"] and out["before"] and \
-       (out["after"].get("defect_count", out["after"]["runt_count"])
-        < out["before"].get("defect_count", out["before"]["runt_count"])):
+       ((out["after"].get("defect_count", out["after"]["runt_count"])
+         < out["before"].get("defect_count", out["before"]["runt_count"]))
+        # an accepted tableRatio is already self-gated (cascade cleared AND
+        # the value column held) - persist it even when the OVERALL defect
+        # count merely holds steady (793: the gate blocked the ladder's fix)
+        or out.get("table_ratio")):
         # NARROW-CELL-CASCADE-001: an accepted tableRatio lives ON the table
         # section inside cv_sections, so this PUT persists it by itself
         c2, b2 = gr._req(gr.RELAY, f"/api/applications/{args.app}", "PUT",

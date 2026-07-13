@@ -12,6 +12,18 @@ another routine. **They are all bound by the same discipline** (`CLAUDE.md` § S
 > the claimed range; (4) `node scripts/shift.mjs release` at the end. A routine that only reads,
 > or only writes data/docs, may skip the claim but still SYNCs FIRST and never force-pushes.
 > `node scripts/shift.mjs status` reads origin, so it is correct even from a dirty tree.
+>
+> **(5) END-OF-RUN REGISTER REPORTING (owner 2026-07-13, mandatory for every agent-driven
+> routine).** Before the run ends, write its outcome into the repo registers and push:
+> advance/refresh every touched row in `docs/qa/OPEN_REGISTER.md` (bugs + tasks — add a row for
+> any NEW bug or task the run discovered); log every code fix in `docs/qa/ACTIVE_BUGS.md` (top
+> block); register any feature shipped or advanced in `docs/FEATURES_REGISTRY.md`; and update any
+> other register the run touched (dated NIGHTLY/SESSION report, COST_QUALITY log, etc.). Commit +
+> push the register edits with the work (docs-only edits need no shift claim, but SYNC FIRST). A
+> run whose outcome lives only in chat is NOT complete. Non-agent routines (the GitHub weekly
+> security audit, the relay 5-min health cron, the demo-proxy model-freshness cron) are scripts
+> and cannot write registers — the next agent nightly's standing register sweep transcribes any
+> finding they surface into OPEN_REGISTER/ACTIVE_BUGS.
 
 Each routine's own prompt/config (in the scheduled-tasks store, outside the repo) should point
 at this file so the rule travels with it. The authoritative live list of triggers is the

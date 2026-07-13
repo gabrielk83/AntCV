@@ -244,3 +244,10 @@ sections — **CLOSED this run** (item + ID + version + how verified) and **OPEN
 can't do"). Also refresh `docs/qa/NEXT_SESSION_PROMPT.md` so the next run/session starts from the
 current open queue. Commit + push these docs with the code. A run is not "done" until the open/closed
 state is written down — never leave the status only in chat.
+
+**END-OF-RUN REGISTER REPORTING (owner 2026-07-13 — standing rule 5 in
+`docs/qa/SCHEDULED_ROUTINES.md`, applies to this routine too):** in the same end-of-run commit,
+(a) advance/refresh every `docs/qa/OPEN_REGISTER.md` row the run touched and ADD a row for any new
+bug/task discovered; (b) log every code fix in `docs/qa/ACTIVE_BUGS.md` (top block); (c) register
+any feature shipped or advanced in `docs/FEATURES_REGISTRY.md`. The session log above is the
+narrative; these three registers are the canonical state — update BOTH.

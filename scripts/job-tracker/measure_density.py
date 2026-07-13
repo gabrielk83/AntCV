@@ -542,14 +542,11 @@ def cloud_photo():
     exports shipped with no figure). Fetched once per process."""
     return _cloud_prefs()["photo"]
 
-def payload_for_app(app_id, doc="cv"):
-    """Fetch a live application and build its byte-exact worker payload.
-    EXPORT-PARITY-001 (owner 2026-07-13, "no figure and no signature" + Danish
-    slogan leak): the job now carries the cloud photo, the app's OWN meta
-    (slogan and the rest — the fixture's global Danish banner slogan was
-    leaking onto English exports), and the stored subtitle. The signature
-    image exists only in the owner's live browser (not cloud/kernel) — CL
-    exports fall back to the typed sign-name until it is captured."""
+def job_context_for_app(app_id):
+    """The export-parity pieces for a live application: (cv, cl, pi, sc, meta,
+    language, a). ONE builder for payload_for_app AND the density_fit CLI —
+    793's cascade was invisible to the CLI because it rendered with the FULL
+    fixture styleConfig (brand fonts/colors) instead of this parity context."""
     gr = _gen_runner()
     c, resp = gr._req(gr.RELAY, f"/api/applications/{app_id}")
     if c != 200:
@@ -592,9 +589,20 @@ def payload_for_app(app_id, doc="cv"):
         # single persisted key like the cascade-fix tableRatio must not strip
         # the rest of the geometry)
         sc = {**sc, **app_sc}
+    return cv, cl, pi, sc, meta, (lang if lang in ("en", "da", "es", "zh") else "en"), a
+
+def payload_for_app(app_id, doc="cv"):
+    """Fetch a live application and build its byte-exact worker payload.
+    EXPORT-PARITY-001 (owner 2026-07-13, "no figure and no signature" + Danish
+    slogan leak): the job carries the cloud photo, the app's OWN meta
+    (slogan and the rest — the fixture's global Danish banner slogan was
+    leaking onto English exports), and the stored subtitle. The signature
+    image exists only in the owner's live browser (not cloud/kernel) — CL
+    exports fall back to the typed sign-name until it is captured."""
+    gr = _gen_runner()
+    cv, cl, pi, sc, meta, lang, a = job_context_for_app(app_id)
     job = {"sections": {"cv": cv, "cl": cl}, "personalInfo": pi, "styleConfig": sc,
-           "doc": doc, "meta": meta,
-           "language": lang if lang in ("en", "da", "es", "zh") else "en"}
+           "doc": doc, "meta": meta, "language": lang}
     photo = cloud_photo()
     if photo:
         job["photo"] = photo

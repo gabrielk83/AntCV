@@ -809,7 +809,7 @@ def _clean_cut(win):
     if t and t[-1] not in ".!?:)":
         t += "."
     return t
-def _cap_line(s, maxlen=155):
+def _cap_line(s, maxlen=148):
     """Limit a bullet/result to ~2 rendered lines, trimming at a clause or word
     boundary (owner: 'limit line lengths') — always a CLEAN, period-closed end."""
     s = (s or "").strip()
@@ -946,7 +946,7 @@ def _select_and_summarize(roles, jdkw, keep=6, language="en"):
     # reverse-chronological, Earlier career pinned last
     return sorted(result[:keep], key=lambda r: (1 if r.get("id") == "earlier-career" else 0, -_yr(r.get("years"))))
 
-def _fit_role(role, jdkw, max_bullets=3, cap=155):
+def _fit_role(role, jdkw, max_bullets=3, cap=148):
     bl = role.get("bullets") or []
     order = sorted(range(len(bl)), key=lambda i: -_rel(bl[i], jdkw))[:max_bullets]
     top = [bl[i] for i in sorted(order)]                        # keep original narrative order
@@ -999,7 +999,7 @@ def compact_jd_aware(cv, cl, jd, language="en"):
             roles = _select_and_summarize(_merge_roles(s["roles"]), jdkw, keep=6, language=language)
             for r in roles:
                 if r.get("id") != "earlier-career":            # keep the summary compact, verbatim
-                    _fit_role(r, jdkw, max_bullets=3, cap=155)
+                    _fit_role(r, jdkw, max_bullets=3, cap=148)
             s["roles"] = roles
             has_ec = any(r.get("id") == "earlier-career" for r in roles)
             cut.append(f"experience {n0}->{len(roles)} roles (merged + JD-ranked{', +Earlier career' if has_ec else ''}, <=3 bullets + result)")

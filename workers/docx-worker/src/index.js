@@ -27212,6 +27212,12 @@ function renderCompetencyTable(s, ctx) {
   const col1 = Math.round(tableW * (explicitRatio !== null ? explicitRatio : 0.25));
   const col2 = tableW - col1;
   const tableHeaderBg = style && style.tableHeaderBg || style.mainHeadColor;
+  // TABLE-HEADER-INK-WORKER-001 (owner 2026-07-13, CONTRAST-GUARD standing
+  // rule): the header text color was HARDCODED WHITE below — invisible on a
+  // pale tableHeaderBg (#DDE6F2) regardless of any client token, and a
+  // vision-impaired accessibility failure. Honour the forwarded
+  // style.tableHeaderText; fall back to the contrast-correct ink.
+  const tableHeaderInk = (style && style.tableHeaderText) || readableInk(tableHeaderBg);
   const border = { style: BorderStyle.SINGLE, size: 4, color: tableHeaderBg };
   const cellBorders = { top: border, bottom: border, left: border, right: border };
   const headerAlignT = rowAlignAt(s, 0) ?? alignType(s.headerAlign || "center");
@@ -27231,7 +27237,7 @@ function renderCompetencyTable(s, ctx) {
           alignment: headerAlignT,
           children: inlineRuns(cell, {
             bold: true,
-            color: "FFFFFF",
+            color: tableHeaderInk,
             size: pt2hp(fs.mainTblH),
             font: style.mainHeadFont
           })
@@ -28448,7 +28454,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.151-notice-ink";
+var VERSION = "1.14.152-table-header-ink";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

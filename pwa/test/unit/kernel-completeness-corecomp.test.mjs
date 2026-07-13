@@ -63,9 +63,18 @@ test('core_comp_rows with 4 data rows still passes', () => {
   assert.doesNotThrow(() => parseInCtx(output(4)));
 });
 
-test('core_comp_rows with 2 data rows STILL throws (floor is 3, not removed)', () => {
+// CORE-COMP-GUARD-MATRIX-001 (owner 2026-07-13 golden-matrix containment audit):
+// gold-rules.json caps.core_comp_data_rows = 2 and the gold prompt block
+// ("at most 2 rows") rides EVERY generation call — the old floor of 3 REJECTED
+// a matrix-compliant 2-row response as KERNEL_INCOMPLETE and burned retries.
+// The guard floor now sits AT the matrix ceiling: 2 rows pass, 1 row retries.
+test('core_comp_rows with 2 data rows PASSES (matrix cap is 2; floor aligned)', () => {
+  assert.doesNotThrow(() => parseInCtx(output(2)), 'a matrix-compliant 2-row table must not force a retry');
+});
+
+test('core_comp_rows with 1 data row throws (below the guard floor)', () => {
   let threw = null;
-  try { parseInCtx(output(2)); } catch (e) { threw = e; }
-  assert.ok(threw, 'a 2-row table should still be flagged incomplete');
+  try { parseInCtx(output(1)); } catch (e) { threw = e; }
+  assert.ok(threw, 'a 1-row table should be flagged incomplete');
   assert.match(String(threw.message || ''), /core_comp_rows/, 'the failure must cite core_comp_rows');
 });

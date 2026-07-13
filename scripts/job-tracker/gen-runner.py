@@ -903,7 +903,9 @@ def _select_roles(roles, jdkw, keep=6):
     chosen = forced + rest[:max(0, keep - len(forced))]
     return [t[0] for t in sorted(chosen, key=lambda t: -t[3])]  # reverse-chronological
 
-_EC_TITLE = {"en": "Earlier career", "da": "Tidligere karriere", "sv": "Tidigare karriär"}
+_EC_TITLE = {"en": "Earlier career", "da": "Tidligere karriere", "sv": "Tidigare karriär",
+             # ROLE-CANON-LANG-001: match gold-rules.json roles.canon_titles["earlier-career"]
+             "es": "Trayectoria inicial", "zh": "早期职业"}
 def _earlier_career(dropped, language="en"):
     """Collapse the dropped tail roles into ONE condensed 'Earlier career' entry
     (owner: never just drop the early roles). One compact line per role. Returns

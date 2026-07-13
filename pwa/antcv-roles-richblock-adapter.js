@@ -118,7 +118,76 @@
     return { roles: roles };
   }
 
+  // Translate a rich_block edit-path ["items", i, field] on an adapted section
+  // to the roles[] leaf-path the app's inline editor `p` already understands
+  // (the chimera uses ["roles", ri, "title"] etc.). Returns the roles path array
+  // or null. This is what makes the adapted rich_block view edit back into
+  // roles[] through the UNCHANGED onEdit handler — no writeBack array rebuild.
+  function rolesPathFor(sec, itemIndex, field) {
+    if (!sec || !sec.__fromRoles || !Array.isArray(sec.items)) return null;
+    var it = sec.items[itemIndex];
+    if (!it) return null;
+    var ri = it._ri;
+    if (ri == null) return null;
+    if (it.roleHead) {
+      if (field === 'role') return ['roles', ri, 'title'];
+      if (field === 'company') return ['roles', ri, 'company'];
+      if (field === 'years') return ['roles', ri, 'years'];
+      return null;
+    }
+    if (it._results) return ['roles', ri, 'results'];
+    if (it._bi != null) return ['roles', ri, 'bullets', it._bi];
+    return null;
+  }
+
+  // Render the 3-segment role line (role · company · years) + optional hr,
+  // matching the current chimera by default (owner "match current chimera"):
+  //   seg role    = bold + italic, mainSubHeadColor
+  //   seg company = normal weight + italic, mainCompanyColor
+  //   seg years   = italic, mainYearColor, right-aligned
+  //   hr          = 1px mainSubHeadColor under the role line
+  // Per-segment {color,bold,italic} overrides win when present (stage-2 editor).
+  // Kept in the sidecar so app.js only calls it (minimal minified-mirror surface).
+  // ctx = { B, P, T, k, s, exp, C }. React passed explicitly.
+  function renderRoleHead(React, ctx, row, i) {
+    var h = React.createElement;
+    var B = ctx.B, T = ctx.T, k = ctx.k || {}, s = ctx.s, exp = ctx.exp;
+    var segs = Array.isArray(row.seg) ? row.seg : [];
+    var roleSeg = segs[0] || {}, compSeg = segs[1] || {}, yearSeg = segs[2] || {};
+    var subColor = k.mainSubHeadColor || s;
+    var left = h('span', {
+      style: {
+        fontSize: exp, fontStyle: roleSeg.italic === false ? 'normal' : 'italic',
+        color: roleSeg.color || subColor, fontWeight: roleSeg.bold === false ? 400 : 700, fontFamily: T
+      }
+    },
+      h(B, { path: ['items', i, 'role'], value: roleSeg.t || '', placeholder: '[Role title]' }),
+      compSeg.t ? ', ' : '',
+      h('span', {
+        style: {
+          fontWeight: compSeg.bold ? 700 : 400,
+          color: compSeg.color || (k.mainCompanyColor || '#333333'),
+          fontStyle: compSeg.italic === false ? 'normal' : 'italic'
+        }
+      }, h(B, { path: ['items', i, 'company'], value: compSeg.t || '', placeholder: '[Company]' }))
+    );
+    var right = h('span', {
+      style: {
+        fontSize: exp, color: yearSeg.color || (k.mainYearColor || '#595959'),
+        fontStyle: yearSeg.italic === false ? 'normal' : 'italic', fontFamily: T, whiteSpace: 'nowrap'
+      }
+    }, h(B, { path: ['items', i, 'years'], value: yearSeg.t || '', placeholder: '[Years]' }));
+    return h('div', {
+      'data-antcv-row-path': 'items.' + i, 'data-antcv-role-head': '1',
+      style: { marginTop: 0 === i ? 0 : 6, marginBottom: 2 }
+    },
+      h('div', { style: { display: 'flex', justifyContent: 'space-between', flexWrap: 'nowrap', gap: 4, alignItems: 'baseline' } }, left, right),
+      row.hr !== false ? h('div', { style: { borderBottom: '1px solid ' + subColor, margin: '2px 0 2px' } }) : null
+    );
+  }
+
   window.AntcvRolesRichBlock = {
-    version: VERSION, isOn: isOn, adapt: adapt, writeBack: writeBack, FLAG: FLAG
+    version: VERSION, isOn: isOn, adapt: adapt, writeBack: writeBack,
+    rolesPathFor: rolesPathFor, renderRoleHead: renderRoleHead, FLAG: FLAG
   };
 })();

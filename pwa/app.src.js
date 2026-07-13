@@ -5965,6 +5965,33 @@
         );
       }
     }
+    // ROLES-AS-RICHBLOCK-001 (flag antcv:roles-richblock): render professional
+    // experience through the rich_block machinery (3-segment role-line group
+    // headings + native orphan handling). roles[] stays the stored shape; adapt
+    // to a rich_block VIEW for render, and translate the inline editor's
+    // items-path edits back to the roles[] leaf-paths the handler already uses
+    // (the chimera writes ["roles",ri,"title"] etc., so writeback is unchanged).
+    // Flag-off: this block is inert and behaviour is byte-identical.
+    try {
+      if (window.AntcvRolesRichBlock && window.AntcvRolesRichBlock.isOn() &&
+          e && "experience" === e.type && Array.isArray(e.roles)) {
+        const __rbSec = window.AntcvRolesRichBlock.adapt(e);
+        if (__rbSec && __rbSec.__fromRoles) {
+          const __rbEdit = p;
+          if (__rbEdit)
+            p = (pa, v) => {
+              try {
+                if (Array.isArray(pa) && "items" === pa[0]) {
+                  const __rp = window.AntcvRolesRichBlock.rolesPathFor(__rbSec, Number(pa[1]), pa[2]);
+                  if (__rp) return __rbEdit(__rp, v);
+                }
+              } catch (_) {}
+              return __rbEdit(pa, v);
+            };
+          e = __rbSec;
+        }
+      }
+    } catch (_) {}
     const D = (() => {
       var t, o, i, l;
       switch (e.type) {
@@ -6300,6 +6327,15 @@
               if (!row.grp && (/^\s*\[[\s\S]*\]\s*$/.test(String(row.t || "")) || (!String(row.t || "").trim() && e.headlineOff && row.b))) return null;
               // RICH-BLOCK-GROUP-001: a row flagged grp is a bold sub-heading (like labeled_list).
               if (row.grp) {
+                // ROLES-AS-RICHBLOCK-001: a role-line heading (3 styled segments
+                // role/company/years + optional hr) — rendered by the adapter
+                // sidecar so app.js only calls it (minimal minified surface).
+                if (row.roleHead && window.AntcvRolesRichBlock && window.AntcvRolesRichBlock.renderRoleHead) {
+                  return {
+                    key: String(i),
+                    node: window.AntcvRolesRichBlock.renderRoleHead(React, { B: B, P: P, T: T, k: k, s: s, exp: $.exp, C: C }, row, i),
+                  };
+                }
                 // GROUP-EMPTY-HIDE-001: no rendered child → hide the heading+label entirely.
                 if (!__grpHasChild(i)) return null;
                 return {

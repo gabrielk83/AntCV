@@ -26493,6 +26493,62 @@ function renderSection(s, ctx, isSidebar) {
       return out2;
     }
   }
+  // 1.14.153 ROLE-SPLIT-CONT-001 (owner 2026-07-13, OPEN_REGISTER row 87d): a SINGLE
+  // experience role with more bullets than fit one page overflows NATURALLY in the
+  // CloudConvert/LibreOffice render, stranding its tail bullets on the continuation
+  // page with NO "(CONT.)" section header — renderExperience only stamps CONT on
+  // WHOLE-role page increments (role.page), never mid-role, and the two-column
+  // splitter only ever sees TOP-LEVEL __antcvPB markers, so an in-cell overflow is
+  // invisible to it (verified against the real converter: a 22-bullet role put 13
+  // bullets on page 1 and 9 headerless bullets on page 2). Fix (worker half,
+  // safe-by-construction): honour a per-BULLET page map `role.bullet_pages`
+  // { bulletIndex: page } — mirroring the proven table row_pages / list _page split
+  // — by EXPANDING an over-long role into a head role + one continuation role per
+  // page boundary. The continuation roles carry an ABSOLUTE role.page and have their
+  // title/company/years CLEARED, so the existing experience chunker below turns each
+  // into a top-level "(CONT.)" segment under which only the remaining bullets render.
+  // INERT unless the client forwards bullet_pages: no current payload has this field,
+  // so every existing document renders byte-identically. The break POINT is chosen by
+  // the client measurer (the only component that knows page-1 fill) and forwarded
+  // here — the worker deliberately does NOT guess a split index (it has no height
+  // model; a guessed break risks a stranded head-overflow or an extra/blank page in
+  // this PDF-BLANK-PAGE-history area).
+  if (!s._antcvSegment && s.type === "experience" && Array.isArray(s.roles) &&
+      s.roles.some((r) => r && r.bullet_pages && typeof r.bullet_pages === "object")) {
+    const expanded = [];
+    for (const role of s.roles) {
+      const bp = role && role.bullet_pages && typeof role.bullet_pages === "object" ? role.bullet_pages : null;
+      const bl = Array.isArray(role && role.bullets) ? role.bullets.filter(Boolean) : null;
+      if (!bp || !bl || bl.length < 2) { expanded.push(role); continue; }
+      const basePage = (Number.isFinite(Number(role.page)) && Number(role.page) >= 2) ? Math.round(Number(role.page)) : 1;
+      const pageOf = (bi) => {
+        const n = Number(bp[String(bi)]);
+        return Number.isFinite(n) && n >= 2 && n <= 6 ? Math.round(n) : 1;
+      };
+      // Group bullets by MONOTONIC effective page (a later bullet can never sit on an
+      // earlier page than one above it), then emit one role per page group.
+      let run = 1; const groups = []; let cur = [];
+      for (let bi = 0; bi < bl.length; bi++) {
+        let p = pageOf(bi); if (p > run) run = p; else p = run;
+        if (cur.length && cur[0].p !== p) { groups.push(cur); cur = []; }
+        cur.push({ b: bl[bi], p });
+      }
+      if (cur.length) groups.push(cur);
+      if (groups.length < 2) { expanded.push(role); continue; }   // no real break -> untouched
+      groups.forEach((g, gi) => {
+        const nr = Object.assign({}, role, { bullets: g.map((x) => x.b) });
+        delete nr.bullet_pages;
+        if (gi === 0) {
+          // head keeps the role identity (+ any client whole-role break)
+        } else {
+          nr.title = ""; nr.company = ""; nr.years = "";
+          nr.page = Math.max(basePage + gi, g[0].p);   // strictly-increasing -> own CONT segment
+        }
+        expanded.push(nr);
+      });
+    }
+    s = Object.assign({}, s, { roles: expanded });
+  }
   // 1.14.39 PB-WORKER-TWOCOL-PAGED-001: an EXPERIENCE section that spans pages must
   // split into top-level segments too. Its role breaks otherwise live INSIDE the
   // section-wrapper body cell, invisible to the per-page column splitter (so the
@@ -28467,7 +28523,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.153-role-keep-whole";
+var VERSION = "1.14.154-role-split-cont";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.438-personal-dedup';
+const CACHE = 'antcv-1.51.458-remove-last-reset';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

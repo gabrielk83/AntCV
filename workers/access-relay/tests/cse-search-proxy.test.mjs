@@ -92,6 +92,14 @@ test('the real API keys are read from env (Worker secrets) and never appear as l
   assert.equal(/AIza[0-9A-Za-z_-]{20,}/.test(src), false, 'a real Google API key must never be committed to source');
 });
 
+test('CSE-PROXY-CX-DEAD-VAR-001: the cx honours the GOOGLE_CSE_ID secret, hardcoded value is only the fallback', () => {
+  const body = handlerBody();
+  assert.match(body, /const CSE_ID = env\.GOOGLE_CSE_ID \|\| '67ce5387bc18f4028';/);
+  // Same fix must hold on the /api/research Google fallback — no bare-literal
+  // assignment anywhere in the file.
+  assert.equal(/const CSE_ID = '67ce5387bc18f4028';/.test(src), false, 'no handler may ignore env.GOOGLE_CSE_ID');
+});
+
 test('num is clamped to 1..10 regardless of caller input (both backends share it)', () => {
   const body = handlerBody();
   assert.match(body, /const num = Math\.min\(10, Math\.max\(1, parseInt\(url\.searchParams\.get\('num'\), 10\) \|\| 10\)\);/);

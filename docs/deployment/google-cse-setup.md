@@ -173,7 +173,7 @@ workflow_dispatch, mode=deploy, confirm=access-relay. Until that deploy runs,
 production still serves the Google-only handler and still 403s. The Google
 Support case stays open — it now only affects the fallback path.
 
-## 7. KNOWN BUG (found 2026-07-10, still OPEN) — `GOOGLE_CSE_ID` secret is dead code
+## 7. FIXED BUG (found 2026-07-10, fixed 2026-07-13) — `GOOGLE_CSE_ID` secret was dead code
 
 `workers/access-relay/src/index.js`'s `/api/cse-search` handler does **not**
 read `env.GOOGLE_CSE_ID` at all — the `cx` value is a **hardcoded constant**:
@@ -201,10 +201,20 @@ Not fixed in this doc-only session (weekly demand-tuning runs don't touch
 Worker code) — flagged here + in `docs/qa/MASTER_BACKLOG.md` for a proper code
 session to pick up.
 
-**Note 2026-07-13:** with the Brave-first change in §6, the hardcoded `cx`
-(and `GOOGLE_CSE_ID`) only matter on the Google fallback path, which is dead
-in production while `BRAVE_API_KEY` is set. Bug stays open but drops in
-urgency.
+**FIXED 2026-07-13 (same PR as the §6 Brave-first change, relay
+`auth-33-cse-brave`):** both Google CSE call sites (`/api/cse-search` and the
+`/api/research` fallback) now read
+
+```js
+const CSE_ID = env.GOOGLE_CSE_ID || '67ce5387bc18f4028';
+```
+
+so `wrangler secret put GOOGLE_CSE_ID` works as §4 documents, and a rotated
+search engine is a secret update, not a deploy. The literal stays as the
+fallback for installs without the secret. Regression-locked in
+`workers/access-relay/tests/cse-search-proxy.test.mjs`. Same deploy gate as
+§6: not live until the manual access-relay deploy. Note the Google path only
+runs at all when `BRAVE_API_KEY` is unset (see §6).
 
 ---
 

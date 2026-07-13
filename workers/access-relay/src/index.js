@@ -4268,8 +4268,10 @@ const method = request.method;
       return jsonResponse({ error: 'no search backend: set BRAVE_API_KEY (preferred) or GOOGLE_CSE_KEY on the relay' }, 503, request, env);
     }
     // CSE ID is not sensitive (it's embedded in the public cse.js widget
-    // snippet Google itself generates) — safe as a plain constant.
-    const CSE_ID = '67ce5387bc18f4028';
+    // snippet Google itself generates). CSE-PROXY-CX-DEAD-VAR-001: the
+    // GOOGLE_CSE_ID secret takes precedence so a rotated engine is a secret
+    // update, not a deploy; the literal stays as the fallback.
+    const CSE_ID = env.GOOGLE_CSE_ID || '67ce5387bc18f4028';
     const gUrl = new URL('https://www.googleapis.com/customsearch/v1');
     gUrl.searchParams.set('key', env.GOOGLE_CSE_KEY);
     gUrl.searchParams.set('cx', CSE_ID);
@@ -4346,7 +4348,7 @@ const method = request.method;
 
     // Fallback backend: Google CSE (needs GOOGLE_CSE_KEY + a provisioned project).
     if (!env.GOOGLE_CSE_KEY) return jsonResponse({ error: 'no search backend: set BRAVE_API_KEY (preferred) or GOOGLE_CSE_KEY on the relay' }, 503, request, env, refresh);
-    const CSE_ID = '67ce5387bc18f4028';
+    const CSE_ID = env.GOOGLE_CSE_ID || '67ce5387bc18f4028'; // CSE-PROXY-CX-DEAD-VAR-001: secret wins, literal is fallback
     const gUrl = new URL('https://www.googleapis.com/customsearch/v1');
     gUrl.searchParams.set('key', env.GOOGLE_CSE_KEY);
     gUrl.searchParams.set('cx', CSE_ID);

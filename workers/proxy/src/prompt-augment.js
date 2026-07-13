@@ -620,10 +620,12 @@ export async function augmentBodyTextAsync(bodyText, fetchImpl) {
   if (!task) return { bodyText, task: null, gold: false };
 
   applyTaskAugmentation(parsed, task);
-  let gold = false;
-  try {
-    const block = await fetchGoldRulesBlock(fetchImpl);
-    if (block) { prependSystemBlock(parsed, block); gold = true; }
-  } catch { /* never block a generation on the gold fetch */ }
+  // PROXY-GOLD-RULES-DOUBLE-INJECT-001 (2026-07-13, core-comp-wipe regression):
+  // the client (antcv-bullet-targets.js) ALREADY injects the gold-rules prompt_block
+  // into the outgoing prompt. Prepending the SAME block again here double-injected a
+  // large rules block onto an already-huge system prompt and degraded field adherence
+  // (live gens dropped CORE COMPETENCIES). Disabled the proxy prepend — the client is
+  // the single injection site. Re-enable only WITH a dedup guard vs the client block.
+  const gold = false;
   return { bodyText: JSON.stringify(parsed), task, gold };
 }

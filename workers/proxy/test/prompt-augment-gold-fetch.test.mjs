@@ -33,14 +33,15 @@ function stubFetch(json, { ok = true } = {}) {
   return f;
 }
 
-test('served gold block is prepended on a detected CV task', async () => {
+test('proxy does NOT double-inject the gold block (client is the single site)', async () => {
+  // PROXY-GOLD-RULES-DOUBLE-INJECT-001: the client already injects prompt_block;
+  // the proxy must NOT prepend it again (it degraded field adherence / dropped core-comp).
   _resetGoldRulesCache();
   const { bodyText, task, gold } = await augmentBodyTextAsync(cvOutcomesBody(), stubFetch(GOLD_JSON));
-  assert.ok(task, 'a CV task is detected');
-  assert.equal(gold, true, 'gold block applied');
+  assert.ok(task, 'a CV task is still detected');
+  assert.equal(gold, false, 'gold block NOT applied by the proxy');
   const parsed = JSON.parse(bodyText);
-  assert.match(parsed.system, /RULE ONE: be concrete\./);
-  assert.match(parsed.system, /RULE TWO: no filler\./);
+  assert.doesNotMatch(parsed.system, /RULE ONE: be concrete\./, 'served gold rule not prepended');
   assert.match(parsed.system, /BASE SYSTEM PROMPT/, 'original system prompt survives');
 });
 

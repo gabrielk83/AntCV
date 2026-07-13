@@ -39,26 +39,58 @@ _SPORT_JD = re.compile(r"sport|rugby|coach|community|idr[æa]t|club|athlet", re.
 _RUGBY_CERT = re.compile(r"rugby|coaching|concussion", re.I)
 _YEAR_SUFFIX = re.compile(r"\s*[\(,]\s*(19|20)\d{2}\s*\)?\s*$")
 _NUM = re.compile(r"\d")
+# RESULTS-OUTCOME-METRIC-001 (owner 2026-07-13: "7-person EO/optics team at
+# the Sigma-Connectivity ODM site" is a role bullet, not a result). A Results
+# line must show a CHANGE metric — a percentage, multiplier, from→to, a
+# time/volume/money delta — not merely contain a digit (team sizes, years and
+# site counts are descriptors).
+_CHANGE_METRIC = re.compile(
+    r"%|×|x\d|→|->| to \d|\d\s*(?:days?|dage|weeks?|months?|hours?|hrs?|units?|percent|pct)"
+    r"|\$\s?\d|\d\s?(?:M|K|mio\.?|mn)\b|DKK|EUR|USD|NIS", re.I)
+# Partner/ODM names only with a strong JD signal (owner 2026-07-13: "do not
+# mention Sigma-Connectivity directly if no strong signal").
+_PARTNER_NAMES = [("Sigma-Connectivity", "an ODM partner"), ("Sigma Connectivity", "an ODM partner")]
 
-# R3 — owner-specified exact compressions (en + da forms)
+def _is_outcome(text):
+    return bool(_NUM.search(text)) and bool(_CHANGE_METRIC.search(text))
+
+# R3 — owner-specified compressions. SHAPE LESSON (owner caught it twice):
+# interests are rich_block {b: label, t: value} SPLITS and additional is a
+# labeled_list {l, v} — full-line pairs never match, so every pair here is a
+# SUBSTRING of the VALUE field alone (label + URL survive around it).
 LINE_COMPRESS = [
-    ("Cultural exchange: Languages, food culture and board games",
-     "Cultural exchange: languages, food, board games"),
     ("Languages, food culture and board games shared with friends",
-     "languages, food, board games"),
-    ("Reading: Technology, society and systems thinking",
-     "Reading: technology and systems thinking"),
+     "Languages, food, board games"),
+    ("Languages, food culture and board games", "Languages, food, board games"),
     ("Technology, society and systems thinking books and essays",
-     "technology and systems thinking"),
-    ("Reading Teknologi, samfund og systemtænkning",
-     "Reading Teknologi og systemtænkning"),
-    ("Research outputs: Details available via Google Scholar",
-     "Research outputs: via Google Scholar"),
-    ("Details available via Google Scholar",
-     "via Google Scholar"),
-    ("Forskningsresultater: Detaljer tilgængelige via Google Scholar",
-     "Forskningsresultater: via Google Scholar"),
+     "Technology and systems thinking"),
+    ("Technology, society and systems thinking", "Technology and systems thinking"),
+    ("technology, society and systems thinking", "technology and systems thinking"),
+    ("Teknologi, samfund og systemtænkning", "Teknologi og systemtænkning"),
+    ("Stability and calm under pressure", "Calm under pressure"),
+    # owner wording 2026-07-13: keep "Details", drop "available".
+    ("Details available via Google Scholar", "Details via Google Scholar"),
+    ("Detaljer tilgængelige via Google Scholar", "Detaljer via Google Scholar"),
 ]
+# R3b — the rugby interests line on a DENMARK-context application must carry
+# "at Pan Idræt (foreningsarbejde)" (conditional-Danish; the fresh NVIDIA
+# generation dropped it). Restored from the kernel-standard wording.
+_DK_CONTEXT = re.compile(r"denmark|danmark|copenhagen|københavn|roskilde|farum|odense|aarhus|jutland", re.I)
+
+def _restore_forening(cv, jd, language, report):
+    if language != "da" and not _DK_CONTEXT.search(jd or ""):
+        return
+    for sec in cv:
+        if sec.get("id") != "interests" or not isinstance(sec.get("items"), list):
+            continue
+        for it in sec["items"]:
+            if not isinstance(it, dict):
+                continue
+            b, t = str(it.get("b", "")), str(it.get("t", ""))
+            if re.search(r"rugby", b + " " + t, re.I) and "foreningsarbejde" not in (b + t) \
+               and re.match(r"^Team operations\b(?! at Pan)", t):
+                it["t"] = t.replace("Team operations", "Team operations at Pan Idræt (foreningsarbejde)", 1)
+                report.append("interests: Pan Idræt (foreningsarbejde) restored (DK context)")
 # R2 — the FVU verbosity class
 _FVU = re.compile(r"FVU\s+Dansk[^.]*(?:KVUC|Voksenundervisning)[^.]*\.?(\s*Danish adult preparatory education\.?)?", re.I)
 _FVU_SHORT = {"en": "FVU Dansk (KVUC), ongoing", "da": "FVU Dansk (KVUC), i gang"}
@@ -197,12 +229,14 @@ def rule_core_comp(cv, jd, report):
     gr = MD._gen_runner()
     jdkw = gr._jd_kw(jd or "")
     rows = sec["rows"]
-    if len(rows) > 5:                        # header + 4
+    # owner 2026-07-13 (NVIDIA review): "the table has 3!! rows - should have
+    # been 2" — keep only the TWO highest-impact rows.
+    if len(rows) > 3:                        # header + 2
         data = rows[1:]
         ranked = sorted(data, key=lambda r: -gr._rel(" ".join(map(str, r)), jdkw))
-        keep = ranked[:4]
+        keep = ranked[:2]
         sec["rows"] = [rows[0]] + [r for r in data if r in keep]
-        report.append(f"core_comp: rows {len(data)} -> 4 by JD relevance")
+        report.append(f"core_comp: rows {len(data)} -> 2 by JD relevance")
     fixed = 0
     for row in sec["rows"][1:]:
         for ci in range(1, len(row)):       # labels (c0) stay untouched
@@ -214,7 +248,7 @@ def rule_core_comp(cv, jd, report):
         report.append(f"core_comp: {fixed} truncated cell tail(s) clause-completed")
 
 
-def rule_results_numeric(cv, kernel, report):
+def rule_results_numeric(cv, kernel, jd_text_for_partner, report):
     """R5: Results lines must carry a number — swap in the kernel's exact
     numeric result for the role when available, else flag."""
     gr = MD._gen_runner()
@@ -233,21 +267,32 @@ def rule_results_numeric(cv, kernel, report):
         return set(re.findall(r"[a-z]{3,}", str(s).lower()))
     for r in exp.get("roles") or []:
         res = str(r.get("results") or "")
-        if not res or _NUM.search(res):
-            continue
+        # RESULTS-OUTCOME-METRIC-001: "has a digit" is not enough — a team
+        # size / site descriptor is a bullet, not a result. Replace whenever
+        # the current line lacks a CHANGE metric.
+        if not res or _is_outcome(res):
+            if res:
+                continue
         rt = toks(str(r.get("title", "")) + " " + str(r.get("company", "")))
+        bullets_norm = {DF._norm(b).lower() for b in (r.get("bullets") or [])}
         best, bs = None, 0
         for label, cand in pool:
-            if not cand or not _NUM.search(cand):
-                continue
+            if not cand or not _is_outcome(cand):
+                continue                     # outcomes only, never descriptors
+            if DF._norm(cand).lower() in bullets_norm:
+                continue                     # never duplicate an existing bullet
             s = len(rt & toks(label)) if label else 0
             if s > bs:
                 best, bs = cand, s
         if best and bs >= 2:
+            # partner names only with a strong JD signal (owner 2026-07-13)
+            for pname, generic in _PARTNER_NAMES:
+                if pname.lower() in best.lower() and pname.lower() not in (jd_text_for_partner or "").lower():
+                    best = re.sub(re.escape(pname), generic, best, flags=re.I)
             r["results"] = best
-            report.append(f"results: numeric swap for '{str(r.get('title'))[:28]}' (kernel exact)")
+            report.append(f"results: outcome swap for '{str(r.get('title'))[:28]}' (kernel exact)")
         else:
-            report.append(f"results: NON-NUMERIC, no kernel match — '{str(r.get('title'))[:28]}' (flagged)")
+            report.append(f"results: NO CHANGE-METRIC, no kernel outcome match — '{str(r.get('title'))[:28]}' (flagged)")
 
 
 _DANGLING_ENUM = re.compile(r",\s*[\w&/-]+\s*,\s*[\w&/-]+\s*\.\s*$")
@@ -262,12 +307,15 @@ def _prose_issues(text, language):
         issues.append("dangling enumeration — the final list has no closing conjunction/noun")
     if re.match(r"^[a-zæøå]", t) and not t.startswith(("i ", "iPhone")):
         issues.append("paragraph starts lowercase")
-    # dangling CONJUNCTIONS/articles only — a final preposition is valid
-    # English in relative clauses ("decisions engineering can act on.")
+    # dangling CONJUNCTIONS/articles — and the NEVER-final prepositions
+    # ("...risks identified and traceable from." is a truncation; "act on."
+    # stays valid relative-clause English)
     last = t.rstrip(".!?").split()[-1].lower() if t.rstrip(".!?").split() else ""
-    if last in {"and", "or", "og", "eller", "samt", "med", "the", "a", "an", "und"} \
+    if last in {"and", "or", "og", "eller", "samt", "med", "the", "a", "an", "und",
+                "from", "into", "of", "under", "across", "versus", "via", "toward",
+                "towards", "fra", "af", "mod"} \
        and not t.rstrip().endswith(":"):
-        issues.append("ends on a dangling connector")
+        issues.append("ends on a dangling connector/truncation")
     return issues
 
 
@@ -337,6 +385,28 @@ def rule_cl_prose(cl, cv, kernel_facts, language, report, use_llm=True):
             report.append(f"prose: UNREPAIRED ({'; '.join(t['issues'])}) — …{t['text'][-50:]}")
 
 
+
+def rule_bullet_periods(cv, report):
+    """Owner screenshot 2026-07-13: bullets ending without terminal punctuation
+    ("...defence-grade products", "...optical microscopy") are visible leaks."""
+    n = 0
+    for sec in cv:
+        if sec.get("type") == "experience":
+            for r in sec.get("roles") or []:
+                bl = r.get("bullets") or []
+                for i, b in enumerate(bl):
+                    t = str(b).rstrip()
+                    if t and t[-1] not in ".!?:)":
+                        bl[i] = t + "."
+                        n += 1
+                res = str(r.get("results") or "").rstrip()
+                if res and res[-1] not in ".!?:)":
+                    r["results"] = res + "."
+                    n += 1
+    if n:
+        report.append(f"punctuation: {n} bullet/result terminal period(s) added")
+
+
 def apply_all(cv, cl, jd, kernel, language="en", use_llm=True):
     """Run every rule in place. Returns the report list."""
     report = []
@@ -345,7 +415,9 @@ def apply_all(cv, cl, jd, kernel, language="en", use_llm=True):
     rule_education(cv, language, report)
     rule_line_compress({"cv": cv, "cl": cl}, report)
     rule_core_comp(cv, jd, report)
-    rule_results_numeric(cv, kernel, report)
+    rule_results_numeric(cv, kernel, jd, report)
+    _restore_forening(cv, jd, language, report)
+    rule_bullet_periods(cv, report)
     rule_cl_prose(cl, cv, kernel_facts, language, report, use_llm=use_llm)
     return report
 

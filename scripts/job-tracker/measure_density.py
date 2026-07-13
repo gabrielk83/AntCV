@@ -443,9 +443,34 @@ def payload_for_app(app_id, doc="cv"):
     pi = gr._pi_from_kernel(kernel, a.get("subtitle") or "")
     meta = {**app_meta,
             "subtitle": a.get("subtitle") or "", "role": a.get("jd_role") or "",
-            "company": a.get("jd_company") or ""}
+            "company": a.get("jd_company") or "",
+            # buildPayload's CL chain reads meta.cl_slogan (the app row stores
+            # it as meta.slogan) — without this mapping the fixture's global
+            # Danish override was the only candidate
+            "cl_slogan": app_meta.get("slogan") or "",
+            # LOCALFORM-DA-CONDITIONAL-EXPORT-001: Denmark-based JD keeps the
+            # Danish contact forms (København) even on an English application
+            "jd_dk": bool(re.search(
+                r"denmark|danmark|copenhagen|københavn|roskilde|farum|odense|aarhus",
+                str(a.get("jd_text") or ""), re.I))}
     lang = a.get("jd_language") or "en"
-    sc = gr._export_style_config()
+    # BRANDFIT-LEAK-EXPORT-001 (owner 2026-07-13: "Teledyne brand is 10000%
+    # sure not that green"): the fixture styleConfig was captured with one
+    # company's SAMPLED brand palette active (NVIDIA green) and leaked onto
+    # every app — the per-app style_config storage is still the unshipped
+    # brandfit-per-app-scope branch. Keep the fixture's GEOMETRY tokens only;
+    # colors and fonts fall back to the neutral package palette. When an app
+    # carries its own meta.styleConfig (future), it wins outright.
+    sc_full = gr._export_style_config()
+    app_sc = app_meta.get("styleConfig")
+    if isinstance(app_sc, dict) and app_sc:
+        sc = app_sc
+    else:
+        _GEOMETRY = {"mainEdgeIndent", "bulletIndent", "bulletMarkerGap", "seamGap",
+                     "bodyEdgePad", "sidebarEdgePad", "mainSectionGap",
+                     "sidebarSectionGap", "bodySectionGap", "candidateGap",
+                     "expTense", "tableFirstColBold"}
+        sc = {k: v for k, v in (sc_full or {}).items() if k in _GEOMETRY}
     job = {"sections": {"cv": cv, "cl": cl}, "personalInfo": pi, "styleConfig": sc,
            "doc": doc, "meta": meta,
            "language": lang if lang in ("en", "da", "es", "zh") else "en"}

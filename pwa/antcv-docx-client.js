@@ -724,7 +724,14 @@ export function buildPayload({
     // LOCALFORM-DA-ONLY-001 (owner 2026-07-10): the Danish local form is only right
     // for a Danish-language application. For en/zh/etc. leave the city as written
     // (Copenhagen) so the language layer localizes it (zh -> 哥本哈根).
-    if (language !== 'da') return s.replace(/københavn/gi, 'Copenhagen');
+    // LOCALFORM-DA-CONDITIONAL-EXPORT-001 (owner 2026-07-13: "you removed
+    // København from the contact for an application in Denmark"): 1.51.367's
+    // conditional — Danish forms stay when the app is Danish OR the JD is
+    // DENMARK-BASED — never reached this export path. meta.jd_dk carries the
+    // Denmark-based signal (the headless harness derives it from the JD text;
+    // in-app callers may set it the same way).
+    const __dkJd = !!(meta && meta.jd_dk) && language !== 'zh';
+    if (language !== 'da' && !__dkJd) return s.replace(/københavn/gi, 'Copenhagen');
     if (!/copenhagen|københavn/i.test(s)) return s;
     s = s
       .replace(/copenhagen/gi, 'København')
@@ -895,6 +902,25 @@ export function buildPayload({
           // Latin-only slogan (e.g. the Danish standing line) must not beat
           // the app's own Chinese meta.cl_slogan. CJK-carrying overrides win.
           if (language === 'zh' && ov && !/[一-鿿]/.test(ov)) ov = '';
+          // CL-SLOGAN-STALE-OWNER-001 (owner 2026-07-13: the Danish standing
+          // line "JEG FORBINDER TEKNIK..." shipped on an ENGLISH NVIDIA CL).
+          // antcv-cl-slogan-fresh.js stamps OWNERSHIP (antcv:clSloganCtx =
+          // {v, app: "Company|Role"}); an override whose stamp belongs to a
+          // DIFFERENT app — or whose stamp doesn't match the value (unowned
+          // residue) — is STALE for a TARGETED app that carries its own
+          // generated meta.cl_slogan, and must not beat it. Unsolicited apps
+          // keep the standing motto (the sidecar's own rule).
+          try {
+            const smart0 = String((meta && meta.cl_slogan) || '').trim();
+            const co0 = String((meta && meta.company) || '').trim();
+            const targeted0 = !!co0 && !(window.__ANTCV_UNSOL_RE || /^unsolicited$/i).test(co0);
+            if (ov && smart0 && targeted0) {
+              const ctx = JSON.parse(localStorage.getItem('antcv:clSloganCtx') || 'null');
+              const cur = co0 + '|' + String((meta && meta.role) || '').trim();
+              const owned = ctx && ctx.v === ov && (!ctx.app || ctx.app === cur);
+              if (!owned) ov = '';
+            }
+          } catch (_) {}
           // SLOGAN-SMART-STATEMENT-001 (owner 2026-07-04): on a TARGETED app the
           // chain is override -> the gen's meta.cl_slogan (the smart statement) ->
           // NOTHING (slogan_hidden, so the WORKER's own subtitle fallback never

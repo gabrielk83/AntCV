@@ -299,8 +299,10 @@ def llm_refit(items, language="en", facts="", n_families=None):
         if it.get("feedback"):
             a["previous_attempt_failed"] = it["feedback"]
         asks.append(a)
-    user = ("Fix EACH item. Its rewritten text's TOTAL LENGTH IN CHARACTERS (count them, "
-            "including spaces and punctuation) must land inside ONE of the item's "
+    user = ("Fix EACH item and return TWO alternative rewrites per item (ids '<id>' and "
+            "'<id>b') — different phrasings, both inside a window; more shots at the "
+            "exact char budget. Each rewritten text's TOTAL LENGTH IN CHARACTERS (count "
+            "them, including spaces and punctuation) must land inside ONE of the item's "
             "rewritten_length_must_be_within_one_of windows [min,max]. A longer window "
             "means grow by elaborating from the item, role_facts, or the VERIFIED "
             "CANDIDATE FACTS; a shorter window means shrink using shorter synonyms with "
@@ -327,7 +329,8 @@ def llm_refit(items, language="en", facts="", n_families=None):
         except Exception:
             continue
         for row in out.get("items") or []:
-            it = by_id.get(row.get("id"))
+            # variant ids: '<id>b' is the model's second phrasing of '<id>'
+            it = by_id.get(row.get("id")) or by_id.get(str(row.get("id", "")).rstrip("b"))
             new = _norm(row.get("text"))
             if not it or not new:
                 continue
@@ -618,10 +621,12 @@ def fit_density(cv, cl, pi, style_config, meta, language, doc="cv",
                     trims.append((r, new))
                     continue
             cpl = cpl_of(r)
-            # Personality-carrying sections are GROW-ONLY: an LLM shrink there
-            # drops exactly the content the deliverable standards protect (the
-            # team joke, "(foreningsarbejde)", accessibility phrasing).
-            may_shrink = r["lines"] >= 2 and r["sec"] not in NO_TRIM_SECTIONS
+            # interests/accessibility are GROW-ONLY (the team joke,
+            # "(foreningsarbejde)", accessibility phrasing are protected).
+            # profile/work_style MAY shrink via the gated LLM (owner
+            # 2026-07-13: "the profile is still inflated") — deterministic
+            # trims stay banned for them (NO_TRIM_SECTIONS in the trim branch).
+            may_shrink = r["lines"] >= 2 and r["sec"] not in ("interests", "accessibility")
             # Experience items may grow from their ROLE's real facts (owner
             # spec: "expand only from facts already in the item/app") — hand
             # the role record to both the rewriter and the claim verifier.

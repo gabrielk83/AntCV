@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.382-photo-library';
+const CACHE = 'antcv-1.51.383-cl-slogan-owner';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

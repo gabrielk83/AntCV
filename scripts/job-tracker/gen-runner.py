@@ -46,6 +46,17 @@
 #        --kernel-file PATH | --out DIR | --provider anthropic | --dry (plan only, no LLM)
 import os, sys, json, time, argparse, urllib.request, urllib.error, urllib.parse, re, copy
 
+# GOLD-RULES-SITE-001: caps + banned words read from the single control site
+# (pwa/gold-rules.json); literals are fallbacks.
+try:
+    _GOLD = json.load(open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "pwa", "gold-rules.json"), encoding="utf-8"))
+except Exception:
+    _GOLD = {}
+_GOLD_CAPS = _GOLD.get("caps") or {}
+_BULLET_CAP = int(_GOLD_CAPS.get("bullet_chars", 148))
+_PARA_CAP = int(_GOLD_CAPS.get("paragraph_chars", 330))
+
+
 RELAY = os.environ.get("ANTCV_RELAY", "https://antcv-access-relay.karp-gabriel-a.workers.dev").rstrip("/")
 PROXY = os.environ.get("ANTCV_PROXY", "https://cv-proxy.karp-gabriel-a.workers.dev").rstrip("/")
 UA    = "Mozilla/5.0 (AntCV gen-runner)"
@@ -808,16 +819,6 @@ def _clean_cut(win):
     if t and t[-1] not in ".!?:)":
         t += "."
     return t
-# GOLD-RULES-SITE-001: caps + banned words read from the single control site
-# (pwa/gold-rules.json); literals are fallbacks.
-try:
-    _GOLD = json.load(open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "pwa", "gold-rules.json"), encoding="utf-8"))
-except Exception:
-    _GOLD = {}
-_GOLD_CAPS = _GOLD.get("caps") or {}
-_BULLET_CAP = int(_GOLD_CAPS.get("bullet_chars", 148))
-_PARA_CAP = int(_GOLD_CAPS.get("paragraph_chars", 330))
-
 def _cap_line(s, maxlen=None):
     """Limit a bullet/result to ~2 rendered lines, trimming at a clause or word
     boundary (owner: 'limit line lengths') — always a CLEAN, period-closed end."""

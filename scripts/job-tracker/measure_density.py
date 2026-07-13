@@ -386,23 +386,42 @@ def render_pdf(payload, timeout=150):
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return r.read()
 
-_CLOUD_PHOTO = {"loaded": False, "data": None}
+_CLOUD_PREFS = {"loaded": False, "photo": None, "sig": {}}
+
+def _cloud_prefs():
+    if not _CLOUD_PREFS["loaded"]:
+        _CLOUD_PREFS["loaded"] = True
+        try:
+            gr = _gen_runner()
+            c, b = gr._req(gr.RELAY, "/api/prefs")
+            prefs = (b or {}).get("prefs") or {}
+            v = prefs.get("photo")
+            if isinstance(v, str) and v.startswith("data:image") and len(v) > 1000:
+                _CLOUD_PREFS["photo"] = v
+            # SIGNATURE-CLOUD-BACKFILL-001: once the owner's browser backfills
+            # the signature to cloud prefs, headless exports carry it too —
+            # buildPayload reads these via the localStorage shim, so they are
+            # merged into the fixture store per run.
+            sig = {}
+            for cloud_key, ls_key in (("signatureB64", "antcv:signatureB64"),
+                                      ("signatureAlign", "antcv:signatureAlign"),
+                                      ("signatureSize", "antcv:signatureSize"),
+                                      ("signatureAspect", "antcv:signatureAspect"),
+                                      ("signatureHidden", "antcv:signatureHidden")):
+                sv = prefs.get(cloud_key)
+                if isinstance(sv, str) and sv:
+                    sig[ls_key] = sv
+            if sig.get("antcv:signatureB64", "").startswith("data:image"):
+                _CLOUD_PREFS["sig"] = sig
+        except Exception:
+            pass
+    return _CLOUD_PREFS
 
 def cloud_photo():
     """The candidate photo lives in cloud prefs (/photo, data-URL) — NOT in the
     kernel or the export fixture (EXPORT-PARITY-001, owner 2026-07-13: headless
     exports shipped with no figure). Fetched once per process."""
-    if not _CLOUD_PHOTO["loaded"]:
-        _CLOUD_PHOTO["loaded"] = True
-        try:
-            gr = _gen_runner()
-            c, b = gr._req(gr.RELAY, "/api/prefs")
-            v = ((b or {}).get("prefs") or {}).get("photo")
-            if isinstance(v, str) and v.startswith("data:image") and len(v) > 1000:
-                _CLOUD_PHOTO["data"] = v
-        except Exception:
-            pass
-    return _CLOUD_PHOTO["data"]
+    return _cloud_prefs()["photo"]
 
 def payload_for_app(app_id, doc="cv"):
     """Fetch a live application and build its byte-exact worker payload.
@@ -438,11 +457,32 @@ def payload_for_app(app_id, doc="cv"):
         raise RuntimeError("byte-exact payload build unavailable (fixture/node/module)")
     return payload, a
 
+_MERGED_SETTINGS = {"path": None}
+
+def _settings_path(gr):
+    """The fixture path, with cloud signature keys merged in when present
+    (the localStorage shim then serves them to buildPayload)."""
+    sig = _cloud_prefs()["sig"]
+    if not sig:
+        return gr._EXPORT_SETTINGS
+    if _MERGED_SETTINGS["path"] and os.path.exists(_MERGED_SETTINGS["path"]):
+        return _MERGED_SETTINGS["path"]
+    try:
+        import tempfile
+        store = json.load(open(gr._EXPORT_SETTINGS, encoding="utf-8"))
+        store.update(sig)
+        p = os.path.join(tempfile.gettempdir(), "antcv-export-settings-merged.json")
+        json.dump(store, open(p, "w", encoding="utf-8"))
+        _MERGED_SETTINGS["path"] = p
+        return p
+    except Exception:
+        return gr._EXPORT_SETTINGS
+
 def _build_doc(gr, job):
     """Like gen-runner._build_payload_exact but honouring job['doc']."""
     import subprocess
     mjs = gr._docx_client_mjs()
-    env = {**os.environ, "ANTCV_DOCX_CLIENT": mjs, "ANTCV_SETTINGS": gr._EXPORT_SETTINGS}
+    env = {**os.environ, "ANTCV_DOCX_CLIENT": mjs, "ANTCV_SETTINGS": _settings_path(gr)}
     p = subprocess.run(["node", gr._HARNESS], input=json.dumps(job).encode("utf-8"),
                        capture_output=True, timeout=60, env=env)
     if p.returncode != 0:

@@ -109,12 +109,31 @@
           var prefs = j && j.prefs && typeof j.prefs === 'object' ? j.prefs : null;
           if (!prefs) return;
           var applied = [];
+          // SIGNATURE-CLOUD-BACKFILL-001 (owner 2026-07-13: "make sure
+          // uploading a signature brings it to the cloud"): the boot seed
+          // (`lastSeen = snapshot()`) deliberately never re-pushes initial
+          // state — which meant a signature uploaded in a PAST session sat in
+          // localStorage forever without ever reaching the cloud (verified:
+          // relay round-trips signatureB64 fine; cloud simply never received
+          // it). On restore, any field present LOCALLY but ABSENT in the
+          // cloud response is pushed once as a backfill.
+          var backfill = {};
           MAP.forEach(function (m) {
             var lk = m[0], field = m[1], cloudVal = prefs[field];
-            if (cloudVal === undefined || cloudVal === null) return;
+            if (cloudVal === undefined || cloudVal === null) {
+              var local = raw(lk);
+              if (local != null && local !== '') backfill[field] = String(local);
+              return;
+            }
             if (raw(lk) != null) return; // present locally -> don't clobber a local edit
             try { localStorage.setItem(lk, String(cloudVal)); applied.push(field); lastSeen[lk] = raw(lk); } catch (_) {}
           });
+          if (Object.keys(backfill).length && typeof window._antcvCloudWrite === 'function') {
+            try {
+              window._antcvCloudWrite(backfill);
+              console.info('[cl-cloud-sync-extra] backfilled to cloud:', Object.keys(backfill).join(','));
+            } catch (_) {}
+          }
           applyAndNotify(applied);
         })
         .catch(function () { restored = false; });

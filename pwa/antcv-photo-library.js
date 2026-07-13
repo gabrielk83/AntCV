@@ -4,15 +4,19 @@
  *
  * A small library of saved profile photos (max 4), rendered as a thumbnail
  * strip inside the Profile Photo panel:
- *   - "＋ Add photos…" — its own multi-select file input; every picked image
- *     is stored in the library and the FIRST one is activated.
- *   - "☆ Save current" — snapshots the currently-active photo into the library.
+ *   - "＋ Add photos…" — the ONE upload control (PHOTO-BTN-FUSE-001, owner
+ *     2026-07-13): multi-select; every picked image is COMPRESSED to fit the
+ *     cloud entry cap, stored in the library, and the FIRST one is activated.
+ *     The native single-file "Change photo" button is hidden as redundant.
+ *     When the library is full, adding evicts the oldest entries.
  *   - click a thumbnail — ACTIVATE: the stored file is re-driven through the
  *     app's OWN hidden upload input (DataTransfer + change event), so the
  *     app's entire processing pipeline (square store, preview, cloud photo
  *     sync) runs exactly as for a manual upload. No app.js changes.
  *   - ✕ on a thumbnail — remove from the library (never touches the active
  *     photo).
+ *   - the native "Reset" button ALSO empties the library (the app already
+ *     restores the embedded default ant as the active photo).
  *
  * Storage: localStorage 'antcv:photoLibrary' = JSON [{id, ts, dataUrl}].
  * Cloud: round-trips through /api/prefs as the allowlisted 'photoLibrary'
@@ -28,7 +32,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.51.382';
+  var VERSION = '1.51.390';
   if (window.__antcvPhotoLibrary === VERSION) return;
   window.__antcvPhotoLibrary = VERSION;
 
@@ -118,28 +122,61 @@
       console.info('[photo-library] activated', entry.id);
     } catch (e) { console.warn('[photo-library] activate failed:', e); }
   }
+  // PHOTO-BTN-FUSE-001: adding IS saving — every picked image is shrunk under
+  // the cloud entry cap (downscale + JPEG re-encode) instead of being skipped.
+  function compressToCap(dataUrl, cb) {
+    if (!dataUrl) { cb(null); return; }
+    if (dataUrl.length <= MAX_ENTRY_BYTES) { cb(dataUrl); return; }
+    var img = new Image();
+    img.onload = function () {
+      try {
+        var w = img.width || 1, h = img.height || 1;
+        var scale = Math.min(1, 600 / Math.max(w, h));
+        var q = 0.85, out = '', guard = 0;
+        do {
+          var c = document.createElement('canvas');
+          c.width = Math.max(1, Math.round(w * scale));
+          c.height = Math.max(1, Math.round(h * scale));
+          var ctx = c.getContext('2d');
+          ctx.fillStyle = '#fff';                    // JPEG has no alpha channel
+          ctx.fillRect(0, 0, c.width, c.height);
+          ctx.drawImage(img, 0, 0, c.width, c.height);
+          out = c.toDataURL('image/jpeg', q);
+          scale *= 0.75; q = Math.max(0.5, q - 0.1);
+        } while (out.length > MAX_ENTRY_BYTES && ++guard < 6);
+        cb(out.length <= MAX_ENTRY_BYTES ? out : null);
+      } catch (_) { cb(null); }
+    };
+    img.onerror = function () { cb(null); };
+    img.src = dataUrl;
+  }
   function addFiles(fileList, thenActivateFirst) {
     var files = Array.prototype.slice.call(fileList || []);
     if (!files.length) return;
     var entries = lib();
     var first = null;
     var pendingReads = files.length;
+    function done() {
+      if (--pendingReads === 0) {
+        save(entries);
+        if (thenActivateFirst && first) activate(first);
+      }
+    }
     files.forEach(function (f, idx) {
       var rd = new FileReader();
       rd.onload = function () {
-        var dataUrl = String(rd.result || '');
-        if (dataUrl.length && dataUrl.length <= MAX_ENTRY_BYTES * 1.4) {
-          var entry = { id: Date.now().toString(36) + idx, ts: Date.now(), dataUrl: dataUrl };
-          entries = [entry].concat(entries).slice(0, MAX_ENTRIES);
-          if (!first) first = entry;
-        } else {
-          console.warn('[photo-library] skipped oversized image (', Math.round(dataUrl.length / 1024), 'KB )');
-        }
-        if (--pendingReads === 0) {
-          save(entries);
-          if (thenActivateFirst && first) activate(first);
-        }
+        compressToCap(String(rd.result || ''), function (dataUrl) {
+          if (dataUrl) {
+            var entry = { id: Date.now().toString(36) + idx, ts: Date.now(), dataUrl: dataUrl };
+            entries = [entry].concat(entries).slice(0, MAX_ENTRIES);
+            if (!first) first = entry;
+          } else {
+            console.warn('[photo-library] image could not be compressed under the cap; skipped');
+          }
+          done();
+        });
       };
+      rd.onerror = done;
       rd.readAsDataURL(f);
     });
   }
@@ -157,10 +194,6 @@
     }
     return null;
   }
-  function currentPhotoDataUrl(panel) {
-    var img = panel && panel.querySelector('img[src^="data:"]');
-    return img ? img.getAttribute('src') : null;
-  }
   function btn(label, title, onClick) {
     var b = document.createElement('button');
     b.type = 'button';
@@ -170,10 +203,22 @@
     b.addEventListener('click', function (ev) { ev.preventDefault(); ev.stopPropagation(); onClick(); });
     return b;
   }
+  // PHOTO-BTN-FUSE-001: "＋ Add photos…" covers the single-change case (first
+  // added photo becomes active), so the app's single-file "Change photo" button
+  // is redundant — hide it. Runs every render sweep because React re-creates
+  // the button on re-render.
+  function hideNativeChangePhoto(panel) {
+    var btns = panel.querySelectorAll('button');
+    for (var i = 0; i < btns.length; i++) {
+      var b = btns[i];
+      if ((b.textContent || '').trim() === 'Change photo' && b.style.display !== 'none') b.style.display = 'none';
+    }
+  }
   function render() {
     if (disabled()) return;
     var panel = findPanel();
     if (!panel || !panel.parentElement) return;
+    hideNativeChangePhoto(panel);
     var existing = panel.parentElement.querySelector('[' + STRIP_MARK + ']');
     var entries = lib();
     var sig = entries.map(function (e) { return e.id; }).join(',');
@@ -209,20 +254,14 @@
       strip.appendChild(wrap);
     });
 
-    if (entries.length < MAX_ENTRIES) {
-      var multi = document.createElement('input');
-      multi.type = 'file'; multi.accept = 'image/*'; multi.multiple = true;
-      multi.style.display = 'none';
-      multi.addEventListener('change', function () { addFiles(multi.files, true); multi.value = ''; });
-      strip.appendChild(multi);
-      strip.appendChild(btn('＋ Add photos…', 'Upload one or more photos into the library (first becomes active)', function () { multi.click(); }));
-      strip.appendChild(btn('☆ Save current', 'Keep the currently-active photo in the library', function () {
-        var cur = currentPhotoDataUrl(panel);
-        if (!cur) return;
-        if (lib().some(function (o) { return o.dataUrl === cur; })) return;
-        save([{ id: Date.now().toString(36), ts: Date.now(), dataUrl: cur }].concat(lib()).slice(0, MAX_ENTRIES));
-      }));
-    }
+    // Always offered — it is the ONE upload control now (PHOTO-BTN-FUSE-001).
+    // At MAX_ENTRIES, adding evicts the oldest entries (newest-first slice).
+    var multi = document.createElement('input');
+    multi.type = 'file'; multi.accept = 'image/*'; multi.multiple = true;
+    multi.style.display = 'none';
+    multi.addEventListener('change', function () { addFiles(multi.files, true); multi.value = ''; });
+    strip.appendChild(multi);
+    strip.appendChild(btn('＋ Add photos…', 'Upload one or more photos (saved to the library, compressed for cloud sync; first becomes active)', function () { multi.click(); }));
     panel.appendChild(strip);
   }
 
@@ -238,6 +277,19 @@
     setTimeout(restoreCloud, 3000);
     setInterval(pushCloud, 5000);
     new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+    // PHOTO-RESET-CLEAR-001 (owner 2026-07-13): the panel's native "Reset"
+    // restores the embedded default ant as the active photo; it must ALSO
+    // empty the library. Capture-phase so it fires even though React handles
+    // the click itself.
+    document.addEventListener('click', function (ev) {
+      try {
+        var b = ev.target && ev.target.closest ? ev.target.closest('button') : null;
+        if (!b || (b.textContent || '').trim() !== 'Reset') return;
+        var panel = findPanel();
+        if (!panel || !(panel.contains(b) || (panel.parentElement && panel.parentElement.contains(b)))) return;
+        if (lib().length) save([]);
+      } catch (_) {}
+    }, true);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 

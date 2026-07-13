@@ -256,6 +256,14 @@ def rule_core_comp(cv, jd, report):
         keep = ranked[:_cap_rows]
         sec["rows"] = [rows[0]] + [r for r in data if r in keep]
         report.append(f"core_comp: rows {len(data)} -> {_cap_rows} by JD relevance")
+    # owner 2026-07-13 round 2: the table must carry 3-4 rows, not 2. This is a
+    # GENERATION requirement (a real competency + its expertise prose can't be
+    # fabricated deterministically) — flag under-count so it is never silently
+    # shipped; the fix is regenerating the table, not padding it here.
+    _min_rows = int((_G.get("caps") or {}).get("core_comp_data_rows_min", 3))
+    _ndata = len(sec.get("rows", [])) - 1
+    if 0 < _ndata < _min_rows:
+        report.append(f"core_comp: ONLY {_ndata} rows (<{_min_rows}) — NEEDS TABLE REGEN (cannot fabricate a competency)")
     # NARROW-CELL-CASCADE-001 lever 1 (persist-time, render-free). Two
     # deterministic compressions only - anything subtler is the measured
     # ladder's job (density_fit) so valid 2-line labels are never mutilated:
@@ -461,6 +469,43 @@ def rule_cl_prose(cl, cv, kernel_facts, language, report, use_llm=True):
                 continue
             report.append(f"prose: UNREPAIRED ({'; '.join(t['issues'])}) — …{t['text'][-50:]}")
 
+
+
+def compress_slogan(slogan, language, report, use_llm=True):
+    """SLOGAN-WORD-CAP-001 (owner 2026-07-13): a CL slogan must be <= max_words
+    (site slogan.max_words, default 9) so it never wraps. Prefer a clean clause
+    cut; fall back to an LLM condensation (kernel-safe, no new claims). Returns
+    the compressed slogan or the original when already short/uncompressable."""
+    t = str(slogan or "").strip()
+    if not t:
+        return t
+    maxw = int(((_G.get("slogan") or {}).get("max_words")) or 9)
+    if len(t.split()) <= maxw:
+        return t
+    # clean clause cut first (deterministic, no fabrication)
+    for sep in (",", ";", " - ", " – ", " — ", ":"):
+        i = t.find(sep)
+        if i > 0:
+            head = t[:i].strip()
+            if 4 <= len(head.split()) <= maxw:
+                report.append(f"slogan: clause-cut to {len(head.split())}w — '{head}'")
+                return head
+    if not use_llm:
+        report.append(f"slogan: {len(t.split())}w OVER cap, no clean clause cut (flagged)")
+        return t
+    sys_p = ("Condense this CV cover-letter slogan to at most %d words while keeping "
+             "its exact meaning and tone. No new facts, no dashes, no banned filler. "
+             "Return ONLY the slogan text, nothing else." % maxw)
+    try:
+        out = DF._post_llm("anthropic", DF.LLM_MODEL, sys_p, t, max_tokens=60).strip().strip('"“”')
+        out = out.split("\n")[0].strip()
+        if out and 3 <= len(out.split()) <= maxw and not any(c in out for c in "—–‐‑"):
+            report.append(f"slogan: LLM-condensed {len(t.split())}w -> {len(out.split())}w — '{out}'")
+            return out
+    except Exception as e:
+        report.append(f"slogan: condense call failed ({str(e)[:50]}) — flagged")
+    report.append(f"slogan: {len(t.split())}w OVER cap, uncompressed (flagged)")
+    return t
 
 
 def rule_bullet_periods(cv, report):

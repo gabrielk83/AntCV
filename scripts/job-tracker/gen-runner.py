@@ -1383,12 +1383,29 @@ def _format_spec(text, language):
     if not parts:
         return _STANDING_SPEC.get(language, _STANDING_SPEC["en"])
     return " • ".join(parts[:3])
+def _cap_slogan_words(t, maxw=9):
+    """SLOGAN-WORD-CAP-001 (owner 2026-07-13, app 810 was 12 words and wrapped):
+    a CL slogan must be <= maxw words so it never slides to a 2nd line. Prefer a
+    clean clause cut (the first comma/dash/semicolon segment when it is 4..maxw
+    words) over a hard word-count truncation."""
+    words = t.split()
+    if len(words) <= maxw:
+        return t
+    for sep in (",", ";", " - ", " – ", " — ", ":"):
+        i = t.find(sep)
+        if i > 0:
+            head = t[:i].strip()
+            if 4 <= len(head.split()) <= maxw:
+                return head
+    return " ".join(words[:maxw]).rstrip(",;:- ")
+
 def _format_slogan(text):
     t = sanitize_text((text or "").strip()).strip(" .\"'")
     t = (t.split("\n")[0]).strip()
     if not t or _is_scaffold(t):
         return ""
-    return _cap_line(t, 90)
+    _maxw = int(((_GOLD.get("slogan") or {}).get("max_words")) or 9)
+    return _cap_slogan_words(_cap_line(t, 90), _maxw)
 
 def persist_application(doc, r, res, category, language, kernel=None, measure=False, max_pages=2):
     """POST a real application, PUT a FULL me()-shaped section set (sidebar +

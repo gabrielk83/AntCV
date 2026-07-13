@@ -287,9 +287,10 @@ def _table_cell_scan(doc, payload, report):
     _cml = int((_GD.get("cell_max_lines") or 2))
     _nrm = lambda s: _re.sub(r"[^\w&+/%.,]", "", str(s).lower())
 
+    words_by_page = [list(doc[pno].get_text("words")) for pno in range(doc.page_count)]
     bands_by_page = []
-    for pno in range(doc.page_count):
-        ws = sorted(doc[pno].get_text("words"), key=lambda w: (w[1], w[0]))
+    for ws in words_by_page:
+        ws = sorted(ws, key=lambda w: (w[1], w[0]))
         bands = []
         for w in ws:
             if bands and abs(w[1] - bands[-1][0]) <= 3.0:
@@ -300,51 +301,82 @@ def _table_cell_scan(doc, payload, report):
             b[1].sort(key=lambda w: w[0])
         bands_by_page.append(bands)
 
-    def _cell_lines(text):
-        toks = [_nrm(t) for t in str(text).split() if _nrm(t)]
-        if not toks:
+    _alnum = lambda s: _re.sub(r"[^0-9a-zÀ-ɏ一-鿿]", "", str(s).lower())
+
+    def _cell_lines(text, anchor, right_bound):
+        """Count the rendered lines a left-aligned cell spans. HYPHENATION-ROBUST
+        + COLUMN-ISOLATED (2026-07-13, app 810 "Optical & electro-optical
+        engineering": LibreOffice hyphenates "electro-optical" into
+        "electro-"+"optical", AND other columns/sections interleave at the same
+        y). Method: keep only words in the cell's column x-band [anchor,
+        right_bound), re-band THOSE into y-lines (interleaved columns vanish),
+        find a start line whose text is a prefix of the alnum-collapsed target,
+        accumulate DOWNWARD until the alnum string matches. Alnum-collapse
+        ignores hyphen splits and spacing."""
+        target = _alnum(text)
+        if not target:
             return None
-        best = None
-        for bands in bands_by_page:
-            for bi, (y, bws) in enumerate(bands):
-                for wi, w in enumerate(bws):
-                    if _nrm(w[4]) != toks[0]:
-                        continue
-                    anchor = w[0]
-                    ti, cb, cw, used = 1, bi, wi + 1, 1
-                    ok = True
-                    while ti < len(toks):
-                        if cw < len(bands[cb][1]) and _nrm(bands[cb][1][cw][4]) == toks[ti]:
-                            ti += 1; cw += 1
-                            continue
-                        nxt = None
-                        for nb in range(cb + 1, min(cb + 3, len(bands))):
-                            if bands[nb][0] - bands[cb][0] > 30:
-                                break
-                            j = next((k for k, z in enumerate(bands[nb][1])
-                                      if abs(z[0] - anchor) <= 3.0 and _nrm(z[4]) == toks[ti]), None)
-                            if j is not None:
-                                nxt = (nb, j)
-                                break
-                        if nxt is None:
-                            ok = False
-                            break
-                        cb, cw = nxt[0], nxt[1] + 1
-                        ti += 1; used += 1
-                    if ok and (best is None or used < best):
-                        best = used
-        return best
+        for ws in words_by_page:
+            col = sorted((w for w in ws if anchor - 3.0 <= w[0] < right_bound),
+                         key=lambda w: (w[1], w[0]))
+            lines = []
+            for w in col:
+                if lines and abs(w[1] - lines[-1][0]) <= 3.0:
+                    lines[-1][1].append(w)
+                else:
+                    lines.append([w[1], [w]])
+            segs = ["".join(_alnum(x[4]) for x in sorted(ln[1], key=lambda z: z[0]))
+                    for ln in lines]
+            for bi in range(len(segs)):
+                acc, count = "", 0
+                for bj in range(bi, len(segs)):
+                    seg = segs[bj]
+                    if not seg or not target[len(acc):].startswith(seg):
+                        break
+                    acc += seg; count += 1
+                    if acc == target:
+                        return count
+        return None
+
+    def _col_anchors(rows):
+        """Label-column and value-column left edges. The first-row tokens
+        ("optical"/"design") recur elsewhere on the page, so EVERY band holding
+        both is a candidate — the right pair is the one where the full first-row
+        LABEL actually resolves at those anchors (self-validated via _cell_lines)."""
+        for row in rows[1:]:
+            if not (isinstance(row, (list, tuple)) and len(row) >= 2):
+                continue
+            lt = next((_nrm(t) for t in str(row[0]).split() if _nrm(t)), None)
+            vt = next((_nrm(t) for t in str(row[1]).split() if _nrm(t)), None)
+            if not lt or not vt:
+                continue
+            cands = []
+            for bands in bands_by_page:
+                for _y, bws in bands:
+                    for lw in (w for w in bws if _nrm(w[4]) == lt):
+                        vw = next((w for w in bws
+                                   if _nrm(w[4]) == vt and w[0] > lw[0] + 30), None)
+                        if vw:
+                            cands.append((lw[0], vw[0]))
+            for la, va in cands:
+                if _cell_lines(str(row[0]), la, va - 3.0):
+                    return la, va
+        return None
 
     vmax = 0
     for sec in (payload.get("sections") or []):
         if not isinstance(sec, dict) or sec.get("type") != "table" or sec.get("on") is False:
             continue
         rows = sec.get("rows") or []
+        anchors = _col_anchors(rows)
+        if not anchors:
+            continue
+        lab_anchor, val_anchor = anchors
         for row in rows[1:]:
             if not isinstance(row, (list, tuple)) or not row:
                 continue
             lab = str(row[0] or "")
-            n_lab = _cell_lines(lab)
+            n_lab = _cell_lines(lab, lab_anchor, val_anchor - 3.0)
             toks = len(lab.split())
             if n_lab is not None:
                 wpl = toks / n_lab
@@ -354,7 +386,7 @@ def _table_cell_scan(doc, payload, report):
                          "loc": "main", "text": lab, "lines": n_lab,
                          "cell_cascade": n_lab, "policy": "listedit"})
             for v in row[1:]:
-                n_v = _cell_lines(v)
+                n_v = _cell_lines(str(v or ""), val_anchor, val_anchor + 600.0)
                 if n_v is not None:
                     vmax = max(vmax, n_v)
     report["table_values_max_lines"] = vmax

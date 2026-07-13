@@ -32,7 +32,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.51.390';
+  var VERSION = '1.51.391';
   if (window.__antcvPhotoLibrary === VERSION) return;
   window.__antcvPhotoLibrary = VERSION;
 

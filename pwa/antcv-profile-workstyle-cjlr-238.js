@@ -5,7 +5,7 @@
  */
 (function(){
   'use strict';
-  const VERSION = '1.51.390-photo-panel-guard';
+  const VERSION = '1.51.391-photo-panel-guard';
   // v1.40.238-preview-guard: Preview is button-free. Profile/Work-style
   // CJLR controls must not attach to rows inside .antcv-preview-paper.
   const isInPreviewPaper = el => { if(!el) return false; const p=document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]'); return !!(p && p.contains(el)); };

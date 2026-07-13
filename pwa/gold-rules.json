@@ -217,7 +217,7 @@
       "tau-council": { "en": "Students Council Representative", "da": "Studenterrepræsentant", "es": "Representante del Consejo Estudiantil", "zh": "学生会代表" },
       "idf": { "en": "Computer Systems Administrator", "da": "It-systemadministrator", "es": "Administrador de Sistemas Informáticos", "zh": "计算机系统管理员" },
       "volunteer-wolves": { "en": "Team Operations Manager (foreningsarbejde)", "da": "Team Operations Manager (foreningsarbejde)", "es": "Gerente de Operaciones del Equipo (voluntariado)", "zh": "球队运营经理（协会志愿工作）" },
-      "early-career": { "en": "Earlier career", "da": "Tidligere karriere", "es": "Trayectoria inicial", "zh": "早期职业" }
+      "earlier-career": { "en": "Earlier career", "da": "Tidligere karriere", "es": "Trayectoria inicial", "zh": "早期职业" }
     }
   }
 }

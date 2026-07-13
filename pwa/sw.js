@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.395-jd-remove-sticky';
+const CACHE = 'antcv-1.51.396-matrix-containment';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

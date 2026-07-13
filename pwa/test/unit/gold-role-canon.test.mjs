@@ -22,7 +22,7 @@ const LANGS = ['en', 'da', 'es', 'zh'];
 const CANONICAL_IDS = [
   'kanzen', 'innoviz-ccr', 'innoviz-sa', 'sirin', 'mepro-tl', 'mepro-eng',
   'tau-security', 'tau-research', 'tau-teaching', 'tau-council', 'idf',
-  'volunteer-wolves', 'early-career',
+  'volunteer-wolves', 'earlier-career',
 ];
 
 test('gold-rules roles.canon_titles: every canonical id has all four languages', () => {

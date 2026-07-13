@@ -216,7 +216,63 @@ fallback for installs without the secret. Regression-locked in
 §6: not live until the manual access-relay deploy. Note the Google path only
 runs at all when `BRAVE_API_KEY` is unset (see §6).
 
+## 8. The research WRITER — `POST /api/cluster-demand-research` (built 2026-07-13)
+
+The weekly job does two things: (a) RESEARCH the demand (this doc's §1–7), and
+(b) WRITE the result into the global demand model so the live D1 path
+(`cluster_top_qualifications`, read by `GET /api/cluster-top20`) tracks the
+market. Leg (b) — the production `source='research'` writer — was unbuilt until
+2026-07-13 (before that, the 2026-07-10 run wrote D1 by hand). It now exists:
+
+**Endpoint (access-relay):** `POST /api/cluster-demand-research`, token-gated by
+a **dedicated** `CLUSTER_RESEARCH_TOKEN` (least privilege — this WRITES the
+demand model, so it is deliberately NOT the read-only `CSE_PROXY_TOKEN` and NOT
+a signed-in user JWT). Body is the research JSON's own `clusters` map:
+
+```
+POST /api/cluster-demand-research
+Header: x-antcv-cluster-research-token: <CLUSTER_RESEARCH_TOKEN>
+{ "date": "2026-07-13", "clusters": { "pm_process": { "top20": [ {"q": "...", "r": 1}, ... ] }, ... } }
+```
+
+It writes each cluster's top-20 into `application_qualification` under the
+`__global_market__` sentinel with `source='research'`, `application_id` NULL
+(so research never inflates the "based on N jobs" `jd_count`), and a
+**rank-scaled** weight `RESEARCH_WEIGHT * (21 - rank) / 20` (rank 1 → 0.4 …
+rank 20 → 0.02) so `recomputeClusterTop20`'s `SUM(weight)` ordering preserves
+the researched order deterministically — a flat weight would tie every research
+qual and lose the order the generation prompt reads back. Every research weight
+stays ≤ `RESEARCH_WEIGHT` (0.4) < a single real required-JD qual (1.0), so real
+user-JD signal still overtakes research as it accumulates. Idempotent per
+cluster (DELETE this cluster's `source='research'` rows, then INSERT — real
+`jd` rows untouched); inserts all clusters, then recomputes each.
+
+**Push script (the routine's one-command write step):**
+```
+ANTCV_RELAY_URL=https://<relay> CLUSTER_RESEARCH_TOKEN=<tok> \
+  node scripts/cluster-demand-research-push.mjs           # newest docs/analysis/cluster_top20_research_*.json
+  node scripts/cluster-demand-research-push.mjs --dry-run # print the body, do not POST
+  node scripts/cluster-demand-research-push.mjs --file docs/analysis/cluster_top20_research_2026-07-13.json
+```
+It forwards the newest research JSON's `clusters` (only `{q, r}` per item,
+stamped with the file's `generated` date). This replaces the hand-written D1
+step. Tests: `workers/access-relay/tests/cluster-demand-research-writer.test.mjs`
+(12) + `scripts/tests/cluster-demand-research-push.test.mjs` (6).
+
+**Provisioning (owner, one-time) + deploy gate:**
+```
+openssl rand -hex 32 | npx wrangler secret put CLUSTER_RESEARCH_TOKEN   # on access-relay
+# then deploy access-relay: .github/workflows/deploy.yml -> workflow_dispatch, mode=deploy, confirm=access-relay
+```
+The same token must be given to the `antcv-demand-seed-weekly` scheduled task
+(as `CLUSTER_RESEARCH_TOKEN`, alongside `ANTCV_RELAY_URL`) so its write step can
+run. **Not live until that access-relay deploy runs** (worker deploys are
+owner-gated); until then the routine keeps refreshing the client SEED
+(`pwa/antcv-cluster-demand.js`, the cold-start read path) as before, and the D1
+rollup stays at its last hand-populated state.
+
 ---
 
 _Owner: 2026-07-05. Part of CLUSTER-QUAL-001 stage 4 (spec §7.6, weekly refresh)._
 _Updated 2026-07-10: logged the persistent entitlement 403 (Support case open) and the `GOOGLE_CSE_ID` dead-secret bug found while diagnosing it._
+_Updated 2026-07-13: built the production `source='research'` writer (§8) — `POST /api/cluster-demand-research` + `scripts/cluster-demand-research-push.mjs`, closing OPEN_REGISTER row 9's writer gap; deploy owner-gated._

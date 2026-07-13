@@ -66,3 +66,37 @@ Shift lane **1.51.478-1.51.497** claimed; worked in worktree
   the optional pipeline build task — not advanced this run (kept the run to the
   reliably-shippable client seed + research JSON + registers; not half-shipping
   a worker change). Next build increment when a session picks up §3.
+
+## FOLLOW-UP (same day, owner ask "build the nightly D1 source='research' writer now")
+
+The carry-forward above is now CLOSED in code. Built the production
+`source='research'` WRITER (OPEN_REGISTER row 9's last-open leg):
+
+- **`insertResearchQualifications(env, clusterId, top20, dateMs)`** (access-relay)
+  — DELETE this cluster's `source='research'` rows (real `jd` rows untouched),
+  INSERT the fresh top-20 under `__global_market__`, `application_id` NULL, weight
+  **rank-scaled** `RESEARCH_WEIGHT*(21-rank)/20`. Rank-scaling (not the old flat
+  0.4) is required: `recomputeClusterTop20` orders by `SUM(weight)`, so a flat
+  weight ties every research qual and loses the researched order the gen prompt
+  reads back (`__clusterRule`, "most-demanded first"). Every value stays ≤0.4 <
+  a real required-JD qual (1.0), so live user-JD signal still overtakes research.
+- **`POST /api/cluster-demand-research`** — token-gated by a dedicated
+  `CLUSTER_RESEARCH_TOKEN` (least privilege — a write to the global demand model,
+  NOT the read-only CSE token, NOT a user JWT). Inserts all clusters, then
+  recomputes each (correct cross-cluster `shared_clusters`). Body = the research
+  JSON's own `clusters` map.
+- **`scripts/cluster-demand-research-push.mjs`** — the routine's one-command
+  write step (forwards the newest `cluster_top20_research_*.json`); replaces the
+  2026-07-10 manual D1 write. `--dry-run` verified against the 2026-07-13 file
+  (9 clusters, 180 quals).
+- **Tests:** `cluster-demand-research-writer.test.mjs` (12) +
+  `cluster-demand-research-push.test.mjs` (6); full access-relay suite **79/79**.
+- **Current D1 note:** the existing 180 research rows (2026-07-10 manual run)
+  are flat-0.4 with `application_id` NULL — the writer supersedes them on its
+  first real push (delete+insert), which also applies this week's 2026-07-13
+  research and the deterministic rank-scaled weights.
+- **Deploy gate (owner):** set `CLUSTER_RESEARCH_TOKEN` on access-relay + deploy
+  the worker (deploy.yml, confirm=access-relay) + give the token to the
+  `antcv-demand-seed-weekly` task. Not live until that deploy. See
+  `docs/deployment/google-cse-setup.md` §8. No Worker cron needed — the
+  scheduled Claude session is the trigger.

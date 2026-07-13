@@ -2220,6 +2220,61 @@ async function persistQualifications(env, { userHash, applicationId, category, q
   }
 }
 
+// ---- CLUSTER-QUAL-001 §7.6: weekly-research WRITER (register row 9) --------
+// Closes the last-open leg of the pipeline: the production 'source=research'
+// writer. The weekly demand-seed tuning routine (a SCHEDULED CLAUDE CODE
+// SESSION — docs/deployment/google-cse-setup.md, NOT this Worker) re-researches
+// each cluster's most-demanded qualifications and pushes them here via POST
+// /api/cluster-demand-research. Before this, research rows were written by hand
+// (the 2026-07-10 manual run) — the gap OPEN_REGISTER row 9 tracked.
+//
+// Rows go in under GLOBAL_USER_HASH with source='research' and application_id
+// NULL (they are not a real JD, so they never inflate the "based on N jobs"
+// jd_count, which counts source='jd' only). Weight is RANK-SCALED —
+// RESEARCH_WEIGHT * (21 - rank) / 20 — NOT flat: recomputeClusterTop20 ranks
+// purely by SUM(weight), so a flat weight would tie every research qual and
+// lose the researched ORDER (which the generation prompt reads back as
+// "most-demanded first", __clusterRule in app.js). Rank-scaling keeps the
+// research order deterministic while EVERY value stays <= RESEARCH_WEIGHT (0.4)
+// < a single real 'required' JD qual (1.0), so real user-JD signal still
+// overtakes research as it accumulates (spec §4 / CLUSTER-DEMAND-GLOBAL-001).
+//
+// Idempotent per cluster: DELETE this cluster's existing source='research' rows
+// (real 'jd' rows are untouched), then INSERT the fresh set — matching the
+// delete+insert recomputeClusterTop20 itself uses. The caller inserts ALL
+// clusters FIRST, then recomputes each, so cross-cluster shared_clusters sees
+// the fresh set.
+const KNOWN_CLUSTERS = new Set(Object.values(CATEGORY_TO_CLUSTER));
+async function insertResearchQualifications(env, clusterId, top20, dateMs) {
+  if (!hasD1(env)) return 0;
+  if (!KNOWN_CLUSTERS.has(clusterId)) return 0;
+  if (!Array.isArray(top20) || !top20.length) return 0;
+
+  await d1RunWithRetry(env.DB.prepare(
+    "DELETE FROM application_qualification WHERE user_hash = ? AND cluster_id = ? AND source = 'research'"
+  ).bind(GLOBAL_USER_HASH, clusterId));
+
+  let inserted = 0;
+  for (let i = 0; i < top20.length; i++) {
+    const item = top20[i] || {};
+    const text = String(item.q != null ? item.q : (item.text != null ? item.text : '')).trim();
+    if (!text) continue;
+    const canonical = qualCanonical(text);
+    if (!canonical) continue;
+    // rank: prefer the item's own r (1..N), else its array position; clamp 1..20.
+    let rank = parseInt(item.r, 10);
+    if (!Number.isFinite(rank) || rank < 1) rank = i + 1;
+    if (rank > 20) rank = 20;
+    const weight = RESEARCH_WEIGHT * (21 - rank) / 20;
+    await d1RunWithRetry(env.DB.prepare(
+      'INSERT INTO application_qualification (application_id, user_hash, cluster_id, qual_text, qual_canonical, weight, source, created_at) ' +
+      'VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+    ).bind(null, GLOBAL_USER_HASH, clusterId, text.slice(0, 200), canonical, weight, 'research', dateMs));
+    inserted++;
+  }
+  return inserted;
+}
+
 // ---- CLUSTER-QUAL-001 stage 2: fit scoring (spec section 3.3) --------------
 // Runs independently of persistQualifications' "already extracted" guard —
 // this application's fit against the cluster top-20 can change even when
@@ -2404,6 +2459,67 @@ async function handleApiClusterTop20(request, env) {
   } catch (e) {
     return jsonResponse({ error: 'd1_read_failed', message: String(e && e.message || e) }, 500, request, env);
   }
+}
+
+// ---- CLUSTER-QUAL-001 §7.6: POST /api/cluster-demand-research --------------
+// The weekly demand-seed tuning routine (a scheduled Claude Code session, NOT
+// this Worker — same machine-to-machine model as /api/cse-search) pushes its
+// freshly-researched per-cluster top-20 here. Token-gated with a dedicated,
+// narrow-scope CLUSTER_RESEARCH_TOKEN — least privilege: this WRITES the global
+// demand model, so it is deliberately NOT the read-only CSE search token, and
+// deliberately NOT a signed-in user JWT (the routine is not an AntCV user).
+// Body (the `clusters` map is exactly the shape of the routine's own
+// docs/analysis/cluster_top20_research_<date>.json, so the push script forwards
+// it near-verbatim):
+//   { date?: <ISO string | epoch-ms>, clusters: { <clusterId>: { top20: [ {q, r?}, ... ] } } }
+// Two passes — insert all clusters, THEN recompute all — so each cluster's
+// shared_clusters reflects the whole fresh set, not a half-updated one.
+async function handleApiClusterDemandResearch(request, env) {
+  const tok = request.headers.get('x-antcv-cluster-research-token') || '';
+  if (!env.CLUSTER_RESEARCH_TOKEN || tok !== env.CLUSTER_RESEARCH_TOKEN) {
+    return jsonResponse({ error: 'unauthorized' }, 401, request, env);
+  }
+  if (!hasD1(env)) return jsonResponse({ error: 'd1_unavailable' }, 503, request, env);
+
+  let body;
+  try { body = await request.json(); }
+  catch (_) { return jsonResponse({ error: 'invalid_json' }, 400, request, env); }
+
+  const clusters = body && body.clusters;
+  if (!clusters || typeof clusters !== 'object') {
+    return jsonResponse({ error: 'missing clusters' }, 400, request, env);
+  }
+  let dateMs = Date.parse(body && body.date);
+  if (!Number.isFinite(dateMs)) dateMs = Date.now();
+
+  const ids = Object.keys(clusters).filter((cid) => KNOWN_CLUSTERS.has(cid));
+  const unknown = Object.keys(clusters).filter((cid) => !KNOWN_CLUSTERS.has(cid));
+  if (!ids.length) {
+    return jsonResponse({ error: 'no_known_clusters', unknown }, 400, request, env);
+  }
+
+  const summary = {};
+  try {
+    // Pass 1: insert all clusters' research rows.
+    for (const cid of ids) {
+      const top20 = clusters[cid] && clusters[cid].top20;
+      summary[cid] = { inserted: await insertResearchQualifications(env, cid, top20, dateMs) };
+    }
+    // Pass 2: recompute each cluster's top-20 (shared_clusters now sees the
+    // fresh cross-cluster set, and rank-scaled weights make order deterministic).
+    for (const cid of ids) {
+      await recomputeClusterTop20(env, cid);
+      summary[cid].recomputed = true;
+    }
+  } catch (e) {
+    return jsonResponse({ error: 'd1_write_failed', message: String(e && e.message || e), summary }, 500, request, env);
+  }
+
+  const totalInserted = ids.reduce((n, cid) => n + (summary[cid].inserted || 0), 0);
+  return jsonResponse({
+    ok: true, date_ms: dateMs, clusters_updated: ids.length,
+    total_inserted: totalInserted, unknown, summary,
+  }, 200, request, env);
 }
 
 // ---- One-time KV → D1 migration --------------------------------------
@@ -4622,6 +4738,9 @@ const method = request.method;
   }
   if (path === '/api/cluster-top20') {
     return handleApiClusterTop20(request, env);
+  }
+  if (path === '/api/cluster-demand-research' && method === 'POST') {
+    return handleApiClusterDemandResearch(request, env);
   }
   if (path === '/api/active') {
     return handleApiActive(request, env);

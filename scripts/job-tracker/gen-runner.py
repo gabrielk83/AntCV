@@ -819,7 +819,7 @@ def _clean_cut(win):
     if t and t[-1] not in ".!?:)":
         t += "."
     return t
-def _cap_line(s, maxlen=155):
+def _cap_line(s, maxlen=None):
     """Limit a bullet/result to ~2 rendered lines, trimming at a clause or word
     boundary (owner: 'limit line lengths') — always a CLEAN, period-closed end."""
     maxlen = maxlen or _BULLET_CAP
@@ -830,7 +830,7 @@ def _cap_line(s, maxlen=155):
         p = win.rfind(sep)
         if p >= maxlen * 0.55: return _clean_cut(win[:p])
     return _clean_cut(win.rsplit(" ", 1)[0])
-    def _cap_para(s, maxlen=330):
+def _cap_para(s, maxlen=None):
     """Keep a cover-letter PARAGRAPH readable (~3-4 lines): trim to the last full
     sentence under maxlen (owner: 'too long, >3-4 lines per paragraph')."""
     maxlen = maxlen or _PARA_CAP

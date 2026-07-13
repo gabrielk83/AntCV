@@ -11,8 +11,11 @@
  * data_analytics / consulting / executive / finance / people_soft) are stage-4
  * research-derived from current market postings, refreshed weekly per
  * docs/deployment/google-cse-setup.md (docs/analysis/
- * cluster_top20_research_2026-07-10.json, latest — supersedes the 2026-07-05
- * revision) — together the 9 clusters the 12 categories fold into. This is the
+ * cluster_top20_research_2026-07-13.json, latest — supersedes the 2026-07-10
+ * revision; 2026-07-13 applied 5 bounded evidence-backed shifts: pm_process
+ * gained an AI/GenAI + EU AI Act item, executive/software/HR/data nudged AI &
+ * cybersecurity ranks up) — together the 9 clusters the 12 categories fold
+ * into. This is the
  * cold-start fallback; the live D1 path (antcv-cluster-demand-live.js) overtakes
  * it once real-JD data accumulates.
  * The demand score is wired alongside the numeric-first rule as a secondary key.
@@ -31,7 +34,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.246';
+  var VERSION = '1.51.478';
   if (window.AntcvClusterDemand && window.AntcvClusterDemand.version === VERSION) return;
 
   // Embedded seed (verbatim ranks/share from the analyst-reviewed JSON). Keeping it
@@ -43,21 +46,21 @@
       [2, 'Stakeholder management & cross-functional coordination', 'ABC'],
       [3, 'Requirements management & translating needs into specs', 'AB'],
       [4, 'Risk identification, assessment & mitigation (risk register)', 'AB'],
-      [5, 'Process design, modelling & documentation (BPM / BABOK / BPMN)', 'none'],
-      [6, 'Process / continuous improvement (Lean / Six Sigma)', 'AB'],
-      [7, 'Change & governance control', 'none'],
-      [8, 'Project planning, time plans & milestone tracking', 'none'],
-      [9, 'Product lifecycle management (concept to field)', 'none'],
-      [10, 'Supplier / vendor collaboration & spec management', 'AB'],
-      [11, 'ERP / CRM or system-implementation experience', 'none'],
-      [12, 'Hardware product development (mechanics/electronics/RF)', 'AB'],
-      [13, 'Design verification & validation vs specifications', 'AB'],
-      [14, 'International product certification (CE / FCC / UL / EASA-145)', 'none'],
-      [15, 'Audit / compliance & CAPA handling', 'none'],
-      [16, 'Commercial & financial understanding', 'AB'],
-      [17, 'Status communication to senior management / board', 'ABC'],
-      [18, 'Matrix-organisation work with competing priorities', 'none'],
-      [19, 'Obsolescence management & cost optimisation', 'AB'],
+      [5, 'AI/GenAI tool fluency in delivery & EU AI Act awareness', 'ABC'],
+      [6, 'Process design, modelling & documentation (BPM / BABOK / BPMN)', 'none'],
+      [7, 'Process / continuous improvement (Lean / Six Sigma)', 'AB'],
+      [8, 'Change & governance control', 'none'],
+      [9, 'Project planning, time plans & milestone tracking', 'none'],
+      [10, 'Product lifecycle management (concept to field)', 'none'],
+      [11, 'Supplier / vendor collaboration & spec management', 'AB'],
+      [12, 'ERP / CRM or system-implementation experience', 'none'],
+      [13, 'Hardware product development (mechanics/electronics/RF)', 'AB'],
+      [14, 'Design verification & validation vs specifications', 'AB'],
+      [15, 'International product certification (CE / FCC / UL / EASA-145)', 'none'],
+      [16, 'Audit / compliance & CAPA handling', 'none'],
+      [17, 'Commercial & financial understanding', 'AB'],
+      [18, 'Status communication to senior management / board', 'ABC'],
+      [19, 'Matrix-organisation work with competing priorities', 'none'],
       [20, 'English fluency (Danish an advantage)', 'ABC']
     ] },
     photonics_eng: { label: 'Photonics / Optical / Test Engineering', top20: [
@@ -124,10 +127,10 @@
       [5, 'CI/CD pipelines & automated testing', 'none'],
       [6, 'Data structures, algorithms & problem-solving', 'none'],
       [7, 'Version control & collaborative workflows (Git)', 'AB'],
-      [8, 'Containerisation & orchestration (Docker / Kubernetes)', 'none'],
-      [9, 'API design & microservices (REST / gRPC)', 'none'],
-      [10, 'Databases & data modelling (SQL & NoSQL)', 'AB'],
-      [11, 'Secure coding & application security (NIS2 compliance)', 'none'],
+      [8, 'Secure coding & application security (NIS2 compliance)', 'none'],
+      [9, 'Containerisation & orchestration (Docker / Kubernetes)', 'none'],
+      [10, 'API design & microservices (REST / gRPC)', 'none'],
+      [11, 'Databases & data modelling (SQL & NoSQL)', 'AB'],
       [12, 'Infrastructure as code & platform engineering (Terraform / developer portals)', 'none'],
       [13, 'Agile / Scrum delivery & iteration', 'AB'],
       [14, 'Frontend frameworks (React / TypeScript)', 'none'],
@@ -143,8 +146,8 @@
       [2, 'Python / R for analysis', 'none'],
       [3, 'Data visualisation & BI (Power BI / Tableau / Looker)', 'none'],
       [4, 'Statistics & probability (hypothesis testing)', 'none'],
-      [5, 'Data cleaning, wrangling & quality', 'none'],
-      [6, 'AI/agentic tools & prompt engineering for analytics workflows', 'ABC'],
+      [5, 'AI/agentic tools & prompt engineering for analytics workflows', 'ABC'],
+      [6, 'Data cleaning, wrangling & quality', 'none'],
       [7, 'Machine learning & predictive modelling', 'none'],
       [8, 'Excel / spreadsheet modelling', 'AB'],
       [9, 'Data pipelines & warehousing (dbt / Snowflake / Spark)', 'none'],
@@ -184,9 +187,9 @@
     ] },
     executive: { label: 'Executive / Senior Leadership', top20: [
       [1, 'Strategic vision & execution', 'none'],
-      [2, 'P&L ownership & financial stewardship', 'AB'],
-      [3, 'Building & leading high-performing teams', 'ABC'],
-      [4, 'AI & digital strategy fluency', 'ABC'],
+      [2, 'AI & digital strategy fluency', 'ABC'],
+      [3, 'P&L ownership & financial stewardship', 'AB'],
+      [4, 'Building & leading high-performing teams', 'ABC'],
       [5, 'Stakeholder, board & investor communication', 'ABC'],
       [6, 'Organisational change & transformation leadership', 'AB'],
       [7, 'Commercial growth & revenue architecture', 'AB'],
@@ -229,8 +232,8 @@
     people_soft: { label: 'People / HR', top20: [
       [1, 'HR business partnering & stakeholder advisory', 'ABC'],
       [2, 'Employee relations & labour-law compliance', 'none'],
-      [3, 'Talent acquisition & full-cycle recruiting', 'none'],
-      [4, 'AI literacy & AI-fluency in HR / recruiting automation', 'ABC'],
+      [3, 'AI literacy & AI-fluency in HR / recruiting automation', 'ABC'],
+      [4, 'Talent acquisition & full-cycle recruiting', 'none'],
       [5, 'People analytics & data-driven HR', 'AB'],
       [6, 'HRIS & people systems (Workday / SuccessFactors / Oracle)', 'AB'],
       [7, 'Business acumen & commercial understanding', 'ABC'],

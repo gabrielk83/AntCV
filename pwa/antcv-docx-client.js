@@ -929,12 +929,28 @@ export function buildPayload({
           // SLOGAN-QUALITY-GATE-001: the export consults the SAME gate the
           // preview uses — a low-quality generated slogan ships NOWHERE.
           try { if (smart && typeof window !== 'undefined' && typeof window.__antcvSloganQualityOk === 'function' && !window.__antcvSloganQualityOk(smart, meta)) smart = ''; } catch (_) {}
+          // SLOGAN-OV-QUALITY-GATE-001 (owner 2026-07-13): the export gated `smart`
+          // but NOT the stored override `ov`, so a STALE / over-long standing motto
+          // pinned in antcv:clSlogan (e.g. an 11-word Danish standing line that fails
+          // the same quality gate the preview applies) shipped in the PDF even though
+          // the preview showed the app's real generated slogan. Gate `ov` identically;
+          // a failing override is dropped so the chain falls to the generated slogan
+          // (or hides). A genuine short user-edit passes the gate and is kept.
+          // Kill-switch antcv:disable-slogan-ov-gate.
+          try {
+            if (ov && !/^\[/.test(ov) && localStorage.getItem('antcv:disable-slogan-ov-gate') !== '1'
+                && typeof window !== 'undefined' && typeof window.__antcvSloganQualityOk === 'function'
+                && !window.__antcvSloganQualityOk(ov, meta)) ov = '';
+          } catch (_) {}
           const co = String((meta && meta.company) || '').trim();
           const targeted = !!co && !(window.__ANTCV_UNSOL_RE || /^unsolicited$/i).test(co) && !/^open application$/i.test(co); // UNSOL-PILLAR-LANG-001: any language variant
           const standing = String((meta && meta.subtitle) || '').trim();
-          const sl = (ov && !/^\[/.test(ov)) ? ov
+          let sl = (ov && !/^\[/.test(ov)) ? ov
             : (smart && !/^\[/.test(smart)) ? smart
               : (targeted ? '' : standing);
+          // SLOGAN-EMDASH-001 (owner 2026-07-13): banned em/en dash in the exported
+          // slogan -> plain hyphen (matches the repo-wide em-dash policy).
+          if (sl) sl = sl.replace(/\s*[—–]\s*/g, ' - ');
           if (sl && !/^\[/.test(sl)) out.slogan = sl;
           else if (targeted) { out.slogan_hidden = true; return out; }
           const al = String(localStorage.getItem('antcv:clSloganAlign') || 'center').replace(/["']/g, '').toLowerCase();

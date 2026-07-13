@@ -18,7 +18,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.598-quick-contact';
+  var VERSION = '1.51.438-dedup-lift';
   if (window.__antcvQuickContact === VERSION) return;
   window.__antcvQuickContact = VERSION;
 
@@ -46,23 +46,37 @@
   function setOpen(v) { try { localStorage.setItem(STATE_KEY, v ? '1' : '0'); } catch (_) {} }
 
   // The fields column = the common parent that holds the contact rows AND the
-  // Name/Headline rows. We find it from an email/phone/linkedin input.
+  // Name/Headline rows. We find it from an email/phone/linkedin input, or —
+  // SETTINGS-PERSONAL-DEDUP-001 — from the Full Name input, since the 5
+  // contact fields now live only in the "Review & Edit my data" dialog and
+  // the Personal tab usually has no contact input at all.
+  function columnFrom(input) {
+    // climb to the direct child of a container that also holds other field rows
+    var node = input;
+    for (var d = 0; d < 8 && node.parentElement; d++) {
+      var p = node.parentElement;
+      // a column holds several field rows as direct children
+      if (p.children.length >= 3) {
+        // verify it really is the personal fields column: it must contain a
+        // "Background" details OR a textarea (the Background field) somewhere.
+        if (p.querySelector('details, textarea')) return { col: p };
+      }
+      node = p;
+    }
+    return null;
+  }
   function findColumn() {
     var inputs = document.querySelectorAll('input');
-    for (var i = 0; i < inputs.length; i++) {
+    var i, found;
+    for (i = 0; i < inputs.length; i++) {
       if (!isContactInput(inputs[i])) continue;
-      // climb to the direct child of a container that also holds other field rows
-      var node = inputs[i];
-      for (var d = 0; d < 8 && node.parentElement; d++) {
-        var p = node.parentElement;
-        // a column holds several field rows as direct children
-        if (p.children.length >= 3) {
-          // verify it really is the personal fields column: it must contain a
-          // "Background" details OR a textarea (the Background field) somewhere.
-          if (p.querySelector('details, textarea')) return { col: p };
-        }
-        node = p;
-      }
+      found = columnFrom(inputs[i]);
+      if (found) return found;
+    }
+    for (i = 0; i < inputs.length; i++) {
+      if (String(inputs[i].placeholder || '').indexOf('Jane Doe') < 0) continue;
+      found = columnFrom(inputs[i]);
+      if (found) return found;
     }
     return null;
   }
@@ -234,24 +248,29 @@
     if (!found) return;
     var col = found.col;
     var rows = contactRows(col);
-    if (!rows.length) return;
+    var hdr = null;
 
-    // Insert / relocate the header immediately before the FIRST contact row.
-    var hdr = col.querySelector('[' + HDR + ']');
-    if (!hdr) { hdr = buildHeader(); }
-    if (hdr.nextSibling !== rows[0] || hdr.parentElement !== col) {
-      try { col.insertBefore(hdr, rows[0]); } catch (_) {}
-    }
-    paintHeader(hdr);
+    // SETTINGS-PERSONAL-DEDUP-001: with the 5 contact fields removed from the
+    // Personal tab the column normally has NO contact rows — the collapse
+    // group only builds when rows exist; the identity lift below runs either way.
+    if (rows.length) {
+      // Insert / relocate the header immediately before the FIRST contact row.
+      hdr = col.querySelector('[' + HDR + ']');
+      if (!hdr) { hdr = buildHeader(); }
+      if (hdr.nextSibling !== rows[0] || hdr.parentElement !== col) {
+        try { col.insertBefore(hdr, rows[0]); } catch (_) {}
+      }
+      paintHeader(hdr);
 
-    var open = isOpen();
-    for (var i = 0; i < rows.length; i++) {
-      // SETTINGS-PERSONAL-STABILIZE-001: stamp only when missing (was an
-      // unconditional attribute write per row per pass — 939 mutations/8s).
-      if (rows[i].getAttribute(ROW) !== '1') rows[i].setAttribute(ROW, '1');
-      // Only touch display when it needs to change (avoids feeding the observer).
-      var want = open ? '' : 'none';
-      if (rows[i].style.display !== want) rows[i].style.display = want;
+      var open = isOpen();
+      for (var i = 0; i < rows.length; i++) {
+        // SETTINGS-PERSONAL-STABILIZE-001: stamp only when missing (was an
+        // unconditional attribute write per row per pass — 939 mutations/8s).
+        if (rows[i].getAttribute(ROW) !== '1') rows[i].setAttribute(ROW, '1');
+        // Only touch display when it needs to change (avoids feeding the observer).
+        var want = open ? '' : 'none';
+        if (rows[i].style.display !== want) rows[i].style.display = want;
+      }
     }
 
     // Float the identity block (Full Name + Headline + this header + contact

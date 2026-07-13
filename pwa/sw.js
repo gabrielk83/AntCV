@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.418-photo-carousel';
+const CACHE = 'antcv-1.51.438-personal-dedup';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

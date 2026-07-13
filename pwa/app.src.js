@@ -24755,56 +24755,9 @@
               (e) => m({ headline: e }),
               "e.g. Senior Project Manager",
             ),
-            React.createElement(
-              "div",
-              { style: { display: "flex", gap: 6 } },
-              React.createElement(
-                "div",
-                { style: { flex: 1 } },
-                f(
-                  "Location",
-                  s.location,
-                  (e) => m({ location: e }),
-                  "Copenhagen, Denmark",
-                ),
-              ),
-              React.createElement(
-                "div",
-                { style: { flex: 1 } },
-                f(
-                  "Citizenship",
-                  s.citizenship,
-                  (e) => m({ citizenship: e }),
-                  "EU citizen",
-                ),
-              ),
-            ),
-            f(
-              "Email",
-              s.email,
-              (e) => m({ email: e }),
-              "name@example.com",
-              "email",
-            ),
-            React.createElement(
-              "div",
-              { style: { display: "flex", gap: 6 } },
-              React.createElement(
-                "div",
-                { style: { flex: 1 } },
-                f("Phone", s.phone, (e) => m({ phone: e }), "+45 12 34 56 78"),
-              ),
-              React.createElement(
-                "div",
-                { style: { flex: 1 } },
-                f(
-                  "LinkedIn",
-                  s.linkedin,
-                  (e) => m({ linkedin: e }),
-                  "linkedin.com/in/your-name",
-                ),
-              ),
-            ),
+            // SETTINGS-PERSONAL-DEDUP-001: Location, Citizenship, Email, Phone,
+            // LinkedIn are edited in the "Review & Edit my data" dialog
+            // (antcv-data-export-360.js) — the Settings copies were removed.
             React.createElement(
               "details",
               // PERSONAL-ORDER-002 (owner 2026-06-13, figure 1-7): final order is

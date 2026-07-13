@@ -36,7 +36,7 @@ Branch: `claude/antcv-roadmap-bugs-L9Sqa`. Compiled 2026-06-04.
 
 # PART 1 — ACTIVE BUGS
 
-## Session 2026-07-13 roll-up (newest — SETTINGS-PERSONAL-DEDUP-001 duplicate personal fields)
+## Session 2026-07-13 roll-up (newest — SETTINGS-PERSONAL-DEDUP-001 + PHOTO-REMOVE-LAST-RESET-001)
 
 App-level ship 1.51.438-personal-dedup (isolated shift worktree, lane 1.51.438-1.51.457, released after merge; PR #344 MERGED 2026-07-13 — PWA auto-deploys from main). Prose detail:
 ACTIVE_BUGS 2026-07-13 entry + OPEN_REGISTER row 87.
@@ -44,6 +44,7 @@ ACTIVE_BUGS 2026-07-13 entry + OPEN_REGISTER row 87.
 | ID | Tag | Item | Next action |
 |----|-----|------|-------------|
 | SETTINGS-PERSONAL-DEDUP-001 | `VERIFYING` `MED` | Location, Citizenship, Email, Phone and LinkedIn were editable in TWO surfaces writing the same personalInfo keys — Settings → STANDARD → Personal and the "Review & Edit my data" dialog. The Settings copies are REMOVED (static render-tree deletion in app.js + app.src.js mirror; Full Name + Headline kept); the review dialog is the sole editor of the 5 keys. `antcv-quick-contact-collapse.js` re-anchored on the Full Name placeholder so the identity lift (Name/Headline above Writing Style) survives with zero contact rows. Data model untouched; suite 1257/1257; freeze/churn diags green; new `diag-settings-personal-dedup.mjs` 7/7. | `[verify]` owner: one glance at the slimmer Personal tab on live 1.51.438 + confirm the review dialog covers all 5 fields for daily editing |
+| PHOTO-REMOVE-LAST-RESET-001 | `VERIFYING` `MED` | ✕ on the LAST carousel photo (1.51.418 photo block) left the previously active photo instead of restoring the default ant — owner: "removing both x-ed photos should get me back to the ant photo not to my photo". `antcv-photo-library.js` `removeCurrent()` now clicks the app's native (hidden) Reset when the library empties — same path as "↺ Reset". New `diag-photo-remove-last-reset.mjs` 9/9 on a synthetic panel; suite 1257/1257. Shipped 1.51.458-remove-last-reset. | `[verify]` owner: add 2 photos, ✕ both — block must land on the default ant |
 
 ## Session 2026-07-10 roll-up (newest — CLUSTER-QUAL-001 weekly demand-seed tuning)
 

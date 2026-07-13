@@ -9,7 +9,9 @@
  *     app's own photo <img> (so the block still reflects the ACTIVE photo).
  *   - ‹ / › small circular arrows + a finger SWIPE over the block move
  *     between the saved photos to review them; a row of dots shows position.
- *   - ✕ (top-right of the block) removes the shown photo from the library.
+ *   - ✕ (top-right of the block) removes the shown photo from the library;
+ *     removing the LAST one resets the block to the embedded default ant
+ *     (PHOTO-REMOVE-LAST-RESET-001).
  *   - landing on a photo ACTIVATES it (debounced): the stored file is
  *     re-driven through the app's OWN hidden upload input (DataTransfer +
  *     change event), so the app's whole pipeline (square store, preview,
@@ -40,7 +42,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.51.418';
+  var VERSION = '1.51.458';
   if (window.__antcvPhotoLibrary === VERSION) return;
   window.__antcvPhotoLibrary = VERSION;
 
@@ -218,8 +220,11 @@
     scheduleActivate(entries[i]);
   }
   // ✕ removes the shown photo. If others remain, the neighbour is activated so
-  // the block keeps showing a live library photo; removing the last one leaves
-  // the active photo untouched (use "↺ Reset" to return to the default ant).
+  // the block keeps showing a live library photo; removing the LAST one resets
+  // the block to the embedded default ant (PHOTO-REMOVE-LAST-RESET-001, owner
+  // 2026-07-13: "removing both x-ed photos should get me back to the ant photo
+  // not to my photo" — the removed photo is usually the ACTIVE one, so leaving
+  // it active resurrects a photo the user just deleted).
   function removeCurrent() {
     var entries = lib();
     if (!entries.length) return;
@@ -228,6 +233,15 @@
     if (next.length) {
       if (currentIndex >= next.length) currentIndex = next.length - 1;
       activate(next[currentIndex]);
+    } else {
+      // same mechanism as "↺ Reset": the app's own (hidden) Reset button
+      // restores the embedded default ant through the app's pipeline. Its
+      // click also fires the PHOTO-RESET-CLEAR-001 capture listener, which
+      // empties the library — idempotent with the save(next=[]) below.
+      var panel = findPanel();
+      var native = panel && findNativeReset(panel);
+      if (native) native.click();
+      currentIndex = 0;
     }
     save(next);
   }

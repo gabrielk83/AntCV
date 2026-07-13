@@ -29,6 +29,18 @@
 > live, per-device pointer helpers no raw INSERT). No row was implemented-but-still-open; nothing shipped (every
 > open row is owner-gated / needs a 2nd device / needs live models / content-gen larger than one safe nightly).
 
+> **STALENESS SWEEP 2026-07-13 (nightly, verify+report — no ship):** every open row given a status word in
+> `docs/qa/NIGHTLY_2026-07-13_REPORT.md`. Baseline PWA 1.51.379-gen-width, docx-worker 1.14.150, suite 1239/1239,
+> boot-smoke OK, main in sync with origin. Live-verify via Browser pane: PWA live = TARGET (no version regression),
+> `app.js?v=1.51.374` correctly lags the .379 seed (375-379 are sidecar-only density work — not a stale-SW mask),
+> **GOLD-TARGET-LAYOUT-DENSITY-001 deployed+live** (bullet-targets .379 + auto-pagebreak .377 sidecars served).
+> Re-verified this run: row 17 (Personal panel 0 mut/8s DIAG PASS), row 23 (206 buttons / 0 throw / 0 errors /
+> 1 benign DEAD "100%" zoom indicator — no regression), row 61 `__balanceGate` last-page gold rule present +
+> unit-tested (green suite). **NEW ENV CONSTRAINT:** the sandbox SHELL is 403-gated to the CF workers, so the
+> density per-app sweep (`DENSITY_SWEEP_SONNET5_HANDOFF.md`) — a Python→relay/proxy pipeline that mutates real
+> saved-application data — CANNOT run here (Browser pane reaches live, shell does not); it belongs to a networked
+> desktop/cloud-Routine session. Nothing shipped; no row implemented-but-still-open.
+
 ## TO-DO SUMMARY (audit 2026-07-04, session 2) — every row below is TO DO
 
 | # | One-line remaining scope | TO DO |

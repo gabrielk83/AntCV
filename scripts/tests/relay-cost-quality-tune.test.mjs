@@ -98,19 +98,46 @@ test('coherence role is scored from its real telemetry label apply_correction', 
   assert.equal(ranked[0].provider, 'gemini');      // far cheaper at equal quality
 });
 
-test('an UNPINNED tunable role (analysis) is proposable as a new pin', () => {
-  // MODEL_ROLES has no 'analysis' key, yet its parse_jd telemetry favours a cheap adequate provider.
+test('an UNPINNED role pins to a cheaper provider that clears the activation floor AND beats the blend', () => {
+  // MODEL_ROLES has no 'analysis' key; gemini is far cheaper at equal quality and has volume.
   const current = { writer: 'anthropic', supervisor: 'mistral', coherence: 'anthropic' };
   const rows = [{ provider: 'mistral', task: 'parse_jd', call_count: 80, success_rate: 1.0,
                   success_count: 80, total_cost_usd: 10.0, health_score: 1.0 },
                 { provider: 'gemini', task: 'parse_jd', call_count: 80, success_rate: 1.0,
                   success_count: 80, total_cost_usd: 0.02, health_score: 1.0 }];
-  const { proposed, changed, rationale } = proposeRoles(current, rows, { floor: 0.9, margin: 0.10, minCalls: 20 });
+  const { proposed, changed, rationale } = proposeRoles(current, rows, { floor: 0.9, margin: 0.10, minCalls: 20, activationMinCalls: 30 });
   assert.equal(changed, true);
   assert.equal(proposed.analysis, 'gemini');       // new pin proposed for the unpinned role
-  // unpinned roles with no telemetry stay ABSENT (no MODEL_ROLES noise)
-  assert.equal('kernel' in proposed, false);
+  assert.equal('kernel' in proposed, false);       // no telemetry → stays absent (no noise)
   assert.ok(rationale.find((r) => r.role === 'analysis' && r.decision === 'flip'));
+});
+
+test('an UNPINNED role does NOT pin to its dominant-but-expensive provider (blended-baseline guard)', () => {
+  // Real-data shape: mistral dominates analysis volume but is the MOST expensive; the cheap
+  // provider (gemini) is under the activation floor. Pinning mistral = no gain → stay unpinned.
+  const current = { writer: 'anthropic', coherence: 'anthropic' };
+  const rows = [{ provider: 'mistral', task: 'parse_jd', call_count: 82, success_rate: 1.0,
+                  success_count: 82, total_cost_usd: 10.70, health_score: 1.0 },
+                { provider: 'claude', task: 'parse_jd', call_count: 9, success_rate: 1.0,
+                  success_count: 9, total_cost_usd: 2.15, health_score: 1.0 },
+                { provider: 'gemini', task: 'parse_jd', call_count: 11, success_rate: 1.0,
+                  success_count: 11, total_cost_usd: 0.027, health_score: 1.0 }];
+  const { proposed, rationale } = proposeRoles(current, rows, { floor: 0.9, margin: 0.10, minCalls: 20, activationMinCalls: 30 });
+  assert.equal('analysis' in proposed, false);     // mistral ≈ blend (no gain), gemini under floor → BYPASS
+  const r = rationale.find((x) => x.role === 'analysis');
+  assert.equal(r.decision, 'keep');
+});
+
+test('activation floor: a cheap winner UNDER the low traffic number is bypassed until it grows', () => {
+  const current = {};
+  const rows = [{ provider: 'gemini', task: 'parse_jd', call_count: 12, success_rate: 1.0,
+                  success_count: 12, total_cost_usd: 0.01, health_score: 1.0 },
+                { provider: 'mistral', task: 'parse_jd', call_count: 12, success_rate: 1.0,
+                  success_count: 12, total_cost_usd: 5.0, health_score: 1.0 }];
+  // minCalls 10 makes gemini eligible, but activation floor 30 holds the pin back.
+  const { proposed, rationale } = proposeRoles(current, rows, { floor: 0.9, margin: 0.10, minCalls: 10, activationMinCalls: 30 });
+  assert.equal('analysis' in proposed, false);
+  assert.match(rationale.find((r) => r.role === 'analysis').why, /activation floor/);
 });
 
 test('summarizeClientDispatch surfaces the compress lever (not MODEL_ROLES-tunable) with the cheapest adequate provider', () => {

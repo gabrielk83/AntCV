@@ -1887,6 +1887,15 @@
     translate_da: ["openai", "claude", "mistral", "gemini"],
     refine_da: ["openai", "claude", "mistral"],
     refine_en: ["openai", "claude", "mistral"],
+    // long_context / consensus_poll cost is handled WITHOUT a manual provider drop:
+    // RELAY-COST-TIEBREAK-001 (1.51.578) folds a bounded cost penalty into health_score for
+    // the cost-sensitive class (both are members), and the client seed demotes the pricey
+    // provider by the resulting health gap — openai long_context ($0.00686/call vs gemini
+    // $0.00024, 28x → ~0.108 penalty ≥ the 0.10 demotion threshold) auto-sinks each cron cycle
+    // while STAYING reachable (no voter lost for the consensus vote, fallback intact for
+    // long_context). RELAY-DETECTION-GAP-001 (1.51.580) makes that auto-demotion SAFE — a
+    // format-broken cheap provider now self-demotes. So no per-task Z edit is needed here
+    // (unlike the pre-tiebreak compress drop, kept above for the record).
     long_context: ["claude", "openai", "gemini"],
     analyze_fit: ["claude", "openai", "mistral", "gemini"],
     apply_correction: ["openai", "claude", "mistral", "gemini"],
@@ -2713,6 +2722,12 @@
             input_tokens: g,
             output_tokens: f,
             tokens_real: null != u.input_tokens,
+            // RELAY-DETECTION-GAP-001: flag format-broken output (SSE-leak / empty-despite-
+            // tokens / control-garbage) so the relay demotes a silently-broken provider.
+            malformed_output_count:
+              window.AntcvMalformed && window.AntcvMalformed.detect(n, { completionTokens: f })
+                ? 1
+                : 0,
             duration_ms: p,
             cost_usd: y,
             session_cost_usd: parseFloat(A.toFixed(6)),

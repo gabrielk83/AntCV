@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.579-cluster-fuse';
+const CACHE = 'antcv-1.51.580-detection-gap';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

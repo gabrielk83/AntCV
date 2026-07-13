@@ -111,11 +111,33 @@ export function scoreRows(rows, role, { floor = 0.9, minCalls = 20 } = {}) {
   return out;
 }
 
+// The weighted-blend cost-quality baseline for a role = what its CURRENT provider mix
+// already delivers (quality per $ across every provider, weighted by call volume). For an
+// UNPINNED role this is the honest thing to beat: pinning it to the cheapest-eligible
+// provider is only an improvement if that provider beats the blend the role runs at today
+// — never a same-as-status-quo pin (e.g. pinning `analysis` to its dominant-but-expensive
+// provider, which just re-states the blend and saves nothing).
+export function blendedBaseline(ranked) {
+  let calls = 0, cost = 0, qCalls = 0;
+  for (const r of ranked) { calls += r.calls; cost += r.costPerCall * r.calls; qCalls += r.quality * r.calls; }
+  if (calls <= 0) return { costQuality: 0, quality: 0, costPerCall: 0, calls: 0 };
+  const costPerCall = cost / calls, quality = qCalls / calls;
+  return { costQuality: costPerCall > 0 ? quality / costPerCall : quality, quality, costPerCall, calls };
+}
+
 // Decide the new head per role from `current` MODEL_ROLES + the health `rows`. Bounded +
 // hysteresis: keep the current head unless an ELIGIBLE challenger beats it by > margin in
 // cost-quality. Never propose an unknown provider or one below the floor.
+//
+// PINNED roles (already in MODEL_ROLES) are judged against the CURRENT HEAD's score.
+// UNPINNED tunable roles (analysis/kernel) are judged against the role's BLENDED baseline
+// AND gated behind `activationMinCalls` — a low traffic floor: the loop leaves an unpinned
+// role at its cascade default (bypass) until the winning provider has accumulated that many
+// calls in the window (owner: "pin analysis/kernel but bypass until traffic grows — set a
+// low traffic number"). This stops a premature pin to a thin-data or no-gain provider, and
+// auto-activates the pin once a genuinely cheaper provider has proven out at low volume.
 export function proposeRoles(current, rows, opts = {}) {
-  const { margin = 0.10 } = opts;
+  const { margin = 0.10, activationMinCalls = 30 } = opts;
   const proposed = { ...current };
   const rationale = [];
   // Score every tunable role, not only the ones already pinned in MODEL_ROLES —
@@ -133,11 +155,23 @@ export function proposeRoles(current, rows, opts = {}) {
     else if (!best) { why = 'no provider meets the adequacy floor — keep (fallback cascade still runs)'; }
     else if (!KNOWN_PROVIDERS.includes(best.provider)) { why = `best (${best.provider}) not a known provider — keep`; }
     else if (best.provider === curHead) { why = `current head is already best (cq=${best.costQuality.toFixed(3)})`; }
-    else {
+    else if (!pinned) {
+      // UNPINNED: blended baseline + low-traffic activation floor.
+      const blend = blendedBaseline(ranked);
+      if (best.calls < activationMinCalls) {
+        why = `${best.provider} best but only n=${best.calls} < activation floor ${activationMinCalls} — bypass (leave ${role} at the cascade default until traffic grows)`;
+      } else if (best.costQuality > blend.costQuality * (1 + margin)) {
+        decision = 'flip'; to = best.provider;
+        why = `PIN ${role}→${best.provider} cq=${best.costQuality.toFixed(3)} beats the role's blended baseline cq=${blend.costQuality.toFixed(3)} by > ${(margin * 100).toFixed(0)}% (n=${best.calls} ≥ activation ${activationMinCalls})`;
+      } else {
+        why = `${best.provider} (cq=${best.costQuality.toFixed(3)}) does not beat the blended baseline cq=${blend.costQuality.toFixed(3)} by margin — no gain, stay unpinned`;
+      }
+    } else {
+      // PINNED: judge against the current head's score.
       const curCq = curScore && curScore.eligible ? curScore.costQuality : 0;
       if (best.costQuality > curCq * (1 + margin)) {
         decision = 'flip'; to = best.provider;
-        why = `${best.provider} cq=${best.costQuality.toFixed(3)} beats ${pinned ? curHead : curHead + ' (unpinned default)'} cq=${curCq.toFixed(3)} by > ${(margin * 100).toFixed(0)}%`;
+        why = `${best.provider} cq=${best.costQuality.toFixed(3)} beats ${curHead} cq=${curCq.toFixed(3)} by > ${(margin * 100).toFixed(0)}%`;
       } else {
         why = `${best.provider} (cq=${best.costQuality.toFixed(3)}) within ${(margin * 100).toFixed(0)}% of ${curHead} (cq=${curCq.toFixed(3)}) — hysteresis, keep`;
       }
@@ -237,6 +271,9 @@ async function main() {
     floor: parseFloat(arg('floor', '0.90')),
     margin: parseFloat(arg('margin', '0.10')),
     minCalls: parseInt(arg('min-calls', '20'), 10),
+    // Low traffic floor before an UNPINNED role (analysis/kernel) is auto-pinned
+    // (owner: "bypass until traffic grows — set a low traffic number").
+    activationMinCalls: parseInt(arg('activation-min-calls', '30'), 10),
   };
   const current = readModelRoles(PROXY_TOMLS[0]);
   if (!current) { console.error('could not read MODEL_ROLES from ' + PROXY_TOMLS[0]); process.exit(2); }

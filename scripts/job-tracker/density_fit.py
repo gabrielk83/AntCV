@@ -541,6 +541,42 @@ def fit_density(cv, cl, pi, style_config, meta, language, doc="cv",
     if rep is None:
         return cv, cl, {"before": None, "after": None, "log": ["measure unavailable"]}
     before = rep
+    # NARROW-CELL-CASCADE-001 corrector, lever 2 (owner 2026-07-13: "hard
+    # compress or enlarge this column width if it does not cause the other
+    # column to go out of line"): when a table label cascades even after the
+    # persist-time label compression (lever 1, quality_pass), widen the
+    # Focus-Area column stepwise; accept the first ratio that clears the
+    # cascade WITHOUT the value column exceeding its baseline line count.
+    accepted_ratio = None
+    if rep.get("cell_cascades") and doc == "cv":
+        base_vmax = rep.get("table_values_max_lines") or 2
+        casc_secs = {m.get("sec") for m in rep["cell_cascades"]}
+        tsecs = [s for s in cv if isinstance(s, dict) and s.get("type") == "table"
+                 and (s.get("id") or s.get("type")) in casc_secs]
+        orig_ratios = [s.get("tableRatio") for s in tsecs]
+        for ratio in (0.28, 0.31, 0.34):
+            for s in tsecs:
+                # the ratio knob is PER-SECTION (docx-client attaches
+                # s.tableRatio; the style-level passthrough never reaches the
+                # table renderer) - and it persists WITH cv_sections
+                s["tableRatio"] = ratio
+            r2, p2 = _measure(cv, cl)
+            if r2 is None:
+                break
+            if not r2.get("cell_cascades") and (r2.get("table_values_max_lines") or 0) <= base_vmax:
+                rep, payload = r2, p2
+                accepted_ratio = ratio
+                log.append(f"cell-cascade: tableRatio -> {ratio} (labels fit, values hold at <= {base_vmax} lines)")
+                if verbose:
+                    print(f"   [density] cell-cascade cleared: tableRatio {ratio}")
+                break
+        if accepted_ratio is None:
+            for s, orig in zip(tsecs, orig_ratios):
+                if orig is None:
+                    s.pop("tableRatio", None)
+                else:
+                    s["tableRatio"] = orig
+            log.append("cell-cascade: ratio ladder exhausted - labels need harder compression")
     best = (copy.deepcopy(cv), copy.deepcopy(cl), rep)
     root = {"cv": cv, "cl": cl}
     attempts = {}          # norm(text) -> {"n": tries, "feedback": last reason}
@@ -722,7 +758,8 @@ def fit_density(cv, cl, pi, style_config, meta, language, doc="cv",
             print(f"   [density] {rw['how']} {rw['sec']}:\n"
                   f"      - {rw['old']}\n      + {rw['new']}")
     return final_cv, final_cl, {"before": before, "after": after, "log": log,
-                                "rewrites": rewrites, "pinned": pinned}
+                                "rewrites": rewrites, "pinned": pinned,
+                                "table_ratio": accepted_ratio}
 
 # ── CLI: fit a live application ──────────────────────────────────────────────
 def main():
@@ -762,9 +799,11 @@ def main():
     if args.apply and out["after"] and out["before"] and \
        (out["after"].get("defect_count", out["after"]["runt_count"])
         < out["before"].get("defect_count", out["before"]["runt_count"])):
+        # NARROW-CELL-CASCADE-001: an accepted tableRatio lives ON the table
+        # section inside cv_sections, so this PUT persists it by itself
         c2, b2 = gr._req(gr.RELAY, f"/api/applications/{args.app}", "PUT",
                          {"cv_sections": cv2, "cl_sections": cl2})
-        print(f"applied: PUT {c2}")
+        print(f"applied: PUT {c2}" + (f" (tableRatio {out['table_ratio']})" if out.get("table_ratio") else ""))
     elif args.apply:
         print("apply skipped: no improvement to persist")
 

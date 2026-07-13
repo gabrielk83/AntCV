@@ -25,6 +25,7 @@
 |---|---|
 | A Results line states a CHANGE metric (%, ×, →, time/volume/money delta) + mechanism; team sizes/site descriptions are bullets, never Results | RESULTS-OUTCOME-METRIC-001 (quality_pass; kernel selectedOutcomes pool, position-matched); GOLD CONTENT RULES gen-prompt block |
 | Core-competency table: 2 highest-impact rows; complete-clause cells | quality_pass rule_core_comp (cap 2); gen prompt block |
+| NARROW-CELL-CASCADE-001: no table cell over 2 rendered lines; no one-word-per-line wrap of a 3+-word label (owner 2026-07-13, Tech Mahindra focus cell). Levers: label hard-compress first, then tableRatio widen (0.28/0.31/0.34) gated on the value column holding its line count | measure_density _table_cell_scan (geometric — cells have no stream geometry); quality_pass label cap (site caps.table_label_max_chars 28); density_fit ratio ladder + per-app meta.styleConfig persist; gold_audit cell_cascade; prompt block line |
 | No truncations anywhere: every cut ends at a clause boundary with terminal punctuation; never a dangling connector/preposition ("…traceable from", "…while producing") | CAP-CLEAN-CUT-001 (gen-runner _cap_line/_cap_para); quality_pass prose rules + rule_bullet_periods; density trim guards |
 | Partner/client names only with a JD signal; else "an ODM partner" | quality_pass _PARTNER_NAMES; gen prompt block |
 | Certificates: no years; JD-relevance-ranked; rugby-class (coaching/concussion) last unless a sports JD; max 4; BABOK survives program/requirements/EA JDs | quality_pass rule_certs; gen-runner BABOK-RELEVANCE-001 |
@@ -43,6 +44,14 @@
 | Citizenship canonical "EU citizen" (da/zh translate at generation); conditional-Danish covers the LOCATION line + forening terms, never citizenship | kernel (fixed); babel layers |
 | København + Danish forms stay when the app is Danish OR the JD is Denmark-based — including exports | LOCALFORM-DA-CONDITIONAL-EXPORT-001 (docx-client, meta.jd_dk) |
 | Photo present in every export (cloud prefs /photo); signature syncs to cloud (backfill) and rides headless exports once present | EXPORT-PARITY-001 (harness); SIGNATURE-CLOUD-BACKFILL-001 (sync sidecars) |
+
+## 3b. Role control (identity + per-language canon)
+
+| Rule | Enforcement |
+|---|---|
+| The stable canonical role id is the LANGUAGE-AGNOSTIC identity: a suffixed backfill twin (`<id>-2`) or a gen schema id (`r1..`) at the same company/tenure is the SAME position — exactly ONE role per canonical id after dedupe, the canonical id survives (the Results pins key on it) | SAME-ID-SAME-POSITION-001 (1.51.353) + BASE-ID/GEN-ID-SAME-POSITION (1.51.358) in `antcv-sections-normalize-415.js` `_samePosition` + `dedupeRoles` |
+| Role TITLES are per-language RENDERINGS of that identity — canonical en/da/es/zh titles live in `gold-rules.json roles.canon_titles` (the ONE control site) and are applied deterministically on en/da/es/zh ribbons after dedupe; he/am/ar keep the translate output; a merged title with MORE &-segments than the canon is a deliberate merge-or-split structure and is never overwritten | ROLE-CANON-LANG-001 (1.51.394) `roleCanonTitles` in normalize-415 (gold-fetch + mirrored fallback); mirror-drift + owner pins + typography gated by `pwa/test/unit/gold-role-canon.test.mjs` (in the suite) |
+| Merged "Earlier career" entries declare their constituents (`__covers`) so the completeness backfill never re-adds them; the backfill's duplicate check is id-based, so cross-LANGUAGE twins can no longer accumulate | ROLE-COVERS-001 (1.51.362) + the id rules above |
 
 ## 4. Accessibility — BEFORE any branding
 

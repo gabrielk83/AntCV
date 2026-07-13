@@ -62,6 +62,9 @@ export interface TrackerDoc {
   support?: Record<string, string>;
   webintel?: Record<string, string>;    // per-row distilled web research on the employer (HOLISTIC + SPECIFIC), cached
   scores?: Record<string, { fit?: number; rank?: number; why?: string }>;
+  pin?: Record<string, boolean>;         // JOBTRACKER-AUTOFILL-TOP5-001: force into Top-5 (independent of fit rank)
+  park?: Record<string, boolean>;        // out of Top-5 candidacy but STAYS LIVE in the weekly list (not archived)
+  discovered?: Record<string, { status?: string; reason?: string; uk?: string; company?: string; role?: string; url?: string; first_seen?: string; why?: string }>; // discovery ledger + reject reasons (mirrors discover-positions.py)
   artifacts?: Record<string, {
     application_id?: number; jd_hash?: string; generated_at?: number;
     cv_export_url?: string; cl_export_url?: string; analysis_url?: string;

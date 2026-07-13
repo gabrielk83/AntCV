@@ -46,6 +46,17 @@
 #        --kernel-file PATH | --out DIR | --provider anthropic | --dry (plan only, no LLM)
 import os, sys, json, time, argparse, urllib.request, urllib.error, urllib.parse, re, copy
 
+# GOLD-RULES-SITE-001: caps + banned words read from the single control site
+# (pwa/gold-rules.json); literals are fallbacks.
+try:
+    _GOLD = json.load(open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "pwa", "gold-rules.json"), encoding="utf-8"))
+except Exception:
+    _GOLD = {}
+_GOLD_CAPS = _GOLD.get("caps") or {}
+_BULLET_CAP = int(_GOLD_CAPS.get("bullet_chars", 148))
+_PARA_CAP = int(_GOLD_CAPS.get("paragraph_chars", 330))
+
+
 RELAY = os.environ.get("ANTCV_RELAY", "https://antcv-access-relay.karp-gabriel-a.workers.dev").rstrip("/")
 PROXY = os.environ.get("ANTCV_PROXY", "https://cv-proxy.karp-gabriel-a.workers.dev").rstrip("/")
 UA    = "Mozilla/5.0 (AntCV gen-runner)"
@@ -464,8 +475,7 @@ def drive(sections, provider, model, source_cv, jd_text, max_steps=80, skip_cohe
     return out
 
 # ── banned-word check (report only) ────────────────────────────────
-BANNED_SAMPLE = ["spearhead", "leverage", "robust", "passionate", "committed",
-                 "cutting-edge", "world-class", "results-driven", "—", "–"]
+BANNED_SAMPLE = (_GOLD.get("banned_words") or ["spearhead", "leverage", "robust", "passionate", "committed", "cutting-edge", "world-class", "results-driven"]) + ["—", "–"]
 def banned_hits(text):
     t = (text or "").lower()
     return [w for w in BANNED_SAMPLE if w in t]
@@ -812,6 +822,7 @@ def _clean_cut(win):
 def _cap_line(s, maxlen=155):
     """Limit a bullet/result to ~2 rendered lines, trimming at a clause or word
     boundary (owner: 'limit line lengths') — always a CLEAN, period-closed end."""
+    maxlen = maxlen or _BULLET_CAP
     s = (s or "").strip()
     if len(s) <= maxlen: return s
     win = s[:maxlen]
@@ -819,9 +830,10 @@ def _cap_line(s, maxlen=155):
         p = win.rfind(sep)
         if p >= maxlen * 0.55: return _clean_cut(win[:p])
     return _clean_cut(win.rsplit(" ", 1)[0])
-def _cap_para(s, maxlen=330):
+    def _cap_para(s, maxlen=330):
     """Keep a cover-letter PARAGRAPH readable (~3-4 lines): trim to the last full
     sentence under maxlen (owner: 'too long, >3-4 lines per paragraph')."""
+    maxlen = maxlen or _PARA_CAP
     s = (s or "").strip()
     if len(s) <= maxlen: return s
     win = s[:maxlen]
@@ -946,7 +958,7 @@ def _select_and_summarize(roles, jdkw, keep=6, language="en"):
     # reverse-chronological, Earlier career pinned last
     return sorted(result[:keep], key=lambda r: (1 if r.get("id") == "earlier-career" else 0, -_yr(r.get("years"))))
 
-def _fit_role(role, jdkw, max_bullets=3, cap=155):
+def _fit_role(role, jdkw, max_bullets=3, cap=148):
     bl = role.get("bullets") or []
     order = sorted(range(len(bl)), key=lambda i: -_rel(bl[i], jdkw))[:max_bullets]
     top = [bl[i] for i in sorted(order)]                        # keep original narrative order
@@ -999,7 +1011,7 @@ def compact_jd_aware(cv, cl, jd, language="en"):
             roles = _select_and_summarize(_merge_roles(s["roles"]), jdkw, keep=6, language=language)
             for r in roles:
                 if r.get("id") != "earlier-career":            # keep the summary compact, verbatim
-                    _fit_role(r, jdkw, max_bullets=3, cap=155)
+                    _fit_role(r, jdkw, max_bullets=3, cap=148)
             s["roles"] = roles
             has_ec = any(r.get("id") == "earlier-career" for r in roles)
             cut.append(f"experience {n0}->{len(roles)} roles (merged + JD-ranked{', +Earlier career' if has_ec else ''}, <=3 bullets + result)")

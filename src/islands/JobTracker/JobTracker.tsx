@@ -7,6 +7,7 @@ import {
   getDoc, putDoc, fetchJdUrl, createApplication, setActive, classifyReason,
   fetchClusterTop20, askAI, fitPercent, fetchBrandColors, research, TRACKED_STATUSES, type TrackerDoc, type Row,
 } from './api';
+import { computeTier, orderTop5 } from './rank';
 
 const NAVY = '#1F3864';
 const today = () => new Date().toISOString().slice(0, 10);
@@ -82,6 +83,28 @@ function signalsBlockOf(d: TrackerDoc | null, uk: string): string {
     if (f && f.text) parts.push('--- attached signal material: ' + (f.name || 'file') + ' ---\n' + f.text);
   }
   return parts.join('\n');
+}
+
+// SAVE-409-MERGE-001: rebase this session's edits onto a newer server doc after
+// a rev conflict. Server doc is the base (rows/keys added elsewhere survive —
+// e.g. discovery rows, app-written rationale/scores); local wins per row-key
+// where this session has data. Deliberate last-writer-wins on shared keys: the
+// pre-existing behaviour on conflict was to DROP every local edit, so any
+// overlap here is strictly less lossy.
+function mergeDocs(server: TrackerDoc, local: TrackerDoc): TrackerDoc {
+  const out: TrackerDoc = { ...server };
+  const MAPS = ['urls', 'jd', 'gen', 'queue', 'brandfit', 'brand', 'signals', 'sigfiles', 'support', 'webintel', 'scores', 'artifacts', 'discovered', 'pin', 'park'];
+  for (const k of MAPS) {
+    const sv = (server as Record<string, unknown>)[k] as Record<string, unknown> | undefined;
+    const lv = (local as Record<string, unknown>)[k] as Record<string, unknown> | undefined;
+    if (lv && typeof lv === 'object') (out as Record<string, unknown>)[k] = { ...(sv || {}), ...lv };
+  }
+  const lmap = new Map((local.rows || []).map((r) => [r[11], r]));
+  const skeys = new Set((server.rows || []).map((r) => r[11]));
+  out.rows = (server.rows || []).map((r) => lmap.get(r[11]) || r);
+  for (const r of local.rows || []) if (!skeys.has(r[11])) out.rows.push(r);
+  if (local.envelope) out.envelope = local.envelope;
+  return out;
 }
 
 // RESEARCH-MERGE-001: JD-sourced ROLE INTEL + web-sourced COMPANY RESEARCH go
@@ -162,9 +185,11 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     r.sort((a, b) => (Number(a[0]) || 99) - (Number(b[0]) || 99));
     return r;
   }, [doc]);
-  // TOP5-REFILL-001: the 5 best LIVE rows (rows are rank-sorted above). Closed/
-  // dropped rows fall out and the next rank auto-promotes into the panel.
-  const top5 = useMemo(() => rows.filter((r) => !isClosedRow(r)).slice(0, 5), [rows]);
+  // TOP5-FIT-RANK-001 (JOBTRACKER-AUTOFILL-TOP5-001): the 5 best LIVE rows by
+  // DETERMINISTIC fit score — pins first, then highest fit; closed + parked rows
+  // excluded. Re-evaluated on every doc change, so any add re-ranks against the
+  // current Top-5 (a new lead that outscores #5 enters on the spot).
+  const top5 = useMemo(() => (doc ? orderTop5(rows, doc, cluster, isClosedRow) : []), [rows, doc, cluster]);
   const top5Keys = useMemo(() => new Set(top5.map((r) => r[11])), [top5]);
 
   function editRow(uk: string, idx: number, value: string): void {
@@ -241,6 +266,22 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
   // Nightly queue (⏰): on by default until the row has been generated; explicit toggle wins.
   const nightlyOn = (uk: string) => { const q = doc?.queue?.[uk]; return q === undefined ? !hasArtifact(uk) : q; };
   function toggleNightly(uk: string): void { if (!doc) return; setDocState({ ...doc, queue: { ...(doc.queue || {}), [uk]: !nightlyOn(uk) } }); setDirty(true); }
+  // TOP5-FIT-RANK-001: Pin forces a row into the fit-ranked Top-5; Park removes it
+  // from Top-5 candidacy but keeps it LIVE in the weekly list (not archived).
+  const pinnedOf = (uk: string) => !!(doc?.pin || {})[uk];
+  const parkedOf = (uk: string) => !!(doc?.park || {})[uk];
+  function togglePin(uk: string): void {
+    if (!doc) return;
+    const on = !pinnedOf(uk);
+    setDocState({ ...doc, pin: { ...(doc.pin || {}), [uk]: on }, ...(on ? { park: { ...(doc.park || {}), [uk]: false } } : {}) });
+    setDirty(true);
+  }
+  function togglePark(uk: string): void {
+    if (!doc) return;
+    const on = !parkedOf(uk);
+    setDocState({ ...doc, park: { ...(doc.park || {}), [uk]: on }, ...(on ? { pin: { ...(doc.pin || {}), [uk]: false } } : {}) });
+    setDirty(true);
+  }
   const [expandRow, setExpandRow] = useState<string | null>(null);
   // Single floating "Ask AI" assistant for the whole job list.
   const [chatOpen, setChatOpen] = useState(false);
@@ -280,7 +321,24 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
   const persist = useCallback(async (next: TrackerDoc, quiet = false): Promise<boolean> => {
     const res = await putDoc(next, rev);
     if (res.ok) { setRev(res.rev || rev + 1); setDocState(next); setDirty(false); if (!quiet) setNote('Saved ✓'); return true; }
-    if (res.conflict) { setErr('Changed elsewhere — reloaded latest, re-apply your edit.'); setDocState(res.serverDoc || next); setRev(res.serverRev || rev); setDirty(false); return false; }
+    if (res.conflict) {
+      // SAVE-409-MERGE-001 (register row 79): the app bumps the doc rev behind
+      // the island (auto JD-analysis persists rationale onto the row after
+      // Open), so a plain 409 used to REPLACE local state with the server doc —
+      // silently dropping typed-but-unsaved edits (e.g. signals entered right
+      // before pressing Open). Rebase ONCE onto the server doc (server-added
+      // rows/keys survive, this session's edits win) and re-PUT.
+      if (res.serverDoc) {
+        const rebased = mergeDocs(res.serverDoc, next);
+        const res2 = await putDoc(rebased, res.serverRev ?? null);
+        if (res2.ok) {
+          setRev(res2.rev || (res.serverRev || rev) + 1); setDocState(rebased); setDirty(false);
+          if (!quiet) setNote('Saved ✓ (merged a concurrent update)');
+          return true;
+        }
+      }
+      setErr('Changed elsewhere — reloaded latest, re-apply your edit.'); setDocState(res.serverDoc || next); setRev(res.serverRev || rev); setDirty(false); return false;
+    }
     setErr(res.error || 'save failed'); return false;
   }, [rev]);
 
@@ -298,20 +356,78 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     return persist({ ...doc, webintel: { ...(doc.webintel || {}), [uk]: text } }, true);
   }, [doc, persist]);
 
-  // Append a row from a JD (shared by URL + file paths).
-  function appendRow(company: string, role: string, jdText: string, url?: string, support?: string, web?: string): void {
-    if (!doc) return;
+  // Append a row from a JD (shared by URL + file paths). Returns the new row's uk
+  // so the caller can run the async enrich pass (AUTOFILL-REFINE-001).
+  function appendRow(company: string, role: string, jdText: string, url?: string, support?: string, web?: string): string {
+    if (!doc) return '';
     const uk = slug(company + '-' + role) + '-' + String(Date.now()).slice(-4);
     const maxRank = Math.max(0, ...(doc.rows || []).map((r) => Number(r[0]) || 0));
-    const row: Row = [maxRank + 1, company, role, '', '', '', '', 'OPEN', 'Not started', '', 'Added', uk, 'E2EFDA'];
+    // AUTO-TIER-001: deterministic fit-tier on add (instant baseline; the async
+    // refine may upgrade it). LEARN-FROM-PRIOR-001: inherit the generation tier of
+    // the most similar prior row (same category) so a new add follows the list's
+    // established conventions instead of a blank default.
+    const band = computeTier(jdText, company, role, '', cluster);
+    const cat = categoryFor(role, company);
+    const prior = (doc.rows || []).find((r) => categoryFor(r[2], r[1]) === cat && (doc.gen || {})[r[11]]);
+    const priorGen = prior ? (doc.gen || {})[prior[11]] : '';
+    const row: Row = [maxRank + 1, company, role, '', '', '', '', 'OPEN', 'Identified (posting saved)', 'Review & tailor', 'Added', uk, band];
     const next: TrackerDoc = {
       ...doc, rows: [...(doc.rows || []), row],
       urls: url ? { ...(doc.urls || {}), [uk]: url } : (doc.urls || {}),
       jd: { ...(doc.jd || {}), [uk]: jdText },
       support: { ...(doc.support || {}), [uk]: support || ('ROLE: ' + company + ' — ' + role) },
       webintel: web ? { ...(doc.webintel || {}), [uk]: web } : (doc.webintel || {}),
+      gen: priorGen ? { ...(doc.gen || {}), [uk]: priorGen } : (doc.gen || {}),
     };
-    setDocState(next); setDirty(true); setNote('Added "' + (role || company) + '" with JD + signals. Review & Save.');
+    setDocState(next); setDirty(true);
+    setNote('Added "' + (role || company) + '" — tier ' + (tierOf(band).label || '?') + '. Auto-filling…');
+    return uk;
+  }
+
+  // AUTOFILL-REFINE-001: async enrichment after an add. Upgrades the tier with
+  // semantic judgment, extracts location / salary / deadline / hiring-manager, sets
+  // a tailored next-step, flags envelope conflicts, and samples brand colours.
+  // Never blocks (the row already appeared); the deterministic baseline stands on
+  // any failure; never fabricates (omits unknowns). Leaves the doc dirty to Save.
+  async function enrichAdded(uk: string, company: string, role: string, jd: string, url?: string): Promise<void> {
+    try {
+      const c = await fetchBrandColors(url || '', company);
+      if (c && (c.navy || c.accent)) setDocState((d) => (d ? { ...d, brand: { ...(d.brand || {}), [uk]: c }, brandfit: { ...(d.brandfit || {}), [uk]: true } } : d));
+    } catch { /* brand is best-effort */ }
+    try {
+      const sys = 'You calibrate a job for a candidate (Gabriel: electro-optics / optical-systems engineer + hardware project manager, Copenhagen, EU/Polish citizen; targeting AI-workflow / technical-product / specialist roles; wants Greater Copenhagen, hybrid DK / Øresund-Skåne, or remote-EU, ~55-75k DKK/month). From the JD output EXACTLY these labelled lines and nothing else; use ONLY what the JD supports and write "?" when unknown — never guess:\n'
+        + 'TIER: <T1|T2|T3> (T1 strong direct EO/photonics/optical-systems & reachable; T2 transferable product/PM/requirements/QC; T3 weak/off-domain or on-site abroad)\n'
+        + 'LOCATION: <city, country + on-site/hybrid/remote, or ?>\n'
+        + 'SALARY: <range if stated, else ?>\nDEADLINE: <if stated, else ?>\nMANAGER: <named hiring contact if stated, else ?>\n'
+        + 'NEXTSTEP: <one short concrete next action for the candidate>\n'
+        + 'CONFLICTS: <envelope conflicts — salary<55k, on-site abroad, draining factors; or "none">';
+      const out = await askAI('Company: ' + company + '\nRole: ' + role + '\n\nJOB DESCRIPTION:\n' + jd.slice(0, 4500), sys, 320);
+      const get = (k: string) => (out.match(new RegExp('^' + k + ':\\s*(.+)$', 'im'))?.[1] || '').trim();
+      const clean = (v: string) => (v && v !== '?' && !/^n\/?a$/i.test(v)) ? v : '';
+      const tierTok = get('TIER').toUpperCase().match(/T[123]/)?.[0];
+      const newBand = tierTok === 'T1' ? 'DDEBF7' : tierTok === 'T2' ? 'E2EFDA' : tierTok === 'T3' ? 'FCE4D6' : '';
+      const loc = clean(get('LOCATION')); const nextStep = clean(get('NEXTSTEP'));
+      const extra: string[] = [];
+      const manager = clean(get('MANAGER')); if (manager) extra.push('Hiring contact: ' + manager);
+      const deadline = clean(get('DEADLINE')); if (deadline) extra.push('Deadline: ' + deadline);
+      const salary = clean(get('SALARY')); if (salary) extra.push('Salary (stated): ' + salary);
+      const conflicts = clean(get('CONFLICTS')); if (conflicts && !/^none$/i.test(conflicts)) extra.push('⚠ Envelope conflict: ' + conflicts);
+      setDocState((d) => {
+        if (!d) return d;
+        const rows2 = (d.rows || []).map((r) => {
+          if (r[11] !== uk) return r;
+          const cc = r.slice() as Row;
+          if (newBand) cc[12] = newBand;
+          if (loc && !cc[3]) cc[3] = loc.slice(0, 60);
+          if (nextStep) cc[9] = nextStep.slice(0, 120);
+          return cc;
+        });
+        if (!extra.length) return { ...d, rows: rows2 };
+        const prev = (d.signals || {})[uk] || '';
+        return { ...d, rows: rows2, signals: { ...(d.signals || {}), [uk]: (prev ? prev + '\n' : '') + extra.join('\n') } };
+      });
+      setDirty(true);
+    } catch { /* deterministic baseline stands */ }
   }
 
   // Unwrap redirect wrappers (LinkedIn safety/go, generic ?url=) to the real posting.
@@ -387,8 +503,9 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
       const support = await analyzeJd(jd.text, company, role);
       setNote('Researching the employer on the web…');
       const web = await webCompanyBrief(company, role);
-      appendRow(company, role, jd.text, url, support, web);
+      const uk = appendRow(company, role, jd.text, url, support, web);
       setAddUrl('');
+      if (uk) { setNote('Auto-filling tier, brand & details…'); await enrichAdded(uk, company, role, jd.text, url); setNote('Added "' + (role || company) + '" with tier, brand & details. Review & Save.'); }
     } catch (e) { setErr(String((e as Error).message || e)); }
     finally { setAdding(false); }
   }
@@ -407,7 +524,8 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
       setNote('Analysing the JD & researching the employer…');
       const support = await analyzeJd(text, company, role);
       const web = await webCompanyBrief(company, role);
-      appendRow(company, role, text, undefined, support, web);
+      const uk = appendRow(company, role, text, undefined, support, web);
+      if (uk) { setNote('Auto-filling tier, brand & details…'); await enrichAdded(uk, company, role, text, undefined); }
       setNote('Extracted ' + text.length + ' chars from ' + file.name + '. Review & Save.');
     } catch (e) { setErr(String((e as Error).message || e)); }
     finally { setAdding(false); if (fileRef.current) fileRef.current.value = ''; }
@@ -499,16 +617,27 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
   // "opens to the upload menu with nothing" bug.
   async function openSaved(row: Row): Promise<void> { return prepareAndOpen(row); }
 
-  async function dropFromTop5(row: Row): Promise<void> {
+  // REJECT (was dropFromTop5): archive the row WITH a reason → classify to a Dream-
+  // Envelope dimension (envelope learning) AND record it in the discovery ledger so
+  // the bi-weekly discovery task never re-proposes it. Distinct from Park, which
+  // keeps the row live. (Ledger key mirrors discover-positions.py: normalized URL
+  // when present, else normalized company|role — so the reject actually blocks.)
+  async function rejectRow(row: Row): Promise<void> {
     if (!doc) return;
-    const reason = window.prompt('Why are you dropping ' + row[1] + '?');
+    const reason = window.prompt('Reject ' + row[1] + ' — why?\n(Recorded, teaches your envelope, and stops the discovery task re-proposing it. To just take it out of Top-5, use Park instead.)');
     if (!reason || !reason.trim()) return;
     const uk = row[11]; setBusyKey(uk); setErr(null); setNote(null);
     try {
       const dim = classifyReason(reason);
-      const env = (doc.envelope || []).map((e) => { if (e[0] !== dim) return e; const c = e.slice(); c[3] = String(c[3] || '') + '  •  [' + today() + '] dropped ' + row[1] + ': ' + reason.trim(); return c; });
-      const rowsNext = (doc.rows || []).map((r) => { if (r[11] !== uk) return r; const c = r.slice() as Row; c[8] = 'Archive / closed'; c[10] = 'Dropped (' + dim + '): ' + reason.trim(); c[12] = 'D9D9D9'; return c; });
-      if (await persist({ ...doc, envelope: env, rows: rowsNext }, true)) setNote('Dropped ' + row[1] + '. Envelope learning added → ' + dim + '.');
+      const env = (doc.envelope || []).map((e) => { if (e[0] !== dim) return e; const c = e.slice(); c[3] = String(c[3] || '') + '  •  [' + today() + '] rejected ' + row[1] + ': ' + reason.trim(); return c; });
+      const rowsNext = (doc.rows || []).map((r) => { if (r[11] !== uk) return r; const c = r.slice() as Row; c[8] = 'Archive / closed'; c[10] = 'Rejected (' + dim + '): ' + reason.trim(); c[12] = 'D9D9D9'; return c; });
+      const url = (doc.urls || {})[uk] || '';
+      const key = url
+        ? url.toLowerCase().replace(/^https?:\/\/(www\.)?/, '').split(/[?#]/)[0].replace(/\/+$/, '')
+        : (String(row[1]) + '|' + String(row[2])).toLowerCase().replace(/[^a-z0-9|]+/g, '');
+      const discovered = { ...(doc.discovered || {}), [key]: { ...((doc.discovered || {})[key] || {}), status: 'rejected', reason: reason.trim(), uk, company: row[1], role: row[2], url } };
+      const next = { ...doc, envelope: env, rows: rowsNext, discovered, pin: { ...(doc.pin || {}), [uk]: false }, park: { ...(doc.park || {}), [uk]: false } };
+      if (await persist(next, true)) setNote('Rejected ' + row[1] + ' → envelope learning (' + dim + '); discovery won\'t re-propose it.');
     } catch (e) { setErr(String((e as Error).message || e)); }
     finally { setBusyKey(null); }
   }
@@ -603,6 +732,14 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
                           </label>
                           {doc?.urls?.[uk] ? <a href={doc.urls[uk]} target="_blank" rel="noreferrer" title="Open posting" style={{ color: t.accent, fontWeight: 700, fontSize: 14 }}>↗</a> : null}
                         </div>
+                        <div style={{ display: 'flex', gap: 6, justifyContent: 'center', alignItems: 'center', marginTop: 3 }}>
+                          <button onClick={() => togglePin(uk)} title={pinnedOf(uk) ? 'Pinned to Top-5 — tap to unpin' : 'Pin to Top-5'}
+                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 13, opacity: pinnedOf(uk) ? 1 : 0.3, padding: 0, color: '#B58A00' }}>★</button>
+                          <button onClick={() => togglePark(uk)} title={parkedOf(uk) ? 'Parked (out of Top-5) — tap to unpark' : 'Park — out of Top-5, stays in the list'}
+                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 12, opacity: parkedOf(uk) ? 1 : 0.3, padding: 0 }}>⏸</button>
+                          <button onClick={() => void rejectRow(r)} title="Reject with a reason (archives + stops discovery re-proposing)"
+                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 12, opacity: 0.5, padding: 0, color: '#7a2618' }}>✕</button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -613,8 +750,9 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
           ) : (
             <div style={{ padding: 14, display: 'grid', gap: 14 }}>
               {top5.map((r) => <FocusCard key={r[11]} row={r} doc={doc} cluster={cluster} mobile={isMobile} busy={busyKey === r[11]}
-                onPrepare={() => void prepareAndOpen(r)} onOpen={() => void openSaved(r)} onDrop={() => void dropFromTop5(r)} onSaveSupport={saveSupport}
-                onSaveWeb={saveWeb} onResearch={researchRow} />)}
+                onPrepare={() => void prepareAndOpen(r)} onOpen={() => void openSaved(r)}
+                pinned={pinnedOf(r[11])} onTogglePin={() => togglePin(r[11])} onPark={() => togglePark(r[11])} onReject={() => void rejectRow(r)}
+                onSaveSupport={saveSupport} onSaveWeb={saveWeb} onResearch={researchRow} />)}
               {top5.length === 0 && <div>No Top-5 roles yet.</div>}
             </div>
           )}
@@ -699,9 +837,10 @@ function buildSupport(p: ReturnType<typeof parseSupport>): string {
   return out.join('\n');
 }
 
-function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, onDrop, onSaveSupport, onSaveWeb, onResearch }: {
+function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, pinned, onTogglePin, onPark, onReject, onSaveSupport, onSaveWeb, onResearch }: {
   row: Row; doc: TrackerDoc | null; cluster: { qual: string }[]; mobile: boolean; busy: boolean;
-  onPrepare: () => void; onOpen: () => void; onDrop: () => void; onSaveSupport: (uk: string, text: string) => Promise<boolean>;
+  onPrepare: () => void; onOpen: () => void; pinned: boolean; onTogglePin: () => void; onPark: () => void; onReject: () => void;
+  onSaveSupport: (uk: string, text: string) => Promise<boolean>;
   onSaveWeb: (uk: string, text: string) => Promise<boolean>; onResearch: (uk: string, company: string, role: string) => Promise<string>;
 }): JSX.Element {
   const uk = row[11]; const t = tierOf(row[12]);
@@ -828,7 +967,10 @@ function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, onDrop,
           {saved
             ? <button onClick={onOpen} disabled={busy} style={btn('#2e7d32', '#fff', fs(12, 14))}>{busy ? '…' : '↗ Open in preview'}</button>
             : <button onClick={onPrepare} disabled={busy} style={btn(t.accent, '#fff', fs(12, 14))}>{busy ? 'Preparing…' : '✨ Prepare & open in AntCV'}</button>}
-          <button onClick={onDrop} disabled={busy} style={btn('#f4e6e2', '#7a2618', fs(12, 14))}>✕ Drop</button>
+          <button onClick={onTogglePin} disabled={busy} title={pinned ? 'Unpin from Top-5' : 'Pin into Top-5 (independent of fit rank)'}
+            style={btn(pinned ? '#B58A00' : '#eef1f6', pinned ? '#fff' : '#556', fs(12, 14))}>{pinned ? '★ Pinned' : '☆ Pin'}</button>
+          <button onClick={onPark} disabled={busy} title="Park — out of Top-5 but stays live in the list" style={btn('#eef1f6', '#556', fs(12, 14))}>⏸ Park</button>
+          <button onClick={onReject} disabled={busy} title="Reject with a reason (archives + stops discovery re-proposing)" style={btn('#f4e6e2', '#7a2618', fs(12, 14))}>✕ Reject</button>
           {showAi && <button onClick={() => void refineAll()} disabled={ai} title="Ask AI to polish all 'I bring' lines"
             style={btn(t.accent, '#fff', fs(12, 14))}>{ai ? 'Polishing…' : '✨ Ask AI'}</button>}
           {dirty && <button onClick={() => void saveIntel()} disabled={savingSup} style={btn('#2e7d32', '#fff', fs(12, 14))}>{savingSup ? 'Saving…' : '💾 Save edits'}</button>}

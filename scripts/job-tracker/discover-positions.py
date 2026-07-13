@@ -38,6 +38,13 @@ import urllib.request
 RELAY = os.environ.get("ANTCV_RELAY", "https://antcv-access-relay.karp-gabriel-a.workers.dev").rstrip("/")
 _UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36"
 
+# Fit tier -> band hex, matching the JobTracker island TIERS map exactly:
+#   T1 DDEBF7 strong direct fit (EO / photonics / optical-systems, open+reachable)
+#   T2 E2EFDA transferable / PM-side envelope fit, a step away  (DEFAULT)
+#   T3 FCE4D6 weak / off-domain — apply only if pivoting (or conditional far-DK)
+# The agent assigns fit_tier per the Dream Envelope; unknown -> T2.
+_TIER_BAND = {"T1": "DDEBF7", "T2": "E2EFDA", "T3": "FCE4D6"}
+
 
 def _token():
     p = os.path.expanduser("~/.antcv/token")
@@ -162,15 +169,23 @@ def cmd_add(args):
             uks.add(uk)
             loc = str(c.get("location") or "").strip()
             fit = str(c.get("fit") or "").strip()
+            why = str(c.get("why") or "").strip()
             jd = str(c.get("jd") or "").strip()
+            band = _TIER_BAND.get(str(c.get("fit_tier") or "").upper().strip(), _TIER_BAND["T2"])
             # row schema: [rank,company,role,location,commute,group,fit,posting,
-            #              tracked,next,flag,urlkey,band]. band (index 12) is the
-            # row FILL COLOUR the Weekly Tracker sheet round-trips (6-hex, default
-            # green E2EFDA); PROPOSED rows get light amber FFF2CC so they stand
-            # apart from tracked/applied rows in the sheet at a glance.
+            #              tracked,next,flag,urlkey,band] — matches the app's own
+            #              addRow shape (JobTracker.tsx). band (index 12) is a
+            #              SEMANTIC TIER colour (DDEBF7=T1/E2EFDA=T2/FCE4D6=T3),
+            #              NOT a free fill: the discovery agent's envelope-fit
+            #              judgment sets it so a proposed lead is tier-QUALIFIED on
+            #              arrival (feeds fitPercent + Top-5 candidacy) — same as a
+            #              manual add. Proposed-ness shows via group "Proposed" +
+            #              the 🔎 flag + a non-closed "Identified" tracked status,
+            #              so the lead stays LIVE (Top-5-eligible), never archived.
             doc["rows"].append([
-                next_rank, company, role, loc, "", "Proposed", fit, url,
-                today, "Review", "🔎", uk, "FFF2CC"])
+                next_rank, company, role, loc, "", "Proposed", fit, "OPEN",
+                "Identified (posting saved)", "Review",
+                ("🔎 " + why) if why else "🔎 proposed (auto-discovered)", uk, band])
             next_rank += 1
             if url:
                 doc["urls"][uk] = url

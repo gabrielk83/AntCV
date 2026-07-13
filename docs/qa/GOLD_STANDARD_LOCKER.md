@@ -24,7 +24,8 @@
 | Rule | Enforcement |
 |---|---|
 | A Results line states a CHANGE metric (%, ×, →, time/volume/money delta) + mechanism; team sizes/site descriptions are bullets, never Results | RESULTS-OUTCOME-METRIC-001 (quality_pass; kernel selectedOutcomes pool, position-matched); GOLD CONTENT RULES gen-prompt block |
-| Core-competency table: 2 highest-impact rows; complete-clause cells | quality_pass rule_core_comp (cap 2); gen prompt block |
+| Core-competency table: 3-4 TABLE ROWS (owner 2026-07-13: table rows vs cell lines are different things), highest-impact first; every cell a complete clause rendering in at most 2 lines of its column | quality_pass rule_core_comp (cap = caps.core_comp_data_rows = 4); 290 guard floor = min 3; gen prompt block; cell lines via density.cell_max_lines + narrow-cell cascade |
+| Professional-experience roles: at most 3 bullets per role — a GENERATION cap (owner ruling 2026-07-13) | caps.role_bullets_max wired into the gold prompt block (rides every gen call via bullet-targets) |
 | NARROW-CELL-CASCADE-001: no table cell over 2 rendered lines; no one-word-per-line wrap of a 3+-word label (owner 2026-07-13, Tech Mahindra focus cell). Levers: label hard-compress first, then tableRatio widen (0.28/0.31/0.34) gated on the value column holding its line count | measure_density _table_cell_scan (geometric — cells have no stream geometry); quality_pass label cap (site caps.table_label_max_chars 28); density_fit ratio ladder + per-app meta.styleConfig persist; gold_audit cell_cascade; prompt block line |
 | No truncations anywhere: every cut ends at a clause boundary with terminal punctuation; never a dangling connector/preposition ("…traceable from", "…while producing") | CAP-CLEAN-CUT-001 (gen-runner _cap_line/_cap_para); quality_pass prose rules + rule_bullet_periods; density trim guards |
 | Partner/client names only with a JD signal; else "an ODM partner" | quality_pass _PARTNER_NAMES; gen prompt block |

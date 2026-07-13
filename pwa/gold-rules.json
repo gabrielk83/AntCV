@@ -22,7 +22,8 @@
   "caps": {
     "bullet_chars": 148,
     "paragraph_chars": 330,
-    "core_comp_data_rows": 2,
+    "core_comp_data_rows": 4,
+    "core_comp_data_rows_min": 3,
     "certs_max": 4,
     "role_bullets_max": 3,
     "photo_library_max": 4,
@@ -163,7 +164,8 @@
   "prompt_block": [
     "GOLD CONTENT RULES (hard requirements):",
     " - Every Results line states a CHANGE metric (a percentage, multiplier, from->to, time/volume/money delta) with its mechanism. A team size or site description is a bullet, never a Result.",
-    " - Core-competency tables: at most 2 rows, the highest-impact ones; every cell a complete clause, one line where possible.",
+    " - Core-competency tables: 3-4 TABLE ROWS, the highest-impact ones; every cell a complete clause that RENDERS in at most two lines of its column - never a third line.",
+    " - Professional-experience roles: at most 3 bullets per role (generation cap) - pick the strongest; never pad.",
     " - Table first-column labels stay SHORT (about 28 chars max): a label that wraps to three lines or one-word rows in its cell is invalid; compress the label instead.",
     " - Every bullet and sentence ends COMPLETE with terminal punctuation - never a dangling connector or preposition (\"...traceable from\"), never a cut enumeration (\"...optics, electronics, mechanical.\").",
     " - Name partner/client companies only when the job description itself signals them; otherwise describe the relationship (\"an ODM partner\").",

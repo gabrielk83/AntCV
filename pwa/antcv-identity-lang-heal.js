@@ -21,7 +21,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.356-identity-heal';
+  var VERSION = '1.51.397-matrix-rowspec';
   if (window.__antcvIdentityLangHeal === VERSION) return;
   window.__antcvIdentityLangHeal = VERSION;
 
@@ -67,7 +67,7 @@
     return [
       ['哥本哈根南', kbh + ' S'],          // 哥本哈根南
       ['哥本哈根', kbh],                        // 哥本哈根
-      ['欧盟公民', L === 'da' ? 'EU-borger' : 'EU Citizen'], // 欧盟公民
+      ['欧盟公民', L === 'da' ? 'EU-borger' : 'EU citizen'], // 欧盟公民 (canonical EN casing per gold identity.citizenship_canonical)
       ['加布里埃尔·亚历山大·卡普·格申', 'Gabriel Alexander Karp-Gershon'], // full zh name pin (owner 2026-07-12)
       ['柯葛顺·加百列·亚历山大', 'Gabriel Alexander Karp-Gershon'], // legacy zh name pin (pre-2026-07-12 stored data)
       ['加布里埃尔', 'Gabriel'],                    // 加布里埃尔 (current sign name)

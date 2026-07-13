@@ -33,7 +33,7 @@
     'linkedin.com/in/your-name',
     'github.com/your-name',
     'your-site.com',           // website
-    'EU Citizen',              // citizenship
+    'EU citizen',              // citizenship (canonical casing; placeholder match is indexOf on the new placeholder)
   ];
   // Location/City/Country placeholders vary; match the labels too as a fallback.
   function isContactInput(el) {

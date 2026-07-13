@@ -354,12 +354,12 @@
     // the subtitle reverting to the [Specialisation …] placeholder), then ending
     // with 3 rows anyway. 3 matches the CL equivalent (cl.bring_rows, below) and
     // experience_roles — a 3-row Core Competencies table is acceptable.
-    // CORE-COMP-GUARD-MATRIX-001 (owner 2026-07-13 golden-matrix containment
-    // audit): gold-rules caps.core_comp_data_rows = 2 and the gold prompt block
-    // ('at most 2 rows') rides EVERY generation call — a matrix-compliant 2-row
-    // response was REJECTED here (min 3) and retried. The guard is a floor, the
-    // matrix is the ceiling: floor must sit AT or UNDER the ceiling.
-    r = checkDataRowsStrict(cv.core_comp_rows, 2, 'cv_overrides.core_comp_rows');
+    // CORE-COMP-ROWSPEC-001 (owner 2026-07-13 ruling on the containment audit):
+    // 'there is a difference between TABLE ROW and the rows inside the table
+    // cell. we need 3-4 table rows' — the matrix now says data rows 3-4
+    // (caps.core_comp_data_rows=4, _min=3) while cells stay <=2 rendered lines
+    // (density.cell_max_lines). Guard floor = the matrix MINIMUM: 3.
+    r = checkDataRowsStrict(cv.core_comp_rows, 3, 'cv_overrides.core_comp_rows');
     if (r) missing.push(r);
     r = checkDataRowsStrict(cl.bring_rows, 3, 'cl_overrides.bring_rows');
     if (r) missing.push(r);
@@ -579,7 +579,7 @@
     parts.push('');
     parts.push('4. cv_overrides.core_comp_rows AND cl_overrides.bring_rows');
     parts.push('   - First row is the literal header ["Focus Area", "Strategic Expertise"].');
-    parts.push('   - At least 2 additional rows (the gold rules keep only the 2 highest-impact), each with two non-placeholder strings tailored to the JD.');
+    parts.push('   - 3-4 data rows (the gold row spec), each with two non-placeholder strings tailored to the JD; every cell must read complete in at most two rendered lines.');
     parts.push('');
     parts.push('5. cl_overrides.contribute_items');
     parts.push('   - At least 3 specific, non-placeholder action bullets, 12-30 words each, concrete actions.');

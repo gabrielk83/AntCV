@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.724-roles-rb-droprules';
+const CACHE = 'antcv-1.51.725-roles-rb-editor';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

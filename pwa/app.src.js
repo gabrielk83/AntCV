@@ -9193,14 +9193,39 @@
           ),
         );
       case "experience":
-        return React.createElement(Ae, {
-          s: e,
-          onChange: t,
-          onCompressRole: n,
-          compressingRoleId: o,
-          onEnrichRole: r,
-          enrichingRoleId: a,
-        });
+        // ROLES-AS-RICHBLOCK-001 Stage 2 (flag antcv:roles-richblock): edit
+        // experience through the rich_block editor — each bullet a rich-content
+        // row, each role a 3-segment role-line group head — so it gains the same
+        // row UI + UNDO as rich_block (updates go through `t`, the app's undoable
+        // section setter). items[] edits map back to roles[] via itemsToRoles
+        // (round-trip verified, no data loss). Flag-off falls to the Ae panel,
+        // byte-identical. onEnrich/onCompress omitted (their item:i indices don't
+        // map to roles yet — follow-up).
+        return (typeof window !== "undefined" && window.AntcvRolesRichBlock && window.AntcvRolesRichBlock.isOn() && window.AntcvRichBlockEditor && Array.isArray(e.roles))
+          ? React.createElement(window.AntcvRichBlockEditor, {
+              section: window.AntcvRolesRichBlock.adapt(e, { forEditor: true }),
+              update: (patch) => {
+                try {
+                  if (patch && Array.isArray(patch.items)) {
+                    const __roles = window.AntcvRolesRichBlock.itemsToRoles(patch.items, e.roles);
+                    const __rest = {};
+                    for (const k in patch) if ("items" !== k && "hidden" !== k) __rest[k] = patch[k];
+                    t({ ...e, ...__rest, roles: __roles });
+                  } else if (patch) {
+                    t({ ...e, ...patch });
+                  }
+                } catch (_) {}
+              },
+              accent: s,
+            })
+          : React.createElement(Ae, {
+              s: e,
+              onChange: t,
+              onCompressRole: n,
+              compressingRoleId: o,
+              onEnrichRole: r,
+              enrichingRoleId: a,
+            });
       case "labeled_list":
         return React.createElement(
           React.Fragment,

@@ -82,6 +82,37 @@
       // ---- rows ----
       var rowEls = rows.map(function (ev, i) {
         var hiddenRow = !!(e.hidden && e.hidden[i]);
+        // ROLES-AS-RICHBLOCK-001: a role-line group head (3 segments role/company/
+        // years + horizontal-line toggle + per-segment colour). The adapter emits
+        // these for professional experience; editing them flows back to roles[] via
+        // the wrapped update (itemsToRoles reads seg[]/hr). reorder/delete reuse the
+        // shared row ops so a role moves/deletes as one unit.
+        if (ev.grp && ev.roleHead) {
+          var seg = Array.isArray(ev.seg) ? ev.seg : [{}, {}, {}];
+          var setSeg = function (idx, patch2) {
+            var ns = [0, 1, 2].map(function (j) { return Object.assign({}, seg[j] || {}, j === idx ? patch2 : null); });
+            updateRow(i, { seg: ns });
+          };
+          var segInput = function (idx, ph, extra) {
+            var sg = seg[idx] || {};
+            return h("div", { style: { display: "flex", alignItems: "center", gap: 3, flex: extra && extra.flex || "1 1 auto", minWidth: 0 } },
+              h("input", { value: sg.t || "", onChange: function (x) { setSeg(idx, { t: x.target.value }); }, placeholder: ph, style: Object.assign({ flex: "1 1 auto", fontSize: 11, padding: 4, border: "1px solid #cfe6e3", borderRadius: 3, minWidth: 0, fontWeight: idx === 0 ? 700 : 500, color: "#0a6b66" }, extra && extra.style || {}) }),
+              h("input", { type: "color", value: sg.color || (idx === 0 ? "#00746E" : idx === 1 ? "#333333" : "#595959"), onChange: function (x) { setSeg(idx, { color: x.target.value }); }, title: ph + " colour", style: { width: 22, height: 20, padding: 0, border: "1px solid #ccc", borderRadius: 3, cursor: "pointer", flexShrink: 0 } })
+            );
+          };
+          return h("div", { key: i, style: { border: "1px solid #cbe0dd", borderRadius: 4, padding: 5, marginBottom: 6, background: hiddenRow ? "#fafafa" : "#eaf6f5", opacity: hiddenRow ? 0.5 : 1, display: "flex", gap: 4, alignItems: "center", flexWrap: "wrap" } },
+            h("div", { style: { display: "grid", gap: 0, justifyItems: "center", width: 20, flexShrink: 0 } },
+              h("button", { onClick: function () { moveRow(i, -1); }, disabled: i === 0, title: "Move role up", style: { fontSize: 10, border: "none", background: "none", color: i === 0 ? "#ccc" : "#666", padding: 0, cursor: i === 0 ? "default" : "pointer" } }, "▲"),
+              h("button", { onClick: function () { moveRow(i, 1); }, disabled: i === rows.length - 1, title: "Move role down", style: { fontSize: 10, border: "none", background: "none", color: i === rows.length - 1 ? "#ccc" : "#666", padding: 0, cursor: i === rows.length - 1 ? "default" : "pointer" } }, "▼")
+            ),
+            h("span", { style: { fontSize: 9, color: "#0a8", fontWeight: 700, flexShrink: 0, width: 26 } }, "ROLE"),
+            segInput(0, "Role title", { flex: "2 1 160px" }),
+            segInput(1, "Company", { flex: "1 1 110px" }),
+            segInput(2, "Years", { flex: "0 1 90px" }),
+            h("button", { onClick: function () { updateRow(i, { hr: ev.hr === false ? true : false }); }, title: ev.hr === false ? "Horizontal line OFF — click to show a line under the role" : "Horizontal line ON — click to hide", style: btn({ border: "1px solid " + (ev.hr === false ? "#bbb" : "#0a8"), color: ev.hr === false ? "#bbb" : "#0a8", fontWeight: 700, minWidth: 24 }) }, "—"),
+            h("button", { onClick: function () { var end = i + 1; while (end < rows.length && !(rows[end] && rows[end].grp)) end++; d({ items: rows.filter(function (x, j) { return j < i || j >= end; }) }); }, title: "Delete this role (and its bullets below)", style: btn({ border: "1px solid #e55", color: "#e55", fontSize: 10 }) }, "✕")
+          );
+        }
         // group sub-heading row — a single heading input + reorder/un-group/delete.
         if (ev.grp) {
           return h("div", { key: i, style: { border: "1px solid #d8e8e6", borderRadius: 4, padding: 5, marginBottom: 6, background: hiddenRow ? "#fafafa" : "#f1faf9", opacity: hiddenRow ? 0.5 : 1, display: "flex", gap: 4, alignItems: "center" } },

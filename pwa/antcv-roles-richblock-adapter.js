@@ -59,8 +59,12 @@
   }
 
   // roles[] -> rich_block section (forward). Pure; does not mutate `sec`.
-  function adapt(sec) {
+  // opts.forEditor: include ALL roles (no drop) + stamp on-state, so the EDITOR
+  // reconstructs the full roles[] with zero data loss. Default (preview) drops
+  // hidden/placeholder roles for Ce parity.
+  function adapt(sec, opts) {
     if (!sec || !Array.isArray(sec.roles)) return sec;
+    var forEditor = !!(opts && opts.forEditor);
     var roles = sec.roles;
     // hasRealRole gates the placeholder drop so a FRESH me() skeleton (all roles
     // bracketed) keeps its roles visible/editable (matches CV-GHOST-...-002).
@@ -72,11 +76,15 @@
       // Preview parity: the chimera preview (Ce/6832) renders null for on:false,
       // <unused slot>, hasRealRole+placeholder, and export-hidden (targeted app)
       // roles. _ri keeps the TRUE roles[] index, so writeback survives skips.
-      if (role.on === false) continue;
-      if (isUnusedSlot(role)) continue;
-      if (hasRealRole && isPlaceholderRole(role)) continue;
-      try { if (typeof window !== 'undefined' && window.AntcvExportHiddenRole && window.AntcvExportHiddenRole(role)) continue; } catch (_) {}
-      var on = true;
+      // The EDITOR (forEditor) shows ALL roles so itemsToRoles rebuilds the full
+      // list with no data loss.
+      if (!forEditor) {
+        if (role.on === false) continue;
+        if (isUnusedSlot(role)) continue;
+        if (hasRealRole && isPlaceholderRole(role)) continue;
+        try { if (typeof window !== 'undefined' && window.AntcvExportHiddenRole && window.AntcvExportHiddenRole(role)) continue; } catch (_) {}
+      }
+      var on = role.on !== false;
       var seg = [
         Object.assign({ t: role.title || '', kind: 'role' }, segStyle(role, 'role')),
         Object.assign({ t: role.company || '', kind: 'company' }, segStyle(role, 'company')),
@@ -105,6 +113,72 @@
     out.items = items;
     out.__fromRoles = true;   // marker: editor writeback routes back to roles[]
     out.roles = sec.roles;    // keep the source visible for writeback
+    return out;
+  }
+
+  // Reverse adapter: rich_block items[] -> roles[]. Used by the EDITOR wiring so
+  // RichBlockEditor's structural ops (add/delete/reorder row, add group, edit)
+  // rebuild roles[] with NO data loss. Walks items: each roleHead/grp starts a
+  // new role (reusing the orig role's non-role-line fields via _rid so pins,
+  // outcomes, proofPointIds etc. survive); following body rows are that role's
+  // bullets; a Results row sets role.results. Pure.
+  function itemsToRoles(items, origRoles) {
+    items = Array.isArray(items) ? items : [];
+    origRoles = Array.isArray(origRoles) ? origRoles : [];
+    var byId = {};
+    for (var q = 0; q < origRoles.length; q++) {
+      var or = origRoles[q];
+      if (or && or.id != null) byId[or.id] = or;
+    }
+    var out = [];
+    var cur = null;
+    // Fields the role LINE / bullets own here — everything else on the orig role
+    // is carried through untouched.
+    var OWNED = { title: 1, company: 1, years: 1, bullets: 1, results: 1, roleLineStyle: 1, roleLineHr: 1, page: 1, on: 1 };
+    function startRole(it) {
+      var base = (it && it._rid != null && byId[it._rid]) ? byId[it._rid] : null;
+      var role = {};
+      if (base) for (var k in base) if (Object.prototype.hasOwnProperty.call(base, k) && !OWNED[k]) role[k] = base[k];
+      var seg = Array.isArray(it.seg) ? it.seg : null;
+      if (seg) {
+        role.title = (seg[0] && seg[0].t) || '';
+        role.company = (seg[1] && seg[1].t) || '';
+        role.years = (seg[2] && seg[2].t) || '';
+        var style = {};
+        ['role', 'company', 'years'].forEach(function (kind, idx) {
+          var sg = seg[idx] || {}, st = {};
+          if (sg.color != null) st.color = sg.color;
+          if (sg.bold != null) st.bold = sg.bold;
+          if (sg.italic != null) st.italic = sg.italic;
+          if (Object.keys(st).length) style[kind] = st;
+        });
+        if (Object.keys(style).length) role.roleLineStyle = style;
+      } else {
+        // plain group row (e.g. "+ Group" added a role with just a heading)
+        role.title = (it && it.t) || '';
+        role.company = '';
+        role.years = '';
+      }
+      if (it && it.hr === false) role.roleLineHr = false;
+      if (it && it.page) role.page = it.page;
+      role.on = !(it && it.on === false);
+      role.id = (base && base.id != null) ? base.id
+        : (it && it._rid != null) ? it._rid
+        : ('r' + out.length + '_' + String(role.title || '').replace(/\s+/g, '').slice(0, 6));
+      role.bullets = [];
+      return role;
+    }
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      if (!it || typeof it !== 'object') continue;
+      if (it.roleHead || it.grp) { cur = startRole(it); out.push(cur); continue; }
+      if (!cur) { cur = startRole({ seg: [] }); out.push(cur); }   // orphan-body safety
+      if (it._results || (typeof it.b === 'string' && /^results?:/i.test(it.b.trim()))) {
+        cur.results = it.t != null ? it.t : '';
+        continue;
+      }
+      cur.bullets.push(it.t != null ? it.t : (it.b || ''));
+    }
     return out;
   }
 
@@ -208,6 +282,7 @@
 
   window.AntcvRolesRichBlock = {
     version: VERSION, isOn: isOn, adapt: adapt, writeBack: writeBack,
-    rolesPathFor: rolesPathFor, renderRoleHead: renderRoleHead, FLAG: FLAG
+    itemsToRoles: itemsToRoles, rolesPathFor: rolesPathFor,
+    renderRoleHead: renderRoleHead, FLAG: FLAG
   };
 })();

@@ -12,6 +12,9 @@
  *   - ✕ (top-right of the block) removes the shown photo from the library;
  *     removing the LAST one resets the block to the embedded default ant
  *     (PHOTO-REMOVE-LAST-RESET-001).
+ *   - the carousel pic ADOPTS the selected photo shape (Circle/Rounded/Square/
+ *     Pentagon from the shape selector), not a hardcoded circle
+ *     (PHOTO-CAROUSEL-SHAPE-001).
  *   - landing on a photo ACTIVATES it (debounced): the stored file is
  *     re-driven through the app's OWN hidden upload input (DataTransfer +
  *     change event), so the app's whole pipeline (square store, preview,
@@ -42,7 +45,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.51.458';
+  var VERSION = '1.51.499';
   if (window.__antcvPhotoLibrary === VERSION) return;
   window.__antcvPhotoLibrary = VERSION;
 
@@ -52,6 +55,46 @@
   var MAX_ENTRY_BYTES = 500 * 1024;
   var CONTROLS_MARK = 'data-antcv-photo-library';   // Add + Reset column
   var OVERLAY_MARK = 'data-antcv-photo-carousel';   // carousel over the block
+
+  // PHOTO-CAROUSEL-SHAPE-001 (owner 2026-07-13): the carousel preview must
+  // adopt the SELECTED photo shape (Circle/Rounded/Square/Pentagon from the
+  // .antcv-fp-shape-row selector), not a hardcoded circle — otherwise a square
+  // or pentagon photo previews as a circle in the block. Same shape mapping the
+  // React photo render + Pentagon sidecar use: square→radius 0, rounded→12px,
+  // pentagon→clip-path, else circle (PHOTO-SHAPE-SQUARE-001).
+  var PENTAGON_POLY =
+    'polygon(50% 0%, 97.55% 34.55%, 79.39% 90.45%, 20.61% 90.45%, 2.45% 34.55%)';
+  function readPhotoShape() {
+    try {
+      var pi = JSON.parse(localStorage.getItem('personalInfo') || '{}') || {};
+      // prefer the canonical stylePrefs location the render reads; fall back to
+      // the legacy top-level value (which Pentagon's own clip reads).
+      var sp = (pi && pi.stylePrefs && typeof pi.stylePrefs === 'object') ? pi.stylePrefs : null;
+      var s = (sp && typeof sp.photoShape === 'string' && sp.photoShape)
+        ? sp.photoShape
+        : (typeof pi.photoShape === 'string' ? pi.photoShape : '');
+      return String(s || '').trim().toLowerCase();
+    } catch (_) { return ''; }
+  }
+  // Apply the current shape to the carousel <img>. Style-only writes: the
+  // sidecar's MutationObserver watches childList (not attributes), so these
+  // never feed the render loop. Guarded to stay a no-op when unchanged.
+  function applyShapeTo(pic) {
+    if (!pic) return;
+    var shape = readPhotoShape();
+    var radius = shape === 'square' ? '0'
+      : shape === 'rounded' ? '12px'
+      : shape === 'pentagon' ? '0'
+      : '50%';
+    var clip = shape === 'pentagon' ? PENTAGON_POLY : '';
+    // a clipped pentagon looks wrong inside a ring border — drop it there.
+    var border = shape === 'pentagon' ? '0' : '2px solid rgba(1,183,187,0.6)';
+    if (pic.style.borderRadius !== radius) pic.style.borderRadius = radius;
+    if ((pic.style.clipPath || '') !== clip) {
+      pic.style.clipPath = clip; pic.style.webkitClipPath = clip;
+    }
+    if (pic.style.border !== border) pic.style.border = border;
+  }
 
   var currentIndex = 0;        // which library entry the block is showing
   var activateTimer = null;    // debounce so rapid swiping activates once
@@ -374,7 +417,7 @@
   }
   function fillOverlay(o, entries) {
     var pic = o.querySelector('.antcv-carousel-pic');
-    if (pic) pic.src = entries[currentIndex].dataUrl;
+    if (pic) { pic.src = entries[currentIndex].dataUrl; applyShapeTo(pic); }
     var many = entries.length > 1;
     var prev = o.querySelector('.antcv-carousel-prev');
     var next = o.querySelector('.antcv-carousel-next');
@@ -428,7 +471,9 @@
       host.appendChild(overlay);
       overlay.__antcvHost = host;
     }
-    var sig = entries.map(function (e) { return e.id; }).join(',') + '@' + currentIndex;
+    // shape is part of the signature so a Circle→Square→Pentagon pick repaints
+    // the carousel pic even when the entries and index are unchanged.
+    var sig = entries.map(function (e) { return e.id; }).join(',') + '@' + currentIndex + '#' + readPhotoShape();
     if (overlay.getAttribute(OVERLAY_MARK) !== sig) {
       fillOverlay(overlay, entries);
       overlay.setAttribute(OVERLAY_MARK, sig);
@@ -458,6 +503,10 @@
     setInterval(pushCloud, 5000);
     new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
     window.addEventListener('resize', schedule);
+    // PHOTO-CAROUSEL-SHAPE-001: the shape selector fires this event (and a
+    // sections-updated the observer already catches); repaint so the carousel
+    // pic adopts the new shape immediately.
+    window.addEventListener('antcv:photo-shape-changed', schedule);
     // PHOTO-RESET-CLEAR-001 (owner 2026-07-13): the panel's native "Reset"
     // restores the embedded default ant as the active photo; it must ALSO
     // empty the library. Capture-phase so it fires even though React handles

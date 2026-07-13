@@ -58,6 +58,26 @@
     return (a === 'left' || a === 'right' || a === 'center') ? a : d;
   }
 
+  // SPEC-SLOGAN-LANG-001 (owner 2026-07-13, "should not be danish if I am set
+  // to english spanish chinese etc"): a candidate specialization that is in the
+  // WRONG SCRIPT for the current ribbon (e.g. a Latin/Danish triad on a zh/ar/
+  // he/ru app) is a stale other-language value — reject it so the generic hint
+  // shows instead. Self-contained (no babel-relang dependency); Latin-script
+  // ribbons pass through (Danish vs English can't be told apart by script — the
+  // source-order flip below handles those).
+  var SPEC_SCRIPTS = {
+    zh: /[一-鿿]/, ja: /[぀-ヿ一-鿿]/, ko: /[가-힯]/,
+    ar: /[؀-ۿ]/, fa: /[؀-ۿ]/, he: /[֐-׿]/,
+    ru: /[Ѐ-ӿ]/, el: /[Ͱ-Ͽ]/, th: /[฀-๿]/, am: /[ሀ-፿]/
+  };
+  function spellsCurrentScript(txt) {
+    try {
+      var L = String(localStorage.getItem('language') || 'en').toLowerCase().replace(/[^a-z]/g, '').slice(0, 2) || 'en';
+      var re = SPEC_SCRIPTS[L];
+      return re ? re.test(String(txt || '')) : true;
+    } catch (_) { return true; }
+  }
+
   // Effective slogan the CL renders: override key, else the specialisation subtitle,
   // uppercased with " | " shown as " • " (same derivation as the render sites).
   function subtitleFallback() {
@@ -77,11 +97,17 @@
     function fromObj(o) {
       try { return String((o && (o.subtitle || o.specialization || (o.meta && o.meta.subtitle))) || ''); } catch (_) { return ''; }
     }
+    // SPEC-SLOGAN-LANG-001: read personalInfo.specialization FIRST — that is the
+    // store the header renders from AND the babel-fish translate pass keeps in
+    // the current ribbon language (kernelShowcase holds the raw GENERATION-language
+    // output and is never re-langed, so it was forcing e.g. the Danish triad on an
+    // English/Spanish/Chinese app). kernelShowcase is now the last resort only.
     var s = '';
-    try { s = fromObj(JSON.parse(localStorage.getItem('kernelShowcase') || '{}')); } catch (_) {}
-    if (!s) { try { s = fromObj(JSON.parse(localStorage.getItem('personalInfo') || '{}')); } catch (_) {} }
+    try { s = fromObj(JSON.parse(localStorage.getItem('personalInfo') || '{}')); } catch (_) {}
+    if (!s) { try { s = fromObj(JSON.parse(localStorage.getItem('kernelShowcase') || '{}')); } catch (_) {} }
     s = String(s || '').replace(/\s*\|\s*/g, ' • ').trim();
     if (!s || /^\[/.test(s)) return '';
+    if (!spellsCurrentScript(s)) return '';   // wrong-script stale value -> generic hint
     return s.toUpperCase();
   }
   function nameFirstWord() {

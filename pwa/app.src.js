@@ -2077,6 +2077,39 @@
           seeded++;
         }
       }
+      // RELAY-COST-TIEBREAK-001 (2026-07-13): the relay folds a BOUNDED cost
+      // penalty into health_score for cost-sensitive tasks (compress, long_context,
+      // consensus_*, apply_correction, enrich, fix_orphans), so an adequate-but-
+      // pricey provider reads lower than the cheapest EQUAL-quality one. Among the
+      // ADEQUATE providers for a task (those not already demoted above), a clear
+      // health GAP below the task's best = a cost-loser -> soft-demote it to the
+      // BACK of that task's ladder (never removed; failover + adequacy-gate still
+      // run). The relay only penalizes a >~20x cost spread, so this fires only on
+      // real waste (e.g. compress openai $0.124 vs gemini $0.00007), never a
+      // 1.5-3x near-tie, and never on quality-critical tasks (generate_cv/cl,
+      // parse_jd, analyze_fit are NOT cost-sensitive server-side). Kill switch:
+      // localStorage 'antcv:disable-cost-tiebreak'='1'. Off the hot path (seed only).
+      let __ctbOff = false;
+      try { __ctbOff = (typeof localStorage !== "undefined" && localStorage.getItem("antcv:disable-cost-tiebreak") === "1"); } catch (_) {}
+      if (!__ctbOff) {
+        const COST_GAP = 0.10;
+        const byTask = new Map();
+        for (const r of rows) {
+          if (!r || !r.provider || !r.task) continue;
+          const sc = Number(r.health_score);
+          const st = String(r.status || "").toLowerCase();
+          if (st === "degraded" || st === "down" || !Number.isFinite(sc) || sc < 0.6) continue; // handled above
+          let a = byTask.get(r.task);
+          if (!a) { a = []; byTask.set(r.task, a); }
+          a.push({ provider: r.provider, score: sc });
+        }
+        for (const [task, arr] of byTask) {
+          if (arr.length < 2) continue;
+          let best = -Infinity;
+          for (const x of arr) if (x.score > best) best = x.score;
+          for (const x of arr) if (best - x.score >= COST_GAP) { __antcvDemoteProvider(task, x.provider, __ANTCV_SEED_TTL_MS); seeded++; }
+        }
+      }
       if (seeded) {
         try { console.debug("[v1.50.294 llm-quality-persist] seeded " + seeded + " demotion(s) from D1 provider health"); } catch (_) {}
       }

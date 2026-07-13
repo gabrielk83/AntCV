@@ -466,7 +466,40 @@ function percentile(sorted, p) {
 // in llm-telemetry-schema.sql.
 // ---------------------------------------------------------------------
 
-function scoreHealth(metrics) {
+// RELAY-COST-TIEBREAK-001 (2026-07-13, owner "make scoreHealth cost-aware so
+// equal-quality providers tie-break by cost"): mechanical / high-volume passes
+// where two ADEQUATE providers are ~interchangeable on quality, so cost should
+// break the tie. Quality-critical tasks (generate_cv/cl, parse_jd, analyze_fit)
+// are deliberately ABSENT — their provider choice must stay quality-led (the
+// client's per-task qW weights already encode that; we must never demote a
+// better-but-pricier writer on a quality-critical task).
+export const COST_SENSITIVE_TASKS = new Set([
+  'compress', 'long_context', 'consensus_poll', 'consensus_reinforce',
+  'fix_orphans', 'enrich', 'apply_correction',
+]);
+
+// Bounded cost penalty for the tie-break. Log-scaled on the cost RATIO vs the
+// task's cheapest ADEQUATE provider, so only a big spread (compress: openai is
+// ~1700x gemini) earns the full penalty; a 1.5-3x spread stays a near-tie. Cap
+// 0.15 = the headroom on a perfect 1.0 quality score down to the 'ok' floor
+// (0.85), so the tie-break can NEVER by itself push an adequate provider into a
+// false 'warning'/'degraded'.
+export const COST_TIEBREAK_MAX = 0.15;
+export const COST_RATIO_CAP = 100;   // >=100x pricier than the cheapest = full penalty
+export function costPenalty(costPerCall, minCostPerCall) {
+  if (!(costPerCall > 0) || !(minCostPerCall > 0) || costPerCall <= minCostPerCall) return 0;
+  const frac = Math.min(1, Math.log10(costPerCall / minCostPerCall) / Math.log10(COST_RATIO_CAP));
+  return COST_TIEBREAK_MAX * frac;
+}
+
+// scoreHealth(metrics[, costCtx]) — QUALITY score + status as before. When
+// costCtx = { costPerCall, minCostPerCall } is supplied (a cost-sensitive task
+// with a known cheapest-adequate cost) AND the provider is adequate ('ok'), a
+// bounded cost penalty is folded into health_score so the pricier-among-equals
+// reads lower. STATUS stays QUALITY-only (a pricey-but-adequate provider is
+// still 'ok' — healthy, just not the cheap pick); the client seed turns the
+// resulting health GAP vs the task's cheapest into the actual routing demotion.
+export function scoreHealth(metrics, costCtx = null) {
   let s = 1.0;
   if (metrics.success_rate < 0.90)          s -= 0.4;
   if (metrics.p95_latency_ms > 30000)       s -= 0.3;
@@ -479,7 +512,13 @@ function scoreHealth(metrics) {
               : s >= 0.60 ? 'warning'
               : s >= 0.30 ? 'degraded'
               : 'down';
-  return { health_score: Number(s.toFixed(3)), status };
+  let health = s, cost_penalty = 0;
+  if (costCtx && status === 'ok') {
+    // clamp so an 'ok' provider never drops below the 0.85 floor from cost alone
+    cost_penalty = Math.min(costPenalty(costCtx.costPerCall, costCtx.minCostPerCall), s - 0.85);
+    health = s - cost_penalty;
+  }
+  return { health_score: Number(health.toFixed(3)), status, cost_penalty: Number(cost_penalty.toFixed(3)) };
 }
 
 // ---------------------------------------------------------------------
@@ -550,6 +589,29 @@ export async function aggregateHealth(env, now = Math.floor(Date.now() / 1000)) 
       b.retry_sum += Math.max(0, (r.retry_attempt || 1) - 1);
     }
 
+    // RELAY-COST-TIEBREAK-001: cheapest ADEQUATE (quality-'ok') cost-per-call per
+    // cost-sensitive task — the floor the cost tie-break scores every other
+    // provider against. Uses the quality-only score so an inadequate provider
+    // can never set an artificially low floor.
+    const minCostByTask = new Map();
+    for (const b of buckets.values()) {
+      if (!COST_SENSITIVE_TASKS.has(b.task) || !(b.calls > 0)) continue;
+      const cpc = b.cost_sum / b.calls;
+      if (!(cpc > 0)) continue;
+      const s0 = b.latencies.slice().sort((x, y) => x - y);
+      const q = scoreHealth({
+        success_rate: b.successes / b.calls,
+        p95_latency_ms: percentile(s0, 0.95),
+        placeholder_leak_rate: b.leak_calls / b.calls,
+        fabrication_rate: b.fab_calls / b.calls,
+        banned_word_rate: b.banned_calls / b.calls,
+        retry_rate: b.retry_sum / b.calls,
+      });
+      if (q.status !== 'ok') continue;   // only adequate providers set the floor
+      const cur = minCostByTask.get(b.task);
+      if (cur == null || cpc < cur) minCostByTask.set(b.task, cpc);
+    }
+
     let upserts = 0;
     for (const b of buckets.values()) {
       const sorted = b.latencies.slice().sort((x, y) => x - y);
@@ -563,7 +625,12 @@ export async function aggregateHealth(env, now = Math.floor(Date.now() / 1000)) 
         banned_word_rate: b.banned_calls / b.calls,
         retry_rate: b.retry_sum / b.calls,
       };
-      const { health_score, status } = scoreHealth(metrics);
+      // RELAY-COST-TIEBREAK-001: fold a bounded cost penalty into health_score for
+      // an adequate provider on a cost-sensitive task (status stays quality-only).
+      const costPerCall = b.calls > 0 ? b.cost_sum / b.calls : 0;
+      const minCost = COST_SENSITIVE_TASKS.has(b.task) ? minCostByTask.get(b.task) : null;
+      const costCtx = (minCost != null && costPerCall > 0) ? { costPerCall, minCostPerCall: minCost } : null;
+      const { health_score, status } = scoreHealth(metrics, costCtx);
 
       await env.DB
         .prepare(

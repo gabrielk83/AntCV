@@ -29,6 +29,7 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 ## ACTIVE CLAIMS
 
 <!-- SHIFT:BEGIN — one JSON object per line; managed by scripts/shift.mjs, safe to hand-edit a line if a session died without releasing -->
+{"id":"sh_costhealth_ea6t","started":"2026-07-13T14:00:00.000Z","host":"GabyPC2","worktree":"AntCV-costhealth","branch":"cost-health-tiebreak","range":"1.51.578-1.51.597","task":"relay scoreHealth cost-tiebreak + client seed demote (RELAY-COST-TIEBREAK-001)","beat":"2026-07-13T14:00:00.000Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

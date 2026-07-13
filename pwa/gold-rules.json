@@ -30,7 +30,7 @@
     "photo_library_max": 4,
     "table_label_max_chars": 28,
     "table_label_hard_chars": 30,
-    "table_value_max_chars": 140
+    "table_value_max_chars": 112
   },
   "results": {
     "require_metric": true,
@@ -215,7 +215,8 @@
     "default": 2
   },
   "tables": {
-    "narrow_cell_cascade": "a table cell rendering 3+ lines, or 2+ lines averaging ~1 word per line, is INVALID (owner 2026-07-13, Tech Mahindra focus-area cell) - hard-compress the label first; widening tableRatio is the second lever if the other column tolerates it"
+    "narrow_cell_cascade": "a table cell rendering 3+ lines, or 2+ lines averaging ~1 word per line, is INVALID (owner 2026-07-13, Tech Mahindra focus-area cell) - hard-compress the label first; widening tableRatio is the second lever if the other column tolerates it",
+    "value_2line_basis": "cap tied to the value-column width; recalibrate if table geometry (col ratio / cell margins / font) changes (backlog #1: preview font 13->13.333 + width 6630->7689)"
   },
   "roles": {
     "_note": "ROLE CONTROL (owner 2026-07-13 'make sure your work fits in the golden gating matrix role control ... I want also danish spanish and chinese canon'). Identity: the stable canonical role id is the LANGUAGE-AGNOSTIC identity (SAME-ID 1.51.353, BASE-ID + GEN-ID 1.51.358) - a suffixed backfill twin (<id>-2) or a gen schema id (r1..) at the same company/tenure is the SAME position; exactly ONE role per canonical id survives dedupe, canonical id wins (the Results pins key on it). Titles: per-language RENDERINGS of that identity come from canon_titles below - deterministic, so LLM title drift can never fork a position across languages. Enforced by antcv-sections-normalize-415.js roleCanonTitles (runs after dedupe on en/da/es/zh ribbons; he/am/ar keep the translate output); mirror-drift gated by pwa/test/unit/gold-role-canon.test.mjs. A merged title with MORE '&'-segments than the canon (deliberate merge-or-split structure) is never overwritten.",

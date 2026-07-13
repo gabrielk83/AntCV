@@ -1467,6 +1467,18 @@ def persist_application(doc, r, res, category, language, kernel=None, measure=Fa
                             # full loop
                             effort=("thorough" if r.get("tier") == "high" else "balanced"))
                         cv[:], cl[:] = cv2, cl2
+                        # PAGE-FLOW-DURABLE-001: after density settles, stamp
+                        # page=2 on the crossing role + aligned sidebar sections
+                        # so a role never splits headerless across a page (the
+                        # worker's (cont.) machinery then fires). Safe: reverts
+                        # to natural flow if it would create an empty half-page.
+                        try:
+                            cvf, _pf = density_fit.fit_page_flow(
+                                cv, cl, _pi_from_kernel(kernel), _export_style_config(),
+                                _meta_m, language, doc="cv")
+                            cv[:] = cvf
+                        except Exception as e:
+                            print(f"   [page-flow] skipped ({str(e)[:70]})")
                     except Exception as e:
                         print(f"   [density] skipped ({str(e)[:80]})")
         print(f"   [skeleton] overlaid: cv={len(cv)} cl={len(cl)} sections (full-fidelity)")

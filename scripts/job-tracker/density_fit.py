@@ -762,6 +762,109 @@ def fit_density(cv, cl, pi, style_config, meta, language, doc="cv",
                                 "table_ratio": accepted_ratio}
 
 # ── CLI: fit a live application ──────────────────────────────────────────────
+def fit_page_flow(cv, cl, pi, style_config, meta, language, doc="cv", verbose=True):
+    """PAGE-FLOW-DURABLE-001 (owner 2026-07-13 round 3: "durable row helper for
+    main AND sidebar AND body, and tables"). A role/section must never split
+    across a page boundary with no continuation header, and forcing ONE column
+    to a new page while the other flows naturally leaves an empty half-page (the
+    810 jump). This helper renders once, finds where EACH column naturally
+    crosses to page 2, and stamps page=2 on BOTH the main-column crossing role
+    AND the sidebar/body crossing section — so both columns advance together and
+    the worker's existing '(CONT.)' header fires. Returns (cv, {'assigned': {...}}).
+
+    Also emits role/section page info the way the worker's inert (cont.) machinery
+    needs it — closes backlog #2 (cont-header client half) and #49 (sidebar group
+    page-break) via the same measured assignment, main+sidebar+body+tables."""
+    gr = MD._gen_runner()
+
+    def _render_measure(cur_cv):
+        job = {"sections": {"cv": cur_cv, "cl": cl}, "personalInfo": pi,
+               "styleConfig": style_config, "doc": doc, "meta": meta,
+               "language": language if language in ("en", "da", "es", "zh") else "en"}
+        ph = MD.cloud_photo()
+        if ph:
+            job["photo"] = ph
+        payload = MD._build_doc(gr, job)
+        if payload is None:
+            return None, None
+        pdf = MD.render_pdf(payload)
+        return (MD.measure(pdf, payload), pdf) if pdf else (None, None)
+
+    rep, _pdf = _render_measure(cv)
+    if rep is None or rep.get("pages", 1) < 2:
+        # single page: clear any stale page stamps so nothing force-breaks
+        for sec in cv:
+            if isinstance(sec, dict):
+                sec.pop("page", None)
+                for r in (sec.get("roles") or []):
+                    if isinstance(r, dict):
+                        r.pop("page", None)
+        return cv, {"assigned": {}, "pages": rep.get("pages", 1) if rep else 1}
+
+    # first page-2 crossing per column, by document order
+    exp_idx = {i for i, s in enumerate(cv) if isinstance(s, dict) and s.get("type") == "experience"}
+    main_cross_role = None       # (exp section idx, role idx)
+    side_cross_sid = None        # sidebar section id
+    for m in rep["items"]:
+        path = m.get("path") or []
+        pg = m.get("page") or 1
+        if pg < 2:
+            continue
+        if len(path) >= 4 and path[2] == "roles":
+            cand = (path[1], path[3])
+            if main_cross_role is None or cand < main_cross_role:
+                main_cross_role = cand
+        elif m.get("loc") == "sidebar":
+            # earliest sidebar section (by cv order) with page-2 content
+            sid = m.get("sec")
+            order = next((i for i, s in enumerate(cv) if isinstance(s, dict) and s.get("id") == sid), 999)
+            if side_cross_sid is None or order < side_cross_sid[0]:
+                side_cross_sid = (order, sid)
+
+    assigned = {}
+    if main_cross_role is not None:
+        si, ri = main_cross_role
+        roles = cv[si].get("roles") or []
+        for i, r in enumerate(roles):
+            if isinstance(r, dict):
+                if i >= ri:
+                    r["page"] = 2
+                else:
+                    r.pop("page", None)
+        assigned["main_role_from"] = ri
+    if side_cross_sid is not None:
+        order = side_cross_sid[0]
+        for i, s in enumerate(cv):
+            if not (isinstance(s, dict) and s.get("loc") == "sidebar"):
+                continue
+            if i >= order:
+                s["page"] = 2
+            else:
+                s.pop("page", None)
+        assigned["sidebar_from"] = side_cross_sid[1]
+
+    # verify: no empty column on any page; if the stamp made it WORSE, revert
+    rep2, pdf2 = _render_measure(cv)
+    if rep2 is not None and pdf2 is not None:
+        import fitz
+        d = fitz.open(stream=pdf2, filetype="pdf")
+        empties = [p + 1 for p in range(d.page_count)
+                   if not [w for w in d[p].get_text("words") if w[0] > 228]]
+        if empties or rep2.get("pages", 9) > rep.get("pages", 2):
+            for sec in cv:                       # revert — natural flow beats a jump
+                if isinstance(sec, dict):
+                    sec.pop("page", None)
+                    for r in (sec.get("roles") or []):
+                        if isinstance(r, dict):
+                            r.pop("page", None)
+            assigned = {"reverted": True, "reason": "empty page or page growth"}
+        else:
+            assigned["pages"] = rep2.get("pages")
+    if verbose:
+        print(f"   [page-flow] {assigned}")
+    return cv, {"assigned": assigned}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--app", type=int, required=True)

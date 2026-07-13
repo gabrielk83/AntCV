@@ -229,7 +229,11 @@ def _prose_issues(text, language):
         issues.append("dangling enumeration — the final list has no closing conjunction/noun")
     if re.match(r"^[a-zæøå]", t) and not t.startswith(("i ", "iPhone")):
         issues.append("paragraph starts lowercase")
-    if DF._ends_dangling(t.rstrip("."), language) and not t.rstrip().endswith(":"):
+    # dangling CONJUNCTIONS/articles only — a final preposition is valid
+    # English in relative clauses ("decisions engineering can act on.")
+    last = t.rstrip(".!?").split()[-1].lower() if t.rstrip(".!?").split() else ""
+    if last in {"and", "or", "og", "eller", "samt", "med", "the", "a", "an", "und"} \
+       and not t.rstrip().endswith(":"):
         issues.append("ends on a dangling connector")
     return issues
 

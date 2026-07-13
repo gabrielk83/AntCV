@@ -1586,87 +1586,6 @@
       .sort((e, t) => t.s - e.s)[0].p;
     return { provider: s, model: null == (r = S[s]) ? void 0 : r.model };
   }
-  // ROW 74C — visibility-aware abort budget (SSE background stall).
-  // Pure state machine: foreground-only elapsed does NOT count time while the
-  // tab is hidden, so a briefly-backgrounded gen isn't killed by wall-clock and
-  // gets to resume on foreground. An absolute wall ceiling still aborts a truly
-  // dead stream. Injected `now` keeps this testable under node:vm.
-  function __antcvMakeAbortBudget(fgLimit, wallLimit, now) {
-    const start = now();
-    let bankedFg = 0,
-      lastResume = start; // ms of last foreground resume, or null while hidden
-    return {
-      onHidden() {
-        if (lastResume != null) {
-          bankedFg += now() - lastResume;
-          lastResume = null;
-        }
-      },
-      onVisible() {
-        if (lastResume == null) lastResume = now();
-      },
-      check() {
-        const wall = now() - start,
-          fg = bankedFg + (lastResume != null ? now() - lastResume : 0);
-        return fg >= fgLimit || wall >= wallLimit;
-      },
-    };
-  }
-  // Wires the pure budget to document visibility + a low-freq interval that
-  // fires ctl.abort(). Kill-switch localStorage 'antcv:disable-bg-timeout-pause'
-  // === '1' restores the exact old fixed 10-min setTimeout. Returns { clear }.
-  function __antcvAbortBudget(ctl) {
-    const FG = 6e5, // 10 min foreground-only
-      WALL = 12e5; // 20 min absolute wall-clock ceiling
-    let disabled = false;
-    try {
-      disabled =
-        localStorage.getItem("antcv:disable-bg-timeout-pause") === "1";
-    } catch (e) {}
-    if (disabled) {
-      const to = setTimeout(() => {
-        try {
-          ctl.abort();
-        } catch (e) {}
-      }, FG);
-      return {
-        clear() {
-          clearTimeout(to);
-        },
-      };
-    }
-    const budget = __antcvMakeAbortBudget(FG, WALL, () => Date.now());
-    try {
-      if (typeof document !== "undefined" && document.hidden) budget.onHidden();
-    } catch (e) {}
-    const onVis = () => {
-      try {
-        document.hidden ? budget.onHidden() : budget.onVisible();
-      } catch (e) {}
-    };
-    try {
-      document.addEventListener("visibilitychange", onVis);
-    } catch (e) {}
-    const iv = setInterval(() => {
-      if (budget.check()) {
-        try {
-          ctl.abort();
-        } catch (e) {}
-        clearInterval(iv);
-        try {
-          document.removeEventListener("visibilitychange", onVis);
-        } catch (e) {}
-      }
-    }, 5e3);
-    return {
-      clear() {
-        clearInterval(iv);
-        try {
-          document.removeEventListener("visibilitychange", onVis);
-        } catch (e) {}
-      },
-    };
-  }
   async function q(e, t) {
     var n, o, r, a, i, l, s, c;
     (p("Anthropic"), await U());
@@ -1688,7 +1607,7 @@
     const f = await b();
     try {
       const p = new AbortController(),
-        u = __antcvAbortBudget(p);
+        u = setTimeout(() => p.abort(), 6e5);
       let m;
       const f = JSON.stringify({
           model: "claude-opus-4-8",
@@ -1717,7 +1636,7 @@
           signal: p.signal,
         });
       } catch (e) {
-        if ((u.clear(), "AbortError" === e.name))
+        if ((clearTimeout(u), "AbortError" === e.name))
           throw new Error(
             "Request was interrupted — this usually happens when the app is backgrounded or the screen locks on Android. Try keeping the app visible while it runs, or retry the operation.",
           );
@@ -1732,7 +1651,7 @@
         );
       }
       if (!m.ok) {
-        u.clear();
+        clearTimeout(u);
         const e = await m.text().catch(() => "");
         if (405 === m.status)
           throw new Error(
@@ -1787,7 +1706,7 @@
             }
           }
         } catch (e) {
-          if ((u.clear(), n.length > 500))
+          if ((clearTimeout(u), n.length > 500))
             return (
               console.warn(
                 `[v23] Stream interrupted after ${n.length} chars — returning partial for JSON repair`,
@@ -1801,7 +1720,7 @@
               )
             : e;
         }
-        u.clear();
+        clearTimeout(u);
         try {
           const e = n.match(/"input_tokens"\s*:\s*(\d+)/),
             t = n.match(/"output_tokens"\s*:\s*(\d+)/g);
@@ -1814,7 +1733,7 @@
         } catch (e) {}
         return n;
       }
-      u.clear();
+      clearTimeout(u);
       const w = await m.json();
       return (
         (O = {
@@ -40655,6 +40574,14 @@
                                                   // completed for X at Y"
                                                   // text.
                                                   bo(n.rationale || null),
+                                                  (() => { try {
+                                                    // MIRROR-LOAD-001 (owner 2026-07-13): the SETTINGS loader
+                                                    // forces identity + language but never applied the brand
+                                                    // palette or refreshed the slogan — add both so the loaded
+                                                    // app is a mirror copy in preview AND print (topbar twin).
+                                                    if (n.meta && n.meta.styleConfig && "object" == typeof n.meta.styleConfig) wa(n.meta.styleConfig); else if (n.meta && null === n.meta.styleConfig) { try { u.remove("styleConfig"); } catch (_) {} }
+                                                    var __sl = (n.meta && (n.meta.cl_slogan || n.meta.slogan)) || ""; if (__sl) { try { localStorage.setItem("antcv:clSlogan", __sl); localStorage.setItem("antcv:clSloganCtx", JSON.stringify({ v: __sl, app: e.id })); } catch (_) {} }
+                                                  } catch (_e) {} })(),
                                                   // APP-SWITCH-LANGUAGE-001 (owner 2026-07-10): switching to a saved
                                                   // application also switches the language dropdown to that app's jd_language.
                                                   (() => { try { var __al = String((n && n.jd_language) || "").toLowerCase().replace(/[^a-z]/g, "").slice(0, 2); if (__al && ["en", "da", "es", "zh", "he", "am"].indexOf(__al) >= 0) { try { u.set("language", __al); } catch (_) {} try { localStorage.setItem("language", __al); localStorage.setItem("uiLang", __al); } catch (_) {} try { window.dispatchEvent(new CustomEvent("antcv:language-changed", { detail: { language: __al } })); } catch (_) {} try { window.dispatchEvent(new CustomEvent("antcv:language-prefs-changed", { detail: {} })); } catch (_) {} } } catch (_) {} })(),
@@ -46977,6 +46904,20 @@
                                           );
                                         } catch (e) {}
                                       })(),
+                                      (() => { try {
+                                        // MIRROR-LOAD-001 (owner 2026-07-13): a TOPBAR load must be a
+                                        // MIRROR COPY of the saved app in preview AND print. The minimal
+                                        // gen-runner meta lacks identity, so the {...io,...meta} above
+                                        // inherited the PREVIOUS app's role/company/slogan; and this loader
+                                        // never applied the brand palette, refreshed the slogan, or switched
+                                        // the language. Force all of them from the saved per-app record.
+                                        var __co = (n.meta && n.meta.company) || n.jd_company || "", __ro = (n.meta && n.meta.role) || n.jd_role || "", __su = n.subtitle || (n.meta && n.meta.subtitle) || "", __sl = (n.meta && (n.meta.cl_slogan || n.meta.slogan)) || "";
+                                        var __mm = { ...(io || {}), ...(n.meta && "object" == typeof n.meta ? n.meta : {}), company: __co, role: __ro, subtitle: __su, cl_slogan: __sl };
+                                        lo(__mm); try { u.set("meta", __mm); } catch (_) {}
+                                        if (n.meta && n.meta.styleConfig && "object" == typeof n.meta.styleConfig) wa(n.meta.styleConfig); else if (n.meta && null === n.meta.styleConfig) { try { u.remove("styleConfig"); } catch (_) {} }
+                                        if (__sl) { try { localStorage.setItem("antcv:clSlogan", __sl); localStorage.setItem("antcv:clSloganCtx", JSON.stringify({ v: __sl, app: e.id })); } catch (_) {} }
+                                        var __al = String((n && n.jd_language) || "").toLowerCase().replace(/[^a-z]/g, "").slice(0, 2); if (__al && ["en","da","es","zh","he","am"].indexOf(__al) >= 0) { try { u.set("language", __al); localStorage.setItem("language", __al); localStorage.setItem("uiLang", __al); window.dispatchEvent(new CustomEvent("antcv:language-changed", { detail: { language: __al } })); window.dispatchEvent(new CustomEvent("antcv:language-prefs-changed", { detail: {} })); } catch (_) {} }
+                                      } catch (_e) {} })(),
                                       // 1.50.243: always overwrite so the
                                       // Analysis panel doesn't keep stale
                                       // rationale from the previous app.

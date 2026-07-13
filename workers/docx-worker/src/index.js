@@ -27414,13 +27414,25 @@ function renderExperience(s, ctx) {
         children: [...left, ...yearsRun ? [yearsRun] : []]
       }));
     }
+    // ROLE-KEEP-WHOLE-001 (owner 2026-07-13 round 3, "that role+result should
+    // have flowed to the next page WITH a proper (cont.) heading — a critical
+    // core function you lost; just a random cut now"). Root cause: headless
+    // exports carry NO role.page, so the page-driven (CONT.) header never fires
+    // and LibreOffice split a role mid-way, stranding bullets/Results with no
+    // header. The keepNext chain stopped at the LAST bullet, so the Results line
+    // (and, under LO, a trailing bullet) could orphan. Glue the ENTIRE role —
+    // title -> every bullet -> Results — into ONE keepNext chain so a role that
+    // fits moves wholesale to the next page (no mid-role split, header travels
+    // with its content); a role genuinely taller than a page still splits, but
+    // Gabriel's 3-bullet roles never are.
+    const _hasResults = typeof role.results === "string" && role.results.trim().length > 0;
     if (Array.isArray(role.bullets)) {
       const _bl = role.bullets.filter(Boolean);
       _bl.forEach((b, bi) => {
         const bAlign = paraAlignPath(s, "roles." + ri + ".bullets." + bi) ?? paraAlign(s, null, void 0);
-        // 1.50.270: keep a role's bullets chained (all but the last) so a
-        // role moves wholesale to the next page instead of splitting.
-        const _keepWithNext = bi < _bl.length - 1;
+        // keep every bullet chained to what follows; the LAST bullet glues to
+        // the Results paragraph when one follows (was: dropped the chain here).
+        const _keepWithNext = bi < _bl.length - 1 || _hasResults;
         out.push(bulletParagraphRich(
           "",
           String(b),
@@ -27441,6 +27453,7 @@ function renderExperience(s, ctx) {
     if (typeof role.results === "string" && role.results.trim()) {
       out.push(new Paragraph({
         spacing: { before: 140, after: 60, line: 252, lineRule: "auto" },
+        keepLines: true,
         children: [
           new TextRun({
             // RESULTS-PDF-INK-BLACK-001 (owner 2026-06-15): the per-role "Results:"
@@ -28454,7 +28467,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.152-table-header-ink";
+var VERSION = "1.14.153-role-keep-whole";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

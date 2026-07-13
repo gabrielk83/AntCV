@@ -247,23 +247,36 @@ def rule_core_comp(cv, jd, report):
     gr = MD._gen_runner()
     jdkw = gr._jd_kw(jd or "")
     rows = sec["rows"]
-    # owner 2026-07-13 (NVIDIA review): "the table has 3!! rows - should have
-    # been 2" — keep only the TWO highest-impact rows.
-    _cap_rows = int((_G.get("caps") or {}).get("core_comp_data_rows", 2))
-    if len(rows) > _cap_rows + 1:             # header + cap
-        data = rows[1:]
-        ranked = sorted(data, key=lambda r: -gr._rel(" ".join(map(str, r)), jdkw))
-        keep = ranked[:_cap_rows]
-        sec["rows"] = [rows[0]] + [r for r in data if r in keep]
-        report.append(f"core_comp: rows {len(data)} -> {_cap_rows} by JD relevance")
-    # owner 2026-07-13 round 2: the table must carry 3-4 rows, not 2. This is a
-    # GENERATION requirement (a real competency + its expertise prose can't be
-    # fabricated deterministically) — flag under-count so it is never silently
-    # shipped; the fix is regenerating the table, not padding it here.
+    # CORE-COMP-HIDE-NOT-DELETE-001 (owner 2026-07-13 round 3, CRITICAL: "it used
+    # to have 8 rows and you are selecting to populate it with 4 and now 2 - if
+    # you deleted them, it is your fault - you should have used hiding"). The old
+    # cap DROPPED excess rows from sec['rows'] — irreversible data loss. Now the
+    # FULL competency set is preserved: the top-N (caps.core_comp_data_rows, 3-4)
+    # by JD relevance stay VISIBLE in sec['rows']; every other row moves to
+    # sec['rows_hidden'] (retained, restorable), NEVER deleted. The worker
+    # renders only sec['rows'], so the CV shows 3-4; nothing is lost.
+    _cap_rows = int((_G.get("caps") or {}).get("core_comp_data_rows", 4))
     _min_rows = int((_G.get("caps") or {}).get("core_comp_data_rows_min", 3))
-    _ndata = len(sec.get("rows", [])) - 1
-    if 0 < _ndata < _min_rows:
-        report.append(f"core_comp: ONLY {_ndata} rows (<{_min_rows}) — NEEDS TABLE REGEN (cannot fabricate a competency)")
+    header = rows[0] if rows else ["Focus Area", "Strategic Expertise"]
+    pool = list(rows[1:]) + list(sec.get("rows_hidden") or [])
+    seen, alldata = set(), []
+    for r in pool:                            # dedupe by label, keep first (live) text
+        if not (isinstance(r, (list, tuple)) and len(r) >= 2):
+            continue
+        k = str(r[0]).strip().lower()
+        if k and k not in seen:
+            seen.add(k); alldata.append(list(r))
+    if alldata:
+        ranked = sorted(alldata, key=lambda r: -gr._rel(" ".join(map(str, r)), jdkw))
+        vis_set = ranked[:_cap_rows]
+        visible = [r for r in alldata if r in vis_set]   # preserve original order
+        hidden = [r for r in alldata if r not in vis_set]
+        sec["rows"] = [header] + visible
+        sec["rows_hidden"] = hidden
+        if hidden:
+            report.append(f"core_comp: {len(alldata)} rows -> {len(visible)} visible + {len(hidden)} HIDDEN (preserved, never deleted)")
+        if len(visible) < _min_rows:
+            report.append(f"core_comp: only {len(visible)} competencies total (<{_min_rows}) — needs a richer generation, not padding")
     # NARROW-CELL-CASCADE-001 lever 1 (persist-time, render-free). Two
     # deterministic compressions only - anything subtler is the measured
     # ladder's job (density_fit) so valid 2-line labels are never mutilated:

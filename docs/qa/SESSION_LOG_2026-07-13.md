@@ -129,3 +129,38 @@ The carry-forward above is now CLOSED in code. Built the production
 - **Still pending (owner):** give `CLUSTER_RESEARCH_TOKEN` to the
   `antcv-demand-seed-weekly` task env + run the first push (or wait for Friday)
   to populate D1 with the rank-scaled weights + 2026-07-13 research.
+
+## FOLLOW-UP 3 (same day) — IN PRODUCTION + FIRST D1 POPULATION (row 9 CLOSED)
+
+- **Fuse to production.** Owner merged the fuse (#349) and set
+  `CLUSTER_RESEARCH_TOKEN`. Redeployed access-relay (union writer live); the
+  client union auto-deployed on the merge. Live-verified:
+  `antcv.pages.dev/app.js?v=1.51.579-cluster-fuse` contains the union;
+  `/health` 200; `POST /api/cluster-demand-research` 401-gated without a token.
+- **Routine wiring.** `antcv-demand-seed-weekly` SKILL.md gained step **4b** —
+  the D1 write is now `node scripts/cluster-demand-research-push.mjs --url
+  https://antcv-access-relay.karp-gabriel-a.workers.dev` (URL hardcoded, token
+  from env). Created `~/.claude/settings.local.json` with `ANTCV_RELAY_URL`.
+  Token lives in a Windows User env var (secret; not in any file). NOTE: a
+  scheduled session started BEFORE the `setx` won't inherit it — restart Claude
+  once so future Fri runs have it.
+- **First D1 population — RAN + VERIFIED.** Token pulled from the User env var at
+  run time (never printed). Response `{"ok":true, clusters_updated:9,
+  total_inserted:181}` — pm_process **21** (20 fresh + 1 retained), others 20.
+  D1 verify (`ant_memory` 499c3de9): `application_qualification` pm_process
+  research weights step 0.400 → 0.020 (rank-scaled) + **0.010 = "Obsolescence
+  management" retained at floor** (union / nothing lost);
+  `cluster_top_qualifications` pm_process rank-5 = "AI/GenAI tool fluency & EU AI
+  Act awareness" (this week's item, deterministic order). The prior 180 flat-0.4
+  rows are superseded.
+- **Routines control (owner Q).** There is ONE demand-seed routine
+  (`antcv-demand-seed-weekly`, Fri 22:02 — its own name is "weekly demand-seed
+  TUNING"); the other "tune" is `antcv-relay-cost-quality-tune` (Wed 22:04),
+  a separate LLM-router routine, not demand-seed. Collision control across ALL
+  routines: staggered cron days/times + the NIGHT SHIFT shift-ledger
+  (`scripts/shift.mjs` claim/worktree/sync-first/never-force,
+  `docs/qa/SCHEDULED_ROUTINES.md`) + non-overlapping file/D1 lanes (demand-seed
+  = cluster seed sidecar + `application_qualification`; cost-quality = proxy
+  `MODEL_ROLES`). Demand-seed never touches app.js (SKILL rule 3); the client
+  union is permanent infra, not something the weekly run edits.
+- **OPEN_REGISTER row 9 CLOSED** (both entries); FEATURES_REGISTRY (15).

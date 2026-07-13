@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.721';
+  const TARGET_VERSION = '1.51.722-cjlr-export';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.721',
     '1.51.701',
     '1.51.683-antiosc',
     '1.51.682-title-order',

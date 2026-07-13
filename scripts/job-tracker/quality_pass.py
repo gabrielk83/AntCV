@@ -261,18 +261,21 @@ def rule_core_comp(cv, jd, report):
         report.append(f"core_comp: {fixed} truncated cell tail(s) clause-completed")
 
 
-def rule_results_numeric(cv, kernel, jd_text_for_partner, report):
+def rule_results_numeric(cv, kernel, jd_text_for_partner, report, language="en"):
     """R5: Results lines must carry a number — swap in the kernel's exact
     numeric result for the role when available, else flag."""
     gr = MD._gen_runner()
     idy = gr._asdict((kernel or {}).get("identity"))
     # the kernel's numeric-outcome pool: identity.selectedOutcomes[] —
     # {role, position: "Role - Company", verb, title (metric summary), result}
-    pool = []
+    pool_entries = []
     for o in idy.get("selectedOutcomes") or []:
         if isinstance(o, dict):
-            label = str(o.get("position") or "") + " " + str(o.get("role") or "")
-            pool.append((label, str(o.get("result") or "")))
+            pool_entries.append({
+                "role_id": str(o.get("role") or ""),
+                "label": str(o.get("position") or "") + " " + str(o.get("role") or ""),
+                "result": str(o.get("result") or ""),
+            })
     exp = next((s for s in cv if s.get("type") == "experience"), None)
     if not exp:
         return
@@ -280,32 +283,42 @@ def rule_results_numeric(cv, kernel, jd_text_for_partner, report):
         return set(re.findall(r"[a-z]{3,}", str(s).lower()))
     for r in exp.get("roles") or []:
         res = str(r.get("results") or "")
-        # RESULTS-OUTCOME-METRIC-001: "has a digit" is not enough — a team
-        # size / site descriptor is a bullet, not a result. Replace whenever
-        # the current line lacks a CHANGE metric.
-        if not res or _is_outcome(res):
-            if res:
-                continue
-        rt = toks(str(r.get("title", "")) + " " + str(r.get("company", "")))
+        # RESULTS-OUTCOME-METRIC-001 v2: replace whenever the current line
+        # lacks a qualifying metric (quantified outcome OR scope).
+        if res and _is_outcome(res):
+            continue
+        # ID-EXACT MATCH (owner 2026-07-13: every Gabriel role HAS a kernel
+        # outcome, so a miss is a matcher defect): the kernel pool's `role`
+        # ids map onto role.id and merged roles' __covers (ROLE-COVERS-001).
+        ids = set()
+        if r.get("id"):
+            ids.add(str(r["id"]))
+        for cid in (r.get("__covers") or []):
+            ids.add(str(cid))
         bullets_norm = {DF._norm(b).lower() for b in (r.get("bullets") or [])}
         best, bs = None, 0
-        for label, cand in pool:
+        for entry in pool_entries:
+            cand = entry["result"]
             if not cand or not _is_outcome(cand):
-                continue                     # outcomes only, never descriptors
+                continue
             if DF._norm(cand).lower() in bullets_norm:
-                continue                     # never duplicate an existing bullet
-            s = len(rt & toks(label)) if label else 0
+                continue
+            if entry["role_id"] and entry["role_id"] in ids:
+                s = 100                                   # id-exact wins outright
+            else:
+                rt = toks(str(r.get("title", "")) + " " + str(r.get("company", "")))
+                s = len(rt & toks(entry["label"])) if entry["label"] else 0
             if s > bs:
                 best, bs = cand, s
         if best and bs >= 2:
-            # partner names only with a strong JD signal (owner 2026-07-13)
             for pname, generic in _PARTNER_NAMES:
                 if pname.lower() in best.lower() and pname.lower() not in (jd_text_for_partner or "").lower():
                     best = re.sub(re.escape(pname), generic, best, flags=re.I)
             r["results"] = best
-            report.append(f"results: outcome swap for '{str(r.get('title'))[:28]}' (kernel exact)")
+            _langflag = " - NEEDS TRANSLATION (pool is en)" if language not in ("en", None, "") else ""
+            report.append(f"results: outcome swap for '{str(r.get('title'))[:28]}' ({'id-exact' if bs >= 100 else 'label'}){_langflag}")
         else:
-            report.append(f"results: NO CHANGE-METRIC, no kernel outcome match — '{str(r.get('title'))[:28]}' (flagged)")
+            report.append(f"results: NO METRIC, no kernel outcome match - '{str(r.get('title'))[:28]}' (MATCHER DEFECT if a kernel outcome exists)")
 
 
 _DANGLING_ENUM = re.compile(r",\s*[\w&/-]+\s*,\s*[\w&/-]+\s*\.\s*$")
@@ -428,7 +441,7 @@ def apply_all(cv, cl, jd, kernel, language="en", use_llm=True):
     rule_education(cv, language, report)
     rule_line_compress({"cv": cv, "cl": cl}, report)
     rule_core_comp(cv, jd, report)
-    rule_results_numeric(cv, kernel, jd, report)
+    rule_results_numeric(cv, kernel, jd, report, language=language)
     _restore_forening(cv, jd, language, report)
     rule_bullet_periods(cv, report)
     rule_cl_prose(cl, cv, kernel_facts, language, report, use_llm=use_llm)

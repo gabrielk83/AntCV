@@ -52,9 +52,29 @@
   function isOpen() { return get(K.open, '0') === '1'; }
   function setOpen(v) { set(K.open, v ? '1' : '0'); }
 
+  // SPEC-SLOGAN-LANG-001 (owner 2026-07-13, "should not be danish if I am set to
+  // english spanish chinese etc"): reject a specialization candidate that is in
+  // the WRONG SCRIPT for the current ribbon (a Latin/Danish triad on a zh/ar/he/
+  // ru app) so the generic hint shows instead. Self-contained; Latin ribbons pass
+  // through (Danish vs English is not script-distinguishable — the source-order
+  // flip in subtitleFallback handles those).
+  var SPEC_SCRIPTS = {
+    zh: /[一-鿿]/, ja: /[぀-ヿ一-鿿]/, ko: /[가-힯]/,
+    ar: /[؀-ۿ]/, fa: /[؀-ۿ]/, he: /[֐-׿]/,
+    ru: /[Ѐ-ӿ]/, el: /[Ͱ-Ͽ]/, th: /[฀-๿]/, am: /[ሀ-፿]/
+  };
+  function spellsCurrentScript(txt) {
+    try {
+      var L = String(localStorage.getItem('language') || 'en').toLowerCase().replace(/[^a-z]/g, '').slice(0, 2) || 'en';
+      var re = SPEC_SCRIPTS[L];
+      return re ? re.test(String(txt || '')) : true;
+    } catch (_) { return true; }
+  }
+
   // The default (placeholder) the slogan falls back to = the candidate subtitle, uppercased,
-  // with "|" turned into " • ". Read from the stored kernel showcase / personalInfo so the
-  // control can SHOW the user what the empty field will render.
+  // with "|" turned into " • ". Read from personalInfo (the current-language store the header
+  // renders + the babel-fish pass keeps current) so the control SHOWS what the empty field
+  // will render in THIS app language.
   function subtitleFallback() {
     // SLOGAN-SMART-STATEMENT-001 (owner 2026-07-04: "the slogan and the
     // specialization are definitely NOT the same for a specified job"): on a
@@ -78,11 +98,17 @@
         return String(s || '');
       } catch (_) { return ''; }
     }
+    // SPEC-SLOGAN-LANG-001: personalInfo.specialization FIRST (current-ribbon
+    // language, kept current by the babel-fish translate pass + what the header
+    // renders); kernelShowcase (raw generation-language, never re-langed) is the
+    // last resort only — reading it first was what forced the stale Danish triad
+    // onto an English/Spanish/Chinese app.
     var s = '';
-    try { s = fromObj(JSON.parse(localStorage.getItem('kernelShowcase') || '{}')); } catch (_) {}
-    if (!s) { try { s = fromObj(JSON.parse(localStorage.getItem('personalInfo') || '{}')); } catch (_) {} }
+    try { s = fromObj(JSON.parse(localStorage.getItem('personalInfo') || '{}')); } catch (_) {}
+    if (!s) { try { s = fromObj(JSON.parse(localStorage.getItem('kernelShowcase') || '{}')); } catch (_) {} }
     s = String(s || '').replace(/\s*\|\s*/g, ' • ').trim();
     if (!s || /^\[/.test(s)) return '';
+    if (!spellsCurrentScript(s)) return '';   // wrong-script stale value -> generic hint
     return s.toUpperCase();
   }
 

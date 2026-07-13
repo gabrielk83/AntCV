@@ -369,7 +369,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.681-slogan-ov-gate';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.723-roles-rb-render';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.724-roles-rb-droprules';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -411,7 +411,7 @@
           app.src = 'app.js?v=1.51.723-roles-rb-render';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.723-roles-rb-render';
+            vo.src = 'antcv-version-override.js?v=1.51.724-roles-rb-droprules';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -916,7 +916,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      intervals). Verified: 211's CSS replicates each 206/207/208 rule; no
      external consumer of their APIs/attrs. Review: docs/refactor/SIDECAR_CONSOLIDATION_REVIEW.md -->
 <script src="antcv-section-panel-211.js?v=1.50.418" defer></script>
-<script src="antcv-roles-richblock-adapter.js?v=1.51.723-roles-rb-render" defer></script>
+<script src="antcv-roles-richblock-adapter.js?v=1.51.724-roles-rb-droprules" defer></script>
 <script src="antcv-experience-role-cjlr-230.js?v=1.51.722-cjlr-export" defer></script>
 <script src="antcv-core-competencies-row-controls-234.js?v=1.51.94" defer></script>
 <script src="antcv-selected-outcomes-row-controls-237.js?v=1.51.56" defer></script>

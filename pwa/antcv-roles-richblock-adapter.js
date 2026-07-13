@@ -42,20 +42,40 @@
     return st && typeof st === 'object' ? st : {};
   }
 
+  // Chimera drop-rule helpers (app.src.js:6850) — mirror them so flag-on preview
+  // parity holds: a fully-bracketed "[Role title]" placeholder, an empty string,
+  // or the literal "<unused slot>" marker all count as "blank".
+  function isBlank(x) {
+    var t = String(x == null ? '' : x).trim();
+    return !t || /^\[[^\]]*\]$/.test(t) || t.toLowerCase() === '<unused slot>';
+  }
+  function isPlaceholderRole(role) {
+    var bl = Array.isArray(role.bullets) ? role.bullets : [];
+    return isBlank(role.title) && isBlank(role.company) && (!bl.length || bl.every(isBlank));
+  }
+  function isUnusedSlot(role) {
+    var bl = Array.isArray(role.bullets) ? role.bullets : [];
+    return bl.length > 0 && bl.every(function (b) { return String(b == null ? '' : b).trim().toLowerCase() === '<unused slot>'; });
+  }
+
   // roles[] -> rich_block section (forward). Pure; does not mutate `sec`.
   function adapt(sec) {
     if (!sec || !Array.isArray(sec.roles)) return sec;
     var roles = sec.roles;
+    // hasRealRole gates the placeholder drop so a FRESH me() skeleton (all roles
+    // bracketed) keeps its roles visible/editable (matches CV-GHOST-...-002).
+    var hasRealRole = roles.some(function (r) { return r && typeof r === 'object' && !isPlaceholderRole(r); });
     var items = [];
     for (var r = 0; r < roles.length; r++) {
       var role = roles[r];
       if (!role || typeof role !== 'object') continue;
-      // Preview parity: the chimera preview (Ce/6832) renders null for on:false
-      // roles (the Ae editor panel owns visibility toggling), so skip them here.
-      // _ri keeps the TRUE roles[] index, so writeback is unaffected by skipping.
-      // TODO(render stage): also mirror the <unused slot> + fully-bracketed
-      // placeholder drop (needs the __hasRealRole context from the section).
+      // Preview parity: the chimera preview (Ce/6832) renders null for on:false,
+      // <unused slot>, hasRealRole+placeholder, and export-hidden (targeted app)
+      // roles. _ri keeps the TRUE roles[] index, so writeback survives skips.
       if (role.on === false) continue;
+      if (isUnusedSlot(role)) continue;
+      if (hasRealRole && isPlaceholderRole(role)) continue;
+      try { if (typeof window !== 'undefined' && window.AntcvExportHiddenRole && window.AntcvExportHiddenRole(role)) continue; } catch (_) {}
       var on = true;
       var seg = [
         Object.assign({ t: role.title || '', kind: 'role' }, segStyle(role, 'role')),

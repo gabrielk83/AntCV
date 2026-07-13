@@ -1866,7 +1866,17 @@
   const Z = {
     generate_cv: ["openai", "claude"],
     generate_cl: ["openai", "claude"],
-    compress: ["mistral", "openai", "gemini", "claude"],
+    // COMPRESS-COST-OPENAI-DROP-001 (owner 2026-07-13): openai was winning ~1/4
+    // of compress calls (D1 7d: 503 calls, $62.35 = ~58% of the week's LLM spend)
+    // at $0.12395/call vs gemini $0.00007 / mistral $0.012 / anthropic $0.017 —
+    // all at 100% success + zero leak/fabrication/banned flags. compress is a
+    // mechanical TIGHTENING pass, so the quality gap is ~nil and cost should win.
+    // openai scored highest here only because __LLM_BASE.openai.c (0.45) is a
+    // GENERATION-tuned proxy that inverts compress's real economics (it makes the
+    // actually-cheap anthropic look priciest at c=0.9). Removing openai from the
+    // compress candidate list makes the scorer lead with gemini (cheapest, 100%
+    // success); the full cascade fallback still runs. Anthropic stays reachable.
+    compress: ["mistral", "gemini", "claude"],
     fix_orphans: ["mistral", "openai", "gemini", "claude"],
     enrich: ["openai", "claude", "mistral", "gemini"],
     parse_jd: ["mistral", "gemini", "openai", "claude"],

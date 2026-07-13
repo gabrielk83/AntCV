@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.499-owner-followups';
+const CACHE = 'antcv-1.51.538-compress-openai-drop';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

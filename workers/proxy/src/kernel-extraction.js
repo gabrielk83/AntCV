@@ -192,6 +192,10 @@ export async function handleKernelExtraction(request, env, getCORS) {
   const cascade = await callAnyLLMForJSON(env, SYSTEM_PROMPT, userPrompt, {
     order: providerOrder,
     models: body.models || {},
+    // RELAY-TUNE-COVERAGE-GAP-001: env.MODEL_ROLES.kernel, when set, leads the
+    // cascade head (over the client's order) so the weekly cost-quality tune can
+    // steer kernel extraction; the full cascade stays as the fallback tail.
+    role: 'kernel',
     validate: (text) => extractJSON(text) !== null,
   });
   const duration = Date.now() - t0;

@@ -35,12 +35,42 @@ const PROXY_TOMLS = ['workers/proxy/wrangler.toml', 'workers/demo-proxy/wrangler
 // Which telemetry `task`(s) inform each MODEL_ROLES role. A role with no matching task keeps
 // its current head (never guess from unrelated traffic).
 export const ROLE_TASKS = {
-  writer:     ['gen', 'generate', 'generation', 'writer'],
-  coherence:  ['coherence', 'coherence_repair', 'repair'],
-  supervisor: ['supervisor', 'advisory'],
+  writer:     ['gen', 'generate', 'generation', 'writer', 'generate_cv', 'generate_cl'],
+  // apply_correction is the coherence role's real telemetry label (gen-coherence.js
+  // role:'coherence' logs it) — include it so coherence traffic is actually seen.
+  coherence:  ['coherence', 'coherence_repair', 'repair', 'apply_correction'],
+  supervisor: ['supervisor', 'advisory', 'grounding'],
+  // RELAY-TUNE-COVERAGE-GAP-001 (2026-07-13): the two PROXY-side cascades now
+  // carry a role (multi-llm.js ROLE_KEYS) so MODEL_ROLES can pin their head.
+  // These map to the real telemetry task labels the proxy cascade logs.
+  analysis:   ['analyze_fit', 'parse_jd', 'jd_analysis', 'analysis'],
+  kernel:     ['kernel', 'kernel_extraction', 'extract', 'ingest'],
 };
+
+// The tunable roles = the router's ROLE_KEYS (workers/proxy/src/multi-llm.js). A
+// role need NOT already be a key in MODEL_ROLES to be scored — the loop proposes
+// a NEW pin for an unpinned role when its telemetry warrants it (owner-gated via
+// --apply + deploy). Kept in lockstep with ROLE_KEYS; a drift is caught by the test.
+export const TUNABLE_ROLES = ['writer', 'supervisor', 'coherence', 'analysis', 'kernel'];
+// An unpinned role leads with the cascade default (DEFAULT_ORDER[0] in multi-llm.js).
+export const DEFAULT_HEAD = 'anthropic';
+
+// RELAY-TUNE-COVERAGE-GAP-001 (2026-07-13): the highest-COST telemetry tasks are
+// CLIENT-dispatched pass-through (the client's ee() router picks the provider and
+// sends x-provider + a provider-specific model id; the proxy forwards it verbatim,
+// so MODEL_ROLES CANNOT reorder them — rerouting would 404 on the wrong model id,
+// see multi-llm.js "raw-passthrough" lock). The tune loop must NOT pretend to tune
+// these; it SURFACES them so the owner can move the lever at the real site (the
+// client ee() router default), a separate owner-gated change. Kept for the report.
+export const CLIENT_DISPATCH_TASKS = ['compress', 'long_context', 'consensus_poll', 'consensus_reinforce', 'generate', 'gen'];
+
 // The providers the router knows (a proposal may only name one of these).
 export const KNOWN_PROVIDERS = ['anthropic', 'openai', 'gemini', 'mistral'];
+// RELAY-TUNE-COVERAGE-GAP-001: telemetry logs Anthropic as `claude` but the
+// router/MODEL_ROLES id is `anthropic`. Normalize so a claude health row scores
+// against the anthropic head (else an anthropic-headed role always reads as
+// "no data" and could wrongly flip).
+export const normProvider = (p) => (String(p) === 'claude' ? 'anthropic' : String(p));
 
 // ── pure scoring core ────────────────────────────────────────────────────────
 // A row is a llm_provider_health record: {provider, task, call_count, success_rate,
@@ -51,7 +81,7 @@ export function scoreRows(rows, role, { floor = 0.9, minCalls = 20 } = {}) {
   const byProvider = new Map();
   for (const r of rows) {
     if (!r || !tasks.includes(String(r.task))) continue;
-    const p = String(r.provider);
+    const p = normProvider(r.provider);   // fold telemetry 'claude' onto the router id 'anthropic'
     const a = byProvider.get(p) || { provider: p, calls: 0, ok: 0, cost: 0, retry: 0, latency: 0, qw: 0 };
     const calls = Number(r.call_count) || 0;
     a.calls += calls;
@@ -88,9 +118,14 @@ export function proposeRoles(current, rows, opts = {}) {
   const { margin = 0.10 } = opts;
   const proposed = { ...current };
   const rationale = [];
-  for (const role of Object.keys(current)) {
+  // Score every tunable role, not only the ones already pinned in MODEL_ROLES —
+  // an unpinned proxy-cascade role (analysis / kernel) is proposable too. Order:
+  // pinned roles first (stable diffs), then any tunable role not yet pinned.
+  const roles = [...Object.keys(current), ...TUNABLE_ROLES.filter((r) => !(r in current))];
+  for (const role of roles) {
+    const pinned = role in current;
     const ranked = scoreRows(rows, role, opts);
-    const curHead = current[role];
+    const curHead = pinned ? current[role] : DEFAULT_HEAD;  // an unpinned role leads with the cascade default
     const curScore = ranked.find((r) => r.provider === curHead);
     const best = ranked.find((r) => r.eligible);   // top eligible
     let decision = 'keep', to = curHead, why;
@@ -102,15 +137,55 @@ export function proposeRoles(current, rows, opts = {}) {
       const curCq = curScore && curScore.eligible ? curScore.costQuality : 0;
       if (best.costQuality > curCq * (1 + margin)) {
         decision = 'flip'; to = best.provider;
-        why = `${best.provider} cq=${best.costQuality.toFixed(3)} beats ${curHead} cq=${curCq.toFixed(3)} by > ${(margin * 100).toFixed(0)}%`;
+        why = `${best.provider} cq=${best.costQuality.toFixed(3)} beats ${pinned ? curHead : curHead + ' (unpinned default)'} cq=${curCq.toFixed(3)} by > ${(margin * 100).toFixed(0)}%`;
       } else {
         why = `${best.provider} (cq=${best.costQuality.toFixed(3)}) within ${(margin * 100).toFixed(0)}% of ${curHead} (cq=${curCq.toFixed(3)}) — hysteresis, keep`;
       }
     }
-    proposed[role] = to;
-    rationale.push({ role, from: curHead, to, decision, why, ranked });
+    // Only write a role into the proposal when it is already pinned, or when we are
+    // proposing a NEW pin (a flip). A "keep" on an unpinned role stays absent — the
+    // router keeps leading it with the cascade default; we don't add MODEL_ROLES noise.
+    if (pinned || decision === 'flip') proposed[role] = to;
+    rationale.push({ role, from: curHead, to, decision, why, pinned, ranked });
   }
   return { proposed, rationale, changed: JSON.stringify(proposed) !== JSON.stringify(current) };
+}
+
+// RELAY-TUNE-COVERAGE-GAP-001: summarize the CLIENT-dispatched pass-through tasks
+// (compress / long_context / consensus_*) that MODEL_ROLES cannot reorder, so the
+// weekly report can surface the cost lever at its real (client ee()-router) site.
+// Returns per-task the current spend split by provider + the cheapest ADEQUATE
+// provider (success ≥ floor, ≥ minCalls) — the owner-gated recommendation.
+export function summarizeClientDispatch(rows, { floor = 0.9, minCalls = 20 } = {}) {
+  const out = [];
+  for (const task of CLIENT_DISPATCH_TASKS) {
+    const byProv = new Map();
+    for (const r of rows) {
+      if (!r || String(r.task) !== task) continue;
+      const p = normProvider(r.provider);
+      const a = byProv.get(p) || { provider: p, calls: 0, ok: 0, cost: 0 };
+      const calls = Number(r.call_count) || 0;
+      a.calls += calls;
+      a.ok += Number(r.success_count != null ? r.success_count : (Number(r.success_rate) || 0) * calls);
+      a.cost += Number(r.total_cost_usd) || 0;
+      byProv.set(p, a);
+    }
+    const provs = [...byProv.values()].map((a) => ({
+      provider: a.provider, calls: a.calls, cost: a.cost,
+      costPerCall: a.calls ? a.cost / a.calls : 0,
+      successRate: a.calls ? a.ok / a.calls : 0,
+    }));
+    if (!provs.length) continue;
+    const totalCost = provs.reduce((s, p) => s + p.cost, 0);
+    const totalCalls = provs.reduce((s, p) => s + p.calls, 0);
+    const lead = [...provs].sort((x, y) => y.cost - x.cost)[0];  // where the money goes now
+    const cheapest = [...provs]
+      .filter((p) => p.successRate >= floor && p.calls >= minCalls && KNOWN_PROVIDERS.includes(p.provider))
+      .sort((x, y) => x.costPerCall - y.costPerCall)[0] || null;
+    const potentialSave = cheapest ? Math.max(0, totalCost - cheapest.costPerCall * totalCalls) : 0;
+    out.push({ task, totalCost, totalCalls, lead, cheapest, potentialSave, provs });
+  }
+  return out.sort((a, b) => b.potentialSave - a.potentialSave);
 }
 
 // ── IO helpers ───────────────────────────────────────────────────────────────
@@ -177,8 +252,9 @@ async function main() {
   }
   const rows = rowsFromHealth(health);
   const { proposed, rationale, changed } = proposeRoles(current, rows, opts);
+  const clientLevers = summarizeClientDispatch(rows, opts);
 
-  if (arg('json', false)) { console.log(JSON.stringify({ current, proposed, changed, rationale }, null, 2)); }
+  if (arg('json', false)) { console.log(JSON.stringify({ current, proposed, changed, rationale, clientLevers }, null, 2)); }
   else {
     console.log(`\nRELAY-COST-QUALITY-TUNE — ${rows.length} health rows · floor=${opts.floor} margin=${opts.margin} min-calls=${opts.minCalls}\n`);
     for (const r of rationale) {
@@ -192,6 +268,18 @@ async function main() {
     console.log(`\ncurrent  MODEL_ROLES = '${JSON.stringify(current)}'`);
     console.log(`proposed MODEL_ROLES = '${JSON.stringify(proposed)}'`);
     console.log(changed ? '\n→ change proposed.' : '\n→ no change (current heads are optimal / within hysteresis).');
+
+    if (clientLevers.length) {
+      console.log(`\nCLIENT-DISPATCH LEVERS (NOT MODEL_ROLES-tunable — the proxy forwards the client's`);
+      console.log(`x-provider + model verbatim; moving these is a client ee()-router change, owner-gated):`);
+      for (const l of clientLevers) {
+        const now = `${l.lead.provider} $${l.lead.cost.toFixed(2)} (${l.lead.costPerCall.toFixed(5)}/call)`;
+        const to = l.cheapest ? `${l.cheapest.provider} @ $${l.cheapest.costPerCall.toFixed(5)}/call (ok=${(l.cheapest.successRate * 100).toFixed(0)}%)` : 'none adequate';
+        console.log(`  ${l.task.padEnd(16)} spend $${l.totalCost.toFixed(2)}/wk · leads ${now}`);
+        if (l.cheapest && l.cheapest.provider !== l.lead.provider && l.potentialSave > 0.01)
+          console.log(`      ↳ cheapest adequate: ${to} → ~$${l.potentialSave.toFixed(2)}/wk potential (QUALITY-GATE: telemetry flags are blind to format-broken output — verify before moving)`);
+      }
+    }
   }
 
   if (arg('apply', false)) {

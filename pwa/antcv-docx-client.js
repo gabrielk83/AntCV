@@ -686,7 +686,13 @@ export function buildPayload({
       // already reads "Application:/Ansøgning:" is kept verbatim.
       const stored = stripFounder(meta.subtitle || '');
       const cvRole = stripFounder((meta.role || '').trim());
-      if (!cvRole || /^(application|ansøgning)\s*:/i.test(stored)) return stored;
+      // CV-SPEC-OVER-APPLICATION-001 (owner 2026-07-13: "the specialization is
+      // supposed to show in CVs, not the Application line"): a PRESENT stored
+      // subtitle (the positioning/specialization triad) is kept verbatim; the
+      // "Application: <role> — <company>" synthesis fires ONLY when the band
+      // would otherwise be blank (CV-APPLICATION-LINE-001's real case — Anita's
+      // fresh session had no stored subtitle). The CL band is unchanged.
+      if (stored || !cvRole) return stored;
       const cvCo = (meta.company || '').trim();
       const isDA2 = (language === 'da');
       // SUBTITLE-ZH-001 (owner 2026-07-12): zh header furniture: 申请: prefix +
@@ -1827,10 +1833,50 @@ export function buildStyle(styleConfig, navyColor) {
     // candidate band), while `mainHeadColor` is teal. Worker
     // v1.14.2 reads `style.tableHeaderBg` when present.
     'tableHeaderBg',
+    // TABLE-HEADER-INK-001 (owner 2026-07-13, "table header is hardly
+    // visible on the background"): tableHeaderBg passed through WITHOUT its
+    // ink token, so a pale stored bg (#DDE6F2) met the worker's package
+    // default ink (white on the brand band) — near-invisible and a
+    // color-blind accessibility failure. Pass the stored ink through, and
+    // (below) compute a contrast-correct ink whenever the bg travels alone.
+    'tableHeaderText',
   ];
   for (const k of passthrough) {
     if (styleConfig[k] != null) out[k] = styleConfig[k];
   }
+  // CONTRAST-GUARD-001 (owner 2026-07-13, STANDING accessibility rule: "even
+  // when you get company brand colors always fit visibility for vision
+  // impaired users"). Every text ink is validated against its fill; a pair
+  // below ~3:1 contrast is replaced by the luminance-correct ink. This caught
+  // live: white table-header ink on pale #DDE6F2, gray #666666 sidebar
+  // headings on brand green #76B900.
+  const __lum = (hex) => {
+    const h = String(hex || '').replace('#', '');
+    if (h.length < 6) return null;
+    const c = (i) => {
+      let v = parseInt(h.slice(i, i + 2), 16) / 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * c(0) + 0.7152 * c(2) + 0.0722 * c(4);
+  };
+  const __contrast = (a, b) => {
+    const la = __lum(a), lb = __lum(b);
+    if (la == null || lb == null) return 21;
+    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+  };
+  const __ensureInk = (bgKey, inkKeys) => {
+    const bg = out[bgKey];
+    if (!bg) return;
+    // pick whichever candidate actually contrasts more (a mid-luminance
+    // saturated brand green fails WHITE at ~2.4:1 while near-black passes ~9:1)
+    const good = __contrast(bg, '333333') >= __contrast(bg, 'FFFFFF') ? '333333' : 'FFFFFF';
+    for (const k of inkKeys) {
+      if (!out[k] || __contrast(bg, out[k]) < 3) out[k] = good;
+    }
+  };
+  __ensureInk('tableHeaderBg', ['tableHeaderText']);
+  __ensureInk('sidebarBg', ['sidebarTextColor', 'sidebarLabelColor', 'sidebarHeadColor']);
+  __ensureInk('headerBg', ['headerNameColor', 'headerSpecColor', 'headerContactColor']);
   if (navyColor) {
     // navyColor in the PWA drives the header/sidebar background.
     if (!out.headerBg)  out.headerBg  = navyColor;

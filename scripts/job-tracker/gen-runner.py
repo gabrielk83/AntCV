@@ -1367,6 +1367,19 @@ def persist_application(doc, r, res, category, language, kernel=None, measure=Fa
     sk = load_skeleton()
     if sk:
         cv, cl = build_structured_sections(sk, res["sections"], company, role, language=language)
+        # PERSIST-QUALITY-001 (owner 2026-07-13, generalized from the 808/797
+        # review): certs relevance + no years + rugby-class last, FVU compress,
+        # sidebar one-liner compressions, core_comp top-4 + clause-complete
+        # cells, NUMERIC results from the kernel outcome pool, CL sentence
+        # health (dangling enumerations, lowercase starts) — every rule on
+        # every persist, LLM repairs behind the density fact gates.
+        try:
+            import quality_pass
+            qrep = quality_pass.apply_all(cv, cl, r["jd"], kernel, language=language)
+            for line in qrep:
+                print("   [quality] " + line)
+        except Exception as e:
+            print(f"   [quality] skipped ({str(e)[:80]})")
         # Nordic-Minimal (~1.75 pages) via JD-relevance: merge + rank experience
         # to <=6 roles, hide JD-irrelevant sidebar detail. COMPACT-ALL-TIERS-001
         # (owner 2026-07-12): high tier used to skip this gate entirely and

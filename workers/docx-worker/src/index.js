@@ -23798,7 +23798,7 @@ function makePhotosCircular(documentXml, shape) {
   return { xml: next, count: count3 };
 }
 __name(makePhotosCircular, "makePhotosCircular");
-function aiNoticeVmlRun(side, __idx, noticeText, noticeFont, bodyLevel) {
+function aiNoticeVmlRun(side, __idx, noticeText, noticeFont, bodyLevel, underColor) {
   __idx = Number.isFinite(__idx) ? __idx : 0;
   // FURNITURE-ZH-001: caller (postProcessDocx) forwards the localized notice +
   // font; Chinese needs a CJK eastAsia face or the glyphs box out in the VML.
@@ -23837,13 +23837,26 @@ function aiNoticeVmlRun(side, __idx, noticeText, noticeFont, bodyLevel) {
   // still 2pt clear of the 842pt edge that clipped at 824 in AI-NOTICE-ANCHOR-FIX-001).
   // The owner-verified in-cell/overflow routes keep 806 untouched.
   const __mt = bodyLevel ? 822 : 806;
+  // AI-NOTICE-INK-001 (owner 2026-07-13, CONTRAST-GUARD standing rule): the
+  // fixed 9A9A9A gray became unreadable once SIDEBAR-SPINE-VML-001 painted the
+  // page bottom in the brand color. When the notice's corner sits over a
+  // colored ground (underColor = the spine fill on the spine's side), pick the
+  // higher-contrast ink; plain white ground keeps the subtle gray.
+  let __inkC = "9A9A9A";
+  const __uc = (underColor || "").replace(/[^0-9A-Fa-f]/g, "").slice(0, 6);
+  if (__uc.length === 6) {
+    const lin = (i) => { let v = parseInt(__uc.slice(i, i + 2), 16) / 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    const L = 0.2126 * lin(0) + 0.7152 * lin(2) + 0.0722 * lin(4);
+    const cr = (l2) => (Math.max(L, l2) + 0.05) / (Math.min(L, l2) + 0.05);
+    if (cr(0.318) < 3) __inkC = cr(0.05) >= cr(0.95) ? "262626" : "F5F5F5"; // 9A9A9A fails -> strongest ink
+  }
   return '<w:r><w:rPr><w:noProof/></w:rPr><w:pict>' +
     '<v:rect id="AntCVAiNotice' + __idx + '" o:spid="_x0000_s' + (4097 + __idx) + '" style="position:absolute;margin-left:' + __ml + 'pt;margin-top:' + __mt + 'pt;width:320pt;height:18pt;' +
     'mso-position-horizontal-relative:page;' +
     'mso-position-vertical-relative:page;z-index:251658240;mso-wrap-style:square" filled="f" stroked="f">' +
     '<v:textbox inset="14pt,1pt,14pt,11pt"><w:txbxContent>' +
     '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="220" w:lineRule="auto"/><w:jc w:val="' + horiz + '"/></w:pPr>' +
-    '<w:r><w:rPr><w:rFonts w:ascii="' + _font + '" w:hAnsi="' + _font + '" w:eastAsia="' + _font + '"/><w:i/><w:color w:val="9A9A9A"/><w:sz w:val="13"/></w:rPr>' +
+    '<w:r><w:rPr><w:rFonts w:ascii="' + _font + '" w:hAnsi="' + _font + '" w:eastAsia="' + _font + '"/><w:i/><w:color w:val="' + __inkC + '"/><w:sz w:val="13"/></w:rPr>' +
     '<w:t xml:space="preserve">' + _txt + '</w:t></w:r>' +
     '</w:p></w:txbxContent></v:textbox></v:rect></w:pict></w:r>';
 }
@@ -23903,7 +23916,11 @@ function postProcessDocx(input, opts = {}) {
     let __aiWmIdx = 0;
     let aiWmMatch;
     while ((aiWmMatch = xml2.match(AIWM_RE))) {
-      xml2 = xml2.replace(AIWM_RE, aiNoticeVmlRun(aiWmMatch[1], __aiWmIdx++, opts && opts.aiNotice, opts && opts.aiFont, aiWmMatch[2] === "B"));
+      // AI-NOTICE-INK-001: when the notice corner sits on the spine side, the
+      // spine fill is its ground; readable ink is computed inside aiNoticeVmlRun.
+      const __noticeUnder = (opts && opts.spineColor && opts.spineSide &&
+        (aiWmMatch[1] === opts.spineSide)) ? opts.spineColor : "";
+      xml2 = xml2.replace(AIWM_RE, aiNoticeVmlRun(aiWmMatch[1], __aiWmIdx++, opts && opts.aiNotice, opts && opts.aiFont, aiWmMatch[2] === "B", __noticeUnder));
       aiNoticeInjected = true;
       if (__aiWmIdx > 8) break;
     }
@@ -28431,7 +28448,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.150-lo-sep-guard";
+var VERSION = "1.14.151-notice-ink";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

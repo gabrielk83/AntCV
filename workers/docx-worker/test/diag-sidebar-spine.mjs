@@ -112,5 +112,30 @@ const check = (name, cond) => { log((cond ? 'PASS' : 'FAIL') + '  ' + name); if 
   check('linear/CL doc -> no spine rect', hdr.indexOf('AntCVSpine') < 0);
 }
 
+// ── AI-NOTICE-INK-001: the notice ink adapts to the spine ground ─────────────
+{
+  // NOTE: payload.style.navy does NOT flow into sidebarBg (the worker default
+  // navy 283556 holds unless sidebarBg is explicit — real app payloads always
+  // send it). Set the brand green explicitly, like the live NVIDIA payloads.
+  const p = basePayload({ sidebarBg: '#76B900' });
+  p.ai_wm_side = 'left';                  // notice corner ON the spine side
+  const xml = unzipEntry(await gen(p), 'word/document.xml').toString('utf8');
+  const m = xml.match(/AntCVAiNotice[\s\S]{0,1200}?w:color w:val="([0-9A-Fa-f]{6})"/);
+  check('notice over green spine gets a readable dark ink', !!m && m[1].toUpperCase() === '262626', m && m[1]);
+  const hs = (unzipEntry(await gen(p), 'word/header1.xml').toString('utf8').match(/AntCVSpine[^>]*fillcolor="#([0-9A-Fa-f]{6})"/) || [])[1];
+  check('spine takes the explicit brand green', (hs || '').toUpperCase() === '76B900', hs);
+  // off-spine: flip the SPINE to the right (sidebarPosition), notice stays left
+  // (the ai_wm_side hint alone can be overridden by the measured-gap routing,
+  // so pin the geometry instead of the hint)
+  const p2 = basePayload({ sidebarBg: '#76B900', sidebarPosition: 'right' });
+  p2.ai_wm_side = 'left';
+  const xml2 = unzipEntry(await gen(p2), 'word/document.xml').toString('utf8');
+  const m2 = xml2.match(/AntCVAiNotice[\s\S]{0,1200}?style="position:absolute;margin-left:(\d+)pt[\s\S]{0,900}?w:color w:val="([0-9A-Fa-f]{6})"/);
+  const landedLeft = !!m2 && Number(m2[1]) < 100;
+  check('off-spine notice keeps the subtle gray (or adapts if it landed on the spine)',
+        !!m2 && (landedLeft ? m2[2].toUpperCase() === '9A9A9A' : m2[2].toUpperCase() !== '9A9A9A'),
+        m2 && (m2[1] + 'pt/' + m2[2]));
+}
+
 log(fail === 0 ? 'ALL GREEN' : fail + ' FAILURE(S)');
 process.exit(fail === 0 ? 0 : 1);

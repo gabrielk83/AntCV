@@ -82,9 +82,21 @@ function cvSubtitle(meta, language) {
   return buildPayload({ doc: 'cv', language: language || 'en', personalInfo: { name: 'X' }, meta, sections: [], styleConfig: {} }).meta.subtitle;
 }
 
-test('CV header synthesizes the Application line from meta.role (triad subtitle replaced)', () => {
+// CV-SPEC-OVER-APPLICATION-001 (owner 2026-07-13: "the specialization is
+// supposed to show in CVs, not the Application line") SUPERSEDES the batch-9
+// replace-the-triad behavior: a PRESENT stored subtitle is kept verbatim; the
+// Application line is synthesized ONLY when the band would otherwise be blank
+// (Anita's original fresh-session case).
+test('CV header keeps a PRESENT specialization triad (owner 2026-07-13)', () => {
   assert.equal(
     cvSubtitle({ subtitle: 'Planning • Logistics • Reliability', role: 'Senior Grain Storage Coordinator', company: '' }),
+    'Planning • Logistics • Reliability',
+  );
+});
+
+test('CV header synthesizes the Application line ONLY for an empty subtitle', () => {
+  assert.equal(
+    cvSubtitle({ subtitle: '', role: 'Senior Grain Storage Coordinator', company: '' }),
     'Application: Senior Grain Storage Coordinator — Unsolicited',
   );
 });
@@ -96,13 +108,13 @@ test('CV header keeps a subtitle that already reads Application:', () => {
   );
 });
 
-test('CV header: real company used; Danish localization', () => {
+test('CV header: empty subtitle -> real company used; Danish localization', () => {
   assert.equal(
-    cvSubtitle({ subtitle: 'triad', role: 'Planner', company: 'Northfield' }),
+    cvSubtitle({ subtitle: '', role: 'Planner', company: 'Northfield' }),
     'Application: Planner — Northfield',
   );
   assert.equal(
-    cvSubtitle({ subtitle: 'triad', role: 'Planlægger', company: '' }, 'da'),
+    cvSubtitle({ subtitle: '', role: 'Planlægger', company: '' }, 'da'),
     'Ansøgning: Planlægger — Uopfordret',
   );
 });

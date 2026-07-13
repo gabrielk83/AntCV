@@ -386,31 +386,56 @@ def render_pdf(payload, timeout=150):
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return r.read()
 
+_CLOUD_PHOTO = {"loaded": False, "data": None}
+
+def cloud_photo():
+    """The candidate photo lives in cloud prefs (/photo, data-URL) — NOT in the
+    kernel or the export fixture (EXPORT-PARITY-001, owner 2026-07-13: headless
+    exports shipped with no figure). Fetched once per process."""
+    if not _CLOUD_PHOTO["loaded"]:
+        _CLOUD_PHOTO["loaded"] = True
+        try:
+            gr = _gen_runner()
+            c, b = gr._req(gr.RELAY, "/api/prefs")
+            v = ((b or {}).get("prefs") or {}).get("photo")
+            if isinstance(v, str) and v.startswith("data:image") and len(v) > 1000:
+                _CLOUD_PHOTO["data"] = v
+        except Exception:
+            pass
+    return _CLOUD_PHOTO["data"]
+
 def payload_for_app(app_id, doc="cv"):
-    """Fetch a live application and build its byte-exact worker payload."""
+    """Fetch a live application and build its byte-exact worker payload.
+    EXPORT-PARITY-001 (owner 2026-07-13, "no figure and no signature" + Danish
+    slogan leak): the job now carries the cloud photo, the app's OWN meta
+    (slogan and the rest — the fixture's global Danish banner slogan was
+    leaking onto English exports), and the stored subtitle. The signature
+    image exists only in the owner's live browser (not cloud/kernel) — CL
+    exports fall back to the typed sign-name until it is captured."""
     gr = _gen_runner()
     c, resp = gr._req(gr.RELAY, f"/api/applications/{app_id}")
     if c != 200:
         raise RuntimeError(f"app fetch failed: {c}")
     a = resp.get("application") or resp
-    def _j(v): return json.loads(v) if isinstance(v, str) else (v or [])
-    cv, cl = _j(a.get("cv_sections")), _j(a.get("cl_sections"))
+    def _j(v, d): return json.loads(v) if isinstance(v, str) else (v if v is not None else d)
+    cv, cl = _j(a.get("cv_sections"), []), _j(a.get("cl_sections"), [])
+    app_meta = _j(a.get("meta"), {}) or {}
     kernel = gr.load_kernel()
     pi = gr._pi_from_kernel(kernel, a.get("subtitle") or "")
-    meta = {"subtitle": a.get("subtitle") or "", "role": a.get("jd_role") or "",
+    meta = {**app_meta,
+            "subtitle": a.get("subtitle") or "", "role": a.get("jd_role") or "",
             "company": a.get("jd_company") or ""}
     lang = a.get("jd_language") or "en"
     sc = gr._export_style_config()
-    payload = gr._build_payload_exact(cv, cl, pi, sc, meta, lang)
+    job = {"sections": {"cv": cv, "cl": cl}, "personalInfo": pi, "styleConfig": sc,
+           "doc": doc, "meta": meta,
+           "language": lang if lang in ("en", "da", "es", "zh") else "en"}
+    photo = cloud_photo()
+    if photo:
+        job["photo"] = photo
+    payload = _build_doc(gr, job)
     if payload is None:
         raise RuntimeError("byte-exact payload build unavailable (fixture/node/module)")
-    if doc == "cl":
-        job = {"sections": {"cv": cv, "cl": cl}, "personalInfo": pi, "styleConfig": sc,
-               "doc": "cl", "meta": meta,
-               "language": lang if lang in ("en", "da", "es", "zh") else "en"}
-        payload = _build_doc(gr, job)
-        if payload is None:
-            raise RuntimeError("CL payload build failed")
     return payload, a
 
 def _build_doc(gr, job):

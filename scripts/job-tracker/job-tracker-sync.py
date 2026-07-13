@@ -102,6 +102,63 @@ def cmd_status():
         print(f"cloud advanced since last sync: {diverged}")
         print(f"local edited since last sync:  {localdirty}")
 
+# Tier band hex -> a short human label (mirrors the JobTracker island TIERS map).
+_TIER_LABEL = {"DDEBF7": "T1 strong fit", "E2EFDA": "T2 transferable",
+               "FCE4D6": "T3 weak / pivot", "FFF2CC": "In progress", "D9D9D9": "Archive"}
+
+def _write_proposed_tab(xlsx_path, doc):
+    """Add/refresh a 'Proposed / Inbox' worksheet = a focused triage view of the
+    auto-discovered leads (rows whose GROUP cell == 'Proposed', written by
+    discover-positions.py). This is a READ-ONLY view: import-xlsx only reads the
+    'Weekly Tracker' sheet, so this tab never affects the doc round-trip. It runs
+    AFTER build_workbook.py on every --render, so build's full-file rewrite can
+    never leave a stale copy. Returns the number of proposed leads written."""
+    from openpyxl import load_workbook
+    from openpyxl.styles import Font, PatternFill, Alignment
+    SHEET = "Proposed Inbox"
+    urls = doc.get("urls") or {}
+    seen_by_uk = {}
+    for v in (doc.get("discovered") or {}).values():
+        if isinstance(v, dict) and v.get("uk"):
+            seen_by_uk[v["uk"]] = v.get("first_seen", "")
+    proposed = [r for r in (doc.get("rows") or [])
+                if len(r) > 5 and str(r[5]).strip().lower() == "proposed"]
+    wb = load_workbook(xlsx_path)
+    if SHEET in wb.sheetnames:
+        del wb[SHEET]
+    ws = wb.create_sheet(SHEET, 1)  # right after Weekly Tracker
+    hdr_fill = PatternFill("solid", fgColor="1F3A5F"); hdr_font = Font(bold=True, color="FFFFFF")
+    ws.cell(2, 2, "PROPOSED — auto-discovered leads (Sun & Tue night). Review, then in the "
+                  "AntCV app: pin/generate the good ones, or reject with a reason. Rebuilds each sync.")
+    cols = ["#", "Company", "Role", "Location", "Tier", "Fit", "Posting",
+            "Why (auto-discovered)", "Status", "First seen"]
+    for ci, h in enumerate(cols, start=1):
+        c = ws.cell(4, ci, h); c.fill = hdr_fill; c.font = hdr_font
+        c.alignment = Alignment(horizontal="left", vertical="center")
+    ri = 5
+    for r in sorted(proposed, key=lambda x: (str(x[12] if len(x) > 12 else ""), x[0])):
+        uk = r[11] if len(r) > 11 else ""
+        band = str((r[12] if len(r) > 12 else "") or "E2EFDA").upper()
+        vals = [r[0], r[1], r[2], r[3] if len(r) > 3 else "", _TIER_LABEL.get(band, band),
+                r[6] if len(r) > 6 else "", "", r[10] if len(r) > 10 else "",
+                r[8] if len(r) > 8 else "", seen_by_uk.get(uk, "")]
+        for ci, v in enumerate(vals, start=1):
+            c = ws.cell(ri, ci, v)
+            c.fill = PatternFill("solid", fgColor=band)
+            c.alignment = Alignment(vertical="top", wrap_text=(ci in (2, 3, 8)))
+        url = urls.get(uk, "")
+        if url:
+            pc = ws.cell(ri, 7, "Open posting"); pc.hyperlink = url
+            pc.font = Font(color="1155CC", underline="single")
+        ri += 1
+    if not proposed:
+        ws.cell(6, 2, "No proposed leads right now — the discovery task adds them Sun & Tue night.")
+    for ci, w in enumerate([5, 22, 30, 16, 16, 24, 14, 42, 22, 12], start=1):
+        ws.column_dimensions[chr(64 + ci)].width = w
+    ws.freeze_panes = "A5"
+    wb.save(xlsx_path)
+    return len(proposed)
+
 def cmd_pull(render=False):
     code, remote = _req("GET")
     if code != 200: sys.exit(f"pull failed: {code} {remote}")
@@ -117,6 +174,17 @@ def cmd_pull(render=False):
         env = dict(os.environ, JOB_DOC=DOC)
         subprocess.run([sys.executable, BUILD], check=True, env=env)
         print("rebuilt .xlsx from pulled doc")
+        # PROPOSED-INBOX-TAB-001: append the focused discovery-inbox view. Runs
+        # after build (which rewrites the whole file), guarded so it never breaks
+        # a render. Needs JOB_XLSX to locate the built workbook.
+        if XLSX:
+            try:
+                n = _write_proposed_tab(XLSX, doc)
+                print(f"added 'Proposed Inbox' tab ({n} lead{'s' if n != 1 else ''})")
+            except Exception as e:
+                print(f"proposed-tab skipped ({str(e)[:90]})")
+        else:
+            print("proposed-tab skipped (set JOB_XLSX to enable)")
 
 def _merge(base, local, remote):
     # Row-level 3-way by id. For each id: if only one side changed vs base, take

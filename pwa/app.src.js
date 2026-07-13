@@ -25868,9 +25868,22 @@
                 const live = LIVE && "function" == typeof LIVE.get ? LIVE.get() : null;
                 const CD = window.AntcvClusterDemand;
                 const ci = (live && live.clusterId) || (CD && "function" == typeof CD.classifyJD ? CD.classifyJD() : null);
-                const cl = (live && live.cluster) || (ci && CD && CD.clusters && CD.clusters[ci]);
+                // FUSE (owner 2026-07-13, "fuse the deterministic and research list so
+                // nothing is lost"): UNION the live D1 top-20 with the static deterministic
+                // SEED, so a qualification dropped from one still surfaces from the other.
+                // Live order leads (current market signal); SEED-only items append at the
+                // tail; dedup by normalized text. All temp vars are IIFE-scoped so they
+                // can never collide with the minified mirror's outer scope.
+                const cl = (() => {
+                  const nm = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+                  const seen = new Set(), rows = [];
+                  const add = (q, sh) => { const k = nm(q); if (!k || seen.has(k)) return; seen.add(k); rows.push({ q: String(q), shared: sh || [] }); };
+                  ((live && live.cluster && Array.isArray(live.cluster.top20)) ? live.cluster.top20 : []).forEach((r) => add((r && r.q) || "", (r && r.shared) || []));
+                  (((ci && CD && CD.clusters && CD.clusters[ci]) || {}).top20 || []).forEach((r) => Array.isArray(r) ? add(r[1], (r[2] && r[2] !== "none") ? [r[2]] : []) : add((r && r.q) || "", (r && r.shared) || []));
+                  return rows.length ? { label: (live && live.cluster && live.cluster.label) || ci, top20: rows } : null;
+                })();
                 if (!cl || !Array.isArray(cl.top20) || !cl.top20.length) return "";
-                const it = cl.top20.slice(0, 20).map((r) => (Array.isArray(r) ? String(r[1] || "") : String((r && r.q) || ""))).filter(Boolean);
+                const it = cl.top20.slice(0, 24).map((r) => (Array.isArray(r) ? String(r[1] || "") : String((r && r.q) || ""))).filter(Boolean);
                 if (!it.length) return "";
                 const sharedQ = new Set(cl.top20.filter((r) => !Array.isArray(r) && Array.isArray(r.shared) && r.shared.length).map((r) => String(r.q || "")));
                 const sharedNote = sharedQ.size ? " Qualifications flagged SHARED below are demanded across MULTIPLE clusters - foreground these first, they are the strongest transferable signals: " + Array.from(sharedQ).slice(0, 8).join("; ") + "." : "";

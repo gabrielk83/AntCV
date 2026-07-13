@@ -72,6 +72,13 @@ function makeFakeDB() {
         throw new Error('fake DB: unhandled first(): ' + sql);
       },
       async all() {
+        if (sql.includes('MAX(qual_text) AS qual_text')) {
+          // prior-research snapshot (union): distinct research quals for a cluster
+          const [userHash, clusterId] = bound;
+          const seen = new Map();
+          for (const r of aq.filter((x) => x.user_hash === userHash && x.cluster_id === clusterId && x.source === 'research')) seen.set(r.qual_canonical, r.qual_text);
+          return { results: [...seen.entries()].map(([qual_canonical, qual_text]) => ({ qual_canonical, qual_text })) };
+        }
         if (sql.includes('GROUP BY qual_canonical')) {
           const [clusterId] = bound;
           const rows = aq.filter((r) => r.cluster_id === clusterId);
@@ -165,14 +172,40 @@ test('after recompute, the research ORDER is preserved (rank 1 tops the rollup) 
   assert.equal(top[0].jd_count, 0, 'no real JDs yet -> jd_count 0');
 });
 
-test('idempotent: a second push DELETEs the prior research rows first (no duplication / no stale ranks)', async () => {
+test('UNION (nothing is lost): a qual dropped from the new top-20 is RETAINED at a floor weight, not deleted', async () => {
   const env = { DB: makeFakeDB() };
   await insertResearchQualifications(env, CID, [{ r: 1, q: 'Old top' }, { r: 2, q: 'Kept' }], 1);
   await insertResearchQualifications(env, CID, [{ r: 1, q: 'New top' }, { r: 2, q: 'Kept' }], 2);
   const rows = env.DB._aq();
-  assert.equal(rows.length, 2, 'prior research set replaced, not appended');
-  assert.ok(!rows.some((r) => r.qual_text === 'Old top'), 'the superseded item is gone');
-  assert.ok(rows.some((r) => r.qual_text === 'New top'));
+  // 'New top' + 'Kept' (fresh) + 'Old top' (retained at floor) = 3 rows, no dup of 'Kept'
+  assert.equal(rows.length, 3, 'union: dropped qual retained, fresh set re-written, no duplicate');
+  const old = rows.find((r) => r.qual_text === 'Old top');
+  assert.ok(old, 'the dropped qual is NOT gone — it is retained');
+  assert.ok(Math.abs(old.weight - RESEARCH_WEIGHT / 40) < 1e-9, 'retained at the floor weight (below rank-20)');
+  // recompute: the fresh items outrank the retained one, and the top-20 still leads with the current list
+  await recomputeClusterTop20(env, CID);
+  const top = env.DB._ctq().filter((r) => r.cluster_id === CID).sort((a, b) => a.rank - b.rank);
+  assert.deepEqual(top.map((r) => r.qual_display), ['New top', 'Kept', 'Old top'], 'fresh items rank above the retained (demoted) one');
+});
+
+test('UNION is stable: a retained qual is not re-duplicated on a THIRD push (still one row)', async () => {
+  const env = { DB: makeFakeDB() };
+  await insertResearchQualifications(env, CID, [{ r: 1, q: 'Dropped' }], 1);
+  await insertResearchQualifications(env, CID, [{ r: 1, q: 'Fresh A' }], 2); // Dropped retained
+  await insertResearchQualifications(env, CID, [{ r: 1, q: 'Fresh B' }], 3); // Dropped + Fresh A retained
+  const rows = env.DB._aq().filter((r) => r.source === 'research');
+  assert.equal(rows.filter((r) => r.qual_text === 'Dropped').length, 1, 'retained qual stays exactly one row across pushes');
+  assert.equal(rows.length, 3, 'Fresh B (fresh) + Dropped + Fresh A (retained)');
+});
+
+test('UNION: a qual that RESURFACES in a later week gets its real rank-scaled weight back', async () => {
+  const env = { DB: makeFakeDB() };
+  await insertResearchQualifications(env, CID, [{ r: 1, q: 'Comeback' }, { r: 2, q: 'Other' }], 1);
+  await insertResearchQualifications(env, CID, [{ r: 1, q: 'Other' }], 2); // Comeback dropped -> floor
+  await insertResearchQualifications(env, CID, [{ r: 1, q: 'Comeback' }, { r: 2, q: 'Other' }], 3); // Comeback back at r1
+  const comeback = env.DB._aq().filter((r) => r.qual_text === 'Comeback');
+  assert.equal(comeback.length, 1);
+  assert.ok(Math.abs(comeback[0].weight - RESEARCH_WEIGHT) < 1e-9, 'resurfaced at rank 1 -> full rank-scaled weight, not the floor');
 });
 
 test('a real user JD qual (weight 1.0) outranks every research row after recompute', async () => {
@@ -184,14 +217,15 @@ test('a real user JD qual (weight 1.0) outranks every research row after recompu
   assert.equal(top[0].jd_count, 1);
 });
 
-test('the DELETE only removes research rows — real jd rows in the same cluster survive a re-push', async () => {
+test('research re-push never touches real jd rows (only source=research is rewritten/retained)', async () => {
   const env = { DB: makeFakeDB() };
   await persistQualifications(env, { userHash: 'u1', applicationId: 1, category: 'product_management', qualifications: [{ text: 'Real JD skill', weight: 1.0 }] });
   await insertResearchQualifications(env, CID, [{ r: 1, q: 'Research A' }], 1);
-  await insertResearchQualifications(env, CID, [{ r: 1, q: 'Research B' }], 2); // re-push
+  await insertResearchQualifications(env, CID, [{ r: 1, q: 'Research B' }], 2); // re-push: B fresh, A retained
   const aq = env.DB._aq();
-  assert.ok(aq.some((r) => r.source === 'jd' && r.qual_text === 'Real JD skill'), 'the real jd row must not be deleted by a research re-push');
-  assert.equal(aq.filter((r) => r.source === 'research').length, 1);
+  assert.equal(aq.filter((r) => r.source === 'jd').length, 1, 'the real jd row is never deleted by a research re-push');
+  assert.ok(aq.some((r) => r.source === 'jd' && r.qual_text === 'Real JD skill'));
+  assert.equal(aq.filter((r) => r.source === 'research').length, 2, 'union: Research B (fresh) + Research A (retained)');
 });
 
 test('unknown cluster id / empty top20 / no D1 are safe no-ops', async () => {

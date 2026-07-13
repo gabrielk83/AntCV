@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.578-cost-tiebreak';
+const CACHE = 'antcv-1.51.579-cluster-fuse';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

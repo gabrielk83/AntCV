@@ -100,3 +100,32 @@ The carry-forward above is now CLOSED in code. Built the production
   `antcv-demand-seed-weekly` task. Not live until that deploy. See
   `docs/deployment/google-cse-setup.md` §8. No Worker cron needed — the
   scheduled Claude session is the trigger.
+
+## FOLLOW-UP 2 (same day) — DEPLOY + FUSE
+
+- **Deployed the writer.** Merged the writer PR to main; owner set
+  `CLUSTER_RESEARCH_TOKEN` on access-relay; deployed access-relay (deploy.yml).
+  Live-verified: `/health` 200; `POST /api/cluster-demand-research` with no token
+  → 401 `{"error":"unauthorized"}` (route live + fail-closed).
+- **FUSE (owner "fuse the deterministic and research list so nothing is lost",
+  1.51.558-cluster-fuse).** Two-part union so nothing is lost at either layer:
+  - **Writer-side union** (`insertResearchQualifications`): before, a research
+    qual curated out of a new weekly top-20 was DELETEd. Now the writer snapshots
+    the cluster's current research quals, and after inserting the fresh
+    rank-scaled set, RE-INSERTS any prior qual not in the fresh set at a floor
+    weight (`RESEARCH_WEIGHT/40` = 0.01, below rank-20's 0.02). So a dropped qual
+    persists in `application_qualification` and can resurface (at its real
+    rank-scaled weight) if a later week re-includes it; recompute's top-20 still
+    surfaces the current 20. Real `jd` rows untouched throughout.
+  - **Client-side union** (`__clusterRule`, app.js + app.src.js): before, the
+    live D1 top-20 REPLACED the static SEED (`live || seed`). Now it UNIONs them
+    — live order leads, SEED-only quals append, dedup by normalized text, slice
+    widened 20→24 — so a qual dropped from one list still surfaces from the
+    other. All temp vars are IIFE-scoped (no minified shadow-var hazard).
+  - Tests: writer 14/14 (union-retention / stable-across-pushes / resurface),
+    `cluster-rule-live-preference` 8/8 (incl. an executable union lock pulled
+    from the shipped app.src.js), pwa suite **1260/1260**, access-relay **81/81**.
+    Cache-bust quintet → **1.51.558-cluster-fuse**.
+- **Still pending (owner):** give `CLUSTER_RESEARCH_TOKEN` to the
+  `antcv-demand-seed-weekly` task env + run the first push (or wait for Friday)
+  to populate D1 with the rank-scaled weights + 2026-07-13 research.

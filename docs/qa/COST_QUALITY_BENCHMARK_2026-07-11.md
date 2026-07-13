@@ -115,3 +115,53 @@ cascades with OpenAI** (number-invariant safety).
 **Owner decision:** approve a broader confirmatory run (more roles, real fan-width) + belt
 validation before flipping router defaults; the immediate haiku-drop + translate-cascade
 reorder are safe now.
+
+---
+
+## Weekly tune — 2026-07-13 (RELAY-COST-QUALITY-TUNE-001)
+
+**Result: NO FLIP.** Current `MODEL_ROLES` held on all three tunable roles. Authoritative
+`scripts/relay-cost-quality-tune.mjs` run (`--data` on the week's D1 snapshot, floor=0.90,
+margin=0.10, min-calls=20) proposed no change; unit suite green (8/8, 0 fail).
+
+**Data source:** D1 `ant_memory` (`llm_calls`, last 7 days = 3,698 calls) via Cloudflare MCP —
+the relay admin token / `ANTCV_RELAY_URL` were not in this run's env, so the `/api/llm-health`
+HTTP path was unavailable; the raw-`llm_calls` 7-day aggregate is the same ground truth the cron
+rolls into `llm_provider_health`, computed here with an explicit non-overlapping 7-day window.
+Newest call and newest health window are ~27 h stale (traffic paused ~2026-07-12).
+
+| Role | Head (before→after) | Driving score | Decision |
+|---|---|---|---|
+| writer | anthropic → anthropic | no role-matching telemetry (0 calls under `gen/generate/generation/writer`) | keep (thin-data guardrail c) |
+| supervisor | mistral → mistral | no role-matching telemetry (0 calls under `supervisor/advisory`) | keep |
+| coherence | anthropic → anthropic | no role-matching telemetry (0 calls under `coherence/repair`) | keep |
+
+**Rollback value (unchanged):** `MODEL_ROLES = '{"writer":"anthropic","supervisor":"mistral","coherence":"anthropic"}'`
+in both `workers/proxy/wrangler.toml` + `workers/demo-proxy/wrangler.toml`. No deploy this week.
+
+### Why the loop couldn't flip anything — a coverage gap (registered)
+The three tunable roles (`writer`/`supervisor`/`coherence`) and the task labels actually logged
+to `llm_calls` live in **different namespaces**. The week's traffic logs under `compress` (1,538
+calls), `long_context` (1,164), `parse_jd` (103), `consensus_poll` (326), `consensus_reinforce`
+(53), `analyze_fit` (10), `apply_correction` (4). The scorer's `ROLE_TASKS` maps
+writer→`gen/generate/…`, coherence→`coherence/repair`, supervisor→`supervisor/advisory` — **none
+of which appear** — so the tune function is currently blind to 100% of real traffic and can never
+move a head. Additionally, `roleHeadOrder()`/`parseModelRoles()` only honor writer/supervisor/
+coherence, so the cascade tasks (compress etc.) are **not addressable by `MODEL_ROLES` at all**.
+
+### The cost signal the loop is missing (per-call, last 7 days, all success=1.0, zero quality flags)
+| Task | anthropic | openai | mistral | gemini | weekly $ (task) |
+|---|---|---|---|---|---|
+| compress | $0.01740 | **$0.12395** | $0.01198 | **$0.00007** | ~$76.87 |
+| long_context | $0.03954 | $0.00686 | — | $0.00024 | ~$5.14 |
+| parse_jd | $0.23862 | $0.04639 | $0.13049 | $0.00245 | ~$12.93 |
+| consensus_poll | — | $0.10852 | $0.01175 | $0.00008 | ~$11.63 |
+
+`openai compress` alone = **$62.35 = ~58% of the week's ~$107 spend**, at the *same* 100% success
+and zero leak/fabrication/banned-word flags as gemini's **$0.04 total** for more calls. The
+biggest cost lever this week (compress) is the one the tuning function cannot touch. Extending
+`MODEL_ROLES` to cover the cascade tasks (compress/long_context/parse_jd) — or realigning
+`ROLE_TASKS` to the real task labels — is the fix that would make the closed loop actually close.
+This is an architecture change to `parseModelRoles`/`roleHeadOrder` + a broad generation-cost
+change, so it is **owner-gated**, not shipped this run. Logged as OPEN_REGISTER row 38.
+PushNotify sent 2026-07-13.

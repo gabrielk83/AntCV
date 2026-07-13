@@ -303,6 +303,35 @@ def rule_core_comp(cv, jd, report):
         if newlab != lab and len(newlab) >= 8:
             row[0] = newlab
             report.append(f"core_comp: label compressed '{lab[:32]}' -> '{newlab}'")
+    # TABLE-VALUE-2LINE-001 (owner 2026-07-13 round 3: "some of your table
+    # cells have text which is 4 lines long!!" - page-1 bloat). A value cell
+    # must fit ~2 rendered lines (caps.table_value_max_chars). Cut at the LAST
+    # clause boundary (; or ,) under budget - complete clauses only; the FULL
+    # text is stashed in sec['rows_full'] (label -> original) so nothing is
+    # lost and a future re-rank can restore it.
+    _vcap = int((_G.get("caps") or {}).get("table_value_max_chars", 140))
+    for row in sec["rows"][1:]:
+        if len(row) < 2:
+            continue
+        val = str(row[1] or "")
+        if len(val) <= _vcap:
+            continue
+        cut = None
+        for b in (";", ","):
+            i = val.rfind(b, 40, _vcap)
+            if i > 0:
+                cut = val[:i].rstrip(" ,;")
+                break
+        if not cut:
+            i = val.rfind(" ", 40, _vcap)
+            cut = val[:i].rstrip(" ,;") if i > 0 else val[:_vcap]
+        if DF._ends_dangling(cut, "en"):
+            cut = " ".join(cut.split()[:-1]).rstrip(" ,;")
+        cut = cut.rstrip(".") + "."
+        full = sec.setdefault("rows_full", {})
+        full.setdefault(str(row[0]), val)
+        row[1] = cut
+        report.append(f"core_comp: value cell {len(val)}ch -> {len(cut)}ch (full text preserved) [{str(row[0])[:24]}]")
     fixed = 0
     for row in sec["rows"][1:]:
         for ci in range(1, len(row)):       # labels (c0) stay untouched

@@ -516,9 +516,16 @@ def measure(pdf_bytes, payload, style_budget=None):
     # geometry for them — this GEOMETRIC scan finds each cell's token sequence
     # directly (left-aligned wrap continuation) and counts its rendered lines.
     _table_cell_scan(doc, payload, report)
+    # PROFILE-MAX-8-001 (owner 2026-07-13): a profile over
+    # density.profile_max_lines rendered lines is a defect.
+    _pml = int(_GD.get("profile_max_lines") or 8)
+    for m in report["items"]:
+        if m["sec"] == "profile" and (m.get("lines") or 0) > _pml:
+            report.setdefault("profile_over", []).append(m)
     report["runt_count"] = len(report["runts"])
     report["rewritable_runts"] = len([r for r in report["runts"] if r["policy"] != "verbatim"])
     defect_keys = {id(m) for m in report["runts"]} | {id(m) for m in report["stretched"]} | {id(m) for m in report.get("cell_cascades", [])}
+    defect_keys |= {id(m) for m in report.get("profile_over", [])}
     report["defect_count"] = len(defect_keys)
     n = max(1, len(report["items"]))
     report["quality_pct"] = round(100.0 * (n - len(defect_keys)) / n, 1)

@@ -17,7 +17,8 @@
       -30,
       30
     ],
-    "cell_max_lines": 2
+    "cell_max_lines": 2,
+    "profile_max_lines": 8
   },
   "caps": {
     "bullet_chars": 148,
@@ -28,7 +29,8 @@
     "role_bullets_max": 3,
     "photo_library_max": 4,
     "table_label_max_chars": 28,
-    "table_label_hard_chars": 34
+    "table_label_hard_chars": 30,
+    "table_value_max_chars": 140
   },
   "results": {
     "require_metric": true,
@@ -311,7 +313,20 @@
     "Optical subsystem architecture": "Optical architecture",
     "Process Development & Transfer": "Process dev & transfer",
     "Data, KPIs & Decision Support": "Data & decision support",
-    "Validering & Produktionsoverførsel": "Validering & overførsel"
+    "Validering & Produktionsoverførsel": "Validering & overførsel",
+    "Prototype-to-production transfer": "Production transfer",
+    "Electro-Optics & Sensing Systems": "EO & sensing systems",
+    "Electro-Optics & Measurement Systems": "EO & measurement",
+    "Nanotech & MEMS Characterisation": "MEMS characterisation",
+    "Production Transfer & Validation": "Production transfer",
+    "Supplier & Production Transfer": "Supplier & transfer",
+    "Supplier & Production Transition": "Supplier & transition",
+    "Systems Analysis & Trade Studies": "Systems & trade studies",
+    "Validation & Production Transfer": "Validation & transfer",
+    "Data-drevet beslutningsstøtte": "Databeslutningsstøtte",
+    "Billed- og optikvalidering": "Optikvalidering",
+    "Validation & Test Automation": "Validation & test",
+    "Systems Analysis & Trade-offs": "Systems & trade-offs"
   },
   "slogan": {
     "max_words": 9,

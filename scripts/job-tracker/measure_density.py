@@ -266,12 +266,28 @@ def measure(pdf_bytes, payload, style_budget=None):
         gaps = [max(0.0, ws[i + 1][0] - ws[i][2]) for i in range(len(ws) - 1)]
         return sum(gaps) / len(gaps)
 
+    # Whole-document normalized text: the fallback presence check for TABLE
+    # CELLS. A multi-line cell's words INTERLEAVE with the neighbour column in
+    # the extraction stream, so the contiguous token matcher false-flags them
+    # as missing (2026-07-13: 29 phantom "unmatched" core_comp cells across the
+    # tracker — visually all present). Cells found only via this fallback are
+    # counted matched WITHOUT geometry (no runt/stretch judgement).
+    def _flat(s):
+        return " ".join(_tok(s))
+    doc_flat = " " + " ".join(_flat(doc[p].get_text()) for p in range(doc.page_count)) + " "
+
     for it in items:
         col = "sidebar" if it["loc"] == "sidebar" else "main"
         stream = cols[col]
         toks = _tok(it["text"])
         hit = _match_item(stream["tokens"], toks, used[col])
         if not hit:
+            if it["kind"] == "cell" and (" " + _flat(it["text"]) + " ") in doc_flat:
+                report["items"].append({**{k: it[k] for k in ("sec", "path", "kind", "loc", "text", "policy")},
+                                        "page": 0, "lines": 1, "fill": 1.0, "add_min": 0,
+                                        "add_lo": 0, "add_hi": 0, "add_wrap": 0,
+                                        "trim_chars": 0, "_gaps": [], "_col": col})
+                continue
             report["unmatched"].append({"sec": it["sec"], "text": it["text"][:60]})
             continue
         s, e = hit

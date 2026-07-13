@@ -35,7 +35,7 @@ const VERSION='1.3.11';
 // Required binding (declare in wrangler.toml):
 //   KV_BINDING        KV namespace (stores OTPs, rate counters, prefs, signals)
 
-const RELAY_VERSION = 'auth-31-category-recall';
+const RELAY_VERSION = 'auth-32-photo-library';
 const SESSION_TTL_SECONDS    = 7 * 24 * 60 * 60;       // 7 days
 // Refresh whenever the token has < 6 days left (i.e. it's more than 1 day old),
 // so ANY request past the first day rotates it to a fresh 7-day token via the
@@ -772,6 +772,11 @@ const KERNEL_PREFS_STR_FIELDS = new Set([
   'clClosing', 'clClosingAlign',
   // CL-SIGNNAME-001 (owner 2026-06-29): editable sign-off name + its own CJLR align (default center).
   'clSignName', 'clSignNameAlign',
+  // PHOTO-LIBRARY-001 (owner 2026-07-13: "allow uploading more than one
+  // profile picture"): a small JSON-stringified array of saved photos
+  // [{id, ts, dataUrl}] pushed by antcv-photo-library.js. Rides as a plain
+  // string like clSloganCtx; the client caps entries (4) and size.
+  'photoLibrary',
 ]);
 const KERNEL_PREFS_BOOL_FIELDS = new Set([
   'consensusEnabled', 'kernelShowcaseGenerated', 'useChatGPT', 'wizardCompleted',

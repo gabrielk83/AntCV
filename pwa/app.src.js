@@ -50334,17 +50334,49 @@
                       {
                         className: "antcv-preview-paper",
                         "data-antcv-preview-paper": "true",
-                        style: {
-                          width: 794,
-                          background: "#fff",
-                          boxShadow: "0 4px 24px rgba(0,0,0,0.25)",
-                          position: "relative",
-                          fontFamily:
-                            "Calibri,Arial,'Noto Sans CJK SC','Microsoft YaHei','PingFang SC','Hiragino Sans GB',SimSun,sans-serif",
-                          touchAction: "pan-x pan-y pinch-zoom",
-                          transform: `scale(${ui})`,
-                          transformOrigin: "top left",
-                        },
+                        // BRANDFIT-CANDIDATE-SIDEBAR-OVERRIDE-001 (owner 2026-07-14):
+                        // when a per-app brand is ACTIVE (antcv:brandActive==='1'),
+                        // set the header/sidebar CSS vars INLINE on the paper wrapper
+                        // from the fitted v2 brand — inline on this closer ancestor
+                        // beats the body[data-package] cascade, so the candidate band
+                        // + sidebar (which read var(--header-bg)/var(--sidebar-bg))
+                        // finally take the brand. Gated: no active brand -> no vars ->
+                        // shipping packages / default untouched; unticking (brandActive
+                        // off) clears them. Contrast pre-fitted by brand_fit.py. Done in
+                        // the body, not a sidecar (owner request).
+                        style: (() => {
+                          var __b = null;
+                          try {
+                            if (localStorage.getItem("antcv:brandActive") === "1") {
+                              var __s = localStorage.getItem("antcv:brandV2");
+                              if (__s) { var __o = JSON.parse(__s); __b = (__o && __o.slots) ? __o.slots : (__o && __o.headerBg ? __o : null); }
+                            }
+                          } catch (_) {}
+                          return {
+                            width: 794,
+                            background: "#fff",
+                            boxShadow: "0 4px 24px rgba(0,0,0,0.25)",
+                            position: "relative",
+                            fontFamily:
+                              "Calibri,Arial,'Noto Sans CJK SC','Microsoft YaHei','PingFang SC','Hiragino Sans GB',SimSun,sans-serif",
+                            touchAction: "pan-x pan-y pinch-zoom",
+                            transform: `scale(${ui})`,
+                            transformOrigin: "top left",
+                            ...(__b ? {
+                              "--header-bg": __b.headerBg,
+                              "--header-name-color": __b.headerInk,
+                              "--header-spec-color": __b.headerInk,
+                              "--header-contact-color": __b.headerInk,
+                              "--header-line-color": __b.accent || __b.headerInk,
+                              "--sidebar-bg": __b.sidebarBg,
+                              "--package-base": __b.sidebarBg,
+                              "--brand-accent": __b.accent,
+                              "--brand-slogan-color": __b.sloganColor,
+                              "--brand-signature-color": __b.signatureColor,
+                              "--brand-ai-notice-color": __b.aiNoticeColor,
+                            } : {}),
+                          };
+                        })(),
                       },
                       React.createElement(Ts, null),
                       React.createElement(Oe, null),
@@ -50361,7 +50393,9 @@
                             lineHeight: 1.15,
                             letterSpacing: 0.3,
                             fontWeight: 600,
-                            color: "rgba(0,116,110,.7)",
+                            // BRANDFIT: AI notice takes the fitted brand grey when a
+                            // brand is active (var set on the paper wrapper), else teal.
+                            color: "var(--brand-ai-notice-color, rgba(0,116,110,.7))",
                             pointerEvents: "none",
                             userSelect: "none",
                             zIndex: 6,

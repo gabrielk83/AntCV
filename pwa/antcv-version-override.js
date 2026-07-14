@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.1065-group-scope';
+  const TARGET_VERSION = '1.51.1084-slogan-vis';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.1065-group-scope',
     '1.51.1064-edit-lag-spec',
     '1.51.1046-group-cjlr-redeploy',
     '1.51.1045-group-cjlr',

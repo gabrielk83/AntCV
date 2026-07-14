@@ -181,7 +181,7 @@
   var openState = { slogan: false, signoff: false, signature: false };
   function mkAlignBtns(key, refresh, afterWrite) {
     var wrap = document.createElement('div');
-    wrap.style.cssText = 'display:flex;align-items:center;gap:5px;font-size:10px;color:#cdd;';
+    wrap.style.cssText = 'display:flex;align-items:center;gap:5px;font-size:10px;color:#234a46;';
     wrap.appendChild(document.createTextNode('Align:'));
     var btns = {};
     [['Left', 'left'], ['Center', 'center'], ['Right', 'right']].forEach(function (p) {
@@ -205,7 +205,7 @@
   function mkInput(key, refresh, afterWrite) {
     var input = document.createElement('input');
     input.type = 'text';
-    input.style.cssText = 'padding:5px 8px;font-size:11px;background:rgba(255,255,255,0.06);color:#fff;border:1px solid rgba(255,255,255,0.18);border-radius:4px;font-family:inherit;';
+    input.style.cssText = 'padding:5px 8px;font-size:11px;background:#fff;color:#04231f;border:1px solid rgba(1,183,187,0.45);border-radius:4px;font-family:inherit;';
     // commit on change/Enter (NOT per keystroke): the sections-updated re-render would
     // rebuild this foreign row and steal the caret mid-word.
     input.addEventListener('change', function () {
@@ -231,7 +231,7 @@
     var lbl = document.createElement('span');
     lbl.textContent = label;
     var preview = document.createElement('span');
-    preview.style.cssText = 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:400;font-size:9px;opacity:.65;color:#cdd;';
+    preview.style.cssText = 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:400;font-size:9px;opacity:.95;color:#234a46;';
     head.appendChild(caret); head.appendChild(lbl); head.appendChild(preview);
     var body = document.createElement('div');
     body.style.cssText = 'margin-top:6px;display:none;flex-direction:column;gap:6px;';
@@ -254,13 +254,13 @@
   }
   function mkNote(text) {
     var note = document.createElement('div');
-    note.style.cssText = 'font-size:9px;opacity:.55;line-height:1.4;color:#cdd;';
+    note.style.cssText = 'font-size:9px;opacity:.9;line-height:1.4;color:#234a46;';
     note.textContent = text;
     return note;
   }
   function mkSub(text) {
     var d = document.createElement('div');
-    d.style.cssText = 'font-size:10px;font-weight:600;color:#cdd;';
+    d.style.cssText = 'font-size:10px;font-weight:600;color:#234a46;';
     d.textContent = text;
     return d;
   }

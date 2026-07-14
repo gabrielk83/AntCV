@@ -46164,6 +46164,12 @@
                         // rev1's onBlur stays all-caps in storage, so sentence-case it below; the
                         // uppercase LOOK stays via textTransform. onBlur then stores natural case.
                         contentEditable: true, suppressContentEditableWarning: true, spellCheck: true,
+                        // SLOGAN-APPLY-CORRECTION-001 (owner 2026-07-14: slogan must accept the
+                        // suggested spelling correction in preview): the text was a React CHILD, so
+                        // a re-render reset it to the model and reverted an applied correction.
+                        // Manage it via a model-changed-only ref (never clobber a focused/just-
+                        // committed edit) — the correction survives until onBlur commits it.
+                        ref: (el) => { if (!el) return; const __sv = (st === st.toUpperCase() && /[a-zA-Z]/.test(st)) ? (st.charAt(0).toUpperCase() + st.slice(1).toLowerCase()) : st; if (el.__antcvSloganV === __sv) return; if (document.activeElement === el) return; el.__antcvSloganV = __sv; if (el.textContent !== __sv) el.textContent = __sv; },
                         title: "Click to edit the positioning line",
                         onBlur: (ev) => { try { localStorage.setItem("antcv:clSlogan", String(ev.currentTarget.textContent || "").trim()); window.dispatchEvent(new CustomEvent("antcv:sections-updated", { detail: { reason: "cl-slogan-inline" } })); } catch (_) {} },
                         style: {
@@ -46177,7 +46183,7 @@
                           cursor: "text",
                           textTransform: "uppercase",
                         },
-                      }, (st === st.toUpperCase() && /[a-zA-Z]/.test(st)) ? (st.charAt(0).toUpperCase() + st.slice(1).toLowerCase()) : st);
+                      });
                     } catch (_) { return null; }
                   })(),
                   Pi.filter(

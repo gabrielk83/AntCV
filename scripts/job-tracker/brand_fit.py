@@ -229,37 +229,145 @@ _TAGLINE_HINT = re.compile(
     r"confident|ambitious|pioneer|fun|creative|challeng)\w*", re.I)
 
 
+_ALLOWED_TONE = {"minimal", "bold", "formal", "warm", "technical", "playful"}
+
+
+def _sanitize_research(research):
+    """Coerce a raw research object (from the worker crawl or a caller) into the
+    canonical {site, spirit, values, tone[, flag, signals_used]} shape. Types
+    are clamped and values de-duped/capped. Never invents content — an absent or
+    malformed field becomes empty, so a failed crawl yields empty spirit/values
+    that decide_slogan_placement/slogan_brief read as 'no signal'."""
+    r = research if isinstance(research, dict) else {}
+    site = r.get("site")
+    spirit = str(r.get("spirit") or "").strip()[:240]
+    raw_vals = r.get("values") if isinstance(r.get("values"), list) else []
+    seen, values = set(), []
+    for v in raw_vals:
+        if not (isinstance(v, str) and v.strip()):
+            continue
+        vv = v.strip()[:60]
+        k = vv.lower()
+        if k in seen:
+            continue
+        seen.add(k)
+        values.append(vv)
+        if len(values) >= 8:
+            break
+    tone = str(r.get("tone") or "").strip().lower()
+    if tone not in _ALLOWED_TONE:
+        tone = ""
+    out = {
+        "site": site if isinstance(site, str) and site else None,
+        "spirit": spirit,
+        "values": values,
+        "tone": tone,
+    }
+    if r.get("flag"):
+        out["flag"] = str(r["flag"])[:40]
+    if "signals_used" in r:
+        out["signals_used"] = bool(r.get("signals_used"))
+    return out
+
+
 def decide_slogan_placement(research):
     """'leadin' (slogan folds into the opening, subtle) vs 'heading' (visible
     tagline), chosen from company spirit/values: minimal/restrained brands read
     better with a lead-in; bold/expressive brands carry a standalone tagline.
     Default 'heading' when there is no signal. Feeds antcv:clSloganMode."""
     try:
+        clean = _sanitize_research(research)
         blob = " ".join([
-            str((research or {}).get("spirit", "")),
-            str((research or {}).get("tone", "")),
-            " ".join((research or {}).get("values", []) or []),
+            clean.get("spirit", ""),
+            clean.get("tone", ""),
+            " ".join(clean.get("values", []) or []),
         ])
         return "leadin" if len(_LEADIN_HINT.findall(blob)) > len(_TAGLINE_HINT.findall(blob)) else "heading"
     except Exception:
         return "heading"
 
 
+def slogan_brief(research):
+    """A compact one-block brief the slogan LLM fuses to at gen time: brand
+    spirit + values + tone. '' when the crawl found no brand signal — the slogan
+    then falls back to candidate-fit only and NEVER invents a company value."""
+    r = _sanitize_research(research)
+    bits = []
+    if r["spirit"]:
+        bits.append("Brand spirit: " + r["spirit"])
+    if r["values"]:
+        bits.append("Brand values: " + ", ".join(r["values"]))
+    if r["tone"]:
+        bits.append("Brand tone: " + r["tone"])
+    return " | ".join(bits)
+
+
 def brand_record(raw, research=None, source=None):
     """Full v2 brand record for the tracker (doc['brand'][uk]): fitted colour slots
-    + the research (spirit/values/tone) + the derived slogan placement. The app +
-    the headless exporter both fill the same slots; the placement seeds
-    antcv:clSloganMode; the slogan TEXT is written by the LLM at gen time."""
+    + the sanitised research (spirit/values/tone) + the derived slogan placement
+    + the slogan brief. The app + the headless exporter both fill the same slots;
+    the placement seeds antcv:clSloganMode; the slogan TEXT is written by the LLM
+    at gen time, fused to slogan_brief."""
     fitted = fit(raw)
+    clean = _sanitize_research(research)
     return {
         "version": 2,
-        "source": source or (research or {}).get("site"),
+        "source": source or clean.get("site"),
         "raw": raw,
         "slots": fitted["slots"],
         "contrast": fitted["contrast"],
-        "research": research or {},
-        "slogan_placement": decide_slogan_placement(research),
+        "research": clean,
+        "slogan_placement": decide_slogan_placement(clean),
+        "slogan_brief": slogan_brief(clean),
     }
+
+
+# ── the SITE-CRAWL re-collection step (BRAND-DECIDES-RESEARCH-001) ────────────
+# The colour sampler and the spirit/values harvest are ONE round-trip: the CF
+# worker (proxy /api/fetch-brand-colors with research:true) resolves the
+# employer's CANONICAL site (aggregators like LinkedIn are discovery-only — the
+# worker follows them to the company's own domain), samples brand colours, AND
+# reads the About/values/careers text to summarise {spirit, values, tone}. This
+# runs server-side because the shell/Python sandbox is 403-gated to the CF
+# workers (see nightly-sandbox-network-constraint) — a raw shell fetch of an
+# arbitrary company site would both fail there and reopen the SSRF surface the
+# worker already guards. brand_fit stays network-free: the caller injects a
+# `post_json(body) -> (status, dict)` closure aimed at the worker endpoint.
+
+def research_via_worker(jd_url, company, post_json):
+    """Crawl the company site via the worker and return
+    {raw:{dark?,accent?}, research:{site,spirit,values,tone[,flag]}, source}.
+    Deterministic + idempotent (same company URL -> same worker call, no random
+    state). On any failure the research is empty + flagged; colours/values are
+    NEVER fabricated locally."""
+    body = {"jdUrl": jd_url or "", "companyName": company or "", "research": True}
+    try:
+        code, resp = post_json(body)
+    except Exception as e:
+        return {"raw": {}, "source": None,
+                "research": {"site": None, "spirit": "", "values": [], "tone": "",
+                             "flag": "worker_error", "signals_used": False}}
+    resp = resp if isinstance(resp, dict) else {}
+    raw = {}
+    if resp.get("navy"):
+        raw["dark"] = resp["navy"]
+    if resp.get("accent"):
+        raw["accent"] = resp["accent"]
+    research = _sanitize_research(resp.get("research"))
+    if code != 200 and "flag" not in research:
+        research["flag"] = "worker_%s" % code
+    source = resp.get("sampledHost") or research.get("site")
+    return {"raw": raw, "research": research, "source": source}
+
+
+def capture_brand(jd_url, company, post_json, source=None):
+    """One-call brand capture used by the gen pipeline: crawl the company site
+    (colours AND spirit/values/tone in the SAME round-trip) then build the full
+    v2 brand record. research carries REAL spirit/values when the crawl+summary
+    succeed, empty + flagged otherwise. Feeds doc['brand'][uk], the slogan
+    placement (antcv:clSloganMode), and the slogan brief the LLM fuses to."""
+    crawl = research_via_worker(jd_url, company, post_json)
+    return brand_record(crawl["raw"], research=crawl["research"], source=source or crawl["source"])
 
 
 if __name__ == "__main__":
@@ -274,3 +382,39 @@ if __name__ == "__main__":
         r = fit(raw)
         print("==", name, "==")
         print(json.dumps(r, indent=1))
+
+    # BRAND-DECIDES-RESEARCH-001 demo: capture_brand with a FAKE worker so the
+    # crawl+summary path is exercised offline. Shows how real spirit/values from
+    # the site drive the slogan placement + brief, with no live network.
+    def _fake_worker(payload):
+        # mimics proxy /api/fetch-brand-colors with research:true for a bold brand
+        return 200, {
+            "ok": True, "navy": "#12324f", "accent": "#e8531f",
+            "sampledHost": "trackman.com",
+            "research": {
+                "site": "https://www.trackman.com/",
+                "spirit": "Bold, data-driven sports technology that dares teams to push further.",
+                "values": ["innovation", "precision", "ambition", "performance"],
+                "tone": "bold", "signals_used": True,
+            },
+        }
+    print("== capture_brand (bold brand -> heading) ==")
+    rec = capture_brand("https://www.linkedin.com/jobs/view/123", "Trackman A/S", _fake_worker)
+    print(json.dumps({k: rec[k] for k in ("source", "research", "slogan_placement", "slogan_brief")}, indent=1))
+
+    def _fake_worker_minimal(payload):
+        return 200, {
+            "ok": True, "navy": "#1d2b45", "accent": None, "sampledHost": "kanzen.example",
+            "research": {"site": "https://kanzen.example/", "spirit": "Quiet, precise craftsmanship.",
+                         "values": ["restraint", "rigor", "care"], "tone": "minimal", "signals_used": True},
+        }
+    rec2 = capture_brand("", "Kanzen ApS", _fake_worker_minimal)
+    print("== capture_brand (minimal brand -> leadin) placement:", rec2["slogan_placement"], "==")
+
+    def _fake_worker_fail(payload):
+        return 200, {"ok": False, "error": "no site",
+                     "research": {"site": None, "spirit": "", "values": [], "tone": "", "flag": "no_site"}}
+    rec3 = capture_brand("", "Nowhere Inc", _fake_worker_fail)
+    print("== capture_brand (crawl failed -> empty + flagged, NOT fabricated) ==")
+    print(json.dumps({"research": rec3["research"], "slogan_placement": rec3["slogan_placement"],
+                      "slogan_brief": rec3["slogan_brief"]}, indent=1))

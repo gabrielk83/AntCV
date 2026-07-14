@@ -42,11 +42,35 @@
 // existing LLM brand_fit — see COMPANY-BRAND-FIT-001 in app.src.js) and
 // must never leak between applications; keeping this endpoint
 // cache-free removes an entire class of cross-application leak risk.
+//
+// BRAND-DECIDES-RESEARCH-001 (owner 2026-07-14): the brand is colours AND
+// company SPIRIT + VALUES. When the caller passes { research: true } the SAME
+// crawl that samples colours ALSO harvests the company's own brand TEXT (title,
+// meta description, og:description/site_name, h1/h2 headings, plus one or two
+// About/values/careers pages on the winning host) and summarises it into
+// { spirit, values[], tone } with the shared multi-provider LLM cascade. Those
+// signals pick the cover-letter slogan PLACEMENT (tagline vs opening lead-in)
+// and fuse into the slogan TEXT at gen time (see scripts/job-tracker/brand_fit.py
+// decide_slogan_placement + brand_record, and gen-runner's slogan section).
+// The research step is OPT-IN so the existing colour-only client path is byte-
+// identical (no LLM cost, no extra fetches). On any failure the research object
+// is returned with empty spirit/values and a `flag` — it NEVER fabricates values.
+
+import { callAnyLLMForJSON } from './multi-llm.js';
+import { extractJSON } from './jd-analysis.js';
 
 const FETCH_TIMEOUT_MS = 8000;
 const MAX_HTML_BYTES = 700_000;
 const MAX_CSS_BYTES = 200_000;
 const MAX_STYLESHEETS = 3;
+// About/values/careers pages a company most often exposes its brand voice on.
+// Tried in order on the winning host, capped by MAX_RESEARCH_PAGES / attempts.
+const ABOUT_PATHS = [
+  '/about', '/about-us', '/company', '/who-we-are',
+  '/values', '/our-values', '/culture', '/careers', '/mission',
+];
+const MAX_RESEARCH_PAGES = 2;   // extra pages fetched beyond the colour-winner homepage
+const MAX_RESEARCH_ATTEMPTS = 4; // upper bound on About-page fetch attempts (404s are cheap but bounded)
 
 // ─── SSRF guard (mirrors fetch-jd-url.js) ────────────────────────
 const BLOCKED_HOSTS = new Set([
@@ -243,7 +267,7 @@ function extractStylesheetLinks(html, baseUrl) {
   return out;
 }
 
-async function sampleColorsFromPage(pageUrl) {
+async function sampleColorsFromPage(pageUrl, collectSignals = false) {
   let resp;
   try {
     resp = await timedFetch(pageUrl, {
@@ -286,8 +310,177 @@ async function sampleColorsFromPage(pageUrl) {
   // a fake accent, the client's apply path treats accent as optional.
   const accent = ranked.find((h) => h !== rawNavy && h !== themeColor) || null;
 
-  return { navy, accent, hostname: new URL(pageUrl).hostname, navySource };
+  return {
+    navy, accent, hostname: new URL(pageUrl).hostname, navySource,
+    // BRAND-DECIDES-RESEARCH-001: harvest the brand TEXT from the SAME html we
+    // already fetched for colours — no extra request for the homepage signals.
+    signals: collectSignals ? extractTextSignals(html) : null,
+  };
 }
+
+// ─── brand-text (spirit/values/tone) harvest ──────────────────────
+// Deterministic regex extraction of the visible brand voice from a page's
+// html — never LLM-guessed. Feeds summarizeResearch().
+
+function stripTags(s) {
+  return String(s || '')
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&[a-z]+;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function extractMetaContent(html, name, attr = 'name') {
+  const a = attr.replace(/[^a-z]/gi, '');
+  const n = name.replace(/[^a-z0-9:_-]/gi, '');
+  const re1 = new RegExp('<meta[^>]+' + a + '=["\']' + n + '["\'][^>]*content=["\']([^"\']+)["\']', 'i');
+  const re2 = new RegExp('<meta[^>]+content=["\']([^"\']+)["\'][^>]*' + a + '=["\']' + n + '["\']', 'i');
+  const m = re1.exec(html) || re2.exec(html);
+  return m ? stripTags(m[1]).slice(0, 400) : '';
+}
+
+function extractTextSignals(html) {
+  const titleM = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html);
+  // Strip <script>/<style> blocks before scanning headings so a heading-shaped
+  // string literal inside inline JS/CSS can't masquerade as a real <h1>/<h2>.
+  const body = String(html || '')
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ');
+  const headings = [];
+  const hre = /<h[12][^>]*>([\s\S]*?)<\/h[12]>/gi;
+  let m;
+  while ((m = hre.exec(body)) && headings.length < 12) {
+    const t = stripTags(m[1]);
+    if (t && t.length >= 3 && t.length <= 160 && !headings.includes(t)) headings.push(t);
+  }
+  return {
+    title: titleM ? stripTags(titleM[1]).slice(0, 200) : '',
+    description: extractMetaContent(html, 'description'),
+    ogDescription: extractMetaContent(html, 'og:description', 'property') || extractMetaContent(html, 'og:description'),
+    ogSiteName: extractMetaContent(html, 'og:site_name', 'property') || extractMetaContent(html, 'og:site_name'),
+    headings,
+  };
+}
+
+function signalsHaveContent(s) {
+  return !!(s && (s.description || s.ogDescription || s.title || (s.headings && s.headings.length)));
+}
+
+function signalsToText(sigList) {
+  const parts = [];
+  for (const s of sigList) {
+    if (!s) continue;
+    if (s.ogSiteName) parts.push('Site: ' + s.ogSiteName);
+    if (s.title) parts.push('Title: ' + s.title);
+    if (s.description) parts.push('Description: ' + s.description);
+    if (s.ogDescription && s.ogDescription !== s.description) parts.push('Summary: ' + s.ogDescription);
+    if (s.headings && s.headings.length) parts.push('Headings: ' + s.headings.slice(0, 12).join(' | '));
+  }
+  return parts.join('\n').slice(0, 6000);
+}
+
+async function fetchTextSignals(pageUrl) {
+  let resp;
+  try {
+    resp = await timedFetch(pageUrl, {
+      method: 'GET',
+      redirect: 'follow',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml',
+      },
+    });
+  } catch (_) { return null; }
+  if (!resp.ok) return null;
+  const ct = (resp.headers.get('content-type') || '').toLowerCase();
+  if (!ct.includes('html')) return null;
+  const html = await readCapped(resp, MAX_HTML_BYTES);
+  return extractTextSignals(html);
+}
+
+const RESEARCH_SYSTEM = `You extract a company's brand SPIRIT, VALUES, and TONE from text sampled from the company's OWN website (title, meta description, headings, About / values / careers pages).
+
+Output MUST be valid JSON in exactly this shape. No prose, no markdown fences. JSON only:
+{
+  "spirit": string,        // ONE line: how the brand speaks and what it stands for, in its own register. "" if the text gives no signal.
+  "values": string[],      // 3-8 SHORT value words/phrases the site actually states or clearly implies (e.g. "sustainability", "craftsmanship", "bold thinking"). [] if none are stated or implied.
+  "tone": "minimal"|"bold"|"formal"|"warm"|"technical"|"playful"|""  // the dominant voice; "" if unclear
+}
+
+HARD RULES:
+- Use ONLY what the supplied text supports. If the text is empty, generic boilerplate, or carries no brand signal, return spirit:"", values:[], tone:"".
+- NEVER invent values the text does not state or clearly imply. A guessed value is worse than none.
+- "tone": choose the single closest of the allowed words. minimal = restrained/quiet/precise; bold = expressive/energetic/ambitious; formal = conservative/serious; warm = human/caring; technical = engineering/rigorous; playful = fun/creative.
+Begin your response with { and end with }.`;
+
+async function summarizeResearch(env, site, signalsText) {
+  const empty = { site: site || null, spirit: '', values: [], tone: '', signals_used: false };
+  if (!env || !signalsText || signalsText.length < 40) {
+    return { ...empty, signals_used: !!signalsText, flag: 'no_signals' };
+  }
+  let cascade;
+  try {
+    cascade = await callAnyLLMForJSON(
+      env, RESEARCH_SYSTEM,
+      'COMPANY WEBSITE TEXT (sampled from its own pages):\n---\n' + signalsText + '\n---\nReturn ONLY the JSON object.',
+      { role: 'analysis', validate: (t) => extractJSON(t) !== null },
+    );
+  } catch (e) {
+    return { ...empty, signals_used: true, flag: 'summary_error' };
+  }
+  if (!cascade || !cascade.ok) return { ...empty, signals_used: true, flag: 'summary_unavailable' };
+  const parsed = extractJSON(cascade.text);
+  if (!parsed) return { ...empty, signals_used: true, flag: 'summary_unparseable' };
+
+  const ALLOWED_TONE = new Set(['minimal', 'bold', 'formal', 'warm', 'technical', 'playful']);
+  const spirit = typeof parsed.spirit === 'string' ? parsed.spirit.trim().slice(0, 240) : '';
+  const values = Array.isArray(parsed.values)
+    ? [...new Set(parsed.values.filter((v) => typeof v === 'string' && v.trim()).map((v) => v.trim().slice(0, 60)))].slice(0, 8)
+    : [];
+  const toneRaw = typeof parsed.tone === 'string' ? parsed.tone.trim().toLowerCase() : '';
+  const tone = ALLOWED_TONE.has(toneRaw) ? toneRaw : '';
+
+  const out = { site: site || null, spirit, values, tone, signals_used: true, provider: cascade.provider, model: cascade.model };
+  if (!spirit && !values.length && !tone) out.flag = 'no_brand_signal';
+  return out;
+}
+
+// Gather brand research from the colour-winning page + up to MAX_RESEARCH_PAGES
+// About/values pages on the same host, then summarise. Honest on failure:
+// returns empty spirit/values with a `flag`, never fabricated values.
+async function buildResearch(env, winner, winnerUrl) {
+  if (!winner || !winnerUrl) {
+    return { site: null, spirit: '', values: [], tone: '', signals_used: false, flag: 'no_site' };
+  }
+  const sigList = [];
+  if (winner.signals) sigList.push(winner.signals);
+
+  let origin;
+  try { origin = new URL(winnerUrl).origin; }
+  catch (_) { origin = null; }
+
+  if (origin) {
+    let fetched = 0, attempts = 0;
+    for (const path of ABOUT_PATHS) {
+      if (fetched >= MAX_RESEARCH_PAGES || attempts >= MAX_RESEARCH_ATTEMPTS) break;
+      const v = validateUrl(origin + path);
+      if (!v.ok) continue;
+      attempts++;
+      const s = await fetchTextSignals(v.url.toString());
+      if (signalsHaveContent(s)) { sigList.push(s); fetched++; }
+    }
+  }
+
+  const signalsText = signalsToText(sigList);
+  return summarizeResearch(env, origin ? origin + '/' : winnerUrl, signalsText);
+}
+
+// Exported for unit testing the deterministic (no-LLM) text harvest.
+export { extractTextSignals, signalsToText };
 
 // ─── candidate URL list ───────────────────────────────────────────
 
@@ -335,35 +528,51 @@ export async function handleFetchBrandColors(request, env, getCORS) {
 
   const jdUrl = typeof body.jdUrl === 'string' ? body.jdUrl.trim() : '';
   const companyName = typeof body.companyName === 'string' ? body.companyName.trim() : '';
+  // BRAND-DECIDES-RESEARCH-001: opt-in. Only the brand-capture pipeline sets
+  // this; the PWA colour-only path never does, so it stays byte-for-byte the
+  // same (no About-page fetches, no LLM call, no `research` key in the reply).
+  const wantResearch = body.research === true || body.research === 'true';
 
   const candidates = buildCandidates(jdUrl, companyName);
   if (!candidates.length) {
-    return new Response(JSON.stringify({ ok: false, error: 'No fetchable company-site candidate could be resolved.' }),
+    const noSite = wantResearch
+      ? { research: { site: null, spirit: '', values: [], tone: '', signals_used: false, flag: 'no_site' } }
+      : {};
+    return new Response(JSON.stringify({ ok: false, error: 'No fetchable company-site candidate could be resolved.', ...noSite }),
       { status: 200, headers: { 'Content-Type': 'application/json', ...CORS } });
   }
 
   const tried = [];
+  let winner = null, winnerUrl = null;
   for (const candidate of candidates) {
     const v = validateUrl(candidate);
     if (!v.ok) { tried.push({ candidate, error: v.error }); continue; }
     let sampled = null;
-    try { sampled = await sampleColorsFromPage(v.url.toString()); }
+    try { sampled = await sampleColorsFromPage(v.url.toString(), wantResearch); }
     catch (err) { tried.push({ candidate, error: String(err && err.message || err) }); continue; }
-    if (sampled && (sampled.navy || sampled.accent)) {
-      return new Response(JSON.stringify({
-        ok: true,
-        navy: sampled.navy,
-        accent: sampled.accent,
-        source: `Sampled from ${sampled.hostname} (${sampled.navySource})`,
-        sampledHost: sampled.hostname,
-      }), { status: 200, headers: { 'Content-Type': 'application/json', ...CORS } });
-    }
+    if (sampled && (sampled.navy || sampled.accent)) { winner = sampled; winnerUrl = v.url.toString(); break; }
     tried.push({ candidate, error: 'no usable colors' });
+  }
+
+  // Research rides on the winning page (same host we sampled colours from), so
+  // spirit/values are collected AT THE SAME TIME as the colour exploration.
+  const research = wantResearch ? await buildResearch(env, winner, winnerUrl) : null;
+
+  if (winner) {
+    return new Response(JSON.stringify({
+      ok: true,
+      navy: winner.navy,
+      accent: winner.accent,
+      source: `Sampled from ${winner.hostname} (${winner.navySource})`,
+      sampledHost: winner.hostname,
+      ...(research ? { research } : {}),
+    }), { status: 200, headers: { 'Content-Type': 'application/json', ...CORS } });
   }
 
   return new Response(JSON.stringify({
     ok: false,
     error: 'Could not sample usable colors from any candidate site.',
     tried,
+    ...(research ? { research } : {}),
   }), { status: 200, headers: { 'Content-Type': 'application/json', ...CORS } });
 }

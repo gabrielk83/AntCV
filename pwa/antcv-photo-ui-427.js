@@ -22,7 +22,7 @@
 (function () {
   'use strict';
 
-  var SUITE_VERSION = '1.51.842-photo-flip-anchor';
+  var SUITE_VERSION = '1.51.942-photo-flip-vision';
   if (window.__antcvPhotoUI427 === SUITE_VERSION) return;
   window.__antcvPhotoUI427 = SUITE_VERSION;
 
@@ -907,7 +907,7 @@
     // heuristic auto-heals every stale (esp. 'unknown') result WITHOUT the user
     // having to re-upload. Without this, a photo whose signature was cached as
     // 'unknown' by an older build is never re-analysed by the new one.
-    var DET_VER = 'm3';
+    var DET_VER = 'm4';
     function readPI() {
       try { return JSON.parse(localStorage.getItem('personalInfo') || '{}') || {}; }
       catch (_) { return {}; }
@@ -1111,26 +1111,72 @@
       });
     }
 
+    // ── gated vision fallback (Mistral Pixtral via the proxy) ──────────────
+    // BlazeFace reads HEAD yaw only; for a near-frontal head with an angled
+    // torso it returns center/unknown. ONLY THEN do we spend a vision call:
+    // POST the photo to /api/photo-orientation (proxy + demo-proxy) which asks
+    // Mistral which way the person is oriented (head + shoulders). Runs once per
+    // photo at detection time — never per render/export. Any failure → null.
+    function readProxyUrl() {
+      try {
+        var v = JSON.parse(localStorage.getItem('proxyUrl') || '""') || '';
+        v = String(v || '').replace(/\/+$/, '');
+        if (!v && typeof window.ANTCV_RELAY_URL === 'string') v = String(window.ANTCV_RELAY_URL).replace(/\/+$/, '');
+        return v;
+      } catch (_) { return ''; }
+    }
+    function orientationViaProxy(dataUrl) {
+      return new Promise(function (resolve) {
+        try {
+          var proxy = readProxyUrl();
+          var m = /^data:(image\/[a-z.+-]+);base64,(.*)$/i.exec(dataUrl || '');
+          if (!proxy || !m) return resolve(null);
+          var ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
+          var to = setTimeout(function () { try { ctrl && ctrl.abort(); } catch (_) {} resolve(null); }, 12000);
+          fetch(proxy + '/api/photo-orientation', {
+            method: 'POST', credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image_base64: m[2], media_type: m[1] }),
+            signal: ctrl ? ctrl.signal : undefined,
+          }).then(function (r) { return r.json().catch(function () { return null; }); })
+            .then(function (j) {
+              clearTimeout(to);
+              var f = j && j.ok && String(j.facing || '').toLowerCase();
+              resolve((f === 'left' || f === 'right' || f === 'center') ? f : null);
+            }).catch(function () { clearTimeout(to); resolve(null); });
+        } catch (_) { resolve(null); }
+      });
+    }
     function detectFacing(dataUrl) {
       return new Promise(function (resolve) {
         var done = false, theImg = null;
         function finish(v) { if (!done) { done = true; resolve(v); } }
-        // Hard cap: model load can hit the network; if it stalls, fall back to
-        // the heuristic rather than block AUTO forever.
-        setTimeout(function () { finish(theImg ? heuristicFacing(theImg) : 'unknown'); }, 9000);
+        // Hard cap: model load + the vision round-trip can hit the network; if
+        // it stalls, fall back to the heuristic rather than block AUTO forever.
+        setTimeout(function () { finish(theImg ? heuristicFacing(theImg) : 'unknown'); }, 16000);
+        // local → (if unclear) vision fallback → center/unknown.
+        function localUnclear(m, h) {
+          orientationViaProxy(dataUrl).then(function (v) {
+            if (v === 'left' || v === 'right' || v === 'center') { finish(v); return; }
+            finish(m === 'center' || h === 'center' ? 'center' : 'unknown');
+          });
+        }
         try {
           var img = new Image();
           theImg = img;
           img.onload = function () {
             detectViaModel(img).then(function (m) {
-              // Model head-yaw wins when clear; else use the heuristic's body /
-              // shoulder cue (an angled torso reads a direction even when the
-              // head is frontal); else center / unknown.
+              // Model head-yaw wins when clear; else the heuristic's body /
+              // shoulder cue; else the gated vision fallback; else center/unknown.
               if (m === 'left' || m === 'right') { finish(m); return; }
               var h = heuristicFacing(img);
               if (h === 'left' || h === 'right') { finish(h); return; }
-              finish(m === 'center' || h === 'center' ? 'center' : 'unknown');
-            }).catch(function () { finish(heuristicFacing(img)); });
+              localUnclear(m, h);
+            }).catch(function () {
+              var h = heuristicFacing(img);
+              if (h === 'left' || h === 'right') { finish(h); return; }
+              localUnclear('unknown', h);
+            });
           };
           img.onerror = function () { finish('unknown'); };
           img.src = dataUrl;
@@ -1375,7 +1421,7 @@
     }
 
     window.AntcvPhotoFlip = {
-      version: '1.51.842',
+      version: '1.51.942',
       MODES: MODES.slice(),
       _readMode: readMode,
       _readFacing: readFacing,

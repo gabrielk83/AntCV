@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.922-contact-edit';
+const CACHE = 'antcv-1.51.942-photo-flip-vision';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

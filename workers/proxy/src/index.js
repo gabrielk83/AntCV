@@ -39,6 +39,7 @@ import {
   logWritingEngineEvent,
 } from './writing-style-engine.js';
 import { handleJDAnalysis } from './jd-analysis.js';
+import { handlePhotoOrientation } from './photo-orientation.js';
 import { handleKernelExtraction } from './kernel-extraction.js';
 import { handleFetchJdUrl } from './fetch-jd-url.js';
 import { handleFetchBrandColors } from './fetch-brand-colors.js';
@@ -638,6 +639,9 @@ async function handleRequest(request, env = {}) {
   }
   if (url.pathname.includes('/jd-analysis') || url.pathname.includes('/jd_analysis')) {
     return handleJDAnalysis(request, env, corsHeadersFor, serverKeyFor);
+  }
+  if (url.pathname.includes('/photo-orientation') || url.pathname.includes('/photo_orientation')) {
+    return handlePhotoOrientation(request, env, corsHeadersFor, serverKeyFor);
   }
   if (url.pathname.includes('/extract-kernel') || url.pathname.includes('/extract_kernel')) {
     return handleKernelExtraction(request, env, corsHeadersFor);

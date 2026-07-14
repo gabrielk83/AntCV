@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.986-roles-seg-bold';
+const CACHE = 'antcv-1.51.1004-pubs-editable';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

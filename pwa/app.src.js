@@ -7718,17 +7718,18 @@
                 overflowWrap: "break-word",
                 wordBreak: "break-word",
               };
-              // PUBS-RICH-INLINE-EDIT-001: in edit mode each pubs row is click-to-edit
-              // in place while KEEPING the bold-italic title. The formatted markup lives
-              // in a ref-managed innerHTML (never overwritten while focused — see
-              // [[edit-focus-stable]]); onBlur writes the plain "title - details" string
-              // back to items[n] via the section onEdit p(). xe() re-splits it on " - "
-              // on the next render, so the bold-italic title is recomputed from the string.
-              if (p && u) {
-                // PUBS-RICH-INLINE-EDIT-001 rev2 (owner 2026-07-14: "still not editable on
-                // preview"): gate on p&&u only — the same edit-mode condition every other
-                // inline field uses — NOT e.richPub. A stored pubs section from an older
-                // generation may lack the richPub flag, which blocked the editable branch.
+              // PUBS-RICH-INLINE-EDIT-001 rev3 (owner 2026-07-14: "still not editable in
+              // preview", 3rd report): pubs is now ALWAYS click-to-edit in the preview,
+              // like contact / slogan / closure — NOT gated on the section edit-mode p&&u,
+              // which the user may not have toggled (that gate is what B-backed sections
+              // like education need, and is why pubs looked read-only). Bold-italic title
+              // stays via ref-managed innerHTML. onBlur writes the plain "title - details"
+              // string DIRECTLY to the sections store (find the section by id in secs.cv/
+              // secs.cl, set items[n]) + mirrors personalInfo.publications, then dispatches
+              // antcv:sections-updated — the store handler (~17491) reloads ro from that
+              // write, so the edit shows without needing edit-mode or the onEdit `p`.
+              // xe() re-splits on " - " next render, recomputing the bold-italic title.
+              {
                 const __h = (o.title ? "<b><i>" + __hesc(o.title) + "</i></b>" : "") + (o.title && __det ? " - " : "") + __hesc(__det);
                 return React.createElement("div", {
                   key: n,
@@ -7742,26 +7743,25 @@
                     ev.currentTarget.style.outline = "none";
                     try {
                       const v = String(ev.currentTarget.textContent || "").trim();
-                      p(["items", n], v);
+                      const secs = JSON.parse(localStorage.getItem("sections") || "{}") || {};
+                      let changed = false;
+                      for (const doc of ["cv", "cl"]) {
+                        const arr = secs[doc];
+                        if (!Array.isArray(arr)) continue;
+                        const ix = arr.findIndex((x) => x && x.id === e.id);
+                        if (ix >= 0) { const items = Array.isArray(arr[ix].items) ? arr[ix].items.slice() : []; if (String(items[n] || "") !== v) { items[n] = v; arr[ix] = { ...arr[ix], items }; changed = true; } break; }
+                      }
+                      if (changed) {
+                        localStorage.setItem("sections", JSON.stringify(secs));
+                        try { const pj = JSON.parse(localStorage.getItem("personalInfo") || "{}"); const prt = pj && pj.personalInfo ? pj.personalInfo : pj; if (prt && Array.isArray(prt.publications) && n < prt.publications.length) { prt.publications[n] = v; localStorage.setItem("personalInfo", JSON.stringify(pj)); } } catch (_) {}
+                        window.dispatchEvent(new CustomEvent("antcv:sections-updated", { detail: { reason: "pubs-inline" } }));
+                      }
                     } catch (_) {}
                   },
                   title: "Click to edit",
                   style: { ...__pubStyle, cursor: "text", outline: "none" },
                 });
               }
-              return React.createElement(
-                "div",
-                { key: n, style: __pubStyle },
-                o.title
-                  ? React.createElement(
-                      "b",
-                      null,
-                      React.createElement("i", null, o.title),
-                    )
-                  : null,
-                o.title && __det ? " - " : "",
-                __det,
-              );
             }),
             // PUB-MASTERSITE-001 (owner 2026-06-24): optional link to the
             // publications master site (Google Scholar / Academia / ORCID …),

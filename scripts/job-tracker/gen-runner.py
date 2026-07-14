@@ -215,6 +215,15 @@ def research(company, role, num=6):
 # ── row eligibility ────────────────────────────────────────────────
 def row_uk(row):  return row[11] if len(row) > 11 and row[11] else (str(row[1]) + "|" + str(row[2]))
 
+def jd_content_len(jd):
+    """Meaningful JD length = whitespace-collapsed content, NOT raw chars.
+    Scraped 'Career Opportunities:' listing headers are a bare title + a
+    'Requisition ID … - Posted - …' line padded with hundreds of CRLFs;
+    they clear a raw len>200 gate but carry <100 chars of real JD, so
+    generating from them would force fabrication. Collapse runs of
+    whitespace before measuring so only rows with a real posting body pass."""
+    return len(re.sub(r"\s+", " ", jd or "").strip())
+
 def eligible_rows(doc, only=None):
     """Rows to generate: queue truthy OR (queue undefined AND no artifact),
     AND jd >200 chars, AND no CV/CL artifact yet. Honour tier from gen[uk]."""
@@ -228,7 +237,7 @@ def eligible_rows(doc, only=None):
             continue
         a = arts.get(uk) or {}
         has_art = bool(a.get("cv_export_url") or a.get("application_id"))
-        jd_ok = len((jd.get(uk) or "")) > 200
+        jd_ok = jd_content_len(jd.get(uk)) > 200
         q = queue.get(uk)
         want = bool(q) or (q is None and not has_art)
         if only:  # explicit selection bypasses the queue flag, still needs a JD

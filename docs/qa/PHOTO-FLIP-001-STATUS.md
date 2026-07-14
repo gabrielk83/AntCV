@@ -39,7 +39,28 @@ Feature code: `pwa/antcv-photo-ui-427.js` MODULE D (preview + control + detectio
 
 ---
 
-## OPEN — AUTO orientation not reliable on near-frontal photos
+## SHIPPED (1.51.942) — gated vision fallback for AUTO orientation
+
+When the FREE local detector (BlazeFace + heuristic) returns center/unknown, the
+client (MODULE D) POSTs the photo ONCE to `{proxyUrl}/api/photo-orientation`
+(new endpoint in BOTH `workers/proxy` + `workers/demo-proxy`) which asks a vision
+LLM which way the person is oriented (head + shoulders) → `{facing}`. Gated so it
+bills only on the ambiguous photos; never per render/export; 12 s abort; any
+failure keeps the local result. `DET_VER=m4` re-runs cached center/unknown.
+
+**Provider note (IMPORTANT):** the account's **Mistral key is vision-blind** — it
+silently serves the text model `ministral-14b-latest` for ANY requested model
+(`pixtral-*` → `invalid_model` or a blind substitution), so it never sees the
+image. The codebase already marks `mistral` in `VISION_BLIND`. The endpoint
+therefore routes to genuinely-multimodal providers: **Claude (`claude-sonnet-5`,
+the writer key) first, OpenAI (`gpt-4o`) fallback**, each with its native
+image-block shape. Verified live: a clear left-profile → `left`, its horizontal
+flip → `right` (Claude reads direction correctly and reverses on flip).
+
+Follow-up: if demo users hit the **access-relay** (not cv-proxy directly), the
+relay may need `/api/photo-orientation` added to its forward allowlist.
+
+## Historical — why AUTO needed the vision fallback (near-frontal photos)
 
 **Symptom (owner, 2026-07-14):** Auto still reports "orientation unclear / not detected"
 on the owner's headshot (near head-frontal, torso angled left→right).

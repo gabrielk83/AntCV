@@ -282,25 +282,22 @@
       }
     }, h(B, { path: ['items', i, 'years'], value: yearSeg.t || '', placeholder: '[Years]' }));
     var align = ['left', 'center', 'right', 'justify'].indexOf(ctx.align) >= 0 ? ctx.align : 'justify';
+    // The role line is ALWAYS a flex row (role+company | years); a flex row ignores
+    // textAlign, so the "Groups" control drives its justifyContent instead:
+    //   justify → space-between (role left, years right — the default layout)
+    //   left/center/right → the whole line grouped and pushed that way.
+    // Keeping the structure stable (always flex) lets antcv-item-align toggle it live
+    // via data-antcv-role-line WITHOUT waiting for a React re-render.
+    var JC = { left: 'flex-start', center: 'center', right: 'flex-end', justify: 'space-between' }[align] || 'space-between';
     var hrNode = row.hr !== false ? h('div', { style: { borderBottom: '1px solid ' + subColor, margin: '2px 0 2px' } }) : null;
-    var wrapProps = {
+    return h('div', {
       'data-antcv-row-path': 'items.' + i, 'data-antcv-role-head': '1',
       // stamp the role-head key so item-align / section-align can move it via the
       // Groups control (roles.R). Was missing → group CJLR couldn't target it.
       'data-antcv-rowkey': row._key || ('items.' + i),
       style: { marginTop: 0 === i ? 0 : 6, marginBottom: 2 }
-    };
-    // JUSTIFY = role-line layout (role+company | years, space-between). LEFT/CENTER/
-    // RIGHT (from the Groups control) = the whole role line inline, aligned. A flex
-    // space-between div IGNORES textAlign, so the align must switch the LAYOUT — this
-    // is why the group CJLR "did nothing" on roles before.
-    if (align !== 'justify') {
-      return h('div', wrapProps,
-        h('div', { style: { textAlign: align } }, left, yearSeg.t ? ' ' : '', right),
-        hrNode);
-    }
-    return h('div', wrapProps,
-      h('div', { style: { display: 'flex', justifyContent: 'space-between', flexWrap: 'nowrap', gap: 4, alignItems: 'baseline' } }, left, right),
+    },
+      h('div', { 'data-antcv-role-line': '1', style: { display: 'flex', justifyContent: JC, flexWrap: 'nowrap', gap: 4, alignItems: 'baseline' } }, left, right),
       hrNode
     );
   }

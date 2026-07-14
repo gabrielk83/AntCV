@@ -257,6 +257,7 @@
       writeAlign(loc, nxt);
       refreshCjlr(btn, loc);
       applyTitleAlignment(loc);
+      applyPreviewHeadlines();
     }, true);
   }
 
@@ -416,11 +417,37 @@
   // never re-trigger a sweep.
   let mo = null;
   let applying = false;
+  // HEADLINE-LOC-PREVIEW-001 (owner 2026-07-14: "you have a cjlr for the main head but
+  // it does not seem working"). The loc headline control drove EXPORT (docx-client
+  // loc-map) but never the PREVIEW. Apply the loc alignment to the marked preview
+  // section-headline DIVs so preview == export. The heading DIV's textAlign is what
+  // positions the title (its inner editable span is display:inline, so aligning the
+  // span is inert). Only for a loc the user explicitly touched, so an untouched install
+  // keeps its default headline look. 211 owns this because its sweep (rAF + 2500ms
+  // interval + MutationObserver on 'style') re-applies after every React commit.
+  function applyPreviewHeadlines() {
+    var heads = document.querySelectorAll('[data-antcv-section-headline]');
+    for (var i = 0; i < heads.length; i++) {
+      var el = heads[i];
+      var loc = el.closest('[data-antcv-document-sidebar], .antcv-document-sidebar') ? 'sidebar' : 'main';
+      if (!hasUserTouched(loc)) continue;
+      var v = readAlign(loc);
+      if (ALIGNMENTS.indexOf(v) < 0) continue;
+      var use = v;
+      if (v === 'justify') {
+        // a narrow sidebar heading justifies into ugly gaps — fall to left.
+        try { var w = el.getBoundingClientRect().width; if (loc === 'sidebar' || (w > 0 && w < 300)) use = 'left'; } catch (_) {}
+      }
+      if (el.style.textAlign !== use) el.style.textAlign = use;
+    }
+  }
+
   function applyAll() {
     seedDefaults();
     LOCS.forEach(applyPanel);
     removePublicationsMiniButtons();
     ensureRoleContentCjlr();
+    applyPreviewHeadlines();
   }
   function schedule() {
     if (pending) return;

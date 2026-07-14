@@ -318,7 +318,28 @@
     });
   }
 
+  // GROUP-CJLR-ROLES-001 (owner 2026-07-14): a role head renders an inner flex row
+  // (data-antcv-role-line) — textAlign is INERT on a flex row, which is why the Groups
+  // control "did nothing" on roles. Map the align to the row's justifyContent instead,
+  // so it moves live (no React re-render needed). Restores space-between on clear.
+  var ROLE_JC = { left: 'flex-start', center: 'center', right: 'flex-end', justify: 'space-between' };
   function applyOne(el, align) {
+    var roleLine = (el.getAttribute('data-antcv-role-head') != null) ? el.querySelector('[data-antcv-role-line]') : null;
+    if (roleLine) {
+      var jc = align ? ROLE_JC[align] : null;
+      if (jc) {
+        if (!roleLine.dataset.antcvJcSet) {
+          roleLine.dataset.antcvJcOrig = roleLine.style.justifyContent || '';
+          roleLine.dataset.antcvJcSet = '1';
+        }
+        if (roleLine.style.justifyContent !== jc) roleLine.style.justifyContent = jc;
+      } else if (roleLine.dataset.antcvJcSet === '1') {
+        roleLine.style.justifyContent = roleLine.dataset.antcvJcOrig || '';
+        delete roleLine.dataset.antcvJcSet;
+        delete roleLine.dataset.antcvJcOrig;
+      }
+      return;
+    }
     if (align) {
       if (!el.dataset.antcvAlignSet) {
         el.dataset.antcvAlignOrig = el.style.textAlign || '';

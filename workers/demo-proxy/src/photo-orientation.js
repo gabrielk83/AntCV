@@ -72,7 +72,11 @@ async function mistralPixtral(env, media, b64) {
     if (res.status !== 200) return null;
     const data = await res.json().catch(() => null);
     const served = String((data && data.model) || '');
-    if (!/pixtral/i.test(served)) return null; // blind substitution (e.g. ministral) -> reject
+    // CONFIRMED 2026-07-14: this account's key answers `pixtral-12b` with the
+    // TEXT model `ministral-14b-latest` (status 200, blind guess). Only accept a
+    // genuinely pixtral-served result; otherwise fall through to Claude. If the
+    // key gains Pixtral access later, this path activates automatically.
+    if (!/pixtral/i.test(served)) return null;
     const facing = parseFacing(data?.choices?.[0]?.message?.content || '');
     if (!facing) return null;
     return { facing, model: served, provider: 'mistral' };

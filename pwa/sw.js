@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.985-spell-blip';
+const CACHE = 'antcv-1.51.986-roles-seg-bold';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

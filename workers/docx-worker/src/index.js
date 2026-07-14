@@ -27495,7 +27495,8 @@ function renderExperience(s, ctx) {
       left.push(new TextRun({
         text: role.title,
         bold: __tSeg && __tSeg.bold != null ? !!__tSeg.bold : true,
-        italics: __tSeg && __tSeg.italic != null ? !!__tSeg.italic : true,
+        // Owner 2026-07-14: role title (seg0) = BOLD, NOT italic (was bold+italic).
+        italics: __tSeg && __tSeg.italic != null ? !!__tSeg.italic : false,
         color: (__tSeg && __hex(__tSeg.color)) || style.mainHeadColor,
         size: pt2hp(fs.expSubHead),
         font: style.mainBodyFont

@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.985-spell-blip';
+  const TARGET_VERSION = '1.51.986-roles-seg-bold';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.985-spell-blip',
     '1.51.984-contact-envelope',
     '1.51.964-inline-fixes',
     '1.51.945-revert-pb-freeze',

@@ -102,11 +102,19 @@
             var ns = [0, 1, 2].map(function (j) { return Object.assign({}, seg[j] || {}, j === idx ? patch2 : null); });
             updateRow(i, { seg: ns });
           };
+          // Owner 2026-07-14: effective per-segment defaults — seg0 (role) BOLD,
+          // seg1 (company) ITALIC, seg2 (years) NORMAL. The B/I toggles reflect the
+          // effective state and write an explicit override (mirrors renderRoleHead).
+          var effBold = function (idx, sg) { return sg.bold != null ? !!sg.bold : idx === 0; };
+          var effItalic = function (idx, sg) { return sg.italic != null ? !!sg.italic : idx === 1; };
           var segInput = function (idx, ph, extra) {
             var sg = seg[idx] || {};
+            var eb = effBold(idx, sg), ei = effItalic(idx, sg);
             return h("div", { style: { display: "flex", alignItems: "center", gap: 3, flex: extra && extra.flex || "1 1 auto", minWidth: 0 } },
               h("input", { value: sg.t || "", onChange: function (x) { setSeg(idx, { t: x.target.value }); }, placeholder: ph, style: Object.assign({ flex: "1 1 auto", fontSize: 11, padding: 4, border: "1px solid #cfe6e3", borderRadius: 3, minWidth: 0, fontWeight: idx === 0 ? 700 : 500, color: "#0a6b66" }, extra && extra.style || {}) }),
-              h("input", { type: "color", value: sg.color || (idx === 0 ? "#00746E" : idx === 1 ? "#333333" : "#595959"), onChange: function (x) { setSeg(idx, { color: x.target.value }); }, title: ph + " colour", style: { width: 22, height: 20, padding: 0, border: "1px solid #ccc", borderRadius: 3, cursor: "pointer", flexShrink: 0 } })
+              h("input", { type: "color", value: sg.color || (idx === 0 ? "#00746E" : idx === 1 ? "#333333" : "#595959"), onChange: function (x) { setSeg(idx, { color: x.target.value }); }, title: ph + " colour", style: { width: 22, height: 20, padding: 0, border: "1px solid #ccc", borderRadius: 3, cursor: "pointer", flexShrink: 0 } }),
+              h("button", { onClick: function () { setSeg(idx, { bold: !eb }); }, title: ph + " bold", style: btn({ border: "1px solid " + (eb ? accent : "#bbb"), color: eb ? accent : "#bbb", fontWeight: 800, minWidth: 20, padding: "2px 4px" }) }, "B"),
+              h("button", { onClick: function () { setSeg(idx, { italic: !ei }); }, title: ph + " italic", style: btn({ border: "1px solid " + (ei ? accent : "#bbb"), color: ei ? accent : "#bbb", fontStyle: "italic", fontWeight: 700, minWidth: 20, padding: "2px 4px" }) }, "I")
             );
           };
           return h("div", { key: i, style: { border: "1px solid #cbe0dd", borderRadius: 4, padding: 5, marginBottom: 6, background: hiddenRow ? "#fafafa" : "#eaf6f5", opacity: hiddenRow ? 0.5 : 1, display: "flex", gap: 4, alignItems: "center", flexWrap: "wrap" } },

@@ -257,7 +257,8 @@
     var subColor = k.mainSubHeadColor || s;
     var left = h('span', {
       style: {
-        fontSize: exp, fontStyle: roleSeg.italic === false ? 'normal' : 'italic',
+        // Owner 2026-07-14: role line = seg0 BOLD (not italic), seg1 italic, seg2 normal.
+        fontSize: exp, fontStyle: roleSeg.italic ? 'italic' : 'normal',
         color: roleSeg.color || subColor, fontWeight: roleSeg.bold === false ? 400 : 700, fontFamily: T
       }
     },
@@ -274,7 +275,7 @@
     var right = h('span', {
       style: {
         fontSize: exp, color: yearSeg.color || (k.mainYearColor || '#595959'),
-        fontStyle: yearSeg.italic === false ? 'normal' : 'italic', fontFamily: T, whiteSpace: 'nowrap'
+        fontStyle: yearSeg.italic ? 'italic' : 'normal', fontFamily: T, whiteSpace: 'nowrap'
       }
     }, h(B, { path: ['items', i, 'years'], value: yearSeg.t || '', placeholder: '[Years]' }));
     return h('div', {

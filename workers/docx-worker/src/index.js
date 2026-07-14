@@ -28188,10 +28188,19 @@ function renderEducation(s, ctx, isSidebar) {
         font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont
       }));
     }
+    // EDU-ROW-CJLR-EXPORT-001 (owner 2026-07-15): per-row EDUCATION / RECOMMENDATIONS
+    // CJLR export parity. The preview + editor write antcvItemAlignment[sid]["items.N.deg"]
+    // (+ "items.N"), N = the ORIGINAL s.items index; honour it so DOCX/PDF matches the
+    // preview. NO __group__ (groupCjlr) fallback: the preview's education render (__eRA)
+    // ignores __group__, and item-align never applies it to non-group-head rows, so
+    // __group__ must not move education rows on export either (GROUP-CJLR-SCOPE-001,
+    // 1.14.158). Default void 0 = docx LEFT = the preview default. Byte-identical when no
+    // per-row override AND no __group__ are set (both resolve to void 0 / left).
+    const __eduIdx = s.items.indexOf(it);
     out.push(new Paragraph({
       spacing: { before: 40, after: 40 },
       // NO-JUSTIFY-GAPS-001 (owner 2026-06-12): sidebar default LEFT.
-      alignment: groupCjlr != null ? groupCjlr : void 0,
+      alignment: paraAlignPath(s, "items." + __eduIdx + ".deg") ?? paraAlignPath(s, "items." + __eduIdx) ?? void 0,
       shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
       children: runs
     }));
@@ -28740,7 +28749,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.159-bullet-left-parity";
+var VERSION = "1.14.160-edu-row-cjlr-export";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

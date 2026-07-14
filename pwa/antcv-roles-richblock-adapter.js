@@ -30,11 +30,17 @@
   var VERSION = '1.51.x-roles-richblock-adapter';
   var FLAG = 'antcv:roles-richblock';
 
-  // CUTOVER REVERTED (owner 2026-07-14): default-on was premature — the editor CJLR
-  // click path caused a heavy re-render storm on a long experience. Back to opt-in
-  // (flag === '1') until the CJLR click path is fixed and re-verified.
+  // CUTOVER (owner 2026-07-14 "E is approved — do it"): rich_block is now the DEFAULT
+  // render + editor for professional experience. Roles are a universal rich_block whose
+  // group happens to be a 3-segment role line. The earlier default-on (1106) was reverted
+  // because the editor CJLR click emitted sections-updated → re-render storm on a long
+  // experience; that emit was removed (1125) and per-row/group/header CJLR are all
+  // live-verified (1.51.1005→1225), so the cutover is safe. The stored roles[] shape is
+  // preserved by the adapter, so EXPORT (worker reads roles[]) is unaffected.
+  // The flag stays as a ROLLBACK escape hatch only: set
+  // localStorage['antcv:roles-richblock']='0' to fall back to the legacy chimera render.
   function isOn() {
-    try { return localStorage.getItem(FLAG) === '1'; } catch (_) { return false; }
+    try { return localStorage.getItem(FLAG) !== '0'; } catch (_) { return true; }
   }
 
   // A role's own per-segment style, if the role carries one (roleLineStyle is the

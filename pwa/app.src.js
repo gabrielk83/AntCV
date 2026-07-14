@@ -5803,6 +5803,18 @@
               "span",
               {
                 "data-antcv-editable-text": "true",
+                ref: (el) => {
+                  // EDIT-FOCUS-STABLE-001 (owner 2026-07-14: "undo broken + editing jumps out
+                  // even in quiet places"). The inline editor commits only on blur, so rendering
+                  // its text as React CHILDREN let ANY re-render overwrite a live edit — the caret
+                  // jumped out and the browser's native undo stack was lost. Manage the text via
+                  // this ref instead and NEVER touch it while the field is focused, so an
+                  // in-progress edit (and undo history) survives re-renders. React owns no text
+                  // children on this node now.
+                  if (!el || document.activeElement === el) return;
+                  const __w = o + l + r;
+                  if (el.textContent !== __w) el.textContent = __w;
+                },
                 contentEditable: !0,
                 suppressContentEditableWarning: !0,
                 spellCheck: !0,
@@ -5850,9 +5862,6 @@
                 },
                 "data-edit-path": e.join("."),
               },
-              o,
-              l,
-              r,
             )
           : React.createElement(
               "span",
@@ -7393,6 +7402,11 @@
                                 {
                                   "data-antcv-editable-text": "true",
                                   "data-antcv-results-edit": __rKey,
+                                  ref: (el) => {
+                                    // EDIT-FOCUS-STABLE-001: manage text via ref; never overwrite a live edit while focused.
+                                    if (!el || document.activeElement === el) return;
+                                    if (el.textContent !== __display) el.textContent = __display;
+                                  },
                                   contentEditable: !0,
                                   suppressContentEditableWarning: !0,
                                   spellCheck: !0,
@@ -7446,7 +7460,6 @@
                                     document.execCommand("insertText", !1, t2);
                                   },
                                 },
-                                __display,
                               );
                             })(),
                           );

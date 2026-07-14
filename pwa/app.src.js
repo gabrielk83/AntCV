@@ -6432,7 +6432,7 @@
                 if (row.roleHead && window.AntcvRolesRichBlock && window.AntcvRolesRichBlock.renderRoleHead) {
                   return {
                     key: String(i),
-                    node: window.AntcvRolesRichBlock.renderRoleHead(React, { B: B, P: P, T: T, k: k, s: s, exp: $.exp, C: C }, row, i),
+                    node: window.AntcvRolesRichBlock.renderRoleHead(React, { B: B, P: P, T: T, k: k, s: s, exp: $.exp, C: C, align: __rowAlign(i, true, row._key) }, row, i),
                   };
                 }
                 // ROLES-AS-RICHBLOCK-001 general model (Increment A): a group head
@@ -8047,6 +8047,12 @@
           React.createElement(
             "div",
             {
+              // HEADLINE-LOC-CJLR-001 (owner 2026-07-14): mark the section-headline
+              // block so the loc-level "MAIN/SIDEBAR headline alignment" control
+              // (antcv-section-panel-211 store) can align it in the PREVIEW to match
+              // the export. This DIV's textAlign is what actually moves the title
+              // (the inner editable span is display:inline, so its own align is inert).
+              "data-antcv-section-headline": "1",
               style: {
                 fontFamily: A,
                 fontWeight: 700,

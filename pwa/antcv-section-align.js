@@ -240,14 +240,35 @@
     // headline. Align the heading DIV (parent of the title editable) directly — but ONLY when the
     // user EXPLICITLY set an alignment via the cycler, so an untouched sidebar heading keeps its
     // centered default. Idempotent (guarded write); re-applied after each React commit by the observer.
+    // HEADLINE-CJLR-001 (revived 2026-07-14): align the section HEADLINE block.
+    // The heading is a marked DIV ([data-antcv-section-headline]); ITS textAlign
+    // is what positions the title — the inner editable span is display:inline, so
+    // aligning the span (as the loop above does) is visually inert. The old hook
+    // [data-edit-path="title"] no longer exists in the render, which is exactly
+    // why the "MAIN/SIDEBAR headline alignment" control did nothing on the preview.
     try {
       var __sid = sectionEl.getAttribute && sectionEl.getAttribute('data-sid');
-      var __map = (readPi()[PREFS_KEY] || {})[FIELD] || {};
-      if (__sid && ALIGNMENTS.indexOf(__map[__sid]) >= 0) {
-        var __titleEd = sectionEl.querySelector('[data-edit-path="title"]');
-        if (__titleEd && __titleEd.closest('[data-sid]') === sectionEl) {
-          var __head = __titleEd.parentElement;
-          if (__head && __head.style.textAlign !== alignment) __head.style.textAlign = alignment;
+      var __head = sectionEl.querySelector('[data-antcv-section-headline]');
+      if (__head && __head.closest('[data-sid]') === sectionEl) {
+        var __hAlign = null;
+        var __map = (readPi()[PREFS_KEY] || {})[FIELD] || {};
+        if (__sid && ALIGNMENTS.indexOf(__map[__sid]) >= 0) {
+          // explicit per-section cycler wins for its own headline.
+          __hAlign = alignment;
+        } else {
+          // Loc-level headline control (antcv-section-panel-211 store) — already
+          // drives EXPORT (docx-client loc-map); honour it in the PREVIEW too so
+          // the two agree. Only when the user explicitly touched that loc, so an
+          // untouched install keeps its default headline look.
+          var __loc = (sectionEl.closest && sectionEl.closest('[data-antcv-document-sidebar], .antcv-document-sidebar')) ? 'sidebar' : 'main';
+          var __lm = {}, __lt = {};
+          try { __lm = JSON.parse(localStorage.getItem('antcv.sectionHeadlineAlignment.v1') || '{}') || {}; } catch (_) {}
+          try { __lt = JSON.parse(localStorage.getItem('antcv.sectionHeadlineAlignment.userTouched.v1') || '{}') || {}; } catch (_) {}
+          if (__lt[__loc] && ALIGNMENTS.indexOf(__lm[__loc]) >= 0) __hAlign = __lm[__loc];
+        }
+        if (__hAlign) {
+          var __hUse = effectiveAlignment(sectionEl, __hAlign);
+          if (__head.style.textAlign !== __hUse) __head.style.textAlign = __hUse;
         }
       }
     } catch (_) {}

@@ -290,14 +290,20 @@
     style.textContent = `
       [data-antcv-panel-211] {
         display: flex !important;
+        /* PANEL-WRAP-001 (owner 2026-07-14: "the dimensions of this panel do not
+           fit. better place most of the buttons of row below the lead-in"). The
+           lead-in owns the first row (flex-basis 100%); the action buttons wrap
+           onto the row below instead of squeezing one button to width 0. */
+        flex-wrap: wrap !important;
         align-items: center !important;
         width: 100% !important;
         box-sizing: border-box !important;
         gap: 5px !important;
+        row-gap: 4px !important;
       }
       [data-antcv-section-title-211] {
-        margin-right: auto !important;
-        flex: 1 1 auto !important;
+        flex: 0 0 100% !important;
+        margin: 0 0 1px 0 !important;
         color: ${TITLE_COLOR} !important;
         font-size: 15px !important;
         font-weight: 800 !important;
@@ -383,7 +389,7 @@
       @media (max-width: 900px), (pointer: coarse) {
         [data-antcv-section-title-211],
         [data-antcv-cand-title-211="1"]::before { font-size: 15px !important; }
-        [data-antcv-panel-211] { flex-wrap: nowrap !important; gap: 5px !important; }
+        [data-antcv-panel-211] { flex-wrap: wrap !important; gap: 5px !important; row-gap: 4px !important; }
         [data-antcv-panel-211] button[data-antcv-panel-label-211] {
           height: 24px !important;
           min-height: 24px !important;

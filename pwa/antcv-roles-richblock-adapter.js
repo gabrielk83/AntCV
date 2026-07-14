@@ -281,12 +281,27 @@
         fontStyle: yearSeg.italic ? 'italic' : 'normal', fontFamily: T, whiteSpace: 'nowrap'
       }
     }, h(B, { path: ['items', i, 'years'], value: yearSeg.t || '', placeholder: '[Years]' }));
-    return h('div', {
+    var align = ['left', 'center', 'right', 'justify'].indexOf(ctx.align) >= 0 ? ctx.align : 'justify';
+    var hrNode = row.hr !== false ? h('div', { style: { borderBottom: '1px solid ' + subColor, margin: '2px 0 2px' } }) : null;
+    var wrapProps = {
       'data-antcv-row-path': 'items.' + i, 'data-antcv-role-head': '1',
+      // stamp the role-head key so item-align / section-align can move it via the
+      // Groups control (roles.R). Was missing → group CJLR couldn't target it.
+      'data-antcv-rowkey': row._key || ('items.' + i),
       style: { marginTop: 0 === i ? 0 : 6, marginBottom: 2 }
-    },
+    };
+    // JUSTIFY = role-line layout (role+company | years, space-between). LEFT/CENTER/
+    // RIGHT (from the Groups control) = the whole role line inline, aligned. A flex
+    // space-between div IGNORES textAlign, so the align must switch the LAYOUT — this
+    // is why the group CJLR "did nothing" on roles before.
+    if (align !== 'justify') {
+      return h('div', wrapProps,
+        h('div', { style: { textAlign: align } }, left, yearSeg.t ? ' ' : '', right),
+        hrNode);
+    }
+    return h('div', wrapProps,
       h('div', { style: { display: 'flex', justifyContent: 'space-between', flexWrap: 'nowrap', gap: 4, alignItems: 'baseline' } }, left, right),
-      row.hr !== false ? h('div', { style: { borderBottom: '1px solid ' + subColor, margin: '2px 0 2px' } }) : null
+      hrNode
     );
   }
 

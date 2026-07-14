@@ -55,11 +55,14 @@ export async function handlePhotoOrientation(request, env, corsHeadersFor, _serv
     { type: 'image_url', image_url: dataUrl }, // Mistral string form
   ];
 
+  var chain = (Array.isArray(body.probe_models) && body.probe_models.length)
+    ? body.probe_models.filter(function (x) { return typeof x === 'string'; })
+    : VISION_MODELS;
   let r;
   try {
     r = await callAnyLLMForJSON(env, system, userPrompt, {
       order: ['mistral'],
-      models: { mistral: VISION_MODELS },
+      models: { mistral: chain },
       validate: (t) => {
         try {
           const f = String(JSON.parse(t).facing || '').toLowerCase();
@@ -80,5 +83,5 @@ export async function handlePhotoOrientation(request, env, corsHeadersFor, _serv
   } catch { /* keep center */ }
   if (facing !== 'left' && facing !== 'right' && facing !== 'center') facing = 'center';
 
-  return jsonResponse({ ok: true, facing, provider: r.provider, model: r.model }, 200, cors);
+  return jsonResponse({ ok: true, facing, provider: r.provider, model: r.model, _chain: chain, _attempts: r.attempts }, 200, cors);
 }

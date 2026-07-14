@@ -7881,9 +7881,34 @@
         case "education": {
           const __sid = e.id;
           const __title = (e.title || "").toUpperCase();
+          // EDU-ROW-CJLR-001 (owner 2026-07-15): per-row CJLR for EDUCATION (and
+          // RECOMMENDATIONS, same "education" editor). Mirror the rich_block content-row
+          // pattern (~6510): stamp data-antcv-rowkey / data-antcv-rowalign and honour
+          // antcvItemAlignment[sid] as textAlign so the RENDER self-holds the alignment
+          // across React re-renders (the DOM appliers antcv-item-align.js only reinforce
+          // it; without this the row snapped back to "left" every re-render — the "dance").
+          // The inline editor cycler writes items.N.deg; read items.N / String(N) too for
+          // parity with the rich-block editor + the docx-worker item_alignment map. Default
+          // stays "left" (education's prior fixed alignment) when nothing is set.
+          let __al = {};
+          try {
+            __al =
+              (JSON.parse(localStorage.getItem("antcvItemAlignment") || "{}") ||
+                {})[__sid] || {};
+          } catch (_) {}
+          const __rowAlign = (i) => {
+            const v =
+              __al["items." + i + ".deg"] ||
+              __al["items." + i] ||
+              __al[String(i)];
+            return ["left", "center", "right", "justify"].includes(v)
+              ? v
+              : "left";
+          };
           const __items = [];
           (e.items || []).forEach((t, n) => {
             if (e.hidden && e.hidden[n]) return;
+            const __ra = __rowAlign(n);
             __items.push({
               key: String(n),
               node: React.createElement(
@@ -7891,12 +7916,14 @@
                 {
                   key: n,
                   "data-antcv-row-path": `items.${n}`,
+                  "data-antcv-rowkey": "items." + n,
+                  "data-antcv-rowalign": __ra,
                   style: {
                     fontSize: S ? $.sb : $.text,
                     fontFamily: T,
                     marginBottom: 4,
                     color: S ? __sbInk : "#333",
-                    textAlign: "left",
+                    textAlign: __ra,
                     lineHeight: I,
                     overflowWrap: "break-word",
                     wordBreak: "break-word",
@@ -10519,6 +10546,87 @@
                     },
                   },
                   l ? "🙈" : "👁",
+                ),
+                // EDU-ROW-CJLR-001 (owner 2026-07-15): per-row CJLR cycler for the
+                // EDUCATION / RECOMMENDATIONS editor. Writes antcvItemAlignment[sid]
+                // ["items.N.deg"] (+ "items.N" mirror) — the exact key the render's
+                // __rowAlign and the antcv-item-align.js applier both read — cycling
+                // left -> center -> right -> justify. Updates its own glyph and nudges
+                // the applier in place; the render self-holds on the next re-render.
+                React.createElement(
+                  "button",
+                  {
+                    type: "button",
+                    title:
+                      "Row alignment — click to cycle left / center / right / justify",
+                    onClick: (ev) => {
+                      try {
+                        (ev.preventDefault(), ev.stopPropagation());
+                      } catch (_) {}
+                      const __sid = e.id;
+                      const __ord = ["left", "center", "right", "justify"];
+                      let __m = {};
+                      try {
+                        __m =
+                          JSON.parse(
+                            localStorage.getItem("antcvItemAlignment") || "{}",
+                          ) || {};
+                      } catch (_) {}
+                      if (!__m[__sid] || "object" != typeof __m[__sid])
+                        __m[__sid] = {};
+                      const __curEff =
+                        __m[__sid]["items." + i + ".deg"] || "left";
+                      const __nx =
+                        __ord[(__ord.indexOf(__curEff) + 1) % __ord.length];
+                      ((__m[__sid]["items." + i + ".deg"] = __nx),
+                        (__m[__sid]["items." + i] = __nx));
+                      try {
+                        localStorage.setItem(
+                          "antcvItemAlignment",
+                          JSON.stringify(__m),
+                        );
+                      } catch (_) {}
+                      try {
+                        ev.currentTarget.textContent =
+                          { left: "⇤", center: "↔", right: "⇥", justify: "☰" }[
+                            __nx
+                          ] || "⇤";
+                      } catch (_) {}
+                      try {
+                        window.AntcvItemAlign &&
+                          window.AntcvItemAlign._applyAllAlignments &&
+                          window.AntcvItemAlign._applyAllAlignments();
+                      } catch (_) {}
+                    },
+                    style: {
+                      fontSize: 12,
+                      background: "rgba(1,183,187,0.08)",
+                      border: "1px solid #01B7BB",
+                      color: "#00746E",
+                      borderRadius: 3,
+                      cursor: "pointer",
+                      padding: "1px 5px",
+                      flexShrink: 0,
+                      minWidth: 24,
+                      fontWeight: 700,
+                    },
+                  },
+                  (() => {
+                    try {
+                      const __m0 =
+                        JSON.parse(
+                          localStorage.getItem("antcvItemAlignment") || "{}",
+                        ) || {};
+                      const __v = (__m0[e.id] || {})["items." + i + ".deg"];
+                      return (
+                        { left: "⇤", center: "↔", right: "⇥", justify: "☰" }[
+                          __v || "left"
+                        ] || "⇤"
+                      );
+                    } catch (_) {
+                      return "⇤";
+                    }
+                  })(),
                 ),
                 React.createElement("input", {
                   value: t.deg || "",

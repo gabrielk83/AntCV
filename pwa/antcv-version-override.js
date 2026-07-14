@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.1404-slogan-lang-gate';
+  const TARGET_VERSION = '1.51.1424-edu-row-cjlr';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.1404-slogan-lang-gate',
     '1.51.1384-header-seam',
     '1.51.1344-meta-stick-load-editor',
     '1.51.1304-slogan-brand-color',

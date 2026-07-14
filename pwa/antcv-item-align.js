@@ -55,7 +55,7 @@
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.40.172';
+  const SCRIPT_VERSION = '1.51.1424-edu-row-cjlr';
   const STORAGE_KEY = 'antcvItemAlignment';
   const SECTIONS_KEY = 'sections';
   const DOC_KEY = 'doc';
@@ -490,6 +490,11 @@
       if (!parentSectionRow) return;
       const sid = findSidForEditorRow(parentSectionRow);
       const rowType = itemRow.getAttribute('data-antcv-item-row') || 'list';
+      // EDU-ROW-CJLR-001 (owner 2026-07-15): EDUCATION / RECOMMENDATIONS rows now carry
+      // their OWN inline CJLR cycler (rendered inside app.js's education editor, writing
+      // antcvItemAlignment[sid]["items.N.deg"]). Skip them here so the row does not get a
+      // second, duplicate cycler if these editor rows ever sit under a section-row wrapper.
+      if (rowType === 'education') return;
       const idx = itemRow.getAttribute('data-antcv-item-idx');
       const path = itemPathFor(rowType, idx);
       const wasInjected = itemRow.dataset[ITEM_INJECTED_FLAG] === '1';

@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.1424-edu-row-cjlr';
+const CACHE = 'antcv-1.51.1425-tracker-open-claim';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

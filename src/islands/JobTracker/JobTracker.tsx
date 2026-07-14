@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   getDoc, putDoc, fetchJdUrl, createApplication, setActive, classifyReason,
-  fetchClusterTop20, askAI, fitPercent, fetchBrandColors, research, TRACKED_STATUSES, type TrackerDoc, type Row,
+  fetchClusterTop20, askAI, fitPercent, fetchBrandColors, research, claimTabAppId, TRACKED_STATUSES, type TrackerDoc, type Row,
 } from './api';
 import { computeTier, orderTop5 } from './rank';
 import { top5ClickAction } from './top5controls';
@@ -710,6 +710,11 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
       if (!id) { setErr('Could not create the application.'); return; }
       const next: TrackerDoc = { ...d, artifacts: { ...(d.artifacts || {}), [uk]: { application_id: id, generated_at: Date.now() } } };
       await setActive(id);
+      // LOAD-EDITOR-UNSOLICITED-001 (complete fix): claim this app-id for THIS tab BEFORE the
+      // reload AND before the namespaced lastJdText write, so (a) the cold-restore per-tab drift
+      // guard restores the saved cv/cl sections instead of the unsolicited template, and (b) the
+      // JD is staged under this app's own namespace. Kill: antcv:disable-tracker-open-adopt.
+      claimTabAppId(id);
       try { localStorage.setItem('antcv:lastJdText', jd); } catch { /* */ }
       if (!(await persist(next, true))) return;
       onClose();

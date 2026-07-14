@@ -30,6 +30,22 @@ export function jdScopeDeviceId(): string | null {
   } catch { return null; }
 }
 
+// LOAD-EDITOR-UNSOLICITED-001 (complete fix): claim an app-id for THIS tab BEFORE the
+// tracker Open reloads. Without it, the reloaded tab's per-tab currentAppId stays 'kernel'
+// (or the previously-edited app), so the app's cold-restore drift guard (__foreignAppId2)
+// treats the opened app as "foreign" and SKIPS restoring its saved cv/cl sections — the
+// editor shows the unsolicited template while the JD still loads. Claiming the id makes
+// getCurrentAppId()===rowId on reload, so the sections restore. This covers the case the
+// app.src kernel-adopt carve-out cannot: a tab already editing a DIFFERENT real app.
+// Kill switch (shared with the app.src carve-out): antcv:disable-tracker-open-adopt.
+export function claimTabAppId(id: number | string): void {
+  try {
+    if (localStorage.getItem('antcv:disable-tracker-open-adopt') === '1') return;
+    const s = (window as unknown as { AntcvJdScope?: { setCurrentAppId?: (v: string) => void } }).AntcvJdScope;
+    if (s && typeof s.setCurrentAppId === 'function') s.setCurrentAppId(String(id));
+  } catch { /* */ }
+}
+
 export function proxyBase(): string {
   try {
     const raw = localStorage.getItem('proxyUrl');

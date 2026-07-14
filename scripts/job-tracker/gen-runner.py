@@ -212,6 +212,45 @@ def research(company, role, num=6):
     except Exception:
         return ""
 
+# ── brand capture (BRAND-DECIDES-RESEARCH-001) ─────────────────────
+# The brand is colours AND company SPIRIT + VALUES, collected as RESEARCH in the
+# SAME site-crawl as the colour exploration. brand_fit.capture_brand drives the
+# proxy /api/fetch-brand-colors worker (research:true) which resolves the
+# employer's CANONICAL site (aggregators are discovery-only), samples colours,
+# reads the About/values/careers text, and LLM-summarises {spirit, values, tone}.
+# The record feeds: doc['brand'][uk], the slogan PLACEMENT (antcv:clSloganMode),
+# and the slogan BRIEF the CL-slogan section fuses to. Server-side by necessity:
+# the shell is 403-gated to the workers (nightly-sandbox-network-constraint) and
+# a raw fetch of an arbitrary company site would reopen the SSRF surface the
+# worker already guards. Never fabricates: on failure spirit/values are empty +
+# flagged.
+def _brand_post(body):
+    """post_json closure brand_fit injects: hits the proxy brand-colors endpoint
+    and returns (status, dict)."""
+    return _req(PROXY, "/api/fetch-brand-colors", "POST", body, timeout=45)
+
+def capture_brand_for(row):
+    """Return the v2 brand_record for a row (colours + spirit/values/tone +
+    placement + slogan brief), or None on hard failure. Idempotent per company."""
+    try:
+        import brand_fit
+    except Exception as e:
+        print(f"   [brand] brand_fit import failed ({str(e)[:80]})"); return None
+    try:
+        rec = brand_fit.capture_brand(row.get("url") or "", row.get("company") or "", _brand_post)
+    except Exception as e:
+        print(f"   [brand] capture failed ({str(e)[:80]})"); return None
+    rsr = rec.get("research") or {}
+    vals = rsr.get("values") or []
+    if rsr.get("spirit") or vals or rsr.get("tone"):
+        print("   [brand] %s -> tone=%s values=%s placement=%s (site %s)" % (
+            rec.get("source") or "?", rsr.get("tone") or "-",
+            (", ".join(vals[:4]) or "-"), rec.get("slogan_placement"), rsr.get("site") or "-"))
+    else:
+        print("   [brand] no brand signal (%s) -> placement=%s, slogan falls back to candidate-fit only"
+              % (rsr.get("flag") or "empty", rec.get("slogan_placement")))
+    return rec
+
 # ── row eligibility ────────────────────────────────────────────────
 def row_uk(row):  return row[11] if len(row) > 11 and row[11] else (str(row[1]) + "|" + str(row[2]))
 
@@ -230,6 +269,7 @@ def eligible_rows(doc, only=None):
     rows = doc.get("rows") or []
     jd = doc.get("jd") or {}; queue = doc.get("queue") or {}
     gen = doc.get("gen") or {}; arts = doc.get("artifacts") or {}
+    urls = doc.get("urls") or {}
     out = []
     for row in rows:
         uk = row_uk(row)
@@ -246,6 +286,10 @@ def eligible_rows(doc, only=None):
             out.append({
                 "uk": uk, "rank": row[0], "company": row[1], "role": row[2],
                 "tier": gen.get(uk) or "quick", "jd": jd.get(uk) or "",
+                # BRAND-DECIDES-RESEARCH-001: the CANONICAL posting URL (doc.urls[uk])
+                # seeds the brand crawl — the worker follows an aggregator link
+                # through to the employer's own site (aggregators discovery-only).
+                "url": urls.get(uk) or "",
             })
     return out
 
@@ -384,7 +428,7 @@ CL_SECTIONS = [
     ("cl_how_i_would_contribute","HOW I WOULD CONTRIBUTE","Write the COVER LETTER HOW I WOULD CONTRIBUTE section in THREE parts, in this exact order and format: (1) ONE lead-in sentence (~12-18 words) that frames the first priorities and ENDS WITH A COLON; (2) 3-4 SHORT verb-led action bullets, one per line, each starting with '- '; (3) a FINAL line starting with 'Goal:' naming the concrete outcome the team gains. Return only those lines."),
     ("cl_foundation",       "FOUNDATION",        "Write the COVER LETTER FOUNDATION section: two SHORT lines labelled 'Hands-on:' and 'Professionally:', each ONE sentence of at most ~30 words."),
     ("cl_closure",          "Closure",           "Write the COVER LETTER CLOSURE (1-2 first-person sentences): a warm, confident sign-off that INVITES a conversation and points at the concrete value the candidate would bring to THIS employer. Do NOT restate why the candidate is drawn to the role (the opening already does that); focus on the invitation and the value. Not generic boilerplate. No 'Sincerely'/signature line, no name."),
-    ("cl_slogan",           "SLOGAN",            "Write ONE short personal cover-letter SLOGAN (max ~10 words, a single line): a specific, brand/fit-derived statement of the value THIS candidate brings to THIS employer. Not a generic tagline, no company name, no quotation marks. Return ONLY the line."),
+    ("cl_slogan",           "SLOGAN",            "Write ONE short personal cover-letter SLOGAN (max ~10 words, a single line): a specific statement of the value THIS candidate brings to THIS employer, FUSED to the EMPLOYER BRAND block (spirit/values/tone) when one is present — echo the brand's register and one of its values without naming the company. If no brand block is present, derive it from the candidate's fit alone; NEVER invent a company value. Not a generic tagline, no company name, no quotation marks. Return ONLY the line."),
 ]
 
 def _user_turn(profile_json, meta, section_ask):
@@ -410,6 +454,12 @@ def _user_turn(profile_json, meta, section_ask):
     if meta.get("research"):
         lines.append("=== RECENT WEB RESEARCH on the employer (Google CSE; SUBORDINATE — may be dated, verify; NEVER a source of the candidate's identity/history) ===")
         lines.append(str(meta["research"])[:2500]); lines.append("")
+    if meta.get("brand_brief"):
+        # BRAND-DECIDES-RESEARCH-001: the employer's own brand voice (spirit/
+        # values/tone) sampled from its site. Subordinate framing for the VOICE
+        # of the letter — above all the SLOGAN — never a source of candidate facts.
+        lines.append("=== EMPLOYER BRAND (sampled from the company's own website — spirit, values, tone; SUBORDINATE framing for VOICE, never a source of the candidate's facts) ===")
+        lines.append(str(meta["brand_brief"])[:1200]); lines.append("")
     if meta.get("prior_app"):
         # CATEGORY-RECALL-001: tone/altitude reference from the newest saved
         # same-category application. Subordinate — the identity lock and the
@@ -603,9 +653,15 @@ def cmd_run(args):
         cat = guess_category(r["role"], r["jd"])
         prior = prior_app_digest(cat)
         if prior: print(f"   [prior-app] same-category ({cat}) reference attached ({len(prior)} chars)")
+        # BRAND-DECIDES-RESEARCH-001: crawl the employer site for colours AND
+        # spirit/values/tone in one step; the brief fuses into the slogan (+ all
+        # CL voice) and the placement seeds antcv:clSloganMode at persist.
+        brand = capture_brand_for(r) if getattr(args, "brand", True) else None
+        r["brand"] = brand
         meta = {"company": r["company"], "role": r["role"], "jd": r["jd"],
                 "signals": _signals_for(uk), "support": support.get(uk),
-                "research": rsch, "language": language, "prior_app": prior}
+                "research": rsch, "language": language, "prior_app": prior,
+                "brand_brief": (brand or {}).get("slogan_brief") or None}
         sections, model = build_plan(profile, meta, r["tier"])
         print(f"\n== {uk} [{r['tier']}] {r['company']} / {r['role']} — {len(sections)} sections, model={model}")
         if args.dry:
@@ -657,6 +713,9 @@ def cmd_run(args):
         rev2, cur = get_doc()
         cur["artifacts"] = {**(cur.get("artifacts") or {}), **(doc.get("artifacts") or {})}
         cur["queue"] = {**(cur.get("queue") or {}), **(doc.get("queue") or {})}
+        # BRAND-DECIDES-RESEARCH-001: persist per-position brand records too.
+        if doc.get("brand"):
+            cur["brand"] = {**(cur.get("brand") or {}), **(doc.get("brand") or {})}
         c, b = put_doc(cur, rev2)
         print(f"doc writeback: {c} rev={b.get('rev')}")
         # restore the user's active-application pointer (see ACTIVE-POINTER-GUARD-001)
@@ -1503,6 +1562,19 @@ def persist_application(doc, r, res, category, language, kernel=None, measure=Fa
     slogan = _format_slogan((res["sections"].get("cl_slogan") or {}).get("result"))
     _meta = {"source": "gen-runner", "tier": r["tier"], "urlkey": uk}
     if slogan: _meta["slogan"] = slogan
+    # BRAND-DECIDES-RESEARCH-001: persist the v2 brand record (colours + real
+    # spirit/values/tone) to doc['brand'][uk], and seed the slogan PLACEMENT
+    # (tagline vs opening lead-in) into the app meta so the client sets
+    # antcv:clSloganMode from the SAME research the slogan TEXT was fused to.
+    brand = r.get("brand")
+    if isinstance(brand, dict):
+        doc.setdefault("brand", {})[uk] = brand
+        placement = brand.get("slogan_placement")
+        if placement in ("heading", "leadin"):
+            _meta["slogan_placement"] = placement
+        rsr = brand.get("research") or {}
+        if rsr.get("spirit") or rsr.get("values") or rsr.get("tone"):
+            _meta["brand_research"] = {k: rsr.get(k) for k in ("site", "spirit", "values", "tone")}
     c, b = _req(RELAY, "/api/applications", "POST", {
         "jd_text": r["jd"], "jd_company": str(r["company"]), "jd_role": str(r["role"]),
         "category": category, "jd_language": language, "save_as_new": True,
@@ -1535,6 +1607,7 @@ def main():
         p.add_argument("--max-pages", type=int, default=2, help="CV page budget for the render-and-fit loop (default 2)")
         p.add_argument("--dry", action="store_true", help="build the plan only; no LLM calls")
         p.add_argument("--no-research", dest="research", action="store_false", help="skip Google-CSE employer research")
+        p.add_argument("--no-brand", dest="brand", action="store_false", help="skip the brand-decides site-crawl (colours + spirit/values/tone)")
     args = ap.parse_args()
     if args.cmd == "list": cmd_list(args)
     elif args.cmd == "run": cmd_run(args)

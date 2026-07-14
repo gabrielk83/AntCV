@@ -11,7 +11,7 @@
  * No live network calls — global fetch is mocked per test.
  */
 import assert from 'node:assert';
-import { handleFetchBrandColors } from '../src/fetch-brand-colors.js';
+import { handleFetchBrandColors, extractTextSignals, signalsToText } from '../src/fetch-brand-colors.js';
 
 let pass = 0;
 const ok = (name, cond) => { assert.ok(cond, name); console.log('PASS ' + name); pass++; };
@@ -124,5 +124,92 @@ await withMockFetch(
   const json = await resp.json();
   ok('invalid JSON body -> ok:false, no throw', json.ok === false);
 }
+
+// ─── BRAND-DECIDES-RESEARCH-001 ──────────────────────────────────
+
+// 6. Colour-only path (no research flag) is byte-identical: NEVER carries a
+//    `research` key and NEVER fetches About pages. Regression guard for the PWA.
+await withMockFetch(
+  [['https://www.plaincolor.com/', htmlResponse(
+    '<html><head><meta name="theme-color" content="#334455"></head></html>',
+  )]],
+  async () => {
+    const json = await post({ jdUrl: '', companyName: 'PlainColor' });
+    ok('no-research: navy sampled', json.navy === '#334455');
+    ok('no-research: no research key present', !('research' in json));
+  },
+);
+
+// 7. Deterministic text harvest — extractTextSignals pulls title, meta
+//    description, og:*, and h1/h2 headings from raw html (no LLM).
+{
+  const html =
+    '<html><head><title>Northwind — Quiet, precise engineering</title>' +
+    '<meta name="description" content="We build restrained, durable tools.">' +
+    '<meta property="og:description" content="Craftsmanship over noise.">' +
+    '<meta property="og:site_name" content="Northwind"></head>' +
+    '<body><h1>Built to last</h1><h2>Our values: honesty, rigor</h2>' +
+    '<script>var h="<h1>ignore me</h1>";</script></body></html>';
+  const s = extractTextSignals(html);
+  ok('signals: title extracted', /Northwind/.test(s.title) && /precise/.test(s.title));
+  ok('signals: description extracted', s.description === 'We build restrained, durable tools.');
+  ok('signals: og:description extracted', s.ogDescription === 'Craftsmanship over noise.');
+  ok('signals: og:site_name extracted', s.ogSiteName === 'Northwind');
+  ok('signals: h1/h2 headings extracted', s.headings.includes('Built to last') && s.headings.some((h) => /honesty, rigor/.test(h)));
+  ok('signals: script content stripped, not a heading', !s.headings.some((h) => /ignore me/.test(h)));
+  const txt = signalsToText([s]);
+  ok('signalsToText: composes labelled blob', /Site: Northwind/.test(txt) && /Description:/.test(txt) && /Headings:/.test(txt));
+}
+
+// Fresh-Response mock: buildResearch fetches several About paths, and real
+// network hands back a NEW response body each time. A per-call factory mirrors
+// that (a single shared Response object would be consumed after the first read).
+function withFreshMockFetch(routes, fn) {
+  global.fetch = async (url) => {
+    const u = String(url);
+    for (const [pattern, html] of routes) {
+      if (u.includes(pattern)) return htmlResponse(html);
+    }
+    return new Response('not found', { status: 404 });
+  };
+  return fn().finally(() => { global.fetch = originalFetch; });
+}
+
+// 8. research:true drives the About-page crawl and degrades HONESTLY when no
+//    LLM key is configured — the crawl still resolves the site and harvests
+//    signals, and the research object carries a flag with EMPTY values (never
+//    fabricated). env has no provider keys, so the summary cascade returns
+//    unavailable rather than inventing spirit/values.
+await withFreshMockFetch(
+  [
+    ['honestco.com/about', (
+      '<html><head><title>HonestCo — About</title>' +
+      '<meta name="description" content="A calm, precise studio for durable software."></head>' +
+      '<body><h1>Our values</h1><h2>Rigor, restraint, and care</h2></body></html>'
+    )],
+    ['honestco.com/', (
+      '<html><head><meta name="theme-color" content="#2d4a3e">' +
+      '<meta name="description" content="Quiet software craftsmanship."></head></html>'
+    )],
+  ],
+  async () => {
+    const json = await post({ jdUrl: '', companyName: 'HonestCo', research: true });
+    ok('research: colours still sampled', json.ok === true && !!json.navy);
+    ok('research: research object returned', !!json.research);
+    ok('research: site resolved to sampled host', /honestco\.com/.test(json.research.site || ''));
+    ok('research: signals were harvested from the crawl', json.research.signals_used === true);
+    ok('research: NO fabricated values without an LLM (empty + flagged)',
+      Array.isArray(json.research.values) && json.research.values.length === 0 && !!json.research.flag);
+    ok('research: spirit empty (not fabricated)', json.research.spirit === '');
+  },
+);
+
+// 9. research:true with nothing fetchable → honest no_site flag, empty values.
+await withFreshMockFetch([], async () => {
+  const json = await post({ jdUrl: 'https://www.linkedin.com/jobs/view/1', companyName: '', research: true });
+  ok('research/no-site: ok:false', json.ok === false);
+  ok('research/no-site: research flagged no_site', json.research && json.research.flag === 'no_site');
+  ok('research/no-site: values empty', json.research && json.research.values.length === 0);
+});
 
 console.log(`\n${pass} assertions passed.`);

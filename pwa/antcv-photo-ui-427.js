@@ -22,7 +22,7 @@
 (function () {
   'use strict';
 
-  var SUITE_VERSION = '1.50.647';
+  var SUITE_VERSION = '1.51.761-photo-flip';
   if (window.__antcvPhotoUI427 === SUITE_VERSION) return;
   window.__antcvPhotoUI427 = SUITE_VERSION;
 
@@ -869,15 +869,370 @@
   })();
 
   /* ========================================================================
+   * MODULE D — photo horizontal flip (off / on / auto).  PHOTO-FLIP-001
+   * (owner 2026-07-14). Adds a 3-state Flip control INSIDE the collapsible
+   * PROFILE PHOTO panel, mirrors the preview photo via CSS scaleX(-1), and
+   * for AUTO faces the subject INTO the content using an orientation detected
+   * ONCE at photo upload and stored in personalInfo.stylePrefs (travels with
+   * the photo via the normal personalInfo cloud sync; self-heals by re-
+   * detecting when the stored signature no longer matches the current photo).
+   *   - off  : no flip
+   *   - on   : mirror the photo horizontally
+   *   - auto : flip only when the detected facing points AWAY from the content
+   *            (toward the near page edge). The content side is derived from
+   *            photoPosition + sidebarPosition, so it self-corrects when the
+   *            sidebar swaps sides or the position button is left at default.
+   * Export parity lives in antcv-docx-client.js, which mirrors the exported
+   * PNG when the SAME resolveFlipH() rule is true (exposed on window below).
+   * Follows the MODULE B (Pentagon) pattern: settings-row injection +
+   * preview-<img> restyle + personalInfo.stylePrefs persistence + a
+   * sections-updated nudge, all write-on-change to respect
+   * SETTINGS-SWEEP-STABILIZE.
+   * ===================================================================== */
+  var Flip = (function () {
+    var MODES = ['off', 'on', 'auto'];
+    var DEFAULT_MODE = 'off';
+    var UI_ATTR = 'data-antcv-photo-flip-ctrl';
+    var FLIP_TX = 'scaleX(-1)';
+
+    function readPI() {
+      try { return JSON.parse(localStorage.getItem('personalInfo') || '{}') || {}; }
+      catch (_) { return {}; }
+    }
+    function readSP() {
+      var pi = readPI();
+      return (pi && pi.stylePrefs && typeof pi.stylePrefs === 'object') ? pi.stylePrefs : {};
+    }
+    function readMode() {
+      var v = String(readSP().photoFlip || '').trim().toLowerCase();
+      return MODES.indexOf(v) >= 0 ? v : DEFAULT_MODE;
+    }
+    function writeMode(mode) {
+      try {
+        var pi = readPI();
+        if (!pi.stylePrefs || typeof pi.stylePrefs !== 'object') pi.stylePrefs = {};
+        pi.stylePrefs.photoFlip = mode;
+        localStorage.setItem('personalInfo', JSON.stringify(pi));
+      } catch (_) {}
+      // Nudge the app to re-read sections so the preview repaints (the native
+      // photo render doesn't observe this key). Content sidecars fast-bail.
+      try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: 'photo-flip' } })); } catch (_) {}
+    }
+    function readFacing() {
+      var v = String(readSP().photoFacing || '').trim().toLowerCase();
+      return (v === 'left' || v === 'right' || v === 'center') ? v : 'unknown';
+    }
+    function writeFacing(facing, sig) {
+      try {
+        var pi = readPI();
+        if (!pi.stylePrefs || typeof pi.stylePrefs !== 'object') pi.stylePrefs = {};
+        pi.stylePrefs.photoFacing = facing;
+        pi.stylePrefs.photoFacingSig = sig;
+        localStorage.setItem('personalInfo', JSON.stringify(pi));
+      } catch (_) {}
+    }
+
+    // ── content-side (which way the subject should look) ───────────────────
+    function readLS(key, dflt) {
+      try {
+        var raw = localStorage.getItem(key);
+        if (raw == null || raw === '') return dflt;
+        var v = raw; try { var p = JSON.parse(raw); if (typeof p === 'string') v = p; } catch (_) {}
+        return String(v).trim().toLowerCase();
+      } catch (_) { return dflt; }
+    }
+    function desiredFacing() {
+      var pos = readLS('photoPosition', '');
+      if (pos.indexOf('right') >= 0) return 'left';   // header/main-right → content is left
+      if (pos.indexOf('left') >= 0) return 'right';   // header/main-left  → content is right
+      // sidebar-top/bottom, band-overlap, bridge-*, hidden, unset → photo in sidebar.
+      return readLS('sidebarPosition', 'left') === 'right' ? 'left' : 'right';
+    }
+    function resolveFlipH() {
+      var mode = readMode();
+      if (mode === 'on') return true;
+      if (mode !== 'auto') return false;
+      var f = readFacing();
+      if (f !== 'left' && f !== 'right') return false; // center / unknown → leave as-is
+      return f !== desiredFacing();
+    }
+    // Single source of truth shared with the export sidecar (docx-client).
+    try { window.__antcvResolvePhotoFlipH = resolveFlipH; } catch (_) {}
+
+    // ── facing detection (runs once per photo, at/after upload) ─────────────
+    function photoSig(dataUrl) {
+      if (!dataUrl) return '';
+      return dataUrl.length + ':' + dataUrl.slice(-24);
+    }
+    function classify(bbox, pt) {
+      // When the head turns toward image-left the nose/eye-midpoint sits well
+      // LEFT of the face-box centre (the far cheek widens the box rightward).
+      var cx = bbox.x + bbox.width / 2;
+      var d = (pt.x - cx) / (bbox.width || 1);
+      if (d < -0.12) return 'left';
+      if (d > 0.12) return 'right';
+      return 'center';
+    }
+    function heuristicFacing(img) {
+      // Fallback when the Shape Detection API is absent: a turned head packs the
+      // high-contrast features (eyes/nose/mouth) toward the side it faces while
+      // the far cheek is smooth. Compare horizontal-gradient energy of the left
+      // vs right half of the upper-centre band and face toward the busier half.
+      try {
+        var W = 64, H = 64;
+        var c = document.createElement('canvas'); c.width = W; c.height = H;
+        var ctx = c.getContext('2d'); if (!ctx) return 'unknown';
+        ctx.drawImage(img, 0, 0, W, H);
+        var d = ctx.getImageData(0, 0, W, H).data;
+        function lum(i) { return 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; }
+        var leftE = 0, rightE = 0, mid = W / 2;
+        var y0 = Math.round(H * 0.15), y1 = Math.round(H * 0.70);
+        for (var y = y0; y < y1; y++) {
+          for (var x = 1; x < W - 1; x++) {
+            var i = (y * W + x) * 4;
+            var g = Math.abs(lum(i + 4) - lum(i - 4));
+            if (x < mid) leftE += g; else rightE += g;
+          }
+        }
+        var tot = leftE + rightE;
+        if (tot <= 0) return 'unknown';
+        var bias = (rightE - leftE) / tot;
+        if (bias > 0.10) return 'right';
+        if (bias < -0.10) return 'left';
+        return 'center';
+      } catch (_) { return 'unknown'; }
+    }
+    function detectFacing(dataUrl) {
+      return new Promise(function (resolve) {
+        var done = false;
+        function finish(v) { if (!done) { done = true; resolve(v); } }
+        setTimeout(function () { finish('unknown'); }, 4000); // never block the UI
+        try {
+          var img = new Image();
+          img.onload = function () {
+            if (typeof window.FaceDetector === 'function') {
+              try {
+                var fd = new window.FaceDetector({ fastMode: true, maxDetectedFaces: 1 });
+                fd.detect(img).then(function (faces) {
+                  if (faces && faces.length) {
+                    var f = faces[0], bb = f.boundingBox, nose = null, eyes = [];
+                    (f.landmarks || []).forEach(function (lm) {
+                      var loc = lm && lm.locations && lm.locations[0];
+                      if (!loc) return;
+                      if (lm.type === 'nose') nose = loc;
+                      else if (lm.type === 'eye') eyes.push(loc);
+                    });
+                    if (bb && nose) { finish(classify(bb, nose)); return; }
+                    if (bb && eyes.length === 2) { finish(classify(bb, { x: (eyes[0].x + eyes[1].x) / 2 })); return; }
+                  }
+                  finish(heuristicFacing(img));
+                }).catch(function () { finish(heuristicFacing(img)); });
+                return;
+              } catch (_) { /* fall through to heuristic */ }
+            }
+            finish(heuristicFacing(img));
+          };
+          img.onerror = function () { finish('unknown'); };
+          img.src = dataUrl;
+        } catch (_) { finish('unknown'); }
+      });
+    }
+    var detecting = false;
+    function maybeDetect() {
+      var pi = readPI();
+      var photo = (pi && typeof pi.photo === 'string') ? pi.photo : '';
+      if (!photo || detecting) return;
+      var sp = (pi.stylePrefs && typeof pi.stylePrefs === 'object') ? pi.stylePrefs : {};
+      var sig = photoSig(photo);
+      if (sp.photoFacingSig === sig) return; // already detected for this exact photo
+      detecting = true;
+      detectFacing(photo).then(function (facing) {
+        detecting = false;
+        writeFacing(facing, sig);
+        if (readMode() === 'auto') {
+          applyPreview();
+          try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: 'photo-facing' } })); } catch (_) {}
+        }
+        var ui = document.querySelector('[' + UI_ATTR + '="1"]');
+        if (ui) refreshUI(ui);
+      });
+    }
+
+    // ── preview apply (mirror the rendered <img>) ──────────────────────────
+    function previewPhotos() {
+      var out = [];
+      var papers = document.querySelectorAll('.antcv-preview-paper');
+      for (var i = 0; i < papers.length; i++) {
+        var imgs = papers[i].querySelectorAll('img');
+        for (var j = 0; j < imgs.length; j++) {
+          var img = imgs[j], st = img.getAttribute('style') || '';
+          if (st.indexOf('border-radius') >= 0
+            || img.getAttribute('data-antcv-photo-clone') === '1'
+            || img.getAttribute('data-antcv-repeat-photo') === '1') out.push(img);
+        }
+      }
+      return out;
+    }
+    function applyPreview() {
+      var want = resolveFlipH();
+      var imgs = previewPhotos();
+      for (var i = 0; i < imgs.length; i++) {
+        var img = imgs[i], on = img.getAttribute('data-antcv-photo-flip') === '1';
+        if (want && !on) {
+          // Pentagon uses filter/clip-path (not transform), so this composes.
+          img.style.setProperty('transform', FLIP_TX, 'important');
+          img.style.setProperty('transform-origin', 'center', 'important');
+          img.setAttribute('data-antcv-photo-flip', '1');
+        } else if (!want && on) {
+          img.style.removeProperty('transform');
+          img.style.removeProperty('transform-origin');
+          img.removeAttribute('data-antcv-photo-flip');
+        }
+      }
+    }
+
+    // ── settings UI (segmented Off / On / Auto) ────────────────────────────
+    function styleSeg(btn, active) {
+      btn.style.cssText = [
+        'padding:4px 12px',
+        'background:' + (active ? 'rgba(1,183,187,.1)' : 'rgba(255,255,255,.04)'),
+        'color:' + (active ? '#01B7BB' : '#d7e6ee'),
+        'border:1px solid ' + (active ? '#01B7BB' : 'rgba(255,255,255,.18)'),
+        'border-radius:6px', 'cursor:pointer', 'font-family:inherit',
+        'font-size:11px', 'font-weight:600', 'white-space:nowrap',
+      ].join(';');
+    }
+    function refreshUI(wrap) {
+      var mode = readMode();
+      var btns = wrap.querySelectorAll('button[data-mode]');
+      for (var i = 0; i < btns.length; i++) {
+        var active = btns[i].getAttribute('data-mode') === mode;
+        // write-on-change (SETTINGS-SWEEP-STABILIZE): only restyle on transition.
+        if ((btns[i].getAttribute('data-active') === '1') !== active || !btns[i].getAttribute('data-styled')) {
+          styleSeg(btns[i], active);
+          btns[i].setAttribute('data-active', active ? '1' : '0');
+          btns[i].setAttribute('data-styled', '1');
+        }
+      }
+      var hint = wrap.querySelector('[data-antcv-flip-hint]');
+      if (hint) {
+        var text = '', disp = 'none';
+        if (mode === 'auto') {
+          var f = readFacing();
+          text = (f === 'unknown' || f === 'center')
+            ? 'Auto: no clear orientation detected — not flipped.'
+            : 'Auto: subject faces ' + f + ' — ' + (resolveFlipH() ? 'flipped to face the content.' : 'already faces the content.');
+          disp = '';
+        }
+        if (hint.textContent !== text) hint.textContent = text;
+        if (hint.style.display !== disp) hint.style.display = disp;
+      }
+    }
+    function buildControl() {
+      var wrap = document.createElement('div');
+      wrap.setAttribute(UI_ATTR, '1');
+      wrap.style.marginTop = '10px';
+      var lbl = document.createElement('div');
+      lbl.textContent = 'Flip photo';
+      lbl.style.cssText = 'font-size:10px;letter-spacing:.4px;text-transform:uppercase;opacity:.7;color:#d7e6ee;margin-bottom:5px;';
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
+      var LABELS = { off: 'Off', on: 'On', auto: 'Auto' };
+      var TITLES = {
+        off: 'No flip — the photo is used as uploaded.',
+        on: 'Mirror the photo horizontally.',
+        auto: 'Face the subject into the content, using the orientation detected at upload. Adapts when the sidebar swaps sides or the photo position changes.',
+      };
+      MODES.forEach(function (m) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.setAttribute('data-mode', m);
+        b.textContent = LABELS[m];
+        b.title = TITLES[m];
+        b.addEventListener('click', function (e) {
+          e.preventDefault(); e.stopPropagation();
+          writeMode(m);
+          applyPreview();
+          refreshUI(wrap);
+        });
+        row.appendChild(b);
+      });
+      var hint = document.createElement('div');
+      hint.setAttribute('data-antcv-flip-hint', '1');
+      hint.style.cssText = 'font-size:10px;line-height:1.35;opacity:.6;color:#d7e6ee;margin-top:5px;display:none;';
+      wrap.appendChild(lbl); wrap.appendChild(row); wrap.appendChild(hint);
+      return wrap;
+    }
+    function findPhotoSection() {
+      // Same anchor as MODULE C: the PROFILE PHOTO control container (the label's
+      // parent). Appending our control there makes it a child of the collapse
+      // sidecar's `ctrl`, so it hides/shows with the rest of the panel.
+      try {
+        var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+          acceptNode: function (node) {
+            var t = (node.textContent || '').trim();
+            return (t && /^PROFILE PHOTO$/i.test(t)) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+          },
+        });
+        var tNode = walker.nextNode();
+        if (!tNode) return null;
+        var n = tNode.parentElement;
+        if (n && n.parentElement) n = n.parentElement;
+        return n;
+      } catch (_) { return null; }
+    }
+    function ensureUI() {
+      // Fast path: already injected + connected → just refresh (skip the walk).
+      var existing = document.querySelector('[' + UI_ATTR + '="1"]');
+      if (existing && existing.isConnected) { refreshUI(existing); return; }
+      var section = findPhotoSection();
+      if (!section) return;
+      if (section.querySelector('[' + UI_ATTR + '="1"]')) return;
+      var ctrl = buildControl();
+      section.appendChild(ctrl);
+      refreshUI(ctrl);
+    }
+
+    function boot() {
+      window.addEventListener('storage', function (ev) {
+        if (!ev || ev.key === 'personalInfo' || ev.key === 'photoPosition' || ev.key === 'sidebarPosition' || ev.key === null) applyPreview();
+      });
+      // photoPosition / sidebar swaps change the AUTO target; re-apply post-click.
+      document.addEventListener('click', function () { setTimeout(applyPreview, 60); }, true);
+    }
+
+    window.AntcvPhotoFlip = {
+      version: '1.51.761',
+      MODES: MODES.slice(),
+      _readMode: readMode,
+      _readFacing: readFacing,
+      _desiredFacing: desiredFacing,
+      _resolveFlipH: resolveFlipH,
+      _detectFacing: detectFacing,
+      _applyPreview: applyPreview,
+    };
+
+    return {
+      boot: boot,
+      tick: function () {
+        try { ensureUI(); } catch (_) {}
+        try { maybeDetect(); } catch (_) {}
+        try { applyPreview(); } catch (_) {}
+      },
+    };
+  })();
+
+  /* ========================================================================
    * Shared boot: register ticks, install the ONE MutationObserver, run each
    * module's non-observer wiring + initial pass.
    * ===================================================================== */
-  ticks.push(PhotoPosition.tick, Pentagon.tick, Bridge.tick);
+  ticks.push(PhotoPosition.tick, Pentagon.tick, Bridge.tick, Flip.tick);
 
   function boot() {
     try { PhotoPosition.boot(); } catch (_) {}
     try { Pentagon.boot(); } catch (_) {}
     try { Bridge.boot(); } catch (_) {}
+    try { Flip.boot(); } catch (_) {}
     try {
       new MutationObserver(scheduleAll).observe(document.body || document.documentElement,
         { childList: true, subtree: true });
@@ -891,5 +1246,5 @@
     boot();
   }
 
-  try { console.debug('[photo-ui-427] installed v' + SUITE_VERSION + ' (position+pentagon+bridge)'); } catch (_) {}
+  try { console.debug('[photo-ui-427] installed v' + SUITE_VERSION + ' (position+pentagon+bridge+flip)'); } catch (_) {}
 })();

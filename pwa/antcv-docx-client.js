@@ -229,6 +229,71 @@ function packageDefaultPhotoPosition() {
   } catch (_) { return 'sidebar-top'; }
 }
 
+// PHOTO-FLIP-001 (owner 2026-07-14): mirror the exported photo horizontally
+// when the Flip control (off / on / auto) calls for it, so the DOCX/PDF matches
+// the live preview's scaleX(-1). The effective decision is OWNED by the preview
+// sidecar (antcv-photo-ui-427 MODULE D) and exposed as window.__antcvResolvePhotoFlipH;
+// we use it when present and replicate the same pure rule as a fallback so the
+// export is correct even if that sidecar hasn't booted yet.
+export function resolveExportFlipH() {
+  try {
+    if (typeof window !== 'undefined' && typeof window.__antcvResolvePhotoFlipH === 'function') {
+      return !!window.__antcvResolvePhotoFlipH();
+    }
+  } catch (_) { /* fall through to the local rule */ }
+  try {
+    if (typeof localStorage === 'undefined') return false;
+    const pi = JSON.parse(localStorage.getItem('personalInfo') || '{}') || {};
+    const sp = (pi.stylePrefs && typeof pi.stylePrefs === 'object') ? pi.stylePrefs : {};
+    const mode = String(sp.photoFlip || 'off').trim().toLowerCase();
+    if (mode === 'on') return true;
+    if (mode !== 'auto') return false;
+    const facing = String(sp.photoFacing || 'unknown').trim().toLowerCase();
+    if (facing !== 'left' && facing !== 'right') return false;
+    const readLS = (key, dflt) => {
+      try {
+        const raw = localStorage.getItem(key);
+        if (raw == null || raw === '') return dflt;
+        let v = raw; try { const p = JSON.parse(raw); if (typeof p === 'string') v = p; } catch (_) {}
+        return String(v).trim().toLowerCase();
+      } catch (_) { return dflt; }
+    };
+    const pos = readLS('photoPosition', '');
+    let desired;
+    if (pos.indexOf('right') >= 0) desired = 'left';
+    else if (pos.indexOf('left') >= 0) desired = 'right';
+    else desired = readLS('sidebarPosition', 'left') === 'right' ? 'left' : 'right';
+    return facing !== desired;
+  } catch (_) { return false; }
+}
+
+// Mirror a photo data URL horizontally via canvas. Resolves to a NEW data URL,
+// or the ORIGINAL on any failure — an export must never break over a flip.
+export function flipPhotoDataUrlH(dataUrl) {
+  return new Promise((resolve) => {
+    try {
+      if (!dataUrl || typeof document === 'undefined' || typeof Image === 'undefined') return resolve(dataUrl);
+      const img = new Image();
+      img.onload = function () {
+        try {
+          const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+          if (!w || !h) return resolve(dataUrl);
+          const c = document.createElement('canvas');
+          c.width = w; c.height = h;
+          const ctx = c.getContext('2d');
+          if (!ctx) return resolve(dataUrl);
+          ctx.translate(w, 0);
+          ctx.scale(-1, 1);
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(c.toDataURL('image/png'));
+        } catch (_) { resolve(dataUrl); }
+      };
+      img.onerror = function () { resolve(dataUrl); };
+      img.src = dataUrl;
+    } catch (_) { resolve(dataUrl); }
+  });
+}
+
 export function computeTableWidthDxa(docSections, docType) {
   if (!Array.isArray(docSections) || !docSections.length) return null;
   const pctMap = readTableWidthPctMap();
@@ -389,7 +454,16 @@ export async function exportDocxViaWorker({
     );
   }
 
-  const photoDataUrl = await ensurePhotoDataUrl(photo);
+  let photoDataUrl = await ensurePhotoDataUrl(photo);
+
+  // PHOTO-FLIP-001 (owner 2026-07-14): mirror the exported photo when the Flip
+  // control (or its AUTO orientation) calls for it, matching the preview's
+  // scaleX(-1). Failure-safe: flipPhotoDataUrlH returns the original on any error.
+  try {
+    if (photoDataUrl && resolveExportFlipH()) {
+      photoDataUrl = await flipPhotoDataUrlH(photoDataUrl);
+    }
+  } catch (_) { /* keep the original photo on any failure */ }
 
   // v1.40.140 — derive tableWidth from the section-align sidecar's
   // per-section drag widths. The section-align sidecar writes

@@ -29,7 +29,7 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 ## ACTIVE CLAIMS
 
 <!-- SHIFT:BEGIN — one JSON object per line; managed by scripts/shift.mjs, safe to hand-edit a line if a session died without releasing -->
-{"id":"sh_mrjan7tb_2v89","started":"2026-07-14T11:51:11.918Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.741-1.51.760","task":"roles-richblock Stage 3 worker export + Stage 4 cutover prep","beat":"2026-07-14T11:51:12.322Z"}
+{"id":"sh_mrjan7tb_2v89","started":"2026-07-14T13:12:46.358Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.761-1.51.780","task":"photo horizontal flip control (off/on/auto) in Layout photo panel + preview + export","beat":"2026-07-14T13:12:46.440Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

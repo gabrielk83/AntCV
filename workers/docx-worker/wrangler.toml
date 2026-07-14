@@ -23,16 +23,16 @@ mode = "smart"
 
 [vars]
 # Only allow the AntCV Pages frontend origin. Override per environment if needed.
-ALLOWED_ORIGINS = "https://antcv.pages.dev"
+ALLOWED_ORIGINS = "https://antcv.pages.dev,https://antcv.net,https://www.antcv.net"
 SETUP_URL = "https://antcv.pages.dev"
 
 [env.production]
 name = "docx-worker"
-vars = { ALLOWED_ORIGINS = "https://antcv.pages.dev", SETUP_URL = "https://antcv.pages.dev" }
+vars = { ALLOWED_ORIGINS = "https://antcv.pages.dev,https://antcv.net,https://www.antcv.net", SETUP_URL = "https://antcv.pages.dev" }
 
 [env.staging]
 name = "docx-worker-staging"
-vars = { ALLOWED_ORIGINS = "https://antcv.pages.dev", SETUP_URL = "https://antcv.pages.dev" }
+vars = { ALLOWED_ORIGINS = "https://antcv.pages.dev,https://antcv.net,https://www.antcv.net", SETUP_URL = "https://antcv.pages.dev" }
 
 # Secrets (set via `wrangler secret put`):
 #   WORKER_SECRET   — optional shared secret. If set, requests must

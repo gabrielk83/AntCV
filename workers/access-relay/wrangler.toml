@@ -36,7 +36,7 @@ UPSTREAM_ORIGIN      = "https://cv-proxy.karp-gabriel-a.workers.dev"
 UPSTREAM_ORIGIN_DEMO = "https://antcv-demo-proxy.karp-gabriel-a.workers.dev"
 
 # CORS allowlist (comma-separated). The PWA origin must be listed.
-ALLOWED_ORIGINS = "https://antcv.pages.dev"
+ALLOWED_ORIGINS = "https://antcv.pages.dev,https://antcv.net,https://www.antcv.net"
 SETUP_URL = "https://antcv.pages.dev"
 
 # Google OAuth client ID for in-app sign-in.

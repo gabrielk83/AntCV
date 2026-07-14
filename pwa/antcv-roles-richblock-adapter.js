@@ -321,6 +321,21 @@
         placeholder: '[part ' + (n + 1) + ']'
       })));
     }
+    var hrNode = row.hr ? h('div', { style: { borderBottom: '1px solid ' + C, margin: '2px 0 2px' } }) : null;
+    // Increment B — JUSTIFY = role-line layout: first n-1 segments grouped left,
+    // last segment right, space-between. Mirrors the chimera role line; the RTL
+    // inversion (he/ar) comes free from the document `dir`, exactly as the chimera
+    // relies on (no explicit direction here). L/C/R keep all segments inline.
+    if (align === 'justify' && nodes.length >= 2) {
+      return h('div', {
+        'data-antcv-row-path': 'items.' + i, 'data-antcv-group-head': '1',
+        style: { marginTop: 0 === i ? 0 : 6, marginBottom: 2, letterSpacing: 0.3 }
+      },
+        h('div', { style: { display: 'flex', justifyContent: 'space-between', flexWrap: 'nowrap', gap: 4, alignItems: 'baseline' } },
+          h('span', { style: { overflowWrap: 'break-word', wordBreak: 'break-word' } }, nodes.slice(0, -1)),
+          h('span', { style: { whiteSpace: 'nowrap' } }, nodes[nodes.length - 1])),
+        hrNode);
+    }
     return h('div', {
       'data-antcv-row-path': 'items.' + i, 'data-antcv-group-head': '1',
       style: {
@@ -328,7 +343,7 @@
         textAlign: align, fontWeight: 700, letterSpacing: 0.3,
         overflowWrap: 'break-word', wordBreak: 'break-word'
       }
-    }, nodes, row.hr ? h('div', { style: { borderBottom: '1px solid ' + C, margin: '2px 0 2px' } }) : null);
+    }, nodes, hrNode);
   }
 
   window.AntcvRolesRichBlock = {

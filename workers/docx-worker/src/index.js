@@ -27162,21 +27162,32 @@ function renderRichBlock(s, ctx, isSidebar) {
       const __ghex = (c) => (c ? String(c).replace(/^#/, "").trim() : null);
       const __gBorder = row.hr ? { border: { bottom: { style: BorderStyle.SINGLE, size: 4, space: 1, color: __ghex(__segs && __segs[0] && __segs[0].color) || __gHeadColor } } } : {};
       if (__segs && __segs.length) {
+        const __mkSegRun = (sg, lead) => new TextRun({
+          text: (lead || "") + (sg.sep || "") + String(sg.t || ""),
+          bold: sg.bold != null ? !!sg.bold : true,
+          italics: sg.italic != null ? !!sg.italic : false,
+          color: __ghex(sg.color) || __gHeadColor,
+          size: sg.size ? pt2hp(sg.size) : __gSize,
+          font: __gHeadFont
+        });
+        // Increment B: JUSTIFY = role-line layout in the MAIN column — first n-1
+        // segments left, last segment tab-right (space-between), mirroring the
+        // preview renderGroupHead + renderExperience. Sidebar / L / C / R stay
+        // inline. RTL flips via the paragraph bidi like the rest of the doc.
+        const __gJustify = galign === AlignmentType.JUSTIFIED && __segs.length >= 2 && !isSidebar;
+        const __gRightTab = (ctx.mainW || 9000) - 640 - 40;
+        const __gChildren = __gJustify
+          ? [...__segs.slice(0, -1).map((sg) => __mkSegRun(sg, "")), __mkSegRun(__segs[__segs.length - 1], "\t")]
+          : __segs.map((sg) => __mkSegRun(sg, ""));
         out.push(new Paragraph({
           spacing: { before: 120, after: 40 },
           keepNext: true,
           keepLines: true,
-          alignment: galign,
+          alignment: __gJustify ? AlignmentType.LEFT : galign,
+          ...(__gJustify ? { tabStops: [{ type: TabStopType.RIGHT, position: __gRightTab }] } : {}),
           ...__gBorder,
           shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
-          children: __segs.map((sg) => new TextRun({
-            text: (sg.sep || "") + String(sg.t || ""),
-            bold: sg.bold != null ? !!sg.bold : true,
-            italics: sg.italic != null ? !!sg.italic : false,
-            color: __ghex(sg.color) || __gHeadColor,
-            size: sg.size ? pt2hp(sg.size) : __gSize,
-            font: __gHeadFont
-          }))
+          children: __gChildren
         }));
         return;
       }

@@ -24127,6 +24127,37 @@ function readableInk(hex) {
   }
 }
 __name(readableInk, "readableInk");
+function sloganColorOnWhite(hex, fallback) {
+  // SLOGAN-BRAND-COLOR-001 (owner 2026-07-14): the CL slogan is coloured text on
+  // the WHITE page. A brand slogan colour forwarded by the client (meta.slogan_color)
+  // is rendered as-is when it clears ~3:1 luminance contrast against white; a too-light
+  // colour is DARKENED (hue kept) until it passes. Defence-in-depth: the client already
+  // guards, but the worker never ships an unreadable slogan even if a caller forwards a
+  // raw colour. STANDING accessibility rule — a colour token never ships unguarded.
+  try {
+    let h = String(hex || "").replace(/[^0-9a-fA-F]/g, "");
+    if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+    if (h.length !== 6) return fallback;
+    const lum = (x) => {
+      const c = (i) => {
+        let v = parseInt(x.slice(i, i + 2), 16) / 255;
+        return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+      };
+      return 0.2126 * c(0) + 0.7152 * c(2) + 0.0722 * c(4);
+    };
+    const contrastVsWhite = (x) => 1.05 / (lum(x) + 0.05);
+    let guard = 0;
+    while (contrastVsWhite(h) < 3 && guard++ < 24) {
+      const dark = [0, 2, 4].map((i) => Math.round(parseInt(h.slice(i, i + 2), 16) * 0.82).toString(16).padStart(2, "0")).join("");
+      if (dark === h) break;
+      h = dark;
+    }
+    return h.toUpperCase();
+  } catch (_) {
+    return fallback;
+  }
+}
+__name(sloganColorOnWhite, "sloganColorOnWhite");
 function normalisePackageId(raw) {
   if (typeof raw !== "string") return DEFAULT_PACKAGE;
   const lower = raw.trim().toLowerCase();
@@ -25445,7 +25476,11 @@ function buildLinearDocument(ctx) {
         children: [new TextRun({
           text: __slogan.toUpperCase(),
           bold: true,
-          color: style.mainHeadColor,
+          // SLOGAN-BRAND-COLOR-001 (owner 2026-07-14): follow the brand slogan colour
+          // (meta.slogan_color, forwarded from antcv:brandV2 slots.sloganColor — the SAME
+          // source the preview's var(--brand-slogan-color) reads) when present, else keep
+          // the package head colour (teal on Copenhagen). Contrast-guarded on white.
+          color: __m.slogan_color ? sloganColorOnWhite(__m.slogan_color, style.mainHeadColor) : style.mainHeadColor,
           size: pt2hp(11),
           font: style.mainBodyFont,
           characterSpacing: 20
@@ -28615,7 +28650,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.154-role-split-cont";
+var VERSION = "1.14.155-slogan-brand-color";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

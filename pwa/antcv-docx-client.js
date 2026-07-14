@@ -1035,6 +1035,42 @@ export function buildPayload({
           else if (targeted) { out.slogan_hidden = true; return out; }
           const al = String(localStorage.getItem('antcv:clSloganAlign') || 'center').replace(/["']/g, '').toLowerCase();
           out.slogan_align = (al === 'left' || al === 'right' || al === 'center') ? al : 'center';
+          // SLOGAN-BRAND-COLOR-001 (owner 2026-07-14): the EXPORTED slogan follows the
+          // SAME brand slogan colour the PREVIEW paints — antcv:brandV2 slots.sloganColor,
+          // gated by the same window.__antcvBrandFit flag the paper-wrapper IIFE reads
+          // (app.src.js ~50673). When no brand is active the field is OMITTED and the worker
+          // keeps its hardcoded teal (style.mainHeadColor). CONTRAST-GUARD (STANDING
+          // accessibility rule [[brand-colors-contrast-accessibility]]): the slogan is
+          // coloured text on the WHITE cover-letter page, so a too-light brand colour is
+          // DARKENED (hue kept) until it clears ~3:1 luminance contrast against white — a
+          // colour token never ships without a contrast guard (TABLE-HEADER-INK-001 pattern).
+          try {
+            if (typeof window !== 'undefined' && window.__antcvBrandFit === true) {
+              let sc = '';
+              const raw = localStorage.getItem('antcv:brandV2');
+              if (raw) {
+                const o = JSON.parse(raw);
+                const sl2 = (o && o.slots) ? o.slots : (o && o.headerBg ? o : null);
+                if (sl2 && sl2.sloganColor) sc = String(sl2.sloganColor);
+              }
+              sc = sc.replace(/[^0-9a-fA-F]/g, '');
+              if (sc.length === 3) sc = sc.split('').map(function (c) { return c + c; }).join('');
+              if (sc.length === 6) {
+                const __lum6 = function (hex) {
+                  const c = function (i) { let v = parseInt(hex.slice(i, i + 2), 16) / 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+                  return 0.2126 * c(0) + 0.7152 * c(2) + 0.0722 * c(4);
+                };
+                const __cvw = function (hex) { return 1.05 / (__lum6(hex) + 0.05); }; // contrast vs white page
+                let guard = 0;
+                while (__cvw(sc) < 3 && guard++ < 24) {
+                  const dark = [0, 2, 4].map(function (i) { return Math.round(parseInt(sc.slice(i, i + 2), 16) * 0.82).toString(16).padStart(2, '0'); }).join('');
+                  if (dark === sc) break;
+                  sc = dark;
+                }
+                out.slogan_color = sc.toUpperCase();
+              }
+            }
+          } catch (_) {}
           return out;
         } catch (_) { return {}; }
       })()),

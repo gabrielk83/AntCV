@@ -29109,7 +29109,7 @@
                       ([e, t]) =>
                         `<span style="color:#fff">${e}</span>&nbsp;${t}`,
                     )
-                    .join("&nbsp;&nbsp;•&nbsp;&nbsp;")
+                    .join("&#8195;")
                 : e
                   ? "[Kontakt — e-mail | telefon | LinkedIn | lokation]"
                   : "[Contact — email | phone | LinkedIn | location]",
@@ -29148,7 +29148,7 @@
               ? `<p style="font-family:'Cabin',${s};font-size:${u.nameSize}pt;font-weight:700;color:#fff;text-align:${E("name")};margin:12pt 0 3pt;line-height:1.1;mso-line-height-rule:exactly">${w.name || (e ? "Dit navn" : "Your Name")}</p>${window.__antcvHdrRuleHtml ? window.__antcvHdrRuleHtml("name", "#01B7BB", 2, 0) : ""}`
               : "",
             $ = O
-              ? `${window.__antcvHdrRuleHtml ? window.__antcvHdrRuleHtml("specialisation", "#01B7BB", 3, 1) : f("#01B7BB", 3, 1)}<p style="font-family:'Cabin',${s};font-size:${u.contactSize}pt;color:#fff;text-align:${E("contact")};margin:3pt 0;line-height:1.2;mso-line-height-rule:exactly">${x}</p>${window.__antcvHdrRuleHtml ? window.__antcvHdrRuleHtml("contact", "#01B7BB", 1, 0) : f("#01B7BB", 1, 0)}`
+              ? `${window.__antcvHdrRuleHtml ? window.__antcvHdrRuleHtml("specialisation", "#01B7BB", 3, 1) : f("#01B7BB", 3, 1)}<p style="font-family:'Cabin',${s};font-size:${(Number(u.contactSize) || 10) + 0.5}pt;color:#fff;text-align:${E("contact")};margin:3pt 0;line-height:1.2;mso-line-height-rule:exactly">${x}</p>${window.__antcvHdrRuleHtml ? window.__antcvHdrRuleHtml("contact", "#01B7BB", 1, 0) : f("#01B7BB", 1, 0)}`
               : "",
             L =
               A || I || O
@@ -29764,7 +29764,7 @@
             _ = Gt(r.sidebarTextColor, "FFFFFF"),
             N = h(y.nameSize, 16),
             $ = h(y.specialisation, 11),
-            L = h(y.contactSize, 10),
+            L = String(Math.round(2 * ((Number(y.contactSize) || 10) + 0.5))),
             P = h(y.mainHead, 11),
             B = h(y.mainBody, 10.5),
             D = h(y.mainTblH, 10.5),
@@ -30423,7 +30423,7 @@
             x.push(
               `<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="4" w:color="01B7BB" w:space="0"/></w:pBdr><w:shd w:val="clear" w:color="auto" w:fill="${b}"/><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/></w:pPr></w:p>`,
             );
-            const e = E.join("  •  ");
+            const e = E.join(" ");
             (x.push(u(e, "CV_Contact")),
               x.push(
                 `<w:p><w:pPr><w:pBdr><w:top w:val="single" w:sz="4" w:color="01B7BB" w:space="0"/></w:pBdr><w:shd w:val="clear" w:color="auto" w:fill="${b}"/><w:spacing w:before="0" w:after="20" w:line="20" w:lineRule="exact"/></w:pPr></w:p>`,
@@ -30538,7 +30538,7 @@
               ? (k.push(
                   `<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="6" w:color="${C}" w:space="0"/></w:pBdr><w:shd w:val="clear" w:color="auto" w:fill="${v}"/><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/></w:pPr></w:p>`,
                 ),
-                k.push(m($.join("  •  "), "CV_Contact")),
+                k.push(m($.join(String.fromCharCode(8195)), "CV_Contact")),
                 k.push(
                   `<w:p><w:pPr><w:pBdr><w:top w:val="single" w:sz="6" w:color="${C}" w:space="0"/></w:pBdr><w:shd w:val="clear" w:color="auto" w:fill="${v}"/><w:spacing w:before="0" w:after="20" w:line="20" w:lineRule="exact"/></w:pPr></w:p>`,
                 ))
@@ -44614,7 +44614,11 @@
                 // plain text. Separators unchanged (Bridge round 3: ONE space
                 // around the bullet when the bridge is on).
                 u.flatMap(([e, t], _i) => {
-                  const _sep = _i ? [__bridgeOn ? " • " : " • "] : [];
+                  // CONTACT-NO-BULLET-001 (owner 2026-07-14): every contact item
+                  // carries its own leading glyph (⌂ ★ @ ☎ 🔗︎ ⌘ ⌁ from pe()), so
+                  // the between-item bullet is redundant — replace with an em-space
+                  // gap. Dropping it frees width, so the font also grows +0.5pt.
+                  const _sep = _i ? [" "] : [];
                   if (/linkedin\.com/i.test(String(t))) {
                     const _v = String(t).trim();
                     return [
@@ -44742,7 +44746,8 @@
                             // band text also gains ~28px from the leftward
                             // flow over the seam).
                             fontSize:
-                              (Yr.contactSize || 10) *
+                              // CONTACT-NO-BULLET-001: +0.5pt, freed by dropping •
+                              ((Yr.contactSize || 10) + 0.5) *
                               (96 / 72) *
                               (__bridgeOn ? 0.88 : 1),
                             lineHeight: 1.2,

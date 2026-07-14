@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.822-contact-nobullet';
+  const TARGET_VERSION = '1.51.823-edit-focus-002';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.822-contact-nobullet',
     '1.51.802-photo-flip-redetect',
     '1.51.785-edit-freeze',
     '1.51.784-photo-flip-model',

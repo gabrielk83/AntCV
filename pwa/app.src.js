@@ -5811,9 +5811,19 @@
                   // this ref instead and NEVER touch it while the field is focused, so an
                   // in-progress edit (and undo history) survives re-renders. React owns no text
                   // children on this node now.
-                  if (!el || document.activeElement === el) return;
+                  if (!el) return;
                   const __w = o + l + r;
+                  // EDIT-FOCUS-STABLE-002 (owner 2026-07-14 "selecting a spell
+                  // suggestion no longer applies"): while FOCUSED, skip only when the
+                  // value is UNCHANGED (user typing — the value prop doesn't change
+                  // until blur-commit). If it changed EXTERNALLY while focused (spell
+                  // fix, undo), PAINT it — else the change lands in state but never
+                  // shows. Not focused: always sync. This keeps the no-jump-out
+                  // guarantee (same value = no overwrite) while letting external edits
+                  // through.
+                  if (document.activeElement === el && el.__antcvLastVal === __w) return;
                   if (el.textContent !== __w) el.textContent = __w;
+                  el.__antcvLastVal = __w;
                 },
                 contentEditable: !0,
                 suppressContentEditableWarning: !0,
@@ -7409,8 +7419,11 @@
                                   "data-antcv-results-edit": __rKey,
                                   ref: (el) => {
                                     // EDIT-FOCUS-STABLE-001: manage text via ref; never overwrite a live edit while focused.
-                                    if (!el || document.activeElement === el) return;
+                                    if (!el) return;
+                                    // EDIT-FOCUS-STABLE-002: paint external changes even while focused (unchanged value = skip, so no jump-out).
+                                    if (document.activeElement === el && el.__antcvLastVal === __display) return;
                                     if (el.textContent !== __display) el.textContent = __display;
+                                    el.__antcvLastVal = __display;
                                   },
                                   contentEditable: !0,
                                   suppressContentEditableWarning: !0,

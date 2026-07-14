@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.822-contact-nobullet';
+const CACHE = 'antcv-1.51.823-edit-focus-002';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

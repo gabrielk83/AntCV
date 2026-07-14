@@ -6440,7 +6440,7 @@
           // "dance" that knocked the caret out mid-edit). Prefer the STABLE full-section
           // group flag stamped at the split so the default stays put.
           const __hasGrp = (e && e.__antcvSecHasGrp !== undefined) ? e.__antcvSecHasGrp : (e.items || []).some((it) => it && it.grp);
-          const __rowAlign = (i, isGrp, key) => {
+          const __rowAlign = (i, isGrp, key, isRole) => {
             // ROLES-AS-RICHBLOCK-001: honour a roles-path CJLR key (roles.R.bullets.B)
             // when the adapted experience section stamps row._key — same key the
             // editor writes and the worker reads, so preview==export.
@@ -6450,7 +6450,7 @@
             // captured every body row (the "section CJLR still controls the rows" bug).
             const v = (key && __al[key]) || __al["items." + i] || __al[String(i)] || (isGrp ? __al.__group__ : void 0);
             if (["left", "center", "right", "justify"].includes(v)) return v;
-            return isGrp ? "center" : (__hasGrp ? "left" : "justify");
+            return isGrp ? (isRole ? "justify" : "center") : (__hasGrp ? "left" : "justify");
           };
           // GROUP-EMPTY-HIDE-001 (owner 2026-07-06): a {grp} sub-heading with NO rendered child
           // row must be hidden entirely (heading + label), not left as a bare dangling label —
@@ -6491,7 +6491,7 @@
                 if (row.roleHead && window.AntcvRolesRichBlock && window.AntcvRolesRichBlock.renderRoleHead) {
                   return {
                     key: String(i),
-                    node: window.AntcvRolesRichBlock.renderRoleHead(React, { B: B, P: P, T: T, k: k, s: s, exp: $.exp, C: C, align: __rowAlign(i, true, row._key) }, row, i),
+                    node: window.AntcvRolesRichBlock.renderRoleHead(React, { B: B, P: P, T: T, k: k, s: s, exp: $.exp, C: C, align: __rowAlign(i, true, row._key, true) }, row, i),
                   };
                 }
                 // ROLES-AS-RICHBLOCK-001 general model (Increment A): a group head

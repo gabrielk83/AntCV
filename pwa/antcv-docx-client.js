@@ -243,13 +243,6 @@ export function resolveExportFlipH() {
   } catch (_) { /* fall through to the local rule */ }
   try {
     if (typeof localStorage === 'undefined') return false;
-    const pi = JSON.parse(localStorage.getItem('personalInfo') || '{}') || {};
-    const sp = (pi.stylePrefs && typeof pi.stylePrefs === 'object') ? pi.stylePrefs : {};
-    const mode = String(sp.photoFlip || 'off').trim().toLowerCase();
-    if (mode === 'on') return true;
-    if (mode !== 'auto') return false;
-    const facing = String(sp.photoFacing || 'unknown').trim().toLowerCase();
-    if (facing !== 'left' && facing !== 'right') return false;
     const readLS = (key, dflt) => {
       try {
         const raw = localStorage.getItem(key);
@@ -258,6 +251,13 @@ export function resolveExportFlipH() {
         return String(v).trim().toLowerCase();
       } catch (_) { return dflt; }
     };
+    // PHOTO-FLIP-001 stores mode + detected facing in STANDALONE keys (they
+    // survive Reset-all / cloud-restore), not personalInfo.stylePrefs.
+    const mode = readLS('antcv:photoFlip', 'off');
+    if (mode === 'on') return true;
+    if (mode !== 'auto') return false;
+    const facing = readLS('antcv:photoFacing', 'unknown');
+    if (facing !== 'left' && facing !== 'right') return false;
     const pos = readLS('photoPosition', '');
     let desired;
     if (pos.indexOf('right') >= 0) desired = 'left';

@@ -3,7 +3,8 @@
 // (antcv-photo-ui-427 MODULE D) and the DOCX/PDF export (antcv-docx-client).
 // The rule: off→never, on→always, auto→flip only when the detected facing
 // points AWAY from the content (content side derived from photoPosition +
-// sidebarPosition).
+// sidebarPosition). Mode + facing live in STANDALONE keys (antcv:photoFlip /
+// antcv:photoFacing) so Reset-all / cloud-restore can't wipe them.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { resolveExportFlipH } from './antcv-docx-client.js';
@@ -19,77 +20,82 @@ function withStore(map, fn) {
   };
   try { return fn(); } finally { delete global.localStorage; }
 }
-// Build a personalInfo blob with the given stylePrefs.
-const pi = (sp) => JSON.stringify({ photo: 'data:x', stylePrefs: sp });
+// Build the standalone-key store for a given flip mode + detected facing.
+const flip = (mode, facing) => {
+  const o = {};
+  if (mode != null) o['antcv:photoFlip'] = mode;
+  if (facing != null) o['antcv:photoFacing'] = facing;
+  return o;
+};
 
 test('off → never flips (even with a facing)', () => {
-  withStore({ personalInfo: pi({ photoFlip: 'off', photoFacing: 'left' }), sidebarPosition: 'left' }, () => {
+  withStore({ ...flip('off', 'left'), sidebarPosition: 'left' }, () => {
     assert.equal(resolveExportFlipH(), false);
   });
 });
 
 test('missing / default mode → no flip', () => {
-  withStore({ personalInfo: pi({ photoFacing: 'left' }) }, () => {
+  withStore({ ...flip(null, 'left') }, () => {
     assert.equal(resolveExportFlipH(), false);
   });
 });
 
 test('on → always flips regardless of facing/position', () => {
-  withStore({ personalInfo: pi({ photoFlip: 'on' }) }, () => {
+  withStore({ ...flip('on', null) }, () => {
     assert.equal(resolveExportFlipH(), true);
   });
 });
 
 test('auto + unknown facing → no flip (safe)', () => {
-  withStore({ personalInfo: pi({ photoFlip: 'auto', photoFacing: 'unknown' }), sidebarPosition: 'left' }, () => {
+  withStore({ ...flip('auto', 'unknown'), sidebarPosition: 'left' }, () => {
     assert.equal(resolveExportFlipH(), false);
   });
 });
 
 test('auto + center facing → no flip', () => {
-  withStore({ personalInfo: pi({ photoFlip: 'auto', photoFacing: 'center' }), sidebarPosition: 'left' }, () => {
+  withStore({ ...flip('auto', 'center'), sidebarPosition: 'left' }, () => {
     assert.equal(resolveExportFlipH(), false);
   });
 });
 
 test('auto, left sidebar (content on right): faces right → already faces content → no flip', () => {
-  withStore({ personalInfo: pi({ photoFlip: 'auto', photoFacing: 'right' }), sidebarPosition: 'left' }, () => {
+  withStore({ ...flip('auto', 'right'), sidebarPosition: 'left' }, () => {
     assert.equal(resolveExportFlipH(), false);
   });
 });
 
 test('auto, left sidebar (content on right): faces left → away → FLIP', () => {
-  withStore({ personalInfo: pi({ photoFlip: 'auto', photoFacing: 'left' }), sidebarPosition: 'left' }, () => {
+  withStore({ ...flip('auto', 'left'), sidebarPosition: 'left' }, () => {
     assert.equal(resolveExportFlipH(), true);
   });
 });
 
 test('auto, right sidebar (content on left): faces left → already faces content → no flip', () => {
-  withStore({ personalInfo: pi({ photoFlip: 'auto', photoFacing: 'left' }), sidebarPosition: 'right' }, () => {
+  withStore({ ...flip('auto', 'left'), sidebarPosition: 'right' }, () => {
     assert.equal(resolveExportFlipH(), false);
   });
 });
 
 test('auto, right sidebar (content on left): faces right → away → FLIP', () => {
-  withStore({ personalInfo: pi({ photoFlip: 'auto', photoFacing: 'right' }), sidebarPosition: 'right' }, () => {
+  withStore({ ...flip('auto', 'right'), sidebarPosition: 'right' }, () => {
     assert.equal(resolveExportFlipH(), true);
   });
 });
 
 test('auto, header-right position (content on left) overrides sidebar: faces right → FLIP', () => {
-  withStore({ personalInfo: pi({ photoFlip: 'auto', photoFacing: 'right' }), photoPosition: 'header-right', sidebarPosition: 'left' }, () => {
+  withStore({ ...flip('auto', 'right'), photoPosition: 'header-right', sidebarPosition: 'left' }, () => {
     assert.equal(resolveExportFlipH(), true);
   });
 });
 
 test('auto, main-left position (content on right): faces right → no flip', () => {
-  withStore({ personalInfo: pi({ photoFlip: 'auto', photoFacing: 'right' }), photoPosition: 'main-left', sidebarPosition: 'right' }, () => {
+  withStore({ ...flip('auto', 'right'), photoPosition: 'main-left', sidebarPosition: 'right' }, () => {
     assert.equal(resolveExportFlipH(), false);
   });
 });
 
 test('auto tolerates JSON-wrapped position/sidebar values', () => {
-  withStore({ personalInfo: pi({ photoFlip: 'auto', photoFacing: 'left' }), photoPosition: JSON.stringify('sidebar-top'), sidebarPosition: JSON.stringify('left') }, () => {
+  withStore({ ...flip('auto', 'left'), photoPosition: JSON.stringify('sidebar-top'), sidebarPosition: JSON.stringify('left') }, () => {
     assert.equal(resolveExportFlipH(), true); // sidebar left → content right → faces left → flip
   });
 });

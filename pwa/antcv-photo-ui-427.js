@@ -22,7 +22,7 @@
 (function () {
   'use strict';
 
-  var SUITE_VERSION = '1.51.761-photo-flip';
+  var SUITE_VERSION = '1.51.781-photo-flip-detect';
   if (window.__antcvPhotoUI427 === SUITE_VERSION) return;
   window.__antcvPhotoUI427 = SUITE_VERSION;
 
@@ -895,41 +895,35 @@
     var UI_ATTR = 'data-antcv-photo-flip-ctrl';
     var FLIP_TX = 'scaleX(-1)';
 
+    // STANDALONE keys — NOT personalInfo.stylePrefs. The Layout "Reset all"
+    // button and cloud-restore-on-export both wipe stylePrefs
+    // ([[sidecar-prefs-clobber-hazard]]), which was erasing the user's Flip
+    // pick and detected orientation the moment they pressed Reset. Standalone
+    // keys survive both, exactly like the CL slogan/signature keys.
+    var K_FLIP = 'antcv:photoFlip', K_FACE = 'antcv:photoFacing', K_SIG = 'antcv:photoFacingSig';
     function readPI() {
       try { return JSON.parse(localStorage.getItem('personalInfo') || '{}') || {}; }
       catch (_) { return {}; }
     }
-    function readSP() {
-      var pi = readPI();
-      return (pi && pi.stylePrefs && typeof pi.stylePrefs === 'object') ? pi.stylePrefs : {};
-    }
+    function lsGet(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
+    function lsSet(k, v) { try { localStorage.setItem(k, String(v)); } catch (_) {} }
     function readMode() {
-      var v = String(readSP().photoFlip || '').trim().toLowerCase();
+      var v = String(lsGet(K_FLIP) || '').trim().toLowerCase();
       return MODES.indexOf(v) >= 0 ? v : DEFAULT_MODE;
     }
     function writeMode(mode) {
-      try {
-        var pi = readPI();
-        if (!pi.stylePrefs || typeof pi.stylePrefs !== 'object') pi.stylePrefs = {};
-        pi.stylePrefs.photoFlip = mode;
-        localStorage.setItem('personalInfo', JSON.stringify(pi));
-      } catch (_) {}
+      lsSet(K_FLIP, mode);
       // Nudge the app to re-read sections so the preview repaints (the native
       // photo render doesn't observe this key). Content sidecars fast-bail.
       try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: 'photo-flip' } })); } catch (_) {}
     }
     function readFacing() {
-      var v = String(readSP().photoFacing || '').trim().toLowerCase();
+      var v = String(lsGet(K_FACE) || '').trim().toLowerCase();
       return (v === 'left' || v === 'right' || v === 'center') ? v : 'unknown';
     }
     function writeFacing(facing, sig) {
-      try {
-        var pi = readPI();
-        if (!pi.stylePrefs || typeof pi.stylePrefs !== 'object') pi.stylePrefs = {};
-        pi.stylePrefs.photoFacing = facing;
-        pi.stylePrefs.photoFacingSig = sig;
-        localStorage.setItem('personalInfo', JSON.stringify(pi));
-      } catch (_) {}
+      lsSet(K_FACE, facing);
+      lsSet(K_SIG, sig);
     }
 
     // ── content-side (which way the subject should look) ───────────────────
@@ -974,31 +968,68 @@
       return 'center';
     }
     function heuristicFacing(img) {
-      // Fallback when the Shape Detection API is absent: a turned head packs the
-      // high-contrast features (eyes/nose/mouth) toward the side it faces while
-      // the far cheek is smooth. Compare horizontal-gradient energy of the left
-      // vs right half of the upper-centre band and face toward the busier half.
+      // Fallback when the Shape Detection API is absent (usual case on desktop).
+      // Locate the FACE (skin-tone region), then find where the dark facial
+      // features (eyes/brows/nose/mouth) sit relative to the head centre: a
+      // turned head shifts them toward the side it faces, while the far cheek
+      // shows more bare skin. Background is excluded by only sampling inside the
+      // skin bounding box, so a dark studio backdrop doesn't fool it.
       try {
-        var W = 64, H = 64;
+        var W = 96, H = 96;
         var c = document.createElement('canvas'); c.width = W; c.height = H;
         var ctx = c.getContext('2d'); if (!ctx) return 'unknown';
         ctx.drawImage(img, 0, 0, W, H);
-        var d = ctx.getImageData(0, 0, W, H).data;
+        var d;
+        try { d = ctx.getImageData(0, 0, W, H).data; } catch (_) { return 'unknown'; }
+        function skin(i) {
+          var r = d[i], g = d[i + 1], b = d[i + 2];
+          return r > 60 && g > 40 && b > 20 && r >= g && g >= b &&
+            (r - b) > 12 && (Math.max(r, g, b) - Math.min(r, g, b)) > 12;
+        }
         function lum(i) { return 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; }
-        var leftE = 0, rightE = 0, mid = W / 2;
-        var y0 = Math.round(H * 0.15), y1 = Math.round(H * 0.70);
-        for (var y = y0; y < y1; y++) {
-          for (var x = 1; x < W - 1; x++) {
+        // 1) skin mask -> head bounding box (5th..95th pct = robust to strays).
+        var xs = [], ys = [], sumX = 0, n = 0;
+        for (var y = 0; y < H; y++) {
+          for (var x = 0; x < W; x++) {
             var i = (y * W + x) * 4;
-            var g = Math.abs(lum(i + 4) - lum(i - 4));
-            if (x < mid) leftE += g; else rightE += g;
+            if (skin(i)) { xs.push(x); ys.push(y); sumX += x; n++; }
           }
         }
-        var tot = leftE + rightE;
-        if (tot <= 0) return 'unknown';
-        var bias = (rightE - leftE) / tot;
-        if (bias > 0.10) return 'right';
-        if (bias < -0.10) return 'left';
+        if (n < 60) return 'unknown';
+        xs.sort(function (a, b) { return a - b; });
+        ys.sort(function (a, b) { return a - b; });
+        var bx0 = xs[Math.floor(n * 0.05)], bx1 = xs[Math.floor(n * 0.95)];
+        var by0 = ys[Math.floor(n * 0.05)], by1 = ys[Math.floor(n * 0.95)];
+        var bw = Math.max(1, bx1 - bx0), bh = Math.max(1, by1 - by0);
+        var headCx = sumX / n; // skin centroid ~ head centre
+        // 2) dark-feature centroid INSIDE the head box (upper 3/4, skip chin).
+        var fy0 = Math.round(by0 + bh * 0.10), fy1 = Math.round(by0 + bh * 0.75);
+        var lums = [];
+        for (var y = fy0; y < fy1; y++) {
+          for (var x = bx0; x <= bx1; x++) lums.push(lum((y * W + x) * 4));
+        }
+        if (!lums.length) return 'unknown';
+        lums.sort(function (a, b) { return a - b; });
+        var dk = lums[Math.floor(lums.length * 0.22)]; // darkest ~quartile = features
+        var fSumX = 0, fW = 0;
+        for (var y = fy0; y < fy1; y++) {
+          for (var x = bx0; x <= bx1; x++) {
+            var L = lum((y * W + x) * 4);
+            if (L < dk) { var w = dk - L; fSumX += x * w; fW += w; }
+          }
+        }
+        if (fW > 0) {
+          var off = (fSumX / fW - headCx) / bw; // normalised feature offset
+          if (off < -0.035) return 'left';
+          if (off > 0.035) return 'right';
+        }
+        // 3) near-frontal tie-break: the FAR cheek shows more skin, so heavier
+        //    skin mass sits OPPOSITE the facing direction (split at box centre).
+        var gmid = (bx0 + bx1) / 2, lSkin = 0, rSkin = 0;
+        for (var k = 0; k < xs.length; k++) { if (xs[k] < gmid) lSkin++; else rSkin++; }
+        var soff = (rSkin - lSkin) / n;
+        if (soff > 0.06) return 'left';   // more skin on the right -> faces left
+        if (soff < -0.06) return 'right';
         return 'center';
       } catch (_) { return 'unknown'; }
     }
@@ -1042,9 +1073,8 @@
       var pi = readPI();
       var photo = (pi && typeof pi.photo === 'string') ? pi.photo : '';
       if (!photo || detecting) return;
-      var sp = (pi.stylePrefs && typeof pi.stylePrefs === 'object') ? pi.stylePrefs : {};
       var sig = photoSig(photo);
-      if (sp.photoFacingSig === sig) return; // already detected for this exact photo
+      if (lsGet(K_SIG) === sig) return; // already detected for this exact photo
       detecting = true;
       detectFacing(photo).then(function (facing) {
         detecting = false;
@@ -1119,9 +1149,13 @@
         var text = '', disp = 'none';
         if (mode === 'auto') {
           var f = readFacing();
-          text = (f === 'unknown' || f === 'center')
-            ? 'Auto: no clear orientation detected — not flipped.'
-            : 'Auto: subject faces ' + f + ' — ' + (resolveFlipH() ? 'flipped to face the content.' : 'already faces the content.');
+          if (f === 'left' || f === 'right') {
+            text = 'Auto: subject faces ' + f + ' — ' + (resolveFlipH() ? 'flipped to face the content.' : 'already faces the content.');
+          } else if (f === 'center') {
+            text = 'Auto: subject looks front-facing — no flip needed.';
+          } else {
+            text = 'Auto: orientation not detected yet — no flip. Use On to mirror.';
+          }
           disp = '';
         }
         if (hint.textContent !== text) hint.textContent = text;
@@ -1202,7 +1236,7 @@
     }
 
     window.AntcvPhotoFlip = {
-      version: '1.51.761',
+      version: '1.51.781',
       MODES: MODES.slice(),
       _readMode: readMode,
       _readFacing: readFacing,

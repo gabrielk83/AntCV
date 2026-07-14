@@ -33,6 +33,7 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mrkppnoa_bzvg","started":"2026-07-14T14:41:01.811Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.802-1.51.821","task":"contact-line: drop bullet when emojis + font +0.5pt (preview/srcdoc/OOXML)","beat":"2026-07-14T14:41:02.317Z"}
 {"id":"sh_mrl2y64c_6npv","started":"2026-07-14T20:04:36.350Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.1164-1.51.1183","task":"slogan CJLR single-cycler + Fit-it double-cap fix + apply-corrections for standalone editables + justify-accept","beat":"2026-07-14T20:04:37.031Z"}
 {"id":"sh_mrl30f1d_fcjv","started":"2026-07-14T20:06:21.224Z","host":"GabyPC2","worktree":null,"branch":"shift-1-51-741","range":"1.51.1184-1.51.1203","task":"header/group CJLR preview bridge + role-head align + panel-211 wrap","beat":"2026-07-14T20:06:21.632Z"}
+{"id":"sh_mrl3mn2s_icgp","started":"2026-07-14T20:23:38.074Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.1204-1.51.1223","task":"SLOGAN-CJLR-RERENDER-001: force preview re-render on slogan/standalone localStorage changes","beat":"2026-07-14T20:23:38.469Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

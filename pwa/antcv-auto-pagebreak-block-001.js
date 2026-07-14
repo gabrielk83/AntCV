@@ -1775,7 +1775,12 @@
   }
 
   var pending = false;
+  var __pbFreezePending = false;
   function schedule() {
+    // EDIT-FREEZE-001 (owner 2026-07-14): don't re-paginate mid-edit — the page
+    // split reflows the (CONT.) boundary under the caret and knocks the user out.
+    // Defer while a preview field is focused; run once when editing ends.
+    if (window.__antcvEditing) { __pbFreezePending = true; return; }
     if (pending) return;
     pending = true;
     // A genuine reactive trigger always runs the STABLE band first.
@@ -1785,6 +1790,7 @@
       setTimeout(run, 250);
     });
   }
+  try { window.addEventListener('antcv:edit-freeze-end', function () { if (__pbFreezePending) { __pbFreezePending = false; schedule(); } }); } catch (_) {}
 
   // SIDEBAR-SHRINK-RECLAIM-001: delayed TIGHT recheck. Armed after a reactive
   // pass settles; fires once with the 40px band to reclaim the last line. It

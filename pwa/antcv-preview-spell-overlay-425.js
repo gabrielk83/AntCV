@@ -176,13 +176,15 @@
 
   // ─── popover ─────────────────────────────────────────────────────
   var pop = null;
-  var popMark = null;
-  function closePop() { if (pop && pop.parentElement) pop.parentElement.removeChild(pop); pop = null; popMark = null; }
+  var popWord = null, popSid = null;
+  function closePop() { if (pop && pop.parentElement) pop.parentElement.removeChild(pop); pop = null; popWord = null; popSid = null; }
   function openPop(mark) {
     closePop();
-    popMark = mark;
     var word = mark.getAttribute('data-antcv-pspell-word');
     var sid = mark.getAttribute('data-antcv-pspell-sid');
+    // Track by WORD+SID, not the element: scan re-creates the mark node between
+    // clicks, so element identity can't tell "same word clicked twice".
+    popWord = word; popSid = sid;
     var r = mark.getBoundingClientRect();
     pop = document.createElement('div');
     pop.className = 'no-print';
@@ -221,7 +223,7 @@
     });
     setTimeout(function () {
       document.addEventListener('pointerdown', function onDoc(ev) {
-        if (pop && !pop.contains(ev.target) && ev.target !== mark) { closePop(); document.removeEventListener('pointerdown', onDoc); }
+        if (pop && !pop.contains(ev.target) && !(ev.target && ev.target.getAttribute && ev.target.getAttribute('data-antcv-pspell-word'))) { closePop(); document.removeEventListener('pointerdown', onDoc); }
       });
     }, 0);
   }
@@ -232,14 +234,22 @@
       // popup; a SECOND click on the SAME underlined word closes it and lets the
       // click through so the caret lands and the word becomes editable (previously
       // preventDefault blocked editing of any spell-underlined word).
-      if (pop && popMark === t) { closePop(); return; }
+      var w = t.getAttribute('data-antcv-pspell-word'), s = t.getAttribute('data-antcv-pspell-sid');
+      if (pop && popWord === w && popSid === s) { closePop(); return; }
       ev.preventDefault(); openPop(t);
     }
   });
 
   // ─── scheduling ──────────────────────────────────────────────────
   var t = null;
-  function schedule() { clearTimeout(t); t = setTimeout(scan, 500); }
+  var __spFreezePending = false;
+  function schedule() {
+    // EDIT-FREEZE-001: don't re-scan/re-mark mid-edit — churning <mark> nodes
+    // around the caret contributes to the jump. Defer; catch up on blur.
+    if (window.__antcvEditing) { __spFreezePending = true; return; }
+    clearTimeout(t); t = setTimeout(scan, 500);
+  }
+  try { window.addEventListener('antcv:edit-freeze-end', function () { if (__spFreezePending) { __spFreezePending = false; schedule(); } }); } catch (_) {}
   // Faster realign specifically after a scroll (the marks are hidden meanwhile).
   var st = null;
   function scrollSchedule() { hideOverlayNow(); clearTimeout(st); st = setTimeout(scan, 200); }

@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.823-edit-focus-002';
+const CACHE = 'antcv-1.51.842-photo-flip-anchor';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

@@ -22,7 +22,7 @@
 (function () {
   'use strict';
 
-  var SUITE_VERSION = '1.51.802-photo-flip-redetect';
+  var SUITE_VERSION = '1.51.842-photo-flip-anchor';
   if (window.__antcvPhotoUI427 === SUITE_VERSION) return;
   window.__antcvPhotoUI427 = SUITE_VERSION;
 
@@ -907,7 +907,7 @@
     // heuristic auto-heals every stale (esp. 'unknown') result WITHOUT the user
     // having to re-upload. Without this, a photo whose signature was cached as
     // 'unknown' by an older build is never re-analysed by the new one.
-    var DET_VER = 'm2';
+    var DET_VER = 'm3';
     function readPI() {
       try { return JSON.parse(localStorage.getItem('personalInfo') || '{}') || {}; }
       catch (_) { return {}; }
@@ -1030,16 +1030,16 @@
         }
         if (fW > 0) {
           var off = (fSumX / fW - headCx) / bw; // normalised feature offset
-          if (off < -0.035) return 'left';
-          if (off > 0.035) return 'right';
+          if (off < -0.02) return 'left';
+          if (off > 0.02) return 'right';
         }
         // 3) near-frontal tie-break: the FAR cheek shows more skin, so heavier
         //    skin mass sits OPPOSITE the facing direction (split at box centre).
         var gmid = (bx0 + bx1) / 2, lSkin = 0, rSkin = 0;
         for (var k = 0; k < xs.length; k++) { if (xs[k] < gmid) lSkin++; else rSkin++; }
         var soff = (rSkin - lSkin) / n;
-        if (soff > 0.06) return 'left';   // more skin on the right -> faces left
-        if (soff < -0.06) return 'right';
+        if (soff > 0.04) return 'left';   // more skin on the right -> faces left
+        if (soff < -0.04) return 'right';
         return 'center';
       } catch (_) { return 'unknown'; }
     }
@@ -1084,13 +1084,16 @@
       var eyeMid = (rEye[0] + lEye[0]) / 2;
       var interEye = Math.abs(lEye[0] - rEye[0]) || 1;
       var noseOff = (nose[0] - eyeMid) / interEye; // <0: nose left of eyes -> faces image-left
-      if (noseOff < -0.12) return 'left';
-      if (noseOff > 0.12) return 'right';
+      // Decisive thresholds: the owner prefers a call over "unclear", and a
+      // slight head turn should register (a wrong call is harmless — Off/On
+      // override). ~6% of inter-eye distance ≈ a small yaw.
+      if (noseOff < -0.06) return 'left';
+      if (noseOff > 0.06) return 'right';
       var earMid = (rEar[0] + lEar[0]) / 2;
       var earSpan = Math.abs(lEar[0] - rEar[0]) || 1;
       var earOff = (nose[0] - earMid) / earSpan;
-      if (earOff < -0.06) return 'left';
-      if (earOff > 0.06) return 'right';
+      if (earOff < -0.03) return 'left';
+      if (earOff > 0.03) return 'right';
       return 'center';
     }
     function detectViaModel(img) {
@@ -1295,31 +1298,69 @@
       wrap.appendChild(lbl); wrap.appendChild(row); wrap.appendChild(hint);
       return wrap;
     }
+    var POS_FRAGMENTS = ['sidebar top', 'sidebar btm', 'sidebar bottom', 'header left',
+      'header right', 'main left', 'main right', 'hidden', 'band', 'bridge'];
+    function looksLikePosBtn(txt) {
+      var t = String(txt || '').toLowerCase();
+      for (var i = 0; i < POS_FRAGMENTS.length; i++) if (t.indexOf(POS_FRAGMENTS[i]) >= 0) return true;
+      return false;
+    }
     function findPhotoSection() {
-      // Same anchor as MODULE C: the PROFILE PHOTO control container (the label's
-      // parent). Appending our control there makes it a child of the collapse
-      // sidecar's `ctrl`, so it hides/shows with the rest of the panel.
+      // Anchor to the control body via its POSITION button ROW (the
+      // Sidebar-top / Hidden / Header-left … buttons that always exist in the
+      // PROFILE PHOTO control). Its PARENT is the control body = the collapse
+      // sidecar's ctrl. CRITICAL: this never touches the label. The old anchors
+      // keyed off the label's text; when our control's text (or the bridge
+      // button) landed in/near the label, the label exceeded the collapse
+      // sidecar's 40-char cap, so it stopped recognising the control and the
+      // whole panel — flip control included — vanished (owner's report).
       try {
-        var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
-          acceptNode: function (node) {
-            var t = (node.textContent || '').trim();
-            return (t && /^PROFILE PHOTO$/i.test(t)) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
-          },
-        });
-        var tNode = walker.nextNode();
-        if (!tNode) return null;
-        var n = tNode.parentElement;
-        if (n && n.parentElement) n = n.parentElement;
-        return n;
-      } catch (_) { return null; }
+        var btns = document.querySelectorAll('button');
+        var rows = [];
+        for (var i = 0; i < btns.length; i++) {
+          if (!looksLikePosBtn(btns[i].textContent)) continue;
+          var p = btns[i].parentElement;
+          if (!p) continue;
+          var hit = null;
+          for (var j = 0; j < rows.length; j++) if (rows[j].el === p) { hit = rows[j]; break; }
+          if (hit) hit.n++; else rows.push({ el: p, n: 1 });
+        }
+        var best = null;
+        for (var k = 0; k < rows.length; k++) if (!best || rows[k].n > best.n) best = rows[k];
+        if (best && best.n >= 2 && best.el.parentElement) return best.el.parentElement;
+      } catch (_) {}
+      // Fallbacks: the collapse sidecar's stamp, then the labelled control.
+      try { var c = document.querySelector('[data-antcv-photo-collapse="1"]'); if (c) return c; } catch (_) {}
+      try {
+        var els = document.querySelectorAll('div, section, aside');
+        for (var m = 0; m < els.length; m++) {
+          var fc = els[m].firstElementChild;
+          if (!fc) continue;
+          var t = (fc.textContent || '').trim();
+          // Case-SENSITIVE 'PROFILE PHOTO' — the Layout position control uses
+          // all-caps; the separate upload block is title-case 'Profile Photo'
+          // and must NOT match (that's where the control wrongly attached).
+          if (t.length < 40 && /^[▸▾\s]*PROFILE PHOTO\s*$/.test(t)) return els[m];
+        }
+      } catch (_) {}
+      return null;
     }
     function ensureUI() {
-      // Fast path: already injected + connected → just refresh (skip the walk).
-      var existing = document.querySelector('[' + UI_ATTR + '="1"]');
-      if (existing && existing.isConnected) { refreshUI(existing); return; }
       var section = findPhotoSection();
-      if (!section) return;
-      if (section.querySelector('[' + UI_ATTR + '="1"]')) return;
+      if (!section) return; // control area not present yet; heal on a later tick
+      // Dedup any leaked copies, keep one, and RELOCATE it into the correct
+      // control (self-heals a copy that drifted into the wrong container).
+      var all = document.querySelectorAll('[' + UI_ATTR + '="1"]');
+      var keep = null;
+      for (var i = 0; i < all.length; i++) {
+        if (!keep) keep = all[i];
+        else { try { all[i].parentElement && all[i].parentElement.removeChild(all[i]); } catch (_) {} }
+      }
+      if (keep) {
+        if (keep.parentElement !== section) { try { section.appendChild(keep); } catch (_) {} }
+        refreshUI(keep);
+        return;
+      }
       var ctrl = buildControl();
       section.appendChild(ctrl);
       refreshUI(ctrl);
@@ -1334,7 +1375,7 @@
     }
 
     window.AntcvPhotoFlip = {
-      version: '1.51.802',
+      version: '1.51.842',
       MODES: MODES.slice(),
       _readMode: readMode,
       _readFacing: readFacing,

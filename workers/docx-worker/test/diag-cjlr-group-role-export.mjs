@@ -161,6 +161,20 @@ function check(name, cond, detail) { results.push({ name, ok: !!cond, detail });
   check('non-grpKeep group WITH child still renders head (control)', present(xml, 'GRPHIDDENHEAD'), 'present=' + present(xml, 'GRPHIDDENHEAD'));
 }
 
+// ─── GROUP-CJLR-SCOPE-001: __group__ moves GROUP HEADS only, NOT content rows ───
+{
+  const xml = await gen({ sections: [
+    { id: 'gs', title: 'GS', loc: 'main', on: true, type: 'rich_block', item_alignment: { '__group__': 'right' },
+      items: [{ grp: true, t: 'SCOPEHEAD' }, { b: 'L', t: 'scoped content row body' }] },
+    { id: 'es', title: 'EXPERIENCE', loc: 'main', on: true, type: 'experience', item_alignment: { '__group__': 'right' },
+      roles: [{ title: 'SCOPEROLE', company: 'CoS', years: '2020', bullets: ['scoped role bullet body'] }] },
+  ] });
+  check('__group__=right moves the rich_block GROUP HEAD', jcOf(xml, 'SCOPEHEAD') === 'right', 'jc=' + jcOf(xml, 'SCOPEHEAD'));
+  check('__group__ does NOT move rich_block content row (grouped default left)', jcOf(xml, 'scoped content row body') === 'left', 'jc=' + jcOf(xml, 'scoped content row body'));
+  check('__group__=right moves the experience ROLE LINE (head)', jcOf(xml, 'SCOPEROLE') === 'right', 'jc=' + jcOf(xml, 'SCOPEROLE'));
+  check('__group__ does NOT move role bullet (justify default)', jcOf(xml, 'scoped role bullet body') === 'both', 'jc=' + jcOf(xml, 'scoped role bullet body'));
+}
+
 const fails = results.filter((r) => !r.ok);
 log('');
 log(fails.length === 0 ? ('ALL ' + results.length + ' CHECKS PASS — CJLR-GROUP-ROLE-EXPORT OK') : (fails.length + '/' + results.length + ' CHECKS FAIL'));

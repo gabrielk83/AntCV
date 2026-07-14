@@ -27168,7 +27168,9 @@ function renderRichBlock(s, ctx, isSidebar) {
   let __wholeMoveSkip = !!s._antcvFirstItemPageMoved;
   // RICH-BLOCK-GROUP-ALIGN-DEFAULT-001 (owner 2026-06-25): a GROUPED rich_block (TOOLS & METHODS,
   // REGULATORY CONTEXT) defaults its GROUP-NAME rows to CENTER and its CONTENT rows to LEFT; a
-  // non-grouped rich_block keeps JUSTIFY. Explicit per-row / __group__ CJLR overrides still win.
+  // non-grouped rich_block keeps JUSTIFY. Explicit per-row CJLR wins; __group__ (the "Groups"
+  // control) aligns GROUP HEADS ONLY, NOT content rows — GROUP-CJLR-SCOPE-001, mirroring the preview
+  // __rowAlign (app.src.js: `isGrp ? __al.__group__ : void 0`). groupCjlr feeds the group-head galign below.
   // Mirrors the preview's __rowAlign (app.src.js RICH-BLOCK-GROUP-ALIGN-DEFAULT-001).
   const __hasGrp = items.some((it) => it && typeof it === "object" && it.grp);
   // GROUP-EMPTY-HIDE-001 (owner 2026-07-06): mirror the preview (app.src.js) — a {grp} sub-heading
@@ -27194,7 +27196,7 @@ function renderRichBlock(s, ctx, isSidebar) {
   };
   items.forEach((it, i) => {
     const row = it && typeof it === "object" ? it : { t: String(it || "") };
-    const align = paraAlignPath(s, "items." + i + ".t") ?? paraAlignPath(s, "items." + i) ?? groupCjlr ?? (__hasGrp ? AlignmentType.LEFT : AlignmentType.JUSTIFIED);
+    const align = paraAlignPath(s, "items." + i + ".t") ?? paraAlignPath(s, "items." + i) ?? (__hasGrp ? AlignmentType.LEFT : AlignmentType.JUSTIFIED);
     // RICH-BLOCK-GROUP-001: a grp row is a bold sub-heading (like labeled_list).
     if (row.grp) {
       // ROLES-AS-RICHBLOCK-001 general model (Increment A): a group heading may
@@ -27658,7 +27660,9 @@ function renderExperience(s, ctx) {
     if (Array.isArray(role.bullets)) {
       const _bl = role.bullets.filter(Boolean);
       _bl.forEach((b, bi) => {
-        const bAlign = paraAlignPath(s, "roles." + ri + ".bullets." + bi) ?? paraAlign(s, null, void 0);
+        // GROUP-CJLR-SCOPE-001: a role bullet follows its own per-bullet CJLR only; __group__
+        // (the "Groups" control) aligns the role LINE/head, not the bullets — matches the preview.
+        const bAlign = paraAlignPath(s, "roles." + ri + ".bullets." + bi) ?? void 0;
         // keep every bullet chained to what follows; the LAST bullet glues to
         // the Results paragraph when one follows (was: dropped the chain here).
         const _keepWithNext = bi < _bl.length - 1 || _hasResults;
@@ -28733,7 +28737,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.157-underrole-all";
+var VERSION = "1.14.158-group-cjlr-scope";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

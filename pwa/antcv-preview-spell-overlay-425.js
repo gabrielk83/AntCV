@@ -176,9 +176,11 @@
 
   // ─── popover ─────────────────────────────────────────────────────
   var pop = null;
-  function closePop() { if (pop && pop.parentElement) pop.parentElement.removeChild(pop); pop = null; }
+  var popMark = null;
+  function closePop() { if (pop && pop.parentElement) pop.parentElement.removeChild(pop); pop = null; popMark = null; }
   function openPop(mark) {
     closePop();
+    popMark = mark;
     var word = mark.getAttribute('data-antcv-pspell-word');
     var sid = mark.getAttribute('data-antcv-pspell-sid');
     var r = mark.getBoundingClientRect();
@@ -225,7 +227,14 @@
   }
   document.addEventListener('click', function (ev) {
     var t = ev.target;
-    if (t && t.getAttribute && t.getAttribute('data-antcv-pspell-word')) { ev.preventDefault(); openPop(t); }
+    if (t && t.getAttribute && t.getAttribute('data-antcv-pspell-word')) {
+      // SPELL-MARK-EDIT-001 (owner 2026-07-14): first click shows the suggestion
+      // popup; a SECOND click on the SAME underlined word closes it and lets the
+      // click through so the caret lands and the word becomes editable (previously
+      // preventDefault blocked editing of any spell-underlined word).
+      if (pop && popMark === t) { closePop(); return; }
+      ev.preventDefault(); openPop(t);
+    }
   });
 
   // ─── scheduling ──────────────────────────────────────────────────

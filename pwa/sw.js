@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.882-seam-fallback';
+const CACHE = 'antcv-1.51.883-editable-marks';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

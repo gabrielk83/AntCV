@@ -108,7 +108,13 @@
   }
 
   var pending = null;
+  var __freezePending = false;
   function schedule() {
+    // EDIT-FREEZE-001 (owner 2026-07-14): a keystroke's style/childList mutation
+    // must NOT re-apply the sidebar bg token mid-edit — that reflow under the caret
+    // is the "sidebar colour dancing" that knocked the user out. Defer while a
+    // preview field is focused; run once when editing ends.
+    if (window.__antcvEditing) { __freezePending = true; return; }
     if (pending != null) return;
     pending = requestAnimationFrame(function () {
       pending = null;
@@ -117,6 +123,7 @@
       }
     });
   }
+  try { window.addEventListener('antcv:edit-freeze-end', function () { if (__freezePending) { __freezePending = false; schedule(); } }); } catch (_) {}
 
   function boot() {
     schedule();

@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.1124-spell-apply';
+const CACHE = 'antcv-1.51.1125-cjlr-emit-fix';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

@@ -46,9 +46,9 @@
       function setPage(i, n) { var m = readJSON("antcv:itemPages"); if (!m[sid] || typeof m[sid] !== "object") m[sid] = {}; m[sid][String(i)] = n; m[sid]["items." + i] = n; writeJSON("antcv:itemPages", m); emit("antcv:item-pages-changed", { sid: sid, index: i, page: n }); rerender(); }
       function keyFor(i) { return (fromRoles && rows[i] && rows[i]._key) ? rows[i]._key : ("items." + i); }
       function getAlign(i) { try { var b = readJSON("antcvItemAlignment")[sid] || {}; var v = b[keyFor(i)] || b["items." + i] || b[String(i)] || "justify"; return ALIGNS.indexOf(v) >= 0 ? v : "justify"; } catch (_) { return "justify"; } }
-      function setAlign(i, v) { var m = readJSON("antcvItemAlignment"); if (!m[sid] || typeof m[sid] !== "object") m[sid] = {}; m[sid][keyFor(i)] = v; if (!fromRoles) { m[sid]["items." + i] = v; m[sid][String(i)] = v; } writeJSON("antcvItemAlignment", m); emit("antcv:item-align-changed", { sid: sid, index: i, alignment: v }); emit("antcv:sections-updated", { source: "rb-editor-align" }); rerender(); }
+      function setAlign(i, v) { var m = readJSON("antcvItemAlignment"); if (!m[sid] || typeof m[sid] !== "object") m[sid] = {}; m[sid][keyFor(i)] = v; if (!fromRoles) { m[sid]["items." + i] = v; m[sid][String(i)] = v; } writeJSON("antcvItemAlignment", m); emit("antcv:item-align-changed", { sid: sid, index: i, alignment: v }); rerender(); }
       function getGroup() { try { var b = readJSON("antcvItemAlignment")[sid] || {}; var v = b.__group__; return ALIGNS.indexOf(v) >= 0 ? v : "justify"; } catch (_) { return "justify"; } }
-      function setGroup(v) { var m = readJSON("antcvItemAlignment"); if (!m[sid] || typeof m[sid] !== "object") m[sid] = {}; m[sid].__group__ = v; writeJSON("antcvItemAlignment", m); emit("antcv:item-align-changed", { sid: sid, index: -1, alignment: v }); emit("antcv:sections-updated", { source: "rb-editor-group" }); rerender(); }
+      function setGroup(v) { var m = readJSON("antcvItemAlignment"); if (!m[sid] || typeof m[sid] !== "object") m[sid] = {}; m[sid].__group__ = v; writeJSON("antcvItemAlignment", m); emit("antcv:item-align-changed", { sid: sid, index: -1, alignment: v }); rerender(); }
 
       var rows = (e.items && e.items.length ? e.items : [{ b: "", t: "" }]).map(function (x) {
         return x && typeof x === "object" ? x : { b: "", t: String(x || "") };

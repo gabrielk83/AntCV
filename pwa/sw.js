@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.1304-slogan-brand-color';
+const CACHE = 'antcv-1.51.1344-meta-stick-load-editor';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

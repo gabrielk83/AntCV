@@ -16014,7 +16014,16 @@
                 // Q&A) otherwise leak a whole "Responses to application questions" page into a JD
                 // (Trackman) that has none.
                 bo(null),
-                (function(){try{localStorage.removeItem("antcv:applicationQuestions");localStorage.removeItem("antcv:applicationQuestionsJd")}catch(e){}})(),
+                // META-STICK-001 (owner 2026-07-13, the "Novo ghost"): fetching a NEW JD must
+                // also reset the React identity (io.company/role/subtitle/greeting/opening).
+                // The clears above drop the stale rationale + Q&A, but the meta identity stuck,
+                // so a mislabelled company kept showing and every auto-sync tick STAMPED it onto
+                // the row (jd_company/jd_role/subtitle). Reset to the neutral meta default - the
+                // (re)generation repopulates it from the new JD; auto-sync sees an empty io.company
+                // and SKIPS the stamp (drift branch) until the real company is generated. Kill
+                // switch: antcv:disable-jd-meta-reset. (lo is in closure scope here - declared
+                // after this handler, same as bo above.)
+                (function(){try{if(localStorage.getItem("antcv:disable-jd-meta-reset")!=="1")lo({company:"",role:"",subtitle:"",greeting:"",opening:""})}catch(e){}})(),
                 qt(""),
                 Zt({ busy: !1, error: null, hint: o.wall_hint || null }),
                 Gr &&
@@ -17100,7 +17109,27 @@
                           try {
                             const mine = window.AntcvJdScope && window.AntcvJdScope.getCurrentAppId && window.AntcvJdScope.getCurrentAppId();
                             const rowId = e && (e.id || e.application_id);
-                            return !!(mine && rowId && String(mine) !== String(rowId));
+                            if (!(mine && rowId && String(mine) !== String(rowId))) return false;
+                            // LOAD-EDITOR-UNSOLICITED-001 (kernel-adopt carve-out): a tab with NO
+                            // specific app in progress (currentAppId 'kernel') must ADOPT the cloud
+                            // pointer's app - a job-tracker Open sets the pointer + reloads WITHOUT
+                            // claiming the app id for this tab, so on reload `mine` stays 'kernel' and
+                            // this raw drift check fired, skipping the sections/meta restore (the JD
+                            // block is outside the guard, so "JD loads but the editor shows the
+                            // unsolicited template"). EXCEPT when the pointer was set by a FOREIGN
+                            // device (cross-device-gen leak, already covered by the device guard):
+                            // a same-device / legacy (null-stamp) pointer at kernel = a deliberate
+                            // local open -> adopt. Mirrors the tested AntcvJdScope.shouldAdoptCloudPointer
+                            // helper (kernel -> adopt). Kill switch: antcv:disable-tracker-open-adopt.
+                            try {
+                              if (String(mine) === "kernel" && localStorage.getItem("antcv:disable-tracker-open-adopt") !== "1") {
+                                const myDev = window.AntcvJdScope && window.AntcvJdScope.deviceId && window.AntcvJdScope.deviceId();
+                                const setter = e && e._pointer_device_id;
+                                const foreignDev = !!(setter && myDev && String(setter) !== String(myDev));
+                                if (!foreignDev) return false;
+                              }
+                            } catch (_) {}
+                            return true;
                           } catch (_) { return false; }
                         })();
                         const __draftDrift2 =
@@ -20421,6 +20450,10 @@
             // (yo) AND the applicationQuestions store, so neither a stale company (CL-GHOST-COMPANY-001)
             // nor a prior JD's Q&A page can leak into the new application (see url-fetch).
             try { bo(null); localStorage.removeItem("antcv:applicationQuestions"); localStorage.removeItem("antcv:applicationQuestionsJd"); } catch (e) {}
+            // META-STICK-001 (owner 2026-07-13): uploading a NEW JD file must also reset the
+            // React identity so a stale/mislabelled company can't stick + get stamped by
+            // auto-sync (see the url-fetch twin above). Kill switch: antcv:disable-jd-meta-reset.
+            try { if (localStorage.getItem("antcv:disable-jd-meta-reset") !== "1") lo({ company: "", role: "", subtitle: "", greeting: "", opening: "" }); } catch (e) {}
           } catch (t) {
             (Ft({
               text: "",
@@ -22648,7 +22681,19 @@
                   try {
                     var mine = window.AntcvJdScope && window.AntcvJdScope.getCurrentAppId && window.AntcvJdScope.getCurrentAppId();
                     var rowId = e && (e.id || e.application_id);
-                    return !!(mine && rowId && String(mine) !== String(rowId));
+                    if (!(mine && rowId && String(mine) !== String(rowId))) return false;
+                    // LOAD-EDITOR-UNSOLICITED-001 (kernel-adopt carve-out - read-from-cloud twin
+                    // of the cold-restore guard): a kernel tab (no app in progress) must ADOPT the
+                    // cloud pointer's app unless a FOREIGN device set it. Kill: antcv:disable-tracker-open-adopt.
+                    try {
+                      if (String(mine) === "kernel" && localStorage.getItem("antcv:disable-tracker-open-adopt") !== "1") {
+                        var myDev = window.AntcvJdScope && window.AntcvJdScope.deviceId && window.AntcvJdScope.deviceId();
+                        var setter = e && e._pointer_device_id;
+                        var foreignDev = !!(setter && myDev && String(setter) !== String(myDev));
+                        if (!foreignDev) return false;
+                      }
+                    } catch (_) {}
+                    return true;
                   } catch (_) { return false; }
                 })();
                 var __draftDrift = __staleSamePtr || __foreignActiveHijack || __foreignAppId || (__curCo && "unsolicited" !== __curCo && ("" === __rowCo || "unsolicited" === __rowCo));

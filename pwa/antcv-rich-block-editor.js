@@ -58,7 +58,7 @@
       function deleteRow(i) { d({ items: rows.filter(function (x, j) { return j !== i; }), hidden: (e.hidden || []).filter(function (x, j) { return j !== i; }) }); }
       function addRow() { d({ items: rows.concat([{ b: "", t: "" }]) }); }
       function addGroup() { d({ items: rows.concat([{ grp: true, t: "" }]) }); }
-      function toggleGrp(i) { var o = rows.map(function (x, j) { return j === i ? (x.grp ? { b: x.b || "", t: x.t || "" } : { grp: true, t: x.t || "" }) : x; }); d({ items: o }); }
+      function toggleGrp(i) { var o = rows.map(function (x, j) { return j === i ? (x.grp ? { b: x.b || "", t: x.t || "" } : { grp: true, t: x.t || "", grpKeep: true }) : x; }); d({ items: o }); }
       function toggleRowHidden(i) { var hd = (e.hidden || []).slice(); hd[i] = !hd[i]; d({ hidden: hd }); }
 
       var btn = function (extra) { return Object.assign({ fontSize: 10, padding: "2px 6px", borderRadius: 3, cursor: "pointer", background: "none", whiteSpace: "nowrap", flexShrink: 0 }, extra || {}); };

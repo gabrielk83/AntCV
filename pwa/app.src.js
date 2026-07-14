@@ -6441,14 +6441,16 @@
                 // a plain group (no seg) falls through to the legacy single-text
                 // heading below, so existing rich_block sections are byte-identical.
                 if (Array.isArray(row.seg) && row.seg.length && window.AntcvRolesRichBlock && window.AntcvRolesRichBlock.renderGroupHead) {
-                  if (!__grpHasChild(i)) return null;
+                  if (!row.grpKeep && !__grpHasChild(i)) return null;
                   return {
                     key: String(i),
                     node: window.AntcvRolesRichBlock.renderGroupHead(React, { B: B, T: T, k: k, s: s, exp: $.exp, C: C, align: __rowAlign(i, true, row._key) }, row, i),
                   };
                 }
                 // GROUP-EMPTY-HIDE-001: no rendered child → hide the heading+label entirely.
-                if (!__grpHasChild(i)) return null;
+                // grpKeep = a group the user explicitly created via "▾ Make group" stays
+                // visible even childless (so it doesn't vanish while they add rows).
+                if (!row.grpKeep && !__grpHasChild(i)) return null;
                 return {
                   key: String(i),
                   node: React.createElement(

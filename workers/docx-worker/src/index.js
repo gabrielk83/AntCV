@@ -27156,7 +27156,7 @@ function renderRichBlock(s, ctx, isSidebar) {
       const __segs = Array.isArray(row.seg) ? row.seg.filter((x) => x && String(x.t || "").trim()) : null;
       const txt = String(row.t || "").trim();
       if ((!__segs || !__segs.length) && !txt) return;
-      if (!__grpHasChild(i)) return;   // GROUP-EMPTY-HIDE-001: no rendered child → hide heading
+      if (!row.grpKeep && !__grpHasChild(i)) return;   // GROUP-EMPTY-HIDE-001: no rendered child → hide heading (grpKeep = user-made group stays)
       const galign = paraAlignPath(s, "items." + i + ".t") ?? paraAlignPath(s, "items." + i) ?? groupCjlr ?? AlignmentType.CENTER;
       if (rowPage(i) >= 2) { if (__wholeMoveSkip) { __wholeMoveSkip = false; } else out.push(pbBreakPara()); }
       const __gHeadColor = isSidebar ? style.sidebarHeadColor : style.mainHeadColor;

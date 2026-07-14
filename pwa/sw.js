@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.1045-group-cjlr';
+const CACHE = 'antcv-1.51.1046-group-cjlr-redeploy';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

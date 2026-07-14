@@ -160,6 +160,26 @@ def fit(raw, *, light_gray_default="#eef1f4"):
         "mainYearColor": "#595959",
     }
 
+    # ── extra brand-pending surfaces (owner 2026-07-14) ──────────────────────
+    # Signature ink (transparent-bg image tinted to brand): sits on the WHITE CL
+    # main column -> a dark brand colour that reads on white.
+    signature_color = main_head
+    # Slogan: prominent CL line on white. Use the accent if it pops on white
+    # (AA_LARGE), else the brand head. Fit to brand; the slogan TEXT is generated
+    # separately (LLM, brand + user).
+    slogan_color = accent_on_white if contrast(accent_on_white, WHITE) >= AA_LARGE else main_head
+    # AI-assisted notice: subtle disclaimer -> a MUTED brand grey (low saturation,
+    # not a loud brand hue), still legible on white (>=AA).
+    _r, _g, _b = (c / 255.0 for c in _rgb(dark))
+    _h, _l, _s = colorsys.rgb_to_hls(_r, _g, _b)
+    _r, _g, _b = colorsys.hls_to_rgb(_h, 0.5, min(_s, 0.18))   # desaturate + mid-light
+    ai_notice_color = darken_until_on_white(_hex((_r * 255, _g * 255, _b * 255)), AA_TEXT)
+    # Profile photo: pick the variant whose background matches the surface the
+    # photo sits on (default placement straddles the dark sidebar band) so it
+    # blends; a thin brand-accent contour frames it. Owner can override.
+    photo_bg_pref = "dark" if rel_lum(sidebar_bg) < 0.4 else "light"
+    photo_contour = accent_on_white
+
     slots = {
         "headerBg": band_bg, "headerInk": header_ink,
         "sidebarBg": sidebar_bg, "sidebarInk": sidebar_ink, "sidebarHeadColor": sidebar_ink,
@@ -170,6 +190,11 @@ def fit(raw, *, light_gray_default="#eef1f4"):
         "mainCompanyColor": seg["mainCompanyColor"],
         "mainYearColor": seg["mainYearColor"],
         "mainSubHeadColor": seg["mainSubHeadColor"],
+        "signatureColor": signature_color,
+        "sloganColor": slogan_color,
+        "aiNoticeColor": ai_notice_color,
+        "photoBgPreference": photo_bg_pref,
+        "photoContourColor": photo_contour,
     }
     report = {
         "band(ink/bg)": [header_ink, band_bg, round(contrast(header_ink, band_bg), 2), contrast(header_ink, band_bg) >= AA_TEXT],

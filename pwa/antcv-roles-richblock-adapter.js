@@ -30,17 +30,52 @@
   var VERSION = '1.51.x-roles-richblock-adapter';
   var FLAG = 'antcv:roles-richblock';
 
-  // CUTOVER (owner 2026-07-14 "E is approved — do it"): rich_block is now the DEFAULT
-  // render + editor for professional experience. Roles are a universal rich_block whose
-  // group happens to be a 3-segment role line. The earlier default-on (1106) was reverted
-  // because the editor CJLR click emitted sections-updated → re-render storm on a long
-  // experience; that emit was removed (1125) and per-row/group/header CJLR are all
-  // live-verified (1.51.1005→1225), so the cutover is safe. The stored roles[] shape is
-  // preserved by the adapter, so EXPORT (worker reads roles[]) is unaffected.
-  // The flag stays as a ROLLBACK escape hatch only: set
-  // localStorage['antcv:roles-richblock']='0' to fall back to the legacy chimera render.
+  // CUTOVER (owner 2026-07-14 "E is approved — do it"): rich_block is the DEFAULT render +
+  // editor for professional experience. Roles are a universal rich_block whose group is a
+  // 3-segment role line. The stored roles[] shape is preserved by the adapter, so EXPORT
+  // reads roles[]. NOTE (AUTOPAGES-ITEM-TO-ROLE-001): when this is on, the autoPages
+  // measurer keys experience page-breaks by the FLATTENED rich_block item index (role heads
+  // + bullets), so the export payload builder (antcv-docx-client.js experience case) MUST
+  // translate those item-index breaks back to ROLE indices via the adapter item→role _key
+  // mapping — else roles don't split, the "(Cont.)" heading is lost, and the columns
+  // collapse to an 8-page sequential PDF. The flag stays as a ROLLBACK escape hatch only:
+  // localStorage['antcv:roles-richblock']='0' falls back to the legacy chimera render.
   function isOn() {
     try { return localStorage.getItem(FLAG) !== '0'; } catch (_) { return true; }
+  }
+
+  // AUTOPAGES-ITEM-TO-ROLE-001: given a section's autoPages sub-map keyed by FLATTENED
+  // rich_block item index (what the measurer writes when isOn()), return an equivalent map
+  // keyed by ROLE index (what the export payload builder reads). Each break at item I moves
+  // the ROLE that contains item I to that page; a bullet break pulls its whole role. Uses
+  // the adapter's own item._key ('roles.R' / 'roles.R.bullets.B') so it matches exactly how
+  // the preview flattened the roles. Returns the input unchanged if it already looks
+  // role-indexed (all keys < role count) or on any error (safe no-op).
+  // Caller gates on isOn() — when rich_block is on the measurer ALWAYS keys experience by
+  // the flattened item index, so translate unconditionally (no maxKey heuristic, which
+  // would mis-handle a short experience whose item breaks fall below the role count).
+  function itemAutoPagesToRoleAutoPages(section, autoR) {
+    try {
+      if (!autoR || typeof autoR !== 'object') return autoR;
+      var keys = Object.keys(autoR);
+      if (!keys.length) return autoR;
+      var adapted = adapt(section);
+      var items = adapted && Array.isArray(adapted.items) ? adapted.items : [];
+      if (!items.length) return autoR;
+      var roleAutoR = {};
+      keys.forEach(function (k) {
+        var itemIdx = parseInt(k, 10);
+        var pageN = parseInt(autoR[k], 10);
+        if (!Number.isFinite(itemIdx) || !Number.isFinite(pageN) || pageN < 1) return;
+        var it = items[itemIdx];
+        var m = it && it._key ? String(it._key).match(/roles\.(\d+)/) : null;
+        if (!m) return;
+        var R = parseInt(m[1], 10);
+        if (!Number.isFinite(R)) return;
+        roleAutoR[R] = Math.max(roleAutoR[R] || 1, pageN);
+      });
+      return Object.keys(roleAutoR).length ? roleAutoR : autoR;
+    } catch (_) { return autoR; }
   }
 
   // A role's own per-segment style, if the role carries one (roleLineStyle is the
@@ -371,6 +406,7 @@
   window.AntcvRolesRichBlock = {
     version: VERSION, isOn: isOn, adapt: adapt, writeBack: writeBack,
     itemsToRoles: itemsToRoles, rolesPathFor: rolesPathFor,
-    renderRoleHead: renderRoleHead, renderGroupHead: renderGroupHead, FLAG: FLAG
+    renderRoleHead: renderRoleHead, renderGroupHead: renderGroupHead, FLAG: FLAG,
+    itemAutoPagesToRoleAutoPages: itemAutoPagesToRoleAutoPages
   };
 })();

@@ -2718,7 +2718,19 @@ function normalizeSections(raw) {
         // EFFECTIVE role page = max(manual role.page, auto autoPages[origIdx]) with
         // a monotonic cascade; auto key is the ORIGINAL index in the unfiltered roles.
         const allRoles = Array.isArray(s.roles) ? s.roles : [];
-        const autoR = (s.id && autoPagesRaw && typeof autoPagesRaw[s.id] === 'object') ? autoPagesRaw[s.id] : null;
+        let autoR = (s.id && autoPagesRaw && typeof autoPagesRaw[s.id] === 'object') ? autoPagesRaw[s.id] : null;
+        // AUTOPAGES-ITEM-TO-ROLE-001 (owner 2026-07-14, cutover regression): when the
+        // roles-as-rich_block cutover is on, the experience PREVIEW is a FLATTENED items[]
+        // (role heads + bullets), so the autoPages measurer keys page-breaks by ITEM index
+        // (e.g. 13/36/66) — but the loop below reads autoR by ROLE index (0..N). Translate
+        // item→role via the adapter's item._key ('roles.R') mapping, else no role.page is
+        // set and the export loses every role split + "(Cont.)" heading and collapses the
+        // two columns into a sequential multi-page PDF. No-op (returns autoR) when off.
+        if (autoR && window.AntcvRolesRichBlock && typeof window.AntcvRolesRichBlock.isOn === 'function'
+            && window.AntcvRolesRichBlock.isOn()
+            && typeof window.AntcvRolesRichBlock.itemAutoPagesToRoleAutoPages === 'function') {
+          autoR = window.AntcvRolesRichBlock.itemAutoPagesToRoleAutoPages(s, autoR);
+        }
         let runPage = 1;
         const roles = allRoles.filter(r => r && r.on !== false).map(r => {
           const oi = allRoles.indexOf(r);

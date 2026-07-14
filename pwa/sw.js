@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.1264-roles-cutover';
+const CACHE = 'antcv-1.51.1265-autopages-role';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

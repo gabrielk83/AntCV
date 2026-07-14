@@ -978,6 +978,14 @@ export function buildPayload({
           // Latin-only slogan (e.g. the Danish standing line) must not beat
           // the app's own Chinese meta.cl_slogan. CJK-carrying overrides win.
           if (language === 'zh' && ov && !/[一-鿿]/.test(ov)) ov = '';
+          // SLOGAN-LANG-GATE-001 (owner 2026-07-14): the general wrong-language
+          // gate — a sticky override in a language other than the current ribbon
+          // (the classic Latin-vs-Latin Danish standing line on a Swedish/English
+          // app, and every non-Latin script mismatch) is dropped so the chain
+          // falls to the app's own current-language generated / specialization
+          // slogan. Same helper the two previews use -> preview == export, and it
+          // reads no brand state -> BRANDED and NON-BRANDED exports stay identical.
+          try { if (ov && typeof window !== 'undefined' && typeof window.__antcvSloganLangGate === 'function' && !window.__antcvSloganLangGate(ov)) ov = ''; } catch (_) {}
           // CL-SLOGAN-STALE-OWNER-001 (owner 2026-07-13: the Danish standing
           // line "JEG FORBINDER TEKNIK..." shipped on an ENGLISH NVIDIA CL).
           // antcv-cl-slogan-fresh.js stamps OWNERSHIP (antcv:clSloganCtx =
@@ -1883,7 +1891,12 @@ function sanitizeForExport(docSections, doc) {
         let __sl = '';
         try {
           __sl = String((typeof meta !== 'undefined' && meta && meta.cl_slogan) || '').trim();
-          if (!__sl || /^\[/.test(__sl)) __sl = String(localStorage.getItem('antcv:clSlogan') || '').trim();
+          if (!__sl || /^\[/.test(__sl)) {
+            let __ov = String(localStorage.getItem('antcv:clSlogan') || '').trim();
+            // SLOGAN-LANG-GATE-001: a wrong-language override never becomes the lead-in either.
+            try { if (__ov && typeof window.__antcvSloganLangGate === 'function' && !window.__antcvSloganLangGate(__ov)) __ov = ''; } catch (_) {}
+            __sl = __ov;
+          }
           if (window.__antcvSloganCap) __sl = window.__antcvSloganCap(__sl);
         } catch (_) {}
         const __os = window.__antcvSloganOpeningLeadIn(s, __sl);

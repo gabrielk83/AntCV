@@ -30,7 +30,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.91-cl-body-elements';
+  var VERSION = '1.51.1404-slogan-lang-gate';
   if (window.__antcvClSloganElement) return;
   window.__antcvClSloganElement = VERSION;
 
@@ -122,7 +122,11 @@
   }
   function effectiveText() {
     var c = cfg();
-    return (c.text ? c.text.toUpperCase() : subtitleFallback());
+    // SLOGAN-LANG-GATE-001: a wrong-language OVERRIDE yields to the specialisation
+    // fallback here too, so the settings-panel preview matches the paper + export.
+    var t = c.text;
+    try { if (t && typeof window.__antcvSloganLangGate === 'function' && !window.__antcvSloganLangGate(t)) t = ''; } catch (_) {}
+    return (t ? t.toUpperCase() : subtitleFallback());
   }
   function signoffCfg() {
     return {

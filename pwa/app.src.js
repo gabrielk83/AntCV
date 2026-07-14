@@ -2385,7 +2385,7 @@
       var sl = String(slogan == null ? "" : slogan).trim();
       // no slogan passed -> resolve from the standalone override key (populated on
       // every load path + at generation), so callers need no scope-specific `io`.
-      if (!sl) { try { sl = __antcvSloganCap(String(localStorage.getItem("antcv:clSlogan") || "").trim()); } catch (_) {} }
+      if (!sl) { try { var __ov = String(localStorage.getItem("antcv:clSlogan") || "").trim(); if (__ov && window.__antcvSloganLangGate && !window.__antcvSloganLangGate(__ov)) __ov = ""; sl = __antcvSloganCap(__ov); } catch (_) {} }
       if (!sl || /^\[/.test(sl)) return sec;
       var items = Array.isArray(sec.items) && sec.items.length ? sec.items.slice() : [{ b: "", t: "" }];
       items[0] = Object.assign({}, items[0], { b: sl, bOff: false });
@@ -2397,7 +2397,11 @@
   function __antcvResolveSlogan(io) {
     try {
       var st = String((io && io.cl_slogan) || "").trim();
-      if (!st || /^\[/.test(st)) st = String(localStorage.getItem("antcv:clSlogan") || "").trim();
+      // SLOGAN-LANG-GATE-001 (owner 2026-07-14): a stale OVERRIDE in the wrong
+      // language for the current ribbon is rejected so the app's own current-
+      // language slogan (io.cl_slogan / specialization) wins — same window gate
+      // the docx-client export uses, so preview == export.
+      if (!st || /^\[/.test(st)) { st = String(localStorage.getItem("antcv:clSlogan") || "").trim(); if (st && window.__antcvSloganLangGate && !window.__antcvSloganLangGate(st)) st = ""; }
       if (!st || /^\[/.test(st)) st = String((io && io.subtitle) || "").trim();
       st = __antcvSloganCap(String(st).replace(/\s*\|\s*/g, " • ").trim());
       return (!st || /^\[/.test(st)) ? "" : st;
@@ -29440,7 +29444,7 @@
               })(),
               g = 5;
             P =
-              `<table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${(() => { try { if (window.__antcvSloganStandaloneHidden ? window.__antcvSloganStandaloneHidden() : localStorage.getItem("antcv:clSloganHidden") === "1") return ""; var st = String((io && io.cl_slogan) || "").trim(); if (!st || /^\[/.test(st)) st = String(localStorage.getItem("antcv:clSlogan") || "").trim(); if (!st || /^\[/.test(st)) st = String(io.subtitle || "").trim(); st = st.replace(/\s*\|\s*/g, " • ").trim(); if (window.__antcvSloganCap) st = window.__antcvSloganCap(st); if (!st || /^\[/.test(st)) return ""; var sa = String(localStorage.getItem("antcv:clSloganAlign") || "center").replace(/["']/g, "").toLowerCase(); if (sa !== "left" && sa !== "right" && sa !== "center" && sa !== "justify") sa = "center"; return '<p style="font-family:\'Cabin\',' + d + ';font-size:11pt;font-weight:700;letter-spacing:.08em;text-align:' + sa + ';color:var(--brand-slogan-color,' + (t.mainLineColor || "#01746E") + ');margin:0 0 12pt">' + st.toUpperCase() + '</p>'; } catch (_) { return ""; } })()}${l.map(b).join("")}${u}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table>` +
+              `<table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${(() => { try { if (window.__antcvSloganStandaloneHidden ? window.__antcvSloganStandaloneHidden() : localStorage.getItem("antcv:clSloganHidden") === "1") return ""; var st = String((io && io.cl_slogan) || "").trim(); if (!st || /^\[/.test(st)) { st = String(localStorage.getItem("antcv:clSlogan") || "").trim(); if (st && window.__antcvSloganLangGate && !window.__antcvSloganLangGate(st)) st = ""; } if (!st || /^\[/.test(st)) st = String(io.subtitle || "").trim(); st = st.replace(/\s*\|\s*/g, " • ").trim(); if (window.__antcvSloganCap) st = window.__antcvSloganCap(st); if (!st || /^\[/.test(st)) return ""; var sa = String(localStorage.getItem("antcv:clSloganAlign") || "center").replace(/["']/g, "").toLowerCase(); if (sa !== "left" && sa !== "right" && sa !== "center" && sa !== "justify") sa = "center"; return '<p style="font-family:\'Cabin\',' + d + ';font-size:11pt;font-weight:700;letter-spacing:.08em;text-align:' + sa + ';color:var(--brand-slogan-color,' + (t.mainLineColor || "#01746E") + ');margin:0 0 12pt">' + st.toUpperCase() + '</p>'; } catch (_) { return ""; } })()}${l.map(b).join("")}${u}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table>` +
               (c
                 ? `<div style="page-break-before:always;mso-page-break-before:always;break-before:page"><table width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="${n}" style="width:100%;border-collapse:collapse;background:${n};page-break-after:avoid;mso-page-break-after:avoid"><tr><td bgcolor="${n}" style="background:${n};padding:14pt 16pt 8pt;text-align:center;border-bottom:1pt solid ${S}">${N}${_}${$}</td></tr></table><table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${b(c)}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table></div>`
                 : "");
@@ -46314,7 +46318,8 @@
                     try {
                       if (window.__antcvSloganStandaloneHidden ? window.__antcvSloganStandaloneHidden() : localStorage.getItem("antcv:clSloganHidden") === "1") return null;
                       var st = String((io && io.cl_slogan) || "").trim();
-                      if (!st || /^\[/.test(st)) st = String(localStorage.getItem("antcv:clSlogan") || "").trim();
+                      // SLOGAN-LANG-GATE-001: reject a wrong-language OVERRIDE so preview == export.
+                      if (!st || /^\[/.test(st)) { st = String(localStorage.getItem("antcv:clSlogan") || "").trim(); if (st && window.__antcvSloganLangGate && !window.__antcvSloganLangGate(st)) st = ""; }
                       if (!st || /^\[/.test(st)) st = String((io && io.subtitle) || "").trim();
                       st = st.replace(/\s*\|\s*/g, " • ").trim();
                       if (window.__antcvSloganCap) st = window.__antcvSloganCap(st);

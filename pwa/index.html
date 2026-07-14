@@ -367,9 +367,9 @@
   })();
 </script>
 <script type="module">
-  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.1304-slogan-brand-color';
+  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.1404-slogan-lang-gate';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.1384-header-seam';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.1404-slogan-lang-gate';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -408,10 +408,10 @@
         auth.src = 'antcv-auth.js?v=1.51.92-analytics-401-scope';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.51.1384-header-seam';
+          app.src = 'app.js?v=1.51.1404-slogan-lang-gate';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.1384-header-seam';
+            vo.src = 'antcv-version-override.js?v=1.51.1404-slogan-lang-gate';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -771,9 +771,9 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <!-- AI-NOTICE-POSITION-CONTROL-001: Layout-tab control to pin the CV AI-notice corner (auto/left/center/right). -->
 <script src="antcv-ai-notice-position-control.js?v=1.51.156" defer></script>
 <script src="antcv-cl-slogan-control.js?v=1.51.746-slogan-place-ctrl" defer></script>
-<script src="antcv-cl-slogan-element.js?v=1.51.1164-slogan-ctl" defer></script>
+<script src="antcv-cl-slogan-element.js?v=1.51.1404-slogan-lang-gate" defer></script>
 <!-- SLOGAN-FRESH-GEN-001 + SLOGAN-SMART-STATEMENT-001 (spec rules 23/33): stale overrides yield; the gen's meta.cl_slogan (smart statement) is adopted; a targeted CL never falls back to the specialization. Kill antcv:disable-slogan-fresh. -->
-<script src="antcv-cl-slogan-fresh.js?v=1.51.334-unsol-pillar" defer></script>
+<script src="antcv-cl-slogan-fresh.js?v=1.51.1404-slogan-lang-gate" defer></script>
 <!-- CL-FORMAT-PANEL-001 (F3): distinct "COVER LETTER FORMAT" panel in Settings→Layout wrapping the CL signature + slogan/sign-off controls. Kill antcv:disable-cl-format-panel. -->
 <script src="antcv-cl-format-panel.js?v=1.51.82" defer></script>
 <!-- HEADER-ITEM-RULE-001 UI + preview parity: per-field header rule lines (on/off + pt + colour) writing headerItemRule; helpers __antcvHdrRuleDiv/Html/Style feed the live preview + HTML export. Kill antcv:disable-header-rule-control (UI only). -->

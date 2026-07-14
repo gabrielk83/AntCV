@@ -34,7 +34,7 @@ function load(store0) {
 test('defaults: visible, center, empty text -> falls back to the specialisation subtitle uppercased with | as bullet', () => {
   const { w } = load({ personalInfo: JSON.stringify({ subtitle: 'Processes | Products | People' }) });
   const api = w.AntcvClSloganElement;
-  assert.ok(api && api.version.includes('cl-body-elements'));
+  assert.ok(api && typeof api.version === 'string' && /^\d+\.\d+\.\d+/.test(api.version), 'sidecar loaded and exposes a build-version tag');
   const c = api._cfg();
   assert.equal(c.hidden, false);
   assert.equal(c.align, 'center');

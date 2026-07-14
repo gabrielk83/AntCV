@@ -369,7 +369,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.802-photo-flip-redetect';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.1104-spell-nudge';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.1105-rowkey-match';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -411,7 +411,7 @@
           app.src = 'app.js?v=1.51.1085-grpkeep';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.1104-spell-nudge';
+            vo.src = 'antcv-version-override.js?v=1.51.1105-rowkey-match';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -821,7 +821,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-preview-hyperlink-style.js?v=1.51.39" defer></script>
 <!-- PREVIEW-SPELL-001: spell underlines on the RENDERED preview (non-destructive
      rect overlay; reuses the annotator engine). Owner: grammar also on preview. -->
-<script src="antcv-preview-spell-overlay-425.js?v=1.51.1104-spell-nudge" defer></script>
+<script src="antcv-preview-spell-overlay-425.js?v=1.51.1105-rowkey-match" defer></script>
 <!-- TENSE-RELOCATE-001: EXPERIENCE TENSE control relocated into Settings ->
      Personal beside the languages + grammar controls (uses window._antcvSetExpTense). -->
 <script src="antcv-tense-control-422.js?v=1.50.626" defer></script>
@@ -872,7 +872,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-sidebar-position.js?v=1.50.818" defer></script>
 <script src="antcv-splitter-flip.js?v=1.50.818" defer></script>
 <script src="antcv-section-panel-tweaks.js?v=1.51.128" defer></script>
-<script src="antcv-item-align.js?v=1.51.1065-group-scope" defer></script>
+<script src="antcv-item-align.js?v=1.51.1105-rowkey-match" defer></script>
 <script src="antcv-page-fit.js?v=1.51.168" defer></script>
 <script src="antcv-auto-pagebreak-block-001.js?v=1.51.945-revert-pb-freeze" defer></script>
 <script src="antcv-table-fast-drag.js?v=1.50.490" defer></script>

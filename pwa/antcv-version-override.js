@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.1104-spell-nudge';
+  const TARGET_VERSION = '1.51.1105-rowkey-match';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.1104-spell-nudge',
     '1.51.1085-grpkeep',
     '1.51.1084-slogan-vis',
     '1.51.1065-group-scope',

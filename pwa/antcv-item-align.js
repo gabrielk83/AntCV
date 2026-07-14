@@ -292,7 +292,15 @@
           // marker itself, then the row's ROLE path (roles.N — written by
           // the experience role cycler), then the section default.
           const rolePath = rowEl.getAttribute('data-antcv-role-path');
-          const perItem = isValidAlign(perRow[marker]) ? perRow[marker]
+          // PER-ROW-CJLR-ROWKEY-001 (owner 2026-07-14, verified live): the row stamps
+          // its canonical per-row key as data-antcv-rowkey (e.g. "roles.0.bullets.0"
+          // for a role bullet). Match THAT first — the editor writes the per-row CJLR
+          // under exactly this key, but the DOM row-path is "items.N", so without this
+          // a role bullet's per-row CJLR never matched and this sidecar reset it to the
+          // render default.
+          const rowKey = rowEl.getAttribute('data-antcv-rowkey');
+          const perItem = (rowKey && isValidAlign(bucket[rowKey])) ? bucket[rowKey]
+            : isValidAlign(perRow[marker]) ? perRow[marker]
             : isValidAlign(bucket[marker]) ? bucket[marker]
             : (rolePath && isValidAlign(bucket[rolePath])) ? bucket[rolePath]
             : null;

@@ -1654,7 +1654,17 @@ function sanitizeForExport(docSections, doc) {
       // applyOutcomesMode) and section-mode payloads carry one clean line. Runs on
       // every experience section; KEEP_MIN=2 respected; stored sections untouched.
       if (s.type === 'experience' && Array.isArray(s.roles)) {
-        let roles = s.roles.map(_collapseRoleBullets);
+        // ROLES-AS-RICHBLOCK-001: drop bullets the rich_block editor hid
+        // (role.bulletMeta[bi].hidden) BEFORE collapse so indices line up.
+        // Payload-only — stored roles keep them so the editor can unhide.
+        let roles = s.roles.map((r) => {
+          if (r && Array.isArray(r.bullets) && Array.isArray(r.bulletMeta)) {
+            const meta = r.bulletMeta;
+            const kept = r.bullets.filter((b, bi) => !(meta[bi] && meta[bi].hidden));
+            if (kept.length !== r.bullets.length) return { ...r, bullets: kept, bulletMeta: undefined };
+          }
+          return r;
+        }).map(_collapseRoleBullets);
         if (targeted) {
           // ROLE-CLASS-HIDE-001 (spec rule 18, owner 2026-07-04 "fix in code"):
           // in a TARGETED export the hide-for-this-role-class set never ships,

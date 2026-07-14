@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.725-roles-rb-editor';
+const CACHE = 'antcv-1.51.726-roles-rb-controls';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

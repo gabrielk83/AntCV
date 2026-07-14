@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.725-roles-rb-editor';
+  const TARGET_VERSION = '1.51.726-roles-rb-controls';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.725-roles-rb-editor',
     '1.51.724-roles-rb-droprules',
     '1.51.723-roles-rb-render',
     '1.51.722-cjlr-export',

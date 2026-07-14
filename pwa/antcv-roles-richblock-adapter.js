@@ -94,16 +94,21 @@
         grp: true, roleHead: true, seg: seg,
         hr: role.roleLineHr !== false,       // horizontal line under role line (default on)
         _rid: role.id != null ? role.id : ('r' + r), _ri: r,
+        _key: 'roles.' + r,                  // stable roles-path key for CJLR (worker honours it)
         page: role.page || 1, on: on
       });
       var bl = Array.isArray(role.bullets) ? role.bullets : [];
+      var meta = Array.isArray(role.bulletMeta) ? role.bulletMeta : [];
       for (var b = 0; b < bl.length; b++) {
         if (bl[b] == null) continue;
-        items.push({ t: String(bl[b]), mk: true, _rid: role.id, _ri: r, _bi: b });
+        var bhidden = !!(meta[b] && meta[b].hidden);
+        if (!forEditor && bhidden) continue;   // preview drops hidden bullets (parity)
+        items.push({ t: String(bl[b]), mk: true, _rid: role.id, _ri: r, _bi: b,
+          _key: 'roles.' + r + '.bullets.' + b, hidden: bhidden });
       }
       if (typeof role.results === 'string' && role.results.trim()) {
         items.push({ b: (sec._resultsLabel || 'Results:'), t: role.results.trim(),
-          _rid: role.id, _ri: r, _results: true });
+          _rid: role.id, _ri: r, _results: true, _key: 'roles.' + r + '.results' });
       }
     }
     // Preserve the section identity/props; only swap the shape the renderer reads.
@@ -134,7 +139,7 @@
     var cur = null;
     // Fields the role LINE / bullets own here — everything else on the orig role
     // is carried through untouched.
-    var OWNED = { title: 1, company: 1, years: 1, bullets: 1, results: 1, roleLineStyle: 1, roleLineHr: 1, page: 1, on: 1 };
+    var OWNED = { title: 1, company: 1, years: 1, bullets: 1, bulletMeta: 1, results: 1, roleLineStyle: 1, roleLineHr: 1, page: 1, on: 1 };
     function startRole(it) {
       var base = (it && it._rid != null && byId[it._rid]) ? byId[it._rid] : null;
       var role = {};
@@ -178,6 +183,7 @@
         continue;
       }
       cur.bullets.push(it.t != null ? it.t : (it.b || ''));
+      if (it.hidden) { if (!cur.bulletMeta) cur.bulletMeta = []; cur.bulletMeta[cur.bullets.length - 1] = { hidden: true }; }
     }
     return out;
   }

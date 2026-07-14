@@ -34,12 +34,19 @@
       var enrichingId = props.enrichingId, compressingId = props.compressingId;
       var st = R.useState(0); var bump = st[1];
       var sid = e.id;
+      // ROLES-AS-RICHBLOCK-001: when editing the adapted experience section, per-row
+      // CJLR is keyed by the ROLES path (item._key = "roles.R.bullets.B") instead of
+      // the ephemeral "items.i" — the docx-worker already reads paraAlignPath on that
+      // key, so CJLR EXPORTS with no worker change. Hide is per-item (ev.hidden ->
+      // roles bulletMeta / role.on) not the section.hidden array.
+      var fromRoles = !!e.__fromRoles;
       function rerender() { bump(function (x) { return x + 1; }); }
 
       function getPage(i) { try { var b = readJSON("antcv:itemPages")[sid] || {}; var n = Number(b[String(i)] || b["items." + i] || 1); return n >= 1 && n <= 4 ? (n | 0) : 1; } catch (_) { return 1; } }
       function setPage(i, n) { var m = readJSON("antcv:itemPages"); if (!m[sid] || typeof m[sid] !== "object") m[sid] = {}; m[sid][String(i)] = n; m[sid]["items." + i] = n; writeJSON("antcv:itemPages", m); emit("antcv:item-pages-changed", { sid: sid, index: i, page: n }); rerender(); }
-      function getAlign(i) { try { var b = readJSON("antcvItemAlignment")[sid] || {}; var v = b["items." + i] || b[String(i)] || "justify"; return ALIGNS.indexOf(v) >= 0 ? v : "justify"; } catch (_) { return "justify"; } }
-      function setAlign(i, v) { var m = readJSON("antcvItemAlignment"); if (!m[sid] || typeof m[sid] !== "object") m[sid] = {}; m[sid]["items." + i] = v; m[sid][String(i)] = v; writeJSON("antcvItemAlignment", m); emit("antcv:item-align-changed", { sid: sid, index: i, alignment: v }); rerender(); }
+      function keyFor(i) { return (fromRoles && rows[i] && rows[i]._key) ? rows[i]._key : ("items." + i); }
+      function getAlign(i) { try { var b = readJSON("antcvItemAlignment")[sid] || {}; var v = b[keyFor(i)] || b["items." + i] || b[String(i)] || "justify"; return ALIGNS.indexOf(v) >= 0 ? v : "justify"; } catch (_) { return "justify"; } }
+      function setAlign(i, v) { var m = readJSON("antcvItemAlignment"); if (!m[sid] || typeof m[sid] !== "object") m[sid] = {}; m[sid][keyFor(i)] = v; if (!fromRoles) { m[sid]["items." + i] = v; m[sid][String(i)] = v; } writeJSON("antcvItemAlignment", m); emit("antcv:item-align-changed", { sid: sid, index: i, alignment: v }); rerender(); }
       function getGroup() { try { var b = readJSON("antcvItemAlignment")[sid] || {}; var v = b.__group__; return ALIGNS.indexOf(v) >= 0 ? v : "justify"; } catch (_) { return "justify"; } }
       function setGroup(v) { var m = readJSON("antcvItemAlignment"); if (!m[sid] || typeof m[sid] !== "object") m[sid] = {}; m[sid].__group__ = v; writeJSON("antcvItemAlignment", m); emit("antcv:item-align-changed", { sid: sid, index: -1, alignment: v }); rerender(); }
 
@@ -81,7 +88,9 @@
 
       // ---- rows ----
       var rowEls = rows.map(function (ev, i) {
-        var hiddenRow = !!(e.hidden && e.hidden[i]);
+        var hiddenRow = fromRoles
+          ? (ev.roleHead ? ev.on === false : !!ev.hidden)
+          : !!(e.hidden && e.hidden[i]);
         // ROLES-AS-RICHBLOCK-001: a role-line group head (3 segments role/company/
         // years + horizontal-line toggle + per-segment colour). The adapter emits
         // these for professional experience; editing them flows back to roles[] via
@@ -105,6 +114,7 @@
               h("button", { onClick: function () { moveRow(i, -1); }, disabled: i === 0, title: "Move role up", style: { fontSize: 10, border: "none", background: "none", color: i === 0 ? "#ccc" : "#666", padding: 0, cursor: i === 0 ? "default" : "pointer" } }, "▲"),
               h("button", { onClick: function () { moveRow(i, 1); }, disabled: i === rows.length - 1, title: "Move role down", style: { fontSize: 10, border: "none", background: "none", color: i === rows.length - 1 ? "#ccc" : "#666", padding: 0, cursor: i === rows.length - 1 ? "default" : "pointer" } }, "▼")
             ),
+            h("button", { onClick: function () { updateRow(i, { on: ev.on === false ? true : false }); }, title: ev.on === false ? "Role hidden — click to show" : "Role shown — click to hide the whole role", style: btn({ border: "1px solid " + (ev.on === false ? "#999" : accent), color: ev.on === false ? "#999" : accent, fontSize: 11, minWidth: 22 }) }, ev.on === false ? "🙈" : "👁"),
             h("span", { style: { fontSize: 9, color: "#0a8", fontWeight: 700, flexShrink: 0, width: 26 } }, "ROLE"),
             segInput(0, "Role title", { flex: "2 1 160px" }),
             segInput(1, "Company", { flex: "1 1 110px" }),
@@ -137,7 +147,7 @@
               h("button", { onClick: function () { moveRow(i, -1); }, disabled: i === 0, title: "Move up", style: { fontSize: 10, border: "none", background: "none", color: i === 0 ? "#ccc" : "#666", padding: 0, cursor: i === 0 ? "default" : "pointer" } }, "▲"),
               h("button", { onClick: function () { moveRow(i, 1); }, disabled: i === rows.length - 1, title: "Move down", style: { fontSize: 10, border: "none", background: "none", color: i === rows.length - 1 ? "#ccc" : "#666", padding: 0, cursor: i === rows.length - 1 ? "default" : "pointer" } }, "▼")
             ),
-            h("button", { onClick: function () { toggleRowHidden(i); }, title: hiddenRow ? "Row hidden — show" : "Row shown — hide", style: btn({ border: "1px solid " + (hiddenRow ? "#999" : accent), color: hiddenRow ? "#999" : accent, fontSize: 11, minWidth: 22 }) }, hiddenRow ? "🙈" : "👁"),
+            h("button", { onClick: function () { fromRoles ? updateRow(i, { hidden: !ev.hidden }) : toggleRowHidden(i); }, title: hiddenRow ? "Row hidden — show" : "Row shown — hide", style: btn({ border: "1px solid " + (hiddenRow ? "#999" : accent), color: hiddenRow ? "#999" : accent, fontSize: 11, minWidth: 22 }) }, hiddenRow ? "🙈" : "👁"),
             h("button", { onClick: function () { updateRow(i, { mk: mkOn ? false : true }); }, title: mkOn ? "Marker ON — click to remove" : "No marker — click to add a bullet marker (then type an emoji to customise)", style: btn({ border: "1px solid " + (mkOn ? "#0a8" : "#bbb"), color: mkOn ? "#0a8" : "#bbb", minWidth: 22 }) }, mkOn ? (mkEmoji || "•") : "◦"),
             mkOn ? h("input", { value: mkEmoji, onChange: function (x) { var v = x.target.value; updateRow(i, { mk: v ? v : true }); }, title: "Row marker — leave blank for a bullet, or type any emoji (e.g. 🚀, ✅, ▸)", placeholder: "•", maxLength: 4, style: { width: 26, textAlign: "center", fontSize: 13, padding: "2px 2px", border: "1px solid #0a8", borderRadius: 3, flexShrink: 0 } }) : null,
             h("button", { onClick: function () { updateRow(i, { bOff: !bOff }); }, title: bOff ? "Lead-in hidden — show it" : "Lead-in shown — hide it", style: btn({ border: "1px solid " + (bOff ? "#999" : "#0a8"), color: bOff ? "#999" : "#0a8", fontWeight: 700, minWidth: 24 }) }, bOff ? "a̶" : "Aa"),

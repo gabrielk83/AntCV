@@ -6289,8 +6289,11 @@
           // CONTENT rows to LEFT. A non-grouped rich_block keeps the JUSTIFY default. Explicit
           // per-row CJLR overrides (__al) always win.
           const __hasGrp = (e.items || []).some((it) => it && it.grp);
-          const __rowAlign = (i, isGrp) => {
-            const v = __al["items." + i] || __al[String(i)] || __al.__group__;
+          const __rowAlign = (i, isGrp, key) => {
+            // ROLES-AS-RICHBLOCK-001: honour a roles-path CJLR key (roles.R.bullets.B)
+            // when the adapted experience section stamps row._key — same key the
+            // editor writes and the worker reads, so preview==export.
+            const v = (key && __al[key]) || __al["items." + i] || __al[String(i)] || __al.__group__;
             if (["left", "center", "right", "justify"].includes(v)) return v;
             return isGrp ? "center" : (__hasGrp ? "left" : "justify");
           };
@@ -6352,7 +6355,7 @@
                         fontWeight: 700,
                         marginTop: 0 === i ? 0 : 6,
                         marginBottom: 2,
-                        textAlign: __rowAlign(i, true),
+                        textAlign: __rowAlign(i, true, row._key),
                         letterSpacing: 0.3,
                         overflowWrap: "break-word",
                         wordBreak: "break-word",
@@ -6377,7 +6380,7 @@
                 fontFamily: T,
                 fontSize: __fs,
                 color: __txtColor,
-                textAlign: __rowAlign(i, false),
+                textAlign: __rowAlign(i, false, row._key),
                 lineHeight: I,
               };
               if (mk) {
@@ -9201,31 +9204,38 @@
         // (round-trip verified, no data loss). Flag-off falls to the Ae panel,
         // byte-identical. onEnrich/onCompress omitted (their item:i indices don't
         // map to roles yet — follow-up).
-        return (typeof window !== "undefined" && window.AntcvRolesRichBlock && window.AntcvRolesRichBlock.isOn() && window.AntcvRichBlockEditor && Array.isArray(e.roles))
-          ? React.createElement(window.AntcvRichBlockEditor, {
-              section: window.AntcvRolesRichBlock.adapt(e, { forEditor: true }),
-              update: (patch) => {
-                try {
-                  if (patch && Array.isArray(patch.items)) {
-                    const __roles = window.AntcvRolesRichBlock.itemsToRoles(patch.items, e.roles);
-                    const __rest = {};
-                    for (const k in patch) if ("items" !== k && "hidden" !== k) __rest[k] = patch[k];
-                    t({ ...e, ...__rest, roles: __roles });
-                  } else if (patch) {
-                    t({ ...e, ...patch });
-                  }
-                } catch (_) {}
-              },
-              accent: s,
-            })
-          : React.createElement(Ae, {
-              s: e,
-              onChange: t,
-              onCompressRole: n,
-              compressingRoleId: o,
-              onEnrichRole: r,
-              enrichingRoleId: a,
-            });
+        if (typeof window !== "undefined" && window.AntcvRolesRichBlock && window.AntcvRolesRichBlock.isOn() && window.AntcvRichBlockEditor && Array.isArray(e.roles)) {
+          const __sec = window.AntcvRolesRichBlock.adapt(e, { forEditor: true });
+          // map a rich_block row id "item:<i>" -> that row's roleId, so the per-row
+          // ✨/⇥ run the existing per-ROLE enhance/compress on the row's role.
+          const __ridOf = (id) => { const mm = /^item:(\d+)$/.exec(id || ""); if (!mm) return null; const it = __sec.items[+mm[1]]; return it ? it._rid : null; };
+          return React.createElement(window.AntcvRichBlockEditor, {
+            section: __sec,
+            update: (patch) => {
+              try {
+                if (patch && Array.isArray(patch.items)) {
+                  const __roles = window.AntcvRolesRichBlock.itemsToRoles(patch.items, e.roles);
+                  const __rest = {};
+                  for (const k in patch) if ("items" !== k && "hidden" !== k) __rest[k] = patch[k];
+                  t({ ...e, ...__rest, roles: __roles });
+                } else if (patch) {
+                  t({ ...e, ...patch });
+                }
+              } catch (_) {}
+            },
+            accent: s,
+            onEnrich: (id) => { const rid = __ridOf(id); if (rid != null) r(rid); },
+            onCompress: (id) => { const rid = __ridOf(id); if (rid != null) n(rid); },
+          });
+        }
+        return React.createElement(Ae, {
+          s: e,
+          onChange: t,
+          onCompressRole: n,
+          compressingRoleId: o,
+          onEnrichRole: r,
+          enrichingRoleId: a,
+        });
       case "labeled_list":
         return React.createElement(
           React.Fragment,

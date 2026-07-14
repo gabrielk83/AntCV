@@ -109,6 +109,8 @@ function check(name, cond, detail) { results.push({ name, ok: !!cond, detail });
   check('role align=center -> NO literal tab (year inline)', !p1.includes(TAB), 'tab=' + p1.includes(TAB));
   check('role align=right -> jc=right', jcOf(xml, 'ROLETWO') === 'right', 'jc=' + jcOf(xml, 'ROLETWO'));
   check('role align=right -> NO literal tab (year inline)', !p2.includes(TAB), 'tab=' + p2.includes(TAB));
+  // PREVIEW-BULLET-PARITY-001: a role bullet with no per-bullet override defaults to LEFT (preview parity).
+  check('role bullet default -> LEFT (preview parity)', jcOf(xml, 'bz') === 'left', 'jc=' + jcOf(xml, 'bz'));
 }
 
 // ─── Fix 4: section heading honours forwarded headline_align loc-map ───
@@ -172,7 +174,8 @@ function check(name, cond, detail) { results.push({ name, ok: !!cond, detail });
   check('__group__=right moves the rich_block GROUP HEAD', jcOf(xml, 'SCOPEHEAD') === 'right', 'jc=' + jcOf(xml, 'SCOPEHEAD'));
   check('__group__ does NOT move rich_block content row (grouped default left)', jcOf(xml, 'scoped content row body') === 'left', 'jc=' + jcOf(xml, 'scoped content row body'));
   check('__group__=right moves the experience ROLE LINE (head)', jcOf(xml, 'SCOPEROLE') === 'right', 'jc=' + jcOf(xml, 'SCOPEROLE'));
-  check('__group__ does NOT move role bullet (justify default)', jcOf(xml, 'scoped role bullet body') === 'both', 'jc=' + jcOf(xml, 'scoped role bullet body'));
+  // PREVIEW-BULLET-PARITY-001: role bullet default is LEFT (preview parity); __group__ still does not move it.
+  check('__group__ does NOT move role bullet (stays LEFT default)', jcOf(xml, 'scoped role bullet body') === 'left', 'jc=' + jcOf(xml, 'scoped role bullet body'));
 }
 
 const fails = results.filter((r) => !r.ok);

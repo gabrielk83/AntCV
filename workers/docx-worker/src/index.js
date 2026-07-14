@@ -27660,9 +27660,12 @@ function renderExperience(s, ctx) {
     if (Array.isArray(role.bullets)) {
       const _bl = role.bullets.filter(Boolean);
       _bl.forEach((b, bi) => {
-        // GROUP-CJLR-SCOPE-001: a role bullet follows its own per-bullet CJLR only; __group__
-        // (the "Groups" control) aligns the role LINE/head, not the bullets — matches the preview.
-        const bAlign = paraAlignPath(s, "roles." + ri + ".bullets." + bi) ?? void 0;
+        // GROUP-CJLR-SCOPE-001 + PREVIEW-BULLET-PARITY-001 (owner 2026-07-15): a role bullet
+        // follows its own per-bullet CJLR; else it defaults to LEFT — matching the preview, where
+        // experience is a grouped rich_block so content rows resolve __rowAlign(isGrp=false,
+        // __hasGrp=true) -> "left" (was JUSTIFIED in the export). __group__ never touches bullets
+        // (it aligns the role LINE/head only).
+        const bAlign = paraAlignPath(s, "roles." + ri + ".bullets." + bi) ?? AlignmentType.LEFT;
         // keep every bullet chained to what follows; the LAST bullet glues to
         // the Results paragraph when one follows (was: dropped the chain here).
         const _keepWithNext = bi < _bl.length - 1 || _hasResults;
@@ -28737,7 +28740,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.158-group-cjlr-scope";
+var VERSION = "1.14.159-bullet-left-parity";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

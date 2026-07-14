@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.883-editable-marks';
+const CACHE = 'antcv-1.51.922-contact-edit';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

@@ -29122,7 +29122,7 @@
                       ([e, t]) =>
                         `<span style="color:#fff">${e}</span>&nbsp;${t}`,
                     )
-                    .join("&#8195;")
+                    .join("&#8194;")
                 : e
                   ? "[Kontakt — e-mail | telefon | LinkedIn | lokation]"
                   : "[Contact — email | phone | LinkedIn | location]",
@@ -29161,7 +29161,7 @@
               ? `<p style="font-family:'Cabin',${s};font-size:${u.nameSize}pt;font-weight:700;color:#fff;text-align:${E("name")};margin:12pt 0 3pt;line-height:1.1;mso-line-height-rule:exactly">${w.name || (e ? "Dit navn" : "Your Name")}</p>${window.__antcvHdrRuleHtml ? window.__antcvHdrRuleHtml("name", "#01B7BB", 2, 0) : ""}`
               : "",
             $ = O
-              ? `${window.__antcvHdrRuleHtml ? window.__antcvHdrRuleHtml("specialisation", "#01B7BB", 3, 1) : f("#01B7BB", 3, 1)}<p style="font-family:'Cabin',${s};font-size:${(Number(u.contactSize) || 10) + 0.5}pt;color:#fff;text-align:${E("contact")};margin:3pt 0;line-height:1.2;mso-line-height-rule:exactly">${x}</p>${window.__antcvHdrRuleHtml ? window.__antcvHdrRuleHtml("contact", "#01B7BB", 1, 0) : f("#01B7BB", 1, 0)}`
+              ? `${window.__antcvHdrRuleHtml ? window.__antcvHdrRuleHtml("specialisation", "#01B7BB", 3, 1) : f("#01B7BB", 3, 1)}<p style="font-family:'Cabin',${s};font-size:${(Number(u.contactSize) || 10) + 1}pt;color:#fff;text-align:${E("contact")};margin:3pt 0;line-height:1.2;mso-line-height-rule:exactly">${x}</p>${window.__antcvHdrRuleHtml ? window.__antcvHdrRuleHtml("contact", "#01B7BB", 1, 0) : f("#01B7BB", 1, 0)}`
               : "",
             L =
               A || I || O
@@ -29777,7 +29777,7 @@
             _ = Gt(r.sidebarTextColor, "FFFFFF"),
             N = h(y.nameSize, 16),
             $ = h(y.specialisation, 11),
-            L = String(Math.round(2 * ((Number(y.contactSize) || 10) + 0.5))),
+            L = String(Math.round(2 * ((Number(y.contactSize) || 10) + 1))),
             P = h(y.mainHead, 11),
             B = h(y.mainBody, 10.5),
             D = h(y.mainTblH, 10.5),
@@ -30436,7 +30436,7 @@
             x.push(
               `<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="4" w:color="01B7BB" w:space="0"/></w:pBdr><w:shd w:val="clear" w:color="auto" w:fill="${b}"/><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/></w:pPr></w:p>`,
             );
-            const e = E.join(" ");
+            const e = E.join(" ");
             (x.push(u(e, "CV_Contact")),
               x.push(
                 `<w:p><w:pPr><w:pBdr><w:top w:val="single" w:sz="4" w:color="01B7BB" w:space="0"/></w:pBdr><w:shd w:val="clear" w:color="auto" w:fill="${b}"/><w:spacing w:before="0" w:after="20" w:line="20" w:lineRule="exact"/></w:pPr></w:p>`,
@@ -30551,7 +30551,7 @@
               ? (k.push(
                   `<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="6" w:color="${C}" w:space="0"/></w:pBdr><w:shd w:val="clear" w:color="auto" w:fill="${v}"/><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/></w:pPr></w:p>`,
                 ),
-                k.push(m($.join(String.fromCharCode(8195)), "CV_Contact")),
+                k.push(m($.join(String.fromCharCode(8194)), "CV_Contact")),
                 k.push(
                   `<w:p><w:pPr><w:pBdr><w:top w:val="single" w:sz="6" w:color="${C}" w:space="0"/></w:pBdr><w:shd w:val="clear" w:color="auto" w:fill="${v}"/><w:spacing w:before="0" w:after="20" w:line="20" w:lineRule="exact"/></w:pPr></w:p>`,
                 ))
@@ -44631,25 +44631,46 @@
                   // carries its own leading glyph (⌂ ★ @ ☎ 🔗︎ ⌘ ⌁ from pe()), so
                   // the between-item bullet is redundant — replace with an em-space
                   // gap. Dropping it frees width, so the font also grows +0.5pt.
-                  const _sep = _i ? [" "] : [];
-                  if (/linkedin\.com/i.test(String(t))) {
-                    const _v = String(t).trim();
+                  const _sep = _i ? [" "] : [];
+                  // CONTACT-INLINE-EDIT-001 (owner 2026-07-14): each contact item is
+                  // click-to-edit in place. Only the RAW fields (email/phone/linkedin/
+                  // github/website — pe() emits them verbatim) are editable; location &
+                  // citizenship are pe()-transformed (localForm / dict-routed) so writing
+                  // the display form back would corrupt them, so they stay plain (edit via
+                  // the review dialog). The leading glyph stays outside the editable span.
+                  // Editable LinkedIn replaces the old clickable <a> (can't be both).
+                  const __ICON_FIELD = { "⌂": "location", "★": "citizenship", "@": "email", "☎": "phone", "🔗︎": "linkedin", "⌘": "github", "⌁": "website" };
+                  const __field = __ICON_FIELD[String(e)] || "";
+                  if (/^(email|phone|linkedin|github|website)$/.test(__field)) {
                     return [
                       ..._sep,
                       React.createElement(
-                        "a",
-                        {
-                          key: "li" + _i,
-                          href: /^https?:/i.test(_v) ? _v : "https://" + _v,
-                          target: "_blank",
-                          rel: "noopener noreferrer",
-                          style: {
-                            color: "#fff",
-                            textDecoration: "underline",
-                            textUnderlineOffset: "2px",
+                        "span",
+                        { key: "cw" + _i },
+                        `${e} `,
+                        React.createElement("span", {
+                          key: "cv" + _i,
+                          ref: (el) => { if (!el || document.activeElement === el) return; if (el.textContent !== String(t)) el.textContent = String(t); },
+                          contentEditable: true,
+                          suppressContentEditableWarning: true,
+                          spellCheck: false,
+                          title: "Click to edit " + __field,
+                          onFocus: (ev) => { ((ev.currentTarget.style.outline = "1px dashed rgba(255,255,255,0.75)"), (ev.currentTarget.style.outlineOffset = "1px")); },
+                          onBlur: (ev) => {
+                            ev.currentTarget.style.outline = "none";
+                            try {
+                              const v = String(ev.currentTarget.textContent || "").trim();
+                              const pi = ie() || {};
+                              if (v !== String(pi[__field] || "")) {
+                                const nextPi = { ...pi, [__field]: v };
+                                try { le(nextPi); } catch (_) {}
+                                try { "function" == typeof Qn && Qn({ personalInfo: nextPi }); } catch (_) {}
+                                try { window.dispatchEvent(new CustomEvent("antcv:sections-updated", { detail: { reason: "contact-inline-" + __field } })); } catch (_) {}
+                              }
+                            } catch (_) {}
                           },
-                        },
-                        `${e} ${t}`,
+                          style: { cursor: "text", outline: "none", color: "#fff" },
+                        }),
                       ),
                     ];
                   }
@@ -44760,7 +44781,7 @@
                             // flow over the seam).
                             fontSize:
                               // CONTACT-NO-BULLET-001: +0.5pt, freed by dropping •
-                              ((Yr.contactSize || 10) + 0.5) *
+                              ((Yr.contactSize || 10) + 1) *
                               (96 / 72) *
                               (__bridgeOn ? 0.88 : 1),
                             lineHeight: 1.2,

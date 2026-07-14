@@ -161,10 +161,19 @@
   }
 
   var t = null;
+  var __freezePending = false;
   function schedule() {
+    // EDIT-FREEZE-001 (owner 2026-07-14): while a preview field is focused, a
+    // keystroke's characterData mutation must NOT re-equalize the sidebar — that
+    // reflow under the caret is the "sidebar color dancing" that knocked the user
+    // out of the edit. Defer; run once when editing ends.
+    if (window.__antcvEditing) { __freezePending = true; return; }
     clearTimeout(t);
     t = setTimeout(equalize, 60);
   }
+  window.addEventListener('antcv:edit-freeze-end', function () {
+    if (__freezePending) { __freezePending = false; schedule(); }
+  });
 
   window.addEventListener('antcv:sections-updated', schedule);
   window.addEventListener('antcv:item-pages-changed', schedule);

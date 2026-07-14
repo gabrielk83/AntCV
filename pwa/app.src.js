@@ -45498,10 +45498,20 @@
                                     if (!band) return;
                                     const g = Math.max(
                                       6,
+                                      // PHOTO-NUDGE-UP-001 (owner 2026-07-14, tuned live
+                                      // to −99.5 / 30 on the reference app): the header-CJLR
+                                      // preview bridge (1.51.1184) grew the band, so the
+                                      // seam-centred medallion rode DOWN. Pull the photo up
+                                      // (marginTop below, +13.5) AND drop 11px here so the
+                                      // sidebar text rises with it — equal-ish air above/
+                                      // below + fewer runts jumping page 1↔2. marginBottom
+                                      // stays band-height-aware (only offset by a constant),
+                                      // and the sidebar bg fills far past content so text
+                                      // rising leaves NO bottom white gap.
                                       Math.round(
                                         band.getBoundingClientRect().height -
                                           __zoEff / 2,
-                                      ),
+                                      ) - 11,
                                     );
                                     el.style.marginBottom = g + "px";
                                   } catch (_) {}
@@ -45526,8 +45536,10 @@
                                   // floats with EQUAL air on both sides.
                                   ...(er === "band-overlap"
                                     ? {
+                                        // PHOTO-NUDGE-UP-001: +13.5 extra pull-up (paired
+                                        // with the −11 marginBottom above). Tuned live to −99.5.
                                         marginTop: -(
-                                          Math.round(__zoEff / 2) + 8
+                                          Math.round(__zoEff / 2) + 21.5
                                         ),
                                         marginBottom: __bridgeGap,
                                         position: "relative",

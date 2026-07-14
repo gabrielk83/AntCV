@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.1225-headline-cjlr3';
+const CACHE = 'antcv-1.51.1244-photo-nudge';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

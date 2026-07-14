@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.1265-autopages-role';
+const CACHE = 'antcv-1.51.1304-slogan-brand-color';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

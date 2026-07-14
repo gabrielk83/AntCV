@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.1265-autopages-role';
+  const TARGET_VERSION = '1.51.1304-slogan-brand-color';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.1265-autopages-role',
     '1.51.1264-roles-cutover',
     '1.51.1244-photo-nudge',
     '1.51.1225-headline-cjlr3',

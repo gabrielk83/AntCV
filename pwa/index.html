@@ -367,9 +367,9 @@
   })();
 </script>
 <script type="module">
-  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.1265-autopages-role';
+  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.1304-slogan-brand-color';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.1265-autopages-role';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.1304-slogan-brand-color';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -411,7 +411,7 @@
           app.src = 'app.js?v=1.51.1244-photo-nudge';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.1265-autopages-role';
+            vo.src = 'antcv-version-override.js?v=1.51.1304-slogan-brand-color';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);

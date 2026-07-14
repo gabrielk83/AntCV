@@ -5,15 +5,17 @@
 // cost-GATED fallback the client calls ONLY in that case: a vision LLM decides
 // which way the person is oriented (head + shoulders) and returns one word.
 //
-// Provider note: `mistral` is VISION-BLIND on this account — the key silently
-// serves a text model (ministral-14b) for any requested model, so it can't see
-// the image. We therefore use genuinely-multimodal providers: Claude first
-// (the configured writer key, vision-capable), then OpenAI (gpt-4o) as a
-// fallback. Each needs its OWN image-block shape (callAnyLLMForJSON forwards
-// the content verbatim, so we format per provider).
+// Provider order (cheap -> capable): Mistral `pixtral-12b` FIRST (owner's
+// preference; Mistral's own vision recipe uses the BARE model id `pixtral-12b`,
+// NOT pixtral-12b-2409/-latest, which this key silently swaps for the text model
+// ministral-14b). We call Mistral directly (no json_object — pixtral's vision
+// path returns plain text) and ONLY accept it when the served model is actually
+// a pixtral model — otherwise we treat it as a blind substitution and fall
+// through to Claude (claude-sonnet-5, the writer key) then OpenAI (gpt-4o),
+// each with its native image-block shape.
 //
 // Identical file lives in workers/proxy and workers/demo-proxy (near-copies).
-import { callAnyLLMForJSON } from './multi-llm.js';
+import { callAnyLLMForJSON, getKeyForProvider } from './multi-llm.js';
 
 const MAX_B64 = 5_000_000; // ~3.75 MB decoded, matches the OCR cap
 const SYSTEM =
@@ -31,11 +33,50 @@ function jsonResponse(obj, status, cors) {
     headers: { 'Content-Type': 'application/json', ...cors },
   });
 }
-function isFacing(t) {
+function parseFacing(t) {
+  if (!t) return null;
   try {
     const f = String(JSON.parse(t).facing || '').toLowerCase();
-    return f === 'left' || f === 'right' || f === 'center';
-  } catch { return false; }
+    if (f === 'left' || f === 'right' || f === 'center') return f;
+  } catch { /* fall through to a loose scan of the plain text */ }
+  const s = String(t).toLowerCase();
+  if (/\bleft\b/.test(s) && !/\bright\b/.test(s)) return 'left';
+  if (/\bright\b/.test(s) && !/\bleft\b/.test(s)) return 'right';
+  if (/\bcenter\b|\bfront\b|\bcentre\b/.test(s)) return 'center';
+  return null;
+}
+const isFacing = (t) => parseFacing(t) !== null;
+
+// Direct Mistral Pixtral vision call (bare `pixtral-12b`, image_url string form,
+// no json_object). Returns { facing, model } only when a real pixtral model
+// served it; null on any failure OR a blind ministral substitution.
+async function mistralPixtral(env, media, b64) {
+  try {
+    const key = await getKeyForProvider(env, 'mistral');
+    if (!key) return null;
+    const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({
+        model: 'pixtral-12b',
+        max_tokens: 30,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'text', text: SYSTEM + '\n\n' + TEXT },
+            { type: 'image_url', image_url: `data:${media};base64,${b64}` },
+          ],
+        }],
+      }),
+    });
+    if (res.status !== 200) return null;
+    const data = await res.json().catch(() => null);
+    const served = String((data && data.model) || '');
+    if (!/pixtral/i.test(served)) return null; // blind substitution (e.g. ministral) -> reject
+    const facing = parseFacing(data?.choices?.[0]?.message?.content || '');
+    if (!facing) return null;
+    return { facing, model: served, provider: 'mistral' };
+  } catch (_) { return null; }
 }
 
 export async function handlePhotoOrientation(request, env, corsHeadersFor, _serverKeyFor) {
@@ -53,16 +94,21 @@ export async function handlePhotoOrientation(request, env, corsHeadersFor, _serv
   if (!b64) return jsonResponse({ ok: false, error: 'no_image' }, 400, cors);
   if (b64.length > MAX_B64) return jsonResponse({ ok: false, error: 'image_too_large' }, 413, cors);
 
-  // Anthropic image-block shape (Claude) and OpenAI image_url shape.
+  // 1) Mistral Pixtral (cheap, owner's preference) — accepted only if a real
+  //    pixtral model served it.
+  const mp = await mistralPixtral(env, media, b64);
+  if (mp) return jsonResponse({ ok: true, facing: mp.facing, provider: mp.provider, model: mp.model }, 200, cors);
+
+  // 2) Fallback to genuinely-multimodal providers via the shared cascade, each
+  //    with its native image-block shape.
   const anthropicContent = [
     { type: 'text', text: TEXT },
     { type: 'image', source: { type: 'base64', media_type: media, data: b64 } },
   ];
   const openaiContent = [
     { type: 'text', text: TEXT },
-    { type: 'image_url', image_url: { url: 'data:' + media + ';base64,' + b64 } },
+    { type: 'image_url', image_url: { url: `data:${media};base64,${b64}` } },
   ];
-
   let r;
   try {
     r = await callAnyLLMForJSON(env, SYSTEM, anthropicContent, { order: ['anthropic'], validate: isFacing });
@@ -72,13 +118,9 @@ export async function handlePhotoOrientation(request, env, corsHeadersFor, _serv
   } catch (e) {
     return jsonResponse({ ok: false, error: 'vision_exception', detail: String(e && e.message || e) }, 502, cors);
   }
-
   if (!r || !r.ok) {
     return jsonResponse({ ok: false, error: 'vision_failed', attempts: (r && r.attempts) || null }, 502, cors);
   }
-  let facing = 'center';
-  try { facing = String(JSON.parse(r.text).facing || '').toLowerCase(); } catch { /* keep center */ }
-  if (facing !== 'left' && facing !== 'right' && facing !== 'center') facing = 'center';
-
+  const facing = parseFacing(r.text) || 'center';
   return jsonResponse({ ok: true, facing, provider: r.provider, model: r.model }, 200, cors);
 }

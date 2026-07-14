@@ -2314,6 +2314,48 @@
     } catch (_) { return String(s == null ? "" : s); }
   }
   try { if (typeof window !== "undefined") window.__antcvSloganCap = __antcvSloganCap; } catch (_) {}
+  // SLOGAN-PLACEMENT-001 (owner 2026-07-14): the slogan can either be VISIBLE
+  // between heading and body ('heading', default) OR HIDDEN as a standalone and
+  // instead injected as the LEAD-IN (b) of the CL opening's first sentence
+  // ('leadin' — rich_content shows a per-item lead-in). The brand helps choose
+  // the default. antcv:clSloganMode holds it.
+  function __antcvSloganMode() { try { return String(localStorage.getItem("antcv:clSloganMode") || "heading").toLowerCase() === "leadin" ? "leadin" : "heading"; } catch (_) { return "heading"; } }
+  function __antcvSloganStandaloneHidden() { try { return localStorage.getItem("antcv:clSloganHidden") === "1" || __antcvSloganMode() === "leadin"; } catch (_) { return false; } }
+  // Given the CL opening section + the resolved slogan, return it with the
+  // slogan as the first item's lead-in when in 'leadin' mode (else unchanged).
+  // Shared by the preview map + the docx-client export so preview == export.
+  function __antcvSloganOpeningLeadIn(sec, slogan) {
+    try {
+      if (!sec || sec.id !== "opening" || __antcvSloganMode() !== "leadin") return sec;
+      var sl = String(slogan == null ? "" : slogan).trim();
+      // no slogan passed -> resolve from the standalone override key (populated on
+      // every load path + at generation), so callers need no scope-specific `io`.
+      if (!sl) { try { sl = __antcvSloganCap(String(localStorage.getItem("antcv:clSlogan") || "").trim()); } catch (_) {} }
+      if (!sl || /^\[/.test(sl)) return sec;
+      var items = Array.isArray(sec.items) && sec.items.length ? sec.items.slice() : [{ b: "", t: "" }];
+      items[0] = Object.assign({}, items[0], { b: sl, bOff: false });
+      return Object.assign({}, sec, { items: items });
+    } catch (_) { return sec; }
+  }
+  // The resolved, capped slogan (same chain both preview renders use), so the
+  // opening lead-in and the standalone render never disagree.
+  function __antcvResolveSlogan(io) {
+    try {
+      var st = String((io && io.cl_slogan) || "").trim();
+      if (!st || /^\[/.test(st)) st = String(localStorage.getItem("antcv:clSlogan") || "").trim();
+      if (!st || /^\[/.test(st)) st = String((io && io.subtitle) || "").trim();
+      st = __antcvSloganCap(String(st).replace(/\s*\|\s*/g, " • ").trim());
+      return (!st || /^\[/.test(st)) ? "" : st;
+    } catch (_) { return ""; }
+  }
+  try {
+    if (typeof window !== "undefined") {
+      window.__antcvSloganMode = __antcvSloganMode;
+      window.__antcvSloganStandaloneHidden = __antcvSloganStandaloneHidden;
+      window.__antcvSloganOpeningLeadIn = __antcvSloganOpeningLeadIn;
+      window.__antcvResolveSlogan = __antcvResolveSlogan;
+    }
+  } catch (_) {}
   function __antcvWriteSpec(v) {
     try {
       if ("string" != typeof v) return;
@@ -29161,7 +29203,7 @@
               })(),
               g = 5;
             P =
-              `<table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${(() => { try { if (localStorage.getItem("antcv:clSloganHidden") === "1") return ""; var st = String((io && io.cl_slogan) || "").trim(); if (!st || /^\[/.test(st)) st = String(localStorage.getItem("antcv:clSlogan") || "").trim(); if (!st || /^\[/.test(st)) st = String(io.subtitle || "").trim(); st = st.replace(/\s*\|\s*/g, " • ").trim(); if (window.__antcvSloganCap) st = window.__antcvSloganCap(st); if (!st || /^\[/.test(st)) return ""; var sa = String(localStorage.getItem("antcv:clSloganAlign") || "center").replace(/["']/g, "").toLowerCase(); if (sa !== "left" && sa !== "right" && sa !== "center") sa = "center"; return '<p style="font-family:\'Cabin\',' + d + ';font-size:11pt;font-weight:700;letter-spacing:.08em;text-align:' + sa + ';color:var(--brand-slogan-color,' + (t.mainLineColor || "#01746E") + ');margin:0 0 12pt">' + st.toUpperCase() + '</p>'; } catch (_) { return ""; } })()}${l.map(b).join("")}${u}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table>` +
+              `<table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${(() => { try { if (window.__antcvSloganStandaloneHidden ? window.__antcvSloganStandaloneHidden() : localStorage.getItem("antcv:clSloganHidden") === "1") return ""; var st = String((io && io.cl_slogan) || "").trim(); if (!st || /^\[/.test(st)) st = String(localStorage.getItem("antcv:clSlogan") || "").trim(); if (!st || /^\[/.test(st)) st = String(io.subtitle || "").trim(); st = st.replace(/\s*\|\s*/g, " • ").trim(); if (window.__antcvSloganCap) st = window.__antcvSloganCap(st); if (!st || /^\[/.test(st)) return ""; var sa = String(localStorage.getItem("antcv:clSloganAlign") || "center").replace(/["']/g, "").toLowerCase(); if (sa !== "left" && sa !== "right" && sa !== "center") sa = "center"; return '<p style="font-family:\'Cabin\',' + d + ';font-size:11pt;font-weight:700;letter-spacing:.08em;text-align:' + sa + ';color:var(--brand-slogan-color,' + (t.mainLineColor || "#01746E") + ');margin:0 0 12pt">' + st.toUpperCase() + '</p>'; } catch (_) { return ""; } })()}${l.map(b).join("")}${u}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table>` +
               (c
                 ? `<div style="page-break-before:always;mso-page-break-before:always;break-before:page"><table width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="${n}" style="width:100%;border-collapse:collapse;background:${n};page-break-after:avoid;mso-page-break-after:avoid"><tr><td bgcolor="${n}" style="background:${n};padding:14pt 16pt 8pt;text-align:center">${N}${_}${$}</td></tr></table><table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${b(c)}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table></div>`
                 : "");
@@ -45954,7 +45996,7 @@
                   // CJLR align. Mirrors the export srcdoc IIFE + the worker __slogan block.
                   (() => {
                     try {
-                      if (localStorage.getItem("antcv:clSloganHidden") === "1") return null;
+                      if (window.__antcvSloganStandaloneHidden ? window.__antcvSloganStandaloneHidden() : localStorage.getItem("antcv:clSloganHidden") === "1") return null;
                       var st = String((io && io.cl_slogan) || "").trim();
                       if (!st || /^\[/.test(st)) st = String(localStorage.getItem("antcv:clSlogan") || "").trim();
                       if (!st || /^\[/.test(st)) st = String((io && io.subtitle) || "").trim();
@@ -45987,7 +46029,9 @@
                   ).map((e) =>
                     React.createElement(Ce, {
                       key: e.id,
-                      s: e,
+                      // SLOGAN-PLACEMENT-001: in 'leadin' mode the slogan becomes the
+                      // opening's first-item lead-in (rich_block renders + exports it).
+                      s: (e.id === "opening" && window.__antcvSloganOpeningLeadIn) ? window.__antcvSloganOpeningLeadIn(e) : e,
                       navyColor: Ke,
                       isCL: !0,
                       language: je,
@@ -46177,7 +46221,8 @@
                           { style: { padding: "6px 7px 14px" } },
                           React.createElement(Ce, {
                             key: e.id,
-                            s: e,
+                            // SLOGAN-PLACEMENT-001: 'leadin' mode -> slogan as opening lead-in.
+                            s: (e.id === "opening" && window.__antcvSloganOpeningLeadIn) ? window.__antcvSloganOpeningLeadIn(e) : e,
                             navyColor: Ke,
                             isCL: !0,
                             language: je,

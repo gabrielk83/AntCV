@@ -890,7 +890,9 @@ export function buildPayload({
         try {
           if (doc !== 'cl') return {};
           const out = {};
-          if (localStorage.getItem('antcv:clSloganHidden') === '1') { out.slogan_hidden = true; return out; }
+          // SLOGAN-PLACEMENT-001: in 'leadin' mode the standalone tagline is hidden
+          // (it becomes the opening's lead-in instead — injected into the sections below).
+          if (localStorage.getItem('antcv:clSloganHidden') === '1' || (typeof window !== 'undefined' && window.__antcvSloganMode && window.__antcvSloganMode() === 'leadin')) { out.slogan_hidden = true; return out; }
           // SLOGAN-SUBTITLE-SOURCE-001 (owner 2026-06-30): for a CL the local `subtitle` var (and
           // hence meta.subtitle sent below) is OVERRIDDEN to the "Application: <role>" header label,
           // so the worker's slogan fallback (meta.subtitle) showed the APP LABEL instead of the
@@ -1763,6 +1765,19 @@ function sanitizeForExport(docSections, doc) {
       if ((s.id === 'languages' || /^languages?$/i.test(String(s.title || s.id || ''))) && Array.isArray(s.items)) {
         const items = _stripUruguayan(s.items);
         if (items !== s.items) return { ...s, items };
+      }
+      // SLOGAN-PLACEMENT-001 export parity: in 'leadin' mode inject the slogan as
+      // the opening's first-item lead-in so the DOCX/PDF matches the preview (the
+      // standalone tagline is hidden via slogan_hidden above).
+      if (s.id === 'opening' && typeof window !== 'undefined' && window.__antcvSloganOpeningLeadIn && window.__antcvSloganMode && window.__antcvSloganMode() === 'leadin') {
+        let __sl = '';
+        try {
+          __sl = String((typeof meta !== 'undefined' && meta && meta.cl_slogan) || '').trim();
+          if (!__sl || /^\[/.test(__sl)) __sl = String(localStorage.getItem('antcv:clSlogan') || '').trim();
+          if (window.__antcvSloganCap) __sl = window.__antcvSloganCap(__sl);
+        } catch (_) {}
+        const __os = window.__antcvSloganOpeningLeadIn(s, __sl);
+        if (__os !== s) return __os;
       }
       // (1) strip fabricated tools from any tools comma-list (Nordea analytics -> Snowflake/
       // DBT, which the candidate does not use). Always, regardless of targeted/unsolicited.

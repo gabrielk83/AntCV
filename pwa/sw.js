@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.744-roles-rb-justify';
+const CACHE = 'antcv-1.51.745-slogan-placement';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

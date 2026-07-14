@@ -179,26 +179,29 @@
 
   // ---- shared row scaffolding ----
   var openState = { slogan: false, signoff: false, signature: false };
+  // CJLR-CYCLER-001 (owner 2026-07-14: "merge the 4 left/center/right/justify to a single
+  // button"): one button that shows the current alignment and cycles L → C → R → J on click,
+  // like the section CJLR control. Writes the same align key + bumps the preview.
+  var __ALIGN_CYCLE = ['left', 'center', 'right', 'justify'];
+  var __ALIGN_LABEL = { left: '⯇ Left', center: '≡ Center', right: 'Right ⯈', justify: '☰ Justify' };
   function mkAlignBtns(key, refresh, afterWrite) {
     var wrap = document.createElement('div');
     wrap.style.cssText = 'display:flex;align-items:center;gap:5px;font-size:10px;color:#234a46;';
     wrap.appendChild(document.createTextNode('Align:'));
-    var btns = {};
-    [['Left', 'left'], ['Center', 'center'], ['Right', 'right'], ['Justify', 'justify']].forEach(function (p) {
-      var b = document.createElement('button');
-      b.type = 'button'; b.textContent = p[0];
-      b.style.cssText = 'padding:3px 8px;border-radius:5px;border:1px solid rgba(1,183,187,0.45);font-size:10px;font-weight:600;cursor:pointer;';
-      b.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); set(key, p[1]); refresh(); (afterWrite || bump)(); });
-      btns[p[1]] = b;
-      wrap.appendChild(b);
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.title = 'Click to cycle alignment: Left → Center → Right → Justify';
+    b.style.cssText = 'padding:3px 10px;border-radius:5px;border:1px solid rgba(1,183,187,0.45);background:' + ACCENT + ';color:#04231f;font-size:10px;font-weight:600;cursor:pointer;min-width:78px;text-align:center;';
+    b.addEventListener('click', function (e) {
+      e.preventDefault(); e.stopPropagation();
+      var cur = sanitizeAlign(get(key, null), 'center');
+      var next = __ALIGN_CYCLE[(__ALIGN_CYCLE.indexOf(cur) + 1) % __ALIGN_CYCLE.length];
+      set(key, next); refresh(); (afterWrite || bump)();
     });
+    wrap.appendChild(b);
     wrap.__paint = function () {
       var a = sanitizeAlign(get(key, null), 'center');
-      for (var k in btns) {
-        var on = (k === a);
-        btns[k].style.background = on ? ACCENT : 'rgba(1,183,187,0.10)';
-        btns[k].style.color = on ? '#04231f' : ACCENT;
-      }
+      b.textContent = __ALIGN_LABEL[a] || a;
     };
     return wrap;
   }
@@ -270,11 +273,13 @@
   //   __antcvLLM(messages, prompt, opts)  __antcvLLMProviders  __antcvLLMInit  __antcvJsonRepair
   //   __antcvOverCost  __antcvPushUndo. All read/write the same antcv:clSlogan store; both push
   //   app undo (so the toolbar ↶ reverts them) and cap to 4-8 words.
+  // RAW current slogan text — NO word-cap applied here. (Earlier this capped, which made
+  // Fit-it a no-op: it re-capped an already-capped string → no change → "Fit doesn't work".
+  // The cap now lives ONLY in sloganFit, so Fit-it actually trims an over-length slogan.)
   function sloganCurrentText() {
     var cur = get(K.text, '') || '';
     try { if (!cur) cur = String(localStorage.getItem('antcv:clSlogan') || ''); } catch (_) {}
     cur = String(cur).replace(/\s*\|\s*/g, ' • ');
-    if (window.__antcvSloganCap) { try { cur = window.__antcvSloganCap(cur); } catch (_) {} }
     return String(cur || '').replace(/\s*•\s*/g, ' ').replace(/\s+/g, ' ').trim();
   }
   function sloganFit() {
@@ -286,6 +291,8 @@
     if (fit && fit !== cur) {
       try { window.__antcvPushUndo && window.__antcvPushUndo('Fit slogan'); } catch (_) {}
       set(K.text, fit); bump();
+    } else {
+      alert('Slogan already fits within 4-8 words — nothing to trim.');
     }
   }
   function sloganEnhance() {

@@ -89,11 +89,16 @@
     } catch (_) { return null; }
   }
 
-  function drawMark(rect, word, sid) {
+  function drawMark(rect, word, sid, node, start, end) {
     if (rect.width < 2 || rect.bottom < 0 || rect.top > window.innerHeight) return;
     var m = document.createElement('span');
     m.setAttribute('data-antcv-pspell-word', word);
     if (sid) m.setAttribute('data-antcv-pspell-sid', sid);
+    // Stash the owning text node + word offsets (JS props, not attributes) so the
+    // popover can commit a fix straight into a standalone contentEditable editable
+    // (slogan / specialisation / contact / publications) that lives OUTSIDE the
+    // sections store — see applyStandaloneFix.
+    m.__pspellNode = node || null; m.__pspellStart = start; m.__pspellEnd = end;
     m.style.cssText = 'position:fixed;left:' + Math.round(rect.left) + 'px;top:' + Math.round(rect.top) + 'px;'
       + 'width:' + Math.round(rect.width) + 'px;height:' + Math.round(rect.height) + 'px;'
       + 'pointer-events:auto;cursor:pointer;'
@@ -136,7 +141,7 @@
           for (var i = 0; i < rects.length; i++) {
             var rr = rects[i];
             if (rr.width < 2 || rr.bottom < 0 || rr.top > window.innerHeight) continue;
-            toDraw.push({ word: mk.word, sid: sid, left: Math.round(rr.left), top: Math.round(rr.top), width: Math.round(rr.width), height: Math.round(rr.height) });
+            toDraw.push({ word: mk.word, sid: sid, node: res.node, start: mk.start, end: mk.end, left: Math.round(rr.left), top: Math.round(rr.top), width: Math.round(rr.width), height: Math.round(rr.height) });
             count++;
           }
         });
@@ -146,7 +151,7 @@
       if (sig === __lastSig && o && o.style.visibility !== 'hidden') return; // unchanged → no DOM churn → no blip
       clearOverlay();
       overlay().style.visibility = ''; // re-show after a scroll-hide, now realigned
-      toDraw.forEach(function (d) { drawMark({ left: d.left, top: d.top, width: d.width, height: d.height, bottom: d.top + d.height }, d.word, d.sid); });
+      toDraw.forEach(function (d) { drawMark({ left: d.left, top: d.top, width: d.width, height: d.height, bottom: d.top + d.height }, d.word, d.sid, d.node, d.start, d.end); });
       __lastSig = sig;
     });
   }
@@ -189,10 +194,43 @@
     } catch (_) { return false; }
   }
 
+  // SPELL-APPLY-STANDALONE-001 (owner 2026-07-14: "apply spelling corrections to slogan,
+  // application and specification"). Those editables are NOT sections — the slogan lives in
+  // antcv:clSlogan, the specialisation in personalInfo.specialization, contact/publications in
+  // their own stores — so applyFix (which only edits the `sections` bundle) silently no-ops on
+  // them. Here we commit the fix straight into the live contentEditable that owns the clicked
+  // word, then fire its own onBlur (focus→blur) so it persists to whatever store it uses. This
+  // works uniformly for every ref-managed standalone editable (slogan / spec / contact / pubs).
+  function applyStandaloneFix(node, start, end, word, repl) {
+    try {
+      if (!node || !node.isConnected || node.nodeType !== 3) return false;
+      var el = node.parentElement;
+      var ed = el && el.closest && el.closest('[contenteditable="true"], [contenteditable=""]');
+      if (!ed || ed.getAttribute('contenteditable') === 'false') return false;
+      // ignore section-owned editables — those persist through applyFix/React, not a raw
+      // text-node poke (data-sid marks a real section container).
+      if (ed.closest && ed.closest('[data-sid]')) return false;
+      var val = node.nodeValue || '';
+      var seg = (typeof start === 'number' && typeof end === 'number') ? val.slice(start, end) : '';
+      if (seg === word) {
+        node.nodeValue = val.slice(0, start) + repl + val.slice(end);
+      } else {
+        var nv = replaceWordInString(val, word, repl); // offsets drifted — scoped word replace
+        if (nv === val) return false;
+        node.nodeValue = nv;
+      }
+      // commit via the element's own onBlur (it reads textContent/innerHTML → writes its store)
+      try { ed.focus(); } catch (_) {}
+      try { ed.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
+      try { ed.blur(); } catch (_) {}
+      return true;
+    } catch (_) { return false; }
+  }
+
   // ─── popover ─────────────────────────────────────────────────────
   var pop = null;
-  var popWord = null, popSid = null;
-  function closePop() { if (pop && pop.parentElement) pop.parentElement.removeChild(pop); pop = null; popWord = null; popSid = null; }
+  var popWord = null, popSid = null, popNode = null, popStart = null, popEnd = null;
+  function closePop() { if (pop && pop.parentElement) pop.parentElement.removeChild(pop); pop = null; popWord = null; popSid = null; popNode = null; popStart = null; popEnd = null; }
   function openPop(mark) {
     closePop();
     var word = mark.getAttribute('data-antcv-pspell-word');
@@ -200,6 +238,7 @@
     // Track by WORD+SID, not the element: scan re-creates the mark node between
     // clicks, so element identity can't tell "same word clicked twice".
     popWord = word; popSid = sid;
+    popNode = mark.__pspellNode || null; popStart = mark.__pspellStart; popEnd = mark.__pspellEnd;
     var r = mark.getBoundingClientRect();
     pop = document.createElement('div');
     pop.className = 'no-print';
@@ -228,7 +267,14 @@
         none.style.cssText = 'padding:5px 8px;color:#888;'; pop.appendChild(none);
       }
       (sugg || []).forEach(function (s) {
-        pop.appendChild(btn(s, true, function () { applyFix(sid, word, s); closePop(); setTimeout(scan, 120); }));
+        pop.appendChild(btn(s, true, function () {
+          // Section words (sid present) → sections store; standalone editables
+          // (slogan / spec / contact / pubs, no sid) → the live-editable commit path.
+          var ok = sid ? applyFix(sid, word, s) : false;
+          if (!ok) ok = applyStandaloneFix(popNode, popStart, popEnd, word, s);
+          if (!ok) applyFix(sid, word, s);
+          closePop(); setTimeout(scan, 120);
+        }));
       });
       var hr = document.createElement('div'); hr.style.cssText = 'border-top:1px solid rgba(0,0,0,0.08);margin:4px 0;'; pop.appendChild(hr);
       pop.appendChild(btn('+ Add "' + word + '" to my dictionary', false, function () {

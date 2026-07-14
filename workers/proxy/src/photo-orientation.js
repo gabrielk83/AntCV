@@ -50,10 +50,10 @@ const isFacing = (t) => parseFacing(t) !== null;
 // Direct Mistral Pixtral vision call (bare `pixtral-12b`, image_url string form,
 // no json_object). Returns { facing, model } only when a real pixtral model
 // served it; null on any failure OR a blind ministral substitution.
-async function mistralPixtral(env, media, b64) {
+async function mistralPixtral(env, media, b64, diag) {
   try {
     const key = await getKeyForProvider(env, 'mistral');
-    if (!key) return null;
+    if (!key) { if (diag) diag.mistral = { err: 'no_key' }; return null; }
     const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
@@ -69,14 +69,16 @@ async function mistralPixtral(env, media, b64) {
         }],
       }),
     });
-    if (res.status !== 200) return null;
     const data = await res.json().catch(() => null);
     const served = String((data && data.model) || '');
+    const content = data?.choices?.[0]?.message?.content || '';
+    if (diag) diag.mistral = { status: res.status, served, content: String(content).slice(0, 80), err: (data && data.error && (data.error.message || data.error)) ? String(data.error.message || data.error).slice(0, 120) : undefined };
+    if (res.status !== 200) return null;
     if (!/pixtral/i.test(served)) return null; // blind substitution (e.g. ministral) -> reject
-    const facing = parseFacing(data?.choices?.[0]?.message?.content || '');
+    const facing = parseFacing(content);
     if (!facing) return null;
     return { facing, model: served, provider: 'mistral' };
-  } catch (_) { return null; }
+  } catch (e) { if (diag) diag.mistral = { err: String(e && e.message || e) }; return null; }
 }
 
 export async function handlePhotoOrientation(request, env, corsHeadersFor, _serverKeyFor) {
@@ -96,7 +98,8 @@ export async function handlePhotoOrientation(request, env, corsHeadersFor, _serv
 
   // 1) Mistral Pixtral (cheap, owner's preference) — accepted only if a real
   //    pixtral model served it.
-  const mp = await mistralPixtral(env, media, b64);
+  const diag = {};
+  const mp = await mistralPixtral(env, media, b64, diag);
   if (mp) return jsonResponse({ ok: true, facing: mp.facing, provider: mp.provider, model: mp.model }, 200, cors);
 
   // 2) Fallback to genuinely-multimodal providers via the shared cascade, each
@@ -122,5 +125,5 @@ export async function handlePhotoOrientation(request, env, corsHeadersFor, _serv
     return jsonResponse({ ok: false, error: 'vision_failed', attempts: (r && r.attempts) || null }, 502, cors);
   }
   const facing = parseFacing(r.text) || 'center';
-  return jsonResponse({ ok: true, facing, provider: r.provider, model: r.model }, 200, cors);
+  return jsonResponse({ ok: true, facing, provider: r.provider, model: r.model, _diag: diag }, 200, cors);
 }

@@ -1,3 +1,7 @@
+## 1.14.157-underrole-all
+
+- UNDER-ROLE-RULE-ALL-001 (owner 2026-07-15): the under-role horizontal rule (teal, thin) now renders under EVERY experience role in the export, not only editor-restyled roles. The preview (chimera app.src.js + adapter renderRoleHead) has always drawn it under every role; the worker export gated it on role.roleLineStyle (__rls) since 1.14.156's Stage-3 work, so exported PDFs/DOCX had NO line under plain role headings while the on-screen preview did. This closes that preview/export parity gap. renderExperience now emits the paragraph bottom border for any role unless role.roleLineHr === false; a restyled role uses its seg-0 (title) colour, every other role uses style.mainHeadColor. This DOES change untouched exports (adds the rule) — that is the intent (export == preview). Test: diag-cjlr-group-role-export.mjs now asserts a plain role (no roleLineStyle) carries the under-role border, and a role with roleLineHr:false does not.
+
 ## 1.14.156-cjlr-export-parity
 
 - CJLR EXPORT PARITY (owner 2026-07-14/15): mirror the PWA-preview-only CJLR fixes shipped 1.51.1184->1.51.1225 into the worker export so DOCX/PDF matches the on-screen preview. Four items:

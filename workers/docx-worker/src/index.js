@@ -27625,13 +27625,14 @@ function renderExperience(s, ctx) {
         // L/C/R → group the whole role line to that side. The tabStops below stay put
         // but are inert in the L/C/R case (no tab char in the years run then).
         alignment: __roleLCR ? roleAlign : void 0,
-        // ROLES-AS-RICHBLOCK-001 Stage 3: draw the teal under-role rule ONLY for a
-        // role the flag-on editor restyled (__rls present) and not explicitly
-        // hr-off. The preview (chimera + adapter) draws this line under EVERY role;
-        // the export historically never did. Gating on __rls keeps every untouched
-        // role's export byte-identical — turning the underline on for all exports is
-        // a separate, production-wide parity decision left to the owner.
-        ...(__rls && role.roleLineHr !== false ? { border: { bottom: { style: BorderStyle.SINGLE, size: 4, space: 1, color: (__tSeg && __hex(__tSeg.color)) || style.mainHeadColor } } } : {}),
+        // UNDER-ROLE-RULE-ALL-001 (owner 2026-07-15): draw the under-role rule under
+        // EVERY role, mirroring the preview (chimera app.src.js + adapter renderRoleHead
+        // draw it under every role). The export historically drew it only for editor-
+        // restyled roles (__rls) — a preview/export parity GAP the owner has now closed.
+        // A role opts OUT with roleLineHr:false; a restyled role uses its seg-0 colour,
+        // every other role uses the teal mainHeadColor. This changes untouched exports
+        // by design (adds the rule) — the whole point is preview==export.
+        ...(role.roleLineHr !== false ? { border: { bottom: { style: BorderStyle.SINGLE, size: 4, space: 1, color: (__tSeg && __hex(__tSeg.color)) || style.mainHeadColor } } } : {}),
         // keepNext: the role title (e.g. "Customer Change Requests Specialist
         // | Innoviz Technologies | 2020 — 2025") must stay glued to its
         // first bullet. Otherwise Word can leave the title alone at the
@@ -28732,7 +28733,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.156-cjlr-export-parity";
+var VERSION = "1.14.157-underrole-all";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

@@ -140,7 +140,15 @@ function check(name, cond, detail) { results.push({ name, ok: !!cond, detail });
     { id: 'exp', title: 'EXPERIENCE', loc: 'main', on: true, type: 'experience', roles: [
       { title: 'PLAINROLE', company: 'CoPlain', years: '2021', bullets: ['bp'] } ] } ] });
   const p2 = paraSlice(xml2, 'PLAINROLE') || '';
-  check('plain role (no roleLineStyle) -> NO under-role border (byte-identical)', !/<w:pBdr>/.test(p2), 'border=' + /<w:pBdr>/.test(p2));
+  // UNDER-ROLE-RULE-ALL-001 (owner 2026-07-15): the under-role rule now draws under
+  // EVERY role, so a plain role (no roleLineStyle) carries the border too.
+  check('plain role (no roleLineStyle) -> HAS under-role rule (UNDER-ROLE-RULE-ALL-001)', /<w:pBdr>[\s\S]*<w:bottom/.test(p2), 'border=' + /<w:pBdr>/.test(p2));
+  // a role may opt OUT of the under-role rule with roleLineHr:false
+  const xml3 = await gen({ sections: [
+    { id: 'exp', title: 'EXPERIENCE', loc: 'main', on: true, type: 'experience', roles: [
+      { title: 'NOHRROLE', company: 'CoNoHr', years: '2020', bullets: ['bn'], roleLineHr: false } ] } ] });
+  const p3 = paraSlice(xml3, 'NOHRROLE') || '';
+  check('role roleLineHr:false -> NO under-role border', !/<w:pBdr>/.test(p3), 'border=' + /<w:pBdr>/.test(p3));
 }
 
 // ─── grpKeep: user-made childless group stays visible; without it, hidden ───

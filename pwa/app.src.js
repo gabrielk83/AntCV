@@ -6377,7 +6377,11 @@
             // ROLES-AS-RICHBLOCK-001: honour a roles-path CJLR key (roles.R.bullets.B)
             // when the adapted experience section stamps row._key — same key the
             // editor writes and the worker reads, so preview==export.
-            const v = (key && __al[key]) || __al["items." + i] || __al[String(i)] || __al.__group__;
+            // GROUP-CJLR-SCOPE-001 (owner 2026-07-14): __group__ (the "Groups" control)
+            // aligns GROUP HEADINGS only — NOT content rows. Content rows follow their
+            // own per-row CJLR, else the default. Without this, the group control also
+            // captured every body row (the "section CJLR still controls the rows" bug).
+            const v = (key && __al[key]) || __al["items." + i] || __al[String(i)] || (isGrp ? __al.__group__ : void 0);
             if (["left", "center", "right", "justify"].includes(v)) return v;
             return isGrp ? "center" : (__hasGrp ? "left" : "justify");
           };

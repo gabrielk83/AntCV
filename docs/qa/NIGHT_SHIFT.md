@@ -33,6 +33,7 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mrkppnoa_bzvg","started":"2026-07-14T14:41:01.811Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.802-1.51.821","task":"contact-line: drop bullet when emojis + font +0.5pt (preview/srcdoc/OOXML)","beat":"2026-07-14T14:41:02.317Z"}
 {"id":"sh_mrl2y64c_6npv","started":"2026-07-14T20:04:36.350Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.1164-1.51.1183","task":"slogan CJLR single-cycler + Fit-it double-cap fix + apply-corrections for standalone editables + justify-accept","beat":"2026-07-14T20:04:37.031Z"}
 {"id":"sh_mrl3rhbt_a4e8","started":"2026-07-14T20:27:23.902Z","host":"GabyPC2","worktree":null,"branch":"HEAD","range":"1.51.1224-1.51.1243","task":"cjlr 1185 group-roles + header preview (reversion above 1204)","beat":"2026-07-14T20:32:04.083Z"}
+{"id":"sh_mrl49li0_9915","started":"2026-07-14T20:41:29.119Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.1244-1.51.1263","task":"PHOTO-NUDGE-UP-001: pull header photo up 6px (flow-neutral, sidebar fill unchanged)","beat":"2026-07-14T20:41:29.504Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

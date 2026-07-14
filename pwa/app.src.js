@@ -432,6 +432,61 @@
     const n = Number(v);
     return null != v && isFinite(n) ? n : d;
   };
+  // SEAM-LINE-001b / HEADER-SEAM-#0b (owner 2026-07-14): the header↔sidebar seam.
+  // A thin bottom rule under the candidate band, in the PHOTO-CONTOUR colour
+  // (photoBorderColor), shown ONLY when the header band and the sidebar share ONE
+  // background (headerBg === sidebarBg) — then the two same-coloured regions need a
+  // rule to read as distinct. When they differ, the colour change IS the separator,
+  // so no line is drawn (Copenhagen: navy band + pale sidebar → no seam). The
+  // contour is contrast-guarded against the shared bg so a 1px rule stays visible
+  // (accessibility); if the accent is too close to the background it falls back to
+  // a high-contrast neutral. __antcvSeamStyle returns a style fragment ({} or
+  // {borderBottom}) so the populated band and the empty-state strip spread it
+  // identically — and the docx-worker export mirrors this exact rule for parity.
+  // Distinct from the CONTACT line (#0a), which uses headerLineColor and is drawn
+  // unconditionally around the name/spec/contact block.
+  const __antcvSeamLum = (hex) => {
+    try {
+      let h = String(hex || "").replace(/^#/, "").trim();
+      if (3 === h.length) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+      if (h.length < 6) return null;
+      const f = (i) => {
+        const c = parseInt(h.slice(i, i + 2), 16) / 255;
+        return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+      };
+      return 0.2126 * f(0) + 0.7152 * f(2) + 0.0722 * f(4);
+    } catch (_) {
+      return null;
+    }
+  };
+  const __antcvSeamContour = (contour, bg) => {
+    try {
+      const lc = __antcvSeamLum(contour),
+        lb = __antcvSeamLum(bg);
+      if (null == lc || null == lb) return contour || "#00746E";
+      const ratio = (Math.max(lc, lb) + 0.05) / (Math.min(lc, lb) + 0.05);
+      if (ratio >= 1.8) return contour; // visible enough as a thin rule
+      // guard: fall back to a high-contrast neutral vs the shared bg (mirrors the
+      // docx-worker's readableInk: white on dark, #283556 on light).
+      return lb < 0.5 ? "#FFFFFF" : "#283556";
+    } catch (_) {
+      return contour || "#00746E";
+    }
+  };
+  const __antcvSeamStyle = (cfg) => {
+    try {
+      const a = String((cfg && cfg.headerBg) || "").trim().toLowerCase(),
+        b = String((cfg && cfg.sidebarBg) || "").trim().toLowerCase();
+      if (!a || a !== b) return {}; // colour change is the separator
+      const col = __antcvSeamContour(
+        (cfg && cfg.photoBorderColor) || "#00746E",
+        a,
+      );
+      return { borderBottom: `1px solid ${col}` };
+    } catch (_) {
+      return {};
+    }
+  };
   // GEN-SPEED-001 (owner 2026-06-12: "prevent long convergence time for
   // the generation"): one persisted preset drives the convergence knobs.
   //   fast     — single provider per task, consensus skipped this run;
@@ -44987,11 +45042,14 @@
                     // band (#283556) that the token sidecar skips; custom falls
                     // back to Ke. See diag-copenhagen-palette.mjs.
                     background: `var(--header-bg, ${Ke})`,
-                    // SEAM-LINE-001 (owner 2026-07-14): a full-width bottom border on the
-                    // candidate band, matched to the figure's outer contour (photoBorderColor).
-                    // Gives continuity along the whole line and — when header and sidebar share
-                    // one colour — restores the otherwise-invisible header/sidebar seam.
-                    borderBottom: `1px solid ${(ya && ya.photoBorderColor) || "#00746E"}`,
+                    // SEAM-LINE-001b / HEADER-SEAM-#0b (owner 2026-07-14): a full-width
+                    // bottom border on the candidate band, matched to the figure's outer
+                    // contour (photoBorderColor), drawn ONLY when the header band and the
+                    // sidebar share one colour (headerBg === sidebarBg) — then it restores
+                    // the otherwise-invisible header/sidebar seam. When they differ, the
+                    // colour change itself separates the regions, so no line. Contrast-
+                    // guarded so a 1px rule stays visible on the shared background.
+                    ...__antcvSeamStyle(ya),
                     padding: "14px 16px 10px",
                     textAlign: "center",
                     // PHOTO-SIDEBAR-BRIDGE-001: in bridge mode the candidate
@@ -45032,7 +45090,9 @@
                 w.map(v),
               )
             : React.createElement("div", {
-                style: { background: `var(--header-bg, ${Ke})`, height: 8, borderBottom: `1px solid ${(ya && ya.photoBorderColor) || "#00746E"}` },
+                // SEAM-LINE-001b / HEADER-SEAM-#0b: empty-state header strip — same
+                // gated seam as the populated band (only when headerBg === sidebarBg).
+                style: { background: `var(--header-bg, ${Ke})`, height: 8, ...__antcvSeamStyle(ya) },
               }),
           "cv" === Lt
             ? (() => {

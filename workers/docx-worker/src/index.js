@@ -25041,10 +25041,26 @@ function buildTwoColumnDocument(ctx) {
   const __sbEdge = __pxTok("sidebarEdgePad");
   const sbLR = __sbEdge != null ? Math.round(__sbEdge * 15) : 120;
   const seamDxa = Math.round((__pxTok("seamGap") || 0) * 15);
+  // SEAM-LINE-001b / HEADER-SEAM-#0b (owner 2026-07-14): the banner->body divider
+  // (Track C rule 5) becomes the header<->sidebar SEAM. Drawn ONLY when the header
+  // band and the sidebar share ONE background (headerBg === sidebarBg) — then the
+  // two same-coloured regions need a rule to read as distinct — in the photo-
+  // contour colour (photoBorderColor), contrast-guarded against the shared bg so a
+  // thin 1.5pt rule stays visible (accessibility). When they differ, the colour
+  // change itself separates the regions, so NO line — mirrors the PWA preview
+  // (__antcvSeamStyle) for preview==export parity.
+  const __seamSame = (() => {
+    const a = String((style && style.headerBg) || "").trim().toLowerCase().replace(/^#/, "");
+    const b = String((style && style.sidebarBg) || "").trim().toLowerCase().replace(/^#/, "");
+    return !!a && a === b;
+  })();
+  const __seamBorders = __seamSame
+    ? bodyTopBorder(seamContourColor(style.photoBorderColor || "00746E", style.headerBg))
+    : noBorders();
   const makeSidebarCell = (els, withHeader) => new TableCell({
     width: { size: ctx.sidebarW, type: WidthType.DXA },
     shading: { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" },
-    borders: withHeader ? bodyTopBorder(style.headerBg) : noBorders(),
+    borders: withHeader ? __seamBorders : noBorders(),
     // PREVIEW-PDF-SIDEBAR-GEOM-001 (owner 2026-06-10): the preview sidebar uses
     // 8px (=120 DXA) L/R padding; the worker used 144 (9.6px), so the export
     // text column was ~3px narrower each side and wrapped more (e.g. a
@@ -25072,7 +25088,7 @@ function buildTwoColumnDocument(ctx) {
     // main column so it balances a dark sidebar (rule 12: not both pure). Opt-in via
     // style.mainTint (a light hex, e.g. FDF1E9); absent -> white as before.
     shading: style.mainTint ? { type: ShadingType.CLEAR, fill: style.mainTint, color: "auto" } : void 0,
-    borders: withHeader ? bodyTopBorder(style.headerBg) : noBorders(),
+    borders: withHeader ? __seamBorders : noBorders(),
     // ADV-SPACING-CONTROLS-001: seamGap widens the seam side only.
     margins: {
       top: Math.max(0, 120 + __vDelta),
@@ -28188,6 +28204,43 @@ function bodyTopBorder(color) {
   const n = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
   return { top: { style: BorderStyle.SINGLE, size: 12, color: color || "auto" }, bottom: n, left: n, right: n, insideHorizontal: n, insideVertical: n };
 }
+__name(bodyTopBorder, "bodyTopBorder");
+// SEAM-LINE-001b / HEADER-SEAM-#0b (owner 2026-07-14): WCAG relative luminance,
+// mirrored 1:1 from the PWA preview helper (__antcvSeamLum in pwa/app.src.js) so
+// the header↔sidebar seam colour decision is identical in preview and export.
+function seamLum(hex) {
+  try {
+    let h = String(hex || "").replace(/^#/, "").trim();
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    if (h.length < 6) return null;
+    const f = (i) => {
+      const c = parseInt(h.slice(i, i + 2), 16) / 255;
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * f(0) + 0.7152 * f(2) + 0.0722 * f(4);
+  } catch (_) {
+    return null;
+  }
+}
+__name(seamLum, "seamLum");
+// Contrast-guard the photo-contour colour against the shared header/sidebar bg:
+// a thin 1px/1.5pt rule needs a visible ratio. If the accent is too close to the
+// shared background, fall back to a high-contrast neutral (readableInk -> white on
+// dark, 283556 on light) so the seam never disappears. Returns a docx hex (no #).
+// Mirror of __antcvSeamContour in the PWA.
+function seamContourColor(contour, bg) {
+  const cc = String(contour || "").replace(/^#/, "").trim() || "00746E";
+  try {
+    const lc = seamLum(cc), lb = seamLum(bg);
+    if (lc == null || lb == null) return cc;
+    const ratio = (Math.max(lc, lb) + 0.05) / (Math.min(lc, lb) + 0.05);
+    if (ratio >= 1.8) return cc; // visible enough as a thin rule
+    return readableInk(bg); // UNIVERSAL_WHITE / UNIVERSAL_DARK_INK
+  } catch (_) {
+    return cc;
+  }
+}
+__name(seamContourColor, "seamContourColor");
 __name(noBorders, "noBorders");
 
 // src/schema.js

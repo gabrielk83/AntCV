@@ -18516,13 +18516,19 @@
             contact: "center",
           }),
         ),
+        __slogSnap = () => { try { return { s: localStorage.getItem("antcv:clSlogan"), h: localStorage.getItem("antcv:clSloganHidden"), a: localStorage.getItem("antcv:clSloganAlign"), m: localStorage.getItem("antcv:clSloganMode") }; } catch (_) { return null; } },
+        __slogRestore = (snap) => { if (!snap) return; try { const __sset = (k, v) => { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); }; __sset("antcv:clSlogan", snap.s); __sset("antcv:clSloganHidden", snap.h); __sset("antcv:clSloganAlign", snap.a); __sset("antcv:clSloganMode", snap.m); window.dispatchEvent(new CustomEvent("antcv:sections-updated", { detail: { reason: "slogan-undo" } })); } catch (_) {} },
         vr = (e) => {
+          // SLOGAN-UNDO-001: snapshot the standalone slogan localStorage (outside ro/io) so
+          // slogan edits + Enhance/Fit-it undo/redo like anything else.
           const t = {
             label: e || "change",
             sections: JSON.parse(JSON.stringify(ro)),
             meta: { ...io },
+            slogan: __slogSnap(),
           };
           (pr((e) => [...e.slice(-9), t]), mr([]));
+          try { window.__antcvPushUndo = vr; } catch (_) {}
         },
         xr = () => {
           var e;
@@ -18536,10 +18542,12 @@
               label: "redo:" + (t.label || "change"),
               sections: JSON.parse(JSON.stringify(ro)),
               meta: { ...io },
+              slogan: __slogSnap(),
             };
           (mr((e) => [...e.slice(-9), n]),
             ao(t.sections),
             lo(t.meta),
+            __slogRestore(t.slogan),
             pr((e) => e.slice(0, -1)));
         },
         Er = () => {
@@ -18550,10 +18558,12 @@
               label: "undo:" + (e.label || "change"),
               sections: JSON.parse(JSON.stringify(ro)),
               meta: { ...io },
+              slogan: __slogSnap(),
             };
           (pr((e) => [...e.slice(-9), t]),
             ao(e.sections),
             lo(e.meta),
+            __slogRestore(e.slogan),
             mr((e) => e.slice(0, -1)));
         },
         [Rr, Sr] = React.useState(!1),
@@ -21670,6 +21680,11 @@
               }));
           }
         },
+        // SLOGAN-ENHANCE-001 (owner 2026-07-14): the slogan Enhance/Fit-it LOGIC lives in the
+        // isolated slogan control sidecar (antcv-cl-slogan-element.js) to keep app.js edits tiny;
+        // it needs the app-internal LLM dispatcher (ee), provider filter (Q), init (U), JSON-repair
+        // (Ki), undo (vr) and cost ceiling — expose them here (re-set each render so they track).
+        __antcvExposeSloganOps = ((window.__antcvLLM = ee), (window.__antcvLLMProviders = Q), (window.__antcvLLMInit = U), (window.__antcvJsonRepair = Ki), (window.__antcvOverCost = (typeof __overCostCeil === "function" ? __overCostCeil : null)), (window.__antcvPushUndo = vr), null),
         ll = async ({ sectionId: e, roleId: t }) => {
           var n, o;
           Gr("compress_section", {
@@ -46173,7 +46188,7 @@
                         // committed edit) — the correction survives until onBlur commits it.
                         ref: (el) => { if (!el) return; const __sv = (st === st.toUpperCase() && /[a-zA-Z]/.test(st)) ? (st.charAt(0).toUpperCase() + st.slice(1).toLowerCase()) : st; if (el.__antcvSloganV === __sv) return; if (document.activeElement === el) return; el.__antcvSloganV = __sv; if (el.textContent !== __sv) el.textContent = __sv; },
                         title: "Click to edit the positioning line",
-                        onBlur: (ev) => { try { localStorage.setItem("antcv:clSlogan", String(ev.currentTarget.textContent || "").trim()); window.dispatchEvent(new CustomEvent("antcv:sections-updated", { detail: { reason: "cl-slogan-inline" } })); } catch (_) {} },
+                        onBlur: (ev) => { try { const __nv = String(ev.currentTarget.textContent || "").trim(); if (__nv !== String(localStorage.getItem("antcv:clSlogan") || "")) { try { vr("slogan"); } catch (_) {} localStorage.setItem("antcv:clSlogan", __nv); window.dispatchEvent(new CustomEvent("antcv:sections-updated", { detail: { reason: "cl-slogan-inline" } })); } } catch (_) {} },
                         style: {
                           fontFamily: "'Cabin',sans-serif",
                           fontSize: 15,

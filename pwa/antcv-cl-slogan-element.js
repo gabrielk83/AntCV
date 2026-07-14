@@ -55,7 +55,7 @@
   }
   function sanitizeAlign(v, d) {
     var a = String(v == null ? d : v).replace(/["']/g, '').toLowerCase();
-    return (a === 'left' || a === 'right' || a === 'center') ? a : d;
+    return (a === 'left' || a === 'right' || a === 'center' || a === 'justify') ? a : d;
   }
 
   // SPEC-SLOGAN-LANG-001 (owner 2026-07-13, "should not be danish if I am set
@@ -184,7 +184,7 @@
     wrap.style.cssText = 'display:flex;align-items:center;gap:5px;font-size:10px;color:#234a46;';
     wrap.appendChild(document.createTextNode('Align:'));
     var btns = {};
-    [['Left', 'left'], ['Center', 'center'], ['Right', 'right']].forEach(function (p) {
+    [['Left', 'left'], ['Center', 'center'], ['Right', 'right'], ['Justify', 'justify']].forEach(function (p) {
       var b = document.createElement('button');
       b.type = 'button'; b.textContent = p[0];
       b.style.cssText = 'padding:3px 8px;border-radius:5px;border:1px solid rgba(1,183,187,0.45);font-size:10px;font-weight:600;cursor:pointer;';
@@ -265,6 +265,72 @@
     return d;
   }
 
+  // SLOGAN-ENHANCE-001 (owner 2026-07-14): Enhance (LLM rewrite) + Fit-it (re-apply the 4-8
+  // word cap). The app exposes its LLM dispatcher + undo on window (see app.js SLOGAN-ENHANCE-001):
+  //   __antcvLLM(messages, prompt, opts)  __antcvLLMProviders  __antcvLLMInit  __antcvJsonRepair
+  //   __antcvOverCost  __antcvPushUndo. All read/write the same antcv:clSlogan store; both push
+  //   app undo (so the toolbar ↶ reverts them) and cap to 4-8 words.
+  function sloganCurrentText() {
+    var cur = get(K.text, '') || '';
+    try { if (!cur) cur = String(localStorage.getItem('antcv:clSlogan') || ''); } catch (_) {}
+    cur = String(cur).replace(/\s*\|\s*/g, ' • ');
+    if (window.__antcvSloganCap) { try { cur = window.__antcvSloganCap(cur); } catch (_) {} }
+    return String(cur || '').replace(/\s*•\s*/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+  function sloganFit() {
+    var cur = sloganCurrentText();
+    if (!cur || /^\[/.test(cur)) { alert('No slogan to fit yet — write or generate one first.'); return; }
+    var fit = cur;
+    if (window.__antcvSloganCap) { try { fit = window.__antcvSloganCap(cur); } catch (_) {} }
+    fit = String(fit).replace(/[.\s]+$/, '').trim();
+    if (fit && fit !== cur) {
+      try { window.__antcvPushUndo && window.__antcvPushUndo('Fit slogan'); } catch (_) {}
+      set(K.text, fit); bump();
+    }
+  }
+  function sloganEnhance() {
+    var cur = sloganCurrentText();
+    if (!cur || /^\[/.test(cur)) { alert('Write or generate a slogan first, then Enhance it.'); return Promise.resolve(); }
+    if (typeof window.__antcvLLM !== 'function') { alert('Enhance is unavailable right now — reload the app and try again.'); return Promise.resolve(); }
+    try { if (typeof window.__antcvOverCost === 'function' && window.__antcvOverCost()) { alert('Monthly generation budget reached — Enhance paused.'); return Promise.resolve(); } } catch (_) {}
+    if (window.__antcvSloganEnhancing) return Promise.resolve();
+    window.__antcvSloganEnhancing = true;
+    var lang = 'en';
+    try { lang = String(localStorage.getItem('language') || 'en').replace(/"/g, '').slice(0, 2); } catch (_) {}
+    var prompt = 'You are a senior copywriter. Sharpen ONE cover-letter positioning line (a short personal tagline). Make it punchier, more concrete and more memorable while KEEPING the same core meaning and the same subject/voice. HARD RULES: 4-8 words; no trailing period; no quotes; no hype or corporate-speak (never "passionate", "driven", "dynamic", "impactful", "world-class", "results-driven", "cutting-edge", "seamless", "leverage"). Calm, factual, senior Scandinavian-professional voice — facts before flair. Output language: ' + lang + '. Return ONLY valid JSON: {"slogan":"..."}. First character "{", last character "}".';
+    var provs;
+    try { var pf = window.__antcvLLMProviders; provs = ['claude', 'openai', 'mistral', 'gemini'].filter(typeof pf === 'function' ? pf : function () { return true; }); } catch (_) { provs = ['claude']; }
+    var attempts = 2 + Math.max(0, provs.length);
+    function parse(raw) { try { return JSON.parse(raw); } catch (_) { try { return typeof window.__antcvJsonRepair === 'function' ? window.__antcvJsonRepair(raw) : null; } catch (_) { return null; } } }
+    var out = null;
+    function attempt(k) {
+      if (k >= attempts || out) return Promise.resolve();
+      var opt = k <= 1 ? { task: 'enrich' } : { task: 'enrich', forceProvider: provs[k - 2] };
+      return Promise.resolve().then(function () {
+        return window.__antcvLLM([{ role: 'user', content: 'Current positioning line:\n\n' + JSON.stringify({ type: 'slogan', slogan: cur }) }], prompt, opt);
+      }).then(function (raw) {
+        var o = parse(raw);
+        if (o && o.slogan) { out = o; return; }
+        return new Promise(function (r) { setTimeout(r, 1000); }).then(function () { return attempt(k + 1); });
+      }, function () { return new Promise(function (r) { setTimeout(r, 1200); }).then(function () { return attempt(k + 1); }); });
+    }
+    var initChain = Promise.resolve();
+    try { if (typeof window.__antcvLLMInit === 'function') initChain = Promise.resolve(window.__antcvLLMInit()); } catch (_) {}
+    return initChain.then(function () { return attempt(0); }).then(function () {
+      if (!out || !out.slogan) { alert('Enhance failed — try again in a moment.'); return; }
+      var ns = String(out.slogan).replace(/^[\s"'“”]+|[\s"'“”.]+$/g, '').replace(/\s*\|\s*/g, ' • ').trim();
+      if (window.__antcvSloganCap) { try { ns = window.__antcvSloganCap(ns); } catch (_) {} }
+      ns = String(ns || '').trim();
+      if (!ns) { alert('Enhance returned nothing usable — try again.'); return; }
+      try { window.__antcvPushUndo && window.__antcvPushUndo('Enhance slogan'); } catch (_) {}
+      set(K.text, ns);
+      try { localStorage.setItem('antcv:clSloganCtx', JSON.stringify({ v: ns })); } catch (_) {}
+      bump();
+    }).catch(function (e) { try { alert('Enhance slogan failed: ' + (e && e.message)); } catch (_) {} }).then(function () {
+      window.__antcvSloganEnhancing = false;
+    });
+  }
+
   // ---- element 1: SLOGAN (first) ----
   function buildSloganRow() {
     var s = mkShell('slogan', 'COVER LETTER SLOGAN', 'The teal tagline at the top of the cover letter — click to edit');
@@ -275,6 +341,32 @@
     var input = mkInput(K.text, function () { s.box.__refresh(); });
     var alignRow = mkAlignBtns(K.align, function () { s.box.__refresh(); });
     s.body.appendChild(input); s.body.appendChild(alignRow);
+    // SLOGAN-ENHANCE-001 (owner 2026-07-14): Enhance (LLM rewrite) + Fit-it (re-apply the
+    // 4-8 word cap). Both call the app-exposed window ops (app.js defines __antcvEnhanceSlogan /
+    // __antcvFitSlogan next to `il`), are undoable (they push app undo via vr), and read/write
+    // the same antcv:clSlogan store as the inline editor.
+    var aiRow = document.createElement('div');
+    aiRow.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:10px;color:#234a46;margin-top:1px;';
+    var aiLbl = document.createElement('span'); aiLbl.textContent = 'AI:'; aiLbl.style.cssText = 'color:#234a46;';
+    function mkActBtn(txt, title, fn) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.textContent = txt; b.title = title;
+      b.style.cssText = 'padding:3px 8px;border-radius:5px;border:1px solid rgba(1,183,187,0.45);background:rgba(1,183,187,0.10);color:#04231f;font-size:10px;font-weight:600;cursor:pointer;';
+      b.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); fn(b); });
+      return b;
+    }
+    var enhBtn = mkActBtn('✨ Enhance', 'Rewrite the slogan sharper (4-8 words, same meaning) — undoable', function (b) {
+      if (window.__antcvSloganEnhancing) return;
+      var o = b.textContent; b.textContent = '⏳…'; b.style.opacity = '0.7'; b.disabled = true;
+      var done = function () { b.textContent = o; b.style.opacity = '1'; b.disabled = false; try { s.box.__refresh(); } catch (_) {} };
+      Promise.resolve().then(sloganEnhance).then(function () { setTimeout(done, 200); }, done);
+    });
+    var fitBtn = mkActBtn('⇥ Fit', 'Trim the slogan to fit (4-8 words) — undoable', function () {
+      try { sloganFit(); } catch (_) {}
+      setTimeout(function () { try { s.box.__refresh(); } catch (_) {} }, 120);
+    });
+    aiRow.appendChild(aiLbl); aiRow.appendChild(enhBtn); aiRow.appendChild(fitBtn);
+    s.body.appendChild(aiRow);
     s.body.appendChild(mkNote('Leave empty to use the specialisation line. Same store as Settings → COVER LETTER FORMAT.'));
     s.box.__refresh = function () {
       var c = cfg();

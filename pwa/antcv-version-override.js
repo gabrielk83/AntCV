@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.729-slogan-brand-cap';
+  const TARGET_VERSION = '1.51.743-roles-rb-grouphead';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.729-slogan-brand-cap',
     '1.51.728-brand-connect',
     '1.51.727-brand-override',
     '1.51.726-roles-rb-controls',

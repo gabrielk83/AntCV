@@ -286,9 +286,54 @@
     );
   }
 
+  // GENERAL rich_block group heading (Increment A): a group item may carry up to
+  // 3 STYLED segments (row.seg = [{t,color,size,bold,italic,sep}]) + an under-group
+  // rule (row.hr). Each segment's text is EDITABLE inline via the `B` inline editor
+  // at path ["items", i, "seg", n, "t"] — the app's generic deep-path setter
+  // commits it to section state, so the edit persists on blur / panel switch and
+  // reverts ONLY on undo (owner acceptance criteria 1-2). Layout mirrors the worker
+  // renderRichBlock Increment A exactly: inline segments in ONE block honouring the
+  // group align (textAlign) — no per-segment padding/border that could reflow while
+  // marking (criterion 3). The justify space-between (role-line) + RTL variants land
+  // in Increment B (both preview + worker together, to keep parity). ctx = { B, T,
+  // k, exp, s, C, align }.
+  function renderGroupHead(React, ctx, row, i) {
+    var h = React.createElement;
+    var B = ctx.B, T = ctx.T, exp = ctx.exp, C = ctx.C;
+    var segs = Array.isArray(row.seg) ? row.seg : [];
+    // textAlign accepts left|center|right|justify directly — same value the worker
+    // paragraph alignment uses, so preview == export.
+    var align = ['left', 'center', 'right', 'justify'].indexOf(ctx.align) >= 0 ? ctx.align : 'center';
+    var nodes = [];
+    for (var n = 0; n < segs.length; n++) {
+      var sg = segs[n] || {};
+      nodes.push(h('span', {
+        key: n,
+        style: {
+          fontFamily: T,
+          fontSize: sg.size ? (sg.size + 'pt') : exp,
+          color: sg.color || C,
+          fontWeight: sg.bold === false ? 400 : 700,
+          fontStyle: sg.italic ? 'italic' : 'normal'
+        }
+      }, sg.sep || '', h(B, {
+        path: ['items', i, 'seg', n, 't'], value: sg.t || '',
+        placeholder: '[part ' + (n + 1) + ']'
+      })));
+    }
+    return h('div', {
+      'data-antcv-row-path': 'items.' + i, 'data-antcv-group-head': '1',
+      style: {
+        marginTop: 0 === i ? 0 : 6, marginBottom: 2,
+        textAlign: align, fontWeight: 700, letterSpacing: 0.3,
+        overflowWrap: 'break-word', wordBreak: 'break-word'
+      }
+    }, nodes, row.hr ? h('div', { style: { borderBottom: '1px solid ' + C, margin: '2px 0 2px' } }) : null);
+  }
+
   window.AntcvRolesRichBlock = {
     version: VERSION, isOn: isOn, adapt: adapt, writeBack: writeBack,
     itemsToRoles: itemsToRoles, rolesPathFor: rolesPathFor,
-    renderRoleHead: renderRoleHead, FLAG: FLAG
+    renderRoleHead: renderRoleHead, renderGroupHead: renderGroupHead, FLAG: FLAG
   };
 })();

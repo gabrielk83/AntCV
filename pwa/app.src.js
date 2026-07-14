@@ -44514,7 +44514,7 @@
           // shadow prefs.
           __photoFrame = (sz) => {
             let radius = "50%",
-              border = `0.5pt solid ${(ya && ya.photoBorderColor) || l}`,
+              border = `0.5pt solid ${(ya && ya.photoBorderColor) || "#00746E"}`,
               shadow = "none";
             try {
               const sp =
@@ -44527,7 +44527,7 @@
                     ? "12px"
                     : "50%";
               const ct = sp.photoContour || "line";
-              border = "soft" === ct ? "none" : `0.5pt solid ${(ya && ya.photoBorderColor) || l}`;
+              border = "soft" === ct ? "none" : `0.5pt solid ${(ya && ya.photoBorderColor) || "#00746E"}`;
               shadow =
                 [
                   "soft" === ct ? `0 0 5px ${l}` : null,
@@ -44803,7 +44803,7 @@
                     // candidate band, matched to the figure's outer contour (photoBorderColor).
                     // Gives continuity along the whole line and — when header and sidebar share
                     // one colour — restores the otherwise-invisible header/sidebar seam.
-                    borderBottom: `1px solid ${(ya && ya.photoBorderColor) || l}`,
+                    borderBottom: `1px solid ${(ya && ya.photoBorderColor) || "#00746E"}`,
                     padding: "14px 16px 10px",
                     textAlign: "center",
                     // PHOTO-SIDEBAR-BRIDGE-001: in bridge mode the candidate
@@ -44841,7 +44841,7 @@
                 w.map(v),
               )
             : React.createElement("div", {
-                style: { background: `var(--header-bg, ${Ke})`, height: 8, borderBottom: `1px solid ${(ya && ya.photoBorderColor) || l}` },
+                style: { background: `var(--header-bg, ${Ke})`, height: 8, borderBottom: `1px solid ${(ya && ya.photoBorderColor) || "#00746E"}` },
               }),
           "cv" === Lt
             ? (() => {
@@ -45427,7 +45427,7 @@
                                         border:
                                           "soft" === t
                                             ? "none"
-                                            : `0.5pt solid ${(ya && ya.photoBorderColor) || l}`,
+                                            : `0.5pt solid ${(ya && ya.photoBorderColor) || "#00746E"}`,
                                         boxShadow:
                                           [
                                             "soft" === t
@@ -45441,7 +45441,7 @@
                                             .join(", ") || "none",
                                       };
                                     } catch (e) {
-                                      return { border: `0.5pt solid ${(ya && ya.photoBorderColor) || l}` };
+                                      return { border: `0.5pt solid ${(ya && ya.photoBorderColor) || "#00746E"}` };
                                     }
                                   })(),
                                   objectFit: "cover",

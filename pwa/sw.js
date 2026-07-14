@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.862-slogan-seam';
+const CACHE = 'antcv-1.51.882-seam-fallback';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

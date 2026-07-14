@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.862-slogan-seam';
+  const TARGET_VERSION = '1.51.882-seam-fallback';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.862-slogan-seam',
     '1.51.842-photo-flip-anchor',
     '1.51.823-edit-focus-002',
     '1.51.822-contact-nobullet',

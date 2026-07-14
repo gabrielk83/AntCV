@@ -2,29 +2,40 @@
 // ============================================================================
 // The client's local BlazeFace model reads HEAD yaw only; for a near-frontal
 // head with an angled torso it returns center/unknown. This endpoint is the
-// cost-GATED fallback the client calls ONLY in that case: it asks a vision LLM
-// (Mistral Pixtral) which way the person is oriented — considering head AND
-// shoulders/torso — and returns one word.
+// cost-GATED fallback the client calls ONLY in that case: a vision LLM decides
+// which way the person is oriented (head + shoulders) and returns one word.
 //
-// Reuses the shared multi-provider helper. We force provider=mistral with a
-// Pixtral (vision) model chain, and pass Mistral-shaped content (image_url as a
-// STRING). We deliberately DON'T pass opts.messages so the VISION_BLIND filter
-// (which assumes the default mistral-large is text-only) can't drop us — the
-// explicit pixtral model override makes the call vision-capable.
+// Provider note: `mistral` is VISION-BLIND on this account — the key silently
+// serves a text model (ministral-14b) for any requested model, so it can't see
+// the image. We therefore use genuinely-multimodal providers: Claude first
+// (the configured writer key, vision-capable), then OpenAI (gpt-4o) as a
+// fallback. Each needs its OWN image-block shape (callAnyLLMForJSON forwards
+// the content verbatim, so we format per provider).
 //
 // Identical file lives in workers/proxy and workers/demo-proxy (near-copies).
 import { callAnyLLMForJSON } from './multi-llm.js';
 
-// Vision models verified available on the account (pixtral-large-* returned
-// invalid_model; pixtral-12b + the 2503+ small/medium multimodals work).
-const VISION_MODELS = ['pixtral-12b-2409', 'pixtral-12b-latest', 'mistral-small-latest', 'mistral-medium-latest'];
 const MAX_B64 = 5_000_000; // ~3.75 MB decoded, matches the OCR cap
+const SYSTEM =
+  'You classify the orientation of the person in a CV portrait photo. ' +
+  'Consider the HEAD direction AND the shoulders/torso. Reply with STRICT JSON only: ' +
+  '{"facing":"left"|"right"|"center"}. ' +
+  '"left" = the person is oriented toward the viewer\'s LEFT side of the image; ' +
+  '"right" = toward the viewer\'s RIGHT; ' +
+  '"center" = front-facing or genuinely ambiguous. No prose, JSON only.';
+const TEXT = 'Which way is this person oriented (head + shoulders)? Return the JSON only.';
 
 function jsonResponse(obj, status, cors) {
   return new Response(JSON.stringify(obj), {
     status,
     headers: { 'Content-Type': 'application/json', ...cors },
   });
+}
+function isFacing(t) {
+  try {
+    const f = String(JSON.parse(t).facing || '').toLowerCase();
+    return f === 'left' || f === 'right' || f === 'center';
+  } catch { return false; }
 }
 
 export async function handlePhotoOrientation(request, env, corsHeadersFor, _serverKeyFor) {
@@ -42,34 +53,22 @@ export async function handlePhotoOrientation(request, env, corsHeadersFor, _serv
   if (!b64) return jsonResponse({ ok: false, error: 'no_image' }, 400, cors);
   if (b64.length > MAX_B64) return jsonResponse({ ok: false, error: 'image_too_large' }, 413, cors);
 
-  const dataUrl = 'data:' + media + ';base64,' + b64;
-  const system =
-    'You classify the orientation of the person in a CV portrait photo. ' +
-    'Consider the HEAD direction AND the shoulders/torso. Reply with STRICT JSON only: ' +
-    '{"facing":"left"|"right"|"center"}. ' +
-    '"left" = the person is oriented toward the viewer\'s LEFT side of the image; ' +
-    '"right" = toward the viewer\'s RIGHT; ' +
-    '"center" = front-facing or genuinely ambiguous. No prose, JSON only.';
-  const userPrompt = [
-    { type: 'text', text: 'Which way is this person oriented (head + shoulders)? Return the JSON only.' },
-    { type: 'image_url', image_url: dataUrl }, // Mistral string form
+  // Anthropic image-block shape (Claude) and OpenAI image_url shape.
+  const anthropicContent = [
+    { type: 'text', text: TEXT },
+    { type: 'image', source: { type: 'base64', media_type: media, data: b64 } },
+  ];
+  const openaiContent = [
+    { type: 'text', text: TEXT },
+    { type: 'image_url', image_url: { url: 'data:' + media + ';base64,' + b64 } },
   ];
 
-  var chain = (Array.isArray(body.probe_models) && body.probe_models.length)
-    ? body.probe_models.filter(function (x) { return typeof x === 'string'; })
-    : VISION_MODELS;
   let r;
   try {
-    r = await callAnyLLMForJSON(env, system, userPrompt, {
-      order: ['mistral'],
-      models: { mistral: chain },
-      validate: (t) => {
-        try {
-          const f = String(JSON.parse(t).facing || '').toLowerCase();
-          return f === 'left' || f === 'right' || f === 'center';
-        } catch { return false; }
-      },
-    });
+    r = await callAnyLLMForJSON(env, SYSTEM, anthropicContent, { order: ['anthropic'], validate: isFacing });
+    if (!r || !r.ok) {
+      r = await callAnyLLMForJSON(env, SYSTEM, openaiContent, { order: ['openai'], validate: isFacing });
+    }
   } catch (e) {
     return jsonResponse({ ok: false, error: 'vision_exception', detail: String(e && e.message || e) }, 502, cors);
   }
@@ -78,10 +77,8 @@ export async function handlePhotoOrientation(request, env, corsHeadersFor, _serv
     return jsonResponse({ ok: false, error: 'vision_failed', attempts: (r && r.attempts) || null }, 502, cors);
   }
   let facing = 'center';
-  try {
-    facing = String(JSON.parse(r.text).facing || '').toLowerCase();
-  } catch { /* keep center */ }
+  try { facing = String(JSON.parse(r.text).facing || '').toLowerCase(); } catch { /* keep center */ }
   if (facing !== 'left' && facing !== 'right' && facing !== 'center') facing = 'center';
 
-  return jsonResponse({ ok: true, facing, provider: r.provider, model: r.model, _chain: chain, _attempts: r.attempts }, 200, cors);
+  return jsonResponse({ ok: true, facing, provider: r.provider, model: r.model }, 200, cors);
 }

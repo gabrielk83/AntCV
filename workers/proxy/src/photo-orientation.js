@@ -15,7 +15,9 @@
 // Identical file lives in workers/proxy and workers/demo-proxy (near-copies).
 import { callAnyLLMForJSON } from './multi-llm.js';
 
-const VISION_MODELS = ['pixtral-large-latest', 'pixtral-12b-2409'];
+// Vision models verified available on the account (pixtral-large-* returned
+// invalid_model; pixtral-12b + the 2503+ small/medium multimodals work).
+const VISION_MODELS = ['pixtral-12b-2409', 'pixtral-12b-latest', 'mistral-small-latest', 'mistral-medium-latest'];
 const MAX_B64 = 5_000_000; // ~3.75 MB decoded, matches the OCR cap
 
 function jsonResponse(obj, status, cors) {
@@ -53,14 +55,11 @@ export async function handlePhotoOrientation(request, env, corsHeadersFor, _serv
     { type: 'image_url', image_url: dataUrl }, // Mistral string form
   ];
 
-  var chain = (Array.isArray(body.probe_models) && body.probe_models.length)
-    ? body.probe_models.filter(function (x) { return typeof x === 'string'; })
-    : VISION_MODELS;
   let r;
   try {
     r = await callAnyLLMForJSON(env, system, userPrompt, {
       order: ['mistral'],
-      models: { mistral: chain },
+      models: { mistral: VISION_MODELS },
       validate: (t) => {
         try {
           const f = String(JSON.parse(t).facing || '').toLowerCase();
@@ -81,5 +80,5 @@ export async function handlePhotoOrientation(request, env, corsHeadersFor, _serv
   } catch { /* keep center */ }
   if (facing !== 'left' && facing !== 'right' && facing !== 'center') facing = 'center';
 
-  return jsonResponse({ ok: true, facing, provider: r.provider, model: r.model, _attempts: r.attempts, _chain: chain }, 200, cors);
+  return jsonResponse({ ok: true, facing, provider: r.provider, model: r.model }, 200, cors);
 }

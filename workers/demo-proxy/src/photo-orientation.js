@@ -15,7 +15,9 @@
 // Identical file lives in workers/proxy and workers/demo-proxy (near-copies).
 import { callAnyLLMForJSON } from './multi-llm.js';
 
-const VISION_MODELS = ['pixtral-large-latest', 'pixtral-12b-2409'];
+// Vision models verified available on the account (pixtral-large-* returned
+// invalid_model; pixtral-12b + the 2503+ small/medium multimodals work).
+const VISION_MODELS = ['pixtral-12b-2409', 'pixtral-12b-latest', 'mistral-small-latest', 'mistral-medium-latest'];
 const MAX_B64 = 5_000_000; // ~3.75 MB decoded, matches the OCR cap
 
 function jsonResponse(obj, status, cors) {

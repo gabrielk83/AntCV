@@ -27438,12 +27438,21 @@ function renderExperience(s, ctx) {
       if (s.title && !(ctx.style && ctx.style.contHeadlines === false)) out.push(headingParagraph(String(s.title || "").toUpperCase() + " " + (ctx.contSuffix || "(CONT.)"), ctx, false));
     }
     const left = [];
+    // ROLES-AS-RICHBLOCK-001 Stage 3: honour per-segment role-line style overrides
+    // (role.roleLineStyle, written by the flag-on 3-segment rich_block editor).
+    // ABSENT => byte-identical to the pre-Stage-3 export: every current role has
+    // no roleLineStyle, so production output is unchanged. color arrives as
+    // "#rrggbb" from the client picker; docx wants bare hex.
+    const __rls = role && role.roleLineStyle && typeof role.roleLineStyle === "object" ? role.roleLineStyle : null;
+    const __hex = (c) => (c ? String(c).replace(/^#/, "").trim() : null);
+    const __seg = (kind) => (__rls && __rls[kind] && typeof __rls[kind] === "object" ? __rls[kind] : null);
+    const __tSeg = __seg("role"), __cSeg = __seg("company"), __ySeg = __seg("years");
     if (role.title) {
       left.push(new TextRun({
         text: role.title,
-        bold: true,
-        italics: true,
-        color: style.mainHeadColor,
+        bold: __tSeg && __tSeg.bold != null ? !!__tSeg.bold : true,
+        italics: __tSeg && __tSeg.italic != null ? !!__tSeg.italic : true,
+        color: (__tSeg && __hex(__tSeg.color)) || style.mainHeadColor,
         size: pt2hp(fs.expSubHead),
         font: style.mainBodyFont
       }));
@@ -27451,9 +27460,10 @@ function renderExperience(s, ctx) {
     if (role.company) {
       left.push(new TextRun({
         text: (left.length ? " | " : "") + role.company,
-        italics: true,
+        italics: __cSeg && __cSeg.italic != null ? !!__cSeg.italic : true,
+        bold: __cSeg && __cSeg.bold != null ? !!__cSeg.bold : false,
         // Spec: role title in main head colour, COMPANY in BLACK, year in gray.
-        color: style.mainTextColor,
+        color: (__cSeg && __hex(__cSeg.color)) || style.mainTextColor,
         size: pt2hp(fs.expSubHead),
         font: style.mainBodyFont
       }));
@@ -27476,7 +27486,9 @@ function renderExperience(s, ctx) {
     const __yrs = __scrubYears(role.years);
     const yearsRun = __yrs ? new TextRun({
       text: "	" + __yrs,
-      color: "595959",
+      italics: __ySeg && __ySeg.italic != null ? !!__ySeg.italic : false,
+      bold: __ySeg && __ySeg.bold != null ? !!__ySeg.bold : false,
+      color: (__ySeg && __hex(__ySeg.color)) || "595959",
       size: pt2hp(fs.expSubHead),
       font: style.mainBodyFont
     }) : null;
@@ -27485,6 +27497,13 @@ function renderExperience(s, ctx) {
       out.push(new Paragraph({
         spacing: { before: __roleGapDxa, after: 40 },
         alignment: roleAlign,
+        // ROLES-AS-RICHBLOCK-001 Stage 3: draw the teal under-role rule ONLY for a
+        // role the flag-on editor restyled (__rls present) and not explicitly
+        // hr-off. The preview (chimera + adapter) draws this line under EVERY role;
+        // the export historically never did. Gating on __rls keeps every untouched
+        // role's export byte-identical — turning the underline on for all exports is
+        // a separate, production-wide parity decision left to the owner.
+        ...(__rls && role.roleLineHr !== false ? { border: { bottom: { style: BorderStyle.SINGLE, size: 4, space: 1, color: (__tSeg && __hex(__tSeg.color)) || style.mainHeadColor } } } : {}),
         // keepNext: the role title (e.g. "Customer Change Requests Specialist
         // | Innoviz Technologies | 2020 — 2025") must stay glued to its
         // first bullet. Otherwise Word can leave the title alone at the

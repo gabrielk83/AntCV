@@ -31,7 +31,6 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 <!-- SHIFT:BEGIN — one JSON object per line; managed by scripts/shift.mjs, safe to hand-edit a line if a session died without releasing -->
 {"id":"sh_mrjan7tb_2v89","started":"2026-07-14T13:12:46.358Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.761-1.51.780","task":"photo horizontal flip control (off/on/auto) in Layout photo panel + preview + export","beat":"2026-07-14T13:12:46.440Z"}
 {"id":"sh_mrkppnoa_bzvg","started":"2026-07-14T14:41:01.811Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.802-1.51.821","task":"contact-line: drop bullet when emojis + font +0.5pt (preview/srcdoc/OOXML)","beat":"2026-07-14T14:41:02.317Z"}
-{"id":"sh_mrl0wr1u_cnru","started":"2026-07-14T19:07:30.934Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.1104-1.51.1123","task":"spell-blip scroll-nudge near page break (isolated overlay sidecar)","beat":"2026-07-14T19:07:31.385Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

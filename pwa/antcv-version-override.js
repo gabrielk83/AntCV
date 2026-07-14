@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.745-slogan-placement';
+  const TARGET_VERSION = '1.51.746-slogan-place-ctrl';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.745-slogan-placement',
     '1.51.744-roles-rb-justify',
     '1.51.743-roles-rb-grouphead',
     '1.51.729-slogan-brand-cap',

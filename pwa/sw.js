@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.745-slogan-placement';
+const CACHE = 'antcv-1.51.746-slogan-place-ctrl';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

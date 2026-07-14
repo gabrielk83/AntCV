@@ -32,6 +32,7 @@
     text: 'antcv:clSlogan',
     hidden: 'antcv:clSloganHidden',
     align: 'antcv:clSloganAlign',
+    mode: 'antcv:clSloganMode',   // SLOGAN-PLACEMENT-001: 'heading' (visible tagline) | 'leadin' (opening lead-in)
     closing: 'antcv:clClosing',   // CL-CLOSING-EDIT-001: editable sign-off closing (default "At your service,")
     closingAlign: 'antcv:clClosingAlign', // CL-SIGNOFF-ALIGN-001: sign-off closing CJLR (default center)
     signName: 'antcv:clSignName',       // CL-SIGNNAME-001: editable sign-off name (default = first word of full name)
@@ -209,6 +210,29 @@
     body.appendChild(textRow);
     body.appendChild(hiddenRow);
     body.appendChild(alignRow);
+
+    // SLOGAN-PLACEMENT-001: tagline (visible between heading + body) vs opening
+    // lead-in (standalone hidden; the slogan becomes the opening's first-sentence
+    // lead-in). The brand helps you decide which reads better.
+    var placeRow = document.createElement('div');
+    placeRow.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:10px;color:#cdd;flex-wrap:wrap;';
+    placeRow.appendChild(document.createTextNode('Placement:'));
+    var placeBtns = {};
+    var setModeActive = function () {
+      var m = String(get(K.mode, 'heading')).toLowerCase() === 'leadin' ? 'leadin' : 'heading';
+      for (var mk in placeBtns) {
+        var active = (mk === m);
+        placeBtns[mk].style.background = active ? ACCENT : 'rgba(1,183,187,0.10)';
+        placeBtns[mk].style.color = active ? '#04231f' : ACCENT;
+      }
+    };
+    [['heading', 'Tagline'], ['leadin', 'Opening lead-in']].forEach(function (p) {
+      var pb = btn(p[1], function () { set(K.mode, p[0]); setModeActive(); bump(); });
+      placeBtns[p[0]] = pb;
+      placeRow.appendChild(pb);
+    });
+    setModeActive();
+    body.appendChild(placeRow);
 
     // CL-CLOSING-EDIT-001: sign-off closing (the line above the name). Default "At your service,".
     var closingRow = document.createElement('div');

@@ -369,7 +369,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.745-slogan-placement';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.745-slogan-placement';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.746-slogan-place-ctrl';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -411,7 +411,7 @@
           app.src = 'app.js?v=1.51.745-slogan-placement';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.745-slogan-placement';
+            vo.src = 'antcv-version-override.js?v=1.51.746-slogan-place-ctrl';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -770,7 +770,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-cl-signature-control.js?v=1.51.34" defer></script>
 <!-- AI-NOTICE-POSITION-CONTROL-001: Layout-tab control to pin the CV AI-notice corner (auto/left/center/right). -->
 <script src="antcv-ai-notice-position-control.js?v=1.51.156" defer></script>
-<script src="antcv-cl-slogan-control.js?v=1.51.499-owner-followups" defer></script>
+<script src="antcv-cl-slogan-control.js?v=1.51.746-slogan-place-ctrl" defer></script>
 <script src="antcv-cl-slogan-element.js?v=1.51.499-owner-followups" defer></script>
 <!-- SLOGAN-FRESH-GEN-001 + SLOGAN-SMART-STATEMENT-001 (spec rules 23/33): stale overrides yield; the gen's meta.cl_slogan (smart statement) is adopted; a targeted CL never falls back to the specialization. Kill antcv:disable-slogan-fresh. -->
 <script src="antcv-cl-slogan-fresh.js?v=1.51.334-unsol-pillar" defer></script>

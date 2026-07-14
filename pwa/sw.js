@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.984-contact-envelope';
+const CACHE = 'antcv-1.51.985-spell-blip';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

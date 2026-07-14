@@ -45,7 +45,8 @@
     }
     return o;
   }
-  function clearOverlay() { var o = document.getElementById(OVERLAY_ID); if (o) o.innerHTML = ''; }
+  var __lastSig = '';  // SPELL-BLIP-GUARD-001: signature of the currently-drawn marks
+  function clearOverlay() { var o = document.getElementById(OVERLAY_ID); if (o) o.innerHTML = ''; __lastSig = ''; }
   // GRAMMAR-MARKER-SCROLL-LAG-001 (owner 2026-06-13): the marks are fixed to
   // viewport coords, so during a scroll (esp. mobile) they lag behind the text
   // until the debounced rescan catches up. Hide them the instant a scroll starts
@@ -119,20 +120,34 @@
       );
     })).then(function (results) {
       if (myToken !== scanToken) return; // superseded by a newer scan
-      clearOverlay();
-      overlay().style.visibility = ''; // re-show after a scroll-hide, now realigned
-      var count = 0;
+      // SPELL-BLIP-GUARD-001 (owner 2026-07-14 "stop the spelling blip"): collect the
+      // marks to draw (word + rounded rect) FIRST; if that set is identical to what is
+      // already on screen, do NOT clear+redraw. The repeated remove/re-add of identical
+      // overlay marks during the reflow storm is exactly the blip.
+      var toDraw = [], count = 0;
       results.forEach(function (res) {
         if (!res || !res.marks.length || !res.node.isConnected) return;
+        var sid = sidOf(res.node);
         res.marks.forEach(function (mk) {
           if (count >= MAX_MARKS) return;
           var r = document.createRange();
           try { r.setStart(res.node, mk.start); r.setEnd(res.node, mk.end); } catch (_) { return; }
           var rects = r.getClientRects();
-          var sid = sidOf(res.node);
-          for (var i = 0; i < rects.length; i++) { drawMark(rects[i], mk.word, sid); count++; }
+          for (var i = 0; i < rects.length; i++) {
+            var rr = rects[i];
+            if (rr.width < 2 || rr.bottom < 0 || rr.top > window.innerHeight) continue;
+            toDraw.push({ word: mk.word, sid: sid, left: Math.round(rr.left), top: Math.round(rr.top), width: Math.round(rr.width), height: Math.round(rr.height) });
+            count++;
+          }
         });
       });
+      var sig = toDraw.map(function (d) { return d.word + '|' + (d.sid || '') + '|' + d.left + ',' + d.top + ',' + d.width + ',' + d.height; }).join(';');
+      var o = document.getElementById(OVERLAY_ID);
+      if (sig === __lastSig && o && o.style.visibility !== 'hidden') return; // unchanged → no DOM churn → no blip
+      clearOverlay();
+      overlay().style.visibility = ''; // re-show after a scroll-hide, now realigned
+      toDraw.forEach(function (d) { drawMark({ left: d.left, top: d.top, width: d.width, height: d.height, bottom: d.top + d.height }, d.word, d.sid); });
+      __lastSig = sig;
     });
   }
 

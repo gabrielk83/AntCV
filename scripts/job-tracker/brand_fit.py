@@ -24,6 +24,7 @@ Output is JSON-serialisable and stored per-position in the tracker
 values}) so the app AND the headless exporter fill the same variables.
 """
 import colorsys
+import re
 
 WHITE = "#ffffff"
 NEAR_BLACK = "#1a1a1a"
@@ -205,6 +206,60 @@ def fit(raw, *, light_gray_default="#eef1f4"):
         "cb_head_vs_body": round(abs(rel_lum(main_head) - rel_lum(main_text)), 3),
     }
     return {"slots": slots, "contrast": report}
+
+
+# ── BRAND-DECIDES-002 (owner 2026-07-14): the brand is colours AND company SPIRIT
+# + VALUES, collected as RESEARCH at the same time as the colour exploration.
+# When a JD comes from an aggregator (e.g. LinkedIn), the collector must follow to
+# the company's OWN site and read its About / careers / values pages. Those signals
+# (a) pick the slogan PLACEMENT (visible tagline vs opening lead-in) and (b) inform
+# the slogan TEXT the LLM writes at gen time (fused to brand + user).
+#
+# research = {
+#   'site':   '<canonical company url the collector resolved to>',
+#   'spirit': '<one line: how the brand speaks / what it stands for>',
+#   'values': ['<value>', ...],   # from the values / About / careers page
+#   'tone':   'minimal|bold|formal|warm|technical|...',
+# }
+_LEADIN_HINT = re.compile(
+    r"\b(minimal|restrain|understate|quiet|calm|subtle|precise|discreet|elegant|"
+    r"refined|formal|conservative|nordic|clean|humble|serious|rigor)\w*", re.I)
+_TAGLINE_HINT = re.compile(
+    r"\b(bold|expressive|dynamic|energetic|vibrant|playful|disrupt|innovat|loud|"
+    r"confident|ambitious|pioneer|fun|creative|challeng)\w*", re.I)
+
+
+def decide_slogan_placement(research):
+    """'leadin' (slogan folds into the opening, subtle) vs 'heading' (visible
+    tagline), chosen from company spirit/values: minimal/restrained brands read
+    better with a lead-in; bold/expressive brands carry a standalone tagline.
+    Default 'heading' when there is no signal. Feeds antcv:clSloganMode."""
+    try:
+        blob = " ".join([
+            str((research or {}).get("spirit", "")),
+            str((research or {}).get("tone", "")),
+            " ".join((research or {}).get("values", []) or []),
+        ])
+        return "leadin" if len(_LEADIN_HINT.findall(blob)) > len(_TAGLINE_HINT.findall(blob)) else "heading"
+    except Exception:
+        return "heading"
+
+
+def brand_record(raw, research=None, source=None):
+    """Full v2 brand record for the tracker (doc['brand'][uk]): fitted colour slots
+    + the research (spirit/values/tone) + the derived slogan placement. The app +
+    the headless exporter both fill the same slots; the placement seeds
+    antcv:clSloganMode; the slogan TEXT is written by the LLM at gen time."""
+    fitted = fit(raw)
+    return {
+        "version": 2,
+        "source": source or (research or {}).get("site"),
+        "raw": raw,
+        "slots": fitted["slots"],
+        "contrast": fitted["contrast"],
+        "research": research or {},
+        "slogan_placement": decide_slogan_placement(research),
+    }
 
 
 if __name__ == "__main__":

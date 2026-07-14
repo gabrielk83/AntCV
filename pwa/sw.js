@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.1064-edit-lag-spec';
+const CACHE = 'antcv-1.51.1065-group-scope';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

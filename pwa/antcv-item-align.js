@@ -296,7 +296,14 @@
             : isValidAlign(bucket[marker]) ? bucket[marker]
             : (rolePath && isValidAlign(bucket[rolePath])) ? bucket[rolePath]
             : null;
-          const align = perItem || groupAlign;
+          // GROUP-CJLR-SCOPE-001 (owner 2026-07-14): __group__ (the "Groups" control)
+          // aligns GROUP HEADINGS only — NOT content rows. This sidecar previously
+          // applied groupAlign to EVERY [data-antcv-row-path] row, which is why the
+          // group/section control still dragged all the body rows even after the
+          // render + section-align were scoped. Content rows follow their own per-item
+          // CJLR (perItem) or the render default (applyOne(null) restores it).
+          const isGroupHead = rowEl.hasAttribute('data-antcv-group-head') || rowEl.hasAttribute('data-antcv-role-head');
+          const align = perItem || (isGroupHead ? groupAlign : null);
           applyOne(rowEl, align);
         });
       });

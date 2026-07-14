@@ -17537,7 +17537,18 @@
                 // normalisers react to again — the sections-updated storm that jumps the editor and the
                 // preview page-transition spacing. Skip the no-op refresh; a real external change applies.
                 const __sig = JSON.stringify(__nextSec);
-                if (__sig === window.__antcvLastSecApplied) return;
+                // SLOGAN-CJLR-RERENDER-001 (owner 2026-07-14 "cjlr does not change in preview"):
+                // the slogan align / sign-off / signature controls change ONLY standalone
+                // localStorage keys, not `sections`, so __sig matches the last-applied signature
+                // and the guard above returns early → the preview never re-renders → the new
+                // textAlign never shows. When the event announces a slogan/standalone change,
+                // force one re-render (ao() with a fresh object ref) so the render re-reads the
+                // align key. Real content changes still take the normal (de-duped) path.
+                const __slogForce = !!(
+                  e && e.detail &&
+                  /slogan|standalone|signoff|signature/i.test(String(e.detail.reason || e.detail.source || ""))
+                );
+                if (__sig === window.__antcvLastSecApplied && !__slogForce) return;
                 window.__antcvLastSecApplied = __sig;
                 (ao(__nextSec),
                   console.info(

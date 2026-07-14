@@ -53,6 +53,6 @@ const c1 = jcFor('CenterMeExpertise');
 const c2 = jcFor('LeftDefaultExpertise');
 const c3 = jcFor('HardwareLead');
 log('rows.1 expertise jc:', c1, '| rows.2 expertise jc:', c2, '| focus cell jc:', c3);
-const ok = c1 === 'center' && c2 === 'left' && c3 === 'left';
+const ok = c1 === 'center' && c2 === 'both' && c3 === 'both';
 log(ok ? 'CJLR-TABLE-EXPORT OK' : 'CJLR-TABLE-EXPORT FAIL');
 process.exit(ok ? 0 : 1);

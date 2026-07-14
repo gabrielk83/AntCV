@@ -6357,7 +6357,12 @@
           // (TOOLS & METHODS, REGULATORY CONTEXT) defaults its GROUP-NAME rows to CENTER and its
           // CONTENT rows to LEFT. A non-grouped rich_block keeps the JUSTIFY default. Explicit
           // per-row CJLR overrides (__al) always win.
-          const __hasGrp = (e.items || []).some((it) => it && it.grp);
+          // ALIGN-DANCE-FIX-001 (owner 2026-07-14): a paginated CONT. fragment carries a
+          // SUBSET of items (44865), so a group heading on the previous page made this
+          // fragment's __hasGrp flip false → content align flipped left↔justify (the
+          // "dance" that knocked the caret out mid-edit). Prefer the STABLE full-section
+          // group flag stamped at the split so the default stays put.
+          const __hasGrp = (e && e.__antcvSecHasGrp !== undefined) ? e.__antcvSecHasGrp : (e.items || []).some((it) => it && it.grp);
           const __rowAlign = (i, isGrp, key) => {
             // ROLES-AS-RICHBLOCK-001: honour a roles-path CJLR key (roles.R.bullets.B)
             // when the adapted experience section stamps row._key — same key the
@@ -44862,7 +44867,7 @@
                       for (const gp of groups) {
                         const fi = n(gp.items);
                         if (!fi.length) continue;
-                        out.push({ ...sec, items: fi, page: gp.page, _antcvSplitCont: out.length > 0 });
+                        out.push({ ...sec, items: fi, page: gp.page, _antcvSplitCont: out.length > 0, __antcvSecHasGrp: origItems.some((it) => it && it.grp) });
                       }
                       return out.length ? out : [];
                     } catch (_) { return [sec]; }

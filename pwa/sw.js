@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.781-photo-flip-detect';
+const CACHE = 'antcv-1.51.782-align-dance-fix';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

@@ -44788,25 +44788,12 @@
                           // one line"): at commit, shrink the font until the
                           // whole contact line FITS — exact measurement, no
                           // guessing; ellipsis stays only as a last resort.
-                          ref: __bridgeOn
-                            ? (el) => {
-                                if (!el) return;
-                                try {
-                                  let fs = parseFloat(
-                                    el.style.fontSize || "12",
-                                  );
-                                  let guard = 0;
-                                  while (
-                                    el.scrollWidth > el.clientWidth + 1 &&
-                                    fs > 8 &&
-                                    guard++ < 28
-                                  ) {
-                                    fs -= 0.25;
-                                    el.style.fontSize = fs + "px";
-                                  }
-                                } catch (_) {}
-                              }
-                            : void 0,
+                          // CONTACT-CV-CL-PARITY-001 (owner 2026-07-14: "contact size differs
+                          // CV vs CL / jumps 5→13"): the CV-only one-line font-shrink (which
+                          // dropped the contact to ~5pt beside the photo, while the CL stayed
+                          // full ~13pt) is REMOVED — CV now matches CL's full size and WRAPS
+                          // if it does not fit, instead of shrinking to unreadable.
+                          ref: void 0,
                           style: {
                             fontFamily: e,
                             color: "#fff",
@@ -44815,10 +44802,10 @@
                             // band text also gains ~28px from the leftward
                             // flow over the seam).
                             fontSize:
-                              // CONTACT-NO-BULLET-001: +0.5pt, freed by dropping •
+                              // CONTACT-CV-CL-PARITY-001: SAME full size in CV and CL (no
+                              // bridge ×0.94 penalty); +1pt over the pre-822 contact size.
                               ((Yr.contactSize || 10) + 1) *
-                              (96 / 72) *
-                              (__bridgeOn ? 0.94 : 1),
+                              (96 / 72),
                             lineHeight: 1.2,
                             margin:
                               __nzPx(ya && ya.candidateGap, 5) + "px 0",
@@ -44830,14 +44817,9 @@
                             // still fits inside the inset.
                             padding: "0 2px",
                             textAlign: y("contact"),
-                            whiteSpace: __bridgeOn ? "nowrap" : "normal",
-                            ...(__bridgeOn
-                              ? {
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                  letterSpacing: "-0.1px",
-                                }
-                              : {}),
+                            // CONTACT-CV-CL-PARITY-001: always wrap (was nowrap+ellipsis in
+                            // the CV bridge, which is what forced the tiny one-line shrink).
+                            whiteSpace: "normal",
                           },
                         },
                         m,

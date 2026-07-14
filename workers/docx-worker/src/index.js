@@ -27143,23 +27143,56 @@ function renderRichBlock(s, ctx, isSidebar) {
     const align = paraAlignPath(s, "items." + i + ".t") ?? paraAlignPath(s, "items." + i) ?? groupCjlr ?? (__hasGrp ? AlignmentType.LEFT : AlignmentType.JUSTIFIED);
     // RICH-BLOCK-GROUP-001: a grp row is a bold sub-heading (like labeled_list).
     if (row.grp) {
+      // ROLES-AS-RICHBLOCK-001 general model (Increment A): a group heading may
+      // carry up to 3 STYLED segments (row.seg) + an under-group rule (row.hr).
+      // ABSENT => the legacy single bold heading, byte-identical (no current
+      // rich_block group has seg/hr, so production output is unchanged). Each
+      // seg = { t, color, size, bold, italic, sep } — sep is an optional literal
+      // prefix (e.g. ", "). Layout here is inline under the group align; the
+      // justify space-between (role-line) + RTL variants land in a later increment.
+      const __segs = Array.isArray(row.seg) ? row.seg.filter((x) => x && String(x.t || "").trim()) : null;
       const txt = String(row.t || "").trim();
-      if (!txt) return;
+      if ((!__segs || !__segs.length) && !txt) return;
       if (!__grpHasChild(i)) return;   // GROUP-EMPTY-HIDE-001: no rendered child → hide heading
       const galign = paraAlignPath(s, "items." + i + ".t") ?? paraAlignPath(s, "items." + i) ?? groupCjlr ?? AlignmentType.CENTER;
       if (rowPage(i) >= 2) { if (__wholeMoveSkip) { __wholeMoveSkip = false; } else out.push(pbBreakPara()); }
+      const __gHeadColor = isSidebar ? style.sidebarHeadColor : style.mainHeadColor;
+      const __gHeadFont = isSidebar ? style.sidebarFont : style.mainHeadFont;
+      const __gSize = pt2hp(isSidebar ? fs.sbBody : fs.mainBody);
+      const __ghex = (c) => (c ? String(c).replace(/^#/, "").trim() : null);
+      const __gBorder = row.hr ? { border: { bottom: { style: BorderStyle.SINGLE, size: 4, space: 1, color: __ghex(__segs && __segs[0] && __segs[0].color) || __gHeadColor } } } : {};
+      if (__segs && __segs.length) {
+        out.push(new Paragraph({
+          spacing: { before: 120, after: 40 },
+          keepNext: true,
+          keepLines: true,
+          alignment: galign,
+          ...__gBorder,
+          shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
+          children: __segs.map((sg) => new TextRun({
+            text: (sg.sep || "") + String(sg.t || ""),
+            bold: sg.bold != null ? !!sg.bold : true,
+            italics: sg.italic != null ? !!sg.italic : false,
+            color: __ghex(sg.color) || __gHeadColor,
+            size: sg.size ? pt2hp(sg.size) : __gSize,
+            font: __gHeadFont
+          }))
+        }));
+        return;
+      }
       out.push(new Paragraph({
         spacing: { before: 120, after: 40 },
         keepNext: true,
         keepLines: true,
         alignment: galign,
+        ...__gBorder,
         shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
         children: [new TextRun({
           text: txt,
           bold: true,
-          color: isSidebar ? style.sidebarHeadColor : style.mainHeadColor,
-          size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
-          font: isSidebar ? style.sidebarFont : style.mainHeadFont
+          color: __gHeadColor,
+          size: __gSize,
+          font: __gHeadFont
         })]
       }));
       return;

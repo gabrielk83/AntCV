@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.1024-contact-parity';
+const CACHE = 'antcv-1.51.1025-per-row-live';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

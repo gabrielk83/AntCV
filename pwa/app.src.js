@@ -6497,7 +6497,7 @@
                   // break points, so it could never paginate: it crammed page 1 and cascaded
                   // the export to extra pages. Tag every body row so any rich_block (grouped
                   // or flat) paginates.
-                  { key: i, "data-antcv-row-path": "items." + i, "data-antcv-rowalign": __pStyle.textAlign, style: __pStyle },
+                  { key: i, "data-antcv-row-path": "items." + i, "data-antcv-rowalign": __pStyle.textAlign, "data-antcv-rowkey": row._key || ("items." + i), style: __pStyle },
                   mk
                     ? __mkStr
                       ? React.createElement(

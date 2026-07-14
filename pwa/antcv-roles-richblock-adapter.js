@@ -329,7 +329,7 @@
     // relies on (no explicit direction here). L/C/R keep all segments inline.
     if (align === 'justify' && nodes.length >= 2) {
       return h('div', {
-        'data-antcv-row-path': 'items.' + i, 'data-antcv-group-head': '1', 'data-antcv-rowalign': align,
+        'data-antcv-row-path': 'items.' + i, 'data-antcv-group-head': '1', 'data-antcv-rowalign': align, 'data-antcv-rowkey': row._key || ('items.' + i),
         style: { marginTop: 0 === i ? 0 : 6, marginBottom: 2, letterSpacing: 0.3 }
       },
         h('div', { style: { display: 'flex', justifyContent: 'space-between', flexWrap: 'nowrap', gap: 4, alignItems: 'baseline' } },

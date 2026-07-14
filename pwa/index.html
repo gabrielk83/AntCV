@@ -369,7 +369,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.802-photo-flip-redetect';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.1024-contact-parity';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.1025-per-row-live';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -408,10 +408,10 @@
         auth.src = 'antcv-auth.js?v=1.51.92-analytics-401-scope';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.51.1024-contact-parity';
+          app.src = 'app.js?v=1.51.1025-per-row-live';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.1024-contact-parity';
+            vo.src = 'antcv-version-override.js?v=1.51.1025-per-row-live';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -713,7 +713,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      i18n, translation-patch, and language-ui-fixes stay separate. The three old
      files stay on disk, unreferenced. -->
 <script src="antcv-language-ui-429.js?v=1.51.238-multilang-he-am" defer></script>
-<script src="antcv-section-align.js?v=1.51.1005-per-row-cjlr" defer></script>
+<script src="antcv-section-align.js?v=1.51.1025-per-row-live" defer></script>
 <script src="antcv-subsection-reorder.js?v=1.50.702" defer></script>
 <script src="antcv-disclosure-triangle.js?v=1.50.703" defer></script>
 <script src="antcv-recheck-fit.js?v=1.50.161-proxy-relay" defer></script>
@@ -916,7 +916,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      intervals). Verified: 211's CSS replicates each 206/207/208 rule; no
      external consumer of their APIs/attrs. Review: docs/refactor/SIDECAR_CONSOLIDATION_REVIEW.md -->
 <script src="antcv-section-panel-211.js?v=1.50.418" defer></script>
-<script src="antcv-roles-richblock-adapter.js?v=1.51.1005-per-row-cjlr" defer></script>
+<script src="antcv-roles-richblock-adapter.js?v=1.51.1025-per-row-live" defer></script>
 <script src="antcv-experience-role-cjlr-230.js?v=1.51.722-cjlr-export" defer></script>
 <script src="antcv-core-competencies-row-controls-234.js?v=1.51.94" defer></script>
 <script src="antcv-selected-outcomes-row-controls-237.js?v=1.51.56" defer></script>

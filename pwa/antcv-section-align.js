@@ -200,6 +200,11 @@
     // contributor to the re-render storm. Stable state now produces no writes.
     if (sectionEl.getAttribute('data-antcv-align') !== alignment) sectionEl.setAttribute('data-antcv-align', alignment);
     const targets = sectionEl.querySelectorAll(TEXT_TARGET_SELECTOR);
+    // Live per-row alignment map for this section (fresh each pass) — the app does
+    // NOT re-render on antcv:item-align-changed, so reading it here is what makes a
+    // per-row CJLR take effect at all.
+    var __ia = {};
+    try { __ia = (JSON.parse(localStorage.getItem('antcvItemAlignment') || '{}') || {})[sectionEl.getAttribute('data-sid')] || {}; } catch (_) {}
     for (const t of targets) {
       // Skip targets that live inside a child section (nested data-sid).
       // Each section owns its own alignment; the inner one wins.
@@ -218,8 +223,10 @@
       // alignment, otherwise this section-level reapply reverts every per-row CJLR
       // back to justify within a frame (esp. roles, whose per-row key
       // "roles.R.bullets.B" never matched the section value).
+      var __rkEl = t.closest('[data-antcv-rowkey]');
+      var __perRow = __rkEl && __ia[__rkEl.getAttribute('data-antcv-rowkey')];
       var __raEl = t.closest('[data-antcv-rowalign]');
-      var __raVal = __raEl && __raEl.getAttribute('data-antcv-rowalign');
+      var __raVal = (__perRow && ALIGNMENTS.indexOf(__perRow) >= 0) ? __perRow : (__raEl && __raEl.getAttribute('data-antcv-rowalign'));
       var __use = (__raVal && ALIGNMENTS.indexOf(__raVal) >= 0) ? effectiveAlignment(sectionEl, __raVal) : alignment;
       if (t.style.textAlign !== __use) t.style.textAlign = __use;
       if (t.getAttribute('data-antcv-aligned') !== __use) t.setAttribute('data-antcv-aligned', __use);

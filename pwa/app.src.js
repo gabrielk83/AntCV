@@ -2296,6 +2296,24 @@
   // on switch). ie() and the slogan render read these localStorage keys fresh, so a write
   // + the existing re-render updates the preview.
   function __antcvWriteSlogan(v) { try { if ("string" == typeof v) localStorage.setItem("antcv:clSlogan", v); } catch (_) {} }
+  // SLOGAN-WORDCAP-001 (owner 2026-07-14: slogan limited to 4-8 words even when
+  // fused to the brand). A LOAD-time safety net: generation clamps it, but a
+  // legacy/override slogan may exceed 8 words on any of the load paths. Clause-
+  // aware: keep the first 8 words, then drop a trailing dangling connector /
+  // punctuation so the cut reads clean. Shared by both preview renders + export.
+  function __antcvSloganCap(s) {
+    try {
+      var t = String(s == null ? "" : s).trim();
+      if (!t) return t;
+      var w = t.split(/\s+/).filter(Boolean);
+      if (w.length <= 8) return t;
+      return w.slice(0, 8).join(" ")
+        .replace(/[\s,;:•\-–—&]+$/, "")
+        .replace(/\s+(?:and|og|or|eller|the|a|an|to|of|for|with|som|både)$/i, "")
+        .trim();
+    } catch (_) { return String(s == null ? "" : s); }
+  }
+  try { if (typeof window !== "undefined") window.__antcvSloganCap = __antcvSloganCap; } catch (_) {}
   function __antcvWriteSpec(v) {
     try {
       if ("string" != typeof v) return;
@@ -29131,7 +29149,7 @@
               })(),
               g = 5;
             P =
-              `<table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${(() => { try { if (localStorage.getItem("antcv:clSloganHidden") === "1") return ""; var st = String((io && io.cl_slogan) || "").trim(); if (!st || /^\[/.test(st)) st = String(localStorage.getItem("antcv:clSlogan") || "").trim(); if (!st || /^\[/.test(st)) st = String(io.subtitle || "").trim(); st = st.replace(/\s*\|\s*/g, " • ").trim(); if (!st || /^\[/.test(st)) return ""; var sa = String(localStorage.getItem("antcv:clSloganAlign") || "center").replace(/["']/g, "").toLowerCase(); if (sa !== "left" && sa !== "right" && sa !== "center") sa = "center"; return '<p style="font-family:\'Cabin\',' + d + ';font-size:11pt;font-weight:700;letter-spacing:.08em;text-align:' + sa + ';color:' + (t.mainLineColor || "#01746E") + ';margin:0 0 12pt">' + st.toUpperCase() + '</p>'; } catch (_) { return ""; } })()}${l.map(b).join("")}${u}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table>` +
+              `<table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${(() => { try { if (localStorage.getItem("antcv:clSloganHidden") === "1") return ""; var st = String((io && io.cl_slogan) || "").trim(); if (!st || /^\[/.test(st)) st = String(localStorage.getItem("antcv:clSlogan") || "").trim(); if (!st || /^\[/.test(st)) st = String(io.subtitle || "").trim(); st = st.replace(/\s*\|\s*/g, " • ").trim(); if (window.__antcvSloganCap) st = window.__antcvSloganCap(st); if (!st || /^\[/.test(st)) return ""; var sa = String(localStorage.getItem("antcv:clSloganAlign") || "center").replace(/["']/g, "").toLowerCase(); if (sa !== "left" && sa !== "right" && sa !== "center") sa = "center"; return '<p style="font-family:\'Cabin\',' + d + ';font-size:11pt;font-weight:700;letter-spacing:.08em;text-align:' + sa + ';color:var(--brand-slogan-color,' + (t.mainLineColor || "#01746E") + ');margin:0 0 12pt">' + st.toUpperCase() + '</p>'; } catch (_) { return ""; } })()}${l.map(b).join("")}${u}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table>` +
               (c
                 ? `<div style="page-break-before:always;mso-page-break-before:always;break-before:page"><table width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="${n}" style="width:100%;border-collapse:collapse;background:${n};page-break-after:avoid;mso-page-break-after:avoid"><tr><td bgcolor="${n}" style="background:${n};padding:14pt 16pt 8pt;text-align:center">${N}${_}${$}</td></tr></table><table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${b(c)}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table></div>`
                 : "");
@@ -45929,6 +45947,7 @@
                       if (!st || /^\[/.test(st)) st = String(localStorage.getItem("antcv:clSlogan") || "").trim();
                       if (!st || /^\[/.test(st)) st = String((io && io.subtitle) || "").trim();
                       st = st.replace(/\s*\|\s*/g, " • ").trim();
+                      if (window.__antcvSloganCap) st = window.__antcvSloganCap(st);
                       if (!st || /^\[/.test(st)) return null;
                       var sa = String(localStorage.getItem("antcv:clSloganAlign") || "center").replace(/["']/g, "").toLowerCase();
                       if (sa !== "left" && sa !== "right" && sa !== "center") sa = "center";
@@ -45943,7 +45962,7 @@
                           fontWeight: 700,
                           letterSpacing: "0.08em",
                           textAlign: sa,
-                          color: (ya && ya.mainLineColor) || "#00746E",
+                          color: "var(--brand-slogan-color, " + ((ya && ya.mainLineColor) || "#00746E") + ")",
                           margin: "0 0 12px",
                           cursor: "text",
                         },

@@ -951,6 +951,10 @@ export function buildPayload({
           // SLOGAN-EMDASH-001 (owner 2026-07-13): banned em/en dash in the exported
           // slogan -> plain hyphen (matches the repo-wide em-dash policy).
           if (sl) sl = sl.replace(/\s*[—–]\s*/g, ' - ');
+          // SLOGAN-WORDCAP-001 (owner 2026-07-14): cap the EXPORTED slogan to 4-8
+          // words, same as the two preview renders, so a legacy long slogan does
+          // not ship overlong to the PDF/DOCX. Preview == export.
+          try { if (sl && typeof window !== 'undefined' && typeof window.__antcvSloganCap === 'function') sl = window.__antcvSloganCap(sl); } catch (_) {}
           if (sl && !/^\[/.test(sl)) out.slogan = sl;
           else if (targeted) { out.slogan_hidden = true; return out; }
           const al = String(localStorage.getItem('antcv:clSloganAlign') || 'center').replace(/["']/g, '').toLowerCase();

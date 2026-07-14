@@ -205,6 +205,13 @@
   // already under experience (e.g. a manual __group__) are preserved.
   function persistBridge(bridge){
     try{
+      // ROLES-AS-RICHBLOCK-001 (owner 2026-07-14, root-caused live): when the
+      // rich_block adapter drives experience, this CHIMERA bridge must NOT rewrite
+      // the bullet-path alignments — it recomputes them from the chimera preview and
+      // overwrites the per-row CJLR the rich_block editor just wrote, so every
+      // per-row alignment reverts within a frame. Bail when the flag is on; the
+      // rich_block editor + section-align/item-align own the CJLR then.
+      if (window.AntcvRolesRichBlock && window.AntcvRolesRichBlock.isOn && window.AntcvRolesRichBlock.isOn()) return;
       if(typeof localStorage === 'undefined') return;
       const raw = localStorage.getItem(ITEM_ALIGN_KEY);
       const all = raw ? (JSON.parse(raw) || {}) : {};

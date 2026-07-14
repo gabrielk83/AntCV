@@ -36,6 +36,7 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mrl6tl4e_899a","started":"2026-07-14T21:53:00.981Z","host":"GabyPC2","worktree":null,"branch":"claude/amazing-goldberg-43c796","range":"1.51.1324-1.51.1343","task":"EDU-ROW-CJLR-001: per-row alignment cycler for EDUCATION (render stamp + editor)","beat":"2026-07-14T21:53:02.178Z"}
 {"id":"sh_mrl5nybc_9wce","started":"2026-07-14T22:33:09.331Z","host":"GabyPC2","worktree":null,"branch":"claude/hopeful-albattani-24195b","range":"1.51.1404-1.51.1423","task":"SLOGAN-LANG-GATE-001: wrong-language slogan override gate; branded==non-branded parity","beat":"2026-07-14T22:33:10.251Z"}
 {"id":"sh_mrl8jzdk_dmif","started":"2026-07-14T22:41:32.127Z","host":"GabyPC2","worktree":null,"branch":"claude/competent-mclean-b949e4","range":"1.51.1424-1.51.1443","task":"LOAD-EDITOR-UNSOLICITED-001 complete fix: tracker prepareAndOpen claims app-id before reload (island)","beat":"2026-07-14T22:41:32.864Z"}
+{"id":"sh_mrl8pqih_hyix","started":"2026-07-14T22:46:00.576Z","host":"GabyPC2","worktree":null,"branch":"claude/blissful-greider-41a6ec","range":"1.51.1444-1.51.1463","task":"EDU-ROW-CJLR-001 rescue: re-version orphaned 623f55a (education per-row CJLR) above high-water","beat":"2026-07-14T22:46:01.253Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

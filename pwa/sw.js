@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.1106-roles-default-on';
+const CACHE = 'antcv-1.51.1124-spell-apply';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

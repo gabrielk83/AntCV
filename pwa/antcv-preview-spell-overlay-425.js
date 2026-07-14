@@ -305,6 +305,29 @@
       } catch (_) {}
     }, 140);
   }
+  // SPELL-APPLY-COMMIT-001 (owner 2026-07-14: "make sure spelling correction can be appended
+  // on preview as well"): picking a suggestion from the browser's native context menu fires
+  // input with inputType==='insertReplacementText'. The React refs keep the correction VISIBLE
+  // while focused, but it only PERSISTS to the store on blur — so if the user never blurs (or
+  // the menu blurred+returned) it can be lost. Commit it immediately: blur (fires the element's
+  // own onBlur write) then restore focus with the caret at the end.
+  function __commitSpellCorrection(ev) {
+    try {
+      if (!ev || ev.inputType !== 'insertReplacementText') return;
+      var t = ev.target;
+      if (!t || !t.closest) return;
+      var ed = t.closest('.antcv-preview-paper [contenteditable="true"], .antcv-preview-paper [data-antcv-editable-text], .antcv-preview-paper [data-antcv-row-path]');
+      if (!ed || document.activeElement !== ed) return;
+      ed.blur();
+      requestAnimationFrame(function () {
+        try {
+          ed.focus();
+          var r = document.createRange(); r.selectNodeContents(ed); r.collapse(false);
+          var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        } catch (_) {}
+      });
+    } catch (_) {}
+  }
   function boot() {
     schedule();
     [800, 1800, 3500].forEach(function (ms) { setTimeout(scan, ms); });
@@ -314,6 +337,7 @@
     window.addEventListener('antcv:sections-updated', schedule);
     try { window.addEventListener('antcv:language-changed', function () { setTimeout(scan, 300); }); } catch (_) {}
     try { document.addEventListener('input', __spellBlipNudge, true); } catch (_) {}
+    try { document.addEventListener('input', __commitSpellCorrection, true); } catch (_) {}
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
   else boot();

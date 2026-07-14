@@ -7737,7 +7737,14 @@
                   contentEditable: true,
                   suppressContentEditableWarning: true,
                   spellCheck: true,
-                  ref: (el) => { if (!el || document.activeElement === el) return; if (el.innerHTML !== __h) el.innerHTML = __h; },
+                  // PUBS-EDIT-STABLE-001 (owner 2026-07-14: "a spelling error blips and I go
+                  // out of the edit and the change is reversed"): only repaint when the MODEL
+                  // (__h) actually changed — never when the DOM merely diverges (that IS the
+                  // user's uncommitted edit). The old guard was document.activeElement===el,
+                  // but a spellcheck context-menu momentarily drops focus, so the ref fired and
+                  // clobbered the in-progress edit with the old value. The model-changed check
+                  // survives that focus flicker; keep the focus guard as defence in depth.
+                  ref: (el) => { if (!el) return; if (el.__antcvPubH === __h) return; if (document.activeElement === el) return; el.__antcvPubH = __h; el.innerHTML = __h; },
                   onFocus: (ev) => { ((ev.currentTarget.style.outline = "1px dashed " + (S ? __sbInk : "#01B7BB")), (ev.currentTarget.style.outlineOffset = "2px")); },
                   onBlur: (ev) => {
                     ev.currentTarget.style.outline = "none";
@@ -44685,7 +44692,9 @@
                         `${e} `,
                         React.createElement("span", {
                           key: "cv" + _i,
-                          ref: (el) => { if (!el || document.activeElement === el) return; if (el.textContent !== String(t)) el.textContent = String(t); },
+                          // PUBS-EDIT-STABLE-001: model-changed-only repaint (see pubs above) —
+                          // don't let a spellcheck focus-flicker revert an in-progress contact edit.
+                          ref: (el) => { if (!el) return; const __cv = String(t); if (el.__antcvCV === __cv) return; if (document.activeElement === el) return; el.__antcvCV = __cv; el.textContent = __cv; },
                           contentEditable: true,
                           suppressContentEditableWarning: true,
                           spellCheck: false,

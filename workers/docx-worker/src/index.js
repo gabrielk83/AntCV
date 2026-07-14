@@ -25984,7 +25984,10 @@ function buildHeaderCell(ctx, bridgePhoto) {
         const bridge = normalisePhotoPosition(pi.photoPosition) === "band-overlap" && pi.photo_b64 && ctx.doc !== "cl";
         // HEADER-BANNER rule 2 (KOMBIT gold): the icon glyphs (\u2302 \u2605 \u2709 \u260e \ud83d\udd17) ARE
         // the separators \u2014 drop the " \u2022 " bullets, use ~3 spaces between items.
-        const sep = "\u00a0\u00a0\u00a0";
+        // CONTACT-CONVERGE-001 (owner 2026-07-14: manually made the export converge with
+        // "only '  ' not '   '" between contact elements + 8.5pt): two nbsp, not three \u2014
+        // the third space was overflowing the one-line contact and forcing a wrap/shrink.
+        const sep = "\u00a0\u00a0";
         // CONTACT-BRIDGE-NOSHRINK-001 (owner 2026-06-30): do NOT shrink the
         // contact line in bridge mode. The split header now widens the text
         // cell leftward to the figure's right edge (see buildCandidateHeader
@@ -25992,7 +25995,7 @@ function buildHeaderCell(ctx, bridgePhoto) {
         // second line if long, instead of being crammed unreadably small.
         // FIGURE-CONTACT-REF-001: bridge contact is pinned to 8pt per the
         // owner reference (w:sz 16); non-bridge keeps fs.contactSize.
-        const pt = __bridgePhotoOn ? 8 : fs.contactSize;
+        const pt = __bridgePhotoOn ? 8.5 : fs.contactSize;
         // CONTACT-TRACK-TIGHT-001 (owner 2026-07-03, on the 1.14.120 PDF:
         // "same size but letter separation a bit smaller"): condense the
         // bridge contact runs by 0.5pt (w:spacing -10 twentieths). Size stays 8pt.

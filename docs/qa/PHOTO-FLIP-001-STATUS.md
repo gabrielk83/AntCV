@@ -48,14 +48,24 @@ LLM which way the person is oriented (head + shoulders) → `{facing}`. Gated so
 bills only on the ambiguous photos; never per render/export; 12 s abort; any
 failure keeps the local result. `DET_VER=m4` re-runs cached center/unknown.
 
-**Provider note (IMPORTANT):** the account's **Mistral key is vision-blind** — it
-silently serves the text model `ministral-14b-latest` for ANY requested model
-(`pixtral-*` → `invalid_model` or a blind substitution), so it never sees the
-image. The codebase already marks `mistral` in `VISION_BLIND`. The endpoint
-therefore routes to genuinely-multimodal providers: **Claude (`claude-sonnet-5`,
-the writer key) first, OpenAI (`gpt-4o`) fallback**, each with its native
-image-block shape. Verified live: a clear left-profile → `left`, its horizontal
-flip → `right` (Claude reads direction correctly and reverses on flip).
+**Provider order:** Mistral **`pixtral-12b`** FIRST (owner's preference, cheapest),
+then Claude (`claude-sonnet-5`, the writer key), then OpenAI (`gpt-4o`) — each with
+its native image-block shape.
+
+**Mistral finding (CONFIRMED 2026-07-14, raw API response captured):** tried
+Mistral's exact documented recipe — bare model id `pixtral-12b` (not
+`pixtral-12b-2409`/`-latest`), `image_url` string form, no `json_object`. This
+account's Mistral **key still answers `pixtral-12b` with `served: "ministral-14b-latest"`**
+(HTTP 200) — a TEXT model that can't see the image and returns a blind guess. So
+it's an **account/key limitation, not a model-id or format issue**: this key has
+no Pixtral vision access. The handler therefore GUARDS the Mistral result (accepts
+it only when the *served* model is actually a pixtral model) and otherwise falls
+through to Claude. The Mistral path stays first, so it activates automatically if
+the key later gains Pixtral. Claude does the real work today — verified live: a
+clear left-profile → `left`, its horizontal flip → `right`.
+
+**Owner action for Mistral vision:** enable a Mistral plan/key with **Pixtral**
+access; no code change needed then.
 
 Follow-up: if demo users hit the **access-relay** (not cv-proxy directly), the
 relay may need `/api/photo-orientation` added to its forward allowlist.

@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.727-brand-override';
+const CACHE = 'antcv-1.51.728-brand-connect';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

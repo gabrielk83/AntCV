@@ -16977,6 +16977,15 @@
                           var __bf1 = (e.meta && e.meta.styleConfig && "object" == typeof e.meta.styleConfig) || /\n\nBRAND-FIT:/.test(String(e.supporting_context || ""));
                           if (__bf1) {
                             window.__antcvBrandFit = !0;
+                            // BRANDFIT-CANDIDATE-SIDEBAR-OVERRIDE-001: publish the fitted
+                            // brand palette so the preview paper paints band+sidebar.
+                            // Prefer meta.brandV2 (fitted v2, from re-collection); else map
+                            // the stored styleConfig palette.
+                            try {
+                              var __sc1 = e.meta && e.meta.styleConfig;
+                              var __bv1 = (e.meta && e.meta.brandV2) ? e.meta.brandV2 : (__sc1 && "object" == typeof __sc1 ? { version: 2, slots: { headerBg: __sc1.headerBg, headerInk: __sc1.headerNameColor, sidebarBg: __sc1.sidebarBg, accent: __sc1.accent, aiNoticeColor: __sc1.aiNoticeColor, sloganColor: __sc1.sloganColor, signatureColor: __sc1.signatureColor } } : null);
+                              if (__bv1) localStorage.setItem("antcv:brandV2", JSON.stringify(__bv1));
+                            } catch (_) {}
                             setTimeout(function () {
                               try {
                                 var c = document.querySelector("input[data-antcv-brandfit]");
@@ -22474,6 +22483,11 @@
                   var __bf2 = (e.meta && e.meta.styleConfig && "object" == typeof e.meta.styleConfig) || /\n\nBRAND-FIT:/.test(String(e.supporting_context || ""));
                   if (__bf2) {
                     window.__antcvBrandFit = !0;
+                    try {
+                      var __sc2 = e.meta && e.meta.styleConfig;
+                      var __bv2v = (e.meta && e.meta.brandV2) ? e.meta.brandV2 : (__sc2 && "object" == typeof __sc2 ? { version: 2, slots: { headerBg: __sc2.headerBg, headerInk: __sc2.headerNameColor, sidebarBg: __sc2.sidebarBg, accent: __sc2.accent, aiNoticeColor: __sc2.aiNoticeColor, sloganColor: __sc2.sloganColor, signatureColor: __sc2.signatureColor } } : null);
+                      if (__bv2v) localStorage.setItem("antcv:brandV2", JSON.stringify(__bv2v));
+                    } catch (_) {}
                     setTimeout(function () {
                       try {
                         var c = document.querySelector("input[data-antcv-brandfit]");
@@ -50347,7 +50361,13 @@
                         style: (() => {
                           var __b = null;
                           try {
-                            if (localStorage.getItem("antcv:brandActive") === "1") {
+                            // GATE = the existing upload-panel Brand-fit checkbox flag
+                            // (window.__antcvBrandFit) — set by the checkbox onChange AND
+                            // by the load path (BRAND-FIT-OPEN). COLOURS = antcv:brandV2
+                            // (the fitted v2 palette the load path publishes). So ticking
+                            // off the checkbox removes the brand; loading a brand-fitted app
+                            // applies it — no separate brandActive to keep in sync.
+                            if (!0 === window.__antcvBrandFit) {
                               var __s = localStorage.getItem("antcv:brandV2");
                               if (__s) { var __o = JSON.parse(__s); __b = (__o && __o.slots) ? __o.slots : (__o && __o.headerBg ? __o : null); }
                             }

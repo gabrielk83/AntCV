@@ -68,13 +68,13 @@ for (const [label, section, gi, expected] of CASES) {
 
 test('mirror-lock: minified app.js carries the empty-group guard', () => {
   assert.ok(/__gc=g=>/.test(appMin), 'app.js has the __gc helper');
-  assert.ok(appMin.includes('if(!__gc(n))return null'), 'app.js grp branch calls __gc');
+  assert.ok(appMin.includes('if(!r.grpKeep&&!__gc(n))return null'), 'app.js grp branch calls __gc (grpKeep-guarded)');
   assert.ok(/x&&"object"==typeof x&&x\.grp\)break/.test(appMin), 'app.js helper scans to next group boundary');
 });
 
 test('mirror-lock: source app.src.js and worker both carry GROUP-EMPTY-HIDE-001', () => {
   assert.ok(appSrc.includes('GROUP-EMPTY-HIDE-001'), 'app.src.js sentinel');
-  assert.ok(appSrc.includes('if (!__grpHasChild(i)) return null'), 'app.src.js grp branch guarded');
+  assert.ok(appSrc.includes('if (!row.grpKeep && !__grpHasChild(i)) return null'), 'app.src.js grp branch guarded (grpKeep-aware)');
   assert.ok(worker.includes('GROUP-EMPTY-HIDE-001'), 'worker sentinel');
-  assert.ok(worker.includes('if (!__grpHasChild(i)) return;'), 'worker grp branch guarded');
+  assert.ok(worker.includes('if (!row.grpKeep && !__grpHasChild(i)) return;'), 'worker grp branch guarded (grpKeep-aware)');
 });

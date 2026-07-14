@@ -27245,11 +27245,19 @@ function renderRichBlock(s, ctx, isSidebar) {
         }));
         return;
       }
+      // GROUP-HEAD-JUSTIFY-001 (owner 2026-07-14): a PLAIN single-line group heading
+      // (TOOLS & METHODS "Methods" etc., no seg[]) can't meaningfully justify — a
+      // one-line paragraph has nothing to spread. The preview resolves justify→left
+      // (render + antcv-item-align.js) so it stops oscillating with dejustifyNarrowSidebar.
+      // Mirror: resolve galign justify→left for the plain heading only (the seg branch
+      // above keeps justify = role-line space-between). Absent align → galign default
+      // CENTER, so untouched group heads are byte-identical.
+      const __plainAlign = galign === AlignmentType.JUSTIFIED ? AlignmentType.LEFT : galign;
       out.push(new Paragraph({
         spacing: { before: 120, after: 40 },
         keepNext: true,
         keepLines: true,
-        alignment: galign,
+        alignment: __plainAlign,
         ...__gBorder,
         shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
         children: [new TextRun({
@@ -27445,7 +27453,11 @@ function renderCompetencyTable(s, ctx) {
           // CJLR-EXPORT-PARITY-001 / body-justify default (owner 2026-06-19): native
           // rowAlign wins, then the item-align cycler path, else the body default is
           // JUSTIFIED (header stays center) — matching the preview (234 getAlign).
-          alignment: i === 1 ? (rowAlignAt(s, idx + 1) ?? paraAlignPath(s, "rows." + (idx + 1)) ?? AlignmentType.JUSTIFIED) : AlignmentType.LEFT,
+          // FOCUS-TABLE-LEFTCOL-JUSTIFY-001 (owner 2026-07-14): the LEFT ("[Focus]")
+          // column now DEFAULTS to JUSTIFIED too (was LEFT), mirroring the preview
+          // (app.src.js left td textAlign:"justify"). A short single-line label still
+          // renders left; only a wrapped label spreads across the column.
+          alignment: i === 1 ? (rowAlignAt(s, idx + 1) ?? paraAlignPath(s, "rows." + (idx + 1)) ?? AlignmentType.JUSTIFIED) : AlignmentType.JUSTIFIED,
           children: inlineRuns(cell, {
             bold: i === 0,
             color: style.mainTextColor,
@@ -27583,8 +27595,22 @@ function renderExperience(s, ctx) {
         .replace(/\s{2,}/g, " ").trim();
     };
     const __yrs = __scrubYears(role.years);
+    // GROUP-CJLR-ROLES-001 (owner 2026-07-14): the role line honours the group/per-role
+    // align (roles.R.title / roles.R / __group__), mirroring the preview renderRoleHead
+    // (antcv-roles-richblock-adapter.js) + antcv-item-align.js. The preview role line is
+    // a flex row whose justifyContent follows the align:
+    //   justify (= default / absent)  → space-between (role+company left, years tab-right)
+    //   left / center / right         → the WHOLE line grouped to that side (year travels
+    //                                    inline WITH the line, not pinned to the edge)
+    // Absent align → roleAlign undefined → __roleLCR false → leading TAB + no paragraph
+    // alignment, i.e. byte-identical to the pre-CJLR export. RTL segment reversal is
+    // deferred in BOTH preview and worker (kept at parity).
+    const roleAlign = paraAlignPath(s, "roles." + ri + ".title") ?? paraAlignPath(s, "roles." + ri) ?? paraAlign(s, null, void 0);
+    const __roleLCR = roleAlign === AlignmentType.LEFT || roleAlign === AlignmentType.CENTER || roleAlign === AlignmentType.RIGHT;
     const yearsRun = __yrs ? new TextRun({
-      text: "	" + __yrs,
+      // justify/default → leading TAB drives years to the right tab-stop (space-between);
+      // L/C/R → a small inline gap so the year stays WITH the grouped line.
+      text: (__roleLCR ? "  " : "	") + __yrs,
       italics: __ySeg && __ySeg.italic != null ? !!__ySeg.italic : false,
       bold: __ySeg && __ySeg.bold != null ? !!__ySeg.bold : false,
       color: (__ySeg && __hex(__ySeg.color)) || "595959",
@@ -27592,10 +27618,13 @@ function renderExperience(s, ctx) {
       font: style.mainBodyFont
     }) : null;
     if (left.length || yearsRun) {
-      const roleAlign = paraAlignPath(s, "roles." + ri + ".title") ?? paraAlignPath(s, "roles." + ri) ?? paraAlign(s, null, void 0);
       out.push(new Paragraph({
         spacing: { before: __roleGapDxa, after: 40 },
-        alignment: roleAlign,
+        // justify/default → undefined (natural left; the right-tab yields the space-
+        // between look — do NOT emit JUSTIFIED, which would stretch the single line);
+        // L/C/R → group the whole role line to that side. The tabStops below stay put
+        // but are inert in the L/C/R case (no tab char in the years run then).
+        alignment: __roleLCR ? roleAlign : void 0,
         // ROLES-AS-RICHBLOCK-001 Stage 3: draw the teal under-role rule ONLY for a
         // role the flag-on editor restyled (__rls present) and not explicitly
         // hr-off. The preview (chimera + adapter) draws this line under EVERY role;
@@ -28703,7 +28732,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.155-slogan-brand-color";
+var VERSION = "1.14.156-cjlr-export-parity";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

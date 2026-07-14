@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.783-brand-style-uncheck';
+const CACHE = 'antcv-1.51.784-photo-flip-model';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

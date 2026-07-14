@@ -22,7 +22,7 @@
 (function () {
   'use strict';
 
-  var SUITE_VERSION = '1.51.781-photo-flip-detect';
+  var SUITE_VERSION = '1.51.784-photo-flip-model';
   if (window.__antcvPhotoUI427 === SUITE_VERSION) return;
   window.__antcvPhotoUI427 = SUITE_VERSION;
 
@@ -1033,35 +1033,91 @@
         return 'center';
       } catch (_) { return 'unknown'; }
     }
+    // ── real face model (BlazeFace via TensorFlow.js) ──────────────────────
+    // Lazy-loaded from a CDN the SAME way the app already loads PDF.js / Mammoth
+    // / JSZip (no CSP here), then runtime-cached by the service worker so a
+    // second detection is offline-capable. Loaded ONLY when a photo needs
+    // detection (owner's "detect once at upload"), never at boot. Weights come
+    // from the package's default host; if any step fails we fall back to the
+    // canvas heuristic, so AUTO never breaks.
+    var _blazeP = null;
+    function loadScript(url) {
+      return new Promise(function (res, rej) {
+        var s = document.createElement('script');
+        s.src = url; s.async = true;
+        s.onload = function () { res(); };
+        s.onerror = function () { rej(new Error('load ' + url)); };
+        (document.head || document.documentElement).appendChild(s);
+      });
+    }
+    function loadBlaze() {
+      if (_blazeP) return _blazeP;
+      var TF = ['https://unpkg.com/@tensorflow/tfjs@4.11.0/dist/tf.min.js',
+                'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0/dist/tf.min.js'];
+      // NB: the package's unpkg/jsdelivr field points at a non-existent
+      // dist/blazeface.min.js; the real UMD bundle is dist/blazeface.min.umd.js.
+      var BF = ['https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@0.1.0/dist/blazeface.min.umd.js',
+                'https://unpkg.com/@tensorflow-models/blazeface@0.1.0/dist/blazeface.min.umd.js'];
+      _blazeP = (window.tf ? Promise.resolve() : loadScript(TF[0]).catch(function () { return loadScript(TF[1]); }))
+        .then(function () { return window.blazeface ? null : loadScript(BF[0]).catch(function () { return loadScript(BF[1]); }); })
+        .then(function () { if (!window.blazeface) throw new Error('blazeface missing'); return window.blazeface.load(); })
+        .catch(function (e) { _blazeP = null; throw e; }); // allow a later retry
+      return _blazeP;
+    }
+    // Facing from BlazeFace's 6 landmarks: [rightEye,leftEye,noseTip,mouth,
+    // rightEar,leftEar] (subject's own left/right). A yawed head shifts the nose
+    // tip toward the side it faces, measured against the eye-midpoint and, as a
+    // tie-break, the ear-midpoint — normalised so it's scale-independent.
+    function facingFromLandmarks(lm) {
+      if (!lm || lm.length < 6) return 'unknown';
+      var rEye = lm[0], lEye = lm[1], nose = lm[2], rEar = lm[4], lEar = lm[5];
+      var eyeMid = (rEye[0] + lEye[0]) / 2;
+      var interEye = Math.abs(lEye[0] - rEye[0]) || 1;
+      var noseOff = (nose[0] - eyeMid) / interEye; // <0: nose left of eyes -> faces image-left
+      if (noseOff < -0.12) return 'left';
+      if (noseOff > 0.12) return 'right';
+      var earMid = (rEar[0] + lEar[0]) / 2;
+      var earSpan = Math.abs(lEar[0] - rEar[0]) || 1;
+      var earOff = (nose[0] - earMid) / earSpan;
+      if (earOff < -0.06) return 'left';
+      if (earOff > 0.06) return 'right';
+      return 'center';
+    }
+    function detectViaModel(img) {
+      return loadBlaze().then(function (model) {
+        return model.estimateFaces(img, false).then(function (faces) {
+          if (!faces || !faces.length) return 'unknown';
+          var f = faces[0], bestA = -1;
+          for (var i = 0; i < faces.length; i++) {
+            var tl = faces[i].topLeft, br = faces[i].bottomRight;
+            var a = (br[0] - tl[0]) * (br[1] - tl[1]);
+            if (a > bestA) { bestA = a; f = faces[i]; }
+          }
+          return facingFromLandmarks(f.landmarks);
+        });
+      });
+    }
+
     function detectFacing(dataUrl) {
       return new Promise(function (resolve) {
-        var done = false;
+        var done = false, theImg = null;
         function finish(v) { if (!done) { done = true; resolve(v); } }
-        setTimeout(function () { finish('unknown'); }, 4000); // never block the UI
+        // Hard cap: model load can hit the network; if it stalls, fall back to
+        // the heuristic rather than block AUTO forever.
+        setTimeout(function () { finish(theImg ? heuristicFacing(theImg) : 'unknown'); }, 9000);
         try {
           var img = new Image();
+          theImg = img;
           img.onload = function () {
-            if (typeof window.FaceDetector === 'function') {
-              try {
-                var fd = new window.FaceDetector({ fastMode: true, maxDetectedFaces: 1 });
-                fd.detect(img).then(function (faces) {
-                  if (faces && faces.length) {
-                    var f = faces[0], bb = f.boundingBox, nose = null, eyes = [];
-                    (f.landmarks || []).forEach(function (lm) {
-                      var loc = lm && lm.locations && lm.locations[0];
-                      if (!loc) return;
-                      if (lm.type === 'nose') nose = loc;
-                      else if (lm.type === 'eye') eyes.push(loc);
-                    });
-                    if (bb && nose) { finish(classify(bb, nose)); return; }
-                    if (bb && eyes.length === 2) { finish(classify(bb, { x: (eyes[0].x + eyes[1].x) / 2 })); return; }
-                  }
-                  finish(heuristicFacing(img));
-                }).catch(function () { finish(heuristicFacing(img)); });
-                return;
-              } catch (_) { /* fall through to heuristic */ }
-            }
-            finish(heuristicFacing(img));
+            detectViaModel(img).then(function (m) {
+              // Model head-yaw wins when clear; else use the heuristic's body /
+              // shoulder cue (an angled torso reads a direction even when the
+              // head is frontal); else center / unknown.
+              if (m === 'left' || m === 'right') { finish(m); return; }
+              var h = heuristicFacing(img);
+              if (h === 'left' || h === 'right') { finish(h); return; }
+              finish(m === 'center' || h === 'center' ? 'center' : 'unknown');
+            }).catch(function () { finish(heuristicFacing(img)); });
           };
           img.onerror = function () { finish('unknown'); };
           img.src = dataUrl;
@@ -1090,7 +1146,8 @@
 
     // ── preview apply (mirror the rendered <img>) ──────────────────────────
     function previewPhotos() {
-      var out = [];
+      var out = [], seen = [];
+      function add(img) { if (img && seen.indexOf(img) < 0) { seen.push(img); out.push(img); } }
       var papers = document.querySelectorAll('.antcv-preview-paper');
       for (var i = 0; i < papers.length; i++) {
         var imgs = papers[i].querySelectorAll('img');
@@ -1098,9 +1155,22 @@
           var img = imgs[j], st = img.getAttribute('style') || '';
           if (st.indexOf('border-radius') >= 0
             || img.getAttribute('data-antcv-photo-clone') === '1'
-            || img.getAttribute('data-antcv-repeat-photo') === '1') out.push(img);
+            || img.getAttribute('data-antcv-repeat-photo') === '1') add(img);
         }
       }
+      // Also the Settings→Layout control thumbnail ("the facepic in the blue
+      // screen") and any other on-screen copy of the profile photo, matched by
+      // src, so On/Auto mirror the avatar too — not just the CV preview.
+      try {
+        var pi = readPI();
+        var photo = (pi && typeof pi.photo === 'string') ? pi.photo : '';
+        if (photo && photo.length > 32) {
+          var all = document.querySelectorAll('img');
+          for (var k = 0; k < all.length; k++) {
+            if (all[k].getAttribute('src') === photo || all[k].src === photo) add(all[k]);
+          }
+        }
+      } catch (_) {}
       return out;
     }
     function applyPreview() {
@@ -1236,13 +1306,17 @@
     }
 
     window.AntcvPhotoFlip = {
-      version: '1.51.781',
+      version: '1.51.784',
       MODES: MODES.slice(),
       _readMode: readMode,
       _readFacing: readFacing,
       _desiredFacing: desiredFacing,
       _resolveFlipH: resolveFlipH,
       _detectFacing: detectFacing,
+      _detectViaModel: detectViaModel,
+      _facingFromLandmarks: facingFromLandmarks,
+      _loadBlaze: loadBlaze,
+      _heuristicFacing: heuristicFacing,
       _applyPreview: applyPreview,
     };
 

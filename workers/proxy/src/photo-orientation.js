@@ -78,5 +78,5 @@ export async function handlePhotoOrientation(request, env, corsHeadersFor, _serv
   } catch { /* keep center */ }
   if (facing !== 'left' && facing !== 'right' && facing !== 'center') facing = 'center';
 
-  return jsonResponse({ ok: true, facing, provider: r.provider, model: r.model }, 200, cors);
+  return jsonResponse({ ok: true, facing, provider: r.provider, model: r.model, _attempts: r.attempts }, 200, cors);
 }

@@ -213,8 +213,16 @@
       // alone; the body cells + text still follow the section alignment. The
       // export already defaults the header to center (worker s.headerAlign).
       if (t.closest('th')) continue;
-      if (t.style.textAlign !== alignment) t.style.textAlign = alignment;
-      if (t.getAttribute('data-antcv-aligned') !== alignment) t.setAttribute('data-antcv-aligned', alignment);
+      // PER-ROW-CJLR-001 (owner 2026-07-14): a row the preview aligned PER-ROW stamps
+      // data-antcv-rowalign with the resolved value; honour it over the section
+      // alignment, otherwise this section-level reapply reverts every per-row CJLR
+      // back to justify within a frame (esp. roles, whose per-row key
+      // "roles.R.bullets.B" never matched the section value).
+      var __raEl = t.closest('[data-antcv-rowalign]');
+      var __raVal = __raEl && __raEl.getAttribute('data-antcv-rowalign');
+      var __use = (__raVal && ALIGNMENTS.indexOf(__raVal) >= 0) ? effectiveAlignment(sectionEl, __raVal) : alignment;
+      if (t.style.textAlign !== __use) t.style.textAlign = __use;
+      if (t.getAttribute('data-antcv-aligned') !== __use) t.setAttribute('data-antcv-aligned', __use);
     }
     // Also align the section block itself so block-level elements
     // (like single-line headers) line up.

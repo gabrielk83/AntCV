@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.1004-pubs-editable';
+  const TARGET_VERSION = '1.51.1005-per-row-cjlr';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.1004-pubs-editable',
     '1.51.986-roles-seg-bold',
     '1.51.985-spell-blip',
     '1.51.984-contact-envelope',

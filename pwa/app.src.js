@@ -6451,6 +6451,16 @@
                 // grpKeep = a group the user explicitly created via "▾ Make group" stays
                 // visible even childless (so it doesn't vanish while they add rows).
                 if (!row.grpKeep && !__grpHasChild(i)) return null;
+                // GROUP-HEAD-CJLR-001 (owner 2026-07-14 "tools CJLR switches after leaving
+                // the subsection panel"): a PLAIN group heading must carry the same CJLR
+                // markers as role/seg heads (data-antcv-group-head + data-antcv-rowkey +
+                // data-antcv-rowalign) so the group control (__group__) PERSISTS across the
+                // re-render that fires when the editor closes — item-align + section-align
+                // key off these; without them the heading reverted. A single-line heading
+                // can't meaningfully justify, so justify→left, otherwise the sidebar
+                // de-justify pass flips it and it flickers left<->justify.
+                let __gAlign = __rowAlign(i, true, row._key);
+                if (__gAlign === "justify") __gAlign = "left";
                 return {
                   key: String(i),
                   node: React.createElement(
@@ -6458,6 +6468,9 @@
                     {
                       key: i,
                       "data-antcv-row-path": "items." + i,
+                      "data-antcv-group-head": "1",
+                      "data-antcv-rowkey": row._key || ("items." + i),
+                      "data-antcv-rowalign": __gAlign,
                       style: {
                         fontSize: S ? 0.96 * $.sb : $.exp,
                         fontFamily: T,
@@ -6465,7 +6478,7 @@
                         fontWeight: 700,
                         marginTop: 0 === i ? 0 : 6,
                         marginBottom: 2,
-                        textAlign: __rowAlign(i, true, row._key),
+                        textAlign: __gAlign,
                         letterSpacing: 0.3,
                         overflowWrap: "break-word",
                         wordBreak: "break-word",
@@ -6786,6 +6799,11 @@
                             fontSize: $.tbl,
                             fontWeight: 700,
                             color: k.tableFirstColText,
+                            // FOCUS-TABLE-LEFTCOL-JUSTIFY-001 (owner 2026-07-14): the left
+                            // ("[Focus]") column defaulted to left while the right column
+                            // justified. Default it to justify too (owner may switch back to
+                            // left if it opens ugly inter-word gaps on short labels).
+                            textAlign: "justify",
                             lineHeight: I,
                             verticalAlign: "middle",
                           },

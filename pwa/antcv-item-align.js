@@ -311,7 +311,13 @@
           // render + section-align were scoped. Content rows follow their own per-item
           // CJLR (perItem) or the render default (applyOne(null) restores it).
           const isGroupHead = rowEl.hasAttribute('data-antcv-group-head') || rowEl.hasAttribute('data-antcv-role-head');
-          const align = perItem || (isGroupHead ? groupAlign : null);
+          let align = perItem || (isGroupHead ? groupAlign : null);
+          // GROUP-HEAD-JUSTIFY-001 (owner 2026-07-14): a PLAIN group heading (not a role
+          // line) can't meaningfully justify — a single heading line justified renders as
+          // left anyway, and leaving it 'justify' makes the sidebar de-justify pass flip it
+          // (the tools "left<->justify fight"). Map justify→left so this applier agrees with
+          // the render (GROUP-HEAD-CJLR-001). Role heads keep justify (= space-between).
+          if (align === 'justify' && isGroupHead && !rowEl.hasAttribute('data-antcv-role-head')) align = 'left';
           applyOne(rowEl, align);
         });
       });

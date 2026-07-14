@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.945-revert-pb-freeze';
+const CACHE = 'antcv-1.51.964-inline-fixes';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

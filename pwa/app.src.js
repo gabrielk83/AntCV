@@ -7724,7 +7724,11 @@
               // [[edit-focus-stable]]); onBlur writes the plain "title - details" string
               // back to items[n] via the section onEdit p(). xe() re-splits it on " - "
               // on the next render, so the bold-italic title is recomputed from the string.
-              if (e.richPub && p && u) {
+              if (p && u) {
+                // PUBS-RICH-INLINE-EDIT-001 rev2 (owner 2026-07-14: "still not editable on
+                // preview"): gate on p&&u only — the same edit-mode condition every other
+                // inline field uses — NOT e.richPub. A stored pubs section from an older
+                // generation may lack the richPub flag, which blocked the editable branch.
                 const __h = (o.title ? "<b><i>" + __hesc(o.title) + "</i></b>" : "") + (o.title && __det ? " - " : "") + __hesc(__det);
                 return React.createElement("div", {
                   key: n,
@@ -44794,8 +44798,8 @@
                                   let guard = 0;
                                   while (
                                     el.scrollWidth > el.clientWidth + 1 &&
-                                    fs > 8.5 &&
-                                    guard++ < 24
+                                    fs > 8 &&
+                                    guard++ < 28
                                   ) {
                                     fs -= 0.25;
                                     el.style.fontSize = fs + "px";
@@ -44818,6 +44822,13 @@
                             lineHeight: 1.2,
                             margin:
                               __nzPx(ya && ya.candidateGap, 5) + "px 0",
+                            // CONTACT-EDGE-INSET-001 (owner 2026-07-14: "missing by one
+                            // char … release a bit the space from edge"): a small
+                            // horizontal inset keeps the first/last contact char off the
+                            // band edge (the +1pt font pushed it flush → the edge clipped
+                            // one char). The bridge font-shrink measures clientWidth, so it
+                            // still fits inside the inset.
+                            padding: "0 5px",
                             textAlign: y("contact"),
                             whiteSpace: __bridgeOn ? "nowrap" : "normal",
                             ...(__bridgeOn
@@ -46112,13 +46123,16 @@
                       if (sa !== "left" && sa !== "right" && sa !== "center") sa = "center";
                       return React.createElement("div", {
                         key: "__cl_slogan",
-                        // SLOGAN-SPELLCHECK-001 (owner 2026-07-14): spellcheck ON. The DOM
-                        // text is kept NATURAL-CASE (browsers skip spellcheck on ALL-CAPS)
-                        // and uppercased only for DISPLAY via textTransform below; onBlur
-                        // therefore stores natural case (matches what the export/worker
-                        // receive and re-uppercase — see docx-client out.slogan). lang=je
-                        // picks the right dictionary.
-                        contentEditable: true, suppressContentEditableWarning: true, spellCheck: true, lang: je,
+                        // SLOGAN-SPELLCHECK-001 (owner 2026-07-14, rev2): spellcheck ON, matching
+                        // the specialisation field which DOES spellcheck. Two fixes vs rev1 which
+                        // still showed no underlines: (1) NO explicit lang — an app-language lang
+                        // (e.g. "da"/"zh") forces a dictionary the browser may not have installed,
+                        // silently disabling spellcheck; the default (browser locale) is what the
+                        // working specialisation uses. (2) the DOM text is NATURAL-CASE — browsers
+                        // skip spellcheck on ALL-CAPS *content*, and a legacy slogan uppercased by
+                        // rev1's onBlur stays all-caps in storage, so sentence-case it below; the
+                        // uppercase LOOK stays via textTransform. onBlur then stores natural case.
+                        contentEditable: true, suppressContentEditableWarning: true, spellCheck: true,
                         title: "Click to edit the positioning line",
                         onBlur: (ev) => { try { localStorage.setItem("antcv:clSlogan", String(ev.currentTarget.textContent || "").trim()); window.dispatchEvent(new CustomEvent("antcv:sections-updated", { detail: { reason: "cl-slogan-inline" } })); } catch (_) {} },
                         style: {
@@ -46132,7 +46146,7 @@
                           cursor: "text",
                           textTransform: "uppercase",
                         },
-                      }, st);
+                      }, (st === st.toUpperCase() && /[a-zA-Z]/.test(st)) ? (st.charAt(0).toUpperCase() + st.slice(1).toLowerCase()) : st);
                     } catch (_) { return null; }
                   })(),
                   Pi.filter(

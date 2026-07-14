@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.782-align-dance-fix';
+  const TARGET_VERSION = '1.51.783-brand-style-uncheck';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.782-align-dance-fix',
     '1.51.781-photo-flip-detect',
     '1.51.761-photo-flip',
     '1.51.747-edit-focus-stable',

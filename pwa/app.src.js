@@ -38987,6 +38987,18 @@
                                     try {
                                       Qn({ stylePackage: e });
                                     } catch (e) {}
+                                    // BRAND-STYLE-UNCHECK-001 (owner 2026-07-14): choosing a
+                                    // STANDARD visual style unchecks the upload-menu brand-fit
+                                    // (the style owns the preview + export colours) so the brand
+                                    // override (window.__antcvBrandFit gate) clears. The JD-LIST
+                                    // brand tick is NOT touched.
+                                    try {
+                                      if ("custom" !== e) {
+                                        window.__antcvBrandFit = false;
+                                        var __bc = document.querySelector("input[data-antcv-brandfit]");
+                                        if (__bc && __bc.checked) __bc.checked = false;
+                                      }
+                                    } catch (_) {}
                                     // COPENHAGEN-OVERLAY-001 (owner 2026-06-18): the
                                     // native picker recolours the main column (ya) but
                                     // never told the body-package island, so

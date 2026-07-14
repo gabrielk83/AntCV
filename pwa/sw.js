@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.782-align-dance-fix';
+const CACHE = 'antcv-1.51.783-brand-style-uncheck';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

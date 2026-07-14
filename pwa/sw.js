@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.1105-rowkey-match';
+const CACHE = 'antcv-1.51.1106-roles-default-on';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

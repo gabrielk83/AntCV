@@ -30,8 +30,15 @@
   var VERSION = '1.51.x-roles-richblock-adapter';
   var FLAG = 'antcv:roles-richblock';
 
+  // ROLES-AS-RICHBLOCK CUTOVER step 1 (owner 2026-07-14, "move to E"): the flag now
+  // DEFAULTS ON — experience renders through the rich_block adapter for everyone
+  // unless a device explicitly opted out (antcv:roles-richblock === '0'). Verified
+  // live: render (12 role heads + bullets), CJLR (per-row/group/section), editor,
+  // per-seg bold all correct; EXPORT is unaffected (the worker reads the unchanged
+  // roles[] shape). Reversible per-device via setting the flag to '0'. The chimera
+  // stays as the flag-off fallback until it is deleted in cutover step 2.
   function isOn() {
-    try { return localStorage.getItem(FLAG) === '1'; } catch (_) { return false; }
+    try { return localStorage.getItem(FLAG) !== '0'; } catch (_) { return true; }
   }
 
   // A role's own per-segment style, if the role carries one (roleLineStyle is the

@@ -29165,8 +29165,8 @@
               : "",
             L =
               A || I || O
-                ? `<table width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="${n}" style="width:100%;border-collapse:collapse;background:${n};page-break-after:avoid"><tr><td bgcolor="${n}" style="background:${n};padding:14pt 16pt 8pt;text-align:center">${N}${_}${$}</td></tr></table>`
-                : `<table width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="${n}" style="width:100%;border-collapse:collapse;background:${n};page-break-after:avoid"><tr><td bgcolor="${n}" style="background:${n};height:8pt;line-height:8pt;font-size:1pt">&nbsp;</td></tr></table>`;
+                ? `<table width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="${n}" style="width:100%;border-collapse:collapse;background:${n};page-break-after:avoid"><tr><td bgcolor="${n}" style="background:${n};padding:14pt 16pt 8pt;text-align:center;border-bottom:1pt solid ${S}">${N}${_}${$}</td></tr></table>`
+                : `<table width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="${n}" style="width:100%;border-collapse:collapse;background:${n};page-break-after:avoid"><tr><td bgcolor="${n}" style="background:${n};height:8pt;line-height:8pt;font-size:1pt;border-bottom:1pt solid ${S}">&nbsp;</td></tr></table>`;
           let P = "";
           if ("cv" === Lt) {
             const e = `width:307px;background:${n};padding:8pt;vertical-align:top`,
@@ -29236,7 +29236,7 @@
             P =
               `<table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${(() => { try { if (window.__antcvSloganStandaloneHidden ? window.__antcvSloganStandaloneHidden() : localStorage.getItem("antcv:clSloganHidden") === "1") return ""; var st = String((io && io.cl_slogan) || "").trim(); if (!st || /^\[/.test(st)) st = String(localStorage.getItem("antcv:clSlogan") || "").trim(); if (!st || /^\[/.test(st)) st = String(io.subtitle || "").trim(); st = st.replace(/\s*\|\s*/g, " • ").trim(); if (window.__antcvSloganCap) st = window.__antcvSloganCap(st); if (!st || /^\[/.test(st)) return ""; var sa = String(localStorage.getItem("antcv:clSloganAlign") || "center").replace(/["']/g, "").toLowerCase(); if (sa !== "left" && sa !== "right" && sa !== "center") sa = "center"; return '<p style="font-family:\'Cabin\',' + d + ';font-size:11pt;font-weight:700;letter-spacing:.08em;text-align:' + sa + ';color:var(--brand-slogan-color,' + (t.mainLineColor || "#01746E") + ');margin:0 0 12pt">' + st.toUpperCase() + '</p>'; } catch (_) { return ""; } })()}${l.map(b).join("")}${u}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table>` +
               (c
-                ? `<div style="page-break-before:always;mso-page-break-before:always;break-before:page"><table width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="${n}" style="width:100%;border-collapse:collapse;background:${n};page-break-after:avoid;mso-page-break-after:avoid"><tr><td bgcolor="${n}" style="background:${n};padding:14pt 16pt 8pt;text-align:center">${N}${_}${$}</td></tr></table><table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${b(c)}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table></div>`
+                ? `<div style="page-break-before:always;mso-page-break-before:always;break-before:page"><table width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="${n}" style="width:100%;border-collapse:collapse;background:${n};page-break-after:avoid;mso-page-break-after:avoid"><tr><td bgcolor="${n}" style="background:${n};padding:14pt 16pt 8pt;text-align:center;border-bottom:1pt solid ${S}">${N}${_}${$}</td></tr></table><table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${b(c)}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table></div>`
                 : "");
           }
           return `<!DOCTYPE html><html><head><meta charset="utf-8">\n<link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">\n<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Carlito:ital,wght@0,400;0,700;1,400;1,700&family=Cabin:ital,wght@0,400;0,500;0,600;0,700;1,400&display=block"><title>${"cv" === Lt ? "CV" : "Cover Letter"} — ${w.name || "CV"}</title>\n<meta name="author" content="${(w.name || "").replace(/"/g, "&quot;")}">\n<meta name="generator" content="AntCV v${Ai}">\n<meta name="description" content="Generated by AntCV (cv-generator-det.pages.dev) — author retains all rights to the content.">\n<meta name="created" content="${new Date().toISOString()}">\n<style>\n*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}\nbody{font-family:'Carlito',${d};background:#fff;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}\n@page WordSection1{size:595pt 842pt;margin:0 !important;mso-header-margin:0pt;mso-footer-margin:0pt}\ndiv.WordSection1{page:WordSection1}\n@page{size:A4;margin:0 !important}\n@media print{\n body{margin:0;padding:0}html{margin:0;padding:0}\n .emoji{-webkit-filter:brightness(0) invert(1);filter:brightness(0) invert(1)}\n [style*="page-break-inside:avoid"]{page-break-inside:avoid}\n /* v1.40.95: ATS-readable font override for print.\n    Chrome's print-to-PDF pipeline subsets web fonts (Carlito/Cabin from Google Fonts)\n    using CID-keyed encoding WITHOUT generating a ToUnicode CMap. Visually fine, but\n    every text extractor (PDF.js, pdfminer, ATS systems) gets scrambled output.\n    Forcing the body font to a stack of system / PDF-standard fonts (Arial first —\n    most ATS systems treat Arial as a "core" font with built-in Unicode mappings)\n    means the printed PDF has properly extractable text. Visual fidelity drops a\n    little (Carlito is wider than Arial) but the document remains professional and\n    machine-readable. */\n body, p, div, span, td, th, li, a { font-family: Arial, Helvetica, "Liberation Sans", sans-serif !important; }\n strong, b { font-family: Arial, Helvetica, "Liberation Sans", sans-serif !important; font-weight: 700; }\n em, i { font-family: Arial, Helvetica, "Liberation Sans", sans-serif !important; font-style: italic; }\n}\n</style></head>\n<body style="margin:0;padding:0"><div class="WordSection1">${L}${P}</div><div aria-hidden="true" style="position:fixed;bottom:0;right:0;color:transparent;font-size:1px;line-height:1px;height:1px;overflow:hidden;pointer-events:none">AntCV/v${Ai} · ${(w.name || "").replace(/[<>&"]/g, "")} · ${new Date().toISOString()}</div></body></html>`;
@@ -44514,7 +44514,7 @@
           // shadow prefs.
           __photoFrame = (sz) => {
             let radius = "50%",
-              border = `0.5pt solid ${l}`,
+              border = `0.5pt solid ${(ya && ya.photoBorderColor) || l}`,
               shadow = "none";
             try {
               const sp =
@@ -44527,7 +44527,7 @@
                     ? "12px"
                     : "50%";
               const ct = sp.photoContour || "line";
-              border = "soft" === ct ? "none" : `0.5pt solid ${l}`;
+              border = "soft" === ct ? "none" : `0.5pt solid ${(ya && ya.photoBorderColor) || l}`;
               shadow =
                 [
                   "soft" === ct ? `0 0 5px ${l}` : null,
@@ -44799,6 +44799,11 @@
                     // band (#283556) that the token sidecar skips; custom falls
                     // back to Ke. See diag-copenhagen-palette.mjs.
                     background: `var(--header-bg, ${Ke})`,
+                    // SEAM-LINE-001 (owner 2026-07-14): a full-width bottom border on the
+                    // candidate band, matched to the figure's outer contour (photoBorderColor).
+                    // Gives continuity along the whole line and — when header and sidebar share
+                    // one colour — restores the otherwise-invisible header/sidebar seam.
+                    borderBottom: `1px solid ${(ya && ya.photoBorderColor) || l}`,
                     padding: "14px 16px 10px",
                     textAlign: "center",
                     // PHOTO-SIDEBAR-BRIDGE-001: in bridge mode the candidate
@@ -44836,7 +44841,7 @@
                 w.map(v),
               )
             : React.createElement("div", {
-                style: { background: `var(--header-bg, ${Ke})`, height: 8 },
+                style: { background: `var(--header-bg, ${Ke})`, height: 8, borderBottom: `1px solid ${(ya && ya.photoBorderColor) || l}` },
               }),
           "cv" === Lt
             ? (() => {
@@ -45422,7 +45427,7 @@
                                         border:
                                           "soft" === t
                                             ? "none"
-                                            : `0.5pt solid ${l}`,
+                                            : `0.5pt solid ${(ya && ya.photoBorderColor) || l}`,
                                         boxShadow:
                                           [
                                             "soft" === t
@@ -45436,7 +45441,7 @@
                                             .join(", ") || "none",
                                       };
                                     } catch (e) {
-                                      return { border: `0.5pt solid ${l}` };
+                                      return { border: `0.5pt solid ${(ya && ya.photoBorderColor) || l}` };
                                     }
                                   })(),
                                   objectFit: "cover",
@@ -46055,7 +46060,13 @@
                       if (sa !== "left" && sa !== "right" && sa !== "center") sa = "center";
                       return React.createElement("div", {
                         key: "__cl_slogan",
-                        contentEditable: true, suppressContentEditableWarning: true, spellCheck: false,
+                        // SLOGAN-SPELLCHECK-001 (owner 2026-07-14): spellcheck ON. The DOM
+                        // text is kept NATURAL-CASE (browsers skip spellcheck on ALL-CAPS)
+                        // and uppercased only for DISPLAY via textTransform below; onBlur
+                        // therefore stores natural case (matches what the export/worker
+                        // receive and re-uppercase — see docx-client out.slogan). lang=je
+                        // picks the right dictionary.
+                        contentEditable: true, suppressContentEditableWarning: true, spellCheck: true, lang: je,
                         title: "Click to edit the positioning line",
                         onBlur: (ev) => { try { localStorage.setItem("antcv:clSlogan", String(ev.currentTarget.textContent || "").trim()); window.dispatchEvent(new CustomEvent("antcv:sections-updated", { detail: { reason: "cl-slogan-inline" } })); } catch (_) {} },
                         style: {
@@ -46067,8 +46078,9 @@
                           color: "var(--brand-slogan-color, " + ((ya && ya.mainLineColor) || "#00746E") + ")",
                           margin: "0 0 12px",
                           cursor: "text",
+                          textTransform: "uppercase",
                         },
-                      }, st.toUpperCase());
+                      }, st);
                     } catch (_) { return null; }
                   })(),
                   Pi.filter(

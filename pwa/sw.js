@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.842-photo-flip-anchor';
+const CACHE = 'antcv-1.51.862-slogan-seam';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

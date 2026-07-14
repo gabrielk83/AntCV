@@ -34,7 +34,6 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mrl2y64c_6npv","started":"2026-07-14T20:04:36.350Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.1164-1.51.1183","task":"slogan CJLR single-cycler + Fit-it double-cap fix + apply-corrections for standalone editables + justify-accept","beat":"2026-07-14T20:04:37.031Z"}
 {"id":"sh_mrl53oqw_b48x","started":"2026-07-14T21:04:53.003Z","host":"GabyPC2","worktree":null,"branch":"HEAD","range":"1.51.1264-1.51.1283","task":"E cutover: roles-as-universal-rich_block default-on","beat":"2026-07-14T21:04:53.255Z"}
 {"id":"sh_mrl5nybc_9wce","started":"2026-07-14T22:33:09.331Z","host":"GabyPC2","worktree":null,"branch":"claude/hopeful-albattani-24195b","range":"1.51.1404-1.51.1423","task":"SLOGAN-LANG-GATE-001: wrong-language slogan override gate; branded==non-branded parity","beat":"2026-07-14T22:33:10.251Z"}
-{"id":"sh_mrl8jzdk_dmif","started":"2026-07-14T22:41:32.127Z","host":"GabyPC2","worktree":null,"branch":"claude/competent-mclean-b949e4","range":"1.51.1424-1.51.1443","task":"LOAD-EDITOR-UNSOLICITED-001 complete fix: tracker prepareAndOpen claims app-id before reload (island)","beat":"2026-07-14T22:41:32.864Z"}
 {"id":"sh_mrl8pqih_hyix","started":"2026-07-14T22:46:00.576Z","host":"GabyPC2","worktree":null,"branch":"claude/blissful-greider-41a6ec","range":"1.51.1444-1.51.1463","task":"EDU-ROW-CJLR-001 rescue: re-version orphaned 623f55a (education per-row CJLR) above high-water","beat":"2026-07-14T22:46:01.253Z"}
 <!-- SHIFT:END -->
 

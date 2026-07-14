@@ -271,6 +271,40 @@
     }
     // all mutations were inside the overlay — ignore
   }
+  // SPELL-BLIP-NUDGE-001 (owner 2026-07-14: "a new spelling mistake near a page break makes
+  // the red underline blip; a tiny press on the vertical roller stops it instantly"). Root
+  // cause (investigated): the native spellcheck marker thrashes because forced-reflow readers
+  // re-run getBoundingClientRect on every keystroke at the metastable page fold. Reproduce the
+  // owner's own remedy: after a brief typing pause in a preview editable that sits near a page
+  // boundary, do ONE net-zero 1px scroll nudge on the preview scroller — a single clean
+  // composited repaint lets the marker settle. Isolated here (leaf sidecar), never touches the
+  // hot app.js / CJLR / pagination lanes.
+  var __blipNudgeT = null;
+  function __nearPageBreak(el) {
+    try {
+      var r = el.getBoundingClientRect();
+      var rows = document.querySelectorAll('.antcv-page-row, .antcv-preview-page, [data-antcv-page]');
+      for (var i = 0; i < rows.length; i++) {
+        var pb = rows[i].getBoundingClientRect().bottom;
+        if (r.bottom > pb - 70 && r.top < pb + 24) return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+  function __spellBlipNudge(ev) {
+    var t = ev && ev.target;
+    if (!t || !t.closest) return;
+    var ed = t.closest('.antcv-preview-paper [contenteditable="true"], .antcv-preview-paper [data-antcv-editable-text], .antcv-preview-paper [data-antcv-row-path]');
+    if (!ed) return;
+    clearTimeout(__blipNudgeT);
+    __blipNudgeT = setTimeout(function () {
+      try {
+        if (!__nearPageBreak(ed)) return;
+        var sc = document.querySelector('.antcv-preview-scroll');
+        if (sc) { sc.scrollTop += 1; sc.scrollTop -= 1; }
+      } catch (_) {}
+    }, 140);
+  }
   function boot() {
     schedule();
     [800, 1800, 3500].forEach(function (ms) { setTimeout(scan, ms); });
@@ -279,6 +313,7 @@
     window.addEventListener('resize', scrollSchedule);
     window.addEventListener('antcv:sections-updated', schedule);
     try { window.addEventListener('antcv:language-changed', function () { setTimeout(scan, 300); }); } catch (_) {}
+    try { document.addEventListener('input', __spellBlipNudge, true); } catch (_) {}
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
   else boot();

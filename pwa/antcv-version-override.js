@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.944-pubs-inline';
+  const TARGET_VERSION = '1.51.945-revert-pb-freeze';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.944-pubs-inline',
     '1.51.943-edit-freeze-more',
     '1.51.942-photo-flip-vision',
     '1.51.922-contact-edit',

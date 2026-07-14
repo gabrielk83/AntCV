@@ -242,14 +242,7 @@
 
   // ─── scheduling ──────────────────────────────────────────────────
   var t = null;
-  var __spFreezePending = false;
-  function schedule() {
-    // EDIT-FREEZE-001: don't re-scan/re-mark mid-edit — churning <mark> nodes
-    // around the caret contributes to the jump. Defer; catch up on blur.
-    if (window.__antcvEditing) { __spFreezePending = true; return; }
-    clearTimeout(t); t = setTimeout(scan, 500);
-  }
-  try { window.addEventListener('antcv:edit-freeze-end', function () { if (__spFreezePending) { __spFreezePending = false; schedule(); } }); } catch (_) {}
+  function schedule() { clearTimeout(t); t = setTimeout(scan, 500); }
   // Faster realign specifically after a scroll (the marks are hidden meanwhile).
   var st = null;
   function scrollSchedule() { hideOverlayNow(); clearTimeout(st); st = setTimeout(scan, 200); }

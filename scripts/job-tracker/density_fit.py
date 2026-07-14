@@ -50,6 +50,9 @@ COMPACT_SUBS = [("Uni. of Toronto", "UofToronto"),
                 ("University of Toronto", "UofToronto")]
 # Re-space length windows per section (owner 2026-07-13: the profile block may
 # move well beyond the default +-12).
+# GROW-VETO -> SHRINK-ONLY RETRY frontier lever (2026-07-14): on by default;
+# set ANTCV_DENSITY_NO_SHRINK_RETRY=1 to disable (A/B or owner override).
+SHRINK_RETRY = os.environ.get("ANTCV_DENSITY_NO_SHRINK_RETRY", "") not in ("1", "true", "yes")
 RESPACE_BAND = {"profile": (-30, 30), "work_style": (-30, 30)}
 RESPACE_DEFAULT = (-12, 15)
 LLM_MODEL = os.environ.get("ANTCV_DENSITY_MODEL", "claude-sonnet-5")
@@ -676,16 +679,32 @@ def fit_density(cv, cl, pi, style_config, meta, language, doc="cv",
                                    b for b in role.get("bullets") or [] if _norm(b) != _norm(r["text"])))
                 except Exception:
                     context = ""
+            cut_lo = r["trim_chars"] if may_shrink else 0
+            cut_hi = (r["trim_chars"] + int(0.35 * cpl)) if may_shrink else 0
+            add_min, add_lo, add_hi = r.get("add_min", r["add_lo"]), r["add_lo"], r["add_hi"]
+            # GROW-VETO -> SHRINK-ONLY RETRY (frontier lever): the previous round
+            # grew this runt and the cross-family auditor vetoed it as a NEW claim.
+            # Re-offering the grow window just invites the same fabrication. If an
+            # honest shrink window exists (drop no fact, shorter synonyms, still
+            # gated), suppress grow so the retry collapses the runt to one full
+            # line instead. Never relaxes a gate — only steers the retry.
+            fb = seen.get("feedback") or ""
+            if SHRINK_RETRY and "asserted a NEW claim" in fb and cut_lo >= 2 \
+               and r.get("mode") != "respace":
+                add_min = add_lo = add_hi = 0
+                if os.environ.get("ANTCV_DENSITY_LEVER_DEBUG"):
+                    print(f"   [lever] shrink-retry forced: {r['sec']} …{r['text'][-36:]}",
+                          file=sys.stderr)
             ask = {"id": f"i{i}", "text": r["text"], "sec": r["sec"], "kind": r["kind"],
                    "mode": r.get("mode", "refit"),
                    "context": context,
-                   "add_min": r.get("add_min", r["add_lo"]),
-                   "add_lo": r["add_lo"], "add_hi": r["add_hi"],
+                   "add_min": add_min,
+                   "add_lo": add_lo, "add_hi": add_hi,
                    "add_wrap": r.get("add_wrap", r["add_hi"] + 18),
                    # shrink band: remove the runt line without starving the new
                    # last line below ~60% (same 0.40*cpl guard as trim_text)
-                   "cut_lo": r["trim_chars"] if may_shrink else 0,
-                   "cut_hi": (r["trim_chars"] + int(0.35 * cpl)) if may_shrink else 0,
+                   "cut_lo": cut_lo,
+                   "cut_hi": cut_hi,
                    "feedback": seen.get("feedback")}
             if ask["mode"] == "respace" or ask["add_lo"] >= 2 or ask["cut_lo"] >= 2:
                 asks.append(ask)

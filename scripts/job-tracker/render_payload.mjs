@@ -31,6 +31,12 @@ globalThis.location = { href: 'https://antcv.pages.dev/', origin: 'https://antcv
 try { Object.defineProperty(globalThis, 'navigator', { value: { userAgent: 'node-harness', language: 'en' }, configurable: true }); } catch (_) {}
 if (!globalThis.fetch) { try { globalThis.fetch = () => Promise.reject(new Error('fetch disabled')); } catch (_) {} }
 
+// buildPayload (and its hydration belts, e.g. CL-HYDRATE-EXPORT-GATE-001) emit
+// diagnostics via console.log — that lands on STDOUT and corrupts the JSON the
+// caller parses. Route all console chatter to STDERR so STDOUT is JSON-only.
+for (const m of ['log', 'info', 'debug', 'warn']) {
+  console[m] = (...a) => process.stderr.write(a.map(String).join(' ') + '\n');
+}
 const mod = await import(pathToFileURL(MODULE).href);
 const job = JSON.parse(fs.readFileSync(0, 'utf8')); // stdin
 const payload = mod.buildPayload(job);

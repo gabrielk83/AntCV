@@ -35,7 +35,7 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mrl53oqw_b48x","started":"2026-07-14T21:04:53.003Z","host":"GabyPC2","worktree":null,"branch":"HEAD","range":"1.51.1264-1.51.1283","task":"E cutover: roles-as-universal-rich_block default-on","beat":"2026-07-14T21:04:53.255Z"}
 {"id":"sh_mrl6tl4e_899a","started":"2026-07-14T21:53:00.981Z","host":"GabyPC2","worktree":null,"branch":"claude/amazing-goldberg-43c796","range":"1.51.1324-1.51.1343","task":"EDU-ROW-CJLR-001: per-row alignment cycler for EDUCATION (render stamp + editor)","beat":"2026-07-14T21:53:02.178Z"}
 {"id":"sh_mrl62y28_erw5","started":"2026-07-14T21:56:49.843Z","host":"GabyPC2","worktree":null,"branch":"claude/competent-mclean-b949e4","range":"1.51.1344-1.51.1363","task":"META-STICK-001 + LOAD-EDITOR-UNSOLICITED-001 live-repro fixes (kill-switched)","beat":"2026-07-14T21:56:51.054Z"}
-{"id":"sh_mrl5nybc_9wce","started":"2026-07-14T22:02:44.643Z","host":"GabyPC2","worktree":null,"branch":"claude/hopeful-albattani-24195b","range":"1.51.1364-1.51.1383","task":"SLOGAN-LANG-GATE-001: wrong-language slogan override gate; branded==non-branded parity (re-laned above 1363)","beat":"2026-07-14T22:02:46.049Z"}
+{"id":"sh_mrl5nybc_9wce","started":"2026-07-14T22:33:09.331Z","host":"GabyPC2","worktree":null,"branch":"claude/hopeful-albattani-24195b","range":"1.51.1404-1.51.1423","task":"SLOGAN-LANG-GATE-001: wrong-language slogan override gate; branded==non-branded parity","beat":"2026-07-14T22:33:10.251Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

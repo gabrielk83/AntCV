@@ -70,13 +70,20 @@ two openings — same candidate, brand-driven divergence:
   block) + a single-section gen-job — the actual generation path, not a mock.
 - The honesty guarantee: unreachable employer → empty + flag → candidate-fit only.
 
-## Known separate issue (NOT brand-decides)
+## Known separate issue (NOT brand-decides) — FIXED (SLOGAN-WORD-CAP-DANGLE-001, 1.51.1484)
 
-The word cap (`_cap_slogan_words`, SLOGAN-WORD-CAP-001) hard-chops a >9-word
-slogan with no early clause break, and can leave a trailing conjunction — e.g.
+The word cap (`_cap_slogan_words`, SLOGAN-WORD-CAP-001) hard-chopped a >9-word
+slogan with no early clause break, and could leave a trailing conjunction — e.g.
 Arm B raw (12 words) capped to `"…last-mile routes winter-ready and"`. The
-fusion is correct; the cap's hard-truncation fallback should drop a dangling
-trailing stopword (and/or/through/with/to). Tracked separately from this thread.
+fusion was always correct; only the cap's hard-truncation fallback was wrong.
+
+Fixed: the hard-chop fallback now drops a trailing dangling stopword
+(and/or/nor/but/with/to/through/for/of/the/a/an + Nordic og/eller/som/både) so
+the capped line ends on a content word — Arm B now caps to
+`"…last-mile routes winter-ready"`. The clause-cut path (comma/dash/semicolon/
+colon) is unchanged. The app-side `window.__antcvSloganCap`
+(`pwa/app.js` / `pwa/app.src.js`) carries the identical single-drop scrub so
+preview == export. Unit coverage: `scripts/job-tracker/test_slogan_cap.py`.
 
 ## Reproduce
 

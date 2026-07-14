@@ -1451,6 +1451,13 @@ def _format_spec(text, language):
     if not parts:
         return _STANDING_SPEC.get(language, _STANDING_SPEC["en"])
     return " • ".join(parts[:3])
+# Trailing dangling-stopword scrub for a hard-chopped slogan (shared regexes so
+# the drop is a single behaviour). Keep this list in sync with the app-side
+# __antcvSloganCap (pwa/app.src.js / pwa/app.js): EN + Nordic function words.
+_SLOGAN_TRAIL_PUNCT_RE = re.compile(r"[\s,;:•\-–—&]+$")
+_SLOGAN_TRAIL_STOP_RE = re.compile(
+    r"\s+(?:and|or|nor|but|with|to|through|for|of|the|a|an|og|eller|som|både)$",
+    re.I)
 def _cap_slogan_words(t, maxw=9):
     """SLOGAN-WORD-CAP-001 (owner 2026-07-13, app 810 was 12 words and wrapped):
     a CL slogan must be <= maxw words so it never slides to a 2nd line. Prefer a
@@ -1465,7 +1472,15 @@ def _cap_slogan_words(t, maxw=9):
             head = t[:i].strip()
             if 4 <= len(head.split()) <= maxw:
                 return head
-    return " ".join(words[:maxw]).rstrip(",;:- ")
+    # SLOGAN-WORD-CAP-DANGLE-001 (owner 2026-07-15, Anita brand-decides demo):
+    # a hard word-count cut with no clause break can strand a trailing
+    # conjunction/preposition ("...winter-ready and"). Drop it so the capped
+    # slogan ends on a content word. Mirrors window.__antcvSloganCap so
+    # preview == export.
+    hard = " ".join(words[:maxw]).rstrip(",;:- ")
+    hard = _SLOGAN_TRAIL_PUNCT_RE.sub("", hard)
+    hard = _SLOGAN_TRAIL_STOP_RE.sub("", hard)
+    return hard.strip()
 
 def _format_slogan(text):
     t = sanitize_text((text or "").strip()).strip(" .\"'")

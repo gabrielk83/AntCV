@@ -2364,7 +2364,7 @@
       if (w.length <= 8) return t;
       return w.slice(0, 8).join(" ")
         .replace(/[\s,;:•\-–—&]+$/, "")
-        .replace(/\s+(?:and|og|or|eller|the|a|an|to|of|for|with|som|både)$/i, "")
+        .replace(/\s+(?:and|or|nor|but|with|to|through|for|of|the|a|an|og|eller|som|både)$/i, "")
         .trim();
     } catch (_) { return String(s == null ? "" : s); }
   }

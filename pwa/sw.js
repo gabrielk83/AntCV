@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.1464-rolehead-justify';
+const CACHE = 'antcv-1.51.1484-slogan-dangle-cap';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

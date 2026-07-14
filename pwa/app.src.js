@@ -5822,6 +5822,14 @@
                   // guarantee (same value = no overwrite) while letting external edits
                   // through.
                   if (document.activeElement === el && el.__antcvLastVal === __w) return;
+                  // EDIT-COMMIT-LAG-001 (owner 2026-07-14 "editing results/text regresses when I
+                  // leave the edit area"): after blur the commit is async, so a re-render can fire
+                  // while __w is still the OLD value — the sync below would revert the just-typed
+                  // edit. If the model is UNCHANGED since we last synced AND the DOM diverges, that
+                  // divergence IS the uncommitted edit — preserve it; the next render (model caught
+                  // up, __w changes) syncs the committed value. Compatible with the focused external-
+                  // paint above (there __w has changed, so this guard doesn't fire).
+                  if (document.activeElement !== el && el.__antcvLastVal === __w && el.textContent !== __w) return;
                   if (el.textContent !== __w) el.textContent = __w;
                   el.__antcvLastVal = __w;
                 },
@@ -7426,6 +7434,10 @@
                                     if (!el) return;
                                     // EDIT-FOCUS-STABLE-002: paint external changes even while focused (unchanged value = skip, so no jump-out).
                                     if (document.activeElement === el && el.__antcvLastVal === __display) return;
+                                    // EDIT-COMMIT-LAG-001 (results revert on blur): preserve the
+                                    // uncommitted edit while the async commit propagates (see the
+                                    // matching guard in the shared editable-text ref).
+                                    if (document.activeElement !== el && el.__antcvLastVal === __display && el.textContent !== __display) return;
                                     if (el.textContent !== __display) el.textContent = __display;
                                     el.__antcvLastVal = __display;
                                   },
@@ -44775,6 +44787,28 @@
                     "div",
                     {
                       key: "specialisation",
+                      // SPEC-INLINE-EDIT-001 (owner 2026-07-14 "we still do not have spelling
+                      // on the specification line"): make the specialisation click-to-edit with
+                      // spellcheck, like the contact. Ref-managed text with the model-changed-
+                      // only guard (never revert a live/just-committed edit). onBlur writes the
+                      // current-language specialisation (+ subtitle mirror) and dispatches.
+                      contentEditable: true,
+                      suppressContentEditableWarning: true,
+                      spellCheck: true,
+                      title: "Click to edit the specialisation",
+                      ref: (el) => { if (!el) return; const __sv = String(h == null ? "" : h); if (el.__antcvSpecV === __sv) return; if (document.activeElement === el) return; el.__antcvSpecV = __sv; if (el.textContent !== __sv) el.textContent = __sv; },
+                      onBlur: (ev) => {
+                        try {
+                          const v = String(ev.currentTarget.textContent || "").trim();
+                          const pi = ie() || {};
+                          if (v && v !== String(pi.specialization || pi.subtitle || "")) {
+                            const nextPi = { ...pi, specialization: v, subtitle: v };
+                            try { le(nextPi); } catch (_) {}
+                            try { "function" == typeof Qn && Qn({ personalInfo: nextPi }); } catch (_) {}
+                            try { window.dispatchEvent(new CustomEvent("antcv:sections-updated", { detail: { reason: "spec-inline" } })); } catch (_) {}
+                          }
+                        } catch (_) {}
+                      },
                       style: {
                         fontFamily: e,
                         color: "rgba(255,255,255,0.9)",
@@ -44785,9 +44819,10 @@
                         textOverflow: "ellipsis",
                         lineHeight: 1.1,
                         textAlign: y("specialisation"),
+                        cursor: "text",
+                        outline: "none",
                       },
                     },
-                    h,
                   )
                 : "contact" === t && p
                   ? React.createElement(
@@ -44822,13 +44857,11 @@
                             lineHeight: 1.2,
                             margin:
                               __nzPx(ya && ya.candidateGap, 5) + "px 0",
-                            // CONTACT-EDGE-INSET-001 (owner 2026-07-14: "missing by one
-                            // char … release a bit the space from edge"): a small
-                            // horizontal inset keeps the first/last contact char off the
-                            // band edge (the +1pt font pushed it flush → the edge clipped
-                            // one char). The bridge font-shrink measures clientWidth, so it
-                            // still fits inside the inset.
-                            padding: "0 2px",
+                            // CONTACT-TIGHTEN-001 (owner 2026-07-14: "less space from the
+                            // profile picture and edge … tight to enter one line"): drop the
+                            // edge inset to 0 (with the photo-gap reduction below, this frees
+                            // enough width for the whole line to fit without wrapping).
+                            padding: "0",
                             textAlign: y("contact"),
                             // CONTACT-CV-CL-PARITY-001: always wrap (was nowrap+ellipsis in
                             // the CV bridge, which is what forced the tiny one-line shrink).
@@ -44873,7 +44906,10 @@
                     // the gap below (content vertically centred).
                     ...(__bridgeOn
                       ? {
-                          paddingLeft: `calc(${Math.round(100 * ta)}% - 28px)`,
+                          // CONTACT-TIGHTEN-001: less space from the profile picture — the band
+                          // text flows further left over the seam (was -28px) so the contact has
+                          // more width and fits one line.
+                          paddingLeft: `calc(${Math.round(100 * ta)}% - 48px)`,
                           minHeight:
                             Math.round(__zoEff / 2) + __bridgeGap - 24,
                           display: "flex",

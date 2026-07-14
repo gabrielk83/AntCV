@@ -7695,6 +7695,8 @@
               ? v
               : "justify";
           };
+          // PUBS-RICH-INLINE-EDIT-001 (owner 2026-07-14): escape for the ref-managed innerHTML
+          const __hesc = (x) => String(x == null ? "" : x).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
           return React.createElement(
             React.Fragment,
             null,
@@ -7706,21 +7708,46 @@
                 const __ym = String(__det).match(/(1[89][0-9][0-9]|20[0-9][0-9])/);
                 __det = __ym ? __ym[1] : "";
               }
+              const __pubStyle = {
+                fontSize: S ? $.sb : $.text,
+                fontFamily: T,
+                color: S ? __sbInk : "#333",
+                marginBottom: 3,
+                lineHeight: 1.3,
+                textAlign: e.richPub ? __pubRowAlign(n) : "justify",
+                overflowWrap: "break-word",
+                wordBreak: "break-word",
+              };
+              // PUBS-RICH-INLINE-EDIT-001: in edit mode each pubs row is click-to-edit
+              // in place while KEEPING the bold-italic title. The formatted markup lives
+              // in a ref-managed innerHTML (never overwritten while focused — see
+              // [[edit-focus-stable]]); onBlur writes the plain "title - details" string
+              // back to items[n] via the section onEdit p(). xe() re-splits it on " - "
+              // on the next render, so the bold-italic title is recomputed from the string.
+              if (e.richPub && p && u) {
+                const __h = (o.title ? "<b><i>" + __hesc(o.title) + "</i></b>" : "") + (o.title && __det ? " - " : "") + __hesc(__det);
+                return React.createElement("div", {
+                  key: n,
+                  "data-antcv-row-path": "items." + n,
+                  contentEditable: true,
+                  suppressContentEditableWarning: true,
+                  spellCheck: true,
+                  ref: (el) => { if (!el || document.activeElement === el) return; if (el.innerHTML !== __h) el.innerHTML = __h; },
+                  onFocus: (ev) => { ((ev.currentTarget.style.outline = "1px dashed " + (S ? __sbInk : "#01B7BB")), (ev.currentTarget.style.outlineOffset = "2px")); },
+                  onBlur: (ev) => {
+                    ev.currentTarget.style.outline = "none";
+                    try {
+                      const v = String(ev.currentTarget.textContent || "").trim();
+                      p(["items", n], v);
+                    } catch (_) {}
+                  },
+                  title: "Click to edit",
+                  style: { ...__pubStyle, cursor: "text", outline: "none" },
+                });
+              }
               return React.createElement(
                 "div",
-                {
-                  key: n,
-                  style: {
-                    fontSize: S ? $.sb : $.text,
-                    fontFamily: T,
-                    color: S ? __sbInk : "#333",
-                    marginBottom: 3,
-                    lineHeight: 1.3,
-                    textAlign: e.richPub ? __pubRowAlign(n) : "justify",
-                    overflowWrap: "break-word",
-                    wordBreak: "break-word",
-                  },
-                },
+                { key: n, style: __pubStyle },
                 o.title
                   ? React.createElement(
                       "b",
@@ -44588,6 +44615,10 @@
                 regulatory: "regulatory",
                 additional: "additional",
                 publications: "publications",
+                // PUBS-RICH-INLINE-EDIT-001: the LIVE publications section id is "pubs"
+                // (the old "publications" id is retired) — mirror its inline edits to
+                // personalInfo.publications so cloud-/backup-restore can't wipe them.
+                pubs: "publications",
               };
               const piKey = SYNCED[e];
               if (!piKey) return;

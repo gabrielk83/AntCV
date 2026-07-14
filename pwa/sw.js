@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.943-edit-freeze-more';
+const CACHE = 'antcv-1.51.944-pubs-inline';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

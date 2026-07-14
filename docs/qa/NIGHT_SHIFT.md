@@ -31,7 +31,7 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 <!-- SHIFT:BEGIN — one JSON object per line; managed by scripts/shift.mjs, safe to hand-edit a line if a session died without releasing -->
 {"id":"sh_mrjan7tb_2v89","started":"2026-07-14T13:12:46.358Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.761-1.51.780","task":"photo horizontal flip control (off/on/auto) in Layout photo panel + preview + export","beat":"2026-07-14T13:12:46.440Z"}
 {"id":"sh_mrkppnoa_bzvg","started":"2026-07-14T14:41:01.811Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.802-1.51.821","task":"contact-line: drop bullet when emojis + font +0.5pt (preview/srcdoc/OOXML)","beat":"2026-07-14T14:41:02.317Z"}
-{"id":"sh_mrktodff_5h2u","started":"2026-07-14T15:45:02.720Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.902-1.51.921","task":"photo-orientation Mistral vision endpoint (proxy+demo-proxy) + gated client fallback","beat":"2026-07-14T15:45:03.103Z"}
+{"id":"sh_mrktodff_5h2u","started":"2026-07-14T15:51:08.703Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.922-1.51.941","task":"contact inline per-item edit + tighter en-space separator + contact font +0.5 more","beat":"2026-07-14T15:51:08.896Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

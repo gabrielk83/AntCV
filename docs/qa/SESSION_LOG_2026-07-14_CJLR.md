@@ -66,3 +66,43 @@ ordering; E cutover pending.
   STALE. Windows worktree `rebase-merge` cleanup warnings are benign (rm the dir + continue).
 - Live verification done in the in-app Browser pane (Bash sandbox can't reach the live site);
   cleared SW + caches before each reload to defeat the stale-SW version mask.
+
+## Continuation 2026-07-15 — E cutover + export pagination
+
+### 1.51.1264 — E CUTOVER (roles-as-rich_block is now DEFAULT)
+Owner: "E is approved — do it." `AntcvRolesRichBlock.isOn()` flipped opt-in (`flag==='1'`) →
+default-on (`flag!=='0'`); flag kept as a `'0'` rollback. Verified live with the flag REMOVED:
+experience renders as rich_block (role heads + role-lines + 64 bullets, editable), NO
+double-render, stored `roles[]` intact + `items[]` empty + no `__fromRoles` residue → EXPORT
+reads roles[] unaffected. Chimera dead-code retained as the rollback (deletion deferred).
+
+### 1.51.1265 — AUTOPAGES-ITEM-TO-ROLE-001 (cutover export regression)
+The cutover flattened experience to items[], so the autoPages measurer keyed page-breaks by
+ITEM index (13/36/66) while the docx-client read them by ROLE index (0..N) → no role.page →
+worker never split roles / emitted "(Cont.)" → columns collapsed to sequential → 8-page PDF
+(preview 3). Fix: adapter `itemAutoPagesToRoleAutoPages()` maps item-break → containing role
+via `item._key`; docx-client calls it in the experience case gated on `isOn()`. Validated
+live: `{13:2,36:3,66:4}` → `{1:2,4:3,10:4}`. Export 8→6 pages, cont-headers + parallel
+sidebar restored.
+
+### Export evaluation (6-page PDF) + routing
+- Under-role line now exports for every role (docx-worker 1.14.157, deployed) — closes the
+  "line in preview but not export" complaint.
+- Remaining, ROUTED to the "Density frontier → 97.5%" session (owner-approved): (a) preview↔
+  export line-drift (3 vs 4 pp — measurer vs Word line counts); (b) sidebar group-swap /
+  page-fill pack (reorder overflowing sidebar groups long+short on page 1; NOT a mid-group
+  split; must apply in preview AND docx-worker for parity).
+
+### Spawn status — CORRECTED
+A "0-commits-ahead + clean worktree" reads identically to "stalled" and to "work MERGED to
+main" — I misread merged spawns as stalled and over-nudged. Actual status:
+- **Profile per-row CJLR = NOT A BUG** — cycler works; the "doesn't respond" was a stale
+  service worker serving pre-1.51.1065 app.js. Clear SW; no code change.
+- **Education per-row CJLR** — landed (preview 1.51.1424 + worker export 1.14.160, test-locked).
+- **Worker CJLR export parity** — landed (docx-worker 1.14.156-159).
+LESSON: to judge a spawn's progress, check whether its feature is in `main` (by commit/feature),
+NOT the worktree's ahead-count — a merged worktree is 0-ahead + clean.
+
+### Deploy status — all live
+PWA auto-deploys on push (main 1.51.1484). docx-worker 1.14.160 manually deployed via
+`workflow_dispatch` (`deploy-worker` job, 23:19 UTC, after the 1.14.160 commit).

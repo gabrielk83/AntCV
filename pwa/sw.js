@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.785-edit-freeze';
+const CACHE = 'antcv-1.51.802-photo-flip-redetect';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

@@ -22,7 +22,7 @@
 (function () {
   'use strict';
 
-  var SUITE_VERSION = '1.51.784-photo-flip-model';
+  var SUITE_VERSION = '1.51.802-photo-flip-redetect';
   if (window.__antcvPhotoUI427 === SUITE_VERSION) return;
   window.__antcvPhotoUI427 = SUITE_VERSION;
 
@@ -901,6 +901,13 @@
     // pick and detected orientation the moment they pressed Reset. Standalone
     // keys survive both, exactly like the CL slogan/signature keys.
     var K_FLIP = 'antcv:photoFlip', K_FACE = 'antcv:photoFacing', K_SIG = 'antcv:photoFacingSig';
+    var K_VER = 'antcv:photoFacingVer';
+    // Bump when the DETECTOR changes. maybeDetect re-runs whenever the stored
+    // result was produced by an older detector — so shipping a better model /
+    // heuristic auto-heals every stale (esp. 'unknown') result WITHOUT the user
+    // having to re-upload. Without this, a photo whose signature was cached as
+    // 'unknown' by an older build is never re-analysed by the new one.
+    var DET_VER = 'm2';
     function readPI() {
       try { return JSON.parse(localStorage.getItem('personalInfo') || '{}') || {}; }
       catch (_) { return {}; }
@@ -924,6 +931,7 @@
     function writeFacing(facing, sig) {
       lsSet(K_FACE, facing);
       lsSet(K_SIG, sig);
+      lsSet(K_VER, DET_VER);
     }
 
     // ── content-side (which way the subject should look) ───────────────────
@@ -983,8 +991,10 @@
         try { d = ctx.getImageData(0, 0, W, H).data; } catch (_) { return 'unknown'; }
         function skin(i) {
           var r = d[i], g = d[i + 1], b = d[i + 2];
-          return r > 60 && g > 40 && b > 20 && r >= g && g >= b &&
-            (r - b) > 12 && (Math.max(r, g, b) - Math.min(r, g, b)) > 12;
+          // Loosened so cooler / studio-lit skin tones still register (the strict
+          // r>=g>=b ordering missed some faces -> 'unknown').
+          return r > 50 && g > 30 && b > 15 && r > b && (r - g) > -8 &&
+            (r - b) > 8 && (Math.max(r, g, b) - Math.min(r, g, b)) > 8;
         }
         function lum(i) { return 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; }
         // 1) skin mask -> head bounding box (5th..95th pct = robust to strays).
@@ -995,7 +1005,7 @@
             if (skin(i)) { xs.push(x); ys.push(y); sumX += x; n++; }
           }
         }
-        if (n < 60) return 'unknown';
+        if (n < 40) return 'unknown';
         xs.sort(function (a, b) { return a - b; });
         ys.sort(function (a, b) { return a - b; });
         var bx0 = xs[Math.floor(n * 0.05)], bx1 = xs[Math.floor(n * 0.95)];
@@ -1125,24 +1135,30 @@
       });
     }
     var detecting = false;
-    function maybeDetect() {
+    // Detection runs when the stored result is for a DIFFERENT photo (sig) OR
+    // was produced by an OLDER detector (ver) — the latter auto-heals stale
+    // 'unknown' results from earlier builds. `force` (Auto click) re-runs even
+    // when the current detector already attempted this photo.
+    function runDetect(force) {
       var pi = readPI();
       var photo = (pi && typeof pi.photo === 'string') ? pi.photo : '';
       if (!photo || detecting) return;
       var sig = photoSig(photo);
-      if (lsGet(K_SIG) === sig) return; // already detected for this exact photo
+      if (!force && lsGet(K_SIG) === sig && lsGet(K_VER) === DET_VER) return; // already attempted with this detector
       detecting = true;
+      var ui0 = document.querySelector('[' + UI_ATTR + '="1"]');
+      if (ui0) refreshUI(ui0); // show "detecting…" while it runs
       detectFacing(photo).then(function (facing) {
         detecting = false;
         writeFacing(facing, sig);
-        if (readMode() === 'auto') {
-          applyPreview();
-          try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: 'photo-facing' } })); } catch (_) {}
-        }
+        applyPreview();
+        try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: 'photo-facing' } })); } catch (_) {}
         var ui = document.querySelector('[' + UI_ATTR + '="1"]');
         if (ui) refreshUI(ui);
       });
     }
+    function maybeDetect() { runDetect(false); }
+    function forceDetect() { runDetect(true); }
 
     // ── preview apply (mirror the rendered <img>) ──────────────────────────
     function previewPhotos() {
@@ -1158,9 +1174,14 @@
             || img.getAttribute('data-antcv-repeat-photo') === '1') add(img);
         }
       }
-      // Also the Settings→Layout control thumbnail ("the facepic in the blue
-      // screen") and any other on-screen copy of the profile photo, matched by
-      // src, so On/Auto mirror the avatar too — not just the CV preview.
+      // The upload-menu / Layout control avatar ("the facepic in the blue
+      // screen") is the photo-library carousel <img> — flip it by CLASS. Its
+      // src is the library's own copy (not necessarily byte-identical to
+      // personalInfo.photo), which is why an src match alone missed it. This is
+      // what lets the user SEE what On does while they're in the upload menu.
+      var carousels = document.querySelectorAll('.antcv-carousel-pic');
+      for (var c = 0; c < carousels.length; c++) add(carousels[c]);
+      // Belt-and-braces: any other on-screen copy of the profile photo by src.
       try {
         var pi = readPI();
         var photo = (pi && typeof pi.photo === 'string') ? pi.photo : '';
@@ -1218,13 +1239,17 @@
       if (hint) {
         var text = '', disp = 'none';
         if (mode === 'auto') {
-          var f = readFacing();
-          if (f === 'left' || f === 'right') {
-            text = 'Auto: subject faces ' + f + ' — ' + (resolveFlipH() ? 'flipped to face the content.' : 'already faces the content.');
-          } else if (f === 'center') {
-            text = 'Auto: subject looks front-facing — no flip needed.';
+          if (detecting) {
+            text = 'Auto: detecting orientation…';
           } else {
-            text = 'Auto: orientation not detected yet — no flip. Use On to mirror.';
+            var f = readFacing();
+            if (f === 'left' || f === 'right') {
+              text = 'Auto: subject faces ' + f + ' — ' + (resolveFlipH() ? 'flipped to face the content.' : 'already faces the content.');
+            } else if (f === 'center') {
+              text = 'Auto: subject looks front-facing — no flip needed.';
+            } else {
+              text = 'Auto: orientation unclear — no flip. Use On to mirror.';
+            }
           }
           disp = '';
         }
@@ -1258,6 +1283,9 @@
           writeMode(m);
           applyPreview();
           refreshUI(wrap);
+          // Picking Auto forces a fresh detection now (don't wait for a re-
+          // upload) — and if orientation is still unclear, re-runs the model.
+          if (m === 'auto') forceDetect();
         });
         row.appendChild(b);
       });
@@ -1306,7 +1334,7 @@
     }
 
     window.AntcvPhotoFlip = {
-      version: '1.51.784',
+      version: '1.51.802',
       MODES: MODES.slice(),
       _readMode: readMode,
       _readFacing: readFacing,

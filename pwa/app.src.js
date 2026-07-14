@@ -3405,7 +3405,7 @@
           __ctF(__localForm(t ? a || "København, Danmark" : a || "Copenhagen, Denmark")),
         ]),
       e.citizenship && o.push(["★", __ctF(e.citizenship)]),
-      e.email && o.push(["@", e.email]),
+      e.email && o.push(["✉︎", e.email]),
       e.phone && o.push(["☎", e.phone]),
       e.linkedin && o.push(["🔗︎", e.linkedin]),
       e.github && o.push(["⌘", e.github]),
@@ -44674,7 +44674,7 @@
                   // the display form back would corrupt them, so they stay plain (edit via
                   // the review dialog). The leading glyph stays outside the editable span.
                   // Editable LinkedIn replaces the old clickable <a> (can't be both).
-                  const __ICON_FIELD = { "⌂": "location", "★": "citizenship", "@": "email", "☎": "phone", "🔗︎": "linkedin", "⌘": "github", "⌁": "website" };
+                  const __ICON_FIELD = { "⌂": "location", "★": "citizenship", "✉︎": "email", "☎": "phone", "🔗︎": "linkedin", "⌘": "github", "⌁": "website" };
                   const __field = __ICON_FIELD[String(e)] || "";
                   if (/^(email|phone|linkedin|github|website)$/.test(__field)) {
                     return [
@@ -44682,7 +44682,7 @@
                       React.createElement(
                         "span",
                         { key: "cw" + _i },
-                        `${e} `,
+                        `${e} `,
                         React.createElement("span", {
                           key: "cv" + _i,
                           ref: (el) => { if (!el || document.activeElement === el) return; if (el.textContent !== String(t)) el.textContent = String(t); },
@@ -44818,7 +44818,7 @@
                               // CONTACT-NO-BULLET-001: +0.5pt, freed by dropping •
                               ((Yr.contactSize || 10) + 1) *
                               (96 / 72) *
-                              (__bridgeOn ? 0.88 : 1),
+                              (__bridgeOn ? 0.94 : 1),
                             lineHeight: 1.2,
                             margin:
                               __nzPx(ya && ya.candidateGap, 5) + "px 0",
@@ -44828,7 +44828,7 @@
                             // band edge (the +1pt font pushed it flush → the edge clipped
                             // one char). The bridge font-shrink measures clientWidth, so it
                             // still fits inside the inset.
-                            padding: "0 5px",
+                            padding: "0 2px",
                             textAlign: y("contact"),
                             whiteSpace: __bridgeOn ? "nowrap" : "normal",
                             ...(__bridgeOn

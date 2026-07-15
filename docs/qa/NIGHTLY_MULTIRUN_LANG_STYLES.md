@@ -36,7 +36,12 @@ collide on a version number or a shared working tree (full detail: `docs/qa/NIGH
       (`__langPromptName`, killed the hardcoded "UK English" for non-Danish — the root cause of "unsolicited
       zh → English"); 1b `antcv-babel-relang.js` re-renders wrong-script content to the ribbon language; 2
       lazy per-language cache w/ genSpeed split; 2b cross-device `langRenders` cloud sync (relay auth-30); 2c-A
-      fact-preservation invariant check. NOT done: the full 23-language `__ANTCV_LANG_REGISTRY` sidecar +
+      fact-preservation invariant check. **SLOGAN-LANG-GATE-001 SHIPPED (1.51.1404, 2026-07-15):** a
+      defensive gate on top of babel-fish — a stored slogan OVERRIDE whose language/script mismatches the
+      ribbon is rejected (`window.__antcvSloganLangGate`) → yields to the specialisation fallback, in preview
+      AND export, so branded==non-branded parity holds. Every multi-language run should now spot-check the
+      rendered + exported CL slogan is in the ribbon language (not a leaked Danish/other-language override).
+      NOT done: the full 23-language `__ANTCV_LANG_REGISTRY` sidecar +
       register/voice/name-map lookups this phase specifies; 2c-B pre-warm (needs a headless translate).
 - [~] R2 Export path: filename suffixes; RTL + CJK in docx-worker — SUBSTANTIALLY SHIPPED: CJK font
       (zh Microsoft YaHei), RTL he/ar (w:rtl + w:bidi + `visuallyRightToLeft` layout mirror), Ethiopic am

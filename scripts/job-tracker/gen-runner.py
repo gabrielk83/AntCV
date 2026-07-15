@@ -849,6 +849,23 @@ def _furn(language, key, company, role):
     f = _FURNITURE.get(language) or _FURNITURE["en"]
     return f[key].format(role=role, company=company)
 
+# Cover-letter FOUNDATION section labels + fallback intro, localised to the JD
+# language (FOUNDATION-LANG-001, 2026-07-15). The generation prompt asks for the
+# internal parse markers "Hands-on:"/"Professionally:" in English, but the
+# DISPLAYED labels + fallback intro must follow the CL's language, or an English
+# "Foundation / Hands-on / Professionally" leaks into a Danish/Swedish letter.
+_FOUNDATION_FURNITURE = {
+    "en": {"label": "Foundation", "handson": "Hands-on", "professionally": "Professionally",
+           "intro": "I connect what I do best with the outcomes this employer is after."},
+    "da": {"label": "Grundlag", "handson": "Praktisk", "professionally": "Fagligt",
+           "intro": "Jeg forbinder det, jeg er bedst til, med de resultater, arbejdsgiveren søger."},
+    "sv": {"label": "Grund", "handson": "Praktiskt", "professionally": "Professionellt",
+           "intro": "Jag kopplar det jag är bäst på till de resultat arbetsgivaren söker."},
+}
+def _flabel(language, key):
+    f = _FOUNDATION_FURNITURE.get(language) or _FOUNDATION_FURNITURE["en"]
+    return f.get(key) or _FOUNDATION_FURNITURE["en"][key]
+
 # Nordic-Minimal compaction targets (~1.5-2 pages). Trims the verbose MAIN-column
 # blocks; leaves the short sidebar furniture intact. Tunable; logs what it cut
 # (NORDIC-COMPACT-001, 2026-07-12 — owner: the persisted batch ran 3-5 pages).
@@ -1359,9 +1376,9 @@ def build_structured_sections(sk, sections, company, role, language="en"):
     pro = "" if _is_scaffold(pro) else _cap_para(pro, 200)
     f = _ov_find(cl, "foundation")
     if f and (ho or pro):
-        items = [{"b": "Foundation", "t": intro or "I connect what I do best with the outcomes this employer is after.", "bullets": []}]
-        if ho: items.append({"b": "Hands-on", "t": ho, "mk": True})
-        if pro: items.append({"b": "Professionally", "t": pro, "mk": True})
+        items = [{"b": _flabel(language, "label"), "t": intro or _flabel(language, "intro"), "bullets": []}]
+        if ho: items.append({"b": _flabel(language, "handson"), "t": ho, "mk": True})
+        if pro: items.append({"b": _flabel(language, "professionally"), "t": pro, "mk": True})
         f["items"] = items
 
     # what_i_bring: a LEAD-IN line + 2-col rows -> intro item + labelled bullets.

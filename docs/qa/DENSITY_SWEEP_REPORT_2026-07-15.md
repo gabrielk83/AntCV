@@ -137,3 +137,40 @@ only within-item rewording); kernel-sourced only (growth draws from the kernel
 digest + role facts, never invented — verifier-enforced); banned em/en dashes and
 AI-notice untouched; accessibility wording untouched (verbatim). No real candidate
 data committed (all data lives in the live relay / kernel, not the repo).
+
+## OPEN — two layout items ROUTED here from the 2026-07-14/15 CJLR/pagination session (owner-approved)
+
+These are pagination/layout, not content-density, but they live in this exact
+measure/fit code and need the render-and-measure harness — so they belong to the
+next density pass, NOT a cold coordinator edit. Recorded here so a future
+density-nightly is guaranteed to grab them (also in `ACTIVE_BUGS.md` top entry).
+
+1. **PREVIEW↔EXPORT LINE-DRIFT (3 vs 4 pages).** On a real Gabriel unsolicited CV the
+   PREVIEW paginates to 3 pages but the exported PDF is 4 (experience span). Root cause
+   is the classic "the PREVIEW counts fewer lines per paragraph than Word actually
+   renders," so the auto page-break lands one role/page late. Fix belongs in the
+   **measurer** (match preview per-paragraph line counts to Word) — `measure_density.py`
+   already renders byte-exact via the docx-worker + PyMuPDF, so it can quantify the
+   per-paragraph drift and calibrate it. See the note in `pwa/antcv-docx-client.js`
+   experience case (~line 2714). Do NOT "fix" it by dropping the export break.
+
+2. **SIDEBAR GROUP-SWAP / PAGE-FILL PACK.** A sidebar section (e.g. TOOLS & METHODS)
+   keeps its groups in stored order and overflows such that a later sidebar section
+   (EDUCATION) is orphaned onto its own page with lots of empty space. Owner does NOT
+   want a mid-group split (that fights the coordinator's deliberate group-boundary
+   snapping + oscillation guards). Instead: reorder an overflowing sidebar section's
+   groups so page-1 packs a **long group + a short group** together (best fill), pushing
+   medium groups to later pages. Height source: `antcv-auto-pagebreak-block-001.js`
+   already computes per-group heights (`heights = {"sid|key":px}`) and group starts from
+   `items[i].grp` (~lines 288 / 1314-1427). **HARD CONSTRAINT:** this can NOT be
+   preview-only — the reorder changes the rendered group order, so the **docx-worker
+   sidebar render MUST apply the identical reorder** or the PDF won't match the preview
+   (recreating the mismatch). One coordinated change: preview render + `workers/docx-worker`,
+   measure-validated (use the harness's STRETCHED-line + per-page sidebar-gap metrics),
+   no oscillation.
+
+Context for whoever picks these up: the roles-as-rich_block cutover went default-on
+(1.51.1264) and AUTOPAGES-ITEM-TO-ROLE-001 (1.51.1265) now translates the flattened
+experience item-index autoPages back to role indices in `antcv-docx-client.js` — relevant
+if you touch experience pagination. The under-role line already exports for every role
+(docx-worker 1.14.157, deployed).

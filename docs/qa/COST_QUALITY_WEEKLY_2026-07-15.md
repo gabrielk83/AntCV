@@ -95,7 +95,20 @@ it is not addressable by this routine.)
 - Prior `MODEL_ROLES` recorded above for one-command rollback.
 - Suites green before push: model-table-freshness 5/5 ×2, relay-cost-quality-tune 14/14.
 
-## Deploy
-- `gh workflow run deploy.yml -f target=proxy -f mode=deploy -f confirm=proxy`
-- `gh workflow run deploy.yml -f target=demo-proxy -f mode=deploy -f confirm=demo-proxy`
-- one deployer at a time; `/health` verified after each (see run log below).
+## Deploy — DONE
+- proxy: run 29447832182 ✓ success; `GET cv-proxy.karp-gabriel-a.workers.dev/health` → 200
+  `{"ok":true,"service":"cv-proxy","version":"3.8.3-gemini-flash-ramble"}`.
+- demo-proxy: run 29447903547 ✓ success; `GET antcv-demo-proxy.karp-gabriel-a.workers.dev/health`
+  → 200 (same version). One deployer at a time (no other deploy in-flight, verified via `gh run list`).
+- Note: this is a worker-config + docs change (no pwa asset / `?v=` cache-bust consumed), so no
+  version-range shift claim was reserved; deployer exclusivity was ensured by the in-flight check.
+- Commit `a9923fb` on main. Rollback = revert the MODEL_ROLES line in both wrangler.toml
+  (`coherence`→`anthropic`) + redeploy proxy + demo-proxy.
+
+## Operational note for future runs
+The relay admin-token `/api/llm-health` path is not reachable from the sandbox shell this run, so
+telemetry came from D1 `llm_provider_health` via the Cloudflare MCP `d1_database_query`. A single
+call-weighted **full-table** aggregate over all tasks trips D1's per-query CPU limit (207k rows);
+query **per-task with a literal `window_start` cutoff** (`>= max-604800`) instead — those return in
+~20 ms each. Snapshot assembled to the `/api/llm-health` `rows[]` shape and scored offline with
+`scripts/relay-cost-quality-tune.mjs --data`.

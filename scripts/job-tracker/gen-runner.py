@@ -263,9 +263,13 @@ def jd_content_len(jd):
     whitespace before measuring so only rows with a real posting body pass."""
     return len(re.sub(r"\s+", " ", jd or "").strip())
 
-def eligible_rows(doc, only=None):
+def eligible_rows(doc, only=None, force=False):
     """Rows to generate: queue truthy OR (queue undefined AND no artifact),
-    AND jd >200 chars, AND no CV/CL artifact yet. Honour tier from gen[uk]."""
+    AND jd >200 chars, AND no CV/CL artifact yet. Honour tier from gen[uk].
+    force=True bypasses the no-artifact gate — a CLEAN re-gen of rows that
+    already have an application (owner 2026-07-15: regenerate the queued apps
+    with today's fixes). The active-pointer guard in cmd_run still protects the
+    user's working app."""
     rows = doc.get("rows") or []
     jd = doc.get("jd") or {}; queue = doc.get("queue") or {}
     gen = doc.get("gen") or {}; arts = doc.get("artifacts") or {}
@@ -282,7 +286,7 @@ def eligible_rows(doc, only=None):
         want = bool(q) or (q is None and not has_art)
         if only:  # explicit selection bypasses the queue flag, still needs a JD
             want = True
-        if want and jd_ok and not has_art:
+        if want and jd_ok and (force or not has_art):
             out.append({
                 "uk": uk, "rank": row[0], "company": row[1], "role": row[2],
                 "tier": gen.get(uk) or "quick", "jd": jd.get(uk) or "",
@@ -607,7 +611,7 @@ def cmd_run(args):
     profile = compact_profile(kernel)
     rev, doc = get_doc()
     only = set(args.row) if args.row else None
-    rows = eligible_rows(doc, only)
+    rows = eligible_rows(doc, only, force=getattr(args, "force", False))
     # tier caps + High-first ordering
     rows.sort(key=lambda r: (0 if r["tier"] == "high" else 1, r["rank"]))
     high = [r for r in rows if r["tier"] == "high"][:args.max_high]
@@ -1665,6 +1669,7 @@ def main():
         p.add_argument("--no-measure", dest="measure", action="store_false", help="skip the render-and-fit page-budget loop (needs PyMuPDF + docx-worker)")
         p.add_argument("--max-pages", type=int, default=2, help="CV page budget for the render-and-fit loop (default 2)")
         p.add_argument("--dry", action="store_true", help="build the plan only; no LLM calls")
+        p.add_argument("--force", action="store_true", help="regenerate even rows that already have an artifact (clean re-gen with today's fixes)")
         p.add_argument("--no-research", dest="research", action="store_false", help="skip Google-CSE employer research")
         p.add_argument("--no-brand", dest="brand", action="store_false", help="skip the brand-decides site-crawl (colours + spirit/values/tone)")
     args = ap.parse_args()

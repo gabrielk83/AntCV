@@ -1028,6 +1028,19 @@ export function buildPayload({
           } catch (_) {}
           const co = String((meta && meta.company) || '').trim();
           const targeted = !!co && !(window.__ANTCV_UNSOL_RE || /^unsolicited$/i).test(co) && !/^open application$/i.test(co); // UNSOL-PILLAR-LANG-001: any language variant
+          // SLOGAN-UNSOL-GENERIC-001 (owner 2026-07-15): an UNSOLICITED application
+          // uses the GENERIC standing default (meta.subtitle), never a role-tailored
+          // slogan. Drop the tailored meta.cl_slogan and an override that merely
+          // equals the auto-copied gen slogan; a genuinely USER-EDITED override is
+          // kept. Preview == export across every load path. Kill:
+          // antcv:disable-slogan-unsol-generic.
+          try {
+            if (!targeted && localStorage.getItem('antcv:disable-slogan-unsol-generic') !== '1') {
+              smart = '';
+              if (ov && typeof window !== 'undefined' && typeof window.__antcvSloganOverrideIsGen === 'function'
+                  && window.__antcvSloganOverrideIsGen(ov, meta)) ov = '';
+            }
+          } catch (_) {}
           const standing = String((meta && meta.subtitle) || '').trim();
           let sl = (ov && !/^\[/.test(ov)) ? ov
             : (smart && !/^\[/.test(smart)) ? smart

@@ -2356,19 +2356,52 @@
   // legacy/override slogan may exceed 8 words on any of the load paths. Clause-
   // aware: keep the first 8 words, then drop a trailing dangling connector /
   // punctuation so the cut reads clean. Shared by both preview renders + export.
+  // SLOGAN-CAP-DANGLE-VERB-001 (owner 2026-07-15): a hard word-count chop can
+  // leave a dangling "pronoun + transitive verb" fragment with no object
+  // ("...I bridge", "...that connect", "...we deliver"). Drop it so a truncated
+  // slogan ends on a complete phrase. Only trims a chop that still has body
+  // (>=6 words in, so >=4 survive) — a genuinely short complete slogan is never
+  // touched. Mirrors the Python _scrub_dangle_verb (scripts/job-tracker/gen-runner.py).
+  function __antcvSloganDeDangle(s) {
+    try {
+      var t = String(s == null ? "" : s).replace(/[\s,;:•\-–—&]+$/, "").trim();
+      var w = t.split(/\s+/).filter(Boolean);
+      if (w.length < 6) return t;
+      var norm = function (x) { try { return String(x || "").toLowerCase().replace(/[^\p{L}]/gu, ""); } catch (_) { return String(x || "").toLowerCase().replace(/[^a-zæøåäöü]/g, ""); } };
+      var pron = /^(?:i|we|they|he|she|you|it|that|which|who|whom|jeg|vi|de|man|som|der)$/;
+      var stop = /^(?:and|or|nor|but|with|to|through|for|of|the|a|an|my|our|your|their|its|his|her|og|eller|som|både|med|til|af)$/;
+      var last = norm(w[w.length - 1]), prev = norm(w[w.length - 2]);
+      if (pron.test(prev) && last && !stop.test(last)) {
+        return w.slice(0, w.length - 2).join(" ").replace(/[\s,;:•\-–—&]+$/, "").trim();
+      }
+      return t;
+    } catch (_) { return String(s == null ? "" : s); }
+  }
   function __antcvSloganCap(s) {
     try {
       var t = String(s == null ? "" : s).trim();
       if (!t) return t;
       var w = t.split(/\s+/).filter(Boolean);
       if (w.length <= 8) return t;
-      return w.slice(0, 8).join(" ")
+      // SLOGAN-CAP-DANGLE-VERB-001: prefer a CLAUSE cut over a hard mid-clause
+      // chop — if the first comma / dash / semicolon falls at 4..8 words, keep
+      // the head clause (matches the Python _cap_slogan_words). Else hard-chop to
+      // 8 words, scrub a trailing connector/punctuation, THEN drop a dangling
+      // pronoun+verb fragment so it ends on a complete phrase.
+      var cm = t.search(/\s*[,;–—]\s*|\s+-\s+/);
+      if (cm > 0) {
+        var head = t.slice(0, cm).trim();
+        var hw = head.split(/\s+/).filter(Boolean);
+        if (hw.length >= 4 && hw.length <= 8) return __antcvSloganDeDangle(head);
+      }
+      var cut = w.slice(0, 8).join(" ")
         .replace(/[\s,;:•\-–—&]+$/, "")
         .replace(/\s+(?:and|or|nor|but|with|to|through|for|of|the|a|an|og|eller|som|både)$/i, "")
         .trim();
+      return __antcvSloganDeDangle(cut);
     } catch (_) { return String(s == null ? "" : s); }
   }
-  try { if (typeof window !== "undefined") window.__antcvSloganCap = __antcvSloganCap; } catch (_) {}
+  try { if (typeof window !== "undefined") { window.__antcvSloganCap = __antcvSloganCap; window.__antcvSloganDeDangle = __antcvSloganDeDangle; } } catch (_) {}
   // SLOGAN-PLACEMENT-001 (owner 2026-07-14): the slogan can either be VISIBLE
   // between heading and body ('heading', default) OR HIDDEN as a standalone and
   // instead injected as the LEAD-IN (b) of the CL opening's first sentence
@@ -2392,16 +2425,50 @@
       return Object.assign({}, sec, { items: items });
     } catch (_) { return sec; }
   }
+  // SLOGAN-UNSOL-GENERIC-001 (owner 2026-07-15): an UNSOLICITED application uses
+  // the GENERIC standing default (the specialization triad), never a role-tailored
+  // slogan (no employer + no brand block to anchor one to). Generation no longer
+  // emits a tailored slogan for unsolicited, but an ALREADY-generated unsolicited
+  // app still has io.cl_slogan + an auto-copied antcv:clSlogan override. So at
+  // every slogan read: if this app is unsolicited, skip io.cl_slogan AND skip an
+  // override that merely equals the auto-copied gen slogan → fall through to
+  // io.subtitle. A genuinely USER-EDITED override (differs from the gen slogan)
+  // is still honored. Kill: antcv:disable-slogan-unsol-generic.
+  function __antcvSloganUnsolActive(io) {
+    try {
+      if (localStorage.getItem("antcv:disable-slogan-unsol-generic") === "1") return false;
+      var co = io && io.company;
+      if (!co) { try { var mm = JSON.parse(localStorage.getItem("meta") || "{}") || {}; co = mm.company; } catch (_) {} }
+      return !!(co && window.__antcvUnsol && window.__antcvUnsol(co));
+    } catch (_) { return false; }
+  }
+  function __antcvSloganNorm(s) { try { return String(s == null ? "" : s).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").replace(/\s+/g, " ").trim(); } catch (_) { return String(s == null ? "" : s).toLowerCase().replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim(); } }
+  // Is this override merely the auto-copied generated slogan (io.cl_slogan or
+  // io.slogan) rather than a user edit? Normalise, then compare.
+  function __antcvSloganOverrideIsGen(ov, io) {
+    try {
+      var o = __antcvSloganNorm(ov); if (!o) return false;
+      var a = __antcvSloganNorm(io && io.cl_slogan), b = __antcvSloganNorm(io && io.slogan);
+      return (!!a && o === a) || (!!b && o === b);
+    } catch (_) { return false; }
+  }
   // The resolved, capped slogan (same chain both preview renders use), so the
   // opening lead-in and the standalone render never disagree.
   function __antcvResolveSlogan(io) {
     try {
-      var st = String((io && io.cl_slogan) || "").trim();
+      var __uns = __antcvSloganUnsolActive(io);
+      var st = __uns ? "" : String((io && io.cl_slogan) || "").trim();
       // SLOGAN-LANG-GATE-001 (owner 2026-07-14): a stale OVERRIDE in the wrong
       // language for the current ribbon is rejected so the app's own current-
       // language slogan (io.cl_slogan / specialization) wins — same window gate
       // the docx-client export uses, so preview == export.
-      if (!st || /^\[/.test(st)) { st = String(localStorage.getItem("antcv:clSlogan") || "").trim(); if (st && window.__antcvSloganLangGate && !window.__antcvSloganLangGate(st)) st = ""; }
+      if (!st || /^\[/.test(st)) {
+        st = String(localStorage.getItem("antcv:clSlogan") || "").trim();
+        if (st && window.__antcvSloganLangGate && !window.__antcvSloganLangGate(st)) st = "";
+        // SLOGAN-UNSOL-GENERIC-001: unsolicited yields the auto-copied gen slogan
+        // to the generic; a user-edited override is kept.
+        if (st && __uns && __antcvSloganOverrideIsGen(st, io)) st = "";
+      }
       if (!st || /^\[/.test(st)) st = String((io && io.subtitle) || "").trim();
       st = __antcvSloganCap(String(st).replace(/\s*\|\s*/g, " • ").trim());
       return (!st || /^\[/.test(st)) ? "" : st;
@@ -2413,6 +2480,8 @@
       window.__antcvSloganStandaloneHidden = __antcvSloganStandaloneHidden;
       window.__antcvSloganOpeningLeadIn = __antcvSloganOpeningLeadIn;
       window.__antcvResolveSlogan = __antcvResolveSlogan;
+      window.__antcvSloganUnsolActive = __antcvSloganUnsolActive;
+      window.__antcvSloganOverrideIsGen = __antcvSloganOverrideIsGen;
     }
   } catch (_) {}
   function __antcvWriteSpec(v) {
@@ -27222,7 +27291,9 @@
                 // schema, sibling of subtitle) but never carried into meta, so
                 // antcv-cl-slogan-fresh.freshSmart() always read '' and the stale
                 // override survived — in EVERY speed mode. Carry it through.
-                cl_slogan: W.cl_slogan || "",
+                // SLOGAN-UNSOL-GENERIC-001: an unsolicited gen keeps the generic
+                // standing default — do NOT carry a tailored slogan into meta.
+                cl_slogan: (W.company && window.__antcvUnsol && window.__antcvUnsol(W.company)) ? "" : (W.cl_slogan || ""),
                 greeting: W.greeting,
                 opening: W.opening,
               }),
@@ -29552,7 +29623,7 @@
               })(),
               g = 5;
             P =
-              `<table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${(() => { try { if (window.__antcvSloganStandaloneHidden ? window.__antcvSloganStandaloneHidden() : localStorage.getItem("antcv:clSloganHidden") === "1") return ""; var st = String((io && io.cl_slogan) || "").trim(); if (!st || /^\[/.test(st)) { st = String(localStorage.getItem("antcv:clSlogan") || "").trim(); if (st && window.__antcvSloganLangGate && !window.__antcvSloganLangGate(st)) st = ""; } if (!st || /^\[/.test(st)) st = String(io.subtitle || "").trim(); st = st.replace(/\s*\|\s*/g, " • ").trim(); if (window.__antcvSloganCap) st = window.__antcvSloganCap(st); if (!st || /^\[/.test(st)) return ""; var sa = String(localStorage.getItem("antcv:clSloganAlign") || "center").replace(/["']/g, "").toLowerCase(); if (sa !== "left" && sa !== "right" && sa !== "center" && sa !== "justify") sa = "center"; return '<p style="font-family:\'Cabin\',' + d + ';font-size:11pt;font-weight:700;letter-spacing:.08em;text-align:' + sa + ';color:var(--brand-slogan-color,' + (t.mainLineColor || "#01746E") + ');margin:0 0 12pt">' + st.toUpperCase() + '</p>'; } catch (_) { return ""; } })()}${l.map(b).join("")}${u}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table>` +
+              `<table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${(() => { try { if (window.__antcvSloganStandaloneHidden ? window.__antcvSloganStandaloneHidden() : localStorage.getItem("antcv:clSloganHidden") === "1") return ""; var __uns = window.__antcvSloganUnsolActive ? window.__antcvSloganUnsolActive(io) : false; var st = __uns ? "" : String((io && io.cl_slogan) || "").trim(); if (!st || /^\[/.test(st)) { st = String(localStorage.getItem("antcv:clSlogan") || "").trim(); if (st && window.__antcvSloganLangGate && !window.__antcvSloganLangGate(st)) st = ""; if (st && __uns && window.__antcvSloganOverrideIsGen && window.__antcvSloganOverrideIsGen(st, io)) st = ""; } if (!st || /^\[/.test(st)) st = String(io.subtitle || "").trim(); st = st.replace(/\s*\|\s*/g, " • ").trim(); if (window.__antcvSloganCap) st = window.__antcvSloganCap(st); if (!st || /^\[/.test(st)) return ""; var sa = String(localStorage.getItem("antcv:clSloganAlign") || "center").replace(/["']/g, "").toLowerCase(); if (sa !== "left" && sa !== "right" && sa !== "center" && sa !== "justify") sa = "center"; return '<p style="font-family:\'Cabin\',' + d + ';font-size:11pt;font-weight:700;letter-spacing:.08em;text-align:' + sa + ';color:var(--brand-slogan-color,' + (t.mainLineColor || "#01746E") + ');margin:0 0 12pt">' + st.toUpperCase() + '</p>'; } catch (_) { return ""; } })()}${l.map(b).join("")}${u}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table>` +
               (c
                 ? `<div style="page-break-before:always;mso-page-break-before:always;break-before:page"><table width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="${n}" style="width:100%;border-collapse:collapse;background:${n};page-break-after:avoid;mso-page-break-after:avoid"><tr><td bgcolor="${n}" style="background:${n};padding:14pt 16pt 8pt;text-align:center;border-bottom:1pt solid ${S}">${N}${_}${$}</td></tr></table><table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${b(c)}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table></div>`
                 : "");
@@ -41171,7 +41242,8 @@
                                                           company: n.meta.company || n.jd_company || "",
                                                           role: n.meta.role || n.jd_role || "",
                                                           subtitle: n.subtitle || n.meta.subtitle || "",
-                                                          cl_slogan: n.meta.cl_slogan || n.meta.slogan || (io && io.cl_slogan) || "",
+                                                          // SLOGAN-UNSOL-GENERIC-001: unsolicited keeps the generic standing default — never carry a tailored slogan in meta.
+                                                          cl_slogan: (window.__antcvUnsol && window.__antcvUnsol(n.meta.company || n.jd_company || "")) ? "" : (n.meta.cl_slogan || n.meta.slogan || (io && io.cl_slogan) || ""),
                                                         }
                                                       : {
                                                           ...(io || {}),
@@ -41199,7 +41271,9 @@
                                                     // palette or refreshed the slogan — add both so the loaded
                                                     // app is a mirror copy in preview AND print (topbar twin).
                                                     if (n.meta && n.meta.styleConfig && "object" == typeof n.meta.styleConfig) wa(n.meta.styleConfig); else if (n.meta && null === n.meta.styleConfig) { try { u.remove("styleConfig"); } catch (_) {} }
-                                                    var __sl = (n.meta && (n.meta.cl_slogan || n.meta.slogan)) || ""; if (__sl) { try { localStorage.setItem("antcv:clSlogan", __sl); localStorage.setItem("antcv:clSloganCtx", JSON.stringify({ v: __sl, app: e.id })); } catch (_) {} }
+                                                    // SLOGAN-UNSOL-GENERIC-001: never copy a tailored gen slogan into the override for an unsolicited app — it keeps the generic standing default.
+                                                    var __unsL = (() => { try { var __c = (n.meta && n.meta.company) || n.jd_company || ""; return !!(__c && window.__antcvUnsol && window.__antcvUnsol(__c)); } catch (_) { return false; } })();
+                                                    var __sl = __unsL ? "" : ((n.meta && (n.meta.cl_slogan || n.meta.slogan)) || ""); if (__sl) { try { localStorage.setItem("antcv:clSlogan", __sl); localStorage.setItem("antcv:clSloganCtx", JSON.stringify({ v: __sl, app: e.id })); } catch (_) {} }
                                                   } catch (_e) {} })(),
                                                   // APP-SWITCH-LANGUAGE-001 (owner 2026-07-10): switching to a saved
                                                   // application also switches the language dropdown to that app's jd_language.
@@ -46425,9 +46499,11 @@
                   (() => {
                     try {
                       if (window.__antcvSloganStandaloneHidden ? window.__antcvSloganStandaloneHidden() : localStorage.getItem("antcv:clSloganHidden") === "1") return null;
-                      var st = String((io && io.cl_slogan) || "").trim();
+                      // SLOGAN-UNSOL-GENERIC-001: unsolicited yields a tailored slogan to the generic.
+                      var __uns = window.__antcvSloganUnsolActive ? window.__antcvSloganUnsolActive(io) : false;
+                      var st = __uns ? "" : String((io && io.cl_slogan) || "").trim();
                       // SLOGAN-LANG-GATE-001: reject a wrong-language OVERRIDE so preview == export.
-                      if (!st || /^\[/.test(st)) { st = String(localStorage.getItem("antcv:clSlogan") || "").trim(); if (st && window.__antcvSloganLangGate && !window.__antcvSloganLangGate(st)) st = ""; }
+                      if (!st || /^\[/.test(st)) { st = String(localStorage.getItem("antcv:clSlogan") || "").trim(); if (st && window.__antcvSloganLangGate && !window.__antcvSloganLangGate(st)) st = ""; if (st && __uns && window.__antcvSloganOverrideIsGen && window.__antcvSloganOverrideIsGen(st, io)) st = ""; }
                       if (!st || /^\[/.test(st)) st = String((io && io.subtitle) || "").trim();
                       st = st.replace(/\s*\|\s*/g, " • ").trim();
                       if (window.__antcvSloganCap) st = window.__antcvSloganCap(st);
@@ -47619,6 +47695,8 @@
                                         // never applied the brand palette, refreshed the slogan, or switched
                                         // the language. Force all of them from the saved per-app record.
                                         var __co = (n.meta && n.meta.company) || n.jd_company || "", __ro = (n.meta && n.meta.role) || n.jd_role || "", __su = n.subtitle || (n.meta && n.meta.subtitle) || "", __sl = (n.meta && (n.meta.cl_slogan || n.meta.slogan)) || "";
+                                        // SLOGAN-UNSOL-GENERIC-001: an unsolicited app keeps the generic standing default — do not seed a tailored slogan into meta.cl_slogan or the override.
+                                        var __unsL = !!(__co && window.__antcvUnsol && window.__antcvUnsol(__co)); if (__unsL) __sl = "";
                                         var __mm = { ...(io || {}), ...(n.meta && "object" == typeof n.meta ? n.meta : {}), company: __co, role: __ro, subtitle: __su, cl_slogan: __sl };
                                         lo(__mm); try { u.set("meta", __mm); } catch (_) {}
                                         if (n.meta && n.meta.styleConfig && "object" == typeof n.meta.styleConfig) wa(n.meta.styleConfig); else if (n.meta && null === n.meta.styleConfig) { try { u.remove("styleConfig"); } catch (_) {} }

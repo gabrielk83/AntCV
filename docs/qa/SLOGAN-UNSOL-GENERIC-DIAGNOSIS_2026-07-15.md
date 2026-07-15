@@ -1,5 +1,13 @@
 # Diagnosis — unsolicited slogan is tailored + truncated ("AS A PRODUCT AND PROJECT EXPERT, I BRIDGE")
 
+> **SHIPPED 2026-07-15 — PWA `1.51.1504-slogan-unsol-generic` (option (a)).** All three parts landed, kill-switchable via `antcv:disable-slogan-unsol-generic`:
+> 1. **Generation** — `gen-runner.py` `_is_unsolicited(company, category)` (mirrors `__ANTCV_UNSOL_RE`) gates `_meta["slogan"]`; the in-app gen result blanks `meta.cl_slogan` for unsolicited (`app.src.js` ~27225 + `app.js` mirror).
+> 2. **Render/export** — new shared `window.__antcvSloganUnsolActive(io)` + `__antcvSloganOverrideIsGen(ov,io)`; `__antcvResolveSlogan`, the React standalone render, the srcdoc PDF render, and `antcv-docx-client.js` all skip `io.cl_slogan` AND an override equal to the auto-copied gen slogan for unsolicited → fall through to `io.subtitle`. A **user-edited override (differs from the gen slogan) is still honored.** The three load-path copies (settings-loader, topbar, override seed) no longer seed a tailored slogan for unsolicited, and `antcv-cl-slogan-fresh.js` `!isTargeted` drops a gen-equal override so already-generated unsolicited apps yield without a regen.
+> 3. **Cap** — `window.__antcvSloganCap` gained the Python cap's clause-cut; both caps drop a trailing pronoun+verb fragment (`__antcvSloganDeDangle` / Python `_scrub_dangle_verb`) so "…product and project expert, I bridge strategy…" caps to "As a product and project expert" and a no-comma chop never strands "…I bridge".
+>
+> **Verify:** headless assertion extracted from the shipping `app.js` (9/9 — unsolicited→triad, auto-copied override yields, user-edit honored, targeted unaffected, kill-switch restores old, dangling-verb trimmed); PWA suite 1313/1313 green. Docs: ACTIVE_BUGS top entry + FEATURES_REGISTRY increment (22).
+
+
 Owner 2026-07-15 (unsolicited app generated ~02:03): the CL slogan read
 "AS A PRODUCT AND PROJECT EXPERT, I BRIDGE" — a dangling transitive verb ("bridge"
 with no object), AND it was a role-tailored slogan on an **unsolicited** application

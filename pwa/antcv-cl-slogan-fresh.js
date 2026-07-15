@@ -38,7 +38,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.1404-slogan-lang-gate';
+  var VERSION = '1.51.1504-slogan-unsol-generic';
   if (window.__antcvClSloganFresh) return;
   window.__antcvClSloganFresh = VERSION;
 
@@ -209,6 +209,26 @@
       var m = readMeta();
       var cur = appKeyOf(m);
       if (!isTargeted(m)) {
+        // SLOGAN-UNSOL-GENERIC-001 (owner 2026-07-15): an unsolicited application
+        // uses the GENERIC standing default, never a role-tailored slogan. An
+        // ALREADY-generated unsolicited app copied its gen cl_slogan into this
+        // override with ctx.app === cur, so the leak-from-another-app rule below
+        // does NOT catch it. Drop an override that merely equals the app's own
+        // generated slogan (meta.cl_slogan / meta.slogan) so ALREADY-generated
+        // apps yield to the generic without a regen; a genuinely USER-EDITED
+        // override (differs from the gen slogan) is kept. Kill:
+        // antcv:disable-slogan-unsol-generic.
+        try {
+          if (S && localStorage.getItem('antcv:disable-slogan-unsol-generic') !== '1') {
+            var __gen = normPhrase(m.cl_slogan || m.slogan || '');
+            if (__gen && normPhrase(S) === __gen) {
+              dropOverride(); dropCtx();
+              try { console.log('[slogan-fresh] unsolicited app yields its generated slogan to the generic standing default (SLOGAN-UNSOL-GENERIC-001)'); } catch (_) {}
+              try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: 'slogan-fresh' } })); } catch (_) {}
+              return;
+            }
+          }
+        } catch (_) {}
         // SLOGAN-UNSOL-CLEAR-001 (owner 2026-07-05: "a slogan has stuck over an
         // unsolicited application"): an unsolicited CL carries NO JD-specific slogan.
         // If the current slogan was adopted by slogan-fresh for a DIFFERENT (targeted)

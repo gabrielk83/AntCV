@@ -1458,6 +1458,27 @@ _SLOGAN_TRAIL_PUNCT_RE = re.compile(r"[\s,;:•\-–—&]+$")
 _SLOGAN_TRAIL_STOP_RE = re.compile(
     r"\s+(?:and|or|nor|but|with|to|through|for|of|the|a|an|og|eller|som|både)$",
     re.I)
+# SLOGAN-CAP-DANGLE-VERB-001 (owner 2026-07-15): a hard word-count chop can leave
+# a dangling "pronoun + transitive verb" fragment with no object ("...I bridge",
+# "...that connect", "...we deliver"). Drop it so a truncated slogan ends on a
+# complete phrase. Mirrors window.__antcvSloganDeDangle (pwa/app.src.js / app.js)
+# so preview == export == gen.
+_SLOGAN_DANGLE_PRON = {"i", "we", "they", "he", "she", "you", "it", "that",
+                       "which", "who", "whom", "jeg", "vi", "de", "man", "som", "der"}
+_SLOGAN_DANGLE_STOP = {"and", "or", "nor", "but", "with", "to", "through", "for",
+                       "of", "the", "a", "an", "my", "our", "your", "their", "its",
+                       "his", "her", "og", "eller", "som", "både", "med", "til", "af"}
+def _scrub_dangle_verb(s):
+    t = _SLOGAN_TRAIL_PUNCT_RE.sub("", (s or "").strip())
+    words = t.split()
+    if len(words) < 6:                       # only trim a chop that keeps >=4 words
+        return t
+    def _n(x):
+        return re.sub(r"[^\wæøåäöü]", "", x, flags=re.U).lower()
+    last, prev = _n(words[-1]), _n(words[-2])
+    if prev in _SLOGAN_DANGLE_PRON and last and last not in _SLOGAN_DANGLE_STOP:
+        return _SLOGAN_TRAIL_PUNCT_RE.sub("", " ".join(words[:-2])).strip()
+    return t
 def _cap_slogan_words(t, maxw=9):
     """SLOGAN-WORD-CAP-001 (owner 2026-07-13, app 810 was 12 words and wrapped):
     a CL slogan must be <= maxw words so it never slides to a 2nd line. Prefer a
@@ -1471,7 +1492,7 @@ def _cap_slogan_words(t, maxw=9):
         if i > 0:
             head = t[:i].strip()
             if 4 <= len(head.split()) <= maxw:
-                return head
+                return _scrub_dangle_verb(head)
     # SLOGAN-WORD-CAP-DANGLE-001 (owner 2026-07-15, Anita brand-decides demo):
     # a hard word-count cut with no clause break can strand a trailing
     # conjunction/preposition ("...winter-ready and"). Drop it so the capped
@@ -1480,7 +1501,25 @@ def _cap_slogan_words(t, maxw=9):
     hard = " ".join(words[:maxw]).rstrip(",;:- ")
     hard = _SLOGAN_TRAIL_PUNCT_RE.sub("", hard)
     hard = _SLOGAN_TRAIL_STOP_RE.sub("", hard)
-    return hard.strip()
+    return _scrub_dangle_verb(hard.strip())
+
+# SLOGAN-UNSOL-GENERIC-001 (owner 2026-07-15): an UNSOLICITED / open application
+# has no employer + no brand block, so a "value to THIS employer" slogan is
+# manufactured with nothing to anchor to. Owner rule: unsolicited keeps the
+# GENERIC standing default (the specialisation triad) — no tailored slogan. This
+# mirrors the app's window.__ANTCV_UNSOL_RE (pwa/index.html) so both sides agree;
+# category == 'unsolicited' (the relay's fallback bucket) also counts.
+_UNSOL_RE = re.compile(
+    r"^(unsolicited|open\s+application|n/?a|uopfordret(\s+ansøgning)?|"
+    r"åben\s+ansøgning|candidatura\s+espontánea|postulación\s+espontánea|"
+    r"solicitud\s+espontánea|主动申请|自荐|开放式申请|מועמדות\s+יזומה|"
+    r"פנייה\s+יזומה|ያልተጠየቀ\s+ማመልከቻ|طلب\s+عفوي|تقديم\s+عفوي|طلب\s+توظيف\s+عفوي)$",
+    re.I | re.U)
+def _is_unsolicited(company, category=""):
+    if str(category or "").strip().lower() == "unsolicited":
+        return True
+    c = str(company or "").strip()
+    return bool(c) and bool(_UNSOL_RE.match(c))
 
 def _format_slogan(text):
     t = sanitize_text((text or "").strip()).strip(" .\"'")
@@ -1576,7 +1615,12 @@ def persist_application(doc, r, res, category, language, kernel=None, measure=Fa
     spec = _format_spec((res["sections"].get("cv_specialization") or {}).get("result"), language)
     slogan = _format_slogan((res["sections"].get("cl_slogan") or {}).get("result"))
     _meta = {"source": "gen-runner", "tier": r["tier"], "urlkey": uk}
-    if slogan: _meta["slogan"] = slogan
+    # SLOGAN-UNSOL-GENERIC-001: an unsolicited application keeps the GENERIC
+    # standing default (the specialisation triad) — do NOT persist a tailored
+    # slogan for it. The render/export side (window.__antcvResolveSlogan) then
+    # falls through to io.subtitle.
+    _unsol = _is_unsolicited(company, category)
+    if slogan and not _unsol: _meta["slogan"] = slogan
     # BRAND-DECIDES-RESEARCH-001: persist the v2 brand record (colours + real
     # spirit/values/tone) to doc['brand'][uk], and seed the slogan PLACEMENT
     # (tagline vs opening lead-in) into the app meta so the client sets
@@ -1595,7 +1639,7 @@ def persist_application(doc, r, res, category, language, kernel=None, measure=Fa
         "category": category, "jd_language": language, "save_as_new": True,
         "subtitle": spec, "meta": _meta,
     })
-    print(f"   [lang] subtitle={spec!r} slogan={slogan!r}")
+    print(f"   [lang] subtitle={spec!r} slogan={('<suppressed:unsolicited>' if (slogan and _unsol) else slogan)!r}")
     if c != 200 or not (b.get("application") or {}).get("id"):
         print(f"   persist POST failed: {c} {str(b)[:160]}"); return
     app_id = b["application"]["id"]

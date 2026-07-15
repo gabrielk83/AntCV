@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.1484-slogan-dangle-cap';
+const CACHE = 'antcv-1.51.1504-slogan-unsol-generic';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.1504-slogan-unsol-generic';
+  const TARGET_VERSION = '1.51.1524-leadin-underline';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.1504-slogan-unsol-generic',
     '1.51.1484-slogan-dangle-cap',
     '1.51.1464-rolehead-justify',
     '1.51.1425-tracker-open-claim',

@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.1504-slogan-unsol-generic';
+const CACHE = 'antcv-1.51.1524-leadin-underline';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

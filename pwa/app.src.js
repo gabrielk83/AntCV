@@ -6492,6 +6492,11 @@
             fontWeight: e.leadBold === false ? 400 : 700,
             fontStyle: e.leadItalic ? "italic" : "normal",
             color: __headColor,
+            // LEAD-UNDERLINE-001 (owner 2026-07-16): optional coloured underline on the
+            // lead-in — mirrored in the docx-worker export (w:u w:val=single w:color).
+            // Default underline colour = the lead colour unless leadUnderlineColor is set.
+            textDecoration: e.leadUnderline ? "underline" : "none",
+            textDecorationColor: e.leadUnderline ? (e.leadUnderlineColor || __headColor) : undefined,
           };
           let __al = {};
           try {

@@ -27129,6 +27129,11 @@ function renderRichBlock(s, ctx, isSidebar) {
   const leadBold = s.leadBold !== false;
   const leadItalic = !!s.leadItalic;
   const leadHex = s.leadColor ? String(s.leadColor).replace(/^#/, "") : (isSidebar ? style.sidebarHeadColor : style.mainHeadColor);
+  // LEAD-UNDERLINE-001 (owner 2026-07-16): optional coloured underline on the lead-in,
+  // mirroring the preview (__leadStyle textDecoration). Default underline colour = leadHex
+  // unless s.leadUnderlineColor is set. Applies to non-marker rows (the `make` lead run).
+  const leadUnderline = !!s.leadUnderline;
+  const leadUlHex = s.leadUnderlineColor ? String(s.leadUnderlineColor).replace(/^#/, "") : leadHex;
   const rp = s.row_pages && typeof s.row_pages === "object" ? s.row_pages : null;
   const rowPage = /* @__PURE__ */ __name((i) => {
     if (!rp) return 1;
@@ -27151,6 +27156,7 @@ function renderRichBlock(s, ctx, isSidebar) {
         bold: leadBold,
         italics: leadItalic,
         color: leadHex,
+        underline: leadUnderline ? { type: UnderlineType.SINGLE, color: leadUlHex } : undefined,
         size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
         font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont
       })] : [],

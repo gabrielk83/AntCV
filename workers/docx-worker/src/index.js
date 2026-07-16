@@ -28755,7 +28755,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.160-edu-row-cjlr-export";
+var VERSION = "1.14.161-leadin-underline";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

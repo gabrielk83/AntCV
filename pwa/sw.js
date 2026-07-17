@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.1524-leadin-underline';
+const CACHE = 'antcv-1.51.1544-brand-parity';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

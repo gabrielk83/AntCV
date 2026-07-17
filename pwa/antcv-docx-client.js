@@ -2128,6 +2128,40 @@ export function buildStyle(styleConfig, navyColor) {
         out.tableHeaderBg = hb; out.tableHeaderText = ink(hb); }
     }
   } catch (_) {}
+  // BRAND-EXPORT-PARITY-001 (owner 2026-07-17): the EXPORT-PALETTE-PARITY-001 block
+  // above resolves --header-bg/--sidebar-bg from getComputedStyle(document.body) — the
+  // PACKAGE token. But a per-app BRAND applies its colours as an INLINE var on the
+  // paper-WRAPPER (a descendant, app.js BRANDFIT-CANDIDATE-SIDEBAR-OVERRIDE-001), which
+  // document.body never sees, and :root defines a default --header-bg (#33446F), so the
+  // block above silently reverted the export to the package band even for a brand-fitted
+  // (custom-package) app — the raw teal/navy export the owner reported. When a brand is
+  // ACTIVE (upload-panel Brand-fit flag), re-assert the brand from the SAME source the
+  // apply wrote — brandV2 slots if published (restore/re-collection), else the live
+  // styleConfig the brand-fit apply sets on a fresh generate (headerBg/sidebarBg/
+  // photoBorderColor). Gated on __antcvBrandFit so non-branded package exports are
+  // untouched. Contrast (readable ink) recomputed here so a light brand can't go
+  // white-on-white in the band.
+  try {
+    if (typeof window !== 'undefined' && window.__antcvBrandFit === true) {
+      const inkB = (hex) => {
+        const h = String(hex || '').replace('#', '');
+        if (h.length < 6) return '#FFFFFF';
+        const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+        return (0.2126 * r + 0.7152 * g + 0.0722 * b > 140) ? '#283556' : '#FFFFFF';
+      };
+      let bH = null, bS = null, bA = null;
+      try {
+        const raw = (typeof localStorage !== 'undefined') ? localStorage.getItem('antcv:brandV2') : null;
+        if (raw) { const bv = JSON.parse(raw); const sl = (bv && bv.slots) ? bv.slots : ((bv && bv.headerBg) ? bv : null);
+          if (sl) { bH = sl.headerBg || null; bS = sl.sidebarBg || null; bA = sl.accent || null; } }
+      } catch (_) {}
+      if (!bH && styleConfig && typeof styleConfig === 'object') { bH = styleConfig.headerBg || null; bS = styleConfig.sidebarBg || null; bA = styleConfig.photoBorderColor || null; }
+      const isHex = (v) => typeof v === 'string' && /^#?[0-9a-fA-F]{6}$/.test(v.trim());
+      if (isHex(bH)) { out.headerBg = bH; out.headerNameColor = inkB(bH); out.headerSpecColor = inkB(bH); out.headerContactColor = inkB(bH); out.tableHeaderBg = bH; out.tableHeaderText = inkB(bH); }
+      if (isHex(bS)) { out.sidebarBg = bS; out.sidebarTextColor = inkB(bS); out.sidebarLabelColor = inkB(bS); }
+      if (isHex(bA)) { out.photoBorderColor = bA; out.sidebarHeadColor = bA; }
+    }
+  } catch (_) {}
   // v1.40.146 — sidebarPosition pass-through. Worker (≥ v1.14.2)
   // accepts 'left' (default) or 'right' and swaps the body table's
   // sidebar and main cells accordingly. We special-case this

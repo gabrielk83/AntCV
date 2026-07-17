@@ -17427,7 +17427,7 @@
                         // to supporting_context, arm window.__antcvBrandFit, and tick the
                         // checkbox once it renders (checked=, not click — no onChange loop).
                         try {
-                          var __bf1 = (e.meta && e.meta.styleConfig && "object" == typeof e.meta.styleConfig) || /\n\nBRAND-FIT:/.test(String(e.supporting_context || ""));
+                          var __bf1 = (e.meta && e.meta.styleConfig && "object" == typeof e.meta.styleConfig) || (e.meta && e.meta.brandV2 && "object" == typeof e.meta.brandV2) || /\n\nBRAND-FIT:/.test(String(e.supporting_context || ""));
                           if (__bf1) {
                             window.__antcvBrandFit = !0;
                             // BRANDFIT-CANDIDATE-SIDEBAR-OVERRIDE-001: publish the fitted
@@ -22975,7 +22975,7 @@
                   } catch (e) {}
                 // BRAND-FIT-OPEN-002: same brand-fit checkbox arming as occ-1.
                 try {
-                  var __bf2 = (e.meta && e.meta.styleConfig && "object" == typeof e.meta.styleConfig) || /\n\nBRAND-FIT:/.test(String(e.supporting_context || ""));
+                  var __bf2 = (e.meta && e.meta.styleConfig && "object" == typeof e.meta.styleConfig) || (e.meta && e.meta.brandV2 && "object" == typeof e.meta.brandV2) || /\n\nBRAND-FIT:/.test(String(e.supporting_context || ""));
                   if (__bf2) {
                     window.__antcvBrandFit = !0;
                     try {
@@ -26982,6 +26982,19 @@
                 hf && ((scPatch.mainHeadFont = hf), (scPatch.headerFont = hf));
                 bdf && ((scPatch.mainBodyFont = bdf), (scPatch.sidebarFont = bdf));
                 Object.keys(scPatch).length && wa(scPatch);
+                // BRAND-PREVIEW-PARITY-001 (owner 2026-07-17): publish antcv:brandV2 on a
+                // FRESH apply too. Previously only the restore/re-collection paths wrote it,
+                // so the preview paper-wrapper (which paints band + sidebar from
+                // antcv:brandV2, gated on __antcvBrandFit) stayed on the package palette
+                // until the app was saved + reloaded, and BRAND-EXPORT-PARITY-001 had to
+                // fall back to styleConfig. Mirror the just-applied brand into the v2 slots
+                // shape both readers expect, so first-generate preview AND export take the
+                // brand immediately.
+                try {
+                  if (navy && darkEnough(navy)) {
+                    localStorage.setItem("antcv:brandV2", JSON.stringify({ version: 2, slots: { headerBg: navy, headerInk: "#FFFFFF", sidebarBg: navy, accent: accent || null } }));
+                  }
+                } catch (_) {}
                 try {
                   console.log("[COMPANY-BRAND-FIT-001] applied brand palette", {
                     navy: navy && darkEnough(navy) ? navy : "(rejected)",
@@ -27301,6 +27314,13 @@
                 cl_slogan: (W.company && window.__antcvUnsol && window.__antcvUnsol(W.company)) ? "" : (W.cl_slogan || ""),
                 greeting: W.greeting,
                 opening: W.opening,
+                // BRAND-PERSIST-PERAPP-001 (owner 2026-07-17): stamp the fitted brand into
+                // THIS application's meta so it saves per-app and BRAND-FIT-OPEN restores it
+                // on reload (owner: "brand never reaches uploading from saved applications").
+                // Read the v2 slots the apply block just published to antcv:brandV2; spreads
+                // nothing when no brand is active, so a non-branded gen leaves meta.brandV2
+                // undefined and shipping packages are untouched.
+                ...(function () { try { if (window.__antcvBrandFit === true) { var __r = localStorage.getItem("antcv:brandV2"); if (__r) return { brandV2: JSON.parse(__r) }; } } catch (_) {} return {}; })(),
               }),
               ao((e) => {
                 const t = (e) => {

@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.1556-pdf-panel-worker';
+const CACHE = 'antcv-1.51.1557-role-merge-swallow';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

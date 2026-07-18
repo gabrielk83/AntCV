@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.1556-pdf-panel-worker';
+  const TARGET_VERSION = '1.51.1557-role-merge-swallow';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.1556-pdf-panel-worker',
     '1.51.1544-brand-parity',
     '1.51.1524-leadin-underline',
     '1.51.1504-slogan-unsol-generic',

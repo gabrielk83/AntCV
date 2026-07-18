@@ -152,6 +152,22 @@
     try { return s.replace(/[^\p{L}\p{N}]+/gu, ' ').trim(); }
     catch (_) { return s.replace(/[^a-z0-9]+/g, ' ').trim(); }
   }
+  // MERGE-COMPONENT-SWALLOW-001 (owner 2026-07-18): the normalised COMPONENTS of an
+  // explicit "X & Y" / "X / Y" / "X and Y" merged title. Splits on a SEPARATOR WITH
+  // SURROUNDING SPACES only, so "R&D" (no spaces) stays intact while "… & Team Leader"
+  // splits. Returns [] for a non-merged (single-part) title. Used to drop a bare
+  // component role that a merged role already covers (never both merged + a component).
+  function _mergedParts(t) {
+    var s = String(t == null ? '' : t).replace(/\([^)]*\)/g, ' ');
+    var parts = s.split(/\s+[&/]\s+|\s+and\s+/i);
+    if (parts.length < 2) return [];
+    var nm = function (x) {
+      x = String(x || '').toLowerCase();
+      try { return x.replace(/[^\p{L}\p{N}]+/gu, ' ').trim(); }
+      catch (_) { return x.replace(/[^a-z0-9]+/g, ' ').trim(); }
+    };
+    return parts.map(nm).filter(Boolean);
+  }
   function _yrKey(y) {
     var n = (String(y == null ? '' : y).match(/\d{4}/g) || []).map(Number);
     var present = /present|current|nu(?:værende|tid)?|pågår|løbende|ongoing|至今|现在|היום|עד\s*היום|حتى\s*الآن|إلى\s*الآن|እስከ\s*አሁን/i.test(String(y || ''));
@@ -443,6 +459,60 @@
     }
     var keys = Object.keys(drop);
     if (!keys.length) return null;
+    var kept = roles.filter(function (_, i) { return !drop[i]; });
+    var copy = cv.slice();
+    copy[xi] = Object.assign({}, copy[xi], { roles: kept });
+    return copy;
+  }
+
+  // MERGE-COMPONENT-SWALLOW-001 (owner 2026-07-18, "I see both 'System Architect &
+  // Change Request Lead' and 'System Architect'"): the kernel stores ATOMIC roles and
+  // MERGING is the app's job at generation; the rule is NEVER both a merged role AND
+  // one of its atomic components (gabriel-cv-facts). dedupeRoles is exact-title-only
+  // (ROLE-DECOMP-001 dropped containment because it over-merged), so it deliberately
+  // will not collapse a merged "X & Y" against a bare "X" or "Y". This pass enforces
+  // the rule PRECISELY: when a role's title is an explicit "X & Y" merge and ANOTHER
+  // role's exact title equals X or Y (same company, overlapping years), the bare
+  // COMPONENT is dropped and the merged role kept. It fires only on an explicit merge
+  // (not generic containment), so "Product Manager" never swallows "Project Manager".
+  // Covers the three the owner reported: "System Architect & Change Request Lead" ⊃
+  // "System Architect"; "Research Assistant & Teaching Assistant" ⊃ "Teaching
+  // Assistant" (2nd component — the reason _titleCore's first-part-only match missed
+  // it); "R&D Electro-Optics Engineer & Team Leader" ⊃ "R&D Electro-Optics Engineer".
+  function swallowMergedComponents(cv) {
+    var xi = cv.findIndex(function (e) { return e && e.type === 'experience' && Array.isArray(e.roles); });
+    if (xi < 0) return null;
+    var nm = function (s) {
+      s = String(s || '').toLowerCase();
+      try { return s.replace(/[^\p{L}\p{N}]+/gu, ' ').trim(); }
+      catch (_) { return s.replace(/[^a-z0-9]+/g, ' ').trim(); }
+    };
+    var yearsOf = function (s) { return (String(s || '').match(/\d{4}/g) || []).map(Number); };
+    var overlap = function (a, b) {
+      var ya = yearsOf(a), yb = yearsOf(b);
+      if (!ya.length || !yb.length) return true;
+      return Math.min.apply(null, ya) <= Math.max.apply(null, yb) && Math.min.apply(null, yb) <= Math.max.apply(null, ya);
+    };
+    var nbul = function (r) { return Array.isArray(r && r.bullets) ? r.bullets.length : 0; };
+    var roles = cv[xi].roles.slice();
+    var drop = {};
+    for (var i = 0; i < roles.length; i++) {
+      var m = roles[i]; if (!m || drop[i]) continue;
+      var parts = _mergedParts(m.title || m.role); if (parts.length < 2) continue;
+      for (var j = 0; j < roles.length; j++) {
+        if (i === j || drop[j]) continue;
+        var c = roles[j]; if (!c) continue;
+        if (_mergedParts(c.title || c.role).length >= 2) continue; // never swallow another merged role
+        var ct = nm(c.title || c.role); if (!ct) continue;
+        if (parts.indexOf(ct) < 0) continue;                       // exact component match only
+        if (_companyKey(m.company) !== _companyKey(c.company)) continue;
+        if (!overlap(m.years, c.years)) continue;
+        drop[j] = true;
+        if (c.on !== false) m.on = true;              // component was visible → keep the merged visible
+        if (!nbul(m) && nbul(c)) m.bullets = c.bullets; // never lose content if the merged had none
+      }
+    }
+    var keys = Object.keys(drop); if (!keys.length) return null;
     var kept = roles.filter(function (_, i) { return !drop[i]; });
     var copy = cv.slice();
     copy[xi] = Object.assign({}, copy[xi], { roles: kept });
@@ -1868,6 +1938,10 @@
       var fe = foundedToEstablished(cv); if (fe) { cv = fe; changed = true; }
       var pt = stripPatentFromRoles(cv); if (pt) { cv = pt; changed = true; }
       var d = dedupeRoles(cv); if (d) { cv = d; changed = true; }
+      // MERGE-COMPONENT-SWALLOW-001: after dedupe (exact-title twins gone), drop a bare
+      // component role that an explicit merged "X & Y" title already covers — BEFORE
+      // roleCanonTitles rewrites titles, so the component/part text still matches.
+      var msc = swallowMergedComponents(cv); if (msc) { cv = msc; changed = true; }
       // ROLE-CANON-LANG-001: canonical per-language titles AFTER dedupe has
       // collapsed twins, so the survivor gets the ribbon-language canon title.
       var rct = roleCanonTitles(cv); if (rct) { cv = rct; changed = true; }

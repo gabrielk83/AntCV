@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.1544-brand-parity';
+const CACHE = 'antcv-1.51.1556-pdf-panel-worker';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

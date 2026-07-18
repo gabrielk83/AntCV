@@ -1586,6 +1586,18 @@
       return true;
     }
   }
+  // EXPORT-PDF-PANEL-WORKER-001 (owner 2026-07-18): expose the server-PDF policy
+  // and demo state so the preview-modal sidecar (antcv-pdf-preview-gate.js) can
+  // route "Save as PDF" through the CloudConvert worker with the SAME decision
+  // the app's own PDF button makes, even when that button is unmounted (a
+  // non-Preview tab, e.g. the Analysis panel, is open). Without this the modal
+  // fell back to browser print with a panel open.
+  try {
+    if ("undefined" != typeof window) {
+      window.__antcvUseServerPdf = __antcvUseServerPdf;
+      window.__antcvDemoActive = __antcvDemoActive;
+    }
+  } catch (_) {}
   function Y(e) {
     let t = "";
     return (

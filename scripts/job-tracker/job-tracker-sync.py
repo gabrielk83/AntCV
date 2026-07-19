@@ -182,7 +182,10 @@ def cmd_pull(render=False):
                 n = _write_proposed_tab(XLSX, doc)
                 print(f"added 'Proposed Inbox' tab ({n} lead{'s' if n != 1 else ''})")
             except Exception as e:
-                print(f"proposed-tab skipped ({str(e)[:90]})")
+                # JOBTRACKER-PROPOSED-TAB-PATH-QUOTE-001: the old [:90] slice cut a
+                # FileNotFoundError mid-path, making a wrong JOB_XLSX value (real
+                # cause) misread as a path-parsing bug. Print it whole.
+                print(f"proposed-tab skipped ({type(e).__name__}: {e})")
         else:
             print("proposed-tab skipped (set JOB_XLSX to enable)")
 

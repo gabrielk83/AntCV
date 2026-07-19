@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.1576-mansave-category';
+  const TARGET_VERSION = '1.51.1580-autocommit-freshest';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.1576-mansave-category',
     '1.51.1558-unsol-subtitle-slogan-gate',
     '1.51.1557-role-merge-swallow',
     '1.51.1556-pdf-panel-worker',

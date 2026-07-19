@@ -18613,7 +18613,15 @@
                   try {
                     const __l = await oo.list();
                     const __apps = (__l && __l.applications) || [];
-                    const __ex = __apps.find((a) => a && __norm(a.jd_company) === __ioCo);
+                    // AUTO-COMMIT-FRESHEST-001 (owner 2026-07-19): among rows matching this
+                    // company, pick the MOST-RECENTLY-UPDATED one, not the arbitrary first.
+                    // With a leftover duplicate (e.g. an old junk-JD twin) the first match
+                    // could be the STALE row, so generated sections committed to the wrong row
+                    // while the active row stayed empty ("load from list" showed nothing).
+                    // Freshest-wins routes the save to the row the user is actually on. (Dedup
+                    // now prevents new duplicates; this hardens against any legacy ones.)
+                    const __matches = __apps.filter((a) => a && __norm(a.jd_company) === __ioCo);
+                    const __ex = __matches.sort((a, b) => (b.updated_at || 0) - (a.updated_at || 0))[0];
                     let __id = __ex && __ex.id;
                     if (!__id) {
                       const __c = await oo.create({ save_as_new: !0 });

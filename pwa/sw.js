@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.1576-mansave-category';
+const CACHE = 'antcv-1.51.1580-autocommit-freshest';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

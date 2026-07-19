@@ -2349,6 +2349,21 @@ function resolveTargetedCategory(incoming, existing, jdCompany, jdText) {
   return incoming;
 }
 
+// DEDUP-BY-EMPLOYER-ROLE-001 (owner 2026-07-18): whether a /job/create save should
+// UPDATE the existing (user_hash, jd_company, jd_role) row instead of running the
+// jd_hash upsert. The ON CONFLICT key hashes the JD *text*, so re-generating the same
+// job after a re-scrape (JD text drifts on dynamic careers pages) spawns a NEW row —
+// the owner's three Ibsen "Project Manager for SBC" duplicates. Dedup by employer+role
+// only for a REAL targeted job (named employer + role + substantive JD), and NEVER for
+// an explicit "save as new" (that button intentionally forces a distinct row).
+function shouldDedupeByJob(saveAsNew, jdCompany, jdRole, jdText) {
+  if (saveAsNew) return false;
+  const co = typeof jdCompany === 'string' ? jdCompany.trim() : '';
+  const role = typeof jdRole === 'string' ? jdRole.trim() : '';
+  const jd = typeof jdText === 'string' ? jdText.trim() : '';
+  return !!co && !/^unsolicited$/i.test(co) && !!role && jd.length > 200;
+}
+
 // ---- CLUSTER-QUAL-001 stage 1: qualification extraction + top-20 recompute --
 // docs/plan/CLUSTER-QUAL-001.md sections 1-3.2. The D1 tables already exist
 // (applied 2026-06-16, confirmed empty pre-this-change); nothing in cv-proxy
@@ -3265,14 +3280,27 @@ async function handleApiApplications(request, env) {
     const subtitle         = typeof body.subtitle   === 'string' ? body.subtitle.trim()   : '';
     const jdLanguage       = typeof body.jd_language === 'string' && body.jd_language.trim() ? body.jd_language.trim().slice(0, 5) : 'en';
     const incomingCategory = normalizeCategory(body.category);
-    // HYGIENE-CATEGORY-DOWNGRADE-001: read the existing row's category first so an
-    // unsolicited-coerced save (blank/invalid category on a real targeted job) cannot
-    // downgrade an application that already holds a valid targeted category.
+    // DEDUP-BY-EMPLOYER-ROLE-001: for a real targeted job (not "save as new"), find the
+    // existing (user_hash, jd_company, jd_role) row so we UPDATE it in place instead of
+    // spawning a jd_hash duplicate. Most-recently-updated match wins (converges on the
+    // active row). Fail-safe: any miss/error leaves dedupeId null -> the jd_hash upsert.
+    let dedupeId = null;
+    try {
+      if (shouldDedupeByJob(body.save_as_new, jdCompany, jdRole, jdText)) {
+        const match = await env.DB.prepare(
+          'SELECT id FROM application WHERE user_hash = ? AND jd_company = ? AND jd_role = ? ORDER BY updated_at DESC LIMIT 1'
+        ).bind(userHash, jdCompany, jdRole).first();
+        dedupeId = match && match.id;
+      }
+    } catch (_) { dedupeId = null; }
+    // HYGIENE-CATEGORY-DOWNGRADE-001: read the EXISTING row's category (the dedupe row
+    // when matched, else the jd_hash row) so an unsolicited-coerced save cannot downgrade
+    // an application that already holds a valid targeted category.
     let existingCategory = null;
     try {
-      const prevRow = await env.DB.prepare(
-        'SELECT category FROM application WHERE user_hash = ? AND jd_hash = ?'
-      ).bind(userHash, jdHash).first();
+      const prevRow = dedupeId
+        ? await env.DB.prepare('SELECT category FROM application WHERE id = ?').bind(dedupeId).first()
+        : await env.DB.prepare('SELECT category FROM application WHERE user_hash = ? AND jd_hash = ?').bind(userHash, jdHash).first();
       existingCategory = prevRow && prevRow.category;
     } catch (_) { /* best-effort; fall through to the incoming category */ }
     const category         = resolveTargetedCategory(incomingCategory, existingCategory, jdCompany, jdText);
@@ -3282,28 +3310,48 @@ async function handleApiApplications(request, env) {
     const now = Date.now();
 
     try {
-      // Idempotent upsert on (user_hash, jd_hash).
-      await d1RunWithRetry(env.DB.prepare(
-        'INSERT INTO application ' +
-        '(user_hash, jd_hash, jd_text, supporting_context, jd_language, jd_company, jd_role, subtitle, meta, category, rationale, cv_sections, cl_sections, created_at, updated_at) ' +
-        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?) ' +
-        'ON CONFLICT(user_hash, jd_hash) DO UPDATE SET ' +
-        '  jd_company = excluded.jd_company, ' +
-        '  jd_role = excluded.jd_role, ' +
-        '  subtitle = excluded.subtitle, ' +
-        '  meta = excluded.meta, ' +
-        '  jd_language = excluded.jd_language, ' +
-        '  supporting_context = excluded.supporting_context, ' +
-        '  category = excluded.category, ' +
-        '  rationale = COALESCE(excluded.rationale, application.rationale), ' +
-        '  updated_at = excluded.updated_at'
-      ).bind(
-        userHash, jdHash, jdText, supportingCtx, jdLanguage,
-        jdCompany, jdRole, subtitle, meta, category, rationale, now, now
-      )); // D1-WRITE-RETRY-001
-      const row = await env.DB.prepare(
-        'SELECT * FROM application WHERE user_hash = ? AND jd_hash = ?'
-      ).bind(userHash, jdHash).first();
+      let row;
+      if (dedupeId) {
+        // DEDUP-BY-EMPLOYER-ROLE-001: update the existing job row in place. jd_hash is
+        // LEFT UNCHANGED — the row is keyed by employer+role now, and rewriting the hash
+        // could collide with the UNIQUE(user_hash, jd_hash) index; dedup no longer
+        // depends on the hash matching jd_text.
+        await d1RunWithRetry(env.DB.prepare(
+          'UPDATE application SET ' +
+          '  jd_text = ?, supporting_context = ?, jd_language = ?, jd_company = ?, ' +
+          '  jd_role = ?, subtitle = ?, meta = ?, category = ?, ' +
+          '  rationale = COALESCE(?, rationale), updated_at = ? ' +
+          'WHERE id = ?'
+        ).bind(
+          jdText, supportingCtx, jdLanguage, jdCompany,
+          jdRole, subtitle, meta, category,
+          rationale, now, dedupeId
+        )); // D1-WRITE-RETRY-001
+        row = await env.DB.prepare('SELECT * FROM application WHERE id = ?').bind(dedupeId).first();
+      } else {
+        // Idempotent upsert on (user_hash, jd_hash).
+        await d1RunWithRetry(env.DB.prepare(
+          'INSERT INTO application ' +
+          '(user_hash, jd_hash, jd_text, supporting_context, jd_language, jd_company, jd_role, subtitle, meta, category, rationale, cv_sections, cl_sections, created_at, updated_at) ' +
+          'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?) ' +
+          'ON CONFLICT(user_hash, jd_hash) DO UPDATE SET ' +
+          '  jd_company = excluded.jd_company, ' +
+          '  jd_role = excluded.jd_role, ' +
+          '  subtitle = excluded.subtitle, ' +
+          '  meta = excluded.meta, ' +
+          '  jd_language = excluded.jd_language, ' +
+          '  supporting_context = excluded.supporting_context, ' +
+          '  category = excluded.category, ' +
+          '  rationale = COALESCE(excluded.rationale, application.rationale), ' +
+          '  updated_at = excluded.updated_at'
+        ).bind(
+          userHash, jdHash, jdText, supportingCtx, jdLanguage,
+          jdCompany, jdRole, subtitle, meta, category, rationale, now, now
+        )); // D1-WRITE-RETRY-001
+        row = await env.DB.prepare(
+          'SELECT * FROM application WHERE user_hash = ? AND jd_hash = ?'
+        ).bind(userHash, jdHash).first();
+      }
       // Set as active on creation. This matches the PWA's "you just
       // pasted a JD — work on it" expectation.
       if (row && row.id) {

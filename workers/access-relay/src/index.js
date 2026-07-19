@@ -2305,12 +2305,23 @@ function shapeApplicationRow(row) {
   };
 }
 
-// The 12 fixed categories. Anything else gets coerced to 'unsolicited'.
+// The 12 fixed categories, plus 'targeted' — anything else gets coerced to 'unsolicited'.
+// TARGETED-SENTINEL-001 (owner 2026-07-18): the PWA sends category:'targeted' for a
+// real, targeted job whose JD-analysis hasn't produced one of the 12 domain categories
+// yet (app.src.js ~16658: `ra.category || "targeted"`). Coercing that to 'unsolicited'
+// was a bug: it flips generation into unsolicited breadth mode AND makes the reopen
+// CLEAR the JD instead of seeding it (unsolicited rows carry no JD context) — a targeted
+// job born as an unsolicited row. Recognise 'targeted' as a valid, NON-unsolicited
+// placeholder. It has no cluster (CATEGORY_TO_CLUSTER below → clusterForCategory returns
+// null, handled exactly like 'unsolicited' in the qual/fit pipeline), and it upgrades to
+// a real domain category automatically on the next classified regen (resolveTargeted-
+// Category returns the incoming real category over an existing 'targeted').
 const CATEGORIES = new Set([
   'engineering_hardware', 'engineering_software', 'product_management',
   'research_phd', 'program_management', 'operations',
   'data_analytics', 'consulting', 'executive',
   'finance', 'people_soft', 'unsolicited',
+  'targeted',
 ]);
 
 function normalizeCategory(cat) {

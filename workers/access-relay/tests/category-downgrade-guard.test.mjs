@@ -73,3 +73,23 @@ test('sanity: the guard never fabricates a category outside the incoming/existin
   const out = resolveTargetedCategory('unsolicited', 'program_management', 'Ibsen Photonics', JD);
   assert.ok(out === 'program_management' || out === 'unsolicited');
 });
+
+// TARGETED-SENTINEL-001: 'targeted' is a valid NON-unsolicited placeholder.
+test("'targeted' sentinel is recognised, not coerced to unsolicited", () => {
+  assert.equal(normalizeCategory('targeted'), 'targeted');
+  assert.equal(normalizeCategory('TARGETED'), 'targeted');
+});
+
+test("a new targeted-but-unclassified job stays 'targeted' (never born unsolicited)", () => {
+  // generation sends 'targeted' when analysis has no domain category; normalize keeps it,
+  // so resolveTargetedCategory sees a non-unsolicited incoming and returns it.
+  assert.equal(resolveTargetedCategory(normalizeCategory('targeted'), null, 'Ibsen Photonics', JD), 'targeted');
+});
+
+test("'targeted' upgrades to a real domain category on the next classified save", () => {
+  assert.equal(resolveTargetedCategory('program_management', 'targeted', 'Ibsen Photonics', JD), 'program_management');
+});
+
+test("a 'targeted' row is preserved against an unsolicited downgrade", () => {
+  assert.equal(resolveTargetedCategory('unsolicited', 'targeted', 'Ibsen Photonics', JD), 'targeted');
+});

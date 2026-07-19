@@ -2319,6 +2319,36 @@ function normalizeCategory(cat) {
   return CATEGORIES.has(c) ? c : 'unsolicited';
 }
 
+// HYGIENE-CATEGORY-DOWNGRADE-001 (owner 2026-07-18): a real, TARGETED job (a named
+// employer + a substantive JD) must never be DOWNGRADED to 'unsolicited' just because
+// a save arrived with a blank/invalid category (e.g. a JD-less-framed regen, where
+// normalizeCategory coerces the empty category to 'unsolicited'). That downgrade is
+// what left the owner's live Ibsen "Project Manager for SBC" application stored as
+// category='unsolicited': it flips the whole generation into unsolicited BREADTH mode
+// (6 bullets, no Results pin, the unsolicited specialization line) AND makes the
+// reopen path CLEAR the JD instead of seeding it (unsolicited rows carry no JD
+// context), so the analysis then reads "no JD attached". Guard the upsert: when the
+// INCOMING category coerces to 'unsolicited' but there is a real employer + a
+// substantive JD, and the EXISTING row already holds a valid targeted (non-
+// unsolicited) category, keep the existing one. This ONLY prevents a downgrade — it
+// never overrides a genuine unsolicited application (no real employer) and never
+// upgrades a row the client legitimately kept unsolicited on its first save.
+function resolveTargetedCategory(incoming, existing, jdCompany, jdText) {
+  const co = typeof jdCompany === 'string' ? jdCompany.trim() : '';
+  const jd = typeof jdText === 'string' ? jdText.trim() : '';
+  const realTargeted = !!co && !/^unsolicited$/i.test(co) && jd.length > 200;
+  if (
+    incoming === 'unsolicited' &&
+    realTargeted &&
+    typeof existing === 'string' &&
+    existing !== 'unsolicited' &&
+    CATEGORIES.has(existing)
+  ) {
+    return existing;
+  }
+  return incoming;
+}
+
 // ---- CLUSTER-QUAL-001 stage 1: qualification extraction + top-20 recompute --
 // docs/plan/CLUSTER-QUAL-001.md sections 1-3.2. The D1 tables already exist
 // (applied 2026-06-16, confirmed empty pre-this-change); nothing in cv-proxy
@@ -3234,7 +3264,18 @@ async function handleApiApplications(request, env) {
     const jdRole           = typeof body.jd_role    === 'string' ? body.jd_role.trim()    : '';
     const subtitle         = typeof body.subtitle   === 'string' ? body.subtitle.trim()   : '';
     const jdLanguage       = typeof body.jd_language === 'string' && body.jd_language.trim() ? body.jd_language.trim().slice(0, 5) : 'en';
-    const category         = normalizeCategory(body.category);
+    const incomingCategory = normalizeCategory(body.category);
+    // HYGIENE-CATEGORY-DOWNGRADE-001: read the existing row's category first so an
+    // unsolicited-coerced save (blank/invalid category on a real targeted job) cannot
+    // downgrade an application that already holds a valid targeted category.
+    let existingCategory = null;
+    try {
+      const prevRow = await env.DB.prepare(
+        'SELECT category FROM application WHERE user_hash = ? AND jd_hash = ?'
+      ).bind(userHash, jdHash).first();
+      existingCategory = prevRow && prevRow.category;
+    } catch (_) { /* best-effort; fall through to the incoming category */ }
+    const category         = resolveTargetedCategory(incomingCategory, existingCategory, jdCompany, jdText);
     const supportingCtx    = typeof body.supporting_context === 'string' ? body.supporting_context : '';
     const rationale        = (body.rationale && typeof body.rationale === 'object') ? JSON.stringify(body.rationale) : null;
     const meta             = (body.meta && typeof body.meta === 'object') ? JSON.stringify(body.meta) : null;

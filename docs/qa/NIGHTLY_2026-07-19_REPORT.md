@@ -30,8 +30,11 @@ Two **released** day-session fixes were documented **nowhere** in `docs/` (only 
 1. **EXPORT-PDF-PANEL-WORKER-001** (PWA `1.51.1556`, commit `bea9cf6`). With a side panel open (e.g. Analysis tab) the app's PDF-export button is unmounted, so the preview modal's "Save as PDF" `querySelector` returned null and fell back to the browser **printer** instead of the CloudConvert docx-worker (DOCX was unaffected — it already had the symmetric direct-worker fallback). Fix: `antcv-pdf-preview-gate.js` calls `window.exportPdfViaWorker` directly when the app button is absent, honouring the same `__antcvUseServerPdf` policy and adding the DEMO watermark to the from-storage DOCX fallback; `app.js`/`app.src.js` expose `__antcvUseServerPdf` + `__antcvDemoActive`. Test `export-pdf-panel-worker.test.mjs` (7 checks). Corroborated by auto-memory `export-toolbar-preview-tab-gated`.
 2. **MERGE-COMPONENT-SWALLOW-001** (PWA `1.51.1557`, commit `8633d8e`). A regenerated CV showed BOTH a merged role ("System Architect & Change Request Lead") AND its bare component ("System Architect") — `dedupeRoles` is exact-title-only (containment removed by ROLE-DECOMP-001 for over-merging). Fix: `swallowMergedComponents` in `antcv-sections-normalize-415.js` drops the bare component when a role title is an explicit `X & Y`/`X / Y`/`X and Y` merge and another role's exact title equals X or Y (same company, overlapping years); space-aware ("R&D" survives); wired after `dedupeRoles`, before `roleCanonTitles`. Test `merge-component-swallow.test.mjs` (3 owner cases).
 
-## New finding (parallel-session in-flight — NOT actioned)
-- **relay HYGIENE-CATEGORY-DOWNGRADE-001** (commit `965ca92`, "targeted app never downgraded to unsolicited"): committed to main but the worker is **NOT deployed** (dispatch-only) AND its VERSION was **not bumped** (still `auth-33-cse-brave`). Once deployed, `/health` can't attest it — a repeat of the 07-16 LEAD-UNDERLINE version-bump-omission pattern. **Deploy + version-bump owed by the owner/day session** (their active lane; one-deployer-at-a-time rule → not touched here). `1.51.1558` itself is likewise the day session's own to register.
+## Finding — actioned (owner: "fix findings from tonight")
+- **relay HYGIENE-CATEGORY-DOWNGRADE-001** (commit `965ca92`, "targeted app never downgraded to unsolicited"). On inspection the guard was **already live** — the day session had deployed it via `workflow_dispatch` run `29677003317` (target=access-relay, success, 06:47:10Z; guard commit landed 06:46:06Z). The only residual was the **version-attestation gap** (identical to 07-16 LEAD-UNDERLINE-VERSION-BUMP-001): `/health` still reported the stale `auth-33-cse-brave`.
+  - **FIXED — CATEGORY-DOWNGRADE-VERSION-BUMP-001** (`9453a11`): bumped `RELAY_VERSION 'auth-33-cse-brave' → 'auth-34-category-downgrade'`, redeployed access-relay (run `29678819618` — lint + unit-tests + deploy-worker all ✓). No behaviour change (guard already live); this only makes `/health` truthful. Pre-push: `category-downgrade-guard.test.mjs` 7/7, `node --check` clean, no test pins the version string.
+  - **Owed:** a live `/health` eyeball to confirm it now reports `auth-34-category-downgrade` (the nightly worker-attest env-gate is unchanged, so `/health` couldn't be curled from here).
+- `1.51.1558` (unsol-subtitle-slogan-gate) remains the day session's own to register.
 
 ## Per-band / per-row status (all open rows — unchanged from 07-17 except the reconcile above)
 - **A1 GEN-BACKGROUND-001 (rows 38/38a):** engine + `antcv-gen-memo.js?v=1.51.134` live-served. Flip-default **BLOCKED** — needs a real mobile foreground-gen A/B.
@@ -49,7 +52,7 @@ Two **released** day-session fixes were documented **nowhere** in `docs/` (only 
 
 ## Owner-verify / owner-decision lists
 - **Owner-decision:** A1 flip-default proposal (needs a real mobile foreground gen A/B first — not runnable headlessly).
-- **Owner action:** deploy + version-bump the relay HYGIENE-CATEGORY-DOWNGRADE-001 fix (day-session lane).
+- **Owner action (DONE this session):** relay HYGIENE-CATEGORY-DOWNGRADE-001 VERSION bump + redeploy — shipped as CATEGORY-DOWNGRADE-VERSION-BUMP-001 (`auth-34-category-downgrade`, run `29678819618` ✓). Only a live `/health` eyeball remains.
 - **Owner eyeball owed:** rows 93/94 (JD-swap Novo-ghost gone; tracker-open→Editor restores saved cv/cl).
 - **Env fix owed to unblock nightly worker-attest:** approve the `*.workers.dev` origin for the Browser pane, or un-gate `workers.dev` DNS in the shell.
 

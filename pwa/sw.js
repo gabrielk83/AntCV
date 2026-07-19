@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.1558-unsol-subtitle-slogan-gate';
+const CACHE = 'antcv-1.51.1576-mansave-category';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

@@ -40945,7 +40945,12 @@
                                       meta:
                                         io && "object" == typeof io ? io : {},
                                       jd_language: je,
-                                      category: "unsolicited",
+                                      // MANUAL-SAVE-CATEGORY-001 (owner 2026-07-18): don't hardcode
+                                      // 'unsolicited' when the current app is a real targeted job — that
+                                      // mislabels the saved copy and (on reopen) clears its JD. Prefer the
+                                      // JD-analysis category (yo.category); else, for a real employer, the
+                                      // 'targeted' sentinel the relay keeps non-unsolicited; else unsolicited.
+                                      category: (function () { try { var __c = (yo && "string" == typeof yo.category && yo.category.trim()) || ""; if (__c) return __c; var __co = (io && io.company) || ""; if (__co && !(window.__antcvUnsol && window.__antcvUnsol(__co))) return "targeted"; } catch (e) {} return "unsolicited"; })(),
                                       supporting_context:
                                         (yo && yo.supporting_context) || "",
                                       rationale: yo,
@@ -47475,7 +47480,9 @@
                                   subtitle: (io && io.subtitle) || "",
                                   meta: io && "object" == typeof io ? io : {},
                                   jd_language: je,
-                                  category: "unsolicited",
+                                  // MANUAL-SAVE-CATEGORY-001 (owner 2026-07-18): see the twin site — use
+                                  // the real category / 'targeted' sentinel, not a hardcoded 'unsolicited'.
+                                  category: (function () { try { var __c = (yo && "string" == typeof yo.category && yo.category.trim()) || ""; if (__c) return __c; var __co = (io && io.company) || ""; if (__co && !(window.__antcvUnsol && window.__antcvUnsol(__co))) return "targeted"; } catch (e) {} return "unsolicited"; })(),
                                   supporting_context:
                                     (yo && yo.supporting_context) || "",
                                   rationale: yo,

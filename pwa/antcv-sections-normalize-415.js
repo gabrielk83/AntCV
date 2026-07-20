@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.1624-storm-osc-guard';
+  var VERSION = '1.51.1644-compl-selflimit';
   if (window.__antcvSectionsNormalize === VERSION) return;
   window.__antcvSectionsNormalize = VERSION;
 
@@ -1200,6 +1200,7 @@
   // real personalInfo role whose title+company is NOT present in the section is re-inserted as
   // HIDDEN (on:false) — present and recoverable in one click, never lost. Owner rule (the gen
   // prompt's own words): a hidden role keeps its content; a DROPPED role forces a retype.
+  var __complRepeat = null;   // STORM-OSCILLATION-GUARD-001 (add-side): { sig, first, n } churn tracker
   function repairExperienceCompleteness(cv) {
     var idx = -1;
     for (var i = 0; i < cv.length; i++) { if (cv[i] && cv[i].id === 'experience') { idx = i; break; } }
@@ -1237,7 +1238,26 @@
       o.on = false;                                   // restore HIDDEN — does not change the visible CV
       return o;
     });
-    if (!missing.length) return null;
+    if (!missing.length) { __complRepeat = null; return null; }
+    // STORM-OSCILLATION-GUARD-001 (add-side): this restore keeps finding the SAME roles
+    // "missing" every pass because roleCanonTitles shortens a title so _samePosition no
+    // longer matches its PI source, and dropCanonHiddenDups / a competing writer strips the
+    // restored hidden copy right back out — an endless add<->drop churn that dispatches
+    // antcv:sections-updated and re-renders the whole app (the freeze + downstream text-align
+    // storm). The restored roles are HIDDEN (on:false) — a recover-in-one-click safety net,
+    // NOT visible content — so it is safe to STOP re-adding them once we detect the churn.
+    // Signature = the missing set's identity (id|title|company); if we produce the identical
+    // set 3+ times within 6s, suppress the restore (return null) until the signature changes
+    // or the window lapses. A genuine, new missing set (real edit/regen) resets the counter
+    // and restores normally.
+    var __sig = missing.map(function (r) { return String(r.id != null ? r.id : '') + '|' + norm(r.title || r.role) + '|' + norm(r.company); }).join('~');
+    var __nowC = Date.now();
+    if (__complRepeat && __complRepeat.sig === __sig && (__nowC - __complRepeat.first) < 6000) {
+      __complRepeat.n++;
+      if (__complRepeat.n >= 3) return null;   // churning — hold the add side so the storm can converge
+    } else {
+      __complRepeat = { sig: __sig, first: __nowC, n: 1 };
+    }
     var copy = cv.slice();
     copy[idx] = Object.assign({}, sec, { roles: roles.concat(missing) });
     try { console.log('[415] experience-completeness restored ' + missing.length + ' missing role(s) hidden'); } catch (_) {}

@@ -88,6 +88,19 @@
     'contact_line',
   ]);
 
+  // ALIGN-STORM-001 (owner 2026-07-20, live-diagnosed): sections whose per-cell/row
+  // text-align is OWNED by a dedicated row-controls sidecar. This sidecar must NOT also
+  // write their alignment — two writers with DIFFERENT target values (234 writes the
+  // header 'center' / body getAlign, this one wrote editables 'left') never converge, so
+  // the idempotent "write if different" guards keep re-firing and wake each other's
+  // MutationObservers → the ~200 text-align-writes/sec storm (core_comp alone was 1638
+  // flips / 25s). Skip alignment application for these ids here (table-edge width handles
+  // are applied by a separate pass, so drag-resize is unaffected). core_comp = the
+  // CORE COMPETENCIES table, owned by antcv-core-competencies-row-controls-234.js.
+  const ALIGN_OWNED_ELSEWHERE = new Set([
+    'core_comp',
+  ]);
+
   // Unicode glyphs for the cycler face. Each face shows the CURRENT
   // alignment; clicking advances to the NEXT one. Using monospace box
   // characters keeps the button width stable across the four states.
@@ -486,6 +499,7 @@
     for (const s of sections) {
       const sid = s.getAttribute('data-sid');
       if (!sid || SKIP_SECTION_IDS.has(sid)) continue;
+      if (ALIGN_OWNED_ELSEWHERE.has(sid)) continue;   // ALIGN-STORM-001: defer to the section's own row-controls owner
       applyAlignmentToSection(s, readAlignment(sid));
     }
   }
@@ -1511,7 +1525,7 @@
   window.AntcvSectionAlign = (function () {
     const prev = window.AntcvSectionAlign || {};
     return Object.assign({}, prev, {
-      version: '1.40.203',
+      version: '1.51.1604-align-storm-001',
       _injectPanelDefaultCyclers: function () { return false; },
       _readPanelDefault: readPanelDefault,
       _writePanelDefault: writePanelDefault,

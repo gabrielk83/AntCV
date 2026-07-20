@@ -55,7 +55,7 @@
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.51.1424-edu-row-cjlr';
+  const SCRIPT_VERSION = '1.51.1604-align-storm-001';
   const STORAGE_KEY = 'antcvItemAlignment';
   const SECTIONS_KEY = 'sections';
   const DOC_KEY = 'doc';
@@ -585,13 +585,36 @@
     } catch (_) {}
   }
 
+  // ALIGN-STORM-001 (owner 2026-07-20, live-diagnosed): this MutationObserver was
+  // UNTHROTTLED — it ran the full inject + applyAllAlignments sweep (querySelectorAll over
+  // every preview row + style read/writes = forced reflow) on EVERY DOM mutation, so any
+  // re-render churn multiplied into a ~200 text-align-writes/sec storm (the "preview freeze"
+  // + certs/interests "jumpiness"). section-align already learned this (its schedule() floors
+  // to >=300ms between passes); mirror that here. A debounced+throttled tick keeps alignment
+  // correct (it is not real-time critical) without amplifying the storm. A short self-write
+  // window also stops applyAllAlignments's own style writes from immediately re-scheduling.
+  var __pending = false;
+  var __lastRunAt = 0;
+  function __nowMs() { return (window.performance && performance.now) ? performance.now() : Date.now(); }
+  function scheduleTick() {
+    if (__pending) return;
+    __pending = true;
+    var wait = Math.max(0, 300 - (__nowMs() - __lastRunAt));
+    var runPass = function () {
+      __pending = false;
+      __lastRunAt = __nowMs();
+      tick();
+    };
+    if (wait > 0) setTimeout(runPass, wait); else requestAnimationFrame(runPass);
+  }
+
   [0, 200, 600, 1500, 3000].forEach(function (d) {
     if (d === 0) tick();
     else setTimeout(tick, d);
   });
 
   try {
-    const mo = new MutationObserver(function () { tick(); });
+    const mo = new MutationObserver(function () { scheduleTick(); });
     mo.observe(document.body, { childList: true, subtree: true });
   } catch (_) {}
 

@@ -41151,10 +41151,10 @@
                                           "●",
                                         )
                                       : null,
-                                    (e.jd_company || "") +
+                                    "#" + e.id + "  " +
+                                      ((e.jd_company || "") +
                                       (e.jd_company && e.jd_role ? " - " : "") +
-                                      (e.jd_role || "") ||
-                                      "Application #" + e.id,
+                                      (e.jd_role || "") || "(untitled)"),
                                   ),
                                   React.createElement(
                                     "div",
@@ -47357,7 +47357,7 @@
                   (() => {
                     const e = Dl && Fl ? Dl.find((e) => e.id === Fl) : null;
                     return e
-                      ? e.jd_company || e.jd_role || "App #" + e.id
+                      ? "#" + e.id + " " + (e.jd_company || e.jd_role || "")
                       : Dl && Dl.length > 0
                         ? "Application history (" + Dl.length + ")"
                         : "Application history";
@@ -47832,9 +47832,10 @@
                                   whiteSpace: "nowrap",
                                 },
                               },
-                              (e.jd_company || "") +
+                              "#" + e.id + "  " +
+                                ((e.jd_company || "") +
                                 (e.jd_company && e.jd_role ? " - " : "") +
-                                (e.jd_role || "") || "Application #" + e.id,
+                                (e.jd_role || "") || "(untitled)"),
                             ),
                             React.createElement(
                               "div",
@@ -47864,7 +47865,7 @@
                                 } catch (e) {}
                                 if (
                                   confirm(
-                                    `Delete saved application "${(e.jd_company || "") + (e.jd_role ? " - " + e.jd_role : "")}"?\n\nThis only removes the saved entry. Your current CV/CL in the editor is not affected.`,
+                                    `Delete saved application #${e.id} "${(e.jd_company || "") + (e.jd_role ? " - " + e.jd_role : "")}"?\n\nThis only removes the saved entry. Your current CV/CL in the editor is not affected.`,
                                   )
                                 )
                                   try {

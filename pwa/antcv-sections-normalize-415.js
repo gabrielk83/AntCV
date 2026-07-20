@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.396-matrix-containment';
+  var VERSION = '1.51.1624-storm-osc-guard';
   if (window.__antcvSectionsNormalize === VERSION) return;
   window.__antcvSectionsNormalize = VERSION;
 
@@ -1902,6 +1902,21 @@
     return changed ? out : null;
   }
 
+  // STORM-OSCILLATION-GUARD-001 (owner 2026-07-20, live-diagnosed): the normalize pipeline
+  // can enter an A/B ping-pong with a COMPETING writer — roleCanonTitles shortens a role
+  // title so _samePosition no longer matches its personalInfo source, repairExperienceCompleteness
+  // re-adds that PI role HIDDEN, and dropCanonHiddenDups / another sidecar strips it again, so
+  // every pass produces a genuinely-different `sections` (the "restored N missing role(s)" +
+  // "re-applied normalisers after restore" logs looping endlessly). That write+dispatch storm
+  // re-renders the whole app continuously — the measured freeze AND the downstream text-align
+  // re-apply storm (certs/interests "jumpiness"). The per-pass `__after === __before` guard can't
+  // catch it (each pass IS a real diff). Fix: refuse to WRITE a serialised result we already wrote
+  // in the last few seconds — reproducing a recent state means another writer is reverting us, so
+  // feeding it again only sustains the loop. A genuine, distinct normalisation (different content)
+  // always writes. Time-bounded so a legitimate later re-visit of an old state is unaffected.
+  var __recentWrites = [];   // [{ h: serialisedSections, t: ms }]
+  var __OSC_WINDOW_MS = 4000;
+
   function normalize() {
     // EDIT-GUARD-001 (owner 2026-06-19): defer all normalisation while the user is
     // actively editing — rewriting sections mid-edit re-renders the preview and
@@ -2011,6 +2026,16 @@
       // else this fires the antcv:sections-updated storm that flickers the whole app.
       var __after = JSON.stringify(next);
       if (__after === __before) return;
+      // STORM-OSCILLATION-GUARD-001: if we already wrote this exact result within the window,
+      // a competing writer is reverting it every cycle — writing again only sustains the
+      // sections-updated storm (continuous re-render + text-align re-apply). Hold instead.
+      var __nowW = Date.now();
+      __recentWrites = __recentWrites.filter(function (e) { return __nowW - e.t < __OSC_WINDOW_MS; });
+      if (__recentWrites.some(function (e) { return e.h === __after; })) {
+        try { console.warn('[sections-normalize-415] oscillation held — a competing writer keeps reverting this normalisation; not re-dispatching to break the storm'); } catch (_) {}
+        return;
+      }
+      __recentWrites.push({ h: __after, t: __nowW });
       localStorage.setItem('sections', __after);
       try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: SRC } })); } catch (_) {}
       try { console.log('[sections-normalize-415] re-applied normalisers (recs/founder/loc-default) after restore'); } catch (_) {}

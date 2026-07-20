@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.1604-align-storm-001';
+  const TARGET_VERSION = '1.51.1624-storm-osc-guard';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.1604-align-storm-001',
     '1.51.1584-history-file-number',
     '1.51.1580-autocommit-freshest',
     '1.51.1576-mansave-category',

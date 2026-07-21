@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.1728-palette-resolver';
+  const TARGET_VERSION = '1.51.1748-stale-brand-gate';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.1728-palette-resolver',
     '1.51.1708-switch-open-jdonly',
     '1.51.1704-paginate-stable',
     '1.51.1684-palette-stick-clear',

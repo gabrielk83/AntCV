@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.1728-palette-resolver';
+const CACHE = 'antcv-1.51.1748-stale-brand-gate';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

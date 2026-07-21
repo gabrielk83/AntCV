@@ -1,0 +1,104 @@
+# AntCV NIGHTLY (cloud / machine-independent) — 2026-07-21.
+#
+# WHY: the local desktop nightly only runs while the Claude app is open (it kept
+# missing days — see docs/qa/SCHEDULED_ROUTINES.md STANDING RULE 0). This workflow
+# runs the SAME nightly on GitHub's servers, independent of the owner's machine, in
+# a fresh isolated clone (so it can't collide with the owner's interactive session).
+#
+# INERT UNTIL OPTED IN (no daily-failure noise): the job is skipped unless the repo
+# VARIABLE `CI_NIGHTLY_ENABLED` == 'true'. To turn it on the owner must:
+#   1. Add repo SECRET  ANTHROPIC_API_KEY   (billed API usage — separate from the
+#      claude.ai subscription; this is what pays for the agent run).
+#   2. (optional) Add repo SECRET  ANTCV_TOKEN  = the owner JWT from the PWA console
+#      (copy(localStorage.getItem('antcv:auth:token'))) so the relay/job-tracker parts
+#      work. It expires ~weekly; without it those parts self-flag "owed to a desktop run".
+#   3. Set repo VARIABLE  CI_NIGHTLY_ENABLED = true.
+# Cloudflare deploy secrets (CLOUDFLARE_API_TOKEN / _ACCOUNT_ID) already exist for deploy.yml.
+#
+# SAFETY: the prompt runs unattended, so it pushes docs/register/verify + VERIFIED
+# PWA-safe fixes to main, but routes any pwa/app.js, pwa/app.src.js or workers/** change
+# through a PULL REQUEST for owner review (never an unattended app.js-surgery deploy —
+# that history is why CLAUDE.md gates app.js). Worker deploys only on explicit dispatch.
+
+name: AntCV nightly (cloud)
+
+on:
+  schedule:
+    - cron: "20 2 * * *" # 02:20 UTC daily (~04:20 CEST) — cloud, so time-of-day is free of the app-open constraint
+  workflow_dispatch:
+    inputs:
+      allow_deploy:
+        description: "Allow the run to deploy workers via deploy.yml (default: PR-only, no deploy)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: antcv-nightly-cloud
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write # dispatch deploy.yml when allow_deploy=true
+
+jobs:
+  nightly:
+    # Fully inert until the owner explicitly opts in — no run, no failure, until CI_NIGHTLY_ENABLED=true.
+    if: ${{ vars.CI_NIGHTLY_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # full history so shift.mjs high-water-mark + rebase discipline work
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install (no scripts — matches security-audit)
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Configure git identity + optional relay token
+        env:
+          ANTCV_TOKEN: ${{ secrets.ANTCV_TOKEN }}
+        run: |
+          git config user.name "AntCV Nightly (cloud)"
+          git config user.email "noreply@anthropic.com"
+          if [ -n "$ANTCV_TOKEN" ]; then
+            mkdir -p "$HOME/.antcv"
+            printf '%s' "$ANTCV_TOKEN" > "$HOME/.antcv/token"
+            echo "relay token provisioned"
+          else
+            echo "no ANTCV_TOKEN — relay/job-tracker parts will self-flag owed-to-desktop"
+          fi
+      - name: Run nightly
+        uses: anthropics/claude-code-action@v1
+        env:
+          ALLOW_DEPLOY: ${{ inputs.allow_deploy || 'false' }}
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_args: |
+            --model claude-opus-4-8
+            --max-turns 80
+            --allowedTools Edit,Read,Write,Bash,Glob,Grep,WebSearch,WebFetch
+          prompt: |
+            You are the AntCV NIGHTLY running unattended in GitHub Actions on repo gabrielk83/AntCV.
+            Read docs/qa/CLOUD_ROUTINE_PROMPT.md IN FULL and follow it — that is your authoritative
+            procedure (it points at the live band plan: the newest docs/qa/NIGHTLY_*_PROMPT.md +
+            docs/qa/OPEN_REGISTER.md, and the standing rules in docs/qa/SCHEDULED_ROUTINES.md).
+
+            === CI SAFETY OVERRIDE (this run is unattended — obey strictly) ===
+            1. SYNC FIRST: git fetch origin && git pull --rebase origin main. Never force-push.
+            2. You MAY push DIRECTLY to main: docs, all registers (OPEN_REGISTER / ACTIVE_BUGS /
+               FEATURES_REGISTRY), dated NIGHTLY/SESSION reports, and the shift ledger.
+            3. Any change to pwa/app.js, pwa/app.src.js, or workers/** MUST go through a PULL REQUEST
+               (create a branch, push it, `gh pr create` titled "nightly: <fix>") for owner review —
+               do NOT push app.js surgery or worker code to main unattended. Register the fix and link
+               the PR in your report.
+            4. NEVER run `npm run build:app` (it blue-screens prod). Suite green
+               (node scripts/run-tests.mjs pwa) before any push; boot-smoke after any app.js edit.
+            5. Worker deploys (gh workflow run deploy.yml): ONLY if the environment variable
+               ALLOW_DEPLOY == 'true'. Otherwise leave the worker change as a PR + report the deploy owed.
+            6. No in-app Browser pane here — for every shipped PWA change, add "post-deploy live-verify
+               owed to a desktop run" to your report.
+            7. END-OF-RUN: write the dated report + register edits and push them (this is how a cloud
+               run's outcome is recorded — there is no local heartbeat ledger in CI). A run whose
+               outcome lives only in the log is NOT complete.

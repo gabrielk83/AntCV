@@ -32,9 +32,12 @@
   // (bring is persisted by antcv-nordic-cl-order-971; closure by the editor; both
   //  are included as belt-and-suspenders — re-applying a real value is harmless.)
   var GUARDED = ['opening', 'why', 'who', 'foundation', 'contribute', 'closure', 'bring'];
-  // Canonical CL section order (Nordic) — used to re-insert a guarded section that a
-  // stale restore DELETED outright at its correct position. See CL-PROSE-LOSS-GUARD-002.
-  var ORDER = ['greeting', 'opening', 'why', 'who', 'foundation', 'bring', 'contribute', 'closure'];
+  // Canonical CL section order — used to re-insert a guarded section that a stale restore
+  // DELETED outright at its correct position. See CL-PROSE-LOSS-GUARD-002.
+  // CL-V5-STRUCT-001 (2026-07-21): kept in step with antcv-nordic-cl-order-971's ORDER. A
+  // stale copy here would re-insert `who` in its OLD mid-letter slot and fight 971's v5
+  // order on every restore.
+  var ORDER = ['greeting', 'opening', 'why', 'role_view', 'bring', 'contribute', 'who', 'foundation', 'closure'];
   var lastApplyAt = 0;
 
   function disabled() { try { var v = localStorage.getItem('antcv:disable-cl-prose-guard'); return v === '1' || v === 'true'; } catch (_) { return false; } }

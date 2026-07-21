@@ -102,12 +102,17 @@ test('reorder() moves who AFTER contribute and puts role_view straight after why
   assert.equal(ids.join('|'), 'greeting|opening|why|role_view|bring|contribute|who|foundation|closure');
 });
 
-test('migrateV5 is one-shot: a user who removes role_view does not get it back', () => {
+test('migrateV5 arms its one-shot only on a READ-BACK, then stays inert', () => {
   const store = {};
   const api = loadSidecar(store);
-  assert.equal(api.migrateV5(preV5()).changed, true);
-  assert.equal(store['antcv:cl-v5-role-view-migrated'], '1');
-  assert.equal(api.migrateV5(preV5()).changed, false, 'second pass is inert');
+  // CL-V5-MIGRATE-DURABLE-001: inserting does NOT arm the flag — only observing the
+  // section in a list we read back does, which is what proves the write survived.
+  assert.equal(api.migrateV5(preV5()).changed, true, 'inserts');
+  assert.equal(store['antcv:cl-v5-role-view-migrated'], undefined, 'not armed by the insert');
+  const withRv = preV5().concat([{ id: 'role_view', type: 'rich_block', items: [] }]);
+  assert.equal(api.migrateV5(withRv).changed, false, 'read-back is inert');
+  assert.equal(store['antcv:cl-v5-role-view-migrated'], '1', 'armed by the read-back');
+  assert.equal(api.migrateV5(preV5()).changed, false, 'armed -> a later delete stays deleted');
 });
 
 test('migrateV5 is idempotent when role_view already exists, and inert on a foreign doc', () => {
@@ -162,5 +167,44 @@ test('run() actually reaches the CL when toneRegister is absent (the live failur
   loadSidecar(store).run();
   const ids = JSON.parse(store.sections).cl.map((s) => s.id);
   assert.equal(ids.join('|'), 'greeting|opening|why|role_view|bring|contribute|who|foundation|closure');
-  assert.equal(store['antcv:cl-v5-role-view-migrated'], '1', 'migration ran');
+});
+
+// ------------------------------------------- CL-V5-MIGRATE-DURABLE-001 (live-verified)
+// The flag used to be armed at INSERT time, so the app's boot-time rewrite of `sections`
+// discarded the fresh role_view while the flag stayed set — the owner's live CL came out
+// correctly reordered but permanently without the section.
+test('an overwrite that discards the fresh role_view is repaired on the next pass', () => {
+  const store = { sections: JSON.stringify({ cl: preV5() }) };
+  const api = loadSidecar(store);
+
+  api.run();
+  assert.ok(JSON.parse(store.sections).cl.some((s) => s.id === 'role_view'), 'inserted');
+  assert.equal(store['antcv:cl-v5-role-view-migrated'], undefined, 'flag NOT armed by the insert alone');
+
+  // the app rewrites sections from its own hydrated (pre-v5) state
+  store.sections = JSON.stringify({ cl: preV5() });
+  api.run();
+  assert.ok(JSON.parse(store.sections).cl.some((s) => s.id === 'role_view'), 're-inserted after the overwrite');
+
+  // a pass that READS role_view back arms the one-shot
+  api.run();
+  assert.equal(store['antcv:cl-v5-role-view-migrated'], '1', 'armed once the write survived');
+
+  // and now a genuine user delete sticks
+  const kept = JSON.parse(store.sections).cl.filter((s) => s.id !== 'role_view');
+  store.sections = JSON.stringify({ cl: kept });
+  api.run();
+  assert.equal(JSON.parse(store.sections).cl.some((s) => s.id === 'role_view'), false, 'user delete respected');
+});
+
+test('re-insertion is bounded per page load — it can never become a write storm', () => {
+  const store = { sections: JSON.stringify({ cl: preV5() }) };
+  const api = loadSidecar(store);
+  let inserts = 0;
+  for (let i = 0; i < 40; i++) {
+    store.sections = JSON.stringify({ cl: preV5() });   // a hostile stripper: wipes it every time
+    api.run();
+    if (JSON.parse(store.sections).cl.some((s) => s.id === 'role_view')) inserts++;
+  }
+  assert.ok(inserts <= 5, 'gave up after the attempt ceiling, got ' + inserts);
 });

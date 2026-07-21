@@ -86,3 +86,44 @@ The three other day-session gaps the body flagged (MANUAL-SAVE-CATEGORY-001 `1.5
 **Live-verify (PWA layer, curl to pages.dev) — the SIDEBAR fix is deployed + serving:** live `ANTCV_VERSION` seed = local `TARGET_VERSION` = **`1.51.1664-sidebar-nojustify`** (no version regression / no stale-SW mask); live index references `app.js?v=1.51.1664-sidebar-nojustify`; **the served app.js at that `?v` contains the fix marker** `(hg||N)?"left":"justify"` (grep = 1) → SIDEBAR-RICHBLOCK-NOJUSTIFY-001 is deployed + live-served, not just committed. (The `1664` TARGET is the highest actual cache-bust version; `1665→1683` was a shift-claim range, sidecar/no-asset work.) Worker `/health` live-attest unchanged env-gate — not re-attempted (no worker dispatch this run).
 
 **No canonical open register row is newly actionable** — every open row remains owner-gated / needs-2nd-physical-device / needs-live-models (per-band status in the body holds unchanged). No code shipped by this dispatch.
+
+---
+
+## APPENDED — GitHub Actions CI nightly (3rd 07-21 dispatch, Opus 4.8, unattended)
+
+**Substrate:** the machine-independent **GitHub Actions** cloud nightly (repo `gabrielk83/AntCV`, claude-code-action) — a DIFFERENT substrate from the two day-session dispatches above. Fires on GH cron regardless of any machine being on; fresh isolated clone, no shared WIP. CI safety override in force (docs/registers/reports → direct to main; app.js/app.src.js/workers → PR only; worker deploy gated on `ALLOW_DEPLOY`, which is `false` this run).
+
+**Outcome:** one test-infra fix shipped as a **PR-ready branch** (GHA token is org-blocked from opening PRs — owner opens); full standing sweep green on a freshly-advanced base; PWA layer live-verified. No app.js/worker code shipped.
+
+**Baseline:** opened at PWA `1.51.1748-stale-brand-gate`; the day session pushed mid-run, so rebased to **`1.51.1792-unbranded-nostale`** (`git fetch && pull --rebase origin main` clean — main stayed in sync, no regression). Re-ran the full suite on the 1792 base.
+
+### THE ONE FIX — DIAG-PROBE-WINPATH-001 (branch `nightly-2026-07-21-probe-portable-path`, commit 2a2b9850) — test-infra, PR-gated
+`pwa/test/diag-personal-panel-probe.mjs` and `pwa/test/diag-settings-panels-probe.mjs` hardcoded `const ROOT = 'C:/Users/karpg/GitHub/AntCV/pwa'`. On any non-desktop clone (this GH Actions runner) that path doesn't exist → the in-process static server 404s every asset → the app never boots → the `WRITING STYLE` panel is never found → the probe crashes at `Object.entries(undefined)` (line 75). **These two standing probes (register row 17's locks) were therefore un-runnable in CI.** Fix: replace the hardcoded absolute path with the portable `import.meta.url` pattern **already used by `diag-panel-button-audit.mjs`** — `const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')`. No behaviour change on desktop (same served dir); test-infra only, no `app.js`/`app.src.js`/worker code touched. `node --check` clean on both.
+- **PR status:** branch pushed to origin; `gh pr create` FAILED — *"GitHub Actions is not permitted to create or approve pull requests"* (org policy). **Owner action owed:** open the PR from `nightly-2026-07-21-probe-portable-path` → main (link: https://github.com/gabrielk83/AntCV/pull/new/nightly-2026-07-21-probe-portable-path). Low-risk test-only diff (+6/−2).
+
+### Standing probes — all green on the `1.51.1792` base (no regression)
+| Probe | Result |
+|---|---|
+| PWA suite (`run-tests.mjs pwa`) | **1323 / 1323**, 0 fail (~5.4s) — green on both the 1748 open-base and the 1792 rebased base |
+| boot-smoke | OK — `glDemo=function, errors=0` (after `npx playwright install chromium-headless-shell` — the runner ships no browser by default) |
+| Personal-panel probe (row 17) | **DIAG PASS** — 0 mut / 8s, 0 page errors *(runnable in CI for the first time via the DIAG-PROBE-WINPATH-001 fix)* |
+| Settings-panels probe (row 17) | **DIAG PASS** — Account 0 mut/6s, Layout 0 mut/6s, 0 page errors *(likewise newly CI-runnable)* |
+| button-audit (row 23) | **190 buttons / 0 page errors / 0 DEAD / 0 throws** — 110 active, 51 not-visible/disabled, 12 skipped-dangerous, 17 ui-only (steady vs the 191 earlier-07-21 run) |
+| `app.js` head | `(()=>{window` — no `"use strict"`, minified-sacred intact |
+
+### Live-verify (PWA layer, curl to pages.dev — reachable from GH Actions)
+- live `ANTCV_VERSION` seed = local `TARGET_VERSION` = **`1.51.1792-unbranded-nostale`** — **no version regression / no stale-SW mask**
+- live index references `app.js?v=1.51.1792-unbranded-nostale`; live `sw.js` CACHE = `antcv-1.51.1792-unbranded-nostale` — all three consistent
+- the served `app.js` at that `?v` head is `(()=>{window…` with **0 `"use strict"`** — minified-sacred intact live
+- **Worker `/health` live-attest — BLOCKED (unchanged env gate):** `*.workers.dev` is DNS-gated from the GH Actions runner (relay `/health` → HTTP 000 / could-not-resolve). Worker-layer attest still **owed** to a desktop Browser-pane run. No worker deploy attempted (`ALLOW_DEPLOY=false`; no worker code changed anyway).
+
+### Register-reconcile this run
+- **Row 17** (settings-panel stability): re-verified on 1.51.1792 — Personal + Account + Layout all **0 mut, DIAG PASS**. Its two lock probes are now CI-runnable (DIAG-PROBE-WINPATH-001).
+- **Row 23** (button-audit): re-run on 1.51.1792 — 190 buttons, 0 throws / 0 dead / 0 page errors; no regression.
+- **NEW row: DIAG-PROBE-WINPATH-001** — test-infra fix, PR-ready branch, owner-opens-PR owed (logged in ACTIVE_BUGS top + OPEN_REGISTER).
+- No canonical open register row is newly actionable in CI — every open row remains owner-gated / needs-2nd-physical-device / needs-live-models / worker-attest-owed.
+
+### Owed to a desktop run
+1. **Open + merge the PR** for DIAG-PROBE-WINPATH-001 (GHA can't open PRs).
+2. **post-deploy live-verify** of the day session's `1.51.1792-unbranded-nostale` (PALETTE A2b) in a real Browser pane — the curl checks above confirm the version + minified-sacred head, not the palette render.
+3. **Worker `/health` attest** (relay/proxy/docx) — DNS-gated from CI.

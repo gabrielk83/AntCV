@@ -11829,7 +11829,16 @@
     React.useEffect(() => {
       var e;
       const o = null == (e = n.current) ? void 0 : e.parentElement;
-      o && t(o.scrollHeight || 0);
+      if (!o) return;
+      const __h = o.scrollHeight || 0;
+      // PAGINATION-STABILIZE-001 (owner 2026-07-19): this effect has NO dependency array,
+      // so it runs on every render and setState-measures scrollHeight. A sub-pixel /
+      // scrollbar flicker across the 1123px page boundary re-triggered it endlessly — the
+      // preview flapped "main split across 2 pages" <-> "all main on page 1 (impossible)"
+      // and pegged the main thread (the freeze). Commit a change only when it exceeds a
+      // page-break line's own thickness so a flicker can't re-enter the render->measure
+      // loop; a genuine content edit (>3px) still updates once and settles.
+      t((__prev) => (Math.abs(__h - __prev) > 3 ? __h : __prev));
     });
     const o = 1123,
       r = [];
@@ -20534,7 +20543,11 @@
                 r = Ii ? o : Math.max(320, Math.min(o, e) - 16);
               if (!r) return;
               const a = Math.round(1e3 * Math.min(1, r / 794)) / 1e3;
-              a !== t && ((t = a), mi(a));
+              // PAGINATION-STABILIZE-001: hysteresis — a 1px width flicker (e.g. a scrollbar
+              // toggling as content overflows) changed the scale by 0.001 and re-rendered,
+              // which re-observed the width via ResizeObserver: a feedback loop feeding the
+              // page-break flap above. Only re-scale on a meaningful change (>0.003).
+              (null === t || Math.abs(a - t) > 0.003) && ((t = a), mi(a));
             },
             o = () => {
               (r && cancelAnimationFrame(r),

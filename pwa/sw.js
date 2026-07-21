@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.1684-palette-stick-clear';
+const CACHE = 'antcv-1.51.1704-paginate-stable';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

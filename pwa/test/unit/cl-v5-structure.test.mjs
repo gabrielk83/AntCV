@@ -208,3 +208,48 @@ test('re-insertion is bounded per page load — it can never become a write stor
   }
   assert.ok(inserts <= 5, 'gave up after the attempt ceiling, got ' + inserts);
 });
+
+// ---------------------------------------- CL-V5-FOUNDATION-KEEP-001 (live-verified)
+// v5 ships FOUNDATION off because its content belongs in the "Who I am" end-block. On a
+// PRE-v5 letter the who rows are still placeholders, so turning foundation off deleted a
+// real paragraph and put nothing in its place (the owner's live CL: the Codebeamer/FMEA
+// hardware-path prose vanished).
+const realFoundation = () => ({
+  id: 'foundation', type: 'rich_block', on: false, items: [
+    { b: 'Foundation', t: 'I connect what I do best with the outcomes this employer is after.' },
+    { b: 'Hands-on', t: 'across the full hardware product path: requirements and ALM tooling, FMEA.', mk: true },
+    { b: 'Professionally', t: 'that grounding lets me take product ownership across disciplines.', mk: true },
+  ],
+});
+const phWho = () => ({ id: 'who', type: 'rich_block', items: [
+  { b: 'Who I am', t: 'lead' },
+  { b: 'Professional summary', t: '[Identity tied to the role]', mk: true },
+  { b: 'My goal', t: '[The contribution wanted]', mk: true },
+] });
+const realWho = () => ({ id: 'who', type: 'rich_block', items: [
+  { b: 'Who I am', t: 'I work best where uncertainty and delivery move together.' },
+  { b: 'Professional summary', t: 'Over 15 years in electro-optical hardware and governance.', mk: true },
+  { b: 'How I operate', t: 'Calm and structured, I make data-led decisions.', mk: true },
+] });
+
+test('a hidden foundation with REAL prose is kept visible while who is still placeholder', () => {
+  const api = loadSidecar({});
+  const out = api.foundationKeep([realFoundation(), phWho()]);
+  assert.equal(out.changed, true, 'un-hidden');
+  assert.equal(out.list.find((s) => s.id === 'foundation').on, true);
+  assert.equal(api.foundationKeep(out.list).changed, false, 'idempotent — no write storm');
+});
+
+test('once the v5 who carries REAL content, foundation stays hidden as v5 intends', () => {
+  const api = loadSidecar({});
+  assert.equal(api.foundationKeep([realFoundation(), realWho()]).changed, false);
+});
+
+test('a foundation that is only placeholders stays hidden — nothing would be lost', () => {
+  const api = loadSidecar({});
+  const empty = { id: 'foundation', type: 'rich_block', on: false, items: [
+    { b: 'Foundation', t: '[Legacy pre-v5 section]' },
+    { b: 'Hands-on', t: '[Select only skills that match]', mk: true },
+  ] };
+  assert.equal(api.foundationKeep([empty, phWho()]).changed, false);
+});

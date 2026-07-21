@@ -25,7 +25,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.1943-nordic-cl-order-v5';
+  var VERSION = '1.51.1944-nordic-cl-order-v5';
   if (window.__antcvNordicClOrder971 === VERSION) return;
   window.__antcvNordicClOrder971 = VERSION;
 
@@ -125,6 +125,38 @@
   // today, but if something ever does, this converges to "gave up" instead of a write storm
   // (the failure mode of [[preview-freeze-is-textalign-storm]]).
   var MIGRATE_ATTEMPTS = 0, MIGRATE_MAX = 5;
+  // Does this section carry REAL content (any DATA row that is not an empty/bracketed
+  // placeholder)? Row 0 is the section lead-in — furniture, so it does not count.
+  function hasRealBody(s) {
+    return !!(s && Array.isArray(s.items) && s.items.some(function (r, i) {
+      if (i === 0) return false;
+      var t = String((r && r.t) || '').trim();
+      return t && !/^\[/.test(t);
+    }));
+  }
+
+  // CL-V5-FOUNDATION-KEEP-001 (live-verified 2026-07-21): v5 folds FOUNDATION into the
+  // "Who I am" end-block, so the skeleton ships it off. But a PRE-v5 letter still holds
+  // real foundation prose (the owner's live CL had the Codebeamer / FMEA / hardware-path
+  // paragraphs) while its v5 who rows are still placeholders — turning foundation off
+  // there deletes a paragraph from the rendered letter and puts NOTHING in its place.
+  // Keep it visible until `who` actually carries real content; after a v5 regeneration
+  // fills who_summary / who_operate, foundation stays off as intended. Idempotent: once
+  // it is back on, the `on !== false` guard makes this a no-op.
+  function foundationKeep(list) {
+    var f = null, w = null;
+    list.forEach(function (s) { if (!s) return; if (s.id === 'foundation') f = s; if (s.id === 'who') w = s; });
+    if (!f || f.on !== false) return { changed: false, list: list };
+    if (!hasRealBody(f)) return { changed: false, list: list };   // nothing would be lost
+    if (hasRealBody(w)) return { changed: false, list: list };    // v5 who carries it now
+    return {
+      changed: true,
+      list: list.map(function (s) {
+        return (s && s.id === 'foundation') ? Object.assign({}, s, { on: true }) : s;
+      })
+    };
+  }
+
   function migrateV5(list) {
     if (!Array.isArray(list) || !list.length) return { changed: false, list: list };
     if (list.some(function (s) { return s && s.id === 'role_view'; })) {
@@ -232,6 +264,8 @@
       if (disabled() || !isNordicMinimal()) return;
       var secs = readSections(); if (!secs || !Array.isArray(secs.cl)) return;
       var m = migrateV5(secs.cl);
+      var fk = foundationKeep(m.list);
+      m = { changed: m.changed || fk.changed, list: fk.list };
       var a = orderManual() ? { changed: false, list: m.list } : reorder(m.list);
       var b = bringBullets(a.list);
       var g = contributeGoal(b.list);
@@ -247,5 +281,5 @@
   // Run after the per-section converters settle (they use 0/300/900/2000 + late timers),
   // and on later windows to catch a cloud-restore / regen that rewrites cl.
   [350, 1100, 2600, 5000, 9000].forEach(function (ms) { setTimeout(run, ms); });
-  window.AntcvNordicClOrder = { version: VERSION, run: run, ORDER: ORDER, migrateV5: migrateV5, bringBullets: bringBullets, reorder: reorder, isNordicMinimal: isNordicMinimal };
+  window.AntcvNordicClOrder = { version: VERSION, run: run, ORDER: ORDER, migrateV5: migrateV5, bringBullets: bringBullets, reorder: reorder, isNordicMinimal: isNordicMinimal, foundationKeep: foundationKeep };
 })();

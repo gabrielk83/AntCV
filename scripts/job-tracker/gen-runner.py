@@ -426,11 +426,14 @@ CV_SECTIONS = [
 ]
 CL_SECTIONS = [
     ("cl_opening",          "Opening",           "Write the COVER LETTER OPENING line (1-2 first-person sentences): a specific, engaging hook that names the role and gives a genuine, concrete reason this candidate is drawn to it - NOT a flat 'I am applying for the X position at Y'. Calm professional register, no filler, no greeting line, no name."),
-    ("cl_who_i_am",         "WHO I AM",          "Write the COVER LETTER WHO I AM section: 2-3 SHORT first-person sentences, at most ~55 words total (3-4 lines). Tight and readable, no run-ons."),
-    ("cl_what_i_bring",     "WHAT I BRING",      "Write the COVER LETTER WHAT I BRING section as: (1) ONE short lead-in line naming what the candidate brings, ending with a colon (e.g. 'Structure across scope, suppliers, and validation:'); then (2) 4-5 rows, one per line, each 'Focus Area | Strategic Expertise' (the expertise cell max ~90 chars), forward-looking and drawn from THIS job description. Return the lead-in line first, then the rows."),
+    ("cl_who_i_am",         "WHO I AM",          "Write the COVER LETTER WHO I AM end-block (CL-V5-STRUCT-001 - it sits near the END of the letter, after HOW I WILL CONTRIBUTE) in FIVE lines, in this exact order and format: (1) ONE lead sentence on the conditions the candidate works best in; then four labelled lines, each starting with its label and a colon - (2) 'Professional summary:' years, disciplines and the environments the candidate has come from; (3) 'How I operate:' ONE sentence of work style; (4) 'Eligibility:' ONLY when the candidate's stored record CONFIRMS it AND the role makes it relevant (residence/citizenship, criminal-record status, family-tie declarations) - omit the whole line otherwise, and NEVER infer eligibility or clearance from residence or citizenship; (5) 'My goal:' the contribution the candidate wants to make, never unilateral control. Each line at most ~30 words."),
+    ("cl_what_i_bring",     "WHAT I BRING",      "Write the COVER LETTER WHAT I BRING section (CL-V5-STRUCT-001) as: (1) ONE short linking line naming what the candidate brings, ending with a colon; then (2) EXACTLY THREE rows, one per line, each 'Label | Evidence' (evidence cell max ~110 chars): row 1 = the DECISION FOUNDATION (evidence, requirements, supplier input, risk, gates), row 2 = the STRONGEST hands-on cost or technical result with its real number, row 3 = PROJECT, TEAM AND STAKEHOLDER DIRECTION with real scope. Lead with the most role-critical metric; never invent a number. These are the candidate's EVIDENCE - do NOT restate the employer problems from HOW I SEE THE ROLE and do NOT propose what you would do (that is HOW I WILL CONTRIBUTE). Return the lead-in line first, then the three rows."),
     ("cl_why_this_position","WHY THIS POSITION", "Write the COVER LETTER WHY THIS POSITION section: 2-3 SHORT sentences specific to this role and company, at most ~50 words (3-4 lines). Tight and readable."),
+    ("cl_how_i_see_role",   "HOW I SEE THE ROLE","Write the COVER LETTER HOW I SEE THE ROLE section (CL-V5-STRUCT-001, NEW in v5) as: (1) ONE lead sentence naming the connected priorities the work centres on, ENDING WITH A COLON (example shape: 'The work appears to centre on three connected priorities:'); then (2) EXACTLY THREE rows, one per line, each 'Short label | ONE sentence'. Each row states the EMPLOYER'S problem ONLY - what this role has to solve, drawn from the job description. NO candidate evidence, NO proposed solution, no 'I'. Return the lead-in line first, then the three rows."),
     ("cl_how_i_would_contribute","HOW I WOULD CONTRIBUTE","Write the COVER LETTER HOW I WOULD CONTRIBUTE section in THREE parts, in this exact order and format: (1) ONE lead-in sentence (~12-18 words) that frames the first priorities and ENDS WITH A COLON; (2) 3-4 SHORT verb-led action bullets, one per line, each starting with '- '; (3) a FINAL line starting with 'Goal:' naming the concrete outcome the team gains. Return only those lines."),
-    ("cl_foundation",       "FOUNDATION",        "Write the COVER LETTER FOUNDATION section: two SHORT lines labelled 'Hands-on:' and 'Professionally:', each ONE sentence of at most ~30 words."),
+    # CL-V5-STRUCT-001: cl_foundation retired - v5 carries this content in the WHO I AM
+    # end-block (Professional summary / How I operate). Kept out of CL_SECTIONS so the
+    # nightly stops paying for a section the v5 letter no longer renders.
     ("cl_closure",          "Closure",           "Write the COVER LETTER CLOSURE (1-2 first-person sentences): a warm, confident sign-off that INVITES a conversation and points at the concrete value the candidate would bring to THIS employer. Do NOT restate why the candidate is drawn to the role (the opening already does that); focus on the invitation and the value. Not generic boilerplate. No 'Sincerely'/signature line, no name."),
     ("cl_slogan",           "SLOGAN",            "Write ONE short personal cover-letter SLOGAN (max ~10 words, a single line): a specific statement of the value THIS candidate brings to THIS employer, FUSED to the EMPLOYER BRAND block (spirit/values/tone) when one is present — echo the brand's register and one of its values without naming the company. If no brand block is present, derive it from the candidate's fit alone; NEVER invent a company value. Not a generic tagline, no company name, no quotation marks. Return ONLY the line."),
 ]
@@ -1367,19 +1370,60 @@ def build_structured_sections(sk, sections, company, role, language="en"):
             items = s.get("items") or [{"b": "", "t": ""}]
             items = list(items); items[0] = {**items[0], "t": text}
             s["items"] = items
-    # who / why: capped to ~3-4 lines (owner: paragraphs too long).
-    set_lead(cl, "who", _cap_para(gen("cl_who_i_am"), 300))
+    # why: capped to ~3-4 lines (owner: paragraphs too long).
     set_lead(cl, "why", _cap_para(gen("cl_why_this_position"), 280))
 
-    ho, pro, intro = _ov_foundation(raw("cl_foundation"))
-    ho = "" if _is_scaffold(ho) else _cap_para(ho, 200)
-    pro = "" if _is_scaffold(pro) else _cap_para(pro, 200)
+    # who: CL-V5-STRUCT-001 - the identity block moved to the END of the letter and became
+    # a lead sentence + Professional summary / How I operate / Eligibility / My goal.
+    # A model that still returns one paragraph falls back to the pre-v5 single lead row.
+    WHO_LABELS = ["Professional summary", "How I operate", "Eligibility", "My goal"]
+    wraw = gen("cl_who_i_am")
+    wlead, wrows = "", []
+    for ln in (wraw or "").splitlines():
+        t = ln.strip()
+        if not t or _is_scaffold(t): continue
+        hit = None
+        for lab in WHO_LABELS:
+            m = re.match(r"(?i)^\**\s*" + re.escape(lab) + r"\s*\**\s*[:\-]\s*(.+)$", t)
+            if m: hit = (lab, m.group(1)); break
+        if hit: wrows.append({"b": hit[0], "t": _cap_line(sanitize_text(hit[1]), 170), "mk": True})
+        elif not wlead: wlead = _cap_line(sanitize_text(t), 170)
+    ws_ = _ov_find(cl, "who")
+    if ws_ and wrows:
+        ws_["items"] = [{"b": "Who I am", "t": wlead, "bullets": []}] + wrows
+        ws_["leadColon"] = True
+    else:
+        set_lead(cl, "who", _cap_para(wraw, 300))
+
+    # role_view: CL-V5-STRUCT-001 - "How I see the role", the employer-NEED subsection. The
+    # section may be absent from an older captured skeleton, so create it after `why`.
+    rvraw = raw("cl_how_i_see_role")
+    rvrows = [rr for rr in _ov_table(rvraw)
+              if rr and len(rr) >= 2 and not any(_is_scaffold(x) for x in rr)][:3]
+    rvintro = ""
+    for ln in (rvraw or "").splitlines():
+        t = ln.strip()
+        if t and "|" not in t and not _is_scaffold(t):
+            rvintro = _cap_line(sanitize_text(t), 130); break
+    if rvrows:
+        rv = _ov_find(cl, "role_view")
+        if rv is None:
+            rv = {"id": "role_view", "title": "HOW I SEE THE ROLE", "loc": "main", "on": True,
+                  "type": "rich_block", "headlineOff": True, "leadColon": True, "items": []}
+            wi = next((i for i, x in enumerate(cl) if x.get("id") == "why"), -1)
+            cl.insert(wi + 1 if wi >= 0 else 0, rv)
+        rv["items"] = ([{"b": "How I see the role",
+                         "t": rvintro or "The work appears to centre on three connected priorities:",
+                         "bullets": []}]
+                       + [{"b": sanitize_text(rr[0]), "t": _cap_line(sanitize_text(rr[1]), 120), "mk": True}
+                          for rr in rvrows])
+        rv["on"] = True
+
+    # CL-V5-STRUCT-001: FOUNDATION is no longer generated - its content lives in the WHO I AM
+    # end-block. Hide any foundation section a pre-v5 skeleton still carries so the letter
+    # does not ship the section's instructional scaffolding.
     f = _ov_find(cl, "foundation")
-    if f and (ho or pro):
-        items = [{"b": _flabel(language, "label"), "t": intro or _flabel(language, "intro"), "bullets": []}]
-        if ho: items.append({"b": _flabel(language, "handson"), "t": ho, "mk": True})
-        if pro: items.append({"b": _flabel(language, "professionally"), "t": pro, "mk": True})
-        f["items"] = items
+    if f: f["on"] = False
 
     # what_i_bring: a LEAD-IN line + 2-col rows -> intro item + labelled bullets.
     braw = raw("cl_what_i_bring")
@@ -1393,6 +1437,7 @@ def build_structured_sections(sk, sections, company, role, language="en"):
     bs = _ov_find(cl, "bring")
     if bs and brows:
         items = [{"b": "What I bring", "t": bintro, "bullets": []}]
+        bs["leadColon"] = True
         for rr in brows:
             if len(rr) >= 2: items.append({"b": sanitize_text(rr[0]), "t": _cap_line(sanitize_text(rr[1]), 100), "mk": True})
         if len(items) > 1: bs["items"] = items
@@ -1412,7 +1457,7 @@ def build_structured_sections(sk, sections, company, role, language="en"):
                 cbul.append(_cap_line(sanitize_text(re.sub(r"^[-*•]\s+", "", t)), 150)); continue
             if not cintro: cintro = _cap_line(sanitize_text(t), 150)   # first prose line = the lead-in
         if cbul:
-            items = [{"b": "How I would contribute",
+            items = [{"b": "How I will contribute",
                       "t": cintro or "In the first months I would focus on a few concrete priorities:", "bullets": []}]
             items += [{"b": "", "t": b, "mk": True} for b in cbul]
             if goal: items.append({"b": "Goal", "t": goal, "bullets": []})
@@ -1438,7 +1483,7 @@ def build_structured_sections(sk, sections, company, role, language="en"):
     # carries scaffolding (e.g. who/why/bring/contribute the model left empty),
     # and strip any residual '[...]' token from surviving text. This guarantees
     # no instructional template ('[INTRO LINE ...]') ever reaches a persisted app.
-    GEN_CL = {"opening", "who", "why", "bring", "contribute", "foundation", "closure"}
+    GEN_CL = {"opening", "who", "why", "role_view", "bring", "contribute", "closure"}
     def _sec_text(s):
         if s.get("content"): return str(s["content"])
         return " ".join(str((i or {}).get("t", "")) for i in (s.get("items") or []))
@@ -1455,6 +1500,14 @@ def build_structured_sections(sk, sections, company, role, language="en"):
             for i in (s.get("items") or []):
                 if isinstance(i, dict) and isinstance(i.get("t"), str) and _SCAFFOLD_RE.search(i["t"]):
                     i["t"] = _strip_scaffold(i["t"])
+
+    # CL-V5-STRUCT-001: the captured skeleton may still carry the pre-v5 order
+    # (who + foundation before bring). Force the v5 sequence; unknown ids keep
+    # their relative order at the tail. Mirrors pwa/antcv-nordic-cl-order-971.js.
+    V5_ORDER = ["greeting", "opening", "why", "role_view", "bring",
+                "contribute", "who", "foundation", "closure"]
+    known = [s for sid in V5_ORDER for s in cl if s.get("id") == sid]
+    cl = known + [s for s in cl if s.get("id") not in V5_ORDER]
     return cv, cl
 
 # Standing 3-concept specialisation line (SPEC-CATCHY-001) per language — the

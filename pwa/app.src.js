@@ -2414,6 +2414,13 @@
     } catch (_) { return String(s == null ? "" : s); }
   }
   try { if (typeof window !== "undefined") { window.__antcvSloganCap = __antcvSloganCap; window.__antcvSloganDeDangle = __antcvSloganDeDangle; } } catch (_) {}
+  // PALETTE-RESOLVER-A2 (STABLE-PALETTE stage A2, docs/plan/STABLE_PALETTE_AND_LOAD_FIDELITY.md):
+  // the ONE unconditional paper CSS-var bridge. Branded app -> the brand slots (as before);
+  // UNBRANDED app -> the active package's styleConfig (the SAME palette the export band uses),
+  // instead of leaving the vars unset and falling back to navyColor (Ke) — the preview!=export
+  // "colour mix". Self-contained (reads stable localStorage keys, no component vars). Kill:
+  // antcv:disable-palette-resolver=1 (returns exact prior behaviour).
+  (function(){if("undefined"==typeof window)return;function bv(b){return b?{"--header-bg":b.headerBg,"--header-name-color":b.headerInk,"--header-spec-color":b.headerInk,"--header-contact-color":b.headerInk,"--header-line-color":b.accent||b.headerInk,"--sidebar-bg":b.sidebarBg,"--package-base":b.sidebarBg,"--brand-accent":b.accent,"--brand-slogan-color":b.sloganColor,"--brand-signature-color":b.signatureColor,"--brand-ai-notice-color":b.aiNoticeColor}:{}}window.__antcvResolvePaperVars=function(brandSlots){try{if("1"===localStorage.getItem("antcv:disable-palette-resolver"))return bv(brandSlots);if(brandSlots)return bv(brandSlots);var sc=null;try{sc=JSON.parse(localStorage.getItem("styleConfig")||"null")}catch(_){}if(sc&&"object"==typeof sc&&sc.headerBg){var o={"--header-bg":sc.headerBg,"--sidebar-bg":sc.sidebarBg||sc.headerBg,"--package-base":sc.sidebarBg||sc.headerBg};if(sc.headerNameColor)o["--header-name-color"]=sc.headerNameColor;if(sc.headerSpecColor)o["--header-spec-color"]=sc.headerSpecColor;if(sc.headerContactColor)o["--header-contact-color"]=sc.headerContactColor;if(sc.headerLineColor){o["--header-line-color"]=sc.headerLineColor;o["--brand-accent"]=sc.headerLineColor}if(sc.mainLineColor)o["--brand-slogan-color"]=sc.mainLineColor;return o}return{}}catch(_){return bv(brandSlots)}};})();
   // SLOGAN-PLACEMENT-001 (owner 2026-07-14): the slogan can either be VISIBLE
   // between heading and body ('heading', default) OR HIDDEN as a standalone and
   // instead injected as the LEAD-IN (b) of the CL opening's first sentence
@@ -51077,19 +51084,8 @@
                             touchAction: "pan-x pan-y pinch-zoom",
                             transform: `scale(${ui})`,
                             transformOrigin: "top left",
-                            ...(__b ? {
-                              "--header-bg": __b.headerBg,
-                              "--header-name-color": __b.headerInk,
-                              "--header-spec-color": __b.headerInk,
-                              "--header-contact-color": __b.headerInk,
-                              "--header-line-color": __b.accent || __b.headerInk,
-                              "--sidebar-bg": __b.sidebarBg,
-                              "--package-base": __b.sidebarBg,
-                              "--brand-accent": __b.accent,
-                              "--brand-slogan-color": __b.sloganColor,
-                              "--brand-signature-color": __b.signatureColor,
-                              "--brand-ai-notice-color": __b.aiNoticeColor,
-                            } : {}),
+                            // PALETTE-RESOLVER-A2: unconditional bridge (see prelude helper).
+                            ...window.__antcvResolvePaperVars(__b),
                           };
                         })(),
                       },

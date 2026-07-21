@@ -41283,9 +41283,20 @@
                                                 // loaded app's sections came back empty
                                                 // (old wipe-generated bug) — keep current,
                                                 // notice instead. See the topbar twin.
+                                                // SWITCH-OPEN-JDONLY-001 (owner 2026-07-20): an application saved with a JD
+                                                // but NULL cv/cl_sections (many cloud records are JD-only until generated —
+                                                // e.g. #796 Ibsen Photonics, confirmed cv_sections:null in D1) must still OPEN
+                                                // on an EXPLICIT history switch instead of dead-ending on the "no stored
+                                                // content" toast. Safe: a FAILED fetch returns no t.application (handled above),
+                                                // so we only reach here on a SUCCESSFUL fetch of a genuinely section-less record;
+                                                // the prior app was already saved at the top of this handler; and the me() floor
+                                                // fills the empty sections with the template, so the user lands on the app
+                                                // (identity + JD/meta loaded) ready to Generate. Only a record with NO sections
+                                                // AND no JD/identity at all falls through to the notice.
                                                 const __hasReal =
                                                   (Array.isArray(n.cv_sections) && n.cv_sections.length) ||
-                                                  (Array.isArray(n.cl_sections) && n.cl_sections.length);
+                                                  (Array.isArray(n.cl_sections) && n.cl_sections.length) ||
+                                                  !!(String(n.jd_text || "").trim() || n.jd_company || (n.meta && (n.meta.company || n.meta.role)));
                                                 // APPHISTORY-RELOAD-001: the data
                                                 // loaded into state but the user was
                                                 // left on the Settings/History view,
@@ -47708,9 +47719,14 @@
                                     // NOT blank the populated editor — empty sections trip the client
                                     // minimum-sections floor and show the me() template. Keep the
                                     // current draft and surface a notice instead of destroying it.
+                                    // SWITCH-OPEN-JDONLY-001 (owner 2026-07-20): open a JD-only app (null
+                                    // cv/cl_sections) on an explicit switch instead of dead-ending — see the
+                                    // Settings twin. Failed fetch => no t.application (handled above); prior app
+                                    // already saved; me() floor supplies the template so the user can Generate.
                                     const __hasReal =
                                       (Array.isArray(n.cv_sections) && n.cv_sections.length) ||
-                                      (Array.isArray(n.cl_sections) && n.cl_sections.length);
+                                      (Array.isArray(n.cl_sections) && n.cl_sections.length) ||
+                                      !!(String(n.jd_text || "").trim() || n.jd_company || (n.meta && (n.meta.company || n.meta.role)));
                                     // APPHISTORY-RELOAD-001 / 1.50.235:
                                     // surface the loaded CV — switch to the
                                     // editor view and hydrate sections + meta

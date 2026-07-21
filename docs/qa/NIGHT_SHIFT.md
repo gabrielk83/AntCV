@@ -35,6 +35,7 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mrl53oqw_b48x","started":"2026-07-14T21:04:53.003Z","host":"GabyPC2","worktree":null,"branch":"HEAD","range":"1.51.1264-1.51.1283","task":"E cutover: roles-as-universal-rich_block default-on","beat":"2026-07-14T21:04:53.255Z"}
 {"id":"sh_mrl5nybc_9wce","started":"2026-07-14T22:33:09.331Z","host":"GabyPC2","worktree":null,"branch":"claude/hopeful-albattani-24195b","range":"1.51.1404-1.51.1423","task":"SLOGAN-LANG-GATE-001: wrong-language slogan override gate; branded==non-branded parity","beat":"2026-07-14T22:33:10.251Z"}
 {"id":"sh_mruj65y9_3cof","started":"2026-07-21T10:48:38.819Z","host":"GabyPC2","worktree":null,"branch":"claude/optimistic-jang-7b06fe","range":"1.51.1708-1.51.1727","task":"STABLE-PALETTE A2: unconditional palette bridge via shared resolvePaperVars helper (preview==export band, kill-switched)","beat":"2026-07-21T10:48:38.917Z"}
+{"id":"sh_mruj3lnf_h7o1","started":"2026-07-21T10:46:39.198Z","host":"GabyPC2","worktree":null,"branch":"claude/clever-taussig-7836a0","range":"1.51.1708-1.51.1727","task":"SWITCH-OPEN-JDONLY-001: Application History switch (Settings + topbar) opens JD-only apps (null cloud sections) instead of dead-ending on 'no stored content'","beat":"2026-07-21T10:46:39.362Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

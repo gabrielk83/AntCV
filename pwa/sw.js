@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.1704-paginate-stable';
+const CACHE = 'antcv-1.51.1708-switch-open-jdonly';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

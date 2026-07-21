@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.1882-linkedin-card';
+const CACHE = 'antcv-1.51.1902-roles-storm-converge';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

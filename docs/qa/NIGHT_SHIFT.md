@@ -35,6 +35,7 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mrl53oqw_b48x","started":"2026-07-14T21:04:53.003Z","host":"GabyPC2","worktree":null,"branch":"HEAD","range":"1.51.1264-1.51.1283","task":"E cutover: roles-as-universal-rich_block default-on","beat":"2026-07-14T21:04:53.255Z"}
 {"id":"sh_mrl5nybc_9wce","started":"2026-07-14T22:33:09.331Z","host":"GabyPC2","worktree":null,"branch":"claude/hopeful-albattani-24195b","range":"1.51.1404-1.51.1423","task":"SLOGAN-LANG-GATE-001: wrong-language slogan override gate; branded==non-branded parity","beat":"2026-07-14T22:33:10.251Z"}
 {"id":"sh_mruobonv_d2vf","started":"2026-07-21T13:12:54.433Z","host":"GabyPC2","worktree":null,"branch":"shift-salaryenv","range":"1.51.1794-1.51.1797","task":"salary estimate feeds Dream Envelope conflict check","beat":"2026-07-21T13:12:54.824Z"}
+{"id":"sh_mruogkb3_6pr","started":"2026-07-21T13:16:42.072Z","host":"GabyPC2","worktree":null,"branch":"claude/optimistic-jang-7b06fe","range":"1.51.1798-1.51.1817","task":"BRAND-OWNS-COLORS-FIX: drop stale-brand gate (A4 made it reject genuine brands)","beat":"2026-07-21T13:16:43.910Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

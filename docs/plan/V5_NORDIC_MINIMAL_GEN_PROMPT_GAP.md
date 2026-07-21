@@ -58,6 +58,28 @@ v5 order: `Headline/Subtitle/Greeting → Opening → Why this position → How 
 **Insert points:** add `("cl_how_i_see_role","HOW I SEE THE ROLE", …)` to `CL_SECTIONS` gen-runner.py:427-436;
 add `"see_role"` to `GEN_CL` gen-runner.py:1441; insert the id + reorder the `me()` cl array app.src.js:43802.
 
+## 3b. Slogan / headline, its PLACEMENT, and its link to the ROLE
+v5 §1 "HEADLINE, SUBTITLE AND GREETING" (spec lines 133-136):
+> *Use an **outcome-oriented headline linked to the role**. Add a short **application subtitle** when the
+> template supports it. Address a named contact naturally when verified.*
+
+plus MINIMUM-CHANGE RULE (spec l.311): *keep **headline position** when effective.*
+
+In AntCV the "headline" **is the CL slogan** (`antcv:clSlogan`, the tagline at the top of the cover letter).
+
+| v5 requirement | status | evidence |
+|---|---|---|
+| Headline is **outcome-oriented and LINKED TO THE ROLE** | **MISMATCH** | `cl_slogan` ask (gen-runner.py:435) asks for *"a statement of the value THIS candidate brings to THIS employer, **FUSED to the EMPLOYER BRAND block** (spirit/values/tone)"* — it never mentions the **role** and never asks for an **outcome**. Brand-fusion ≠ role-linkage. |
+| Gold reference | — | Ibsen CL headline: *"A **PROJECT MANAGER** WHO **MOVES OPTICAL HARDWARE FROM LAB TO SCALABLE DELIVERY**"* = role noun + outcome. The current brand-fused ask would not reliably produce this shape. |
+| **Application subtitle** (short line naming the application) | **MISSING ENTIRELY** | `grep -ic "An application for"` = **0** in app.src.js, gen-runner.py AND antcv-docx-client.js. Yet the gold Ibsen CL has *"An application for the SBC Project Manager position · Ibsen Photonics · Farum"* (navy italic, centred, amber rule under it) — the consultant added it by hand. No section id, no ask, no render site. |
+| Headline **position** preserved | **PINNED** | `antcv:clSloganMode` = `heading` (tagline) \| `leadin` (folded into the opening's first sentence); 4 hits app.src.js. Placement is user-controlled and persisted, so v5's "keep headline position" is satisfiable. |
+| Role-linkage implies: targeted ⇒ tailored headline, unsolicited ⇒ generic | **PINNED (consistent)** | SLOGAN-SMART-STATEMENT-001 (targeted → `meta.cl_slogan` or nothing, never the specialization triad) + SLOGAN-UNSOL-GENERIC-001 (unsolicited → generic standing default). This existing split *agrees* with v5: no role ⇒ no role-linked headline. Keep it. |
+| 4-8 word cap | **PINNED** | `__antcvSloganCap` + `__antcvSloganDeDangle` (app.src.js ~2380-2404); gen ask says "max ~10 words" — minor inconsistency (10 vs 8) worth aligning. |
+
+**Fix shape:** rewrite the `cl_slogan` ask to lead with **role + outcome**, keeping brand-fusion as a
+*secondary* flavour rather than the organising principle; and add an **application-subtitle** element
+(id + ask + render site in preview/PDF/DOCX) since none exists.
+
 ## 4. Structural separation rule
 | v5 requirement | status | evidence |
 |---|---|---|
@@ -67,7 +89,7 @@ add `"see_role"` to `GEN_CL` gen-runner.py:1441; insert the id + reorder the `me
 | v5 requirement | status | evidence | note |
 |---|---|---|---|
 | PROFILE | **PINNED** | `cv_profile` gen-runner.py:422 | matches (2-3 sentences + Work style) |
-| **Focus Areas mirror the 3 employer priorities** | **CONTRADICTED** | `cv_core` l.424 says *"Backward-looking, **role-independent**"* | v5 requires them to **mirror the three selected priorities** — direct conflict, needs an owner decision |
+| **Focus Areas mirror the 3 employer priorities** | **CONTRADICTED → v5 WINS (owner 2026-07-21)** | `cv_core` l.424 says *"Backward-looking, **role-independent**"* | **RESOLVED: v5 wins.** Rewrite `cv_core` (gen-runner.py:424) so Focus Areas **mirror the three selected JD priorities** (role-specific). Drop "backward-looking, role-independent". |
 | Three-priority evidence map | **MISSING** | no ranking/evidence-map step in gen-runner | |
 | Expertise / Tools / Methods **split** | **TEMPLATE-SUPPLIED** | not in `CV_SECTIONS`; comes from the kernel/`me()` template + sidecars (`antcv-ai-assisted-to-methods.js`) | not a prompt gap per se |
 | "Do not classify methods as tools / instruments as methods" | **MISSING** | `grep -ic "not classify\|methods as tools"` = **0** both | |
@@ -112,16 +134,20 @@ to be mechanically repaired.
 ## Prioritised fix list (most impactful first)
 1. **Add "How I see the role"** + **reorder the CL** to the v5 sequence (`why → see_role → bring → contribute → who`). Biggest structural gap; everything else in §3/§4 depends on it. *(gen-runner.py:427-436 + :1441; app.src.js:43802)*
 2. **Rework "What I bring"** from 4-5 `Focus Area | Expertise` rows → **3 evidence bullets** (foundation / strongest hands-on result / stakeholder direction), and fold `FOUNDATION` into it.
-3. **Add the structural-separation rule** (employer need ≠ candidate evidence ≠ solution).
-4. **MISWG factual rule** — accuracy/risk.
-5. **Voice completions** — no contractions, British spelling, explicit voice block.
-6. **Results-line formula** (`outcome + scale + mechanism`).
-7. **Resolve the Focus-Areas conflict** — v5 "mirror the 3 priorities" vs current "backward-looking, role-independent" (**owner decision needed**).
-8. **Micro-compression ladder** incl. wording-before-font-size.
-9. **Document-QA block** stated to the model (stop authoring what sidecars must repair).
-10. **Modes A/B + source precedence + JSON-delta** — largest new surface; lowest urgency for the nightly clean-gen path.
+3. **Slogan → role-linked** (§3b): rewrite the `cl_slogan` ask (gen-runner.py:435) to lead with **role + outcome**, brand-fusion secondary. Align the word cap (ask says ~10, `__antcvSloganCap` enforces 8).
+4. **Focus Areas → mirror the 3 JD priorities** (§5) — **owner ruled v5 wins**; rewrite `cv_core` gen-runner.py:424, drop "backward-looking, role-independent".
+5. **Add the structural-separation rule** (employer need ≠ candidate evidence ≠ solution).
+6. **MISWG factual rule** — accuracy/risk.
+7. **Application subtitle element** (§3b) — new id + ask + render site (preview/PDF/DOCX); does not exist today.
+8. **Voice completions** — no contractions, British spelling, explicit voice block.
+9. **Results-line formula** (`outcome + scale + mechanism`).
+10. **Micro-compression ladder** incl. wording-before-font-size.
+11. **Document-QA block** stated to the model (stop authoring what sidecars must repair).
+12. **Modes A/B + source precedence + JSON-delta** — largest new surface; lowest urgency for the nightly clean-gen path.
 
-## Open question for the owner
-**§5 Focus Areas** is a genuine contradiction, not an omission: `cv_core` is deliberately *"backward-looking,
-role-independent"* (a stable competency table), while v5 wants Focus Areas to **mirror the three JD priorities**
-(role-specific). These are incompatible designs — confirm which wins before implementing.
+## Owner decisions recorded
+- **2026-07-21 — Focus Areas: v5 WINS.** Where v5 and the current prompt conflict, **v5 is authoritative**.
+  `cv_core` becomes role-specific (mirrors the three JD priorities); the "backward-looking, role-independent"
+  competency-table design is retired.
+- **2026-07-21 — the slogan is in scope.** v5's headline/subtitle/placement guidance (§3b) is part of the
+  writing update, not a separate track: the headline must be **outcome-oriented and linked to the role**.

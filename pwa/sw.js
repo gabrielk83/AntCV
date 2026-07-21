@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.1799-brand-owns-colors';
+const CACHE = 'antcv-1.51.1800-content-lang-dedup';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

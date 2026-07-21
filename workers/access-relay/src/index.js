@@ -2392,6 +2392,26 @@ function shouldDedupeByJob(saveAsNew, jdCompany, jdRole, jdText) {
   return !!co && !/^unsolicited$/i.test(co) && !!role && jd.length > 200;
 }
 
+// DEDUP-ROLE-NORMALIZE-001 (owner 2026-07-21 "at least two copies of each application"): the
+// exact jd_role match spawned a second row for the SAME job whenever the role string varied —
+// en-dash vs hyphen (– / -), a trailing "- <company>" suffix the JD scraper sometimes appends,
+// or case/whitespace (e.g. 3Shape "Senior Project Manager – R&D…" vs "…- R&D… - 3Shape"). This
+// returns a STABLE key for "same role at same employer" so the dedup matches the variants:
+// lowercase, unify dash variants, strip a trailing "- <company>"/"at <company>", punctuation→space.
+function dedupeRoleKey(role, company) {
+  let r = String(role || '').toLowerCase();
+  if (!r.trim()) return '';
+  r = r.replace(/[‐-―−]/g, '-');   // ‐‑‒–—― and − → hyphen
+  const co = String(company || '').toLowerCase().trim();
+  if (co) {
+    const esc = co.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    r = r.replace(new RegExp('\\s*[-@]\\s*' + esc + '\\s*$'), '');   // "… - 3shape"
+    r = r.replace(new RegExp('\\s+at\\s+' + esc + '\\s*$'), '');     // "… at 3shape"
+  }
+  r = r.replace(/[^a-z0-9]+/g, ' ').trim();       // collapse punctuation/whitespace
+  return r;
+}
+
 // ---- CLUSTER-QUAL-001 stage 1: qualification extraction + top-20 recompute --
 // docs/plan/CLUSTER-QUAL-001.md sections 1-3.2. The D1 tables already exist
 // (applied 2026-06-16, confirmed empty pre-this-change); nothing in cv-proxy
@@ -3315,10 +3335,20 @@ async function handleApiApplications(request, env) {
     let dedupeId = null;
     try {
       if (shouldDedupeByJob(body.save_as_new, jdCompany, jdRole, jdText)) {
-        const match = await env.DB.prepare(
-          'SELECT id FROM application WHERE user_hash = ? AND jd_company = ? AND jd_role = ? ORDER BY updated_at DESC LIMIT 1'
-        ).bind(userHash, jdCompany, jdRole).first();
-        dedupeId = match && match.id;
+        // DEDUP-ROLE-NORMALIZE-001: match on the NORMALIZED role within this employer, not the
+        // raw string, so dash/suffix/case variants of the same job UPDATE the existing row
+        // instead of spawning a duplicate. Company stays exact (employers are stable); role is
+        // normalized in JS (can't express in SQL). Freshest match wins (converges on the active
+        // row). Any miss/error leaves dedupeId null -> the jd_hash upsert, exactly as before.
+        const want = dedupeRoleKey(jdRole, jdCompany);
+        if (want) {
+          const cands = await env.DB.prepare(
+            'SELECT id, jd_role FROM application WHERE user_hash = ? AND jd_company = ? ORDER BY updated_at DESC'
+          ).bind(userHash, jdCompany).all();
+          const rows = (cands && cands.results) || [];
+          const hit = rows.find((r) => dedupeRoleKey(r.jd_role, jdCompany) === want);
+          dedupeId = hit && hit.id;
+        }
       }
     } catch (_) { dedupeId = null; }
     // HYGIENE-CATEGORY-DOWNGRADE-001: read the EXISTING row's category (the dedupe row

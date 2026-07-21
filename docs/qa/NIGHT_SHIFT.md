@@ -35,6 +35,7 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mrl53oqw_b48x","started":"2026-07-14T21:04:53.003Z","host":"GabyPC2","worktree":null,"branch":"HEAD","range":"1.51.1264-1.51.1283","task":"E cutover: roles-as-universal-rich_block default-on","beat":"2026-07-14T21:04:53.255Z"}
 {"id":"sh_mrl5nybc_9wce","started":"2026-07-14T22:33:09.331Z","host":"GabyPC2","worktree":null,"branch":"claude/hopeful-albattani-24195b","range":"1.51.1404-1.51.1423","task":"SLOGAN-LANG-GATE-001: wrong-language slogan override gate; branded==non-branded parity","beat":"2026-07-14T22:33:10.251Z"}
 {"id":"sh_mruoi4d7_8izh","started":"2026-07-21T13:17:54.719Z","host":"GabyPC2","worktree":null,"branch":"claude/elated-wilbur-b386b8","range":"1.51.1818-1.51.1837","task":"BABEL-EN-ASYMMETRY: isInLanguage never detects non-Latin content under an en ribbon (chinese-stuck + downstream 415 role storm)","beat":"2026-07-21T13:17:55.471Z"}
+{"id":"sh_mruobua9_wpq","started":"2026-07-21T13:13:01.716Z","host":"GabyPC2","worktree":null,"branch":"claude/clever-taussig-7836a0","range":"1.51.1794-1.51.1813","task":"DEDUP-ROLE-NORMALIZE-001 + APP-SWITCH-CONTENT-LANG-001: dup apps (normalized role dedup + cleanup) + zh selector mismatch (content-language on load)","beat":"2026-07-21T13:13:02.238Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.1922-cl-v5-structure';
+  const TARGET_VERSION = '1.51.1942-cl-tone-gate';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.1922-cl-v5-structure',
     '1.51.1902-roles-storm-converge',
     '1.51.1838-latin-lang-id',
     '1.51.1818-en-asymmetry',

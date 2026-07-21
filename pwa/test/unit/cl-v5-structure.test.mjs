@@ -133,3 +133,34 @@ test('rows after the lead-in become bullets in bring, role_view AND who', () => 
   }
   assert.equal(api.bringBullets(out.list).changed, false, 'idempotent — no re-write storm');
 });
+
+// ---------------------------------------------------- CL-V5-TONE-GATE-001 (live-verified)
+// An ABSENT `toneRegister` is the app's own DEFAULT (scandinavian). The old gate returned
+// false for it, so on the owner's real account run() bailed and NOTHING in this sidecar
+// fired — the v5 ORDER was loaded and idle while sections.cl kept the pre-v5 order.
+test('the tone gate treats an ABSENT toneRegister as the Nordic default', () => {
+  for (const [label, store] of [
+    ['absent', {}],
+    ['null literal', { toneRegister: 'null' }],
+    ['empty string', { toneRegister: '""' }],
+    ['nordic-minimal', { toneRegister: '"nordic-minimal"' }],
+    ['scandinavian', { toneRegister: '"scandinavian"' }],
+    ['unparseable', { toneRegister: 'not json' }],
+  ]) {
+    assert.equal(loadSidecar(store).isNordicMinimal(), true, label + ' -> Nordic default');
+  }
+});
+
+test('an EXPLICIT non-Nordic register still opts out', () => {
+  for (const reg of ['achievement-driven', 'mediterranean-formal', 'prestige-structured']) {
+    assert.equal(loadSidecar({ toneRegister: JSON.stringify(reg) }).isNordicMinimal(), false, reg);
+  }
+});
+
+test('run() actually reaches the CL when toneRegister is absent (the live failure)', () => {
+  const store = { sections: JSON.stringify({ cl: preV5() }) };
+  loadSidecar(store).run();
+  const ids = JSON.parse(store.sections).cl.map((s) => s.id);
+  assert.equal(ids.join('|'), 'greeting|opening|why|role_view|bring|contribute|who|foundation|closure');
+  assert.equal(store['antcv:cl-v5-role-view-migrated'], '1', 'migration ran');
+});

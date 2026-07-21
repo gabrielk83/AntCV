@@ -25,7 +25,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.1922-nordic-cl-order-v5';
+  var VERSION = '1.51.1942-nordic-cl-order-v5';
   if (window.__antcvNordicClOrder971 === VERSION) return;
   window.__antcvNordicClOrder971 = VERSION;
 
@@ -72,9 +72,23 @@
   function needsSeed(t) { var s = String(t == null ? '' : t).trim(); return !s || /^\[/.test(s); }
 
   function disabled() { try { var v = localStorage.getItem('antcv:disable-nordic-cl-order'); return v === '1' || v === 'true'; } catch (_) { return false; } }
+  // TONE-DEFAULT-SCANDINAVIAN-003 (CL-V5-TONE-GATE-001, live-verified on the owner's
+  // account 2026-07-21): an ABSENT `toneRegister` is the app's own DEFAULT (scandinavian),
+  // not "some other style" — but this gate returned false for it, so on a session that had
+  // never explicitly picked a register `run()` returned early and NOTHING in this sidecar
+  // fired: no v5 order, no role_view migration, no bring bullets, no instruction seeding.
+  // The owner's live CL sat at the pre-v5 order with `toneRegister === null` while the v5
+  // ORDER was loaded and idle. Same fix class as TONE-DEFAULT-SCANDINAVIAN-001/002
+  // (converters) and TEMPLATE-STRUCT-DEFAULT-001 (the me() skeleton gate) — only an
+  // EXPLICIT non-Nordic register opts out.
   function isNordicMinimal() {
-    try { var tr = localStorage.getItem('toneRegister'); if (tr) { var v = JSON.parse(tr); return v === 'nordic-minimal' || v === 'scandinavian'; } } catch (_) {}
-    return false;
+    try {
+      var tr = localStorage.getItem('toneRegister');
+      if (!tr) return true;                       // absent -> the app default
+      var v = JSON.parse(tr);
+      return v == null || v === '' || v === 'nordic-minimal' || v === 'scandinavian';
+    } catch (_) {}
+    return true;                                  // unparseable -> treat as default, not opt-out
   }
   function readSections() {
     try { var v = JSON.parse(localStorage.getItem('sections') || '{}'); return (v && typeof v === 'object') ? v : null; } catch (_) { return null; }
@@ -215,5 +229,5 @@
   // Run after the per-section converters settle (they use 0/300/900/2000 + late timers),
   // and on later windows to catch a cloud-restore / regen that rewrites cl.
   [350, 1100, 2600, 5000, 9000].forEach(function (ms) { setTimeout(run, ms); });
-  window.AntcvNordicClOrder = { version: VERSION, run: run, ORDER: ORDER, migrateV5: migrateV5, bringBullets: bringBullets, reorder: reorder };
+  window.AntcvNordicClOrder = { version: VERSION, run: run, ORDER: ORDER, migrateV5: migrateV5, bringBullets: bringBullets, reorder: reorder, isNordicMinimal: isNordicMinimal };
 })();

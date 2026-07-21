@@ -1976,6 +1976,23 @@ async function handleApiPrefsWipeGenerated(request, env) {
   try {
     // The active application = the row the active_application pointer references.
     const ACTIVE_SUBQUERY = 'IN (SELECT application_id FROM active_application WHERE user_hash = ?)';
+    // WIPE-NONDESTRUCTIVE-RESTORE-001 (owner 2026-07-20): SNAPSHOT the active app's LIVE
+    // sections into cv_sections_bak/cl_sections_bak BEFORE the null below, so an abandoned/
+    // failed/mis-routed regen no longer loses the CV permanently — the explicit reopen path
+    // (handleApiApplicationById GET) restores from the backup. Best-effort + OUTSIDE the batch
+    // so if the _bak columns aren't migrated yet this throws harmlessly and the wipe still
+    // nulls exactly as before (no behaviour change until the ALTER runs). Only snapshots when
+    // the current sections are LIVE (non-empty), so a re-wipe of an already-null row can't
+    // clobber a good backup with null. Contamination behaviour is UNCHANGED — sections are
+    // still nulled during regen; the backup is only ever surfaced on a DELIBERATE reopen.
+    try {
+      await env.DB.prepare(
+        'UPDATE application SET ' +
+        "cv_sections_bak = CASE WHEN (cv_sections IS NOT NULL AND cv_sections <> '' AND cv_sections <> '[]' AND cv_sections <> 'null') THEN cv_sections ELSE cv_sections_bak END, " +
+        "cl_sections_bak = CASE WHEN (cl_sections IS NOT NULL AND cl_sections <> '' AND cl_sections <> '[]' AND cl_sections <> 'null') THEN cl_sections ELSE cl_sections_bak END " +
+        'WHERE user_hash = ? AND id ' + ACTIVE_SUBQUERY
+      ).bind(userHash, userHash).run();
+    } catch (_) { /* _bak columns not migrated yet — skip snapshot, wipe still nulls (unchanged) */ }
     const batch = await env.DB.batch([
       env.DB.prepare(
         'DELETE FROM language_view WHERE application_id ' + ACTIVE_SUBQUERY
@@ -3444,6 +3461,37 @@ async function handleApiApplicationById(request, env, idStr) {
       const row = await env.DB.prepare(
         'SELECT * FROM application WHERE id = ?'
       ).bind(appId).first();
+      // WIPE-NONDESTRUCTIVE-RESTORE-001 (owner 2026-07-20): a full regen NULLs the
+      // ACTIVE app's sections (handleApiPrefsWipeGenerated) to avoid seeding the fresh
+      // generation from the prior CV. If that regen was abandoned / failed / mis-routed,
+      // the row was left permanently null ("no stored content" / JD-only — many apps).
+      // The wipe now SNAPSHOTS the live sections into cv_sections_bak/cl_sections_bak
+      // before nulling; here, on an EXPLICIT single-app open whose live sections are
+      // empty but a backup exists, RESTORE the backup into the row (self-heal) and return
+      // it — the user gets their CV back instead of a null/template. SCOPED to this
+      // deliberate GET ONLY, never the /api/prefs active_application seed (line ~1332),
+      // so a mid-regen sync can never re-apply the backup and re-seed the contamination
+      // the wipe prevents. Best-effort + degrades to current behaviour if the _bak
+      // columns aren't migrated yet.
+      if (row) {
+        try {
+          const __empty = (v) => !(typeof v === 'string' && v.trim() && v.trim() !== 'null' && v.trim() !== '[]');
+          const __needCv = __empty(row.cv_sections) && !__empty(row.cv_sections_bak);
+          const __needCl = __empty(row.cl_sections) && !__empty(row.cl_sections_bak);
+          if (__needCv || __needCl) {
+            await env.DB.prepare(
+              'UPDATE application SET ' +
+              "cv_sections = CASE WHEN (cv_sections IS NULL OR cv_sections = '' OR cv_sections = '[]' OR cv_sections = 'null') THEN cv_sections_bak ELSE cv_sections END, " +
+              "cl_sections = CASE WHEN (cl_sections IS NULL OR cl_sections = '' OR cl_sections = '[]' OR cl_sections = 'null') THEN cl_sections_bak ELSE cl_sections END, " +
+              'cv_sections_bak = NULL, cl_sections_bak = NULL, updated_at = ? ' +
+              'WHERE id = ? AND user_hash = ?'
+            ).bind(Math.floor(Date.now() / 1000), appId, userHash).run();
+            if (__needCv) row.cv_sections = row.cv_sections_bak;
+            if (__needCl) row.cl_sections = row.cl_sections_bak;
+            try { console.log('[apps] WIPE-NONDESTRUCTIVE-RESTORE-001: restored backed-up sections for app', appId, '(a regen had left it empty)'); } catch (_) {}
+          }
+        } catch (_) { /* _bak columns not migrated / restore failed — return the row as-is (current behaviour) */ }
+      }
       return jsonResponse(
         { ok: true, application: shapeApplicationRow(row) },
         200, request, env, refresh

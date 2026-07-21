@@ -40,6 +40,8 @@ CREATE TABLE IF NOT EXISTS application (
   rationale          TEXT,                       -- JSON: LLM JD-analysis output
   cv_sections        TEXT,                       -- JSON, in jd_language
   cl_sections        TEXT,                       -- JSON, in jd_language
+  cv_sections_bak    TEXT,                       -- WIPE-NONDESTRUCTIVE-RESTORE-001: pre-regen snapshot; restored on reopen if a regen left cv_sections NULL
+  cl_sections_bak    TEXT,                       -- WIPE-NONDESTRUCTIVE-RESTORE-001: pre-regen snapshot; restored on reopen if a regen left cl_sections NULL
   style_config       TEXT,                       -- JSON: this application's OWN brand-fit/custom colors+fonts (BRAND-FIT-PER-APP-001)
   created_at         INTEGER NOT NULL,
   updated_at         INTEGER NOT NULL,
@@ -47,6 +49,9 @@ CREATE TABLE IF NOT EXISTS application (
   UNIQUE (user_hash, jd_hash)
 );
 -- existing tables: style_config added live via `ALTER TABLE application ADD COLUMN style_config TEXT;`
+-- existing tables: WIPE-NONDESTRUCTIVE-RESTORE-001 backups added live via
+--   `ALTER TABLE application ADD COLUMN cv_sections_bak TEXT;`
+--   `ALTER TABLE application ADD COLUMN cl_sections_bak TEXT;`
 
 CREATE TABLE IF NOT EXISTS language_view (
   application_id    INTEGER NOT NULL,

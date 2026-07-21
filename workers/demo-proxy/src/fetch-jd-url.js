@@ -214,6 +214,40 @@ function extractTitle(html) {
   return decodeEntities(m[1].replace(/\s+/g, ' ').trim()).slice(0, 300);
 }
 
+// LINKEDIN-CARD-EXTRACT-001 (owner 2026-07-21 "manual add lost company/position for LinkedIn"):
+// the LinkedIn guest jobPosting FRAGMENT (what the guest rewrite fetches) has NO <title> tag, so
+// extractTitle() returned '' and the tracker's Company/Role auto-fill had nothing to derive from.
+// The fragment DOES carry the role in <h2 class="…top-card-layout__title / topcard__title…"> and
+// the company in <a class="…topcard__org-name-link…">. Mirror of workers/proxy (cv-proxy).
+function extractLinkedInCard(html, bodyText) {
+  const clean = (s) => decodeEntities(String(s || '').replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
+  let role = '', company = '';
+  const tm = /<h2\b[^>]*class="[^"]*(?:top-card-layout__title|topcard__title)[^"]*"[^>]*>([\s\S]*?)<\/h2>/i.exec(html);
+  if (tm) role = clean(tm[1]).slice(0, 200);
+  // org-name-link is the POSTING company — but for a recruiter posting that is the AGENCY
+  // ("PMs for Hire"), not the hiring employer (owner 2026-07-21: "the company is DTU Wind").
+  let orgName = '';
+  const cm = /<a\b[^>]*class="[^"]*topcard__org-name-link[^"]*"[^>]*>([\s\S]*?)<\/a>/i.exec(html);
+  if (cm) orgName = clean(cm[1]).slice(0, 120);
+  if (!orgName) { const fm = /<span\b[^>]*class="[^"]*topcard__flavor(?![-\w])[^"]*"[^>]*>([\s\S]*?)<\/span>/i.exec(html); if (fm) orgName = clean(fm[1]).slice(0, 120); }
+  // Real employer: recruiters append the actual employer as the title's trailing "- <Employer>".
+  // Prefer it over the agency org-name when it is SHORT and appears VERBATIM in the JD body (a
+  // strong signal it is the hiring company, not part of the role), and strip it from the role.
+  // Direct postings have no such suffix -> orgName (the real employer) is kept.
+  const body = String(bodyText || '');
+  const parts = role.split(/\s+[–—-]\s+/);
+  if (parts.length >= 2) {
+    const last = parts[parts.length - 1].trim();
+    const esc = last.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (last && last.split(/\s+/).length <= 5 && esc && new RegExp('\\b' + esc + '\\b', 'i').test(body)) {
+      company = last;
+      role = parts.slice(0, -1).join(' - ').trim();
+    }
+  }
+  if (!company) company = orgName;
+  return { role, company };
+}
+
 
 // ─── L3: consent banner + commercial popup removal ──────────────
 // Cookie-consent blocks and commercial interstitials are usually
@@ -765,7 +799,9 @@ export async function handleFetchJdUrl(request, env, getCORS) {
   }
 
   const htmlLen = html.length;
-  const title = extractTitle(html);
+  let title = extractTitle(html);
+  let liCompany = '';
+  const __isLinkedIn = String(rewriteNote || '').startsWith('linkedin-guest-rewrite');
 
   // L3: strip consent banners + commercial popups before extraction.
   const cleaned = stripConsentAndPopups(html);
@@ -788,6 +824,14 @@ export async function handleFetchJdUrl(request, env, getCORS) {
     truncated = true;
   }
 
+  // LINKEDIN-CARD-EXTRACT-001: the guest fragment has no <title>; pull role + REAL employer from
+  // the top-card (body-confirming a recruiter-appended employer) so the tracker pre-fills again.
+  if (__isLinkedIn) {
+    const card = extractLinkedInCard(html, text);
+    if (card.role) title = card.role;
+    if (card.company) liCompany = card.company;
+  }
+
   // L1 gate: flag low-quality / consent / wall content.
   const wallHint = validateContentQuality(text);
 
@@ -795,6 +839,7 @@ export async function handleFetchJdUrl(request, env, getCORS) {
     ok: true,
     text,
     title,
+    company: liCompany || undefined,   // LINKEDIN-CARD-EXTRACT-001: employer for the tracker pre-fill
     source: url.toString(),
     fetched_url: fetchUrl,
     rewrite: rewriteNote,

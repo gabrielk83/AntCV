@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.1838-latin-lang-id';
+const CACHE = 'antcv-1.51.1882-linkedin-card';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

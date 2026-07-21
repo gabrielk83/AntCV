@@ -613,7 +613,10 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
         return;
       }
       const title = (jd.title || '').replace(/\s*[|·—-]\s*(LinkedIn|Jobindex|Indeed|The Happy Recruiter).*$/i, '').trim();
-      const company = window.prompt('Company?', title.split(/ at | hos | - | \| /i).pop()?.trim() || '') || '';
+      // LINKEDIN-CARD-EXTRACT-001: the proxy now returns the real employer (jd.company) for
+      // LinkedIn postings (whose guest fragment has no <title>), and jd.title is the clean role —
+      // so the Company/Role prompts pre-fill again. Fall back to the old title-split guess otherwise.
+      const company = window.prompt('Company?', (jd.company || title.split(/ at | hos | - | \| /i).pop()?.trim() || '')) || '';
       const role = window.prompt('Role / title?', title) || '';
       if (!company && !role) return;
       setNote('Analysing the JD & extracting signals…');

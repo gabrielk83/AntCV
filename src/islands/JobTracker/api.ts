@@ -122,12 +122,14 @@ export async function putDoc(doc: TrackerDoc, baseRev: number | null): Promise<P
 }
 
 // Proxy JD fetch (same pipeline that unlocked the LinkedIn set).
-export interface JdFetch { ok: boolean; text?: string; title?: string; wall_hint?: string | null; error?: string; }
+export interface JdFetch { ok: boolean; text?: string; title?: string; company?: string; wall_hint?: string | null; error?: string; }
 export async function fetchJdUrl(url: string): Promise<JdFetch> {
   const res = await call('/api/fetch-jd-url', { method: 'POST', body: JSON.stringify({ url }) });
   const j = await res.json().catch(() => ({}));
   if (!res.ok || j.ok === false) return { ok: false, error: (j && j.error) || ('HTTP ' + res.status), wall_hint: j.wall_hint };
-  return { ok: true, text: j.text, title: j.title, wall_hint: j.wall_hint };
+  // LINKEDIN-CARD-EXTRACT-001: the proxy now returns the employer (company) for LinkedIn postings
+  // whose guest fragment has no <title>, so the tracker can pre-fill Company + Role again.
+  return { ok: true, text: j.text, title: j.title, company: j.company, wall_hint: j.wall_hint };
 }
 
 // Seed a real, persisted AntCV application (D1 `application` row, deduped by

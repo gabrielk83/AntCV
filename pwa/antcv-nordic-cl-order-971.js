@@ -25,13 +25,37 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.45-nordic-cl-order';
+  var VERSION = '1.51.1922-nordic-cl-order-v5';
   if (window.__antcvNordicClOrder971 === VERSION) return;
   window.__antcvNordicClOrder971 = VERSION;
 
   // The canonical Nordic CL body order (by section id). The positioning line is the F1
   // slogan (rendered above the body, not a section). Sign-off + AI notice are separate.
-  var ORDER = ['greeting', 'opening', 'why', 'who', 'foundation', 'bring', 'contribute', 'closure'];
+  //
+  // CL-V5-STRUCT-001 (owner 2026-07-21, docs/plan/AntCV_Generation_Upgrade_Plan_2026-07-17.md §1):
+  // v5 splits employer NEED / candidate EVIDENCE / proposed APPROACH into three separate
+  // subsections and moves the identity block to the END:
+  //   greeting -> opening -> why -> role_view -> bring -> contribute -> who -> closure
+  // `role_view` ("How I see the role") is NEW; `foundation` is folded into the end-block
+  // "Who I am" and rides at the tail so a legacy CL that still carries real foundation
+  // content keeps rendering it instead of losing it.
+  var ORDER = ['greeting', 'opening', 'why', 'role_view', 'bring', 'contribute', 'who', 'foundation', 'closure'];
+
+  // The v5 "How I see the role" template, inserted once into a pre-v5 CL (see migrateV5).
+  // Mirrors the me() skeleton — employer PROBLEM only, three bullets, no candidate evidence.
+  var ROLE_VIEW_TEMPLATE = {
+    id: 'role_view', title: 'HOW I SEE THE ROLE', loc: 'main', on: true,
+    type: 'rich_block', headlineOff: true, leadColon: true,
+    items: [
+      { b: 'How I see the role', t: '[LEAD SENTENCE - one line naming the connected priorities the work centres on, ending with a colon (example shape: "The work appears to centre on three connected priorities:").]' },
+      { b: '[Employer priority 1 - short label]', t: "[ONE sentence stating the EMPLOYER'S problem only - what this role has to solve. NO candidate evidence, NO proposed solution, no \"I\".]", mk: true },
+      { b: '[Employer priority 2 - short label]', t: '[ONE sentence stating the second employer problem. Employer-centred only.]', mk: true },
+      { b: '[Employer priority 3 - short label]', t: '[ONE sentence stating the third employer problem. Employer-centred only.]', mk: true }
+    ]
+  };
+
+  // Rows AFTER the lead-in render as visible bullets in these v5 sections.
+  var BULLET_SECTIONS = { bring: 1, role_view: 1, who: 1 };
 
   // NORDIC-CL-TEMPLATE-SEED-001 (owner 2026-06-29): the per-section converters create the bring
   // lead-in with an EMPTY body and leave foundation Hands-on/Professionally empty/old, so the live
@@ -72,18 +96,35 @@
     return { changed: before !== after, list: out };
   }
 
-  // BRING: the rows after the "What I bring" lead-in render as visible bullets (mk:true).
-  // The lead-in is the FIRST row (a markerless {b:title, t}); every later data row gets mk.
+  // CL-V5-STRUCT-001: insert the NEW "How I see the role" section into a pre-v5 CL, once.
+  // Guarded by a one-shot flag so a user who hides or deletes the section keeps it gone.
+  function migrateV5(list) {
+    if (!Array.isArray(list) || !list.length) return { changed: false, list: list };
+    if (list.some(function (s) { return s && s.id === 'role_view'; })) return { changed: false, list: list };
+    try { if (localStorage.getItem('antcv:cl-v5-role-view-migrated') === '1') return { changed: false, list: list }; } catch (_) {}
+    // Only migrate a CL that actually looks like the Nordic body (not an empty/foreign doc).
+    if (!list.some(function (s) { return s && (s.id === 'bring' || s.id === 'contribute'); })) return { changed: false, list: list };
+    var at = list.findIndex(function (s) { return s && s.id === 'why'; });
+    var out = list.slice();
+    out.splice(at >= 0 ? at + 1 : 0, 0, JSON.parse(JSON.stringify(ROLE_VIEW_TEMPLATE)));
+    try { localStorage.setItem('antcv:cl-v5-role-view-migrated', '1'); } catch (_) {}
+    return { changed: true, list: out };
+  }
+
+  // BRING / ROLE_VIEW / WHO: the rows after the section lead-in render as visible bullets
+  // (mk:true). The lead-in is the FIRST row (a markerless {b:title, t}); later rows get mk.
   function bringBullets(list) {
     var changed = false;
     var out = list.map(function (s) {
-      if (!s || s.id !== 'bring' || s.type !== 'rich_block' || !Array.isArray(s.items) || s.items.length < 2) return s;
+      if (!s || !BULLET_SECTIONS[s.id] || s.type !== 'rich_block' || !Array.isArray(s.items) || s.items.length < 2) return s;
+      var touched = false;
       var items = s.items.map(function (r, i) {
         if (i === 0) return r;                         // lead-in stays a paragraph
-        if (r && typeof r === 'object' && r.mk !== true) { changed = true; return Object.assign({}, r, { mk: true }); }
+        if (r && typeof r === 'object' && r.mk !== true) { touched = true; return Object.assign({}, r, { mk: true }); }
         return r;
       });
-      if (!changed) return s;
+      if (!touched) return s;                          // per-section, not shared state
+      changed = true;
       return Object.assign({}, s, { items: items });
     });
     return { changed: changed, list: out };
@@ -158,11 +199,12 @@
     try {
       if (disabled() || !isNordicMinimal()) return;
       var secs = readSections(); if (!secs || !Array.isArray(secs.cl)) return;
-      var a = orderManual() ? { changed: false, list: secs.cl } : reorder(secs.cl);
+      var m = migrateV5(secs.cl);
+      var a = orderManual() ? { changed: false, list: m.list } : reorder(m.list);
       var b = bringBullets(a.list);
       var g = contributeGoal(b.list);
       var sd = seedInstructions(g.list);
-      if (!a.changed && !b.changed && !g.changed && !sd.changed) return;
+      if (!m.changed && !a.changed && !b.changed && !g.changed && !sd.changed) return;
       secs.cl = sd.list;
       localStorage.setItem('sections', JSON.stringify(secs));
       try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { reason: 'nordic-cl-order-971' } })); } catch (_) {}
@@ -173,5 +215,5 @@
   // Run after the per-section converters settle (they use 0/300/900/2000 + late timers),
   // and on later windows to catch a cloud-restore / regen that rewrites cl.
   [350, 1100, 2600, 5000, 9000].forEach(function (ms) { setTimeout(run, ms); });
-  window.AntcvNordicClOrder = { version: VERSION, run: run, ORDER: ORDER };
+  window.AntcvNordicClOrder = { version: VERSION, run: run, ORDER: ORDER, migrateV5: migrateV5, bringBullets: bringBullets, reorder: reorder };
 })();

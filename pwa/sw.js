@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.1902-roles-storm-converge';
+const CACHE = 'antcv-1.51.1922-cl-v5-structure';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

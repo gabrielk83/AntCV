@@ -50,9 +50,11 @@ function __clReal(c) {
   return /^\s*\[/.test(String(v).trim()) ? '' : v;
 }
 
-// Pulled verbatim from the Nordic CL template's `closure` section (app.src.js line ~3538).
+// Pulled verbatim from the Nordic CL template's `closure` section in me()
+// (CL-V5-STRUCT-001 reworded it to the v5 CLOSING rule; the placeholder SHAPE —
+// nested brackets, no em dash — is what this test pins).
 const NORDIC_CLOSURE_PLACEHOLDER =
-  '[CLOSURE - 1-2 sentences: "I would welcome the chance to talk through how I could support [Company] in [position/department] by contributing to [relevant scope]." No generic sign-offs. Write in the target language (en/da/es/zh, etc.); default to the role\'s local language if the JD is in it.]';
+  '[CLOSING - connect the strongest match, invite a conversation, and stay SHORTER than the body: "I would welcome a talk on how [strongest match] could support [Company] in [scope]." No generic sign-offs. Write in the target language (en/da/es/zh, etc.); default to the role\'s local language if the JD is in it.]';
 
 test('source fixture: the Nordic closure placeholder is unchanged in app.src.js', () => {
   // app.src.js stores this as a JSON-escaped JS string literal (embedded `"` become `\"`) — compare

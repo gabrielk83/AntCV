@@ -6536,7 +6536,15 @@
             // captured every body row (the "section CJLR still controls the rows" bug).
             const v = (key && __al[key]) || __al["items." + i] || __al[String(i)] || (isGrp ? __al.__group__ : void 0);
             if (["left", "center", "right", "justify"].includes(v)) return v;
-            return isGrp ? (isRole ? "justify" : "center") : (__hasGrp ? "left" : "justify");
+            // SIDEBAR-RICHBLOCK-NOJUSTIFY-001 (owner 2026-07-20): a FLAT sidebar rich_block
+            // (CERTIFICATES & COURSES, INTERESTS, template TOOLS) defaulted its content rows to
+            // "justify" — but the sidebar column is narrow, so justify over-stretches into ugly
+            // inter-word gaps AND the dejustifyNarrowSidebar sidecar flips it back to "left" on
+            // every pass, producing the left<->justify "jumping" the owner reported (reproduces on
+            // the template CV). Default sidebar content rows to LEFT at the SOURCE so there is
+            // nothing to flip — matches what the de-justify pass wanted. Main-column flat
+            // rich_blocks keep justify; explicit per-row CJLR (v, above) still wins.
+            return isGrp ? (isRole ? "justify" : "center") : ((__hasGrp || S) ? "left" : "justify");
           };
           // GROUP-EMPTY-HIDE-001 (owner 2026-07-06): a {grp} sub-heading with NO rendered child
           // row must be hidden entirely (heading + label), not left as a bare dangling label —

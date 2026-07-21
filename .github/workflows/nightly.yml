@@ -76,9 +76,14 @@ jobs:
           ALLOW_DEPLOY: ${{ inputs.allow_deploy || 'false' }}
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Use the workflow's GITHUB_TOKEN (granted contents/PR write above) for all git ops,
+          # instead of the OIDC->GitHub-App (claude[bot]) token whose push rights we can't verify.
+          # main is unprotected, so this token can push docs/registers + open PRs directly.
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           claude_args: |
             --model claude-opus-4-8
             --max-turns 80
+            --verbose
             --allowedTools Edit,Read,Write,Bash,Glob,Grep,WebSearch,WebFetch
           prompt: |
             You are the AntCV NIGHTLY running unattended in GitHub Actions on repo gabrielk83/AntCV.

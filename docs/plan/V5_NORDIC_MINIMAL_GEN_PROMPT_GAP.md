@@ -9,6 +9,27 @@ Read-only analysis (2026-07-21). Source spec: **General CV + Cover-Letter Genera
 **Mandatory NORDIC MINIMAL cover-letter logic** — Nordic Minimal is the style id; the logic is not
 Danish-language-specific (it applies to en/da/es/zh/he/am alike).
 
+> ## ⚠ STATUS UPDATE (2026-07-21, same day) — a parallel session shipped part of this
+> While this report was being written, **CL-V5-STRUCT-001** landed (`1.51.1922` + tone-gate fix
+> `1.51.1942`). Re-verified against the tree, so the table below is **partly historical**:
+>
+> **DONE (verified):**
+> - **`cl_how_i_see_role` now EXISTS** (gen-runner.py:432) — lead sentence + **exactly three rows**,
+>   employer problem ONLY, "NO candidate evidence, NO proposed solution, no 'I'". Closes §3's biggest gap.
+> - **`cl_what_i_bring` reworked** (gen-runner.py:430) — now **exactly three evidence rows**:
+>   decision foundation / strongest hands-on result with its real number / project-team-stakeholder
+>   direction. Exactly the v5 shape; `FOUNDATION` is folded in as row 1.
+> - **§4 structural-separation rule is now ENCODED INLINE** in both asks ("do NOT restate the employer
+>   problems from HOW I SEE THE ROLE and do NOT propose what you would do").
+> - CL **ordering** is driven by the sidecar `pwa/antcv-nordic-cl-order-971.js` (that is why the `me()`
+>   array at app.src.js:43815 still lists the old order — it is overridden at render).
+>
+> **STILL OPEN (re-verified by grep):** slogan role-linkage §3b (`cl_slogan` unchanged, still
+> brand-fused) · Focus Areas §5 (`cv_core` still "Backward-looking, role-independent") · application
+> subtitle (0 hits) · MISWG (0/0) · contractions (0/0) · British spelling · Results-line formula (0/1) ·
+> Tools-vs-Methods classification (0/0) · micro-compression ladder · Document-QA block · Modes A/B +
+> source precedence.
+
 ## Where generation is actually pinned
 | source | role |
 |---|---|
@@ -132,11 +153,14 @@ to be mechanically repaired.
 ---
 
 ## Prioritised fix list (most impactful first)
-1. **Add "How I see the role"** + **reorder the CL** to the v5 sequence (`why → see_role → bring → contribute → who`). Biggest structural gap; everything else in §3/§4 depends on it. *(gen-runner.py:427-436 + :1441; app.src.js:43802)*
-2. **Rework "What I bring"** from 4-5 `Focus Area | Expertise` rows → **3 evidence bullets** (foundation / strongest hands-on result / stakeholder direction), and fold `FOUNDATION` into it.
+> Items 1, 2 and 5 were **SHIPPED by CL-V5-STRUCT-001 (1.51.1922/1.51.1942)** — see the STATUS UPDATE
+> at the top. They are struck through; the live queue starts at **item 3**.
+
+1. ~~**Add "How I see the role"** + reorder the CL to the v5 sequence~~ — **DONE** (gen-runner.py:432; order via `antcv-nordic-cl-order-971.js`)
+2. ~~**Rework "What I bring"** → 3 evidence rows, fold `FOUNDATION` in~~ — **DONE** (gen-runner.py:430)
 3. **Slogan → role-linked** (§3b): rewrite the `cl_slogan` ask (gen-runner.py:435) to lead with **role + outcome**, brand-fusion secondary. Align the word cap (ask says ~10, `__antcvSloganCap` enforces 8).
 4. **Focus Areas → mirror the 3 JD priorities** (§5) — **owner ruled v5 wins**; rewrite `cv_core` gen-runner.py:424, drop "backward-looking, role-independent".
-5. **Add the structural-separation rule** (employer need ≠ candidate evidence ≠ solution).
+5. ~~**Add the structural-separation rule**~~ — **DONE**, encoded inline in both asks (gen-runner.py:430,432).
 6. **MISWG factual rule** — accuracy/risk.
 7. **Application subtitle element** (§3b) — new id + ask + render site (preview/PDF/DOCX); does not exist today.
 8. **Voice completions** — no contractions, British spelling, explicit voice block.

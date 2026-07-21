@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.1794-salary-envelope';
+const CACHE = 'antcv-1.51.1799-brand-owns-colors';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

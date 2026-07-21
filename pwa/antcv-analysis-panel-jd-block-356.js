@@ -783,6 +783,75 @@
     syncWithReportBlock(panel);
   }
 
+  // AUTO-ANALYSE-ON-JD-LOAD-001 (owner 2026-07-19): OPEN-ANALYSIS-AUTORUN-001 above only
+  // fires from inside buildBlock() — i.e. once the user has OPENED the Analysis panel.
+  // The owner wants the analysis to run automatically WHEN A JD IS LOADED, without
+  // opening the panel first ("execute the jd analysis ... not wait for pressing analyse
+  // JD, even in fresh generations"). This headless runner does the same network +
+  // rationale-merge the in-panel Run button does, minus the UI, and the scheduler fires
+  // it once per JD. The shared AUTORUN_KEY fingerprint caps it at ONE LLM run per JD, so
+  // it never double-spends with the in-panel autorun or a later generation.
+  var __headlessRunning = false;
+  async function runHeadlessJdAnalysis(jd, proxyUrl) {
+    var live = readLiveSections();
+    var cvSections = null, clSections = null;
+    if (live) {
+      if (sectionsHaveContent(live.cv)) cvSections = live.cv;
+      if (sectionsHaveContent(live.cl)) clSections = live.cl;
+    } else {
+      cvSections = readSections('cv_pwa_sections');
+      clSections = readSections('cl_pwa_sections');
+    }
+    var summaryStr = cvSections ? JSON.stringify(cvSections).slice(0, 8000) : '';
+    var rfBody = { jd_text: jd, cv_sections: cvSections || [], doc_target: clSections ? 'both' : 'cv' };
+    if (clSections) rfBody.cl_sections = clSections;
+    var rf = window.AntcvRecheckFit;
+    var pFit = cvSections ? postRecheckFit(proxyUrl, rfBody).catch(function () { return null; }) : Promise.resolve(null);
+    var pJd = (rf && typeof rf._postJdAnalysis === 'function')
+      ? rf._postJdAnalysis(proxyUrl, { jd_text: jd, candidate_summary: summaryStr, search_recruiter: true }).catch(function () { return null; })
+      : Promise.resolve(null);
+    var resFit = await pFit, resJd = await pJd;
+    var fit = (resFit && resFit.status === 200 && resFit.body && resFit.body.ok) ? resFit.body.analysis : null;
+    var jdA = (resJd && resJd.status === 200 && resJd.body && resJd.body.ok) ? (resJd.body.analysis || resJd.body) : null;
+    if (!fit && !jdA) return false;
+    var merged = readRationale() || {};
+    if (fit) {
+      if (fit.summary !== undefined) merged.summary = fit.summary;
+      if (fit.fit_score !== undefined) merged.fit_score = fit.fit_score;
+      if (fit.strengths !== undefined) merged.strengths = fit.strengths;
+      if (fit.gaps !== undefined) merged.gaps = fit.gaps;
+      if (fit.suggested_edits !== undefined) merged.suggested_edits = fit.suggested_edits;
+    }
+    if (jdA) {
+      if (jdA.recruiter !== undefined) merged.recruiter = jdA.recruiter;
+      merged.red_flags = (jdA.red_flags !== undefined) ? jdA.red_flags : (merged.red_flags || []);
+      if (jdA.questions !== undefined) merged.questions_in_jd = jdA.questions;
+      else if (jdA.questions_in_jd !== undefined) merged.questions_in_jd = jdA.questions_in_jd;
+      if (jdA.assumptions !== undefined) merged.assumptions = jdA.assumptions;
+      if (jdA.recommendations !== undefined) merged.recommendations = jdA.recommendations;
+      if (jdA.confidence_notes !== undefined) merged.confidence_notes = jdA.confidence_notes;
+    }
+    merged._jdAnalysisMergedAt = Date.now();
+    if (writeRationale(merged)) fireMerge();
+    return true;
+  }
+  function maybeAutoRunOnJdLoad() {
+    try {
+      if (__headlessRunning) return;
+      if (rationaleHasAnalysis(readRationale())) return;         // already analysed → nothing to do
+      var jd = '';
+      try { jd = String(localStorage.getItem('antcv:lastJdText') || '').trim(); } catch (_) {}
+      if (jd.length < 50) return;                                 // no real JD loaded yet
+      var fp = jdFingerprint(jd);
+      if (localStorage.getItem(AUTORUN_KEY) === fp) return;       // this JD already auto-run once
+      var proxyUrl = readProxyUrl();
+      if (!proxyUrl) return;
+      localStorage.setItem(AUTORUN_KEY, fp);                      // claim BEFORE the async call so it can't double-fire
+      __headlessRunning = true;
+      runHeadlessJdAnalysis(jd, proxyUrl).catch(function () {}).then(function () { __headlessRunning = false; });
+    } catch (_) { __headlessRunning = false; }
+  }
+
   var pending = false;
   function schedule() {
     if (pending) return;
@@ -790,11 +859,19 @@
     requestAnimationFrame(function () {
       pending = false;
       try { ensureBlock(); } catch (_) {}
+      try { maybeAutoRunOnJdLoad(); } catch (_) {}
     });
   }
 
   schedule();
   [300, 800, 1800, 3500, 6000].forEach(function (d) { setTimeout(schedule, d); });
+  // AUTO-ANALYSE-ON-JD-LOAD-001: a slow poll catches a JD attached AFTER boot (URL fetch /
+  // file upload / tracker Open mirror it to antcv:lastJdText) even when no DOM mutation
+  // reaches the observer; self-limits — stops once an analysis exists for the loaded JD.
+  var __aaPoll = setInterval(function () {
+    try { maybeAutoRunOnJdLoad(); } catch (_) {}
+  }, 3000);
+  window.addEventListener('antcv:jd-loaded', maybeAutoRunOnJdLoad);
   try {
     new MutationObserver(function (records) {
       var meaningful = false;

@@ -8,9 +8,29 @@ Owner: Gabriel. Style: direct, factual, compressed, no corporate filler.
 ---
 
 You are an autonomous AntCV maintenance run on the GitHub repo **gabrielk83/AntCV** (a React PWA in
-`pwa/` + Cloudflare Workers in `workers/`). Work the prioritised backlog below, ship VERIFIED fixes
-only. Hard rule: **an end result, not a brickable mid-product** — one solid verified fix beats
-several half-verified ones.
+`pwa/` + Cloudflare Workers in `workers/`). Ship VERIFIED fixes only. Hard rule: **an end result,
+not a brickable mid-product** — one solid verified fix beats several half-verified ones.
+
+## AUTHORITATIVE PLAN (read first — SUPERSEDES the historical backlog lower in this file)
+Work the SAME live plan the desktop nightly works, not the dated NVIDIA/1.50.x lists below (those
+are HISTORICAL context, mostly shipped):
+1. The newest dated `docs/qa/NIGHTLY_*_PROMPT.md` (its PRIORITY BANDS are the standing plan; if none
+   newer than 2026-07-05 exists, use `docs/qa/NIGHTLY_2026-07-05_PROMPT.md`).
+2. `docs/qa/OPEN_REGISTER.md` — the single source of open work; a run is "full coverage" when every
+   open row is advanced or given a verify-result. Work Band A first; drop to the next only when blocked.
+3. `docs/qa/SCHEDULED_ROUTINES.md` — the standing rules (SYNC FIRST, shift-claim + worktree for any
+   versioned change, END-OF-RUN REGISTER REPORTING). STANDING RULE 0's heartbeat is a LOCAL-desktop
+   mechanism — it does NOT apply in cloud; here "did it run + what happened" is answered by the
+   claude.ai routine's own run history plus your end-of-run report commit (see REPORT).
+
+## WHY CLOUD IS THE RIGHT SUBSTRATE FOR THE NIGHTLIES (2026-07-21)
+The local desktop nightlies kept missing days: they only run while the Claude app is open (03:30 was
+almost never open → always deferred), and a deferred catch-up run collided with the owner's live work
+in the shared clone (dirty tree → its rebase aborts). A cloud run has NEITHER problem — it fires on
+Anthropic's cron regardless of the owner's machine, in a FRESH ISOLATED clone with no shared WIP to
+collide with. Remaining cloud trade-offs are the CLOUD CAVEATS below (no local memory — this prompt
+inlines the facts; worker deploy + signed-in live-verify may be unavailable → flag them owed to a
+desktop run). SYNC FIRST still matters: the desktop also pushes to `main`, so always rebase, never force.
 
 > **VERSION NOTE (the numbers below are stale — check live before quoting).** As of 2026-07-10 PWA
 > is ~**1.51.259**, workers redeployed several times. Do NOT trust the "1.51.29 / 3.6.0" figures in
@@ -136,7 +156,11 @@ account — no login step is needed. AntCV needs no install for the core work (z
   `git commit -F <file>` (or a bash heredoc). End with:
   `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>`.
 
-## PRIORITY ORDER
+## PRIORITY ORDER — HISTORICAL (context only; work the AUTHORITATIVE PLAN at the top instead)
+
+> Everything below is a 2026-07-01→07-10 snapshot, almost entirely SHIPPED. Do NOT treat it as the
+> live queue — it is kept for code-pointer context (app.js gates, salmon, targeting persistence).
+> The live queue is `docs/qa/OPEN_REGISTER.md` + the newest `NIGHTLY_*_PROMPT.md` bands.
 
 ### **CURRENT BACKLOG (owner re-review 2026-07-01) — FIXED 1.51.29, regen-cycle verify owed**
 

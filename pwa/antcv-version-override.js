@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.1793-load-perapp-palette-slogan';
+  const TARGET_VERSION = '1.51.1794-salary-envelope';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.1793-load-perapp-palette-slogan',
     '1.51.1792-unbranded-nostale',
     '1.51.1768-analysis-on-load',
     '1.51.1748-stale-brand-gate',

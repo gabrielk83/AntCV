@@ -505,9 +505,14 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
       const sys = 'You calibrate a job for a candidate (Gabriel: electro-optics / optical-systems engineer + hardware project manager, Copenhagen, EU/Polish citizen; targeting AI-workflow / technical-product / specialist roles; wants Greater Copenhagen, hybrid DK / Øresund-Skåne, or remote-EU, ~55-75k DKK/month). From the JD output EXACTLY these labelled lines and nothing else; use ONLY what the JD supports and write "?" when unknown — never guess:\n'
         + 'TIER: <T1|T2|T3> (T1 strong direct EO/photonics/optical-systems & reachable; T2 transferable product/PM/requirements/QC; T3 weak/off-domain or on-site abroad)\n'
         + 'LOCATION: <city, country + on-site/hybrid/remote, or ?>\n'
-        + 'SALARY: <range if stated, else ?>\nDEADLINE: <if stated, else ?>\nMANAGER: <named hiring contact if stated, else ?>\n'
+        // SALARY-ENVELOPE-CHECK-001 (owner 2026-07-19): pay is usually NOT stated, so
+        // "else ?" left the salary-vs-Dream-Envelope check unable to run on most rows.
+        // Fall back to a market ESTIMATE (the same read jd-analysis's salary_estimate
+        // makes) so the conflict check always has a number to test — ALWAYS suffixed
+        // " (est)" so an estimate is never presented as if the posting stated it.
+        + 'SALARY: <the stated range if the JD states pay; if it does NOT state pay, your best realistic market ESTIMATE for this role + location + seniority, suffixed " (est)">\nDEADLINE: <if stated, else ?>\nMANAGER: <named hiring contact if stated, else ?>\n'
         + 'NEXTSTEP: <one short concrete next action for the candidate>\n'
-        + 'CONFLICTS: <envelope conflicts — salary<55k, on-site abroad, draining factors; or "none">';
+        + 'CONFLICTS: <envelope conflicts — compare the SALARY line above (stated OR estimated) against the ~55-75k DKK/month envelope and flag when it falls below 55k; also on-site abroad, draining factors; or "none">';
       const out = await askAI('Company: ' + company + '\nRole: ' + role + '\n\nJOB DESCRIPTION:\n' + jd.slice(0, 4500), sys, 320);
       const get = (k: string) => (out.match(new RegExp('^' + k + ':\\s*(.+)$', 'im'))?.[1] || '').trim();
       const clean = (v: string) => (v && v !== '?' && !/^n\/?a$/i.test(v)) ? v : '';
@@ -517,7 +522,12 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
       const extra: string[] = [];
       const manager = clean(get('MANAGER')); if (manager) extra.push('Hiring contact: ' + manager);
       const deadline = clean(get('DEADLINE')); if (deadline) extra.push('Deadline: ' + deadline);
-      const salary = clean(get('SALARY')); if (salary) extra.push('Salary (stated): ' + salary);
+      // SALARY-ENVELOPE-CHECK-001: label an estimate honestly — never as "stated".
+      const salary = clean(get('SALARY'));
+      if (salary) {
+        const isEst = /\(est\)/i.test(salary);
+        extra.push((isEst ? 'Salary (est): ' : 'Salary (stated): ') + salary.replace(/\s*\(est\)\s*$/i, '').trim());
+      }
       const conflicts = clean(get('CONFLICTS')); if (conflicts && !/^none$/i.test(conflicts)) extra.push('⚠ Envelope conflict: ' + conflicts);
       setDocState((d) => {
         if (!d) return d;

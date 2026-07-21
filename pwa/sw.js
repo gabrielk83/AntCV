@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.1792-unbranded-nostale';
+const CACHE = 'antcv-1.51.1793-load-perapp-palette-slogan';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

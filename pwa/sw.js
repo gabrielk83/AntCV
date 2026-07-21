@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.1800-content-lang-dedup';
+const CACHE = 'antcv-1.51.1818-en-asymmetry';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

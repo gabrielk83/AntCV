@@ -369,7 +369,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.1544-brand-parity';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.1800-content-lang-dedup';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.1818-en-asymmetry';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -411,7 +411,7 @@
           app.src = 'app.js?v=1.51.1800-content-lang-dedup';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.1800-content-lang-dedup';
+            vo.src = 'antcv-version-override.js?v=1.51.1818-en-asymmetry';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -1130,7 +1130,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-data-export-360.js?v=1.50.929" defer></script>
 <script src="antcv-personal-dedup-hide.js?v=1.50.861" defer></script>
 <script src="antcv-settings-sync-extra.js?v=1.51.381-sig-backfill" defer></script>
-  <script src="antcv-babel-relang.js?v=1.51.355-relang-single-flight" defer></script>
+  <script src="antcv-babel-relang.js?v=1.51.1818-en-asymmetry" defer></script>
   <script src="antcv-identity-lang-heal.js?v=1.51.397-matrix-rowspec" defer></script>
 <script src="antcv-cl-cloud-sync-extra.js?v=1.51.381-sig-backfill" defer></script>
 <script src="antcv-cl-prose-loss-guard-985.js?v=1.51.334-unsol-pillar" defer></script>

@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.1800-content-lang-dedup';
+  const TARGET_VERSION = '1.51.1818-en-asymmetry';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.1800-content-lang-dedup',
     '1.51.1799-brand-owns-colors',
     '1.51.1794-salary-envelope',
     '1.51.1793-load-perapp-palette-slogan',

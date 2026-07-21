@@ -27,7 +27,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.355-relang-single-flight';
+  var VERSION = '1.51.1818-en-asymmetry';
   if (window.__antcvBabelRelang === VERSION) return;
   window.__antcvBabelRelang = VERSION;
   try { if (localStorage.getItem('antcv:disable-babel-relang') === '1') return; } catch (_) {}
@@ -141,14 +141,48 @@
   // English) scores 25+. 12 sits safely between, so invariant residue never trips it.
   var EN_RESIDUE_MAX = 12;
 
+  // BABEL-RATIO-INVARIANT-001: length of the TRANSLATABLE Latin prose only —
+  // lowercase-initial Latin tokens (grammar/prose words). Acronyms, capitalised
+  // proper nouns and product names are invariants and must not count as "prose".
+  function proseLatinLen(txt) {
+    var n = 0;
+    (txt.match(/[A-Za-z][A-Za-z0-9&\/\.\-]*/g) || []).forEach(function (t) {
+      if (/^[a-z]/.test(t) && t.length > 2) n += t.length;
+    });
+    return n;
+  }
+
   // Is the given text a faithful rendering of language L?
-  //  • English target -> always true (canonical / native).
+  //  • English target -> BABEL-EN-ASYMMETRY-001: must not be dominated by a non-Latin script.
   //  • Non-Latin target (zh/he/am/ar) -> the prose must be predominantly that script.
   //  • Latin non-English target (da/es/...) -> BABEL-FISH-HEADLESS-001: we cannot
   //    script-detect it, but residual ENGLISH grammar words betray a mixed / partly
   //    untranslated render, so we heal it the same way (return false -> re-render).
   function isInLanguage(txt, L) {
-    if (L === 'en') return true;
+    // BABEL-EN-ASYMMETRY-001 (owner 2026-07-21: "a chinese job was loaded but the
+    // language selector stayed english — resulting with chinese all the time").
+    // This returned TRUE for 'en' UNCONDITIONALLY on the premise that English is the
+    // canonical/native rendering. That made the ONE sidecar that heals a wrong-language
+    // document blind in the en direction: a zh rendering sitting under an 'en' ribbon
+    // passed as "already correct" and was NEVER re-rendered, so the document stayed
+    // Chinese forever (the reverse — English under a zh ribbon — was always caught).
+    // It also feeds the 415 role storm: repairExperienceCompleteness compares the
+    // ENGLISH personalInfo roles against zh section roles, _samePosition misses
+    // cross-script, so it re-adds the same "missing" roles every pass endlessly.
+    // Fix: make the en test SYMMETRIC — English content must not be dominated by a
+    // non-Latin script. Measured on translatable PROSE (same basis as the non-Latin
+    // branch below), so Latin invariants and the odd CJK proper noun inside a
+    // genuinely English CV can never trip it.
+    if (L === 'en') {
+      if (letterCount(txt) < MIN_LETTERS) return null;   // too little to judge
+      var enProse = proseLatinLen(txt);
+      for (var sk in SCRIPTS) {
+        if (!Object.prototype.hasOwnProperty.call(SCRIPTS, sk)) continue;
+        var sn = (txt.match(SCRIPTS[sk]) || []).length;
+        if (sn && sn / ((sn + enProse) || 1) >= THRESHOLD_PROSE) return false;
+      }
+      return true;
+    }
     var re = SCRIPTS[L];
     if (re) {
       var letters = letterCount(txt);
@@ -165,8 +199,7 @@
       // matched threshold is lower because legit stored enums keep a floor of
       // lowercase Latin even in a faithful render.
       var script = (txt.match(re) || []).length;
-      var proseLatin = 0;
-      (txt.match(/[A-Za-z][A-Za-z0-9&\/\.\-]*/g) || []).forEach(function (t) { if (/^[a-z]/.test(t) && t.length > 2) proseLatin += t.length; });
+      var proseLatin = proseLatinLen(txt);
       return script / ((script + proseLatin) || 1) >= THRESHOLD_PROSE;
     }
     // Latin non-English: measure English residue.
@@ -369,5 +402,5 @@
     if (__wasGen && !g) schedule();   // generation just finished -> verify language
     __wasGen = g;
   }, 3000);
-  window.AntcvBabelRelang = { version: VERSION, _check: check, _snapshot: snapshot, _restore: restoreCache, _invariants: invariantSet, _missing: missingInvariants, lastDrift: null };
+  window.AntcvBabelRelang = { version: VERSION, _check: check, _snapshot: snapshot, _restore: restoreCache, _invariants: invariantSet, _missing: missingInvariants, _isInLanguage: isInLanguage, lastDrift: null };
 })();

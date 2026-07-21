@@ -56,3 +56,31 @@ No row implemented-but-still-open; no code shipped by this nightly.
 - **2nd physical device:** rows 19 / 39a-leg3, SO-004 real-Android crash capture.
 - **STORM-GUARD-TEST-COVERAGE-001:** day session to add freeze-guard CI coverage.
 - **Freeze eyeball:** owner to confirm the preview no longer freezes/oscillates on a real CV (the fix is live-served; owner-side runtime confirmation not reproducible headlessly — rAF freezes in a backgrounded tab).
+
+---
+
+## Appendix — 2nd dispatch (same day, Opus 4.8)
+
+Re-dispatched after the reconcile above. `git fetch && pull --rebase origin main` clean — HEAD = `origin/main` `5107376`. The day session had since shipped through PWA **`1.51.1683`** (baseline in the body was `1.51.1644`).
+
+**Standing probes — all green on the `1.51.1683` base (no regression):**
+
+| Probe | Result |
+|---|---|
+| PWA suite | **1323 / 1323**, 0 fail (~8.5s) |
+| boot-smoke | OK — glDemo=function, 0 errors |
+| Personal-panel probe | **DIAG PASS** — 0 mut / 8s, 0 page errors |
+| button-audit | **191 buttons / 0 page errors / 0 DEAD / 0 throws** — 112 active, 49 not-visible/disabled, 12 skipped-dangerous, 18 ui-only |
+| `app.js` head | `(()=>{window` — no `"use strict"`, minified-sacred intact |
+
+**One rule-7 gap closed (docs-only, no code ship): SIDEBAR-RICHBLOCK-NOJUSTIFY-001 (`1.51.1664`, commit b087dfb).** A shipped app.js render-source fix that was in **no** register (ACTIVE_BUGS / FEATURES_REGISTRY / OPEN_REGISTER all missed it). It is the render-**source** root of the same certs/interests/tools **left↔justify flap** the ALIGN-STORM / STORM-OSCILLATION-GUARD family (body of this report) treated at the symptom layer:
+
+- **Bug:** `__rowAlign` defaulted a FLAT (non-grouped) `rich_block`'s content rows to `"justify"`. In the narrow sidebar column justify over-stretches into ugly inter-word gaps, and `dejustifyNarrowSidebar` flips it back to `"left"` every pass — a left↔justify flap reproducing on the template CV **independent of pagination** (owner screenshots: CERTIFICATES & COURSES, INTERESTS, TOOLS & METHODS).
+- **Fix (at source, `app.src.js:6547`):** sidebar content rows default to `"left"` (`(__hasGrp || S)`, S = the sidebar flag) so there is nothing for the de-justify pass to flip; main-column flat rich_blocks keep justify; grouped rich_blocks unchanged; explicit per-row CJLR still wins. Mirrored surgically into minified `app.js` (`(hg||N)?"left":"justify"`).
+- **Verified this run:** app.js marker present ×1, app.src.js marker present ×1 (both singular), suite's app.js↔app.src.js mirror tests green; cache-bust quintet complete at 1664 (prev `1.51.1644`→STALE). This is the day session's active alignment lane — **verified, not re-implemented.**
+
+Registered in: ACTIVE_BUGS (top entry) + FEATURES_REGISTRY (increment 30) + OPEN_REGISTER (2026-07-21 "2ND DISPATCH" block).
+
+The three other day-session gaps the body flagged (MANUAL-SAVE-CATEGORY-001 `1.51.1576`, AUTO-COMMIT-FRESHEST-001 `1.51.1580`, Application-History file-number `1.51.1584`) have **since** been reconciled into all three registers — grep-confirmed present this run.
+
+**No canonical open register row is newly actionable** — every open row remains owner-gated / needs-2nd-physical-device / needs-live-models (per-band status in the body holds unchanged). No code shipped by this dispatch.

@@ -352,13 +352,28 @@
   // BABEL-RICHBLOCK-RESIDUE-001: see the call site in the pipeline. Wide ribbon
   // only; drops pure-Latin lead-in rows (Foundation/Hands-on/Professionally)
   // from a rich_block that already carries a wide-script item.
-  function dropRichBlockLatinResidue(list) {
+  // BABEL-RICHBLOCK-RESIDUE-CONVERGE-001 (2026-07-21): the drop is RE-ENABLED. It was
+  // disabled on 2026-07-11 because it entered a write war with legacy re-adders
+  // (foundation-758 pre-345 caches, shape-guard eager writes, languageCache echoes) —
+  // "preview jumpy / edit closes", one cycle every ~5s. Rather than complete the
+  // re-adder inventory (open-ended, and a NEW re-adder would reopen it), the drop now
+  // carries the same STICKY, remover-agnostic decision that converged the roles storm:
+  // drop a given residue set ONCE per (document x ribbon language x the content that
+  // SURVIVES the drop). If the identical residue is back while everything else is
+  // byte-identical, a re-adder owns those rows — hold, log once, and let the wide-script
+  // twin stand alongside it rather than flicker the editor. The write-side per-section
+  // guard is the second net. A real edit / translate pass changes the surviving content
+  // and re-arms the drop; a page reload re-arms it too.
+  var __rbrDone = { key: '', sigs: {} };
+  function dropRichBlockLatinResidue(list, docTag) {
     var wideRibbon = false;
-    try { var L = String(localStorage.getItem('language') || 'en').replace(/"/g, '').slice(0, 2); wideRibbon = L === 'zh' || L === 'he' || L === 'am' || L === 'ar'; } catch (_) {}
+    var L = 'en';
+    try { L = String(localStorage.getItem('language') || 'en').replace(/"/g, '').slice(0, 2); wideRibbon = L === 'zh' || L === 'he' || L === 'am' || L === 'ar'; } catch (_) {}
     if (!wideRibbon) return null;
     var LEAD_RE = /^(foundation|hands-?on|professionally)\s*:?\s*$/i;
     var changed = false;
-    var out = list.map(function (s) {
+    var dropped = [];
+    var out = list.map(function (s, si) {
       if (!s || s.type !== 'rich_block' || !Array.isArray(s.items) || s.items.length < 2) return s;
       var hasWide = s.items.some(function (it) { return it && _WIDE_RE.test(String(it.b || '') + String(it.t || '')); });
       if (!hasWide) return s;
@@ -366,12 +381,33 @@
         if (!it) return false;
         var b = String(it.b || ''), t = String(it.t || '');
         var latinOnly = !_WIDE_RE.test(b + t);
-        if (latinOnly && LEAD_RE.test(b.trim())) { changed = true; return false; }
+        if (latinOnly && LEAD_RE.test(b.trim())) {
+          changed = true;
+          dropped.push(__secKey(s, si) + '|' + b.trim().toLowerCase() + '|' + t.slice(0, 40));
+          return false;
+        }
         return true;
       });
       return kept.length !== s.items.length ? Object.assign({}, s, { items: kept }) : s;
     });
-    return changed ? out : null;
+    if (!changed) return null;
+    // STICKY decision — see the note above. The key is what SURVIVES (JSON.stringify(out)),
+    // so the add/drop churn itself cannot move it, while any genuine content change does.
+    var __doc = '';
+    try { var __m = JSON.parse(localStorage.getItem('meta') || '{}') || {}; __doc = String(__m.company || '') + '|' + String(__m.role || ''); } catch (_) {}
+    var __key = String(docTag || '') + '||' + __doc + '||' + L + '||' + JSON.stringify(out);
+    var __sig = dropped.join('~');
+    if (__rbrDone.key !== __key) __rbrDone = { key: __key, sigs: {} };   // real change -> re-arm
+    if (__rbrDone.sigs[__sig]) {
+      if (__rbrDone.sigs[__sig] === 1) {
+        __rbrDone.sigs[__sig] = 2;         // log once, not once per cycle
+        try { console.warn('[415] rich_block Latin-residue drop HELD (BABEL-RICHBLOCK-RESIDUE-CONVERGE-001) — the ' + dropped.length + ' row(s) it dropped were re-added while the rest of the block was unchanged, so a legacy re-adder owns them; leaving the residue in place rather than flickering the editor.'); } catch (_) {}
+      }
+      return null;
+    }
+    __rbrDone.sigs[__sig] = 1;
+    try { console.log('[415] dropped ' + dropped.length + ' Latin lead-in residue row(s) from a wide-script rich_block'); } catch (_) {}
+    return out;
   }
 
   // ROLE-DECOMP-001 (owner 2026-06-16): "decompose the merged roles ... merging is
@@ -1984,15 +2020,21 @@
   // wrote seconds ago (i.e. it was reverted in between), keep the STORED one and let the
   // rest of the normalisation through. Unrelated work still lands; only the contested
   // substructure stops being re-fed.
-  var __recentExpWrites = [];   // [{ h: serialised experience section, t: ms }]
-  function __expSerial(blob) {
-    try {
-      var a = (blob && blob.cv) || [];
-      for (var i = 0; i < a.length; i++) {
-        if (a[i] && (a[i].id === 'experience' || a[i].type === 'experience')) return JSON.stringify(a[i]);
-      }
-    } catch (_) {}
-    return '';
+  // Generalised over SECTIONS (not just experience): the same tug-of-war shape shows up
+  // wherever a belt and a legacy re-adder disagree about one section — the rich_block
+  // Latin-residue war (BABEL-RICHBLOCK-RESIDUE-001) is the second instance. One guard
+  // covers both docs and every future belt.
+  var __recentSecWrites = [];   // [{ k: 'cv:experience', h: serialised section, t: ms }]
+  function __secKey(s, i) { return String((s && (s.id || s.type)) || ('#' + i)); }
+  // Serialise each section by key. A DUPLICATED key is unusable (we could not tell the
+  // two apart on the next pass), so it maps to null and is never held.
+  function __secMap(list) {
+    var m = {};
+    (list || []).forEach(function (s, i) {
+      var k = __secKey(s, i);
+      m[k] = Object.prototype.hasOwnProperty.call(m, k) ? null : JSON.stringify(s);
+    });
+    return m;
   }
 
   function normalize() {
@@ -2086,15 +2128,20 @@
       // (Foundation / Hands-on / Professionally) when the same block already
       // carries at least one wide-script item — the residue class only, so a
       // legit English quote inside a zh item is never touched.
-      // BABEL-RICHBLOCK-RESIDUE-001 DISABLED (owner 2026-07-11 "preview jumpy /
-      // edit closes"): the drop entered a write war with LEGACY re-adders
-      // (foundation-758 pre-345 caches, shape-guard eager writes, languageCache
-      // echoes) — one cycle every ~5s, editor unmounting mid-edit. The 758-side
-      // FOUNDATION-OPENING-LANG-001 fix prevents NEW English injections on wide
-      // ribbons; the residual stored English row is the translate pass's job.
-      // Re-enable only after the re-adder inventory is complete.
-      // var rbr = dropRichBlockLatinResidue(cv); if (rbr) { cv = rbr; changed = true; }
-      // if (cl) { var rbc = dropRichBlockLatinResidue(cl); if (rbc) { cl = rbc; clChanged = true; } }
+      // BABEL-RICHBLOCK-RESIDUE-CONVERGE-001 (2026-07-21): RE-ENABLED. It was disabled on
+      // 2026-07-11 ("preview jumpy / edit closes") because it lost a write war to legacy
+      // re-adders (foundation-758 pre-345 caches, shape-guard eager writes, languageCache
+      // echoes) at ~one cycle / 5s. The re-adder inventory is still incomplete and a NEW
+      // re-adder would reopen it either way, so the drop is now remover-agnostic instead:
+      // a sticky one-shot decision (see dropRichBlockLatinResidue) plus the per-section
+      // write guard below. Worst case it drops the residue once and then stands down —
+      // never the endless cycle. Kill switch: antcv:disable-richblock-residue-drop.
+      var __rbrOff = false;
+      try { var __rv = localStorage.getItem('antcv:disable-richblock-residue-drop'); __rbrOff = (__rv === '1' || __rv === 'true'); } catch (_) {}
+      if (!__rbrOff) {
+        var rbr = dropRichBlockLatinResidue(cv, 'cv'); if (rbr) { cv = rbr; changed = true; }
+        if (cl) { var rbc = dropRichBlockLatinResidue(cl, 'cl'); if (rbc) { cl = rbc; clChanged = true; } }
+      }
       if (clChanged) changed = true;
       if (!changed) return;
       var next = Object.assign({}, b, { cv: cv });
@@ -2104,27 +2151,35 @@
       // else this fires the antcv:sections-updated storm that flickers the whole app.
       var __after = JSON.stringify(next);
       if (__after === __before) return;
-      // ROLES-STORM-CONVERGE-001 (write-side, substructure-keyed): hold back a contested
-      // EXPERIENCE section — one we already wrote within the window and that has since
-      // been reverted — while still writing everything else this pass normalised.
+      // ROLES-STORM-CONVERGE-001 (write-side, substructure-keyed): hold back any CONTESTED
+      // section — one we already wrote within the window and that has since been reverted —
+      // while still writing everything else this pass normalised. Applies per section, to
+      // BOTH docs, so one belt losing a tug-of-war never blocks the other belts' work.
       var __nowE = Date.now();
-      var __expAfter = __expSerial(next), __expBefore = __expSerial(b);
-      if (__expAfter && __expAfter !== __expBefore) {
-        __recentExpWrites = __recentExpWrites.filter(function (e) { return __nowE - e.t < __OSC_WINDOW_MS; });
-        if (__recentExpWrites.some(function (e) { return e.h === __expAfter; })) {
-          try { console.warn('[sections-normalize-415] experience oscillation held (ROLES-STORM-CONVERGE-001) — a competing writer keeps reverting this experience section; keeping the stored one and writing the rest'); } catch (_) {}
-          var __expStored = JSON.parse(__expBefore || 'null');
-          next = Object.assign({}, next, {
-            cv: next.cv.map(function (s) {
-              return (s && (s.id === 'experience' || s.type === 'experience')) ? (__expStored || s) : s;
-            }),
-          });
-          __after = JSON.stringify(next);
-          if (__after === __before) return;      // experience was the only change -> nothing left to write
-        } else {
-          __recentExpWrites.push({ h: __expAfter, t: __nowE });
+      __recentSecWrites = __recentSecWrites.filter(function (e) { return __nowE - e.t < __OSC_WINDOW_MS; });
+      ['cv', 'cl'].forEach(function (doc) {
+        if (!Array.isArray(next[doc]) || !Array.isArray(b[doc])) return;
+        var mBefore = __secMap(b[doc]), mAfter = __secMap(next[doc]);
+        var held = null;
+        var out = next[doc].map(function (s, i) {
+          var k = __secKey(s, i);
+          var h = mAfter[k];
+          if (!k || h == null || mBefore[k] == null || h === mBefore[k]) return s;   // unchanged / ambiguous key
+          if (!__recentSecWrites.some(function (e) { return e.k === doc + ':' + k && e.h === h; })) {
+            __recentSecWrites.push({ k: doc + ':' + k, h: h, t: __nowE });
+            return s;
+          }
+          held = (held || []).concat(k);
+          try { return JSON.parse(mBefore[k]); } catch (_) { return s; }             // keep the STORED one
+        });
+        if (held) {
+          next = Object.assign({}, next);
+          next[doc] = out;
+          try { console.warn('[sections-normalize-415] ' + doc + ' section oscillation held (ROLES-STORM-CONVERGE-001) — a competing writer keeps reverting ' + held.join(', ') + '; keeping the stored one and writing the rest'); } catch (_) {}
         }
-      }
+      });
+      __after = JSON.stringify(next);
+      if (__after === __before) return;          // the contested sections were the only change
       // STORM-OSCILLATION-GUARD-001: if we already wrote this exact result within the window,
       // a competing writer is reverting it every cycle — writing again only sustains the
       // sections-updated storm (continuous re-render + text-align re-apply). Hold instead.

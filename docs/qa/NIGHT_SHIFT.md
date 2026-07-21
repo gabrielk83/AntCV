@@ -34,7 +34,6 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mrl2y64c_6npv","started":"2026-07-14T20:04:36.350Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.1164-1.51.1183","task":"slogan CJLR single-cycler + Fit-it double-cap fix + apply-corrections for standalone editables + justify-accept","beat":"2026-07-14T20:04:37.031Z"}
 {"id":"sh_mrl53oqw_b48x","started":"2026-07-14T21:04:53.003Z","host":"GabyPC2","worktree":null,"branch":"HEAD","range":"1.51.1264-1.51.1283","task":"E cutover: roles-as-universal-rich_block default-on","beat":"2026-07-14T21:04:53.255Z"}
 {"id":"sh_mrl5nybc_9wce","started":"2026-07-14T22:33:09.331Z","host":"GabyPC2","worktree":null,"branch":"claude/hopeful-albattani-24195b","range":"1.51.1404-1.51.1423","task":"SLOGAN-LANG-GATE-001: wrong-language slogan override gate; branded==non-branded parity","beat":"2026-07-14T22:33:10.251Z"}
-{"id":"sh_mrusqhm4_b82q","started":"2026-07-21T15:16:23.599Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.1858-1.51.1881","task":"v5 cover-letter structure: How I see the role + Who I am to end + slogan headline","beat":"2026-07-21T15:16:23.834Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

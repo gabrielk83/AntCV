@@ -35,6 +35,7 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mrl53oqw_b48x","started":"2026-07-14T21:04:53.003Z","host":"GabyPC2","worktree":null,"branch":"HEAD","range":"1.51.1264-1.51.1283","task":"E cutover: roles-as-universal-rich_block default-on","beat":"2026-07-14T21:04:53.255Z"}
 {"id":"sh_mrl5nybc_9wce","started":"2026-07-14T22:33:09.331Z","host":"GabyPC2","worktree":null,"branch":"claude/hopeful-albattani-24195b","range":"1.51.1404-1.51.1423","task":"SLOGAN-LANG-GATE-001: wrong-language slogan override gate; branded==non-branded parity","beat":"2026-07-14T22:33:10.251Z"}
 {"id":"sh_mrum9lf9_5ilv","started":"2026-07-21T12:15:17.739Z","host":"GabyPC2","worktree":null,"branch":"shift-autoanalyze","range":"1.51.1768-1.51.1771","task":"auto-run JD analysis on JD load (headless)","beat":"2026-07-21T12:15:18.517Z"}
+{"id":"sh_mrumay6j_egol","started":"2026-07-21T12:16:20.878Z","host":"GabyPC2","worktree":null,"branch":"claude/elated-wilbur-b386b8","range":"1.51.1772-1.51.1791","task":"TOOLS-GRP-STORM-CONVERGE corecomp-dedup hide-not-delete kills tools group-heading flap","beat":"2026-07-21T12:16:21.182Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

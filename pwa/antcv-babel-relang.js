@@ -27,7 +27,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.1818-en-asymmetry';
+  var VERSION = '1.51.1838-latin-lang-id';
   if (window.__antcvBabelRelang === VERSION) return;
   window.__antcvBabelRelang = VERSION;
   try { if (localStorage.getItem('antcv:disable-babel-relang') === '1') return; } catch (_) {}
@@ -129,18 +129,6 @@
     catch (_) { return (t.match(/[A-Za-zÀ-ɏЀ-ӿ֐-׿؀-ۿሀ-፿㐀-鿿]/g) || []).length; }
   }
 
-  // Strong English grammar / connective words that are essentially ABSENT from clean
-  // Danish or Spanish prose (which use og/med/til/gennem, y/con/de/a través). A clean
-  // da/es rendering scores ~0-3 of these (only inside the odd invariant phrase); a
-  // MIXED rendering (half the roles still in English) scores 15+. Grammar words only —
-  // no domain nouns like "management" that can sit inside an invariant standard name.
-  var EN_MARKER_RE = /\b(the|and|with|through|across|between|which|would|their|there|these|those|were|been|about|while|during|into|over|under|that|this|from|when|where|whose|within|towards|alongside)\b/gi;
-  // A clean da/es CV can still carry a few of these inside INVARIANTS that translation
-  // keeps verbatim — English quoted publication titles, an English company name ("… of
-  // Denmark"). Those top out around 6-10; a genuinely MIXED render (half the roles still
-  // English) scores 25+. 12 sits safely between, so invariant residue never trips it.
-  var EN_RESIDUE_MAX = 12;
-
   // BABEL-RATIO-INVARIANT-001: length of the TRANSLATABLE Latin prose only —
   // lowercase-initial Latin tokens (grammar/prose words). Acronyms, capitalised
   // proper nouns and product names are invariants and must not count as "prose".
@@ -152,39 +140,106 @@
     return n;
   }
 
+  // BABEL-LATIN-BLIND-001 (owner 2026-07-21, follow-up to BABEL-EN-ASYMMETRY-001:
+  // "make sure no similar issue in danish spanish or others"). The Latin branch only
+  // ever measured ENGLISH residue, so FIVE mismatches were invisible and stranded the
+  // document exactly like the Chinese case:
+  //   da content under an 'en' ribbon   -> "fine"  (a Danish job strands you in Danish)
+  //   es content under an 'en' ribbon   -> "fine"  (same, Spanish)
+  //   da content under an 'es' ribbon   -> "fine"  (no English markers to measure)
+  //   es content under a  'da' ribbon   -> "fine"  (ditto)
+  //   zh content under a  da/es ribbon  -> "fine"  (CJK carries no English markers, so
+  //                                                 it scored as a clean Danish render)
+  // Fix: identify the Latin language POSITIVELY. Distinctive function words plus
+  // orthography (æøå for Danish; ñ¿¡ and accented vowels for Spanish) score each
+  // candidate; the document is "in L" unless another language CLEARLY wins. Ambiguous
+  // or low-signal text stays "in language" on purpose — a weak signal must never fire
+  // a costly LLM re-translate of the user's CV.
+  // Marker sets are deliberately near-disjoint (no "for"/"en"/"de"/"over"/"under",
+  // which collide across these three languages).
+  var LATIN_MARKERS = {
+    en: /\b(the|and|with|through|across|between|which|would|their|there|these|those|were|been|about|while|during|into|that|this|from|when|where|whose|within|towards|alongside|have|has)\b/gi,
+    da: /\b(og|af|til|som|der|ikke|har|på|ved|samt|gennem|tværs|både|eller|hvor|når|deres|disse|været|blevet|med|ansvar|erfaring|virksomhed)\b/gi,
+    es: /\b(la|el|los|las|del|que|por|para|con|una|más|sus|este|esta|entre|sobre|desde|cuando|donde|también|través|mediante|hacia)\b/gi,
+  };
+  // Orthography is near-unambiguous, so it is weighted higher than a single marker.
+  var LATIN_ORTHO = { da: /[æøåÆØÅ]/g, es: /[ñÑ¿¡áéíóúÁÉÍÓÚ]/g };
+  var ORTHO_WEIGHT = 2;
+  // A FOREIGN Latin language counts as present when it scores at least this many hits
+  // per 1000 letters AND at least this fraction of the ribbon language's own score.
+  // Measured separation on real CV text (hits/1000 letters, foreign/own ratio):
+  //   keep  — clean da/es, da+English tool invariants, an English quoted publication
+  //           title, an English CV listing Danish employers: foreign <= 1.5, ratio <= 0.03
+  //   heal  — half-translated da+en / es+en: foreign >= 18.6, ratio >= 0.39
+  //         — full mismatch (English under a da ribbon): ratio unbounded (own = 0)
+  // 6 / 0.20 sits in that gap with a wide margin on both sides, so invariant residue
+  // can never fire a re-translate while a genuinely mixed render always does.
+  var LATIN_FOREIGN_MIN = 6;
+  var LATIN_FOREIGN_RATIO = 0.20;
+
+  // Orthography only counts inside LOWERCASE-INITIAL prose words. A capitalised
+  // proper noun (Ørsted, København, José, Muñoz) is an INVARIANT that survives every
+  // translation, so it must not vote for a language — otherwise an English CV listing
+  // Danish employers scores as Danish. Real Danish prose carries æøå inside ordinary
+  // lowercase words (års, på, tværs, frigivelse) constantly, so nothing is lost.
+  function proseWords(txt) {
+    var toks;
+    try { toks = txt.match(/[\p{L}][\p{L}\p{M}'-]*/gu) || []; }
+    catch (_) { toks = txt.match(/[A-Za-zÀ-ɏ][A-Za-zÀ-ɏ'-]*/g) || []; }
+    var keep = [];
+    for (var i = 0; i < toks.length; i++) {
+      var w = toks[i], c = w.charAt(0);
+      if (c === c.toLowerCase() && c !== c.toUpperCase()) keep.push(w);
+    }
+    return keep.join(' ');
+  }
+
+  function latinScores(txt) {
+    var letters = letterCount(txt) || 1;
+    var prose = proseWords(txt);
+    var out = {};
+    for (var k in LATIN_MARKERS) {
+      if (!Object.prototype.hasOwnProperty.call(LATIN_MARKERS, k)) continue;
+      var hits = (txt.match(LATIN_MARKERS[k]) || []).length;
+      if (LATIN_ORTHO[k]) hits += ORTHO_WEIGHT * (prose.match(LATIN_ORTHO[k]) || []).length;
+      out[k] = hits / letters * 1000;
+    }
+    return out;
+  }
+
   // Is the given text a faithful rendering of language L?
-  //  • English target -> BABEL-EN-ASYMMETRY-001: must not be dominated by a non-Latin script.
   //  • Non-Latin target (zh/he/am/ar) -> the prose must be predominantly that script.
-  //  • Latin non-English target (da/es/...) -> BABEL-FISH-HEADLESS-001: we cannot
-  //    script-detect it, but residual ENGLISH grammar words betray a mixed / partly
-  //    untranslated render, so we heal it the same way (return false -> re-render).
+  //  • Latin target (en/da/es) -> must not be dominated by a non-Latin script
+  //    (BABEL-EN-ASYMMETRY-001, generalised to every Latin ribbon), and no OTHER Latin
+  //    language may clearly out-score it (BABEL-LATIN-BLIND-001).
   function isInLanguage(txt, L) {
-    // BABEL-EN-ASYMMETRY-001 (owner 2026-07-21: "a chinese job was loaded but the
-    // language selector stayed english — resulting with chinese all the time").
-    // This returned TRUE for 'en' UNCONDITIONALLY on the premise that English is the
-    // canonical/native rendering. That made the ONE sidecar that heals a wrong-language
-    // document blind in the en direction: a zh rendering sitting under an 'en' ribbon
-    // passed as "already correct" and was NEVER re-rendered, so the document stayed
-    // Chinese forever (the reverse — English under a zh ribbon — was always caught).
-    // It also feeds the 415 role storm: repairExperienceCompleteness compares the
-    // ENGLISH personalInfo roles against zh section roles, _samePosition misses
-    // cross-script, so it re-adds the same "missing" roles every pass endlessly.
-    // Fix: make the en test SYMMETRIC — English content must not be dominated by a
-    // non-Latin script. Measured on translatable PROSE (same basis as the non-Latin
-    // branch below), so Latin invariants and the odd CJK proper noun inside a
-    // genuinely English CV can never trip it.
-    if (L === 'en') {
-      if (letterCount(txt) < MIN_LETTERS) return null;   // too little to judge
-      var enProse = proseLatinLen(txt);
+    var re = SCRIPTS[L];
+    if (!re) {
+      // ---- Latin target (en / da / es) ----
+      if (letterCount(txt) < MIN_LETTERS) return null;    // too little to judge
+      // (1) a dominating NON-LATIN script means this is certainly not a Latin render.
+      // BABEL-EN-ASYMMETRY-001 did this for 'en' only; every Latin ribbon needs it,
+      // else zh content under a da/es ribbon stays invisible.
+      var pl = proseLatinLen(txt);
       for (var sk in SCRIPTS) {
         if (!Object.prototype.hasOwnProperty.call(SCRIPTS, sk)) continue;
         var sn = (txt.match(SCRIPTS[sk]) || []).length;
-        if (sn && sn / ((sn + enProse) || 1) >= THRESHOLD_PROSE) return false;
+        if (sn && sn / ((sn + pl) || 1) >= THRESHOLD_PROSE) return false;
       }
+      // (2) positively identify the Latin language. A foreign language with a real
+      // presence relative to the ribbon language means either a FULL mismatch (own
+      // score ~0 — a Danish CV under an 'en' ribbon) or a HALF-TRANSLATED render
+      // (the BABEL-FISH-HEADLESS-001 mixed case) — both must heal.
+      var sc = latinScores(txt);
+      var mine = sc[L] || 0, foreign = 0;
+      for (var c in sc) {
+        if (!Object.prototype.hasOwnProperty.call(sc, c)) continue;
+        if (c !== L && sc[c] > foreign) foreign = sc[c];
+      }
+      if (foreign >= LATIN_FOREIGN_MIN && foreign >= mine * LATIN_FOREIGN_RATIO) return false;
       return true;
     }
-    var re = SCRIPTS[L];
-    if (re) {
+    {
       var letters = letterCount(txt);
       if (letters < MIN_LETTERS) return null;   // too little to judge
       // BABEL-RATIO-INVARIANT-001 (owner 2026-07-11 "why does every refresh
@@ -202,9 +257,6 @@
       var proseLatin = proseLatinLen(txt);
       return script / ((script + proseLatin) || 1) >= THRESHOLD_PROSE;
     }
-    // Latin non-English: measure English residue.
-    if (letterCount(txt) < MIN_LETTERS) return null;
-    return (txt.match(EN_MARKER_RE) || []).length <= EN_RESIDUE_MAX;
   }
 
   function hashOf(s) { return s.length + ':' + s.slice(0, 24) + ':' + s.slice(-24); }
@@ -402,5 +454,5 @@
     if (__wasGen && !g) schedule();   // generation just finished -> verify language
     __wasGen = g;
   }, 3000);
-  window.AntcvBabelRelang = { version: VERSION, _check: check, _snapshot: snapshot, _restore: restoreCache, _invariants: invariantSet, _missing: missingInvariants, _isInLanguage: isInLanguage, lastDrift: null };
+  window.AntcvBabelRelang = { version: VERSION, _check: check, _snapshot: snapshot, _restore: restoreCache, _invariants: invariantSet, _missing: missingInvariants, _isInLanguage: isInLanguage, _latinScores: latinScores, lastDrift: null };
 })();

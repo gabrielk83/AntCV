@@ -94,3 +94,81 @@ test('both detection directions share one prose basis (proseLatinLen)', () => {
   assert.equal(src.includes('function proseLatinLen('), true, 'single prose measure helper');
   assert.equal(src.includes('BABEL-EN-ASYMMETRY-001'), true, 'documented at the fix site');
 });
+
+// ---------------------------------------------------------------------------
+// BABEL-LATIN-BLIND-001 (owner 2026-07-21: "make sure no similar issue in danish
+// spanish or others"). The en-only fix above left five mismatches invisible,
+// because the Latin branch measured ENGLISH residue only:
+//   da/es content under an 'en' ribbon  -> a Danish or Spanish job stranded the CV
+//                                          in that language exactly like Chinese
+//   da <-> es either way                -> no English markers to measure
+//   zh content under a da/es ribbon     -> CJK carries no English markers, so it
+//                                          scored as a clean Danish render
+// Latin languages are now identified POSITIVELY (distinctive function words +
+// orthography, orthography counted only inside lowercase prose words so
+// capitalised proper nouns stay invariants).
+// ---------------------------------------------------------------------------
+
+const DA_CV = ('Erfaren produkt- og projektspecialist med mere end femten års levering på '
+  + 'tværs af regulerede og kommercielle markeder, med ansvar for validering og '
+  + 'overholdelse, kravstyring og ændringskontroludvalg, samt koordinering af '
+  + 'tværfaglige teams gennem kvalificering og frigivelse. ').repeat(3);
+
+const ES_CV = ('Profesional de producto y proyecto con más de quince años de entrega en '
+  + 'mercados regulados y comerciales, liderando trabajos de validación y cumplimiento, '
+  + 'gestión de requisitos y comités de control de cambios, y coordinando equipos '
+  + 'multidisciplinares. ').repeat(3);
+
+// Latin tool/standard names survive every translation — they are invariants.
+const TOOLS = ' Jira Confluence Codebeamer ALM Power BI MATLAB SQL Python Enterprise '
+  + 'Architect ISO 26262 ASPICE CISPR 25 FMEA DFMEA MSA SPC RFQ RFI CCB DV PV FAT SAT ';
+
+test('REGRESSION: Danish or Spanish content under an en ribbon is caught', () => {
+  const B = load();
+  assert.equal(B._isInLanguage(DA_CV, 'en'), false, 'a Danish job must not strand the CV in Danish');
+  assert.equal(B._isInLanguage(ES_CV, 'en'), false, 'same for Spanish');
+});
+
+test('REGRESSION: Latin<->Latin mismatch (da<->es) is caught', () => {
+  const B = load();
+  assert.equal(B._isInLanguage(DA_CV, 'es'), false);
+  assert.equal(B._isInLanguage(ES_CV, 'da'), false);
+});
+
+test('REGRESSION: non-Latin content under a da/es ribbon is caught', () => {
+  const B = load();
+  assert.equal(B._isInLanguage(ZH_CV, 'da'), false, 'CJK carries no English markers — must still heal');
+  assert.equal(B._isInLanguage(ZH_CV, 'es'), false);
+});
+
+test('clean da/es content under its own ribbon is left alone', () => {
+  const B = load();
+  assert.equal(B._isInLanguage(DA_CV, 'da'), true);
+  assert.equal(B._isInLanguage(ES_CV, 'es'), true);
+});
+
+test('half-translated renders still heal (BABEL-FISH-HEADLESS-001 unregressed)', () => {
+  const B = load();
+  assert.equal(B._isInLanguage(DA_CV + EN_CV, 'da'), false, 'half the roles still English');
+  assert.equal(B._isInLanguage(ES_CV + EN_CV, 'es'), false);
+});
+
+test('NO FALSE POSITIVE: invariants never fire a costly re-translate', () => {
+  const B = load();
+  // capitalised proper nouns are invariants — their orthography must not vote
+  assert.equal(B._isInLanguage(EN_CV + ' Ørsted København Nørrebro Åhus ', 'en'), true,
+    'an English CV listing Danish employers is still English');
+  assert.equal(B._isInLanguage(EN_CV + ' José Muñoz Peña Málaga ', 'en'), true,
+    'Spanish personal/place names in an English CV');
+  assert.equal(B._isInLanguage(DA_CV + TOOLS + TOOLS, 'da'), true,
+    'English tool/standard names inside a Danish CV are invariants');
+  assert.equal(B._isInLanguage(ES_CV + TOOLS + TOOLS, 'es'), true);
+  assert.equal(B._isInLanguage(DA_CV + ' "A Study of Optical Metrology and Machine Vision" ', 'da'), true,
+    'an English quoted publication title is an invariant');
+});
+
+test('orthography is only trusted inside lowercase prose words', () => {
+  const B = load();
+  const s = B._latinScores(EN_CV + ' Ørsted København Nørrebro Åhus ');
+  assert.equal(s.da === 0, true, 'capitalised Danish proper nouns contribute no Danish signal');
+});

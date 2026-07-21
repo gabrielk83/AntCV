@@ -1200,6 +1200,24 @@
   // real personalInfo role whose title+company is NOT present in the section is re-inserted as
   // HIDDEN (on:false) — present and recoverable in one click, never lost. Owner rule (the gen
   // prompt's own words): a hidden role keeps its content; a DROPPED role forces a retype.
+  // ROLES-STORM-CONVERGE-001 (owner 2026-07-21, live antcv.pages.dev 1.51.1792, Ibsen
+  // Photonics app AT REST): `sections` written ~40x in 31s forever, the console looping
+  // "restored 3 missing role(s) hidden" + "re-applied normalisers after restore". The
+  // add-side __complRepeat counter below could not converge it: it is TIME-windowed
+  // (3 hits / 6s) while the poll is 2.5s, so it suppressed at most one pass in three
+  // and re-armed — and it RESET on any pass that found nothing missing, which a strict
+  // add/remove alternation produces. Replaced by a STICKY decision:
+  //
+  //   restore a given missing-set ONCE per (document x VISIBLE experience substructure).
+  //
+  // If the same set is missing AGAIN while the visible CV is byte-identical, then
+  // something removed what we just restored — restoring it a second time can only
+  // sustain the storm. The restored roles are HIDDEN (a recover-in-one-click safety
+  // net, never visible content), so holding costs the user nothing. Keying on the
+  // VISIBLE substructure is what makes this remover-agnostic: the churn only toggles
+  // the hidden roles, so the key is stable across the loop, while any genuine edit or
+  // regeneration changes it and re-arms the restore. A page reload also re-arms it.
+  var __complDone = { key: '', sigs: {} };
   var __complRepeat = null;   // STORM-OSCILLATION-GUARD-001 (add-side): { sig, first, n } churn tracker
   function repairExperienceCompleteness(cv) {
     var idx = -1;
@@ -1238,6 +1256,9 @@
       o.on = false;                                   // restore HIDDEN — does not change the visible CV
       return o;
     });
+    // NOTE (ROLES-STORM-CONVERGE-001): do NOT clear __complDone here. "Nothing missing"
+    // is the state right after our own restore lands; clearing on it is precisely how the
+    // old counter re-armed itself every other pass and kept the storm alive.
     if (!missing.length) { __complRepeat = null; return null; }
     // STORM-OSCILLATION-GUARD-001 (add-side): this restore keeps finding the SAME roles
     // "missing" every pass because roleCanonTitles shortens a title so _samePosition no
@@ -1258,6 +1279,24 @@
     } else {
       __complRepeat = { sig: __sig, first: __nowC, n: 1 };
     }
+    // ROLES-STORM-CONVERGE-001 (sticky, remover-agnostic — see the note on __complDone):
+    // one restore per (document x visible experience substructure x missing set). The
+    // second time the same set turns up missing under an unchanged visible CV, a
+    // competing writer is stripping our restore; hold instead of feeding the loop.
+    var __vis = roles.filter(function (r) { return r && r.on !== false; })
+      .map(function (r) { return String(r.id != null ? r.id : '') + '|' + norm(r.title || r.role) + '|' + norm(r.company); }).join('~');
+    var __doc = '';
+    try { var __m = JSON.parse(localStorage.getItem('meta') || '{}') || {}; __doc = String(__m.company || '') + '|' + String(__m.role || ''); } catch (_) {}
+    var __key = __doc + '||' + __vis;
+    if (__complDone.key !== __key) __complDone = { key: __key, sigs: {} };   // real change -> re-arm
+    if (__complDone.sigs[__sig]) {
+      if (__complDone.sigs[__sig] === 1) {
+        __complDone.sigs[__sig] = 2;          // log once, not once per cycle
+        try { console.warn('[415] experience-completeness HELD (ROLES-STORM-CONVERGE-001) — the ' + missing.length + ' role(s) it restored were removed again while the visible CV was unchanged, so a competing writer owns them; not restoring a second time. Un-hide from Settings if you want them back.'); } catch (_) {}
+      }
+      return null;
+    }
+    __complDone.sigs[__sig] = 1;
     var copy = cv.slice();
     copy[idx] = Object.assign({}, sec, { roles: roles.concat(missing) });
     try { console.log('[415] experience-completeness restored ' + missing.length + ' missing role(s) hidden'); } catch (_) {}
@@ -1936,6 +1975,25 @@
   // always writes. Time-bounded so a legitimate later re-visit of an old state is unaffected.
   var __recentWrites = [];   // [{ h: serialisedSections, t: ms }]
   var __OSC_WINDOW_MS = 4000;
+  // ROLES-STORM-CONVERGE-001 (write-side): the whole-blob key above is defeated by a
+  // PARALLEL writer. On the live Ibsen app a translation/babel pass rewrote unrelated
+  // rows (the zh/English tools residue) on every cycle, so the serialised blob was never
+  // byte-identical twice and this guard never matched — while the experience section
+  // ping-ponged between exactly two shapes. Key a second guard on the EXPERIENCE
+  // SUBSTRUCTURE alone: if we are about to re-produce an experience section we already
+  // wrote seconds ago (i.e. it was reverted in between), keep the STORED one and let the
+  // rest of the normalisation through. Unrelated work still lands; only the contested
+  // substructure stops being re-fed.
+  var __recentExpWrites = [];   // [{ h: serialised experience section, t: ms }]
+  function __expSerial(blob) {
+    try {
+      var a = (blob && blob.cv) || [];
+      for (var i = 0; i < a.length; i++) {
+        if (a[i] && (a[i].id === 'experience' || a[i].type === 'experience')) return JSON.stringify(a[i]);
+      }
+    } catch (_) {}
+    return '';
+  }
 
   function normalize() {
     // EDIT-GUARD-001 (owner 2026-06-19): defer all normalisation while the user is
@@ -2046,6 +2104,27 @@
       // else this fires the antcv:sections-updated storm that flickers the whole app.
       var __after = JSON.stringify(next);
       if (__after === __before) return;
+      // ROLES-STORM-CONVERGE-001 (write-side, substructure-keyed): hold back a contested
+      // EXPERIENCE section — one we already wrote within the window and that has since
+      // been reverted — while still writing everything else this pass normalised.
+      var __nowE = Date.now();
+      var __expAfter = __expSerial(next), __expBefore = __expSerial(b);
+      if (__expAfter && __expAfter !== __expBefore) {
+        __recentExpWrites = __recentExpWrites.filter(function (e) { return __nowE - e.t < __OSC_WINDOW_MS; });
+        if (__recentExpWrites.some(function (e) { return e.h === __expAfter; })) {
+          try { console.warn('[sections-normalize-415] experience oscillation held (ROLES-STORM-CONVERGE-001) — a competing writer keeps reverting this experience section; keeping the stored one and writing the rest'); } catch (_) {}
+          var __expStored = JSON.parse(__expBefore || 'null');
+          next = Object.assign({}, next, {
+            cv: next.cv.map(function (s) {
+              return (s && (s.id === 'experience' || s.type === 'experience')) ? (__expStored || s) : s;
+            }),
+          });
+          __after = JSON.stringify(next);
+          if (__after === __before) return;      // experience was the only change -> nothing left to write
+        } else {
+          __recentExpWrites.push({ h: __expAfter, t: __nowE });
+        }
+      }
       // STORM-OSCILLATION-GUARD-001: if we already wrote this exact result within the window,
       // a competing writer is reverting it every cycle — writing again only sustains the
       // sections-updated storm (continuous re-render + text-align re-apply). Hold instead.

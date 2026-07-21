@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.1664-sidebar-nojustify';
+  const TARGET_VERSION = '1.51.1684-palette-stick-clear';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.1664-sidebar-nojustify',
     '1.51.1644-compl-selflimit',
     '1.51.1624-storm-osc-guard',
     '1.51.1604-align-storm-001',

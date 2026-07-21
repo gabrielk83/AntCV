@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.1664-sidebar-nojustify';
+const CACHE = 'antcv-1.51.1684-palette-stick-clear';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

@@ -17448,6 +17448,10 @@
                         // checkbox once it renders (checked=, not click — no onChange loop).
                         try {
                           var __bf1 = (e.meta && e.meta.styleConfig && "object" == typeof e.meta.styleConfig) || (e.meta && e.meta.brandV2 && "object" == typeof e.meta.brandV2) || /\n\nBRAND-FIT:/.test(String(e.supporting_context || ""));
+                          // PALETTE-STICK-CLEAR-001: symmetric clear — an unbranded load must NOT
+                          // inherit the previous app's brand. Reset the runtime flag + the GLOBAL
+                          // antcv:brandV2 first; the branded branch below re-applies for a branded app.
+                          try { window.__antcvBrandFit = !1; localStorage.removeItem("antcv:brandV2"); } catch (_) {}
                           if (__bf1) {
                             window.__antcvBrandFit = !0;
                             // BRANDFIT-CANDIDATE-SIDEBAR-OVERRIDE-001: publish the fitted
@@ -23004,6 +23008,8 @@
                 // BRAND-FIT-OPEN-002: same brand-fit checkbox arming as occ-1.
                 try {
                   var __bf2 = (e.meta && e.meta.styleConfig && "object" == typeof e.meta.styleConfig) || (e.meta && e.meta.brandV2 && "object" == typeof e.meta.brandV2) || /\n\nBRAND-FIT:/.test(String(e.supporting_context || ""));
+                  // PALETTE-STICK-CLEAR-001: symmetric clear (see __bf1 site) — Read-button restore.
+                  try { window.__antcvBrandFit = !1; localStorage.removeItem("antcv:brandV2"); } catch (_) {}
                   if (__bf2) {
                     window.__antcvBrandFit = !0;
                     try {

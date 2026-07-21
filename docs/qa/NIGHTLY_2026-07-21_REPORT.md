@@ -83,4 +83,6 @@ Registered in: ACTIVE_BUGS (top entry) + FEATURES_REGISTRY (increment 30) + OPEN
 
 The three other day-session gaps the body flagged (MANUAL-SAVE-CATEGORY-001 `1.51.1576`, AUTO-COMMIT-FRESHEST-001 `1.51.1580`, Application-History file-number `1.51.1584`) have **since** been reconciled into all three registers — grep-confirmed present this run.
 
+**Live-verify (PWA layer, curl to pages.dev) — the SIDEBAR fix is deployed + serving:** live `ANTCV_VERSION` seed = local `TARGET_VERSION` = **`1.51.1664-sidebar-nojustify`** (no version regression / no stale-SW mask); live index references `app.js?v=1.51.1664-sidebar-nojustify`; **the served app.js at that `?v` contains the fix marker** `(hg||N)?"left":"justify"` (grep = 1) → SIDEBAR-RICHBLOCK-NOJUSTIFY-001 is deployed + live-served, not just committed. (The `1664` TARGET is the highest actual cache-bust version; `1665→1683` was a shift-claim range, sidecar/no-asset work.) Worker `/health` live-attest unchanged env-gate — not re-attempted (no worker dispatch this run).
+
 **No canonical open register row is newly actionable** — every open row remains owner-gated / needs-2nd-physical-device / needs-live-models (per-band status in the body holds unchanged). No code shipped by this dispatch.

@@ -30,6 +30,51 @@ at this file so the rule travels with it. The authoritative live list of trigger
 scheduled-tasks store + memory `scheduled-jobs-map`; this doc is the framing + the review-and-tune
 routines' procedures.
 
+## STANDING RULE 0 — PREFLIGHT + HEARTBEAT (owner 2026-07-21, mandatory for every agent routine)
+
+**Why (reliability audit 2026-07-21).** These are desktop-app-local scheduled tasks: they run
+only while the Claude app is open, and a task due when it is closed defers to the next launch
+(multiple missed days coalesce into one catch-up). Two failure modes fell out of that:
+- **Collision with the owner's interactive session.** A deferred run fires into the *shared main
+  clone* while the owner is working there; the dirty tree blocks its `git pull --rebase`, the
+  shift-claim auto-push tangles, version ranges collide — so the run silently aborts or half-runs
+  (evidence: 2026-07-18 + 07-20 produced no run at all though the app was used; 07-14 the nightly
+  left no report while job-tracker committed).
+- **Silent no-op = invisible failure.** A run that fires and does nothing (demand-seed 2026-07-17
+  fired at 20:02 but wrote no report and pushed nothing) is indistinguishable from never running.
+
+**The rule.** Every agent-driven routine, as its FIRST and LAST action:
+
+```
+# FIRST (before SYNC FIRST): log liveness + get a workspace verdict
+node scripts/routine-preflight.mjs start --routine <this-routine-name>
+#   exit 0 "WORKSPACE CLEAN"  → SYNC FIRST + work in this clone as normal.
+#   exit 3 "WORKSPACE DIRTY"  → do NOT rebase/edit here; run the printed `git worktree add
+#            origin/main` line and do ALL work in that worktree (this is what stops the collision).
+
+# LAST (always, even on a no-op or a blocker — this is what makes a silent failure visible):
+node scripts/routine-preflight.mjs end   --routine <name> --status ok|no-op --summary "<one line>"
+node scripts/routine-preflight.mjs error --routine <name> --summary "<why blocked>"   # on abort
+```
+
+The heartbeat ledger is local (`~/.claude/scheduled-tasks/ROUTINE_HEALTH.jsonl`) — no push, no new
+pusher, no collision. `node scripts/routine-preflight.mjs report --days 14` prints the recent runs
+and flags any that STARTED but never ended (crashed / killed / silent). Check it to answer "did the
+routines actually run?" — a start with no matching end is the alarm the old setup lacked.
+
+**Scheduling (owner 2026-07-21).** The two nightlies moved off 03:30/03:45 (app almost never open
+then → always deferred) to a morning window the app is reliably open in and staggered wider:
+antcv-nightly 08:00, antcv-job-tracker-nightly 08:45. The evening weeklies (Wed/Fri/Sun+Tue 22:00)
+stay — the app is usually open then; worktree isolation (rule 0) handles their collision risk.
+
+**Substrate note (structural, owner-gated).** Reliability is ultimately capped by the desktop app
+being open. The only fixes that run independent of this machine: (a) pure-script routines belong on
+GitHub Actions cron — the weekly security audit already proves this substrate; the one AntCV routine
+whose CORE is scriptable is the cost-quality tune's *proposal+report* half (`relay-cost-quality-tune.mjs`),
+apply+deploy still owner-gated. (b) The web-research + judgment routines (position-discovery,
+demand-seed, the nightlies) cannot move to Actions — they need an agent; the true "runs even when my
+machine is off" path for those is a **claude.ai cloud routine**, created from the claude.ai UI.
+
 ## Routine register
 
 | Routine | Cadence | Pushes to main / deploys? | Claim required | Notes |

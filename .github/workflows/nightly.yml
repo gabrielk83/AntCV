@@ -108,3 +108,11 @@ jobs:
             7. END-OF-RUN: write the dated report + register edits and push them (this is how a cloud
                run's outcome is recorded — there is no local heartbeat ledger in CI). A run whose
                outcome lives only in the log is NOT complete.
+      - name: Upload agent transcript (always — makes any failure diagnosable)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-execution-output
+          path: /home/runner/work/_temp/claude-execution-output.json
+          if-no-files-found: warn
+          retention-days: 14

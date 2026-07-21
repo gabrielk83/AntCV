@@ -231,6 +231,14 @@ const realWho = () => ({ id: 'who', type: 'rich_block', items: [
   { b: 'Professional summary', t: 'Over 15 years in electro-optical hardware and governance.', mk: true },
   { b: 'How I operate', t: 'Calm and structured, I make data-led decisions.', mk: true },
 ] });
+// the live half-filled case: "How I operate" real, but the row that actually carries
+// foundation's substance (Professional summary) still a placeholder.
+const halfWho = () => ({ id: 'who', type: 'rich_block', items: [
+  { b: 'Who I am', t: 'I work best where uncertainty and delivery move together.' },
+  { b: 'Professional summary', t: '[Identity tied to the role]', mk: true },
+  { b: 'How I operate', t: 'Calm and structured, I make data-led decisions.', mk: true },
+  { b: 'My goal', t: '[The contribution wanted]', mk: true },
+] });
 
 test('a hidden foundation with REAL prose is kept visible while who is still placeholder', () => {
   const api = loadSidecar({});
@@ -252,4 +260,11 @@ test('a foundation that is only placeholders stays hidden — nothing would be l
     { b: 'Hands-on', t: '[Select only skills that match]', mk: true },
   ] };
   assert.equal(api.foundationKeep([empty, phWho()]).changed, false);
+});
+
+test('a HALF-filled who does not release foundation — no flip-flop between loads', () => {
+  const api = loadSidecar({});
+  const out = api.foundationKeep([realFoundation(), halfWho()]);
+  assert.equal(out.changed, true, 'kept visible: Professional summary is still a placeholder');
+  assert.equal(out.list.find((s) => s.id === 'foundation').on, true);
 });

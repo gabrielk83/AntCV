@@ -25,7 +25,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.1944-nordic-cl-order-v5';
+  var VERSION = '1.51.1945-nordic-cl-order-v5';
   if (window.__antcvNordicClOrder971 === VERSION) return;
   window.__antcvNordicClOrder971 = VERSION;
 
@@ -143,12 +143,31 @@
   // Keep it visible until `who` actually carries real content; after a v5 regeneration
   // fills who_summary / who_operate, foundation stays off as intended. Idempotent: once
   // it is back on, the `on !== false` guard makes this a no-op.
+  // Has the v5 "Who I am" end-block actually ABSORBED what FOUNDATION used to say?
+  // "any real row" is too weak a test: on the owner's live letter only "How I operate"
+  // was real while `Professional summary` — the row that carries foundation's substance
+  // (the hands-on / professional grounding) — was still a placeholder. Releasing on that
+  // would re-hide the real prose on the next load, so the letter would flip between
+  // showing and dropping a paragraph. Require the summary row AND a second real row.
+  function whoCarriesFoundation(w) {
+    if (!w || !Array.isArray(w.items)) return false;
+    var real = 0, summary = false;
+    w.items.forEach(function (r, i) {
+      if (i === 0 || !r) return;                       // row 0 is the lead-in
+      var t = String(r.t || '').trim();
+      if (!t || /^\[/.test(t)) return;
+      real++;
+      if (/^professional summary$/i.test(String(r.b || '').trim())) summary = true;
+    });
+    return summary && real >= 2;
+  }
+
   function foundationKeep(list) {
     var f = null, w = null;
     list.forEach(function (s) { if (!s) return; if (s.id === 'foundation') f = s; if (s.id === 'who') w = s; });
     if (!f || f.on !== false) return { changed: false, list: list };
     if (!hasRealBody(f)) return { changed: false, list: list };   // nothing would be lost
-    if (hasRealBody(w)) return { changed: false, list: list };    // v5 who carries it now
+    if (whoCarriesFoundation(w)) return { changed: false, list: list };
     return {
       changed: true,
       list: list.map(function (s) {

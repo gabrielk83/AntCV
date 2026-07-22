@@ -644,6 +644,46 @@ async function tryEightfoldJson(apiUrl, originalUrl, getCORS, request, env, t0, 
 }
 
 
+// JD-FETCH-JSONLD-001 (2026-07-22): SEO-optimised career SPAs — SAP SuccessFactors RMK
+// (career*.successfactors.eu), many Workday / Phenom tenants — render the JD only via
+// JavaScript, so the server HTML BODY is a near-empty shell and the fetch returned only
+// the <title>. But for Google Jobs they DO embed the full posting as a schema.org
+// JobPosting in <script type="application/ld+json">. htmlToText strips <script>, so that
+// description was invisible. Parse the JSON-LD and use its description when it beats the
+// body extraction. Generic — helps every ATS that ships the JobPosting microdata.
+export function extractJobPostingJsonLd(html) {
+  try {
+    var re = /<script\b[^>]*type\s*=\s*["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+    var m;
+    while ((m = re.exec(html))) {
+      var raw = (m[1] || '').trim();
+      if (!raw) continue;
+      var data;
+      try { data = JSON.parse(raw); } catch (_) { continue; }
+      var nodes = Array.isArray(data) ? data : (data && Array.isArray(data['@graph']) ? data['@graph'] : [data]);
+      for (var i = 0; i < nodes.length; i++) {
+        var n = nodes[i];
+        if (!n || typeof n !== 'object') continue;
+        var ty = n['@type'];
+        var isJob = ty === 'JobPosting' || (Array.isArray(ty) && ty.indexOf('JobPosting') >= 0);
+        if (!isJob) continue;
+        var desc = htmlToText(String(n.description || ''));
+        if (desc.length < MIN_GOOD_TEXT_CHARS) continue;
+        var org = n.hiringOrganization;
+        var company = (org && typeof org === 'object') ? String(org.name || '').trim() : (typeof org === 'string' ? org.trim() : '');
+        var loc = '';
+        try {
+          var jl = n.jobLocation; if (Array.isArray(jl)) jl = jl[0];
+          var addr = jl && jl.address;
+          if (addr && typeof addr === 'object') loc = [addr.addressLocality, addr.addressRegion, addr.addressCountry].filter(Boolean).join(', ');
+        } catch (_) {}
+        return { description: desc, title: String(n.title || '').trim(), company: company, location: loc };
+      }
+    }
+  } catch (_) {}
+  return null;
+}
+
 // ─── Main handler ────────────────────────────────────────────────
 
 export async function handleFetchJdUrl(request, env, getCORS) {
@@ -807,7 +847,7 @@ export async function handleFetchJdUrl(request, env, getCORS) {
   const cleaned = stripConsentAndPopups(html);
 
   // L1: locate the main JD content region.
-  const { html: mainHtml, via: extractedVia } = extractMainContent(cleaned);
+  let { html: mainHtml, via: extractedVia } = extractMainContent(cleaned);
 
   // Convert to text.
   let text = htmlToText(mainHtml);
@@ -816,6 +856,34 @@ export async function handleFetchJdUrl(request, env, getCORS) {
   // (over-aggressive removal), fall back to the cleaned full document.
   if (text.length < MIN_GOOD_TEXT_CHARS && extractedVia !== 'whole-document') {
     text = htmlToText(cleaned);
+  }
+
+  // JD-FETCH-JSONLD-001: SPA career sites (SuccessFactors, Workday…) embed the full JD as
+  // a schema.org JobPosting even when the body is a JS shell — prefer it when it beats the
+  // body extraction (it is the clean, Google-Jobs-grade description).
+  const __jsonLd = extractJobPostingJsonLd(html);
+  if (__jsonLd && __jsonLd.description.length > text.length) {
+    const __hdr = [__jsonLd.title, __jsonLd.location].filter(Boolean).join(' — ');
+    text = (__hdr && !__jsonLd.description.slice(0, 200).includes(__jsonLd.title) ? __hdr + '\n\n' : '') + __jsonLd.description;
+    extractedVia = 'schema-jsonld';
+    if (__jsonLd.company && !liCompany) liCompany = __jsonLd.company;
+    if (__jsonLd.title) title = __jsonLd.title;
+  }
+
+  // JD-FETCH-STUB-REGION-001: SAP SuccessFactors RMK (career*.successfactors.eu) renders the
+  // JD as real DOM but OUTSIDE <main>/[role=main] with no semantic container, so
+  // extractMainContent locks onto a short header stub (title + requisition line ~260 chars)
+  // that clears MIN_GOOD_TEXT_CHARS and the real JD, deeper in the page, is never reached. A
+  // genuine JD is rarely under ~700 chars, so when the located region is that short AND the
+  // full cleaned document carries far more text (>3x), the region is a stub — prefer the
+  // fuller document (nav noise is harmless to the JD-analysis prompt; a title-only "JD" is
+  // useless). Never overrides a clean schema.org JobPosting result.
+  if (extractedVia !== 'schema-jsonld' && extractedVia !== 'whole-document' && text.length < 700) {
+    const whole = htmlToText(cleaned);
+    if (whole.length > text.length * 3 && whole.length >= MIN_GOOD_TEXT_CHARS) {
+      text = whole;
+      extractedVia = 'whole-document-stub-rescue';
+    }
   }
 
   let truncated = false;

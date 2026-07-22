@@ -174,6 +174,13 @@
         }
         // group sub-heading row — a single heading input + reorder/un-group/delete.
         if (ev.grp) {
+          // ROWFIT-GROUP-BUTTONS (owner 2026-07-22): a group runs from this {grp} row to the next
+          // {grp} or the end; group-level ✨/⇥ act on every child content row (loops the proven
+          // per-item path via a "group:i" id). ⏳ shows on the group while any child is busy.
+          var __gEnd = i + 1; while (__gEnd < rows.length && !(rows[__gEnd] && rows[__gEnd].grp)) __gEnd++;
+          var __grpBusyE = false, __grpBusyC = false;
+          for (var __gj = i + 1; __gj < __gEnd; __gj++) { if (isBusy("e:" + (e.id || "") + ":item:" + __gj)) __grpBusyE = true; if (isBusy("c:" + (e.id || "") + ":item:" + __gj)) __grpBusyC = true; }
+          var __grpBusy = __grpBusyE || __grpBusyC;
           return h("div", { key: i, style: { border: "1px solid #d8e8e6", borderRadius: 4, padding: 5, marginBottom: 6, background: hiddenRow ? "#fafafa" : "#f1faf9", opacity: hiddenRow ? 0.5 : 1, display: "flex", gap: 4, alignItems: "center" } },
             h("div", { style: { display: "grid", gap: 0, justifyItems: "center", width: 20, flexShrink: 0 } },
               h("button", { onClick: function () { moveRow(i, -1); }, disabled: i === 0, title: "Move up", style: { fontSize: 10, border: "none", background: "none", color: i === 0 ? "#ccc" : "#666", padding: 0, cursor: i === 0 ? "default" : "pointer" } }, "▲"),
@@ -181,6 +188,8 @@
             ),
             h("span", { style: { fontSize: 10, color: "#0a8", fontWeight: 700, flexShrink: 0 } }, "▾ Group"),
             h("input", { value: ev.t || "", onChange: function (x) { updateRow(i, { t: x.target.value }); }, placeholder: "Sub-group heading (e.g. Engineering)", style: { flex: "1 1 auto", fontSize: 11, padding: 4, border: "1px solid #cfe6e3", borderRadius: 3, minWidth: 0, fontWeight: 700, color: "#0a8" } }),
+            onEnrich ? h("button", { onClick: function () { for (var j = i + 1; j < __gEnd; j++) markBusy("e:" + (e.id || "") + ":item:" + j); onEnrich("group:" + i); }, disabled: __grpBusy, title: "Enhance every row in this group", style: btn({ border: "1px solid " + (__grpBusy ? "#ccc" : "#10b981"), color: __grpBusy ? "#ccc" : "#10b981", fontSize: 9, cursor: __grpBusy ? "wait" : "pointer" }) }, __grpBusyE ? "⏳" : "✨") : null,
+            onCompress ? h("button", { onClick: function () { for (var j = i + 1; j < __gEnd; j++) markBusy("c:" + (e.id || "") + ":item:" + j); onCompress("group:" + i); }, disabled: __grpBusy, title: "Fit every row in this group to one line", style: btn({ border: "1px solid " + (__grpBusy ? "#ccc" : "#7c3aed"), color: __grpBusy ? "#ccc" : "#7c3aed", fontSize: 9, cursor: __grpBusy ? "wait" : "pointer" }) }, __grpBusyC ? "⏳" : "⇥") : null,
             h("button", { onClick: function () { toggleGrp(i); }, title: "Convert to a normal row", style: btn({ border: "1px solid #888", color: "#888", minWidth: 22 }) }, "↩"),
             h("button", { onClick: function () { deleteRow(i); }, title: "Delete group", style: btn({ border: "1px solid #e55", color: "#e55", fontSize: 10 }) }, "✕")
           );

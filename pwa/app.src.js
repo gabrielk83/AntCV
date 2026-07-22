@@ -21904,6 +21904,20 @@
           if (!o) return void alert("Section not found.");
           const r = t ? `${e}:${t}` : e;
           let a, i;
+          if (t && t.startsWith("group:")) {
+            // ROWFIT-GROUP-BUTTONS (owner 2026-07-22): enrich EVERY child content row of this group
+            // (the {grp} row at gi through the next {grp} or end), looping the proven per-item path.
+            if ("rich_block" !== o.type) return void alert("Group actions are rich-block only.");
+            const gi = parseInt(t.slice(6), 10), items = o.items || [];
+            let end = gi + 1;
+            while (end < items.length && !(items[end] && items[end].grp)) end++;
+            for (let j = gi + 1; j < end; j++) {
+              const it = items[j];
+              if (!it || it.grp || !String(it.t || "").trim()) continue;
+              await il({ sectionId: e, roleId: "item:" + j });
+            }
+            return;
+          }
           if (t && t.startsWith("row:")) {
             if ("table" !== o.type)
               return void alert("Section is not a table.");
@@ -22172,6 +22186,22 @@
           const r = Pi.find((t) => t.id === e);
           if (!r) return void alert("Section not found.");
           const a = t ? `${e}:${t}` : e;
+          if (t && t.startsWith("group:")) {
+            // ROWFIT-GROUP-BUTTONS: fit EVERY child content row of this group, skipping rows that
+            // already fit SILENTLY (looping the per-item path would otherwise alert per fitting row).
+            if ("rich_block" !== r.type) return void alert("Group actions are rich-block only.");
+            const gi = parseInt(t.slice(6), 10), items = r.items || [];
+            let end = gi + 1;
+            while (end < items.length && !(items[end] && items[end].grp)) end++;
+            for (let j = gi + 1; j < end; j++) {
+              const it = items[j];
+              if (!it || it.grp || !String(it.t || "").trim()) continue;
+              const __txt = (it.b ? it.b + " " : "") + (it.t || "");
+              if (al(__txt, "list_item", 10)) continue;   // already fits — skip (no per-row alert)
+              await ll({ sectionId: e, roleId: "item:" + j });
+            }
+            return;
+          }
           if (t && t.startsWith("row:")) {
             const e = parseInt(t.slice(4), 10),
               o = null == (n = r.rows) ? void 0 : n[e];

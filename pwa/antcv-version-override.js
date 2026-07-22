@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.2680-hourglass-storm';
+  const TARGET_VERSION = '1.51.2701-quick-contact-scope';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.2680-hourglass-storm',
     '1.51.2661-cl-v5-rerender-force',
     '1.51.2641-cl-v5-why-roleview',
     '1.51.2622-cl-cv-two-tone',

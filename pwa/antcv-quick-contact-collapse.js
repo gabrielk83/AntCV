@@ -247,6 +247,21 @@
     var found = findColumn();
     if (!found) return;
     var col = found.col;
+    // QUICK-CONTACT-SCOPE-001 (owner 2026-07-22 "pressing on the contact makes the
+    // entire candidate panel collapse"): this collapser is ONLY for the
+    // Settings → Personal fields column. The SECTION-EDITOR candidate panel also
+    // has contact inputs (email/phone/linkedin, when the Contact row is expanded)
+    // plus a Background details/textarea, so findColumn() matched it and hid the
+    // whole Name/Spec/Contact row list (collapsed-by-default → display:none). Bail
+    // whenever the matched column belongs to the section editor — it always
+    // contains [data-candidate-key] rows or lives inside the editor side/bottom
+    // panel; the Settings Personal column has neither.
+    try {
+      if (col.querySelector('[data-candidate-key]') ||
+          (col.closest && col.closest('.antcv-editor-side-panel,.antcv-mobile-bottom-panel,[data-antcv-app-panel],[data-antcv-candidate-band]'))) {
+        return;
+      }
+    } catch (_) {}
     var rows = contactRows(col);
     var hdr = null;
 

@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.2680-hourglass-storm';
+const CACHE = 'antcv-1.51.2701-quick-contact-scope';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

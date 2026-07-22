@@ -369,7 +369,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.2230-cl-subtitle-no-dup-company';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.2401-analysis-header-editor-gate';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.2420-application-line';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -411,7 +411,7 @@
           app.src = 'app.js?v=1.51.2230-cl-subtitle-no-dup-company';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.2401-analysis-header-editor-gate';
+            vo.src = 'antcv-version-override.js?v=1.51.2420-application-line';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -811,7 +811,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      Cooperates with candidate-preview-editor-341 (which makes it editable).
      Escape hatch: localStorage['antcv:disable-subtitle-sequence']='1'. -->
 <script src="antcv-subtitle-sequence-368.js?v=1.51.1558-unsol-subtitle-slogan-gate" defer></script>
-<script src="antcv-application-line-001.js?v=1.51.2400-application-line" defer></script>
+<script src="antcv-application-line-001.js?v=1.51.2420-application-line" defer></script>
 <script src="antcv-name-align-fix.js?v=1.1.0-norace" defer></script>
 <script src="antcv-table-headers-editable-341.js?v=1.40.341-tb004-fix2" defer></script>
 <script src="antcv-section-move-button-341.js?v=1.40.341-p0d" defer></script>

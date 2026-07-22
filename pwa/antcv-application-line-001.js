@@ -26,7 +26,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.51.2400-application-line';
+  var VERSION = '1.51.2420-application-line';
   if (window.__antcvApplicationLine === VERSION) return;
   window.__antcvApplicationLine = VERSION;
 
@@ -112,6 +112,11 @@
       var paper = papers[i];
       var existing = paper.querySelector('[' + MARK + ']');
       if (!txt) { if (existing && existing.parentNode) existing.parentNode.removeChild(existing); continue; }
+      // Steady-state fast path: the line is already present and correct, so skip
+      // the (relatively expensive) anchor scan entirely. A re-mounted paper loses
+      // its line (the childList observer + this scan re-inject it), so we never
+      // miss a real change — this just keeps the periodic re-check cheap.
+      if (existing && existing.textContent === txt) continue;
       // Anchor: after the slogan if present, else after the contact band.
       var anchor = sloganEl(paper) || contactBand(paper);
       if (!anchor) { if (existing && existing.parentNode) existing.parentNode.removeChild(existing); continue; }
@@ -161,7 +166,13 @@
   window.addEventListener('antcv:sections-updated', schedule);
   window.addEventListener('antcv:language-changed', schedule);
   window.addEventListener('antcv:language-prefs-changed', schedule);
-  [400, 1200, 3000, 7000, 12000].forEach(function (ms) { setTimeout(schedule, ms); });
+  // The editor boots slowly (~18s) and switching TO the Preview tab shows an
+  // already-mounted paper (no childList add fires), so events alone can miss it.
+  // A low-frequency re-check guarantees the line appears within a few seconds of
+  // the preview being shown. Cheap: apply() early-returns via the steady-state
+  // fast path when the line is already correct.
+  [400, 1200, 3000, 7000, 12000, 20000].forEach(function (ms) { setTimeout(schedule, ms); });
+  setInterval(schedule, 2500);
   try { window.AntcvApplicationLine = { version: VERSION, _apply: apply, _text: appLineText, _remove: removeAll }; } catch (_) {}
   try { console.debug('[application-line] installed ' + VERSION); } catch (_) {}
 })();

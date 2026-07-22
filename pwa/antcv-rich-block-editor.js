@@ -119,7 +119,12 @@
         h("input", { type: "color", value: leadColor, onChange: function (x) { d({ leadColor: x.target.value }); }, title: "Lead-in colour (whole section)", style: { width: 26, height: 22, padding: 0, border: "1px solid #ccc", borderRadius: 3, cursor: "pointer", flexShrink: 0 } }),
         h("button", { onClick: function () { d({ leadColon: !leadColon }); }, title: leadColon ? "Lead-in followed by a colon (Label: value) — click to remove" : "No colon after the lead-in — click to add (Label: value)", style: btn({ border: "1px solid " + (leadColon ? accent : "#bbb"), color: leadColon ? accent : "#bbb", fontWeight: 700, minWidth: 22 }) }, "L:"),
         h("button", { onClick: function () { d({ leadUnderline: !leadUnderline }); }, title: "Lead-in underline (whole section)", style: btn({ border: "1px solid " + (leadUnderline ? accent : "#bbb"), color: leadUnderline ? accent : "#bbb", textDecoration: "underline", fontWeight: 700, minWidth: 22 }) }, "U"),
-        h("input", { type: "color", value: leadUnderlineColor, disabled: !leadUnderline, onChange: function (x) { d({ leadUnderline: true, leadUnderlineColor: x.target.value }); }, title: "Lead-in underline colour (whole section)", style: { width: 26, height: 22, padding: 0, border: "1px solid #ccc", borderRadius: 3, cursor: leadUnderline ? "pointer" : "not-allowed", opacity: leadUnderline ? 1 : 0.5, flexShrink: 0 } })
+        h("input", { type: "color", value: leadUnderlineColor, disabled: !leadUnderline, onChange: function (x) { d({ leadUnderline: true, leadUnderlineColor: x.target.value }); }, title: "Lead-in underline colour (whole section)", style: { width: 26, height: 22, padding: 0, border: "1px solid #ccc", borderRadius: 3, cursor: leadUnderline ? "pointer" : "not-allowed", opacity: leadUnderline ? 1 : 0.5, flexShrink: 0 } }),
+        // BRAND-RESET-001 (owner 2026-07-22): a "back to default" button next to the two colour
+        // pickers (text + underline). leadColor = e.leadColor || accent and leadUnderlineColor =
+        // e.leadUnderlineColor || leadColor, so clearing BOTH overrides reverts them to the
+        // brand / visual-style accent. Highlighted only while a manual colour is set.
+        h("button", { onClick: function () { d({ leadColor: null, leadUnderlineColor: null }); }, disabled: !e.leadColor && !e.leadUnderlineColor, title: "Reset the lead-in text + underline colour to the brand / visual-style default", style: btn({ border: "1px solid " + ((e.leadColor || e.leadUnderlineColor) ? accent : "#ccc"), color: (e.leadColor || e.leadUnderlineColor) ? accent : "#ccc", minWidth: 22, marginLeft: 1, cursor: (e.leadColor || e.leadUnderlineColor) ? "pointer" : "default" }) }, "↺")
       );
 
       // ---- rows ----

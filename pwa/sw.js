@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.2800-pink-latch';
+const CACHE = 'antcv-1.51.2821-brand-reset-btn';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

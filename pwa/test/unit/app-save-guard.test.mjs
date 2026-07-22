@@ -1,9 +1,9 @@
-// APP-SAVE-GUARD-001 — the Application-History "switch save-prior" (which persists the
-// in-memory sections to the OUTGOING app id `Fl`/`es`) is the vector that overwrote cloud
-// records with another app's content when `Fl` desynced from what's on screen. It is now
-// gated behind an explicit `antcv:switch-autosave === "on"` flag (default OFF = skip) so it
-// can never silently write the wrong content to a record. Guard must be present in BOTH the
-// human source and the deployed minified mirror.
+// APP-SAVE-GUARD-001/002 — the Application-History "switch save-prior" persists the in-memory
+// sections to the OUTGOING app id (Fl/es). Because Fl can desync from what's on screen, that
+// write corrupted cloud records with another app's content. -002 (smart): the save-prior now
+// fires when the in-memory content provably belongs to Fl (window.__antcvContentAppId === Fl,
+// stamped by the apps client's setActive) OR the manual antcv:switch-autosave==='on' override.
+// A desync (stamp != Fl) skips -> no corruption, while normal switching keeps auto-saving.
 import { test } from 'node:test';
 import assert from 'node:assert';
 import fs from 'node:fs';
@@ -12,18 +12,22 @@ import { fileURLToPath } from 'node:url';
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const pwa = path.join(dir, '../..');
+const src = fs.readFileSync(path.join(pwa, 'app.src.js'), 'utf8');
+const js = fs.readFileSync(path.join(pwa, 'app.js'), 'utf8');
 
-test('app.src.js gates both switch save-prior sites on antcv:switch-autosave', () => {
-  const s = fs.readFileSync(path.join(pwa, 'app.src.js'), 'utf8');
-  const guarded = s.split('if (Fl && Fl !== e.id && "on" ===').length - 1;
-  assert.equal(guarded, 2, 'both save-prior sites guarded');
-  assert.equal(s.includes('if (Fl && Fl !== e.id)') , false, 'no un-guarded save-prior remains');
-  assert.ok(s.includes('antcv:switch-autosave'), 'flag key present');
+test('app.src.js: both save-prior sites use the smart stamp guard, no un-guarded/flag-only site remains', () => {
+  assert.equal(src.split('String(window.__antcvContentAppId||"") === String(Fl)').length - 1, 2, 'both sites stamp-guarded');
+  assert.equal(src.includes('if (Fl && Fl !== e.id)'), false, 'no bare save-prior');
+  assert.equal(src.includes('if (Fl && Fl !== e.id && "on" === (function'), false, 'no flag-only save-prior');
 });
 
-test('app.js (deployed mirror) gates both switch save-prior sites', () => {
-  const s = fs.readFileSync(path.join(pwa, 'app.js'), 'utf8');
-  const guarded = s.split('if(es&&es!==e.id&&"on"===').length - 1;
-  assert.equal(guarded, 2, 'both save-prior sites guarded in the minified mirror');
-  assert.equal(s.includes('if(es&&es!==e.id)'), false, 'no un-guarded save-prior remains in the mirror');
+test('app.js (deployed mirror): both save-prior sites use the smart stamp guard', () => {
+  assert.equal(js.split('String(window.__antcvContentAppId||"")===String(es)').length - 1, 2, 'both mirror sites stamp-guarded');
+  assert.equal(js.includes('if(es&&es!==e.id)'), false, 'no bare save-prior in mirror');
+  assert.equal(js.includes('if(es&&es!==e.id&&"on"===(function'), false, 'no flag-only save-prior in mirror');
+});
+
+test('the content stamp is set in the apps client setActive() in both files', () => {
+  assert.ok(src.includes('window.__antcvContentAppId = String(e)'), 'src setActive stamps');
+  assert.ok(js.includes('window.__antcvContentAppId=String(e)'), 'mirror setActive stamps');
 });

@@ -16967,7 +16967,7 @@
           return this._call("/api/applications/" + e, { method: "DELETE" });
         },
         setActive(e) {
-          return this._call("/api/active", {
+          try { window.__antcvContentAppId = String(e); } catch (_) {} return this._call("/api/active", {
             method: "PUT",
             body: JSON.stringify({
               application_id: e,
@@ -41389,7 +41389,7 @@
                                           if (!Hl) {
                                             (Ul("switch:" + e.id), Gl(""));
                                             try {
-                                              if (Fl && Fl !== e.id && "on" === (function(){try{return localStorage.getItem("antcv:switch-autosave")}catch(_){return null}})())
+                                              if (Fl && Fl !== e.id && (String(window.__antcvContentAppId||"") === String(Fl) || "on" === (function(){try{return localStorage.getItem("antcv:switch-autosave")}catch(_){return null}})()))
                                                 try {
                                                   await oo.update(Fl, {
                                                     cv_sections:
@@ -47867,7 +47867,7 @@
                                 // saving into itself.
                                 (Ul("switch:" + e.id), Gl(""));
                                 try {
-                                  if (Fl && Fl !== e.id && "on" === (function(){try{return localStorage.getItem("antcv:switch-autosave")}catch(_){return null}})())
+                                  if (Fl && Fl !== e.id && (String(window.__antcvContentAppId||"") === String(Fl) || "on" === (function(){try{return localStorage.getItem("antcv:switch-autosave")}catch(_){return null}})()))
                                     try {
                                       await oo.update(Fl, {
                                         cv_sections: (ro && ro.cv) || [],

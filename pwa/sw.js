@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.2781-header-color-controls';
+const CACHE = 'antcv-1.51.2786-app-save-guard2';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

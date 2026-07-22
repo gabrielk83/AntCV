@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.2359-cl-skeleton-seed-storm';
+const CACHE = 'antcv-1.51.2379-title-lang-heal';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',
@@ -76,6 +76,7 @@ const SHELL = [
   './antcv-table-fast-drag.js',
   './antcv-settings-history-guard.js',
   './antcv-babel-relang.js',
+  './antcv-title-lang-heal.js',
   './antcv-auth.js',
   './icons/icon-192.png',
   './icons/icon-512.png',

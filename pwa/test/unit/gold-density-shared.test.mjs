@@ -40,3 +40,20 @@ test('goldDensity fallbacks mirror gold-rules.json values', () => {
   assert.equal(gold.density.fill_band[1], 0.97);
   assert.equal(gold.density.runt_fraction, 0.6);
 });
+
+// LINE-DISTRIBUTION-001 Fit-it engine leg: the app handlers consult the SHIP5 measurer
+// (window.__antcvRowFit) — bidirectional routing, measured prompts, measured acceptance —
+// mirrored src <-> minified app.js, all fail-open when the sidecar is absent.
+const appmin = readFileSync(join(PWA, 'app.js'), 'utf8');
+const appsrc = readFileSync(join(PWA, 'app.src.js'), 'utf8');
+test('rowFit engine wired in both files (routing, prompts, acceptance)', () => {
+  assert.ok(src.includes('window.__antcvRowFit = {'), 'SHIP5 exposes __antcvRowFit (sidecar)');
+  for (const [name, s] of [['app.src.js', appsrc], ['app.js', appmin]]) {
+    assert.ok(s.includes('__antcvRowFit.measure(o)'), name + ': precheck measures');
+    assert.ok(/"short" ?=== ?__rfm\.band/.test(s), name + ': short routes to enrich');
+    assert.ok(s.includes('__antcvRowFit.promptFor'), name + ': compress prompt injection');
+    assert.ok(s.includes('__antcvRowFit.growPromptFor'), name + ': enrich grow injection');
+    assert.ok(s.includes('__antcvRowFit.corrective'), name + ': measured acceptance corrective');
+    assert.ok(s.includes('__antcvRowFit.inBand'), name + ': in-band accept check');
+  }
+});

@@ -69,7 +69,7 @@
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.51.2921-gold-density-shared';
+  const SCRIPT_VERSION = '1.51.2980-rowfit-measure';
   const STORAGE_KEY = 'antcv:bullet-targets';
   const STYLE_ID = 'antcv-bullet-targets-styles';
   const STRIP_MARKER = 'data-antcv-bullet-target-strip';
@@ -943,6 +943,81 @@
     const shrink = lines >= 2 ? [n - (lastChars + Math.floor(0.35 * widthPx / acw)), n - lastChars] : null;
     return { n: n, fillPct: Math.round(fill * 100), grow: grow, shrink: shrink };
   }
+
+  // ── SHIP 5 — LINE-DISTRIBUTION-001 (owner 2026-07-22, OPEN_REGISTER row 61):
+  // measure-based BIDIRECTIONAL row fit. Exposes window.__antcvRowFit so the app's
+  // per-row Fit-it (ll) / Enhance (il) handlers can (a) classify the acting row
+  // against the gold fill band on LIVE geometry (canvas greedy-wrap — zoom/transform
+  // independent), (b) inject a MEASURED char window into the LLM prompt, and
+  // (c) correct the rewrite by re-measuring. Fail-open: every entry returns
+  // null/'' on any error so the handlers keep the legacy percentage-only behavior.
+  function rowFitMeasure(text) {
+    try {
+      const s = String(text || '').trim();
+      if (!s || s.split(/\s+/).length < 3) return null;
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+      const g = currentGeometry();
+      ctx.font = (g.pt * 4 / 3) + 'px "' + g.font + '", Calibri, sans-serif';
+      const cellWpx = (PAGE_W_DXA - Math.round(PAGE_W_DXA * g.ratio)
+                       - 2 * g.mainEdgeIndent * 15 - g.seamGap * 15) * PX_PER_DXA;
+      const widthPx = cellWpx - g.bulletIndent;
+      if (!(widthPx > 50)) return null;
+      const gd = goldDensity();
+      const words = s.split(/\s+/);
+      const spaceW = ctx.measureText(' ').width;
+      let lineW = 0, lines = 1, totalW = 0, totalChars = 0, lastChars = 0;
+      for (const w of words) {
+        const ww = ctx.measureText(w).width;
+        totalW += ww; totalChars += w.length;
+        const cand = lineW === 0 ? ww : lineW + spaceW + ww;
+        if (cand > widthPx && lineW > 0) { lines += 1; lineW = ww; lastChars = w.length; }
+        else { lineW = cand; lastChars = lineW === ww ? w.length : lastChars + 1 + w.length; }
+      }
+      const fill = lineW / widthPx;
+      const acw = totalChars ? totalW / totalChars : 5;
+      const n = s.length;
+      // Band per row 61: SHORT = a single line ending well before the margin (grow);
+      // RUNT = a wrapped block whose last line under-fills (shrink OR grow); else OK.
+      const band = lines === 1 ? (fill < gd.lo ? 'short' : 'ok')
+                               : (fill < gd.runt ? 'runt' : 'ok');
+      const gLo = Math.max(1, Math.ceil((Math.max(gd.lo, gd.runt) * widthPx - lineW) / acw));
+      const gHi = Math.floor((gd.hi * widthPx - lineW) / acw);
+      const grow = band !== 'ok' && gHi >= gLo ? [n + gLo, n + gHi] : null;
+      const shrink = band === 'runt' && lines >= 2
+        ? [Math.max(8, n - lastChars - Math.ceil(0.35 * widthPx / acw)), n - lastChars] : null;
+      return { n: n, lines: lines, fillPct: Math.round(fill * 100), band: band,
+               grow: grow, shrink: shrink, cpl: Math.round(widthPx / acw),
+               bandPct: Math.round(gd.lo * 100) + '-' + Math.round(gd.hi * 100) };
+    } catch (_) { return null; }
+  }
+  window.__antcvRowFit = {
+    measure: rowFitMeasure,
+    inBand: function (text) { const m = rowFitMeasure(text); return !m || m.band === 'ok'; },
+    promptFor: function (text) {
+      const m = rowFitMeasure(text); if (!m || m.band === 'ok') return '';
+      let t = '\nMEASURED ROW TARGET (live geometry - overrides the percentage above): the current text is ' +
+        m.n + ' chars and renders ' + m.lines + ' line(s); the LAST line fills only ' + m.fillPct +
+        '% of the column (~' + m.cpl + ' chars per line). Rewrite so the TOTAL length lands in one of these windows:';
+      if (m.shrink) t += ' SHRINK to ' + m.shrink[0] + '-' + m.shrink[1] + ' chars (drops the dangling last line)';
+      if (m.shrink && m.grow) t += ' OR';
+      if (m.grow) t += ' GROW to ' + m.grow[0] + '-' + m.grow[1] + ' chars (fills the last line)';
+      t += '. The rewritten last line must fill ' + m.bandPct + '% of the column. Prefer the SHRINK window.';
+      return t;
+    },
+    growPromptFor: function (text) {
+      const m = rowFitMeasure(text); if (!m || m.band === 'ok' || !m.grow) return '';
+      return '\nMEASURED ROW TARGET (live geometry - overrides "similar length"): the current text is ' + m.n +
+        ' chars; its last rendered line fills only ' + m.fillPct + '% of the column. GROW the body so the TOTAL lands ' +
+        m.grow[0] + '-' + m.grow[1] + ' chars - the last line must fill ' + m.bandPct + '% of the column.';
+    },
+    corrective: function (text) {
+      const m = rowFitMeasure(text); if (!m || m.band !== 'runt' || !m.shrink) return null;
+      const pct = Math.max(5, Math.min(35, Math.round(100 * (m.n - m.shrink[1]) / m.n)));
+      return { pct: pct, mode: 'reduce' };
+    },
+  };
 
   function buildWindowsBlock(bullets, cellWpx) {
     const ctx = measureCtx();

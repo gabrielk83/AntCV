@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.2961-swatch-picker-fix';
+const CACHE = 'antcv-1.51.2980-rowfit-measure';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

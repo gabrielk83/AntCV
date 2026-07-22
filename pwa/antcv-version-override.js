@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.2961-swatch-picker-fix';
+  const TARGET_VERSION = '1.51.2980-rowfit-measure';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.2961-swatch-picker-fix',
     '1.51.2921-gold-density-shared',
     '1.51.2901-rowpink',
     '1.51.2881-group-buttons',

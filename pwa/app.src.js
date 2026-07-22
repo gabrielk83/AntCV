@@ -21966,7 +21966,11 @@
             else if ("rich_block" === o.type)
               ((a = { type: "bullets_item", itemIdx: e, b: n.b || "", t: n.t || "" }),
                 (i =
-                  'Senior CV editor. Enrich the body ("t") of ONE rich-block row — more specific, more concrete, senior-toned. Keep "b" (lead-in label) UNCHANGED exactly. Preserve every number, proper noun, tool name, certification code, standards code. Do NOT invent facts. Keep similar length (±15%). Return ONLY valid JSON: {"b":"...","t":"..."}.'));
+                  'Senior CV editor. Enrich the body ("t") of ONE rich-block row — more specific, more concrete, senior-toned. Keep "b" (lead-in label) UNCHANGED exactly. Preserve every number, proper noun, tool name, certification code, standards code. Do NOT invent facts. Keep similar length (±15%). Return ONLY valid JSON: {"b":"...","t":"..."}.' +
+                  // LINE-DISTRIBUTION-001: measured GROW target for a short/runt row
+                  // (from antcv-bullet-targets SHIP5); '' when in-band or sidecar absent.
+                  (("undefined" != typeof window && window.__antcvRowFit &&
+                    window.__antcvRowFit.growPromptFor((n.b ? n.b + " " : "") + (n.t || ""))) || "")));
             else {
               if ("education" !== o.type)
                 return void alert(
@@ -22247,7 +22251,19 @@
                       ? (n.b ? n.b + " " : "") + (n.t || n || "")
                       : n || "",
               a = "labeled_list" === r.type ? "labeled_val" : "list_item";
-            if (al(o, a, 10))
+            // LINE-DISTRIBUTION-001 (owner 2026-07-22, row 61): measured BIDIRECTIONAL
+            // routing for {b,t} rows — a SHORT row (single under-filled line) GROWS via
+            // the enrich path; an in-band row skips; a runt proceeds to the measured
+            // compress. Fail-open to the legacy one-line al() check when the sidecar
+            // (antcv-bullet-targets SHIP5) is absent.
+            const __rfm =
+              ("bullets" === r.type || "rich_block" === r.type) &&
+              "undefined" != typeof window && window.__antcvRowFit
+                ? window.__antcvRowFit.measure(o)
+                : null;
+            if (__rfm && "short" === __rfm.band)
+              return void il({ sectionId: e, roleId: t });
+            if (__rfm ? "ok" === __rfm.band : al(o, a, 10))
               return void alert(
                 "This item already fits tightly. Skipping compression.",
               );
@@ -22477,7 +22493,7 @@
                     : "labeled_list_item" === n.type
                       ? `Compress the value ("v") of this single CV sidebar item by approximately ${e}% in ${a}. ${i} Rules:\n- Keep "l" (label) UNCHANGED exactly as input.\n- Tighten ONLY "v" field.\n- Keep every proper noun, tool name, technology, certification code.\nReturn ONLY valid JSON in the input shape {l,v}:\n\n${JSON.stringify(n)}`
                       : "bullets_item" === n.type
-                        ? `Compress the body ("t") of this single CV/cover-letter bullet by approximately ${e}% in ${a}. ${i} Rules:\n- Keep "b" (lead-in label) UNCHANGED exactly as input.\n- Tighten ONLY the "t" field.\n- Keep every number, proper noun, company name, certification code, tool name, technical term.\nReturn ONLY valid JSON in the input shape {b,t}:\n\n${JSON.stringify(n)}`
+                        ? `Compress the body ("t") of this single CV/cover-letter bullet by approximately ${e}% in ${a}. ${i} Rules:\n- Keep "b" (lead-in label) UNCHANGED exactly as input.\n- Tighten ONLY the "t" field.\n- Keep every number, proper noun, company name, certification code, tool name, technical term.${("undefined" != typeof window && window.__antcvRowFit && window.__antcvRowFit.promptFor((n.b ? n.b + " " : "") + (n.t || ""))) || ""}\nReturn ONLY valid JSON in the input shape {b,t}:\n\n${JSON.stringify(n)}`
                         : "list_item" === n.type
                         ? `Compress this single CV sidebar item by approximately ${e}% in ${a}. ${i} Keep every proper noun, certification code, tool name, citation marker, year, journal name. Return ONLY valid JSON in the input shape {value:"..."}:\n\n${JSON.stringify(n)}`
                         : "education_item" === n.type
@@ -22688,7 +22704,20 @@
                   section_type: r.type,
                 });
             } catch (e) {}
-            const E = v.pass;
+            let E = v.pass;
+            // LINE-DISTRIBUTION-001: measured ACCEPTANCE — if the chosen rewrite still
+            // leaves a runt last line, run ONE bounded corrective pass and keep it only
+            // when it re-measures in-band. Fail-open on any error.
+            try {
+              if (n && "bullets_item" === n.type && "undefined" != typeof window && window.__antcvRowFit) {
+                const __co = window.__antcvRowFit.corrective((E.b ? E.b + " " : "") + (E.t || ""));
+                if (__co) {
+                  const __e2 = await i(__co.pct, __co.mode, l("claude", "openai")).catch(() => null);
+                  if (__e2 && __e2.t && window.__antcvRowFit.inBand((__e2.b ? __e2.b + " " : "") + (__e2.t || "")))
+                    E = __e2;
+                }
+              }
+            } catch (_) {}
             Bi((n) =>
               n.map((n) => {
                 if (n.id !== e) return n;

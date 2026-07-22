@@ -8,23 +8,25 @@
  *      side panel!"): a compact "Rule line below" row injected into each header
  *      field DETAILED EDITOR (the ← Back panel that opens from the candidate
  *      rows), next to the CJLR control: on/off + thickness (pt) + colour + auto.
- * DEFAULTS (absent store) = copenhagen-modern = today's look: rule below
- * Spec/Application + below Contact, none below Name, 0.75pt, theme teal.
+ * DEFAULTS (absent store): NO rules inside the header box — the Copenhagen
+ * MOCKUP LOCK (owner 2026-07-23: "we still have separation lines inside the
+ * header") has a clean navy box with no internal lines. A user who explicitly
+ * turned a rule ON in the field editor keeps it (store.on wins over defOn).
  * Kill (UI only; helpers keep honoring the store):
  * localStorage['antcv:disable-header-rule-control']='1'.
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.87-header-rule-detect2';
+  var VERSION = '1.51.3121-header-rules-off';
   if (window.__antcvHeaderRuleControl === VERSION) return;
   window.__antcvHeaderRuleControl = VERSION;
 
-  var ACCENT = '#01B7BB';
+  var ACCENT = '#01B9BD';
   var KEY = 'headerItemRule';
   var FIELDS = [
     { k: 'name', label: 'Name', defOn: false },
-    { k: 'specialisation', label: 'Specialization / Application', defOn: true },
-    { k: 'contact', label: 'Contact', defOn: true },
+    { k: 'specialisation', label: 'Specialization / Application', defOn: false },
+    { k: 'contact', label: 'Contact', defOn: false },
   ];
 
   function readStore() { try { var v = JSON.parse(localStorage.getItem(KEY) || 'null'); return v && typeof v === 'object' ? v : {}; } catch (_) { return {}; } }

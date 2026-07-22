@@ -33,7 +33,7 @@
 (function () {
   'use strict';
   if (window.__antcvCopenhagenV2) return;
-  window.__antcvCopenhagenV2 = '1.51.3061-stage3';
+  window.__antcvCopenhagenV2 = '1.51.3121-stage3-css';
 
   var FLAG = 'antcv:copenhagen-v2';
   var STYLE_ID = 'antcv-copenhagen-v2-style';
@@ -88,67 +88,64 @@
   }
   function buildCSS() {
     var side = sidebarSide();
+    var BAND = '.antcv-preview-paper [data-antcv-candidate-band="1"]';
     var css =
-      '.antcv-preview-paper [data-antcv-candidate-band="1"]{' +
+      BAND + '{' +
         'border-radius:22px !important;' +
         'border:1.5px solid var(--brand-accent, var(--header-line-color, #01B9BD)) !important;' +
         'margin:7.4px 7.4px 0 7.4px !important;box-sizing:border-box !important;' +
+        'position:relative !important;' +
       '}';
     if (isBridge()) {
       // bridge: same vertical heights, ~3.2px horizontal from the contour.
       css += '.antcv-preview-paper [data-antcv-document-sidebar]{margin-' + side + ':3.2px !important;box-sizing:border-box !important;}';
+      // Bridge keeps the owner-tuned straddle nudge (live-measured 2026-07-22).
+      css += photoNudgeCSS();
     } else {
       // non-bridge: float the sidebar panel — gap below header + inset from the
       // bottom and the page-edge corner it aligns to.
       css += '.antcv-preview-paper [data-antcv-document-sidebar]{' +
         'margin-top:7.4px !important;margin-bottom:7.4px !important;margin-' + side + ':7.4px !important;' +
         'box-sizing:border-box !important;}';
+      // HEADER-DEFECTS 2026-07-23 ("figure is not aligned with corners"): in the
+      // non-bridge in-band modes the old bridge-tuned translate nudge pushed the
+      // floated photo out of the corner. Mockup geometry instead: the photo sits
+      // ABSOLUTE at a fixed inset from the box edge, vertically CENTERED, and the
+      // band text centers independently across the box (no float wrap).
+      css += BAND + ' img{' +
+        'position:absolute !important;' + side + ':14px !important;top:50% !important;' +
+        'transform:translateY(-50%) !important;float:none !important;margin:0 !important;' +
+      '}';
+      css += BAND + '{min-height:112px !important;}'; // 82px photo + 2x ~14px inset
     }
-    // V3 photo-corner alignment (owner 2026-07-21, live-probed): the photo that
-    // needs aligning is the one INSIDE the candidate band (heading-left), a
-    // float:left/right <img> under [data-antcv-candidate-band] — NOT the
-    // main-column [data-antcv-main-photo] modes. It seats ~6px too high and ~20px
-    // toward the centre. Nudge via transform (visual only, keeps the wrap): a
-    // left-floated photo -> left dx + down dy; right-floated -> right dx + down dy.
-    // Tunable live via AntcvCopenhagenV2.photo(dx,dy) (owner dials, we bake).
-    css += photoNudgeCSS();
-    // STAGE 3: band hyperlinks (email/LinkedIn) render WHITE on the dark box.
-    css += '.antcv-preview-paper [data-antcv-candidate-band="1"] a{color:#fff !important;}';
+    // STAGE 3 (structural CSS, NOT per-node inline styles — inline styles were
+    // wiped by React re-renders and re-applied late, which the owner saw as the
+    // CL name/contact "jumping between two sizes"; CSS applies at every paint):
+    //  - NAME (first text line of the band): expanded tracking .14em.
+    //  - CONTACT (last band line): scaleX(.73) condense.
+    //  - band hyperlinks (email/LinkedIn): WHITE on the dark box.
+    css += BAND + ' > div:first-of-type{letter-spacing:.14em !important;}';
+    css += BAND + ' > div:last-of-type:not(:first-of-type){transform:scaleX(.73);transform-origin:center;}';
+    css += BAND + ' a{color:#fff !important;}';
     return css;
   }
 
-  // STAGE 3: name tracking + contact condense on the band text lines. Node
-  // identification mirrors antcv-header-elem-colors.js bandParts (verified live
-  // there): first text-carrying child div = NAME; the div carrying contact
-  // emojis/phone digits = CONTACT. Inline styles are stamped so disable() can
-  // remove exactly what we set and nothing else.
+  // STAGE 3 v2 (2026-07-23): the name/contact styling moved into buildCSS
+  // structural selectors (see above) — the 1.51.3061 per-node inline styles
+  // fought React re-renders and made the CL band text "jump between two sizes".
+  // This sweeper only STRIPS the legacy 3061 stamps so a client transitioning
+  // from the old build self-heals; it never adds styles.
   var TUNE_STAMP = 'data-antcv-cph-v3';
-  function tuneBandText(on) {
+  function tuneBandText() {
     var band;
     try { band = document.querySelector('.antcv-preview-paper [data-antcv-candidate-band="1"]'); } catch (_) { band = null; }
     if (!band) return;
-    var divs = Array.prototype.slice.call(band.querySelectorAll(':scope > div'))
-      .filter(function (d) { return Array.prototype.some.call(d.childNodes, function (n) { return n.nodeType === 3 && n.textContent.trim(); }); });
-    var contact = divs.filter(function (d) { return /[☎🔗⌂✉@]/.test(d.textContent) || /\d[\d\s]{6,}/.test(d.textContent); })[0];
-    var name = divs[0];
-    if (on) {
-      if (name && name !== contact) {
-        name.style.setProperty('letter-spacing', '.14em', 'important');
-        name.setAttribute(TUNE_STAMP, 'name');
-      }
-      if (contact) {
-        contact.style.setProperty('transform', 'scaleX(.73)');
-        contact.style.setProperty('transform-origin', 'center');
-        contact.setAttribute(TUNE_STAMP, 'contact');
-      }
-    } else {
-      Array.prototype.slice.call(band.querySelectorAll('[' + TUNE_STAMP + ']')).forEach(function (d) {
-        d.style.removeProperty('letter-spacing');
-        d.style.removeProperty('transform');
-        d.style.removeProperty('transform-origin');
-        d.removeAttribute(TUNE_STAMP);
-      });
-    }
+    Array.prototype.slice.call(band.querySelectorAll('[' + TUNE_STAMP + ']')).forEach(function (d) {
+      d.style.removeProperty('letter-spacing');
+      d.style.removeProperty('transform');
+      d.style.removeProperty('transform-origin');
+      d.removeAttribute(TUNE_STAMP);
+    });
   }
 
   function enabled() {
@@ -170,7 +167,7 @@
     } else if (el && el.parentNode) {
       el.parentNode.removeChild(el);
     }
-    try { tuneBandText(on); } catch (_) {}
+    try { tuneBandText(); } catch (_) {}   // strip legacy 3061 inline stamps only
   }
 
   // React to the flag being toggled in this tab (custom event) or another tab

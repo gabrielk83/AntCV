@@ -86,7 +86,11 @@
         return flow.querySelector('[contenteditable]:not([data-antcv-app-line])');
       })();
   }
-  function appLine() { return document.querySelector('.antcv-preview-paper [data-antcv-app-line]'); }
+  // APPLINE-NATIVE-MARK-001 (2026-07-23): the native line carries
+  // data-antcv-app-line-native (the legacy attribute is swept by the retired
+  // application-line-001 sidecar) — without this the grey paint never applied
+  // and the line stayed teal.
+  function appLine() { return document.querySelector('.antcv-preview-paper [data-antcv-app-line-native]') || document.querySelector('.antcv-preview-paper [data-antcv-app-line]'); }
 
   function paint(el, color) {
     if (!el) return;

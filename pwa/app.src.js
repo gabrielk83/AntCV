@@ -8324,7 +8324,21 @@
         e._antcvSplitCont && !1 === d.contHeadlines
           ? null
           : e.headlineOff
-          ? (e.headlineRule
+          ? (e.headlineRule &&
+             // ORPHAN-RULE-GATE-001 (owner 2026-07-23 "extra lines below"): a
+             // headline-off section whose content renders EMPTY (all-placeholder
+             // rich_block items / empty text) used to still draw its standalone
+             // rule — an orphan line floating between sections. Draw the rule
+             // only when the section has real renderable body.
+             (function () { try {
+               if (Array.isArray(e.items)) return e.items.some(function (q) {
+                 if (!q || q.hidden) return false;
+                 if (q.grp) return true;
+                 var t = String(q.t || "").trim();
+                 return !!t && !/^\[[\s\S]*\]$/.test(t);
+               });
+               if (typeof e.content === "string") { var c = e.content.trim(); return !!c && !/^\[[\s\S]*\]$/.test(c); }
+             } catch (_) {} return true; })()
               ? React.createElement("div", {
                   // CL-RULE-BALANCE-001 (owner 2026-07-04): symmetric spacing
                   // around the standalone rule — half above, half below.
@@ -46888,6 +46902,11 @@
                       if (!__al) return null;
                       return React.createElement("div", {
                         key: "__cl_appline",
+                        // APPLINE-NATIVE-MARK-001 (2026-07-23): a DEDICATED attribute so the
+                        // appline-rule + header-elem-colors sidecars can target the native
+                        // line. NOT data-antcv-app-line — the retired application-line-001
+                        // sidecar SWEEPS that attribute as a legacy injected node.
+                        "data-antcv-app-line-native": "1",
                         style: {
                           fontFamily: "'Cabin',sans-serif",
                           fontSize: 11,

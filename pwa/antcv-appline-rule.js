@@ -40,18 +40,29 @@
     function h(n) { return ('0' + Number(n).toString(16)).slice(-2); }
     return '#' + h(m[1]) + h(m[2]) + h(m[3]);
   }
-  function appLine() { return document.querySelector('.antcv-preview-paper [data-antcv-app-line]'); }
+  // APPLINE-NATIVE-MARK-001 (2026-07-23): the NATIVE app line (React key
+  // __cl_appline) carries data-antcv-app-line-native — the legacy attribute is
+  // swept by the retired application-line-001 sidecar, so the old selector
+  // never matched and the rule never rendered ("application line missing
+  // horizontal separation line"). Prefer native, keep legacy as fallback.
+  function appLine() { return document.querySelector('.antcv-preview-paper [data-antcv-app-line-native]') || document.querySelector('.antcv-preview-paper [data-antcv-app-line]'); }
   function ruleColor(el) {
     var s = read(); if (s.color) return s.color;
-    try { var hx = toHex(getComputedStyle(el).color); if (hx) return hx; } catch (_) {}
+    // Prefer the ACCENT (mockup: teal rule under grey text) — the element's own
+    // text colour is grey once header-elem-colors paints it, which would yield a
+    // grey rule.
     try { var acc = getComputedStyle(document.querySelector('.antcv-preview-paper')).getPropertyValue('--brand-accent').trim(); if (acc) return acc; } catch (_) {}
-    return '#595959';
+    try { var hx = toHex(getComputedStyle(el).color); if (hx && hx.toLowerCase() !== '#808080') return hx; } catch (_) {}
+    return '#00746E';
   }
 
   function renderRule(el) {
     var s = read();
+    // MOCKUP LOCK default: rule ON at 1.5pt when the store is absent (an explicit
+    // user off — s.on === false — is respected).
+    if (s.on === undefined) s = { on: true, pt: 1.5, color: s.color };
     if (s.on) {
-      var pt = PTS.indexOf(Number(s.pt)) >= 0 ? Number(s.pt) : 0.75;
+      var pt = PTS.indexOf(Number(s.pt)) >= 0 ? Number(s.pt) : 1.5;
       var px = Math.max(0.5, Math.round((pt * 4 / 3) * 2) / 2);
       el.style.setProperty('border-bottom', px + 'px solid ' + ruleColor(el), 'important');
       el.style.setProperty('padding-bottom', '2px', 'important');
@@ -73,11 +84,12 @@
     box.setAttribute(MARK, '1'); box.setAttribute('contenteditable', 'false');
     box.style.cssText = 'position:absolute;left:calc(100% + 8px);top:50%;transform:translateY(-50%);display:inline-flex;align-items:center;white-space:nowrap;z-index:5;';
     var s = read();
+    var effOn = s.on === undefined ? true : !!s.on;   // absent store = default ON (mockup)
     // toggle
-    var tg = mkBtn(s.on ? '—' : '🚫', s.on ? 'Rule under the application line: shown — click to hide' : 'Rule under the application line: hidden — click to show');
-    tg.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); write({ on: !read().on }); });
+    var tg = mkBtn(effOn ? '—' : '🚫', effOn ? 'Rule under the application line: shown — click to hide' : 'Rule under the application line: hidden — click to show');
+    tg.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); var cur = read().on; write({ on: !(cur === undefined ? true : cur) }); });
     // thickness
-    var pt = PTS.indexOf(Number(s.pt)) >= 0 ? Number(s.pt) : 0.75;
+    var pt = PTS.indexOf(Number(s.pt)) >= 0 ? Number(s.pt) : 1.5;
     var th = mkBtn(pt + 'pt', 'Rule thickness — click to cycle');
     th.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); var cur = Number(read().pt) || 0.75; var next = PTS[(PTS.indexOf(cur) + 1) % PTS.length]; write({ pt: next, on: true }); });
     // colour swatch = the native colour input directly (opens the OS picker on click;

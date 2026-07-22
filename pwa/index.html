@@ -369,7 +369,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.3061-copenhagen-stage3';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.3101-copenhagen-mockup-parity';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.3121-header-defects';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -408,10 +408,10 @@
         auth.src = 'antcv-auth.js?v=1.51.92-analytics-401-scope';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.51.3101-copenhagen-mockup-parity';
+          app.src = 'app.js?v=1.51.3121-header-defects';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.3101-copenhagen-mockup-parity';
+            vo.src = 'antcv-version-override.js?v=1.51.3121-header-defects';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -777,7 +777,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <!-- CL-FORMAT-PANEL-001 (F3): distinct "COVER LETTER FORMAT" panel in Settings→Layout wrapping the CL signature + slogan/sign-off controls. Kill antcv:disable-cl-format-panel. -->
 <script src="antcv-cl-format-panel.js?v=1.51.82" defer></script>
 <!-- HEADER-ITEM-RULE-001 UI + preview parity: per-field header rule lines (on/off + pt + colour) writing headerItemRule; helpers __antcvHdrRuleDiv/Html/Style feed the live preview + HTML export. Kill antcv:disable-header-rule-control (UI only). -->
-<script src="antcv-header-rule-control.js?v=1.51.87" defer></script>
+<script src="antcv-header-rule-control.js?v=1.51.3121-header-defects" defer></script>
 <!-- SETTINGS-ROLLER-RESET-001: sentinel history state while Settings is open — a mouse side/tilt-button Back closes the panel like ✕ instead of navigating away (the "mini-reset"). Kill antcv:no-settings-history-guard. -->
 <script src="antcv-settings-history-guard.js?v=1.51.90" defer></script>
 <!-- APP-HISTORY-STYLE-KERNELS-001 (owner 2026-07-10): Settings history tab — a SEPARATE
@@ -786,17 +786,17 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      Sidecar-owned DOM. Kill: antcv:disable-style-kernels-table. -->
 <script src="antcv-app-history-style-kernels.js?v=1.51.349-kernel-table-time" defer></script>
 <script src="antcv-preview-header-tokens.js?v=1.50.41" defer></script>
-<script src="antcv-copenhagen-v2-001.js?v=1.51.3101-copenhagen-mockup-parity" defer></script>
+<script src="antcv-copenhagen-v2-001.js?v=1.51.3121-header-defects" defer></script>
 <!-- CL-NO-PHOTO-001 (preview): hide the candidate headshot inside the band on the cover letter (export already suppresses it) -->
 <script src="antcv-cl-no-photo-001.js?v=1.51.2561-cl-spec-center" defer></script>
 <!-- HEADER-ELEM-COLORS-001: per-element BRAND colours (name/spec/contact/slogan/application) from brandV2 -->
-<script src="antcv-header-elem-colors.js?v=1.51.2601-header-elem-colors" defer></script>
+<script src="antcv-header-elem-colors.js?v=1.51.3121-header-defects" defer></script>
 <!-- EXPORT-HEADER-COLORS-001: inject per-element header colours + app-line rule into the DOCX export payload (1:1 parity) -->
 <script src="antcv-export-header-colors.js?v=1.51.2981-export-header-colors" defer></script>
 <!-- HEADER-COLOR-CONTROLS-001: per-element colour swatch in each candidate row's control cluster -->
 <script src="antcv-header-color-controls.js?v=1.51.2961-swatch-picker-fix" defer></script>
 <!-- APPLINE-RULE-001 (#6): rule under the application line — visible/colour/thickness control -->
-<script src="antcv-appline-rule.js?v=1.51.2961-swatch-picker-fix" defer></script>
+<script src="antcv-appline-rule.js?v=1.51.3121-header-defects" defer></script>
 <!-- v1.50.159: sidebar-bg tokenization — recolours the preview sidebar per visual
      style (var(--package-base) cascade), matching the DOCX. Companion to
      preview-header-tokens (which deliberately skips the sidebar). -->

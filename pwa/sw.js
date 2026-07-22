@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.2085-export-preview-zoom-decouple';
+const CACHE = 'antcv-1.51.2086-copenhagen-v2-box';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',
@@ -60,6 +60,7 @@ const SHELL = [
   './antcv-bullet-targets.js',
   './antcv-photo-ui-427.js',
   './antcv-preview-header-tokens.js',
+  './antcv-copenhagen-v2-001.js',
   './antcv-pdf-preview-gate.js',
   './antcv-tone-helper.js',
   './antcv-jd-image-ocr.js',

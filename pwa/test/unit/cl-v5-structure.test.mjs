@@ -65,6 +65,7 @@ function loadSidecar(store) {
     localStorage: {
       getItem: (k) => (k in store ? store[k] : null),
       setItem: (k, v) => { store[k] = String(v); },
+      removeItem: (k) => { delete store[k]; },
     },
     setTimeout: () => 0,
     CustomEvent: class { constructor(t, d) { this.type = t; Object.assign(this, d); } },
@@ -102,17 +103,27 @@ test('reorder() moves who AFTER contribute and puts role_view straight after why
   assert.equal(ids.join('|'), 'greeting|opening|why|role_view|bring|contribute|who|foundation|closure');
 });
 
-test('migrateV5 arms its one-shot only on a READ-BACK, then stays inert', () => {
+test('migrateV5 uses NO persistent flag and clears a stale -001 flag', () => {
+  // CL-V5-MIGRATE-DURABLE-002: a persistent localStorage flag guarding a hydration-owned
+  // blob is the bug. Inserting never sets a flag; observing role_view present clears any
+  // stale -001 flag so it can never resurrect the "skip forever" behaviour.
   const store = {};
   const api = loadSidecar(store);
-  // CL-V5-MIGRATE-DURABLE-001: inserting does NOT arm the flag — only observing the
-  // section in a list we read back does, which is what proves the write survived.
   assert.equal(api.migrateV5(preV5()).changed, true, 'inserts');
-  assert.equal(store['antcv:cl-v5-role-view-migrated'], undefined, 'not armed by the insert');
+  assert.equal(store['antcv:cl-v5-role-view-migrated'], undefined, 'no flag written by the insert');
+
+  // A letter poisoned by the old bug: flag "1" but role_view ABSENT. The stateless ensure
+  // re-inserts regardless of the flag (this is exactly the owner's live 3Shape failure).
+  const poisonedStore = { 'antcv:cl-v5-role-view-migrated': '1' };
+  const poisoned = loadSidecar(poisonedStore);
+  assert.equal(poisoned.migrateV5(preV5()).changed, true, 'a stale "1" flag no longer blocks re-insertion');
+
+  // Once role_view is read back present, the stale flag is scrubbed.
+  const staleStore = { 'antcv:cl-v5-role-view-migrated': '1' };
+  const withStale = loadSidecar(staleStore);
   const withRv = preV5().concat([{ id: 'role_view', type: 'rich_block', items: [] }]);
-  assert.equal(api.migrateV5(withRv).changed, false, 'read-back is inert');
-  assert.equal(store['antcv:cl-v5-role-view-migrated'], '1', 'armed by the read-back');
-  assert.equal(api.migrateV5(preV5()).changed, false, 'armed -> a later delete stays deleted');
+  assert.equal(withStale.migrateV5(withRv).changed, false, 'present -> inert');
+  assert.equal(staleStore['antcv:cl-v5-role-view-migrated'], undefined, 'stale flag scrubbed');
 });
 
 test('migrateV5 is idempotent when role_view already exists, and inert on a foreign doc', () => {
@@ -169,32 +180,31 @@ test('run() actually reaches the CL when toneRegister is absent (the live failur
   assert.equal(ids.join('|'), 'greeting|opening|why|role_view|bring|contribute|who|foundation|closure');
 });
 
-// ------------------------------------------- CL-V5-MIGRATE-DURABLE-001 (live-verified)
-// The flag used to be armed at INSERT time, so the app's boot-time rewrite of `sections`
-// discarded the fresh role_view while the flag stayed set — the owner's live CL came out
-// correctly reordered but permanently without the section.
-test('an overwrite that discards the fresh role_view is repaired on the next pass', () => {
+// ------------------------------------------- CL-V5-MIGRATE-DURABLE-002 (live-verified)
+// Every load the app hydrates `sections` from the stored (pre-v5) cloud record, which has
+// no role_view; the me() floor only fills empty sections, it does not inject missing ones.
+// -001 armed a persistent flag once role_view was read back present, but the NEXT load's
+// hydration stripped role_view while the flag stayed "1" — so migrateV5 skipped forever and
+// the owner's live CL (3Shape) had the correct v5 ORDER but no "How I see the role" at all.
+// -002 drops the persistent flag: role_view is ensured every load, like reorder/bringBullets.
+test('a hydration overwrite that discards role_view is repaired on EVERY later load', () => {
   const store = { sections: JSON.stringify({ cl: preV5() }) };
   const api = loadSidecar(store);
 
   api.run();
   assert.ok(JSON.parse(store.sections).cl.some((s) => s.id === 'role_view'), 'inserted');
-  assert.equal(store['antcv:cl-v5-role-view-migrated'], undefined, 'flag NOT armed by the insert alone');
+  assert.equal(store['antcv:cl-v5-role-view-migrated'], undefined, 'no persistent flag written');
 
-  // the app rewrites sections from its own hydrated (pre-v5) state
+  // hydration rewrites sections from the pre-v5 record — role_view is stripped
   store.sections = JSON.stringify({ cl: preV5() });
-  api.run();
-  assert.ok(JSON.parse(store.sections).cl.some((s) => s.id === 'role_view'), 're-inserted after the overwrite');
+  loadSidecar(store).run();   // a fresh page load (module attempt counter reset)
+  assert.ok(JSON.parse(store.sections).cl.some((s) => s.id === 'role_view'), 're-inserted on the next load');
 
-  // a pass that READS role_view back arms the one-shot
-  api.run();
-  assert.equal(store['antcv:cl-v5-role-view-migrated'], '1', 'armed once the write survived');
-
-  // and now a genuine user delete sticks
-  const kept = JSON.parse(store.sections).cl.filter((s) => s.id !== 'role_view');
-  store.sections = JSON.stringify({ cl: kept });
-  api.run();
-  assert.equal(JSON.parse(store.sections).cl.some((s) => s.id === 'role_view'), false, 'user delete respected');
+  // even a letter carrying the poisoned "1" flag from the old build is repaired
+  store.sections = JSON.stringify({ cl: preV5() });
+  store['antcv:cl-v5-role-view-migrated'] = '1';
+  loadSidecar(store).run();
+  assert.ok(JSON.parse(store.sections).cl.some((s) => s.id === 'role_view'), 'poisoned flag no longer blocks');
 });
 
 test('re-insertion is bounded per page load — it can never become a write storm', () => {

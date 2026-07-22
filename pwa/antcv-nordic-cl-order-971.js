@@ -25,7 +25,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.1945-nordic-cl-order-v5';
+  var VERSION = '1.51.2073-nordic-cl-order-v5-durable2';
   if (window.__antcvNordicClOrder971 === VERSION) return;
   window.__antcvNordicClOrder971 = VERSION;
 
@@ -110,20 +110,26 @@
     return { changed: before !== after, list: out };
   }
 
-  // CL-V5-STRUCT-001: insert the NEW "How I see the role" section into a pre-v5 CL.
+  // CL-V5-STRUCT-001: ensure the NEW "How I see the role" (role_view) section exists on a
+  // Nordic v5 CL body.
   //
-  // CL-V5-MIGRATE-DURABLE-001 (live-verified 2026-07-21): the flag used to be set at INSERT
-  // time. During boot the app rewrites `sections` from its own hydrated state at least once
-  // AFTER this sidecar's first pass, so the freshly inserted role_view was thrown away while
-  // the flag stayed set — the next pass then read "already migrated" and never retried. The
-  // owner's live CL ended up correctly REORDERED (who at the end) but with no role_view at
-  // all. So the flag is now armed only when role_view is OBSERVED in a list we READ BACK,
-  // i.e. once the write has actually survived. A boot-time overwrite is repaired on the next
-  // pass; a genuine user delete (after the section was durably present) still sticks.
+  // CL-V5-MIGRATE-DURABLE-002 (live-verified 2026-07-22, supersedes -001): a PERSISTENT
+  // localStorage flag must never guard a section that lives in the `sections` blob, because
+  // hydration rewrites that blob on every load. The owner's real saved letters (e.g. 3Shape)
+  // were generated pre-v5, so their stored cloud record has 8 CL sections and NO role_view;
+  // the me() floor only FILLS empty sections, it does not inject missing ones, so every boot
+  // hydrates a role_view-less CL. -001 set the one-shot flag once role_view was read back
+  // present — but that read-back happened in the SAME load, so the flag went to "1", the next
+  // load's hydration stripped role_view, and from then on the "1" flag (persisted across
+  // reloads) made migrateV5 skip forever. Result on the live account: correct v5 ORDER but
+  // "How I see the role" permanently absent. A persistent skip flag is therefore the bug, not
+  // the fix. role_view is a MANDATORY v5 section (like greeting/why), so ensure it EVERY load,
+  // idempotently — exactly how reorder()/bringBullets() already behave — with no persistent
+  // flag. If a user hides it (on:false) that is preserved (we only insert when it is ABSENT).
   //
-  // ATTEMPTS is a per-page-load ceiling: nothing in the app strips unknown CL section ids
-  // today, but if something ever does, this converges to "gave up" instead of a write storm
-  // (the failure mode of [[preview-freeze-is-textalign-storm]]).
+  // ATTEMPTS is a per-page-load ceiling (reset on reload): if a stripper ever fights the
+  // insert within one load, this converges to "gave up" for that load instead of a write
+  // storm (the failure mode of [[preview-freeze-is-textalign-storm]]); the next load retries.
   var MIGRATE_ATTEMPTS = 0, MIGRATE_MAX = 5;
   // Does this section carry REAL content (any DATA row that is not an empty/bracketed
   // placeholder)? Row 0 is the section lead-in — furniture, so it does not count.
@@ -178,19 +184,19 @@
 
   function migrateV5(list) {
     if (!Array.isArray(list) || !list.length) return { changed: false, list: list };
+    // Already present (or user-hidden on:false) -> nothing to do. No persistent flag: see
+    // CL-V5-MIGRATE-DURABLE-002. Clear any stale -001 flag so it can never resurrect the bug.
     if (list.some(function (s) { return s && s.id === 'role_view'; })) {
-      // read back and present -> the insert is durable; arm the one-shot.
-      try { localStorage.setItem('antcv:cl-v5-role-view-migrated', '1'); } catch (_) {}
+      try { if (localStorage.getItem('antcv:cl-v5-role-view-migrated') != null) localStorage.removeItem('antcv:cl-v5-role-view-migrated'); } catch (_) {}
       return { changed: false, list: list };
     }
-    try { if (localStorage.getItem('antcv:cl-v5-role-view-migrated') === '1') return { changed: false, list: list }; } catch (_) {}
     if (MIGRATE_ATTEMPTS >= MIGRATE_MAX) return { changed: false, list: list };
-    // Only migrate a CL that actually looks like the Nordic body (not an empty/foreign doc).
+    // Only ensure on a CL that actually looks like the Nordic body (not an empty/foreign doc).
     if (!list.some(function (s) { return s && (s.id === 'bring' || s.id === 'contribute'); })) return { changed: false, list: list };
     var at = list.findIndex(function (s) { return s && s.id === 'why'; });
     var out = list.slice();
     out.splice(at >= 0 ? at + 1 : 0, 0, JSON.parse(JSON.stringify(ROLE_VIEW_TEMPLATE)));
-    MIGRATE_ATTEMPTS++;   // flag is NOT set here — see CL-V5-MIGRATE-DURABLE-001
+    MIGRATE_ATTEMPTS++;
     return { changed: true, list: out };
   }
 

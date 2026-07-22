@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.3121-header-defects';
+  const TARGET_VERSION = '1.51.3141-band-gap';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.3121-header-defects',
     '1.51.3101-copenhagen-mockup-parity',
     '1.51.3081-queued-filter',
     '1.51.3061-copenhagen-stage3',

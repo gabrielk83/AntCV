@@ -33,7 +33,7 @@
 (function () {
   'use strict';
   if (window.__antcvCopenhagenV2) return;
-  window.__antcvCopenhagenV2 = '1.51.3121-stage3-css';
+  window.__antcvCopenhagenV2 = '1.51.3141-band-gap';
 
   var FLAG = 'antcv:copenhagen-v2';
   var STYLE_ID = 'antcv-copenhagen-v2-style';
@@ -107,16 +107,16 @@
       css += '.antcv-preview-paper [data-antcv-document-sidebar]{' +
         'margin-top:7.4px !important;margin-bottom:7.4px !important;margin-' + side + ':7.4px !important;' +
         'box-sizing:border-box !important;}';
-      // HEADER-DEFECTS 2026-07-23 ("figure is not aligned with corners"): in the
-      // non-bridge in-band modes the old bridge-tuned translate nudge pushed the
-      // floated photo out of the corner. Mockup geometry instead: the photo sits
-      // ABSOLUTE at a fixed inset from the box edge, vertically CENTERED, and the
-      // band text centers independently across the box (no float wrap).
-      css += BAND + ' img{' +
-        'position:absolute !important;' + side + ':14px !important;top:50% !important;' +
-        'transform:translateY(-50%) !important;float:none !important;margin:0 !important;' +
-      '}';
-      css += BAND + '{min-height:112px !important;}'; // 82px photo + 2x ~14px inset
+      // HEADER-DEFECTS 2026-07-23 ("figure is not aligned with corners"): the
+      // misalignment was the bridge-tuned translate NUDGE leaking into non-bridge
+      // modes — photoNudgeCSS is bridge-only now, so the floated photo sits at its
+      // natural padding position, nestled in the rounded corner. CPH-BAND-GAP-001
+      // (owner 2026-07-23 "why so much space between the text and the figure"):
+      // the earlier absolute-positioning fix took the photo OUT of the text flow,
+      // which made the band text center on the full box far from the photo —
+      // reverted; the float keeps the text beside the figure. Only neutralize any
+      // stale transform from a cached nudge.
+      css += BAND + ' img{transform:none !important;}';
     }
     // STAGE 3 (structural CSS, NOT per-node inline styles — inline styles were
     // wiped by React re-renders and re-applied late, which the owner saw as the

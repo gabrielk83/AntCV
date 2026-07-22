@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.3121-header-defects';
+const CACHE = 'antcv-1.51.3141-band-gap';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

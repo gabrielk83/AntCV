@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.2741-cl-appline-native';
+const CACHE = 'antcv-1.51.2781-header-color-controls';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',
@@ -66,6 +66,7 @@ const SHELL = [
   './antcv-copenhagen-v2-001.js',
   './antcv-cl-no-photo-001.js',
   './antcv-header-elem-colors.js',
+  './antcv-header-color-controls.js',
   './antcv-pdf-preview-gate.js',
   './antcv-tone-helper.js',
   './antcv-jd-image-ocr.js',

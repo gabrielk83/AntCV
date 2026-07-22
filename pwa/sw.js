@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.2073-cl-v5-durable2';
+const CACHE = 'antcv-1.51.2085-export-preview-zoom-decouple';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

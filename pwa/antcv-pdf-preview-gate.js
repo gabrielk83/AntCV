@@ -44,7 +44,7 @@
   'use strict';
 
   if (window.__antcvPdfPreviewGateInstalled) return;
-  window.__antcvPdfPreviewGateInstalled = '1.51.1556-pdf-panel-worker';
+  window.__antcvPdfPreviewGateInstalled = '1.51.2085-export-preview-zoom-decouple';
 
   const FAB_ID = 'antcv-pdf-preview-fab';
   const MODAL_ID = 'antcv-pdf-preview-modal';
@@ -478,6 +478,18 @@ ${inlineStyles}
        keep its inherited PWA-rendered dimensions. */
   }
   .antcv-preview-paper:last-child { margin-bottom: 0; }
+  /* EXPORT-PREVIEW-ZOOM-DECOUPLE-001 (owner 2026-07-22: "export preview cuts
+     pages ~half AND its zoom follows the editor's zoom"). The live editor bakes
+     its own zoom onto the paper as an INLINE transform (app.src.js ~51102:
+     transform: scale(<editor-zoom>); transform-origin: top left). p.outerHTML
+     copies that inline transform into this clone, so (a) every editor zoom change
+     also rescaled THIS preview, and (b) it stacked on top of fitWidth's own zoom
+     — the transformed paper's layout box stays full-size while its content shrinks
+     top-left, which desynced the page-row math and chopped pages to ~half. Strip
+     it so the export preview always starts at natural 100% and does its OWN
+     independent fit (body zoom via --antcv-fit below). !important beats the inline
+     style; covers both the initial build and the doc-toggle rebuild. */
+  .antcv-preview-paper { transform: none !important; transform-origin: top left !important; }
   /* Fit-to-width (owner: export preview was "too stretched", main column
      cut on the right on mobile). The A4 paper (~794px) is wider than a
      phone iframe, so we scale the whole body down to fit via a JS-set CSS

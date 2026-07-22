@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.2073-cl-v5-durable2';
+  const TARGET_VERSION = '1.51.2085-export-preview-zoom-decouple';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.2073-cl-v5-durable2',
     '1.51.2072-analysis-cloudconvert',
     '1.51.2032-micro-compress-ladder',
     '1.51.2012-content-lang-detect',

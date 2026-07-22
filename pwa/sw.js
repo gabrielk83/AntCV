@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.2310-sidebar-ink';
+const CACHE = 'antcv-1.51.2311-analysis-persist';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',
@@ -18,6 +18,7 @@ const SHELL = [
   './antcv-analysis-panel-jd-block-356.js',
   './antcv-analysis-report-pdf-360.js',
   './antcv-analysis-header.js',
+  './antcv-analysis-persist.js',
   './antcv-sections-icon-346.js',
   './antcv-topbar-tools-347.js',
   './antcv-cl-ai-notice-inline.js',

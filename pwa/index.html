@@ -369,7 +369,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.2230-cl-subtitle-no-dup-company';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.2310-sidebar-ink';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.2311-analysis-persist';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -411,7 +411,7 @@
           app.src = 'app.js?v=1.51.2230-cl-subtitle-no-dup-company';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.2310-sidebar-ink';
+            vo.src = 'antcv-version-override.js?v=1.51.2311-analysis-persist';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -1106,7 +1106,9 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      Analysis Report panel above. Deliberately separate from that panel's own
      LLM-narrative "Overall fit" section (this one is deterministic, scored
      against the user's own accumulated real-JD demand data). -->
-<script src="antcv-fit-panel.js?v=1.51.188" defer></script>
+<script src="antcv-fit-panel.js?v=1.51.2311-market-fit-copy" defer></script>
+<!-- ANALYSIS-EXTRA-PERSIST-001: round-trip per-app gapState_* + application Q&A via the application row's analysis_extra column -->
+<script src="antcv-analysis-persist.js?v=1.51.2311-analysis-persist" defer></script>
 <script src="antcv-sections-icon-346.js?v=1.40.347-preview-eye" defer></script>
 <script src="antcv-label-history.js?v=1.0.0" defer></script>
 <script src="antcv-topbar-tools-347.js?v=1.51.178-mobile-skip-relocate" defer></script>

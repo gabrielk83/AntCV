@@ -679,9 +679,17 @@ def cmd_run(args):
         # Route provider by the tier's model (quick=gpt-5-mini→openai, high=opus→anthropic),
         # unless the caller pinned --provider to something non-default.
         prov = _prov_for(model) if args.provider == "anthropic" else args.provider
+        # SUPERVISOR-CLEANUP-ALL-TIERS-001 (owner 2026-07-21: "supervisor cleanup step as
+        # the last part of the generation/tightening process ... including cross-section
+        # repetitions not observed when working on each paragraph separately"). The proxy's
+        # gen-coherence supervisor already does exactly this (finds cross-section repetition/
+        # contradiction/redundancy AND rewrites the offending sections), but it used to run on
+        # the HIGH tier only. Run it on EVERY gen now, so quick-tier apps also get the final
+        # cross-section cleanup. Escape hatch for cost: ANTCV_COHERENCE=high-only reverts.
+        _coh_mode = os.environ.get("ANTCV_COHERENCE", "all")
         res = drive(sections, prov, model,
                     source_cv=json.dumps(profile, ensure_ascii=False)[:38000], jd_text=r["jd"],
-                    skip_coherence=(r["tier"] != "high"))
+                    skip_coherence=(_coh_mode == "high-only" and r["tier"] != "high"))
         dt = round(time.time() - t0, 1)
         pexh = provider_exhausted(res)
         if pexh:

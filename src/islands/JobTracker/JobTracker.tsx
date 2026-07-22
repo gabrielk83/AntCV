@@ -55,18 +55,28 @@ const tierOf = (band: string): Tier => TIERS[(band || '').toUpperCase()] || { ke
 // to the default the next time the app is started (new tab/session).
 const BAND_KEYS = ['DDEBF7', 'E2EFDA', 'FCE4D6', 'FFF2CC', 'D9D9D9'];
 const FILTER_STORAGE_KEY = 'antcv:jobtracker:legendFilter';
-interface JLFilters { bands: string[]; top5Only: boolean; jdOnly: boolean; }
-function defaultJLFilters(): JLFilters { return { bands: BAND_KEYS.filter((b) => b !== 'D9D9D9'), top5Only: false, jdOnly: false }; }
+interface JLFilters { bands: string[]; top5Only: boolean; jdOnly: boolean; queuedOnly: boolean; }
+function defaultJLFilters(): JLFilters { return { bands: BAND_KEYS.filter((b) => b !== 'D9D9D9'), top5Only: false, jdOnly: false, queuedOnly: false }; }
 function loadJLFilters(): JLFilters {
   try {
     const raw = sessionStorage.getItem(FILTER_STORAGE_KEY);
     if (!raw) return defaultJLFilters();
     const p = JSON.parse(raw);
     if (!p || !Array.isArray(p.bands)) return defaultJLFilters();
-    return { bands: p.bands.filter((b: string) => BAND_KEYS.includes(b)), top5Only: !!p.top5Only, jdOnly: !!p.jdOnly };
+    return { bands: p.bands.filter((b: string) => BAND_KEYS.includes(b)), top5Only: !!p.top5Only, jdOnly: !!p.jdOnly, queuedOnly: !!p.queuedOnly };
   } catch { return defaultJLFilters(); }
 }
 function saveJLFilters(f: JLFilters): void { try { sessionStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(f)); } catch { /* best-effort */ } }
+
+// JOBLIST-FILTER-001 / JD-MENU-QUEUED-TAB-001: nightly-queue (⏰) membership for
+// a row — an explicit per-row toggle wins; default ON until the row has a
+// generated artifact. This is the SINGLE source of truth shared by the ⏰ row
+// toggle (nightlyOn) and the "⏰ Queued" legend filter, so the filter always
+// matches exactly which rows show the lit ⏰.
+function rowQueued(doc: TrackerDoc | null, uk: string): boolean {
+  const q = doc?.queue?.[uk];
+  return q === undefined ? !doc?.artifacts?.[uk]?.application_id : !!q;
+}
 
 // TOP5-REFILL-001: a dropped/closed/rejected row must LEAVE the Top-5 panel and
 // the next-best live row (by rank) takes its place, so the panel always shows 5
@@ -188,7 +198,8 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
   const [filterBands, setFilterBands] = useState<Set<string>>(() => new Set(initJLFilters.current!.bands));
   const [filterTop5, setFilterTop5] = useState<boolean>(() => initJLFilters.current!.top5Only);
   const [filterJd, setFilterJd] = useState<boolean>(() => initJLFilters.current!.jdOnly);
-  useEffect(() => { saveJLFilters({ bands: Array.from(filterBands), top5Only: filterTop5, jdOnly: filterJd }); }, [filterBands, filterTop5, filterJd]);
+  const [filterQueued, setFilterQueued] = useState<boolean>(() => initJLFilters.current!.queuedOnly);
+  useEffect(() => { saveJLFilters({ bands: Array.from(filterBands), top5Only: filterTop5, jdOnly: filterJd, queuedOnly: filterQueued }); }, [filterBands, filterTop5, filterJd, filterQueued]);
   function toggleBandFilter(b: string): void { setFilterBands((s) => { const n = new Set(s); if (n.has(b)) n.delete(b); else n.add(b); return n; }); }
 
   // Narrow viewports get a stacked card list — a wide fixed table pushes the
@@ -262,8 +273,9 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     const uk = r[11];
     if (filterTop5 && !top5Keys.has(uk)) return false;
     if (filterJd && !(((doc?.jd || {})[uk] || '').length > 200)) return false;
+    if (filterQueued && !rowQueued(doc, uk)) return false;
     return true;
-  }), [rows, filterBands, filterTop5, filterJd, top5Keys, doc]);
+  }), [rows, filterBands, filterTop5, filterJd, filterQueued, top5Keys, doc]);
 
   function editRow(uk: string, idx: number, value: string): void {
     if (!doc) return;
@@ -336,8 +348,10 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     setDirty(true);
   }
   const hasArtifact = (uk: string) => !!doc?.artifacts?.[uk]?.application_id;
-  // Nightly queue (⏰): on by default until the row has been generated; explicit toggle wins.
-  const nightlyOn = (uk: string) => { const q = doc?.queue?.[uk]; return q === undefined ? !hasArtifact(uk) : q; };
+  // Nightly queue (⏰): on by default until the row has been generated; explicit
+  // toggle wins. Delegates to module-level rowQueued so the ⏰ toggle and the
+  // "⏰ Queued" legend filter share one definition (JD-MENU-QUEUED-TAB-001).
+  const nightlyOn = (uk: string) => rowQueued(doc, uk);
   function toggleNightly(uk: string): void { if (!doc) return; setDocState({ ...doc, queue: { ...(doc.queue || {}), [uk]: !nightlyOn(uk) } }); setDirty(true); }
   // TOP5-FIT-RANK-001: Pin forces a row into the fit-ranked Top-5; Park removes it
   // from Top-5 candidacy but keeps it LIVE in the weekly list (not archived).
@@ -803,7 +817,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
           </div>
         )}
 
-        <Legend bands={filterBands} onToggleBand={toggleBandFilter} top5Only={filterTop5} onToggleTop5={() => setFilterTop5((v) => !v)} jdOnly={filterJd} onToggleJd={() => setFilterJd((v) => !v)} />
+        <Legend bands={filterBands} onToggleBand={toggleBandFilter} top5Only={filterTop5} onToggleTop5={() => setFilterTop5((v) => !v)} jdOnly={filterJd} onToggleJd={() => setFilterJd((v) => !v)} queuedOnly={filterQueued} onToggleQueued={() => setFilterQueued((v) => !v)} />
 
         {(err || note) && <div style={{ padding: '6px 16px', fontSize: 12, color: err ? '#b3261e' : '#2e7d32', background: err ? '#fdecea' : '#eaf5ea' }}>{err || note}</div>}
 
@@ -923,9 +937,10 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
 // JOBLIST-FILTER-001: the legend IS the Job List filter — every swatch/icon is
 // a checkbox. Unchecking a tier hides those rows from the table below;
 // unchecking ★/✅ has no effect until CHECKED (they narrow, they don't widen).
-function Legend({ bands, onToggleBand, top5Only, onToggleTop5, jdOnly, onToggleJd }: {
+function Legend({ bands, onToggleBand, top5Only, onToggleTop5, jdOnly, onToggleJd, queuedOnly, onToggleQueued }: {
   bands: Set<string>; onToggleBand: (b: string) => void;
   top5Only: boolean; onToggleTop5: () => void; jdOnly: boolean; onToggleJd: () => void;
+  queuedOnly: boolean; onToggleQueued: () => void;
 }): JSX.Element {
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, padding: '7px 16px', borderBottom: '1px solid #e3e8f0', background: '#fbfcfe', fontSize: 11, color: '#445', alignItems: 'center' }}>
@@ -948,6 +963,10 @@ function Legend({ bands, onToggleBand, top5Only, onToggleTop5, jdOnly, onToggleJ
       <label title={jdOnly ? 'Showing only rows with a stored JD — click to show all' : 'Click to show ONLY rows with a stored JD'}
         style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', opacity: jdOnly ? 1 : 0.75 }}>
         <input type="checkbox" checked={jdOnly} onChange={onToggleJd} style={{ width: 13, height: 13, margin: 0 }} /><b>✅</b> JD stored
+      </label>
+      <label title={queuedOnly ? "Showing only rows queued for tonight's generation — click to show all" : "Click to show ONLY rows queued for tonight's generation (⏰)"}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', opacity: queuedOnly ? 1 : 0.75 }}>
+        <input type="checkbox" checked={queuedOnly} onChange={onToggleQueued} style={{ width: 13, height: 13, margin: 0 }} /><b>⏰</b> Queued
       </label>
     </div>
   );

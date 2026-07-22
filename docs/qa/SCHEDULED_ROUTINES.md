@@ -88,6 +88,23 @@ machine is off" path for those is a **claude.ai cloud routine**, created from th
 | relay health probe | ~5-min | none (alert only) | no | Liveness. |
 | model-freshness check | daily | none/report | no | Flags stale model ids. |
 
+### JD-list-updating routines — the ⏰ queue flag is now USER-VISIBLE (JD-MENU-QUEUED-TAB-001, 2026-07-22, PWA `1.51.3081-queued-filter`)
+
+The routines that add rows to or set the queue on the job-tracker doc — **`antcv-position-discovery`**
+(`discover-positions.py`, adds rows) and **`antcv-job-tracker-nightly`** (`gen-runner.py`, sets
+`doc.queue[uk]=false` after it persists an application) — write the same `doc.queue` map that the
+AntCV Job-Tracker **List** now exposes as a **"⏰ Queued" legend filter**. The owner can filter the
+list to exactly the rows queued for tonight's generation. Implications for these runs:
+
+- The filter reads `rowQueued(doc, uk)` = **explicit `doc.queue[uk]` wins, else default-ON until the
+  row has `doc.artifacts[uk].application_id`** — byte-identical to the ⏰ row toggle. So a row with no
+  `queue` entry and no artifact already shows as Queued; once the nightly persists an app it must keep
+  writing `queue[uk]=false` (as gen-runner already does) or the row stays visibly Queued.
+- This was a **read-only UI add** in the React island (`src/islands/JobTracker/JobTracker.tsx`, built
+  into `pwa/antcv-react-islands.js`) — **no doc-schema change**, so nightly writers need no code change;
+  they just now have a user-facing consumer of `doc.queue`, so keep that flag accurate.
+- Guard test: `pwa/antcv-jobtracker-queued-filter.test.mjs` (in the `pwa` suite).
+
 ---
 
 ## RELAY-COST-QUALITY-TUNE-001 — weekly review + MODIFY the cost-quality router

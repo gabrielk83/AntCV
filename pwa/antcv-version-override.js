@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.2641-cl-v5-why-roleview';
+  const TARGET_VERSION = '1.51.2661-cl-v5-rerender-force';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.2641-cl-v5-why-roleview',
     '1.51.2622-cl-cv-two-tone',
     '1.51.2601-header-elem-colors',
     '1.51.2600-rowfit-hourglass',

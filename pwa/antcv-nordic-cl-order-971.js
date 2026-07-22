@@ -25,7 +25,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.2641-cl-v5-why-roleview';
+  var VERSION = '1.51.2661-cl-v5-rerender-force';
   if (window.__antcvNordicClOrder971 === VERSION) return;
   window.__antcvNordicClOrder971 = VERSION;
 
@@ -361,7 +361,16 @@
       if (!m.changed && !a.changed && !b.changed && !g.changed && !sd.changed) return;
       secs.cl = sd.list;
       localStorage.setItem('sections', JSON.stringify(secs));
-      try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { reason: 'nordic-cl-order-971' } })); } catch (_) {}
+      // CL-V5-RERENDER-FORCE-001 (owner 2026-07-22): the preview's sections-updated handler
+      // early-returns when the sections signature matches window.__antcvLastSecApplied. On a
+      // reload the boot hydration can update that tracker so this sidecar's own change (why
+      // reword, role_view seed, order, bring bullets) is written to localStorage.sections but
+      // NOT re-applied to React state -> the DATA is correct while the PREVIEW stays stale
+      // (owner: "I do not see it in-vivo"). The reason carries 'standalone', a keyword the
+      // handler's force-regex (/slogan|standalone|signoff|signature/) treats as "bypass the
+      // sig early-return", so a real nordic-cl-order change always repaints. Bounded: this
+      // sidecar only dispatches when it ACTUALLY changed something (idempotent) -> no storm.
+      try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { reason: 'nordic-cl-order-971 standalone' } })); } catch (_) {}
     } catch (_) { /* self-disable on any error */ }
   }
 

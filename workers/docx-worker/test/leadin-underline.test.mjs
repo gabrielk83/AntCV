@@ -43,11 +43,24 @@ const amber = await leadRunOf({ leadUnderline:true, leadUnderlineColor:'#D97706'
 const dflt  = await leadRunOf({ leadUnderline:true });            // no colour → defaults to leadColor 0B4F8A
 const none  = await leadRunOf({});                                // no underline field
 
+// marker rows (mk:true) — verb-lead rendered via bulletParagraphRich must underline too
+async function markerLeadRun(extra) {
+  const sec = Object.assign({ id:'p3', title:'PROFILE', loc:'main', on:true, type:'rich_block',
+    leadColor:'#0B4F8A', items:[ { b:'Hands-on', t:'built and operated MEMS rigs.', mk:true } ] }, extra || {});
+  const xml = unzipEntry(await gen(payload(sec)), 'word/document.xml').toString('utf8');
+  const m = xml.match(/<w:r>(?:(?!<w:r>).)*?Hands-on/s);
+  return m ? m[0] : '';
+}
+const mkAmber = await markerLeadRun({ leadUnderline:true, leadUnderlineColor:'#D97706' });
+const mkNone  = await markerLeadRun({});
+
 const checks = [];
 checks.push(['leadUnderline + colour emits <w:u single w:color=D97706>', /<w:u\s+w:val="single"\s+w:color="D97706"\s*\/>/i.test(amber)]);
 checks.push(['default underline colour = leadColor (0B4F8A)', /<w:u\s+w:val="single"\s+w:color="0B4F8A"\s*\/>/i.test(dflt)]);
 checks.push(['no leadUnderline → no <w:u> on the lead run', !/<w:u\b/.test(none)]);
 checks.push(['lead run still carries the text + colour', /Foundation/.test(amber) && /w:color w:val="0B4F8A"/i.test(amber)]);
+checks.push(['marker-row (mk) verb-lead underlines with colour', /Hands-on/.test(mkAmber) && /<w:u\s+w:val="single"\s+w:color="D97706"\s*\/>/i.test(mkAmber)]);
+checks.push(['marker-row without leadUnderline → no <w:u>', /Hands-on/.test(mkNone) && !/<w:u\b/.test(mkNone)]);
 
 let pass = true;
 for (const [name, ok] of checks) { log((ok ? 'PASS' : 'FAIL') + ' — ' + name); if (!ok) pass = false; }

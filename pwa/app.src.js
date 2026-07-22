@@ -21881,6 +21881,10 @@
               ((a = { type: "list_item", itemIdx: e, value: n }),
                 (i =
                   'Senior CV editor. Enrich one sidebar list item — more specific, more concrete. Preserve every number, proper noun, certification code, citation, formatting marker (e.g. *italic stars*, year, journal). Do NOT invent facts. Keep similar length (±15%). Return ONLY valid JSON: {"value":"..."}.'));
+            else if ("rich_block" === o.type)
+              ((a = { type: "bullets_item", itemIdx: e, b: n.b || "", t: n.t || "" }),
+                (i =
+                  'Senior CV editor. Enrich the body ("t") of ONE rich-block row — more specific, more concrete, senior-toned. Keep "b" (lead-in label) UNCHANGED exactly. Preserve every number, proper noun, tool name, certification code, standards code. Do NOT invent facts. Keep similar length (±15%). Return ONLY valid JSON: {"b":"...","t":"..."}.'));
             else {
               if ("education" !== o.type)
                 return void alert(
@@ -22067,7 +22071,9 @@
                     ? (m.type = "labeled_list_item")
                     : "list" === o.type || "list_italic" === o.type
                       ? (m.type = "list_item")
-                      : "education" === o.type && (m.type = "education_item"))
+                      : "rich_block" === o.type
+                        ? (m.type = "bullets_item")
+                        : "education" === o.type && (m.type = "education_item"))
                 : t
                   ? ((u.roleId = t), (m.type = "experience_role"))
                   : (m.type = o.type),
@@ -22133,7 +22139,7 @@
                   ? n.v || ""
                   : "education" === r.type
                     ? n.sch || ""
-                    : "bullets" === r.type
+                    : ("bullets" === r.type || "rich_block" === r.type)
                       ? (n.b ? n.b + " " : "") + (n.t || n || "")
                       : n || "",
               a = "labeled_list" === r.type ? "labeled_val" : "list_item";
@@ -22220,7 +22226,7 @@
                   };
                 else if ("list" === r.type || "list_italic" === r.type)
                   n = { id: e, type: "list_item", itemIdx: o, value: a };
-                else if ("bullets" === r.type)
+                else if ("bullets" === r.type || "rich_block" === r.type)
                   // ITEM-COMPRESS-RICHBLOCK-001: {b,t} rich_block item (e.g.
                   // {b:"Goal:", t:"My aim is..."}), mirrors labeled_list_item
                   // (b stays frozen like l, only t is tightened, like v).
@@ -22598,7 +22604,7 @@
                             { type: "list_item", value: E.value },
                             { itemIdx: e },
                           )
-                        : "bullets" === n.type
+                        : ("bullets" === n.type || "rich_block" === n.type)
                           ? Pe(
                               n,
                               { type: "bullets_item", t: E.t },

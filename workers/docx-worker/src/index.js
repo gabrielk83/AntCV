@@ -27309,7 +27309,7 @@ function renderRichBlock(s, ctx, isSidebar) {
         if (!s.headlineOff && s.title && !(ctx.style && ctx.style.contHeadlines === false)) out.push(headingParagraph(String(s.title || "").toUpperCase() + " " + (ctx.contSuffix || "(CONT.)"), ctx, isSidebar, s.ruleOff));
       }
     }
-    if (row.mk === true) out.push(bulletParagraphRich(lead, body, ctx, isSidebar, align));
+    if (row.mk === true) out.push(bulletParagraphRich(lead, body, ctx, isSidebar, align, void 0, void 0, leadUnderline, leadUlHex));
     else if (typeof row.mk === "string" && row.mk) out.push(make(lead, body, align, row.mk));
     else out.push(make(lead, body, align));
   });
@@ -27326,7 +27326,7 @@ function renderBullets(s, ctx, isSidebar) {
   });
 }
 __name(renderBullets, "renderBullets");
-function bulletParagraphRich(lead, body, ctx, isSidebar, align, keepWithNext, lineTwips) {
+function bulletParagraphRich(lead, body, ctx, isSidebar, align, keepWithNext, lineTwips, leadUnderline, leadUlHex) {
   const { style, fs } = ctx;
   const baseRun = {
     color: isSidebar ? style.sidebarTextColor : style.mainTextColor,
@@ -27354,6 +27354,9 @@ function bulletParagraphRich(lead, body, ctx, isSidebar, align, keepWithNext, li
         // than as a continuous bold run with the result text. In the
         // sidebar we keep the head colour for visibility against navy.
         color: isSidebar ? style.sidebarHeadColor : style.mainTextColor,
+        // LEAD-UNDERLINE-001: marker-row (mk) verb-leads honour the section's
+        // leadUnderline too (threaded from renderRichBlock); default colour = leadUlHex.
+        underline: leadUnderline ? { type: UnderlineType.SINGLE, color: leadUlHex || (isSidebar ? style.sidebarHeadColor : style.mainTextColor) } : undefined,
         size: baseRun.size,
         font: baseRun.font
       })] : [],

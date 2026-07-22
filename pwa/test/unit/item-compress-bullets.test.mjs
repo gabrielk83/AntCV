@@ -48,9 +48,9 @@ test('bullets_item Pe/applier branch exists in both files', () => {
 });
 test('the gate-check no longer hands al() a raw object for "bullets" sections', () => {
   // Confirms the fallback path now extracts b+t instead of `n || ""`.
-  assert.match(src, /"bullets" === r\.type\s*\?\s*\(n\.b \? n\.b \+ " " : ""\) \+ \(n\.t \|\| n \|\| ""\)/);
-  assert.ok(app.includes('"bullets"===r.type?(n.b?n.b+" ":"")+(n.t||n||"")'),
-    'gate-check bullets extraction missing from app.js');
+  assert.match(src, /\("bullets" === r\.type \|\| "rich_block" === r\.type\)\s*\?\s*\(n\.b \? n\.b \+ " " : ""\) \+ \(n\.t \|\| n \|\| ""\)/);
+  assert.ok(app.includes('("bullets"===r.type||"rich_block"===r.type)?(n.b?n.b+" ":"")+(n.t||n||"")'),
+    'gate-check bullets/rich_block extraction missing from app.js');
 });
 
 // 2) LOGIC — replicate the SHIPPED gate-check extraction + Pe applier merge,
@@ -61,7 +61,7 @@ function gateCheckText(item, sectionType) {
   //   : "bullets"===r.type ? (n.b?n.b+" ":"")+(n.t||n||"") : n||""
   if (sectionType === 'labeled_list') return item.v || '';
   if (sectionType === 'education') return item.sch || '';
-  if (sectionType === 'bullets') return (item.b ? item.b + ' ' : '') + (item.t || item || '');
+  if (sectionType === 'bullets' || sectionType === 'rich_block') return (item.b ? item.b + ' ' : '') + (item.t || item || '');
   return item || '';
 }
 function applyBulletsItem(section, itemIdx, compressedT) {
@@ -112,4 +112,21 @@ test('applier leaves other items in the array untouched', () => {
   assert.deepEqual(out.items[0], { b: 'A', t: 'first' });
   assert.equal(out.items[1].t, 'compressed goal text');
   assert.deepEqual(out.items[2], { b: 'C', t: 'third' });
+});
+
+// ITEM-ROWFIT-RICHBLOCK-001 (owner 2026-07-22): Fit-it (⇥) AND Enhance (✨) on a
+// rich_block ROW must run the proven bullets_item path (freeze b, act on t) instead
+// of alerting "not supported on row level". Guard the whitelist extension in BOTH
+// the Fit-it (ll) and Enhance (il) handlers, mirrored src <-> minified.
+test('rich_block rows route through bullets_item in Fit-it + Enhance (src + app mirror)', () => {
+  // Fit-it (ll): fits-check, builder, write-back all accept rich_block
+  assert.ok(src.includes('"bullets" === r.type || "rich_block" === r.type'), 'll builder src');
+  assert.ok(app.includes('"bullets"===r.type||"rich_block"===r.type'), 'll builder app');
+  assert.ok(src.includes('"bullets" === n.type || "rich_block" === n.type'), 'll write-back src');
+  assert.ok(app.includes('"bullets"===n.type||"rich_block"===n.type'), 'll write-back app');
+  // Enhance (il): payload case + type mapping accept rich_block -> bullets_item
+  assert.ok(src.includes('else if ("rich_block" === o.type)') && /rich-block row/.test(src), 'il payload src');
+  assert.ok(app.includes('else if("rich_block"===o.type)a={type:"bullets_item"'), 'il payload app');
+  assert.ok(/"rich_block" === o\.type\s*\?\s*\(m\.type = "bullets_item"\)/.test(src), 'il map src');
+  assert.ok(app.includes('"rich_block"===o.type?g.type="bullets_item"'), 'il map app');
 });

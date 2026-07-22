@@ -26,7 +26,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.51.2420-application-line';
+  var VERSION = '1.51.2440-application-line';
   if (window.__antcvApplicationLine === VERSION) return;
   window.__antcvApplicationLine = VERSION;
 
@@ -147,8 +147,19 @@
   // observer that fires solely when a `.antcv-preview-paper` is added/removed
   // (an app switch / re-mount), then re-applies. apply() is a no-op when the line
   // is already correct, so repeated calls are cheap and self-limiting.
-  var t = null;
-  function schedule() { if (t) clearTimeout(t); t = setTimeout(function () { try { apply(); } catch (_) {} }, 250); }
+  // DEBOUNCE-STARVATION-001 (live-diagnosed 2026-07-22): a clear-and-reset 250ms
+  // debounce here NEVER fired — the header's frequent antcv:sections-updated storm
+  // reset the timer faster than it could resolve, so apply() ran only when boot
+  // sweeps happened to hit a good moment (usually never). apply() is cheap (a
+  // fast-path skips the anchor scan when the line is already correct) and
+  // idempotent, so we run it DIRECTLY on a short, NON-resettable timeout — bursts
+  // just coalesce into a couple of cheap no-op passes instead of starving to zero.
+  var pending = false;
+  function schedule() {
+    if (pending) return;
+    pending = true;
+    setTimeout(function () { pending = false; try { apply(); } catch (_) {} }, 120);
+  }
 
   try {
     var mo = new MutationObserver(function (muts) {
@@ -172,7 +183,11 @@
   // the preview being shown. Cheap: apply() early-returns via the steady-state
   // fast path when the line is already correct.
   [400, 1200, 3000, 7000, 12000, 20000].forEach(function (ms) { setTimeout(schedule, ms); });
-  setInterval(schedule, 2500);
+  // Backstop: React re-renders the paper subtree on state changes and strips our
+  // (non-React) node; the antcv:sections-updated listener re-injects right after,
+  // and this interval guarantees re-appearance even if that event is missed. The
+  // fast path makes the steady-state pass a couple of cheap DOM reads.
+  setInterval(schedule, 1500);
   try { window.AntcvApplicationLine = { version: VERSION, _apply: apply, _text: appLineText, _remove: removeAll }; } catch (_) {}
   try { console.debug('[application-line] installed ' + VERSION); } catch (_) {}
 })();

@@ -104,7 +104,60 @@ Light-ground hyperlinks: blue `#0B4F8A`, underlined (dark-box links are white �
 3. **Header render** (photo ring, spec cyan, contact condense/single-space, white links, box layout, name tracking): COORDINATE with the header-color/elem-colors/appline sidecars (antcv-header-elem-colors.js, antcv-header-color-controls.js, antcv-copenhagen-v2-001.js, antcv-appline-rule.js) — this is their territory; splice in-body or extend their sidecars, do not fork.
 4. **docx parity** for all of the above (docx-worker + antcv-docx-client.js), then live-verify a real export.
 
+## MOCKUP-DIVERGENCE FLAGS (self-verification audit, 2026-07-22 late)
+
+Full render-vs-mockup audit (16 items, code-verified in app.src.js). FIXED = shipped
+this session; OPEN = flagged render work; JUDGMENT = owner live-tuned value conflicts
+with the mockup — owner call, do not silently change.
+
+### FIXED (1.51.3001-3101 + wk 1.14.163/164)
+- Tokens: spec/border/photo-ring/table-frame cyan #01B9BD; sidebar+banding #DCE5EA
+  (ALL five copies synced: preset, base, worker bundle+palette.js, registry css);
+  mainHeadColor → teal #00746E (CL-CV-TWO-TONE navy superseded); mainYearColor →
+  #777777; sidebarLineColor → teal; headerContactColor → #DBE4F0; photo ring 1.5pt.
+- Table: banding token-driven all surfaces; cyan outer frame (preview + export HTML
+  + worker per-cell perimeter); header centered; first col LEFT (supersedes
+  FOCUS-TABLE-LEFTCOL-JUSTIFY-001); heading→table gap 8px≈6pt ✓.
+- Header band (preview, copenhagen-v2 sidecar DEFAULT ON, kill '0'): name tracking
+  .14em, contact scaleX(.73), white band links, cyan border fallback #01B9BD.
+- Contact line joins with single spaces, no middots ✓ (was already correct).
+- CL band = CV band (same builder) ✓. Company italic #333 ✓. Years #777777 ✓.
+
+### OPEN — render-structure flags (well-scoped batch; all cite app.src.js ~lines)
+1. **ALL rules/underlines render 1px CSS (0.75pt); mockup = 1.5pt (2px)** — one
+   thickness sweep covers section-head rule (~8374), sidebar-head rule, lead-in
+   underlines, group lines. THE cross-cutting fix.
+2. **Section-head underline COLOR**: renders mainHeadColor (now teal); mockup wants
+   grey #777777 under the teal heads (~8374; same for CL lead-in underline color).
+3. **Role row draws a teal 1px bottom rule (~7366); mockup: NO per-role rule.**
+4. Role title 10.5pt italic; mockup 11pt bold non-italic (7318-7321).
+5. "Results" lead-in: teal bold italic, NO underline; mockup adds 1.5pt #777
+   underline, non-italic (7645-7658).
+6. {grp} sub-heads (Earlier career / sidebar groups): centered ✓ but NO underline,
+   no inline years; mockup: teal 1.5pt rule (main) / thick #777 line (sidebar
+   groups) + years #777 right (6703-6730; roleHead variant lives in the
+   roles-richblock sidecar).
+7. Body links #0563C1; mockup #0B4F8A (2634).
+8. Sidebar panel: no border-radius in render; mockup rounded ~9px (46040-67;
+   partially covered by the copenhagen-v2 sidecar margins — radius still missing).
+9. CL application line: teal, no rule; mockup #808080 text + full-width 1.5pt teal
+   rule under it (46889-900) — COORDINATE with the appline lane (antcv-appline-rule.js
+   shipped 2861; check whether that sidecar now draws the rule before editing).
+10. "At your service,": black, no underline; mockup teal non-bold + 1.5pt cyan
+    #01B9BD underline (47014-29).
+11. CL AI notice: 7px teal; mockup ~7.5pt grey #777 (51361-88).
+12. Stage 4 docx parity for the header (box border/radius, name tracking, contact
+    condense, white links) — preview-only so far.
+
+### JUDGMENT — owner live-tuned vs mockup (ASK, do not override)
+- Band radius: sidecar 22px (owner live-tuned "perfect" 2026-07-21) vs mockup 9px.
+- Panel insets: sidecar 7.4px vs mockup equation 0.15in (14.4px) X=xS=xM.
+- Photo: app 82px medallion + tuned nudge vs mockup 1.4in circle @0.15in inset.
+- Band name size: render 16pt vs mockup 23px (~17.3pt at A4 scale) — close; exact
+  pinning is a docx-parity (Stage 4) decision.
+
 ## Status
-- ✅ Two-tone `mainHeadColor` → navy `#0B4F8A` (1.51.2622) — SUPERSEDED: mockup locks teal-led heads; navy only for box + sidebar text.
 - ✅ Mockup locked to owner sign-off (2026-07-22) — values above are authoritative.
-- ⬜ Render + docx implementation per the staging plan — pending.
+- ✅ Stages 1-3 + mockup-parity tokens shipped (1.51.3001/3041/3061/3101, wk 1.14.163/164).
+- ⬜ OPEN render-structure flags above + Stage 4 docx header parity.
+- ⬜ JUDGMENT items await owner word.

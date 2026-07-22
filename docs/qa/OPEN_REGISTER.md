@@ -3,6 +3,8 @@
 > the nightly slot always chews the stalest end. `verified:` = the last date a
 > human/agent confirmed the row against the CURRENT code, not the date it was filed.
 > Seeded 2026-07-02 from ACTIVE_BUGS batches 1-8 + the PROJECT_ISSUES chain + MASTER_BACKLOG.
+> **HEADER-APP-LINE-001 — OPEN (owner report + live diagnosis 2026-07-22; coordinate with the CL-v5 header lane, NOT shipped).** Owner: switching apps keeps the same subtitle ("Processes • Products • People") and there is no per-app application line under the header + slogan. **Diagnosis:** the sticky line is `meta.subtitle` = a copy of the GLOBAL `personalInfo.specialization`, identical on every app; the real CL-slogan reset (SLOGAN-LOAD-SYMMETRIC-001) is deployed and works, so there is no separate slogan-stick bug. **Desired (owner-confirmed):** a per-app "Application for [Role] at [Company]" line directly UNDER the name + slogan, on BOTH CV and CL. **Status:** OPEN, owner-gated, needs a VISUAL pass — multi-surface (CV+CL header render in `app.src.js` + docx-worker export parity) and the header is under active CL-v5 slogan-headline rework (`1.51.2194`+). Extends **row 66 sub-item (n)** ("header shows the SPECIALISATION line instead of the APPLICATION line — the generator must render the application line ONCE"). Fold into the CL-v5 lane in a render-capable session. See ACTIVE_BUGS top entry + FEATURES_REGISTRY FT-HEADER-APP-LINE.
+
 > **RENUMBERED 2026-07-03 (owner ask: "show what is actually open"):** closed rows moved to
 > the CLOSED section below; references to old row numbers in ACTIVE_BUGS batches ≤15 use the
 > OLD numbering. Verify-first sweep 2026-07-03 closed old rows 1, 5, 10(core), 13, 14, 20, 25-29.

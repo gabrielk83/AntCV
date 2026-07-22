@@ -272,11 +272,11 @@
     return d;
   }
 
-  // SLOGAN-ENHANCE-001 (owner 2026-07-14): Enhance (LLM rewrite) + Fit-it (re-apply the 4-8
+  // SLOGAN-ENHANCE-001 (owner 2026-07-14): Enhance (LLM rewrite) + Fit-it (re-apply the 4-13
   // word cap). The app exposes its LLM dispatcher + undo on window (see app.js SLOGAN-ENHANCE-001):
   //   __antcvLLM(messages, prompt, opts)  __antcvLLMProviders  __antcvLLMInit  __antcvJsonRepair
   //   __antcvOverCost  __antcvPushUndo. All read/write the same antcv:clSlogan store; both push
-  //   app undo (so the toolbar ↶ reverts them) and cap to 4-8 words.
+  //   app undo (so the toolbar ↶ reverts them) and cap to 4-13 words.
   // RAW current slogan text — NO word-cap applied here. (Earlier this capped, which made
   // Fit-it a no-op: it re-capped an already-capped string → no change → "Fit doesn't work".
   // The cap now lives ONLY in sloganFit, so Fit-it actually trims an over-length slogan.)
@@ -296,7 +296,7 @@
       try { window.__antcvPushUndo && window.__antcvPushUndo('Fit slogan'); } catch (_) {}
       set(K.text, fit); bump();
     } else {
-      alert('Slogan already fits within 4-8 words — nothing to trim.');
+      alert('Slogan already fits within 4-13 words — nothing to trim.');
     }
   }
   function sloganEnhance() {
@@ -308,7 +308,7 @@
     window.__antcvSloganEnhancing = true;
     var lang = 'en';
     try { lang = String(localStorage.getItem('language') || 'en').replace(/"/g, '').slice(0, 2); } catch (_) {}
-    var prompt = 'You are a senior copywriter. Sharpen ONE cover-letter positioning line (a short personal tagline). Make it punchier, more concrete and more memorable while KEEPING the same core meaning and the same subject/voice. HARD RULES: 4-8 words; no trailing period; no quotes; no hype or corporate-speak (never "passionate", "driven", "dynamic", "impactful", "world-class", "results-driven", "cutting-edge", "seamless", "leverage"). Calm, factual, senior Scandinavian-professional voice — facts before flair. Output language: ' + lang + '. Return ONLY valid JSON: {"slogan":"..."}. First character "{", last character "}".';
+    var prompt = 'You are a senior copywriter. Sharpen ONE cover-letter positioning line (a short personal tagline). Make it punchier, more concrete and more memorable while KEEPING the same core meaning and the same subject/voice. HARD RULES: 4-13 words but SHORTER, SHARPER AND MORE MEMORABLE IS BETTER (13 is a ceiling, not a target - prefer the fewest words that still land); no trailing period; no quotes; no hype or corporate-speak (never "passionate", "driven", "dynamic", "impactful", "world-class", "results-driven", "cutting-edge", "seamless", "leverage"). Calm, factual, senior Scandinavian-professional voice — facts before flair. Output language: ' + lang + '. Return ONLY valid JSON: {"slogan":"..."}. First character "{", last character "}".';
     var provs;
     try { var pf = window.__antcvLLMProviders; provs = ['claude', 'openai', 'mistral', 'gemini'].filter(typeof pf === 'function' ? pf : function () { return true; }); } catch (_) { provs = ['claude']; }
     var attempts = 2 + Math.max(0, provs.length);
@@ -353,7 +353,7 @@
     var alignRow = mkAlignBtns(K.align, function () { s.box.__refresh(); });
     s.body.appendChild(input); s.body.appendChild(alignRow);
     // SLOGAN-ENHANCE-001 (owner 2026-07-14): Enhance (LLM rewrite) + Fit-it (re-apply the
-    // 4-8 word cap). Both call the app-exposed window ops (app.js defines __antcvEnhanceSlogan /
+    // 4-13 word cap). Both call the app-exposed window ops (app.js defines __antcvEnhanceSlogan /
     // __antcvFitSlogan next to `il`), are undoable (they push app undo via vr), and read/write
     // the same antcv:clSlogan store as the inline editor.
     var aiRow = document.createElement('div');
@@ -366,13 +366,13 @@
       b.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); fn(b); });
       return b;
     }
-    var enhBtn = mkActBtn('✨ Enhance', 'Rewrite the slogan sharper (4-8 words, same meaning) — undoable', function (b) {
+    var enhBtn = mkActBtn('✨ Enhance', 'Rewrite the slogan sharper (4-13 words, same meaning) — undoable', function (b) {
       if (window.__antcvSloganEnhancing) return;
       var o = b.textContent; b.textContent = '⏳…'; b.style.opacity = '0.7'; b.disabled = true;
       var done = function () { b.textContent = o; b.style.opacity = '1'; b.disabled = false; try { s.box.__refresh(); } catch (_) {} };
       Promise.resolve().then(sloganEnhance).then(function () { setTimeout(done, 200); }, done);
     });
-    var fitBtn = mkActBtn('⇥ Fit', 'Trim the slogan to fit (4-8 words) — undoable', function () {
+    var fitBtn = mkActBtn('⇥ Fit', 'Trim the slogan to fit (4-13 words) — undoable', function () {
       try { sloganFit(); } catch (_) {}
       setTimeout(function () { try { s.box.__refresh(); } catch (_) {} }, 120);
     });

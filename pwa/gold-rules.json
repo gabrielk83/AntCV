@@ -330,8 +330,9 @@
     "Systems Analysis & Trade-offs": "Systems & trade-offs"
   },
   "slogan": {
-    "max_words": 9,
-    "_doc": "CL slogan/headline: at most 9 words so it never wraps to a 2nd line (owner 2026-07-13, app 810 was 12 words and slid)."
+    "max_words": 13,
+    "min_words": 4,
+    "_doc": "CL slogan/headline: 4-13 words (owner 2026-07-21). SHORTER, SHARPER, MORE MEMORABLE IS BETTER - 13 is a hard one-line ceiling, NOT a target; aim for the fewest words that still name the role and the outcome. (Was 9; raised so a fuller role+outcome headline is not truncated.)"
   },
   "jd_relevance": {
     "_doc": "owner 2026-07-13 round 3: JD-gated content visibility",

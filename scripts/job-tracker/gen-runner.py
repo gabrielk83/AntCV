@@ -435,7 +435,7 @@ CL_SECTIONS = [
     # end-block (Professional summary / How I operate). Kept out of CL_SECTIONS so the
     # nightly stops paying for a section the v5 letter no longer renders.
     ("cl_closure",          "Closure",           "Write the COVER LETTER CLOSURE (1-2 first-person sentences): a warm, confident sign-off that INVITES a conversation and points at the concrete value the candidate would bring to THIS employer. Do NOT restate why the candidate is drawn to the role (the opening already does that); focus on the invitation and the value. Not generic boilerplate. No 'Sincerely'/signature line, no name."),
-    ("cl_slogan",           "SLOGAN",            "Write ONE cover-letter HEADLINE (the slogan), a single line of AT MOST 8 WORDS (V5-SLOGAN-ROLE-001, v5 §1 'outcome-oriented headline LINKED TO THE ROLE'). ORGANISING PRINCIPLE = THE ROLE + THE OUTCOME: name what this ROLE does and the concrete OUTCOME the candidate moves it toward - e.g. 'Moving optical hardware from lab to scalable delivery' or 'Project manager turning lab optics into product'. It must read as THIS role, not as a generic personal tagline. SECONDARY (never at the cost of the role linkage): if an EMPLOYER BRAND block is present you MAY echo its register/tone, but NEVER name the company and NEVER invent a company value. Hard limits: at most 8 words, no trailing period, no quotation marks. Return ONLY the line."),
+    ("cl_slogan",           "SLOGAN",            "Write ONE cover-letter HEADLINE (the slogan), a single line of 4 to 13 WORDS (V5-SLOGAN-ROLE-001, v5 §1 'outcome-oriented headline LINKED TO THE ROLE'). SHORTER, SHARPER AND MORE MEMORABLE SCORES HIGHER - 13 is a hard ceiling, NOT a target; use the FEWEST words that still land the point. ORGANISING PRINCIPLE = THE ROLE + THE OUTCOME: name what this ROLE does and the concrete OUTCOME the candidate moves it toward - e.g. 'Moving optical hardware from lab to scalable delivery' (8) or 'Project manager turning lab optics into product' (7). It must read as THIS role, not as a generic personal tagline. SECONDARY (never at the cost of the role linkage or of brevity): if an EMPLOYER BRAND block is present you MAY echo its register/tone, but NEVER name the company and NEVER invent a company value. Hard limits: 4-13 words, no trailing period, no quotation marks. Return ONLY the line."),
 ]
 
 def _user_turn(profile_json, meta, section_ask):
@@ -1553,7 +1553,7 @@ def _scrub_dangle_verb(s):
     if prev in _SLOGAN_DANGLE_PRON and last and last not in _SLOGAN_DANGLE_STOP:
         return _SLOGAN_TRAIL_PUNCT_RE.sub("", " ".join(words[:-2])).strip()
     return t
-def _cap_slogan_words(t, maxw=9):
+def _cap_slogan_words(t, maxw=13):
     """SLOGAN-WORD-CAP-001 (owner 2026-07-13, app 810 was 12 words and wrapped):
     a CL slogan must be <= maxw words so it never slides to a 2nd line. Prefer a
     clean clause cut (the first comma/dash/semicolon segment when it is 4..maxw
@@ -1600,7 +1600,7 @@ def _format_slogan(text):
     t = (t.split("\n")[0]).strip()
     if not t or _is_scaffold(t):
         return ""
-    _maxw = int(((_GOLD.get("slogan") or {}).get("max_words")) or 9)
+    _maxw = int(((_GOLD.get("slogan") or {}).get("max_words")) or 13)
     return _cap_slogan_words(_cap_line(t, 90), _maxw)
 
 def persist_application(doc, r, res, category, language, kernel=None, measure=False, max_pages=2):

@@ -521,7 +521,7 @@ def compress_slogan(slogan, language, report, use_llm=True):
     t = str(slogan or "").strip()
     if not t:
         return t
-    maxw = int(((_G.get("slogan") or {}).get("max_words")) or 9)
+    maxw = int(((_G.get("slogan") or {}).get("max_words")) or 13)
     if len(t.split()) <= maxw:
         return t
     # clean clause cut first (deterministic, no fabrication)

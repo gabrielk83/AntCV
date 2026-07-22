@@ -2363,10 +2363,10 @@
   // on switch). ie() and the slogan render read these localStorage keys fresh, so a write
   // + the existing re-render updates the preview.
   function __antcvWriteSlogan(v) { try { if ("string" == typeof v) localStorage.setItem("antcv:clSlogan", v); } catch (_) {} }
-  // SLOGAN-WORDCAP-001 (owner 2026-07-14: slogan limited to 4-8 words even when
+  // SLOGAN-WORDCAP-001 (owner 2026-07-14: slogan limited to 4-13 words even when
   // fused to the brand). A LOAD-time safety net: generation clamps it, but a
   // legacy/override slogan may exceed 8 words on any of the load paths. Clause-
-  // aware: keep the first 8 words, then drop a trailing dangling connector /
+  // aware: keep the first 13 words, then drop a trailing dangling connector /
   // punctuation so the cut reads clean. Shared by both preview renders + export.
   // SLOGAN-CAP-DANGLE-VERB-001 (owner 2026-07-15): a hard word-count chop can
   // leave a dangling "pronoun + transitive verb" fragment with no object
@@ -2394,19 +2394,19 @@
       var t = String(s == null ? "" : s).trim();
       if (!t) return t;
       var w = t.split(/\s+/).filter(Boolean);
-      if (w.length <= 8) return t;
+      if (w.length <= 13) return t;
       // SLOGAN-CAP-DANGLE-VERB-001: prefer a CLAUSE cut over a hard mid-clause
       // chop — if the first comma / dash / semicolon falls at 4..8 words, keep
       // the head clause (matches the Python _cap_slogan_words). Else hard-chop to
-      // 8 words, scrub a trailing connector/punctuation, THEN drop a dangling
+      // 13 words, scrub a trailing connector/punctuation, THEN drop a dangling
       // pronoun+verb fragment so it ends on a complete phrase.
       var cm = t.search(/\s*[,;–—]\s*|\s+-\s+/);
       if (cm > 0) {
         var head = t.slice(0, cm).trim();
         var hw = head.split(/\s+/).filter(Boolean);
-        if (hw.length >= 4 && hw.length <= 8) return __antcvSloganDeDangle(head);
+        if (hw.length >= 4 && hw.length <= 13) return __antcvSloganDeDangle(head);
       }
-      var cut = w.slice(0, 8).join(" ")
+      var cut = w.slice(0, 13).join(" ")
         .replace(/[\s,;:•\-–—&]+$/, "")
         .replace(/\s+(?:and|or|nor|but|with|to|through|for|of|the|a|an|og|eller|som|både)$/i, "")
         .trim();

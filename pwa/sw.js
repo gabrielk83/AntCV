@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.1972-richblock-residue-converge';
+const CACHE = 'antcv-1.51.1992-slogan-cap-4-13';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

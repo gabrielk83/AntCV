@@ -45289,11 +45289,11 @@
               ? "Ansøgning: [rolle og virksomhed]"
               : "Application: [role and company]",
           h = d
-            ? "cl" === Lt
-              ? io.role || io.company
-                ? `${ye("Application:", je)} ${__antcvSubtitleRoleCo(io.role, io.company)}`
-                : f
-              : io.subtitle || g
+            // CL-APP-SUBTITLE-HEADING-SWAP-001 (owner 2026-07-22): the CL heading now shows the
+            // SPECIALISATION line like the CV. The per-app "Application for [Role] at [Company]"
+            // line lives UNDER THE SLOGAN (antcv-application-line-001.js); the band used to ALSO
+            // render "Application: <role> - <company>", so it appeared TWICE on the cover letter.
+            ? io.subtitle || g
             : "",
           y = (e) => (br && br[e]) || "center",
           b = c || d || p,

@@ -45,6 +45,16 @@ test('adequacy floor: a cheap but failing provider is NOT eligible to lead', () 
   assert.equal(proposed.writer, 'anthropic');            // gemini ineligible → keep
 });
 
+test('missing health_score falls back to success_rate (offline D1 snapshot path)', () => {
+  // D1 llm_calls has no health_score column; a snapshot built from it omits the field. quality
+  // must fall back to success_rate, not become NaN (which would sort the provider unpredictably).
+  const rows = [{ provider: 'mistral', task: 'gen', call_count: 100, success_rate: 1.0,
+                  success_count: 100, total_cost_usd: 1.0 }];  // no health_score
+  const ranked = scoreRows(rows, 'writer', { floor: 0.9, minCalls: 20 });
+  assert.equal(ranked[0].quality, 1.0);                  // == success_rate, not NaN
+  assert.ok(Number.isFinite(ranked[0].costQuality));     // 1.0 / 0.01 = 100, finite
+});
+
 test('min-sample: too few calls → not eligible', () => {
   const rows = [R('mistral', { call_count: 5, success_count: 5, total_cost_usd: 0.01 })];
   const ranked = scoreRows(rows, 'writer', { floor: 0.9, minCalls: 20 });

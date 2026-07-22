@@ -89,7 +89,11 @@ export function scoreRows(rows, role, { floor = 0.9, minCalls = 20 } = {}) {
     a.cost += Number(r.total_cost_usd) || 0;
     a.retry += (Number(r.retry_rate) || 0) * calls;
     a.latency += (Number(r.p50_latency_ms) || 0) * calls;
-    a.qw += (Number(r.health_score) != null ? Number(r.health_score) : Number(r.success_rate) || 0) * calls;
+    // Guard on the RAW field, not Number(): Number(undefined)===NaN and `NaN != null` is true,
+    // so `Number(r.health_score) != null` would keep NaN and never fall back — poisoning quality
+    // for any snapshot lacking health_score (the offline D1/llm_calls path this routine builds when
+    // the relay admin token is unavailable). Fall back to success_rate when the field is absent/null.
+    a.qw += (r.health_score != null ? Number(r.health_score) : Number(r.success_rate) || 0) * calls;
     byProvider.set(p, a);
   }
   const out = [];

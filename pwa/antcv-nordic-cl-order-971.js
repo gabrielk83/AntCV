@@ -25,7 +25,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.2073-nordic-cl-order-v5-durable2';
+  var VERSION = '1.51.2359-cl-skeleton-seed-storm';
   if (window.__antcvNordicClOrder971 === VERSION) return;
   window.__antcvNordicClOrder971 = VERSION;
 
@@ -70,6 +70,19 @@
   // seed when EMPTY or a bracketed placeholder, and not already the instruction (idempotent);
   // real content (does not start with "[") is preserved.
   function needsSeed(t) { var s = String(t == null ? '' : t).trim(); return !s || /^\[/.test(s); }
+
+  // CL-SKELETON-SEED-STORM-001 (owner 2026-07-22, live-measured ~4 sections-writes/s on the
+  // empty CL skeleton): seedInstructions wrote the bracketed authoring instruction into an
+  // empty bring lead-in / foundation Hands-on+Professionally, but TWO anti-placeholder sidecars
+  // strip a bracketed [..] body straight back to empty (antcv-rich-block-shape-fix.fillFoundation
+  // for foundation, antcv-strip-skeleton-placeholders for the bring lead-in). needsSeed('') is
+  // then true again, so this re-seeded it every tick, forever — needsSeed's "idempotent" claim
+  // is false against a competing stripper. Fix per [[storm-guards-must-be-substructure-keyed]]:
+  // DECIDE ONCE — seed each row at most once per page load, keyed on the contested substructure
+  // (section:row). If a stripper removes it afterwards, do NOT re-seed; the strippers win and the
+  // body stays empty (the generator fills real content later). __seededRows resets on reload, so
+  // a genuine later regen still gets a fresh seed.
+  var __seededRows = {};
 
   function disabled() { try { var v = localStorage.getItem('antcv:disable-nordic-cl-order'); return v === '1' || v === 'true'; } catch (_) { return false; } }
   // TONE-DEFAULT-SCANDINAVIAN-003 (CL-V5-TONE-GATE-001, live-verified on the owner's
@@ -257,6 +270,10 @@
         if (needsSeed(lead.t)) {
           var want = dataReal ? '' : INSTR.bring;
           if (String(lead.t == null ? '' : lead.t) !== want) {
+            // decide-once: seeding a placeholder (want=INSTR.bring) happens at most once per
+            // load. Clearing (want='') is always allowed — it is idempotent once t is empty.
+            if (want && __seededRows['bring:lead']) return s;
+            if (want) __seededRows['bring:lead'] = 1;
             var it = s.items.slice(); it[0] = Object.assign({}, lead, { t: want });
             changed = true; return Object.assign({}, s, { items: it });
           }
@@ -268,7 +285,12 @@
         for (var i = 0; i < it2.length; i++) {
           var r = it2[i]; if (!r || typeof r !== 'object') continue;
           var want = r.b === 'Hands-on' ? INSTR.handsOn : r.b === 'Professionally' ? INSTR.professionally : null;
-          if (want && needsSeed(r.t) && r.t !== want) { it2[i] = Object.assign({}, r, { t: want }); touched = true; }
+          if (want && needsSeed(r.t) && r.t !== want) {
+            var __fk = 'foundation:' + r.b;          // decide-once per row (Hands-on / Professionally)
+            if (__seededRows[__fk]) continue;         // a stripper already removed our seed — do not re-seed
+            __seededRows[__fk] = 1;
+            it2[i] = Object.assign({}, r, { t: want }); touched = true;
+          }
         }
         if (touched) { changed = true; return Object.assign({}, s, { items: it2 }); }
         return s;

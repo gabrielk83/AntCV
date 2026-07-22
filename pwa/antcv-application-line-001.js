@@ -12,12 +12,13 @@
  * "sticky slogan" the owner saw is this generic specialization, not the tagline.
  *
  * This sidecar renders the per-app APPLICATION LINE — "Application for [Role] at
- * [Company]" — directly UNDER the header band (and under the slogan when a CL
- * slogan is present), on BOTH the CV and the CL preview papers. Additive, keyed
- * off the header CONTACT band (a stable marker: it carries the email + phone) so
- * it survives the actively-churning header render without touching app.js.
- * Per-app text is read from localStorage `meta`; an unsolicited / empty app
- * renders nothing.
+ * [Company]" — on the COVER LETTER ONLY (owner 2026-07-22: the CV must NOT carry
+ * it — the CV keeps its normal header of name / specialization / contact). On the
+ * CL the line sits UNDER THE SLOGAN (out of the heading), anchored after the
+ * slogan element, falling back to just under the header contact band if no slogan
+ * is present. Additive, keyed off stable text markers so it survives the
+ * actively-churning header render without touching app.js. Per-app text is read
+ * from localStorage `meta`; an unsolicited / empty app renders nothing.
  *
  * Kill switch: localStorage['antcv:disable-application-line'] = '1'.
  * NOTE (owner): this is the PREVIEW surface. Export parity (docx-worker header)
@@ -26,7 +27,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.51.2440-application-line';
+  var VERSION = '1.51.2480-application-line';
   if (window.__antcvApplicationLine === VERSION) return;
   window.__antcvApplicationLine = VERSION;
 
@@ -44,10 +45,22 @@
   function unsol(co) {
     try { return !!(co && window.__antcvUnsol && window.__antcvUnsol(co)); } catch (_) { return false; }
   }
+  // COVER-LETTER ONLY (owner 2026-07-22): the CV must NOT carry the application
+  // line — it keeps its normal header (name / specialization / contact). Only the
+  // COVER LETTER shows "Application for [Role] at [Company]", placed under the
+  // slogan (out of the heading). doc may be stored bare ('cl') or JSON ('"cl"').
+  function isCL() {
+    try {
+      var d = get('doc', 'cv');
+      try { var p = JSON.parse(d); if (typeof p === 'string') d = p; } catch (_) {}
+      return String(d).replace(/["']/g, '').toLowerCase().slice(0, 2) === 'cl';
+    } catch (_) { return false; }
+  }
 
   // The per-app application line text, or '' when there is nothing targeted to say
-  // (empty meta, or an unsolicited application — which keeps its generic standing).
+  // (not the cover letter, empty meta, or an unsolicited application).
   function appLineText() {
+    if (!isCL()) return '';
     var meta = {};
     try { meta = JSON.parse(get('meta', '{}')) || {}; } catch (_) { meta = {}; }
     var role = String(meta.role || '').trim();

@@ -46,7 +46,6 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mrwbrn0q_4edk","started":"2026-07-22T16:56:56.147Z","host":"GabyPC2","worktree":null,"branch":"claude/optimistic-jang-7b06fe","range":"1.51.2781-1.51.2800","task":"HEADER-COLOR-CONTROLS-001 per-element colour swatches","beat":"2026-07-22T16:56:57.365Z"}
 {"id":"sh_mrwi08k6_99dl","started":"2026-07-22T19:51:35.005Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.2921-1.51.2940","task":"LINE-DISTRIBUTION-001: measure-based bidirectional per-row Fit-it","beat":"2026-07-22T19:51:35.315Z"}
 {"id":"sh_mrwm59c4_8eai","started":"2026-07-22T21:47:27.763Z","host":"GabyPC2","worktree":null,"branch":"claude/determined-cannon-8d4c64","range":"1.51.3101-1.51.3120","task":"COPENHAGEN-MOCKUP-PARITY: token fixes flagged by mockup diff (mainHead teal, year 777, sidebarLine teal, contact dbe4f0, worker ground)","beat":"2026-07-22T21:47:28.582Z"}
-{"id":"sh_mrwp0b7f_ixdi","started":"2026-07-22T23:07:35.743Z","host":"GabyPC2","worktree":null,"branch":"claude/determined-cannon-8d4c64","range":"1.51.3202-1.51.3221","task":"CPH-BAND-GRID-001 + DOCX-HEADER-PARITY: band grid distribution + contact nowrap, then docx export parity + nightly export orders","beat":"2026-07-22T23:07:35.997Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

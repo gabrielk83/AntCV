@@ -413,6 +413,59 @@ def prior_app_digest(category):
         app.get("category") or category, app.get("updated_at") or "?")
     return header + "\n" + text
 
+# ── MODE-A-BASELINE-001: prior application for the SAME job (reopened ad) ──
+# Owner 2026-07-21: "the nightly is not always a generation from scratch: an ad
+# can be published more than once (closed, reopened)." v5 Mode A = adapt an
+# existing baseline, not regenerate. If a PRIOR application exists for the SAME
+# company+role (a different posting of the same job), attach its cv+cl as a
+# BASELINE TO ADAPT (preserve deliberate wording, minimum change) - distinct
+# from the same-CATEGORY tone reference above (which says "do NOT copy"). The
+# current posting (identical jd_text) is excluded so we never "adapt" the row
+# we are regenerating.
+def _same_job_baseline(company, role, jd_text):
+    co = (company or "").strip().lower()
+    ro = (role or "").strip().lower()
+    if not co or not ro:
+        return None
+    try:
+        c, b = _req(RELAY, "/api/applications")
+    except Exception as e:
+        print(f"   [mode-a] list failed ({e})"); return None
+    if c != 200:
+        return None
+    lst = (b or {}).get("applications") if isinstance(b, dict) else b
+    if not isinstance(lst, list):
+        return None
+    cur = re.sub(r"\s+", " ", str(jd_text or "")).strip()[:400]
+    cand = [a for a in lst if isinstance(a, dict)
+            and str(a.get("jd_company") or a.get("company") or "").strip().lower() == co
+            and str(a.get("jd_role") or a.get("role") or "").strip().lower() == ro]
+    cand.sort(key=lambda a: a.get("id") or 0, reverse=True)
+    for a in cand[:4]:
+        try:
+            cc, bb = _req(RELAY, "/api/applications/%s" % a.get("id"))
+        except Exception:
+            continue
+        if cc != 200:
+            continue
+        app = (bb or {}).get("application")
+        if not isinstance(app, dict):
+            continue
+        if re.sub(r"\s+", " ", str(app.get("jd_text") or "")).strip()[:400] == cur:
+            continue  # same posting being regenerated, not a prior baseline
+        cv, cl = app.get("cv_sections"), app.get("cl_sections")
+        if not cv and not cl:
+            continue
+        out = []
+        _digest_strings(cv, out, 70)
+        _digest_strings(cl, out, 45)
+        text = re.sub(r"[\x00-\x08\x0b-\x1f\x7f]", " ", " | ".join(out))
+        text = re.sub(r"\s+", " ", text).strip()[:3500]
+        if not text:
+            continue
+        return {"id": a.get("id"), "digest": text}
+    return None
+
 # ── section plan ───────────────────────────────────────────────────
 # Each section: an Anthropic /v1/messages body. The user turn carries the
 # profile + JD + signals + the section ask (trigger words match
@@ -474,6 +527,16 @@ def _user_turn(profile_json, meta, section_ask):
         lines.append("=== PRIOR SAME-CATEGORY APPLICATION (tone/altitude reference; never a source of facts) ===")
         lines.append("Match its register, altitude, and density. Do NOT copy sentences, and do NOT import any fact, employer, number, or claim from it that is absent from the CANDIDATE PROFILE.")
         lines.append(str(meta["prior_app"])[:2000]); lines.append("")
+    if meta.get("baseline"):
+        # MODE-A-BASELINE-001 (v5 Mode A): a PRIOR application exists for this SAME
+        # job (the ad was re-published / reopened). ADAPT it, do not start from
+        # scratch. Opposite instruction to the same-category tone reference above:
+        # here you SHOULD keep the candidate's deliberate wording and structure.
+        _bl = meta["baseline"]
+        _bltxt = _bl.get("digest") if isinstance(_bl, dict) else _bl
+        lines.append("=== PRIOR APPLICATION FOR THIS SAME JOB — BASELINE TO ADAPT (v5 Mode A; the ad was re-published) ===")
+        lines.append("This is your BASELINE for this exact role. ADAPT it rather than rewriting from scratch: KEEP the candidate's deliberate wording, structure and emphasis where they still work; change ONLY what the current posting needs; do NOT reproduce any accidental error (typo, mixed tense, singular/plural mismatch); the CANDIDATE PROFILE above remains the ONLY source of facts - never import a fact absent from it.")
+        lines.append(str(_bltxt)[:3500]); lines.append("")
     _langname = {"da": "Danish", "en": "English", "sv": "Swedish"}.get(meta.get("language"), meta.get("language"))
     lines.append("OUTPUT LANGUAGE: write this section in " + str(_langname) + ".")
     lines.append("TASK: " + section_ask)
@@ -660,6 +723,9 @@ def cmd_run(args):
         cat = guess_category(r["role"], r["jd"])
         prior = prior_app_digest(cat)
         if prior: print(f"   [prior-app] same-category ({cat}) reference attached ({len(prior)} chars)")
+        # MODE-A-BASELINE-001: reopened-ad detection - adapt a prior same-job app.
+        baseline = _same_job_baseline(r["company"], r["role"], r["jd"])
+        if baseline: print(f"   [mode-a] prior SAME-JOB baseline attached (app #{baseline.get('id')}, {len(baseline.get('digest',''))} chars) - ADAPTING, not from scratch")
         # BRAND-DECIDES-RESEARCH-001: crawl the employer site for colours AND
         # spirit/values/tone in one step; the brief fuses into the slogan (+ all
         # CL voice) and the placement seeds antcv:clSloganMode at persist.
@@ -668,6 +734,7 @@ def cmd_run(args):
         meta = {"company": r["company"], "role": r["role"], "jd": r["jd"],
                 "signals": _signals_for(uk), "support": support.get(uk),
                 "research": rsch, "language": language, "prior_app": prior,
+                "baseline": baseline,
                 "brand_brief": (brand or {}).get("slogan_brief") or None}
         sections, model = build_plan(profile, meta, r["tier"])
         print(f"\n== {uk} [{r['tier']}] {r['company']} / {r['role']} — {len(sections)} sections, model={model}")

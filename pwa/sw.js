@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.2290-relay-auth-fix';
+const CACHE = 'antcv-1.51.2310-sidebar-ink';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

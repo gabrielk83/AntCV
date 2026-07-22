@@ -5852,12 +5852,30 @@
       // the styleConfig value, which is what custom styles paint).
       __sbInk = (() => {
         try {
-          const v = getComputedStyle(document.body)
-            .getPropertyValue("--sidebar-bg")
-            .trim();
-          return readableInk(v || k.sidebarBg);
+          // SIDEBAR-INK-BRAND-BG-001 (owner 2026-07-22, live-verified on 3Shape): a BRAND
+          // paints --sidebar-bg on the PAPER wrapper (from antcv:brandV2.sidebarBg), which
+          // document.body never carries — so keying the ink on document.body's --sidebar-bg
+          // read the LIGHT package default (e.g. #DCE5EA) and returned NAVY ink, rendered on
+          // the actually-dark brand sidebar (#2a2a2a) = unreadable. Same parity gap as the
+          // export-palette bug. Key the ink on the bg that ACTUALLY paints the sidebar: the
+          // active brand's sidebarBg first, then the body var, then the styleConfig value —
+          // the GLOBAL rule (dark bg -> light ink) every real brand uses, incl. 3Shape's own
+          // light-on-dark footer.
+          let bg = "";
+          try {
+            if (window.__antcvBrandFit === true) {
+              const b = JSON.parse(localStorage.getItem("antcv:brandV2") || "null");
+              const slots = b && (b.slots || b);
+              if (slots && slots.sidebarBg) bg = String(slots.sidebarBg).trim();
+            }
+          } catch (_) {}
+          if (!bg)
+            bg = getComputedStyle(document.body)
+              .getPropertyValue("--sidebar-bg")
+              .trim();
+          return readableInk(bg || k.sidebarBg);
         } catch (_) {
-          return __sbInk;
+          return readableInk(k.sidebarBg);
         }
       })(),
       C = S ? k.sidebarHeadColor : k.mainHeadColor,

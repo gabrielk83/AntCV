@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.3302-band-symmetry2';
+const CACHE = 'antcv-1.51.3322-band-symmetry3';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

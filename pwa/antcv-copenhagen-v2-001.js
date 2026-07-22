@@ -33,7 +33,7 @@
 (function () {
   'use strict';
   if (window.__antcvCopenhagenV2) return;
-  window.__antcvCopenhagenV2 = '1.51.3302-band-symmetry2';
+  window.__antcvCopenhagenV2 = '1.51.3322-band-symmetry3';
 
   var FLAG = 'antcv:copenhagen-v2';
   var STYLE_ID = 'antcv-copenhagen-v2-style';
@@ -157,12 +157,44 @@
       // trim, dial AntcvCopenhagenV2.specDy); (b) the name→spec and spec→contact
       // gaps are EQUAL (10px each side of the spec row); (c) NAME and CONTACT may
       // run long at the SAME full-band width — both nowrap, both centered.
+      // CPH-BAND-SYMMETRY-003 (owner 2026-07-23 round 3): the specDy visual
+      // downshift was growing the name→spec gap and shrinking the spec→contact
+      // gap — compensate the margins by specDy so BOTH visual gaps equal G.
+      var sd = specDy(), G = 10;
       css += BAND + ' > div{grid-column:1 / -1 !important;margin:0 !important;}';
-      css += BAND + ' > div:first-of-type{grid-row:1 !important;align-self:end !important;margin-bottom:10px !important;white-space:nowrap !important;}';
+      css += BAND + ' > div:first-of-type{grid-row:1 !important;align-self:end !important;margin-bottom:' + Math.max(0, G - sd) + 'px !important;white-space:nowrap !important;}';
       css += BAND + ' > div:nth-of-type(2):not(:last-of-type){grid-row:2 !important;align-self:center !important;' +
-        'transform:translateY(' + specDy() + 'px) !important;}';
+        'transform:translateY(' + sd + 'px) !important;}';
       css += BAND + ' > div:last-of-type:not(:first-of-type){grid-row:3 !important;' +
-        'align-self:start !important;margin-top:10px !important;white-space:nowrap !important;}';
+        'align-self:start !important;margin-top:' + (G + sd) + 'px !important;white-space:nowrap !important;}';
+      // Round 3 (b): "decrease the name and contact line so they are as far from
+      // the circle as the text of the specialization's first letter" — centered
+      // lines share a left edge exactly when they share a WIDTH, so the name
+      // font shrinks and the contact condense adapts until each line's visual
+      // width ≈ the spec's width. Live-measured; re-derived on every apply and
+      // convergent (name factor -> 1, contact scale is from the stable natural
+      // width). Clamps keep it sane on odd content.
+      try {
+        var __b = document.querySelector(BAND);
+        var __ds = __b ? __b.querySelectorAll(':scope > div') : null;
+        if (__ds && __ds.length >= 3) {
+          var __specEl = __ds[1], __nameEl = __ds[0], __contEl = __ds[__ds.length - 1];
+          var __specW = __specEl.scrollWidth;
+          if (__specW > 80) {
+            var __nameW = __nameEl.scrollWidth;
+            var __nameFs = parseFloat(getComputedStyle(__nameEl).fontSize) || 24;
+            if (__nameW > 0) {
+              var __t = Math.max(16, Math.min(24, Math.floor(__nameFs * __specW / __nameW)));
+              css += BAND + ' > div:first-of-type{font-size:' + __t + 'px !important;}';
+            }
+            var __contW = __contEl.scrollWidth;
+            if (__contW > 0) {
+              var __k = Math.max(0.55, Math.min(1, __specW / __contW));
+              css += BAND + ' > div:last-of-type:not(:first-of-type){transform:scaleX(' + __k.toFixed(3) + ') !important;transform-origin:center !important;}';
+            }
+          }
+        }
+      } catch (_) {}
     }
     // STAGE 3 (structural CSS, NOT per-node inline styles — inline styles were
     // wiped by React re-renders and re-applied late, which the owner saw as the

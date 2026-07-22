@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.2786-app-save-guard2';
+  const TARGET_VERSION = '1.51.2800-pink-latch';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.2786-app-save-guard2',
     '1.51.2781-header-color-controls',
     '1.51.2741-cl-appline-native',
     '1.51.2740-hourglass-toolsstorm',

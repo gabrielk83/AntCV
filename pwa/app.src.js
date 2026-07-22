@@ -5815,10 +5815,13 @@
         /SELECTED OUTCOMES/i.test(String(e.title || "")))
     )
       return null;
-    const h = ["translating", "pending", "debating", "working"].includes(g)
+    const __secBusy = (function () { try { return !!(window.__antcvSectionBusy && window.__antcvSectionBusy[e.id] > Date.now()); } catch (_) { return false; } })(),
+      h = ["translating", "pending", "debating", "working"].includes(g)
         ? g
         : null,
-      y = !!h,
+      // ROWFIT-PINK-LATCH-001: OR-in the module-level section-busy latch (set by the rich_block
+      // editor on click) so the pink shows even when the App-level "working" state was swallowed.
+      y = !!h || __secBusy,
       b =
         "translating" === h
           ? "translating…"

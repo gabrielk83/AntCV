@@ -43,6 +43,15 @@
       // on (re)mount the render reads __rowBusy so the ⏳ persists across storm remounts. ~1.8s.
       function markBusy(key) {
         __rowBusy[key] = Date.now() + 1800;
+        // ROWFIT-PINK-LATCH-001 (owner 2026-07-22): also stamp a SECTION-level module latch so the
+        // preview turns pink even when the App-level "working" transition state is swallowed by the
+        // storm / fast-failing relay (same root cause the ⏳ latch solved). The preview Ce reads
+        // window.__antcvSectionBusy; the App repaints on the antcv:section-busy event + at expiry.
+        try {
+          var sb = (window.__antcvSectionBusy = window.__antcvSectionBusy || {});
+          sb[e.id] = Date.now() + 2200;
+          emit("antcv:section-busy", { sid: e.id, until: sb[e.id] });
+        } catch (_) {}
         try { bump(function (x) { return (x | 0) + 1; }); } catch (_) {}
       }
       function isBusy(key) { return !!__rowBusy[key] && __rowBusy[key] > Date.now(); }

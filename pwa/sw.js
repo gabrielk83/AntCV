@@ -67,6 +67,7 @@ const SHELL = [
   './antcv-copenhagen-v2-001.js',
   './antcv-cl-no-photo-001.js',
   './antcv-header-elem-colors.js',
+  './antcv-export-header-colors.js',
   './antcv-header-color-controls.js',
   './antcv-appline-rule.js',
   './antcv-pdf-preview-gate.js',

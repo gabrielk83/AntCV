@@ -25527,14 +25527,28 @@ function buildLinearDocument(ctx) {
       }
     }
     if (__al) {
+      // EXPORT-HEADER-COLORS-001 (owner 2026-07-22): 1:1 parity with the preview —
+      // the application line takes its OWN colour (app_line_color; muted gray by
+      // default) rather than the slogan colour, and an optional rule under it
+      // (app_line_rule {on,color,pt}) matching the #6 preview control.
+      const __alColor = (typeof __m2.app_line_color === "string" && /^[0-9a-f]{6}$/i.test(__m2.app_line_color))
+        ? __m2.app_line_color.toUpperCase()
+        : (__m2.slogan_color ? sloganColorOnWhite(__m2.slogan_color, style.mainHeadColor) : style.mainHeadColor);
+      const __alRule = __m2.app_line_rule;
+      const __alBorder = (__alRule && __alRule.on) ? (function () {
+        const _pt = Number(__alRule.pt); const pt = (_pt >= 0.25 && _pt <= 4) ? _pt : 0.75;
+        const _c = (typeof __alRule.color === "string" && /^[0-9a-f]{6}$/i.test(__alRule.color)) ? __alRule.color.toUpperCase() : __alColor;
+        return { border: { bottom: { color: _c, space: 4, style: BorderStyle.SINGLE, size: Math.max(2, Math.min(32, Math.round(pt * 8))) } } };
+      })() : {};
       bodyChildren.push(new Paragraph({
         alignment: AlignmentType.CENTER,
         spacing: { before: 0, after: 200, line: 240, lineRule: "auto" },
         keepNext: true,
+        ...__alBorder,
         children: [new TextRun({
           text: __al,
           bold: false,
-          color: __m2.slogan_color ? sloganColorOnWhite(__m2.slogan_color, style.mainHeadColor) : style.mainHeadColor,
+          color: __alColor,
           size: pt2hp(10.5),
           font: style.mainBodyFont,
           characterSpacing: 4

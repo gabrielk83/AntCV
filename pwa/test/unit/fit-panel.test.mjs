@@ -124,14 +124,14 @@ test('cardHtml shows the "no data yet" message when fit is null', () => {
   const { api } = load({});
   const html = api._cardHtml(null);
   assert.match(html, /Market fit/);
-  assert.match(html, /No market-fit data yet/);
+  assert.match(html, /Not scored for targeted or unsolicited/);
 });
 
 test('cardHtml (Danish) shows the localized empty message', () => {
   const { api } = load({ language: 'da' });
   const html = api._cardHtml(null);
   assert.match(html, /Markedstilpasning/);
-  assert.match(html, /Ingen markedstilpasningsdata endnu/);
+  assert.match(html, /Scores ikke for/);
 });
 
 test('cardHtml renders score, tier label, "based on N jobs", matched and gaps', () => {
@@ -169,7 +169,7 @@ test('render() inserts the card as a sibling right after #antcv-analysis-report,
   api.render();
   const firstCard = document.getElementById('antcv-fit-panel');
   assert.ok(firstCard, 'an anchor exists -> the card renders even with no cached fit yet (empty-state message)');
-  assert.match(firstCard.innerHTML, /No market-fit data yet/);
+  assert.match(firstCard.innerHTML, /Not scored for targeted or unsolicited/);
 
   api.render();
   const cards = document.body.children.filter((c) => c.id === 'antcv-fit-panel');
@@ -276,7 +276,7 @@ test('an active_application with no fit (e.g. unsolicited) renders the empty-sta
   await api.refresh();
   const card = document.getElementById('antcv-fit-panel');
   assert.ok(card);
-  assert.match(card.innerHTML, /No market-fit data yet/);
+  assert.match(card.innerHTML, /Not scored for targeted or unsolicited/);
 });
 
 test('kill switch: render() removes an existing card and refresh() never calls fetch', async () => {

@@ -28,6 +28,14 @@ blue, `brandV2.sloganColor` — NOT black), application = dark gray, 2 accent ru
 (name/spec/contact/slogan/application) takes a per-element BRAND colour; white/orange/blue/gray here are
 just Ibsen's brand values, not hardcoded defaults.
 
+## Additional asks (owner 2026-07-22, later)
+- **#6 Rule under the application line:** the V5 application line (`data-antcv-app-line`, below the slogan)
+  is MISSING its horizontal rule. It needs the SAME per-field rule control as name/spec/contact:
+  visible/invisible + colour + thickness (the `antcv-header-rule-control.js` store, keyed e.g.
+  `headerItemRule.application`). Render below the app-line in preview + a bottom border in the CL export.
+- **#7 CL specialisation alignment bug:** on the COVER LETTER the specialisation line renders LEFT/justified
+  instead of CENTERED. Fix the alignment for the CL spec/band line (should be centered like the CV).
+
 ## The five asks + exact hooks (from the code map)
 
 ### #4 — No candidate photo in the cover letter

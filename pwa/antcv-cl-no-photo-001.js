@@ -20,9 +20,15 @@
 
   var KILL = 'antcv:disable-cl-no-photo';
   var STYLE_ID = 'antcv-cl-no-photo-style';
-  // The band photo is the ONLY data-URI <img> inside the candidate band; the
+  // (1) The band photo is the ONLY data-URI <img> inside the candidate band; the
   // signature sits outside the band, so this selector never hits it.
-  var CSS = '.antcv-preview-paper [data-antcv-candidate-band="1"] img[src^="data:"]{display:none !important;}';
+  // (2) CL-SPEC-CENTER-001 (owner 2026-07-22): on the cover letter the
+  // specialisation line rendered LEFT while name/contact are centred (the odd one
+  // out). Centre all direct-child band lines on the CL (name/contact are already
+  // centred, so this only fixes the spec; verified live: spec left->center, no
+  // breakage). Gated to the CL so a left-aligned CV specialisation list is unaffected.
+  var CSS = '.antcv-preview-paper [data-antcv-candidate-band="1"] img[src^="data:"]{display:none !important;}' +
+    '.antcv-preview-paper [data-antcv-candidate-band="1"] > div{text-align:center !important;}';
 
   function killed() { try { return localStorage.getItem(KILL) === '1'; } catch (_) { return false; } }
   function isCL() {

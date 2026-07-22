@@ -46,6 +46,7 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mrwbrn0q_4edk","started":"2026-07-22T16:56:56.147Z","host":"GabyPC2","worktree":null,"branch":"claude/optimistic-jang-7b06fe","range":"1.51.2781-1.51.2800","task":"HEADER-COLOR-CONTROLS-001 per-element colour swatches","beat":"2026-07-22T16:56:57.365Z"}
 {"id":"sh_mrwi08k6_99dl","started":"2026-07-22T19:51:35.005Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.2921-1.51.2940","task":"LINE-DISTRIBUTION-001: measure-based bidirectional per-row Fit-it","beat":"2026-07-22T19:51:35.315Z"}
 {"id":"sh_mrwlekjt_urv","started":"2026-07-22T21:26:42.571Z","host":"GabyPC2","worktree":null,"branch":"claude/determined-cannon-8d4c64","range":"1.51.3061-1.51.3080","task":"COPENHAGEN-STAGE2b3: table frame/center/leftcol + header render (band border, name tracking, contact condense, white links)","beat":"2026-07-22T21:26:42.707Z"}
+{"id":"sh_mrwlo8m9_jab0","started":"2026-07-22T21:34:13.674Z","host":"GabyPC2","worktree":null,"branch":"claude/wonderful-yalow-272e67","range":"1.51.3081-1.51.3100","task":"JD-MENU-QUEUED-TAB-001: add ⏰ Queued filter to JobTracker Legend (nightly-queue rows)","beat":"2026-07-22T21:34:14.557Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

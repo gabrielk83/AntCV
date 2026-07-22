@@ -361,7 +361,11 @@
       // The candidate band + table-header bar keep their navy/blue (#33446F on
       // Copenhagen), and role COMPANY (#333333) + YEAR (#595959) stay neutral.
       // Mirrored in the va.copenhagen-modern package map.
-      mainHeadColor: "#00746E",
+      // CL-CV-TWO-TONE-001 (owner 2026-07-22): Copenhagen Modern is TWO-TONE — the section
+      // HEADINGS / CL lead-ins are navy #0B4F8A (mainHeadColor), while the slogan/line and
+      // bullet accents stay greenish teal #00746E (mainLineColor / mainBulletColor). Applies
+      // to BOTH the CV (section heads) and the CL (Why / How I see the role / What I bring …).
+      mainHeadColor: "#0B4F8A",
       mainSubHeadColor: "#00746E",
       mainCompanyColor: "#333333",
       mainYearColor: "#595959",
@@ -20167,7 +20171,7 @@
               sidebarTextColor: "#283556",
               sidebarLineColor: "#283556",
               sidebarFont: "Trebuchet MS",
-              mainHeadColor: "#00746E",
+              mainHeadColor: "#0B4F8A",
               mainTextColor: "#333333",
               mainBulletColor: "#00746E",
               mainLineColor: "#00746E",

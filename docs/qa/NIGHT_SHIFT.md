@@ -36,6 +36,7 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mrl5nybc_9wce","started":"2026-07-14T22:33:09.331Z","host":"GabyPC2","worktree":null,"branch":"claude/hopeful-albattani-24195b","range":"1.51.1404-1.51.1423","task":"SLOGAN-LANG-GATE-001: wrong-language slogan override gate; branded==non-branded parity","beat":"2026-07-14T22:33:10.251Z"}
 {"id":"sh_mrvqtrur_by3m","started":"2026-07-22T07:10:43.787Z","host":"GabyPC2","worktree":null,"branch":"shift-v5fix","range":"1.51.2073-1.51.2084","task":"CL-V5-MIGRATE-DURABLE-002: role_view stateless re-ensure (poisoned one-shot flag left owner letters without How-I-see-the-role)","beat":"2026-07-22T07:10:44.322Z"}
 {"id":"sh_mrvt7nqy_e5og","started":"2026-07-22T08:17:30.880Z","host":"GabyPC2","worktree":null,"branch":"claude/determined-cannon-8d4c64","range":"1.51.2146-1.51.2165","task":"DELETE-CONFIRM-INAPP-001: replace native confirm() delete gate with in-app two-click arm/confirm (topbar + settings app-history); works in embedded/PWA browsers","beat":"2026-07-22T08:17:31.171Z"}
+{"id":"sh_mrvtabkc_6ziy","started":"2026-07-22T08:19:35.059Z","host":"GabyPC2","worktree":null,"branch":"shift-slogan","range":"1.51.2166-1.51.2173","task":"SLOGAN-HEADLINE-PROMPT-001: steer cl_slogan to a punchy 4-13 word headline, not a comma-spliced sentence that caps to a fragment","beat":"2026-07-22T08:19:35.630Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

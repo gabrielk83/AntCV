@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.3182-band-size2';
+const CACHE = 'antcv-1.51.3222-quick-doc-color';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',
@@ -70,6 +70,7 @@ const SHELL = [
   './antcv-header-elem-colors.js',
   './antcv-export-header-colors.js',
   './antcv-sig-brand-tint.js',
+  './antcv-quick-doc-color.js',
   './antcv-header-color-controls.js',
   './antcv-appline-rule.js',
   './antcv-pdf-preview-gate.js',

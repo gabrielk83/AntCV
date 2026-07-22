@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.2921-gold-density-shared';
+const CACHE = 'antcv-1.51.2961-swatch-picker-fix';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

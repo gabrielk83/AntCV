@@ -66,7 +66,7 @@
     return '#888888';
   }
 
-  function paintSwatch(btn, elem) { btn.style.background = currentColor(elem); }
+  function paintSwatch(el, elem) { try { el.value = currentColor(elem); } catch (_) {} }
   function paintReset(rst, elem) {
     var on = !!override(elem);
     rst.disabled = !on;
@@ -77,17 +77,16 @@
 
   function makeControl(elem, label) {
     var frag = document.createDocumentFragment();
-    // plain solid swatch = the element's current colour
-    var btn = document.createElement('button');
-    btn.type = 'button'; btn.setAttribute(MARK, elem);
-    btn.title = 'Colour of the ' + label + ' line — click to pick';
-    btn.style.cssText = 'width:15px;height:15px;min-width:15px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.55);cursor:pointer;padding:0;margin-left:4px;flex:0 0 auto;box-sizing:border-box;';
-    paintSwatch(btn, elem);
-    var inp = document.createElement('input');
-    inp.type = 'color';
-    inp.style.cssText = 'position:fixed;left:-9999px;top:0;width:0;height:0;opacity:0;pointer-events:none;';
-    btn.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); inp.value = currentColor(elem); inp.click(); });
-    inp.addEventListener('input', function () { try { window.AntcvHeaderColors && window.AntcvHeaderColors.set(elem, inp.value); } catch (_) {} paintSwatch(btn, elem); paintReset(rst, elem); });
+    // The swatch IS the native colour input (opens the OS colour picker directly on
+    // click — reliable, unlike a hidden input + programmatic .click(), which Chrome
+    // blocks). Styled as a small round plain swatch showing the current colour.
+    var sw = document.createElement('input');
+    sw.type = 'color'; sw.setAttribute(MARK, elem);
+    sw.title = 'Colour of the ' + label + ' line — click to pick';
+    sw.value = currentColor(elem);
+    sw.style.cssText = 'width:17px;height:17px;min-width:17px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.55);cursor:pointer;padding:0;margin-left:4px;flex:0 0 auto;box-sizing:border-box;background:none;';
+    sw.addEventListener('click', function (e) { e.stopPropagation(); });   // don't bubble to the row (expand)
+    sw.addEventListener('input', function () { try { window.AntcvHeaderColors && window.AntcvHeaderColors.set(elem, sw.value); } catch (_) {} paintReset(rst, elem); });
     // ↺ reset-to-brand button, right next to the swatch
     var rst = document.createElement('button');
     rst.type = 'button'; rst.setAttribute(MARK + '-reset', elem);
@@ -97,11 +96,11 @@
     rst.addEventListener('click', function (e) {
       e.preventDefault(); e.stopPropagation();
       try { window.AntcvHeaderColors && window.AntcvHeaderColors.set(elem, ''); } catch (_) {}
-      paintSwatch(btn, elem); paintReset(rst, elem);
+      sw.value = currentColor(elem); paintReset(rst, elem);
     });
     paintReset(rst, elem);
-    frag.appendChild(btn); frag.appendChild(inp); frag.appendChild(rst);
-    return { frag: frag, btn: btn, rst: rst };
+    frag.appendChild(sw); frag.appendChild(rst);
+    return { frag: frag, btn: sw, rst: rst };
   }
 
   function ensureInto(container, elem, label) {

@@ -80,17 +80,18 @@
     var pt = PTS.indexOf(Number(s.pt)) >= 0 ? Number(s.pt) : 0.75;
     var th = mkBtn(pt + 'pt', 'Rule thickness — click to cycle');
     th.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); var cur = Number(read().pt) || 0.75; var next = PTS[(PTS.indexOf(cur) + 1) % PTS.length]; write({ pt: next, on: true }); });
-    // colour swatch
-    var sw = document.createElement('button');
-    sw.type = 'button'; sw.setAttribute('contenteditable', 'false');
-    sw.title = 'Rule colour — click to pick'; sw.style.cssText = 'width:14px;height:14px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.55);cursor:pointer;padding:0;margin-left:3px;flex:0 0 auto;background:' + ruleColor(el) + ';';
-    var inp = document.createElement('input'); inp.type = 'color'; inp.style.cssText = 'position:fixed;left:-9999px;width:0;height:0;opacity:0;';
-    sw.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); inp.value = ruleColor(el); inp.click(); });
-    inp.addEventListener('input', function () { write({ color: inp.value, on: true }); });
+    // colour swatch = the native colour input directly (opens the OS picker on click;
+    // a hidden input + programmatic .click() is blocked by Chrome).
+    var sw = document.createElement('input');
+    sw.type = 'color'; sw.setAttribute('contenteditable', 'false');
+    sw.title = 'Rule colour — click to pick'; sw.value = ruleColor(el);
+    sw.style.cssText = 'width:15px;height:15px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.55);cursor:pointer;padding:0;margin-left:3px;flex:0 0 auto;background:none;';
+    sw.addEventListener('click', function (e) { e.stopPropagation(); });
+    sw.addEventListener('input', function () { write({ color: sw.value, on: true }); });
     // reset
     var rst = mkBtn('↺', 'Reset the rule colour to the brand / visual-style default');
     rst.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); write({ color: null }); });
-    box.appendChild(tg); box.appendChild(th); box.appendChild(sw); box.appendChild(inp); box.appendChild(rst);
+    box.appendChild(tg); box.appendChild(th); box.appendChild(sw); box.appendChild(rst);
     return box;
   }
 

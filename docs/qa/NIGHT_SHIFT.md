@@ -43,7 +43,6 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mrw39srh_fnes","started":"2026-07-22T12:59:06.850Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.2481-1.51.2500","task":"rich_block row Fit-it/Enhance per-row busy feedback (hourglass + pink row)","beat":"2026-07-22T13:00:09.743Z"}
 {"id":"sh_mrw7uuxu_b1xm","started":"2026-07-22T15:07:27.910Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.2641-1.51.2660","task":"rich_block row Fit-it/Enhance: storm-proof hourglass latch + roles-storm converge","beat":"2026-07-22T15:07:28.238Z"}
 {"id":"sh_mrw8h8gp_ke5u","started":"2026-07-22T15:32:32.185Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.2681-1.51.2700","task":"tools-hidden-residue reconcile loop converge (substructure-keyed)","beat":"2026-07-22T15:32:32.762Z"}
-{"id":"sh_mrw8uikf_1fli","started":"2026-07-22T15:35:11.508Z","host":"GabyPC2","worktree":null,"branch":"claude/optimistic-jang-7b06fe","range":"1.51.2701-1.51.2720","task":"QUICK-CONTACT-SCOPE-001 real contact-collapse fix","beat":"2026-07-22T15:35:12.189Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

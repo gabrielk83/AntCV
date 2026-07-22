@@ -38,6 +38,7 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mrvtabkc_6ziy","started":"2026-07-22T08:19:35.059Z","host":"GabyPC2","worktree":null,"branch":"shift-slogan","range":"1.51.2166-1.51.2173","task":"SLOGAN-HEADLINE-PROMPT-001: steer cl_slogan to a punchy 4-13 word headline, not a comma-spliced sentence that caps to a fragment","beat":"2026-07-22T08:19:35.630Z"}
 {"id":"sh_mrvutbzu_9znm","started":"2026-07-22T09:02:21.693Z","host":"GabyPC2","worktree":null,"branch":"shift-sbink","range":"1.51.2221-1.51.2228","task":"SIDEBAR-INK-BRAND-BG-001: contrast-safe sidebar ink keyed on the brand-painted sidebar bg (dark brand sidebar had navy text)","beat":"2026-07-22T09:02:21.908Z"}
 {"id":"sh_mrvuuqfc_hncc","started":"2026-07-22T09:10:28.910Z","host":"GabyPC2","worktree":null,"branch":"claude/optimistic-jang-7b06fe","range":"1.51.2290-1.51.2309","task":"RELAY-AUTH-FIX-001 relay bearer","beat":"2026-07-22T09:10:29.561Z"}
+{"id":"sh_mrw0g9sq_ky5","started":"2026-07-22T11:40:10.016Z","host":"GabyPC2","worktree":null,"branch":"shift-titleheal","range":"1.51.2331-1.51.2338","task":"TITLE-LANG-HEAL-001: reset wrong-script section titles (CJK/HE/AR on a Latin-target doc) to EN canonical; ratio detector ignored short wrong-lang titles","beat":"2026-07-22T11:40:10.717Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

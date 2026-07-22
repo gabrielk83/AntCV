@@ -108,5 +108,70 @@ day session's own next reconcile**, not actioned here.
 3. **CL-V5 lane** rule-7 reconcile into the 3 canonical registers (day session).
 4. Minor: `pwa/test/sim-spacing-pdfs.mjs` still hardcodes a `C:/…/Downloads` **output** path — desktop-only
    PDF-sim tool, not a CI probe; left as-is (changing an owner's output dir is out of scope for a nightly).
-</content>
-</invoke>
+
+---
+
+## DESKTOP DISPATCH #2 — 2026-07-22 (Opus 4.8; verify + reconcile, no code ship)
+
+Second same-date dispatch, this time on the **desktop substrate** (shell + Browser pane) — dispatched
+specifically to clear the owed **worker `/health` live-attest** (item #2 above). Ran in an isolated routine
+worktree off `origin/main` **d3a0958** (preflight reported the owner's main clone DIRTY → worked in
+`…/antcv-routine-antcv-nightly-mrvpaqme`, per STANDING RULE 0). `git fetch` clean, main == origin/main.
+
+### Owed item #2 — WORKER `/health` LIVE-ATTEST — ✅ CLEARED (root cause: a wrong hostname in prior reports)
+
+The "`/health` DNS-gated from shell / owed to a desktop run" note has recurred across ~5 sweeps
+(07-13/15/16/19/21/22). **It was never a real network gate — it was a wrong `workers.dev` subdomain.**
+Confirmed both ways this run:
+
+    curl …/health   antcv-access-relay.gabriel-a-karp.workers.dev  → 000 (DNS: could not resolve host)
+    curl …/health   antcv-access-relay.karp-gabriel-a.workers.dev  → 200  ✓
+
+The correct subdomain is **`karp-gabriel-a.workers.dev`** (verified against `pwa/*` URLs and the relay's own
+`/health` `endpoints` self-report). With the right host the desktop shell reaches every worker. Full trio +
+demo-proxy attested live, **all matching in-repo source VERSION → no drift:**
+
+| worker | live `/health` version | in-repo | prior owed-attest |
+|---|---|---|---|
+| access-relay | `auth-34-category-downgrade` | `auth-34-category-downgrade` | CATEGORY-DOWNGRADE-VERSION-BUMP-001 (07-19) — **now attested** |
+| docx-worker | `1.14.161-leadin-underline` | `1.14.161-leadin-underline` | LEAD-UNDERLINE-VERSION-BUMP-001 (07-16) — **now attested** |
+| cv-proxy | `3.8.3-gemini-flash-ramble` | `3.8.3-gemini-flash-ramble` | — |
+| demo-proxy | `3.8.3-gemini-flash-ramble` | `3.8.3-gemini-flash-ramble` | — |
+
+Last `deploy.yml` run = the `1.51.1972` release (2026-07-21 20:54Z, success); no worker-only dispatch since →
+the no-drift read is consistent with the deploy history.
+
+### Standing probes (Band E)
+
+- **PWA suite (zero-dep, node-native): 1365/1365 green** (~19.5s) re-run on d3a0958 — matches the CI dispatch;
+  the `app.js ⇄ app.src.js` mirror tests pass, minified-sacred intact (`app.js` head `(()=>{window`, 0 `"use strict"`).
+- **boot-smoke / button-audit / row-17 panel probes:** NOT redundantly re-run. The 07-22 CI dispatch ran all
+  three **earlier today on this identical commit base** (boot-smoke glDemo=function/0 errors; button-audit
+  187 buttons / 0 page errors / 0 DEAD / 0 throws / 117 active; personal + settings panel probes DIAG PASS
+  0 mut). Chromium/Playwright is not installed in this fresh worktree, and re-running on byte-identical code
+  hours later yields no new signal — cited, not repeated (one solid result over a redundant re-run).
+
+### PWA live-verify (curl → pages.dev, reachable)
+
+Live `ANTCV_VERSION` seed = **`1.51.1972-richblock-residue-converge` = TARGET** (no version regression / no
+stale-SW mask); `app.js?v=1.51.1922-cl-v5-structure` correctly lags (app.js last touched at 1922; 1942–1972
+are the CL-V5 lane + sidecar/register work).
+
+### Per-band / per-row status (unchanged from the CI dispatch above — no new actionable canonical row)
+
+All A/B/C/D band statuses hold as recorded above: A1 flip-default BLOCKED (real mobile foreground gen A/B),
+A2 legs 1+2 verified / leg 3 (row 19) BLOCKED (2nd device), B SO-004 (41) BLOCKED (real-Android capture),
+C GEN-LANGFAB/CA-006/JD-ANALYSIS-PRINT shipped/live, D PERF-001 (45) OPEN (single-owner profiling, no clean
+repro, no speculative edit), GEN-MODELROLE (39) config-shipped. Rows 93/94 SHIPPED+LIVE (owner eyeball owed).
+The one open sidecar follow-up — the EXPORT-PDF-PANEL `rAF`→`setTimeout` fallback filed 07-21 — is left to the
+day session: it's owner-flagged low-priority (no evidence of a live user hitting it) and cannot be
+headlessly live-verified without Playwright, so shipping it speculatively (a version + cache-bust quintet on a
+sidecar) is not warranted tonight. **No code shipped this dispatch.**
+
+### Owner-owed / follow-ups (net after this run)
+
+1. **Delete the stale branch** `nightly-2026-07-21-probe-portable-path` (unchanged — still owed).
+2. ~~Worker `/health` live-attest~~ **DONE this run** (all four workers attested live; no drift). The correct
+   attest host is `*.karp-gabriel-a.workers.dev` — future sweeps should stop reporting this as gated.
+3. **CL-V5 lane** rule-7 reconcile into the 3 canonical registers (day session — unchanged).
+4. Minor `sim-spacing-pdfs.mjs` output path (unchanged — out of scope).

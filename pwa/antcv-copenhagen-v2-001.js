@@ -33,7 +33,7 @@
 (function () {
   'use strict';
   if (window.__antcvCopenhagenV2) return;
-  window.__antcvCopenhagenV2 = '1.51.3262-band-symmetry';
+  window.__antcvCopenhagenV2 = '1.51.3282-spec-midline';
 
   var FLAG = 'antcv:copenhagen-v2';
   var STYLE_ID = 'antcv-copenhagen-v2-style';
@@ -86,6 +86,16 @@
     // Unknown (not yet rendered): leave the current on-screen float as left default.
     return sel + '{transform:translate(' + (-o.dx) + 'px,' + o.dy + 'px) !important;}';
   }
+  // CPH-SPEC-MIDLINE-001: downshift (px) that puts the specialization line on the
+  // box midline. Owner-tunable live: AntcvCopenhagenV2.specDy(n) — persisted.
+  function specDy() {
+    try {
+      var v = parseFloat(localStorage.getItem('antcv:cph-spec-dy'));
+      if (isFinite(v) && Math.abs(v) <= 60) return v;
+    } catch (_) {}
+    return 12;
+  }
+
   function buildCSS() {
     var side = sidebarSide();
     var BAND = '.antcv-preview-paper [data-antcv-candidate-band="1"]';
@@ -139,7 +149,12 @@
         'transform:none !important;width:134px !important;height:134px !important;margin:0 !important;float:none !important;}';
       css += BAND + ' > div{grid-column:2 !important;margin:0 !important;}';
       css += BAND + ' > div:first-of-type{grid-row:1 !important;align-self:end !important;margin-bottom:8px !important;}';
-      css += BAND + ' > div:nth-of-type(2):not(:last-of-type){grid-row:2 !important;align-self:center !important;}';
+      // CPH-SPEC-MIDLINE-001 (owner 2026-07-23 "lower the specialization line to
+      // mid height of the header box"): the spec rendered above the geometric
+      // middle (the name row's content outweighs the contact row's) — shift it
+      // down onto the box midline. Dial: AntcvCopenhagenV2.specDy(px).
+      css += BAND + ' > div:nth-of-type(2):not(:last-of-type){grid-row:2 !important;align-self:center !important;' +
+        'transform:translateY(' + specDy() + 'px) !important;}';
       css += BAND + ' > div:last-of-type:not(:first-of-type){grid-column:1 / -1 !important;grid-row:3 !important;' +
         'align-self:start !important;margin-top:8px !important;white-space:nowrap !important;}';
     }
@@ -269,6 +284,12 @@
       try { localStorage.setItem('antcv:cph-photo', (dx == null ? 20 : dx) + ',' + (dy == null ? 6 : dy)); } catch (_) {}
       apply();
       try { return 'photo offset dx=' + dx + ' dy=' + dy + ' — reload not needed'; } catch (_) {}
+    },
+    // CPH-SPEC-MIDLINE-001 live dial: positive = lower. AntcvCopenhagenV2.specDy(16)
+    specDy: function (px) {
+      try { localStorage.setItem('antcv:cph-spec-dy', String(px == null ? 12 : px)); } catch (_) {}
+      apply();
+      return 'spec downshift ' + (px == null ? 12 : px) + 'px';
     },
     _apply: apply
   };

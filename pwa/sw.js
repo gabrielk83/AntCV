@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.2012-content-lang-detect';
+const CACHE = 'antcv-1.51.2032-micro-compress-ladder';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

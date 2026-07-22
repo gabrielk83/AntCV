@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.2012-content-lang-detect';
+  const TARGET_VERSION = '1.51.2032-micro-compress-ladder';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.2012-content-lang-detect',
     '1.51.1972-richblock-residue-converge',
     '1.51.1944-cl-foundation-keep',
     '1.51.1943-cl-v5-durable',

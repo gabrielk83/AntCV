@@ -2420,7 +2420,7 @@
   // instead of leaving the vars unset and falling back to navyColor (Ke) — the preview!=export
   // "colour mix". Self-contained (reads stable localStorage keys, no component vars). Kill:
   // antcv:disable-palette-resolver=1 (returns exact prior behaviour).
-  (function(){if("undefined"==typeof window)return;function bv(b){return b?{"--header-bg":b.headerBg,"--header-name-color":b.headerInk,"--header-spec-color":b.headerInk,"--header-contact-color":b.headerInk,"--header-line-color":b.accent||b.headerInk,"--sidebar-bg":b.sidebarBg,"--package-base":b.sidebarBg,"--brand-accent":b.accent,"--brand-slogan-color":b.sloganColor,"--brand-signature-color":b.signatureColor,"--brand-ai-notice-color":b.aiNoticeColor}:{}}window.__antcvResolvePaperVars=function(brandSlots){try{if("1"===localStorage.getItem("antcv:disable-palette-resolver"))return bv(brandSlots);var sc=null;try{sc=JSON.parse(localStorage.getItem("styleConfig")||"null")}catch(_){}var scOk=sc&&"object"==typeof sc&&sc.headerBg;/* BRAND-OWNS-COLORS-001 (owner 2026-07-21): the old STALE-BRAND-GATE required brandV2.headerBg to MATCH styleConfig.headerBg. Once A4 (1.51.1793) reset styleConfig per-app, a genuinely branded app whose brand lives in meta.brandV2 (NOT meta.styleConfig) stopped matching -> its brand was rejected and it lost its colours. The gate is redundant now that A4 fixes the stale-palette root, so a present brand is simply honored. */if(brandSlots&&brandSlots.headerBg)return bv(brandSlots);/* A2b (owner 2026-07-21): the unbranded band used to paint from styleConfig here, but styleConfig can be STALE on kernel/topbar load (not reset per-app) — surfacing e.g. NVIDIA colours on a kernel. Return {} so unbranded defers to the existing navyColor/package fallback (== kill-switch, the known-correct behaviour). Re-enable styleConfig painting only after A4 resets styleConfig per-app. */return{}}catch(_){return bv(brandSlots)}};})();
+  (function(){if("undefined"==typeof window)return;function bv(b){return b?{"--header-bg":b.headerBg,"--header-name-color":b.headerInk,"--header-spec-color":b.headerInk,"--header-contact-color":b.headerInk,"--header-line-color":b.accent||b.headerInk,"--sidebar-bg":b.sidebarBg,"--package-base":b.sidebarBg,"--sidebar-text-color":b.sidebarInk,"--sidebar-head-color":b.sidebarInk||b.accent,"--brand-accent":b.accent,"--brand-slogan-color":b.sloganColor,"--brand-signature-color":b.signatureColor,"--brand-ai-notice-color":b.aiNoticeColor}:{}}window.__antcvResolvePaperVars=function(brandSlots){try{if("1"===localStorage.getItem("antcv:disable-palette-resolver"))return bv(brandSlots);var sc=null;try{sc=JSON.parse(localStorage.getItem("styleConfig")||"null")}catch(_){}var scOk=sc&&"object"==typeof sc&&sc.headerBg;/* BRAND-OWNS-COLORS-001 (owner 2026-07-21): the old STALE-BRAND-GATE required brandV2.headerBg to MATCH styleConfig.headerBg. Once A4 (1.51.1793) reset styleConfig per-app, a genuinely branded app whose brand lives in meta.brandV2 (NOT meta.styleConfig) stopped matching -> its brand was rejected and it lost its colours. The gate is redundant now that A4 fixes the stale-palette root, so a present brand is simply honored. */if(brandSlots&&brandSlots.headerBg)return bv(brandSlots);/* A2b (owner 2026-07-21): the unbranded band used to paint from styleConfig here, but styleConfig can be STALE on kernel/topbar load (not reset per-app) — surfacing e.g. NVIDIA colours on a kernel. Return {} so unbranded defers to the existing navyColor/package fallback (== kill-switch, the known-correct behaviour). Re-enable styleConfig painting only after A4 resets styleConfig per-app. */return{}}catch(_){return bv(brandSlots)}};})();
   // SLOGAN-PLACEMENT-001 (owner 2026-07-14): the slogan can either be VISIBLE
   // between heading and body ('heading', default) OR HIDDEN as a standalone and
   // instead injected as the LEAD-IN (b) of the CL opening's first sentence
@@ -27024,6 +27024,29 @@
                     b = parseInt(h.slice(5, 7), 16);
                   return (0.299 * r + 0.587 * g + 0.114 * b) / 255 < 0.62;
                 };
+                // BRAND-INK-MATCH-001 + BRAND-WORTHY-GATE-001 (owner 2026-07-22): the old
+                // gate applied a brand whenever the sampled colour's BRIGHTNESS was < 0.62 and
+                // then hardcoded WHITE header ink — so NVIDIA green (#76b900, brightness 0.564)
+                // painted a green band with white text (2.4:1, illegible), while a generic
+                // greyscale theme-color (#919191, brightness 0.57) painted a dull grey "brand".
+                // The owner's rule (from NVIDIA's own site: black text on their green): keep the
+                // company's REAL colour and MATCH the ink to it; and when the sample is not a real
+                // brand (greyscale chrome), apply NOTHING so the user's chosen package default
+                // shows instead of grey.
+                const __wlin = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+                const __rlum = (h) => 0.2126 * __wlin(parseInt(h.slice(1, 3), 16)) + 0.7152 * __wlin(parseInt(h.slice(3, 5), 16)) + 0.0722 * __wlin(parseInt(h.slice(5, 7), 16));
+                const __ctr = (a, b) => { const x = __rlum(a), y = __rlum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+                // Legible ink for a background: black or white, whichever wins WCAG contrast.
+                const __brandInk = (h) => (__ctr(h, "#111111") >= __ctr(h, "#FFFFFF") ? "#111111" : "#FFFFFF");
+                const __hslSat = (h) => {
+                  const r = parseInt(h.slice(1, 3), 16) / 255, g = parseInt(h.slice(3, 5), 16) / 255, b = parseInt(h.slice(5, 7), 16) / 255;
+                  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
+                  return d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+                };
+                // A real brand bg is either CHROMATIC (saturated) or a deliberate near-BLACK
+                // (e.g. Templafy #232323). A greyscale mid-tone (generic mobile theme-color) or a
+                // near-white is NOT a brand -> return false so we leave the package default.
+                const __brandWorthy = (h) => __hslSat(h) >= 0.15 || __rlum(h) <= 0.06;
                 const FONTS = [
                   "Trebuchet MS", "Cabin", "Calibri", "Georgia", "Verdana",
                   "Tahoma", "Cambria", "Palatino Linotype", "Segoe UI", "Arial",
@@ -27039,11 +27062,20 @@
                 // window/chrome. Route the brand navy through styleConfig
                 // (headerBg/sidebarBg) instead of _t()/navyColor (the global
                 // window color). _t(navy) is intentionally NOT called.
-                if (navy && darkEnough(navy)) { scPatch.headerBg = navy; scPatch.sidebarBg = navy; }
-                if (accent) {
+                const __brandOk = !!(navy && __brandWorthy(navy));
+                const __ink = __brandOk ? __brandInk(navy) : null;
+                if (__brandOk) {
+                  scPatch.headerBg = navy; scPatch.sidebarBg = navy;
+                  // MATCH the ink to the band: a light brand (NVIDIA green) gets BLACK text, a
+                  // dark brand white — header name/spec/contact + sidebar text/head, so the
+                  // preview AND the docx export stay legible.
+                  scPatch.headerNameColor = scPatch.headerSpecColor = scPatch.headerContactColor = __ink;
+                  scPatch.sidebarTextColor = __ink;
+                  scPatch.sidebarHeadColor = __ink;
+                }
+                if (accent && __brandOk) {
                   scPatch.photoBorderColor = accent;
                   scPatch.sidebarLineColor = accent;
-                  scPatch.sidebarHeadColor = accent;
                 }
                 const hf = font(bf.head_font), bdf = font(bf.body_font);
                 hf && ((scPatch.mainHeadFont = hf), (scPatch.headerFont = hf));
@@ -27058,14 +27090,19 @@
                 // shape both readers expect, so first-generate preview AND export take the
                 // brand immediately.
                 try {
-                  if (navy && darkEnough(navy)) {
-                    localStorage.setItem("antcv:brandV2", JSON.stringify({ version: 2, slots: { headerBg: navy, headerInk: "#FFFFFF", sidebarBg: navy, accent: accent || null } }));
+                  if (__brandOk) {
+                    localStorage.setItem("antcv:brandV2", JSON.stringify({ version: 2, slots: { headerBg: navy, headerInk: __ink, sidebarBg: navy, sidebarInk: __ink, accent: accent || null } }));
+                  } else {
+                    // BRAND-WORTHY-GATE-001: a non-brand sample (greyscale chrome / near-white)
+                    // must not leave a stale brand from a previous app — clear it so the load
+                    // path (A4) falls back to the user's chosen package default, not grey.
+                    try { localStorage.removeItem("antcv:brandV2"); } catch (_) {}
                   }
                 } catch (_) {}
                 try {
                   console.log("[COMPANY-BRAND-FIT-001] applied brand palette", {
-                    navy: navy && darkEnough(navy) ? navy : "(rejected)",
-                    accent, head: hf, body: bdf, source: bf.source,
+                    navy: __brandOk ? navy : "(rejected — not a real brand, package default kept)",
+                    ink: __ink, accent, head: hf, body: bdf, source: bf.source,
                   });
                 } catch (_) {}
               }

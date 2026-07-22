@@ -1,4 +1,4 @@
-const VERSION='3.8.3-gemini-flash-ramble';
+const VERSION='3.8.4-brand-ink-match';
 // Cloudflare Worker — multi-provider LLM proxy with streaming for Anthropic
 // Includes /preferences route for AntCV cloud save.
 //

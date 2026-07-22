@@ -20,16 +20,16 @@
 //      LLM's unverifiable recollection.
 //
 // Per-page extraction:
-//   - <meta name="theme-color" content="#rrggbb"> — the strongest
-//     signal a site can give us; used directly as the navy candidate.
-//   - Hex colors in inline <style> blocks and up to 3 same-origin
-//     linked stylesheets, frequency-ranked, near-white/near-black
-//     chrome excluded.
-// Returned "navy" is darkened (same luminance target as
-// antcv-brandfit-sample.js) so it's always safe for white header text —
-// the client's existing COMPANY-BRAND-FIT-001 apply path re-validates
-// anyway, this just avoids a bright brand color getting silently
-// rejected as "not dark enough".
+//   - <meta name="theme-color" content="#rrggbb"> and hex colours in inline
+//     <style> blocks + up to 3 same-origin stylesheets, frequency-ranked,
+//     near-white/near-black chrome excluded.
+// BRAND-WORTHY-PICK-001 / BRAND-INK-MATCH-001 (2026-07-22): the picker returns
+// the first REAL brand colour (chromatic or a deliberate near-black) — a generic
+// greyscale theme-color is skipped so a real stylesheet colour wins over dull grey
+// — and returns it UN-darkened plus the `ink` (black/white) that is legible on it,
+// so the client matches the ink to the band (NVIDIA green -> black) instead of
+// hardcoding white. `brandLike:true` marks a genuine brand; when nothing is
+// brand-worthy the endpoint returns not-found and the client keeps the package default.
 //
 // SSRF protection: identical guard to fetch-jd-url.js (validateUrl /
 // isPrivateIpLiteral / BLOCKED_HOSTS) — every candidate URL this file
@@ -201,19 +201,25 @@ function lum(hex) {
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
 }
 
-// Same target/strategy as antcv-brandfit-sample.js's darken() — guarantees
-// the returned navy is safe for white header text without the client
-// having to silently drop a too-bright brand color.
-function darken(hex, target) {
-  const l = lum(hex);
-  if (l < target) return hex;
-  const f = l > 0 ? (target * 0.92) / l : 0;
-  const c = (i) => {
-    const v = Math.max(0, Math.min(255, Math.round(parseInt(hex.slice(i, i + 2), 16) * f)));
-    return (v < 16 ? '0' : '') + v.toString(16);
-  };
-  return '#' + c(1) + c(3) + c(5);
+// BRAND-WORTHY-PICK-001 + BRAND-INK-MATCH-001 (owner 2026-07-22): the old picker took
+// the <meta name="theme-color"> first, but that is frequently a generic mobile chrome
+// bar colour (e.g. #919191) shared across unrelated sites — a dull grey masquerading as
+// a brand. And it DARKENED whatever it picked so the client could hardcode white ink,
+// which destroyed a light brand (NVIDIA green). Now: pick the first colour that is a REAL
+// brand (chromatic, or a deliberate near-black), keep it un-darkened, and return the ink
+// (black/white) that is actually legible on it so the client matches instead of guessing.
+function _wlin(v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }
+function relLum(hex) { return 0.2126 * _wlin(parseInt(hex.slice(1, 3), 16)) + 0.7152 * _wlin(parseInt(hex.slice(3, 5), 16)) + 0.0722 * _wlin(parseInt(hex.slice(5, 7), 16)); }
+function contrast(a, b) { const x = relLum(a), y = relLum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); }
+function brandInk(hex) { return contrast(hex, '#111111') >= contrast(hex, '#FFFFFF') ? '#111111' : '#FFFFFF'; }
+function hslSat(hex) {
+  const r = parseInt(hex.slice(1, 3), 16) / 255, g = parseInt(hex.slice(3, 5), 16) / 255, b = parseInt(hex.slice(5, 7), 16) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
+  return d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
 }
+// A real brand bg is CHROMATIC (saturated) or a deliberate near-BLACK (e.g. #232323).
+// A greyscale mid-tone (generic theme-color) or a near-white is NOT a brand.
+function isBrandWorthy(hex) { return hslSat(hex) >= 0.15 || relLum(hex) <= 0.06; }
 
 // Third-party "Apply with X" / social-share widget colors that ride along on
 // almost EVERY ATS-hosted careers page (Teamtailor, Greenhouse, Workday...),
@@ -303,15 +309,21 @@ async function sampleColorsFromPage(pageUrl, collectSignals = false) {
   const ranked = extractHexColors(cssText + ' ' + html);
   if (!themeColor && !ranked.length) return null;
 
-  const navySource = themeColor ? 'meta theme-color' : 'stylesheet colors';
-  const rawNavy = themeColor || ranked[0];
-  const navy = darken(rawNavy, 0.62);
+  // BRAND-WORTHY-PICK-001: choose the first REAL brand colour among
+  // [theme-color, ...frequency-ranked stylesheet colours]. A greyscale theme-color
+  // is skipped so a genuine stylesheet colour wins instead of a dull grey; if nothing
+  // is brand-worthy we return null and the caller falls back to the package default.
+  const candidates = [themeColor, ...ranked].filter(Boolean);
+  const navy = candidates.find(isBrandWorthy) || null;
+  if (!navy) return null;
+  const navySource = (themeColor && navy === themeColor) ? 'meta theme-color' : 'stylesheet colors';
+  const ink = brandInk(navy);   // legible header text for THIS bg (NVIDIA green -> black)
   // A genuine second color, if the page has one — never duplicate navy as
   // a fake accent, the client's apply path treats accent as optional.
-  const accent = ranked.find((h) => h !== rawNavy && h !== themeColor) || null;
+  const accent = ranked.find((h) => h !== navy && h !== themeColor) || null;
 
   return {
-    navy, accent, hostname: new URL(pageUrl).hostname, navySource,
+    navy, accent, ink, hostname: new URL(pageUrl).hostname, navySource,
     // BRAND-DECIDES-RESEARCH-001: harvest the brand TEXT from the SAME html we
     // already fetched for colours — no extra request for the homepage signals.
     signals: collectSignals ? extractTextSignals(html) : null,
@@ -563,6 +575,8 @@ export async function handleFetchBrandColors(request, env, getCORS) {
       ok: true,
       navy: winner.navy,
       accent: winner.accent,
+      ink: winner.ink,          // BRAND-INK-MATCH-001: legible header ink for winner.navy
+      brandLike: true,          // winner passed isBrandWorthy — a real brand, not grey chrome
       source: `Sampled from ${winner.hostname} (${winner.navySource})`,
       sampledHost: winner.hostname,
       ...(research ? { research } : {}),

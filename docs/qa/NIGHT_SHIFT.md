@@ -44,7 +44,6 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mrw7uuxu_b1xm","started":"2026-07-22T15:07:27.910Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.2641-1.51.2660","task":"rich_block row Fit-it/Enhance: storm-proof hourglass latch + roles-storm converge","beat":"2026-07-22T15:07:28.238Z"}
 {"id":"sh_mrwbhn6v_i2ha","started":"2026-07-22T16:49:09.803Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.2761-1.51.2780","task":"pink section highlight: module-level latch (storm/fast-fail proof)","beat":"2026-07-22T16:49:09.990Z"}
 {"id":"sh_mrwbrn0q_4edk","started":"2026-07-22T16:56:56.147Z","host":"GabyPC2","worktree":null,"branch":"claude/optimistic-jang-7b06fe","range":"1.51.2781-1.51.2800","task":"HEADER-COLOR-CONTROLS-001 per-element colour swatches","beat":"2026-07-22T16:56:57.365Z"}
-{"id":"sh_mrwca5hc_lss","started":"2026-07-22T17:11:19.879Z","host":"GabyPC2","worktree":null,"branch":"claude/optimistic-jang-7b06fe","range":"1.51.2801-1.51.2820","task":"HEADER-COLOR-CONTROLS-001 slogan+application swatches (#2b)","beat":"2026-07-22T17:11:20.599Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

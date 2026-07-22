@@ -37,6 +37,7 @@ const SHELL = [
   './antcv-publications-dedup.js',
   './antcv-tables-core-dedup.js',
   './antcv-tools-hidden-residue.js',
+  './antcv-sidebar-compact-001.js',
   './antcv-sidebar-visibility-ux.js',
   './antcv-tables-partition.js',
   './antcv-orphan-measure-bind.js',

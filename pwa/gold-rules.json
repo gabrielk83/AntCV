@@ -339,5 +339,19 @@
     "recommendations_drop_danish": "outside Denmark and non-da language, 'International and Danish recommendations' reads 'International recommendations'",
     "instruments_em_gate": "SEM/HRSEM/electrical probe stations only for semiconductor/nano/MEMS/materials/cleanroom JDs (electron microscopy is not an optical-design instrument); removed tokens preserved in t_full",
     "nanomanipulator_pub_gate": "the Nanomanipulator (Microsystem Technologies) publication HIDES via the pubs section hidden map unless the JD is academic/deep-research/cleanroom"
+  },
+  "sidebar_compact": {
+    "_doc": "TOOLS-SIDEBAR-COMPRESS-001 (register row 26, owner 2026-07-03, gold from the unsolicited export screenshot). ITEM-LEVEL synonym/trim for the TOOLS & METHODS sidebar Instruments / Lab & fabrication comma-lists ONLY - scoped by the item's lead label so main-column prose (e.g. the 'confocal microscopy' Characterisation bullet) is never touched. The block is rich_block: apply to the item VALUE, do NOT convert the block. Acceptance = the sidebar renders the gold text in preview AND PDF. Deterministic consumer belt: pwa/antcv-sidebar-compact-001.js rewrites the stored sections.cv TOOLS rich_block value once (parity: preview + export both read stored sections), idempotent + text-verified. All three rules apply deterministically to the scoped lines (which are inherently long - the owner's 'when tight' justification): token_subs are unconditional phrase swaps; drop_token_when_sibling drops standalone SEM when HRSEM is a sibling and collapses HRSEM/SEM->HRSEM; trim_trailing_word strips a redundant trailing word (label already carries it). Reordering to the exact gold token order is the SEPARATE packing belt (rule 40, antcv-orphan-export-preflight.js).",
+    "scope_labels": ["Instruments", "Lab & fabrication", "Lab and fabrication"],
+    "token_subs": {
+      "confocal microscopy": "confocal imaging",
+      "electrical probe stations": "probe stations"
+    },
+    "drop_token_when_sibling": { "SEM": "HRSEM" },
+    "trim_trailing_word": ["fabrication"],
+    "gold": {
+      "Instruments": "Optical benches, HRSEM, confocal imaging, interferometry, Raman spectroscopy, probe stations",
+      "Lab & fabrication_ends_with": "SOI MEMS/NEMS"
+    }
   }
 }

@@ -22003,7 +22003,13 @@
             '\n\nVOICE & TONE — SCANDINAVIAN PROFESSIONAL (applies regardless of output language). "Senior-toned" here means calm, factual, direct, and concrete — NOT corporate/hype. Even in English, AVOID American resume-speak: no "transformative", "passionate", "dynamic", "results-driven", "spearheaded", "championed", "drove change", "moved the needle", "thought leader", "cutting-edge", "world-class", "impactful". Aim for the energy of a senior Copenhagen engineer writing a clear memo — facts before flair. Test: would this sound natural said aloud calmly in a meeting in Copenhagen?\nBANNED WORDS: spearhead, ensure, foster, streamline, strengthen, empower, leverage, drive (as \'drive change\'), deliver (vague), enable, robust, comprehensive (without specifics), cutting-edge, state-of-the-art, world-class, leading, impactful, rooted, grounded, committed, passionate, holistic, multi-faceted, cross-functional, collaborative (filler), central (\'played a central role\'), journey, dynamic, proactive, agile (unless software context), seamless, bottomline.\nBANNED PHRASES: key role, pivotal role, proven track record, strong communicator, results-driven, strategic mindset, mission-driven, wore many hats, rolled up sleeves, huge professional pride, "My expertise lies in", "I am passionate about", "I thrive in", "I bring a wealth of experience", "I am committed to", "Passionate about driving".\nBANNED PATTERNS: opener "In my role…"; "Whether in X or Y…"; "My career has been built on…"; "I have demonstrated the ability to…"; "Ensured alignment of…"; exclamation marks; filler transitions (moreover, therefore, furthermore); vague bullets without results.\nBANNED GEOGRAPHY-GROUPING: do NOT use "across <country A> and <country B>" or "across <region>" framing when describing a team. The reader doesn\'t care that the team spanned multiple countries unless it\'s directly relevant. Prefer naming the single primary location, or omit geography entirely.\n  ✗ "Led 7 engineers across Sweden and Israel"\n  ✗ "Supervised a 7-engineer team across Sweden and Israel"\n  ✓ "Supervised 7 engineers in Sweden"\n  ✓ "Directed a 7-engineer optics team in Sweden"\n  ✓ "Supervised a 7-engineer smartphone optics team" (no geography — also fine)\nVerb preference for team leadership: "Supervised" or "Directed" over "Led" (Led is overused American resume-speak).\n'),
             vr(t ? `Enrich ${t} of ${o.title}` : `Enrich ${o.title}`),
             ol(r),
-            Cr((e) => ({ ...e, [r]: "working" })));
+            // ROWFIT-FEEDBACK-001 (owner 2026-07-22): a per-ROW action (item:/row:)
+            // writes only the per-row transition key; the rich_block/table preview
+            // reads the whole-SECTION key, so nothing went pink. Also mark the
+            // section key for item:/row: ids (roles keep their per-role key only —
+            // gated so experience doesn't pink every role). Cleanup already deletes
+            // both via `t && delete o[e]`.
+            Cr((p) => (t && (t.startsWith("item:") || t.startsWith("row:"))) ? ({ ...p, [r]: "working", [e]: "working" }) : ({ ...p, [r]: "working" })));
           try {
             const n =
               '\n\nABSOLUTE: Your response MUST start with "{" and contain ONLY a single valid JSON object. NO prose. NO markdown. First character: "{". Last character: "}".';
@@ -22205,7 +22211,10 @@
           (vr(t ? `Compress role ${t}` : `Compress ${r.title}`),
             tl(a),
             lr(!0),
-            Cr((e) => ({ ...e, [a]: "working" })));
+            // ROWFIT-FEEDBACK-001: mirror il — a per-ROW Fit-it (item:/row:) also
+            // marks the whole-section key so the preview turns pink (roles keep
+            // per-role only). Cleanup deletes both via `t && delete o[e]`.
+            Cr((p) => (t && (t.startsWith("item:") || t.startsWith("row:"))) ? ({ ...p, [a]: "working", [e]: "working" }) : ({ ...p, [a]: "working" })));
           try {
             let n;
             if (t)

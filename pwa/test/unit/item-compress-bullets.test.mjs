@@ -130,3 +130,18 @@ test('rich_block rows route through bullets_item in Fit-it + Enhance (src + app 
   assert.ok(/"rich_block" === o\.type\s*\?\s*\(m\.type = "bullets_item"\)/.test(src), 'il map src');
   assert.ok(app.includes('"rich_block"===o.type?g.type="bullets_item"'), 'il map app');
 });
+
+// ROWFIT-FEEDBACK-001 (owner 2026-07-22): a per-ROW Fit-it/Enhance (item:/row:) must
+// also mark the whole-SECTION transition key so the preview turns pink (the map is
+// written per-row but the rich_block/table preview only reads the section key).
+// Experience roles (real ids) must stay per-role — gate on item:/row:.
+test('per-row Fit-it/Enhance also sets the section transition key (src + app mirror)', () => {
+  // both il ([r]) and ll ([a]) setters carry the gated section-key write
+  assert.ok(/\[r\]: "working", \[e\]: "working"/.test(src), 'il section-key write (src)');
+  assert.ok(/\[a\]: "working", \[e\]: "working"/.test(src), 'll section-key write (src)');
+  assert.ok(app.includes('[r]:"working",[e]:"working"'), 'il section-key write (app)');
+  assert.ok(app.includes('[a]:"working",[e]:"working"'), 'll section-key write (app)');
+  // gated to item:/row: so experience roles are not blanket-pinked
+  assert.ok((src.match(/t\.startsWith\("item:"\) \|\| t\.startsWith\("row:"\)/g) || []).length >= 2, 'gate present twice (src)');
+  assert.ok((app.match(/t\.startsWith\("item:"\)\|\|t\.startsWith\("row:"\)/g) || []).length >= 2, 'gate present twice (app)');
+});

@@ -41,7 +41,6 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mrw0g9sq_ky5","started":"2026-07-22T11:40:10.016Z","host":"GabyPC2","worktree":null,"branch":"shift-titleheal","range":"1.51.2331-1.51.2338","task":"TITLE-LANG-HEAL-001: reset wrong-script section titles (CJK/HE/AR on a Latin-target doc) to EN canonical; ratio detector ignored short wrong-lang titles","beat":"2026-07-22T11:40:10.717Z"}
 {"id":"sh_mrvv4t5g_aqt6","started":"2026-07-22T09:11:17.146Z","host":"GabyPC2","worktree":null,"branch":"shift-sbink","range":"1.51.2250-1.51.2256","task":"SIDEBAR-INK-BRAND-BG-001 (rebased)","beat":"2026-07-22T09:11:17.618Z"}
 {"id":"sh_mrvves34_bc6r","started":"2026-07-22T09:19:02.324Z","host":"GabyPC2","worktree":null,"branch":"claude/determined-cannon-8d4c64","range":"1.51.2310-1.51.2329","task":"CL-V5-APP-SUBTITLE-001: heading shows specialisation + new application-subtitle furniture (role·company·location) below slogan; preview/PDF/docx + side-panel","beat":"2026-07-22T09:19:02.561Z"}
-{"id":"sh_mrw2wp8c_81c6","started":"2026-07-22T12:48:55.746Z","host":"GabyPC2","worktree":null,"branch":"claude/optimistic-jang-7b06fe","range":"1.51.2461-1.51.2480","task":"CL-NO-PHOTO-001 preview sidecar","beat":"2026-07-22T12:48:56.516Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

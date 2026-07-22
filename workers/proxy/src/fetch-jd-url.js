@@ -208,6 +208,16 @@ function stripBlock(html, tag) {
   return html.replace(re, ' ');
 }
 
+// STRIP-SMALL-FORM-001 (2026-07-22): strip only SMALL <tag> blocks (cookie-consent /
+// search boxes). SAP SuccessFactors RMK wraps the ENTIRE job listing — JD included — in
+// one large <form> (its apply/save form), so a blanket form-strip deleted the JD and left
+// only the <title>. A consent/search form is tiny; a JD-bearing form is large. The cap
+// keeps small forms stripped while preserving the big one.
+function stripSmallBlocks(html, tag, maxLen) {
+  const re = new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)</${tag}>`, 'gi');
+  return html.replace(re, (m, inner) => (inner.length <= maxLen ? ' ' : m));
+}
+
 function extractTitle(html) {
   const m = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html);
   if (!m) return '';
@@ -501,7 +511,7 @@ function htmlToText(html) {
   s = stripBlock(s, 'header');
   s = stripBlock(s, 'footer');
   s = stripBlock(s, 'aside');
-  s = stripBlock(s, 'form');     // cookie consent, search forms
+  s = stripSmallBlocks(s, 'form', 2500);   // STRIP-SMALL-FORM-001: consent/search forms only — keep a JD-bearing form
 
   // Convert structural tags to newlines so block boundaries survive.
   s = s.replace(/<\/(p|div|section|article|li|h[1-6]|tr|td|th|br)>/gi, '\n');

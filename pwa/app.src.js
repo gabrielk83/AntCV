@@ -13079,6 +13079,15 @@
                   }),
                     t && r < 160 && (d = t.dataset.candidateDropLoc));
                 }
+                // HEADER-DRAG-DROP-SAMELOC-001 (owner 2026-07-22 "pressing on the
+                // contact collapses the entire candidate panel"): a click with
+                // >8px jitter slips past the NOMOVE guard, resolves the nearest
+                // drop-loc to the "Cand." header (topbar) — the SAME location a
+                // topbar row is already in — and re-runs the location move, which
+                // rebuilds and collapses the panel. A drop onto the row's CURRENT
+                // location is a no-op; skip it. Genuine cross-location drags (d !=
+                // e.loc) are unaffected.
+                if (d && String(d) === String(e.loc)) return;
                 if (l)
                   if (c) l(e.key, c);
                   else if (d) l(e.key, null, d);

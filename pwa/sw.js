@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.2480-application-line';
+const CACHE = 'antcv-1.51.2501-contact-collapse-fix';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

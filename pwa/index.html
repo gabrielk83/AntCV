@@ -369,7 +369,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.1544-brand-parity';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.2194-slogan-headline';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.2200-lang-guard-key';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -411,7 +411,7 @@
           app.src = 'app.js?v=1.51.2194-slogan-headline';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.2194-slogan-headline';
+            vo.src = 'antcv-version-override.js?v=1.51.2200-lang-guard-key';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -1136,7 +1136,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
   <script src="antcv-parallel-translation-keep.js?v=1.51.2106-parallel-translation-keep" defer></script>
   <script src="antcv-identity-lang-heal.js?v=1.51.397-matrix-rowspec" defer></script>
 <script src="antcv-cl-cloud-sync-extra.js?v=1.51.381-sig-backfill" defer></script>
-<script src="antcv-cl-prose-loss-guard-985.js?v=1.51.1943-cl-v5-durable" defer></script>
+<script src="antcv-cl-prose-loss-guard-985.js?v=1.51.2200-lang-guard-key" defer></script>
 <!-- GEN-UNSOL-STALE-JD-001 Patch D: scrub a KNOWN PRIOR targeted company from unsolicited prose (employer names protected). Kill antcv:disable-unsol-company-scrub. -->
 <script src="antcv-unsol-company-scrub.js?v=1.51.334-unsol-pillar" defer></script>
 <!-- SIDEBAR-RELEVANCE-CUT-001 (spec rules 11/15/19/25/27/32 + 38): deterministic JD-relevance cut over tools/certs/regulatory in stored sections — hidden never deleted, exempt Interests/Languages/Accessibility, one-shot per app+JD. Kill antcv:disable-sidebar-relevance-cut. -->
@@ -1147,9 +1147,9 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-brandfit-sample.js?v=1.51.123" defer></script>
 <script src="antcv-profile-access-scrub.js?v=1.51.109" defer></script>
 <!-- CV CORE COMPETENCIES last-good snapshot guard: heals a stale-restore placeholder table back to the laminated rows (CV-CORECOMP-BLANK-001, owner 2026-07-01). -->
-<script src="antcv-corecomp-loss-guard.js?v=1.51.36" defer></script>
+<script src="antcv-corecomp-loss-guard.js?v=1.51.2200-lang-guard-key" defer></script>
 <!-- SELECTED OUTCOMES last-good snapshot guard: heals an outcomes items:[] wipe (e.g. a core_comp row-count change) back to the last real bullets (SO-003, owner row 40, DATA LOSS). Kill antcv:disable-outcomes-guard -->
-<script src="antcv-outcomes-loss-guard.js?v=1.51.138" defer></script>
+<script src="antcv-outcomes-loss-guard.js?v=1.51.2200-lang-guard-key" defer></script>
 <!-- CL render-side text heals: C4 lead-continuation case (Professionally that) + C3 bring/contribute dangling-truncation cleanup (owner 2026-07). -->
 <script src="antcv-cl-text-cleanup.js?v=1.51.26" defer></script>
 <script src="antcv-cl-prose-richblock-fill-987.js?v=1.51.60" defer></script>

@@ -67,8 +67,8 @@ test('snapshot: a sections blob with REAL outcomes items is captured to the loca
   const ctx = makeSandbox({ meta: { company: 'Acme', role: 'PM' }, sections: cv(REAL_ITEMS) });
   ctx.api.snapshot();
   const snap = ctx.snapStore();
-  assert.ok(snap['Acme|PM'], 'a bucket exists for the active application');
-  assert.deepEqual(snap['Acme|PM'].items, REAL_ITEMS, 'the real items are stored verbatim');
+  assert.ok(snap['Acme|PM|en'], 'a bucket exists for the active application (language-keyed: LANG-GUARD-KEY-001)');
+  assert.deepEqual(snap['Acme|PM|en'].items, REAL_ITEMS, 'the real items are stored verbatim');
 });
 
 test('restore: an emptied (items:[]) outcomes section is healed back to the real snapshot (the SO-003 wipe)', () => {

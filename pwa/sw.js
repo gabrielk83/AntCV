@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.2460-rowfit-marker-underline';
+const CACHE = 'antcv-1.51.2461-cl-no-photo';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',
@@ -64,6 +64,7 @@ const SHELL = [
   './antcv-preview-header-tokens.js',
   './antcv-application-line-001.js',
   './antcv-copenhagen-v2-001.js',
+  './antcv-cl-no-photo-001.js',
   './antcv-pdf-preview-gate.js',
   './antcv-tone-helper.js',
   './antcv-jd-image-ocr.js',

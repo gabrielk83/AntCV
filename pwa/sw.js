@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.2106-parallel-translation-keep';
+const CACHE = 'antcv-1.51.2126-copenhagen-v2-insets';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

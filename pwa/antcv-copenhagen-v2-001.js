@@ -32,17 +32,44 @@
   var FLAG = 'antcv:copenhagen-v2';
   var STYLE_ID = 'antcv-copenhagen-v2-style';
 
-  // Radius: the spec is ~20pt. The preview paper is 794px = 595pt (1pt≈1.334px),
-  // so ~20pt ≈ 26px; use 22px (a touch conservative — the owner can tune).
-  // Border 1.5pt ≈ 2px. Corners round via border-radius alone (the band bg is
-  // clipped to the border-box); we do NOT force overflow:hidden so the bridge-
-  // mode photo that straddles the band edge is never clipped.
-  var CSS =
-    '.antcv-preview-paper [data-antcv-candidate-band="1"]{' +
-      'border-radius:22px !important;' +
-      'border:2px solid var(--brand-accent, var(--header-line-color, #01B7BB)) !important;' +
-      '-webkit-box-decoration-break:clone;box-decoration-break:clone;' +
-    '}';
+  // Owner-tuned (2026-07-21): radius 22px = "perfect"; border 1.5px accent; box
+  // inset 7.4px from top/left/right (V2 floating panels). The sidebar becomes an
+  // inset panel: in every figure placement mode EXCEPT sidebar-bridge, gap 7.4px
+  // below the header, 7.4px from the bottom and from the page-edge corner it hugs
+  // (left/right per sidebarPosition); in bridge mode keep the current vertical
+  // heights and inset ~3.2px horizontally from the contour. Colours from the
+  // palette resolver vars — never hardcoded. Corners round via border-radius (bg
+  // is clipped to the border-box); NO overflow:hidden so a straddling photo is
+  // never clipped. Preview-only; export parity is a follow-up once numbers lock.
+  function sidebarSide() {
+    try {
+      var v = String(localStorage.getItem('sidebarPosition') || 'left').replace(/["']/g, '').toLowerCase();
+      return v === 'right' ? 'right' : 'left';
+    } catch (_) { return 'left'; }
+  }
+  function isBridge() {
+    try { return !!document.querySelector('.antcv-preview-paper [data-antcv-bridge-spacer]'); } catch (_) { return false; }
+  }
+  function buildCSS() {
+    var side = sidebarSide();
+    var css =
+      '.antcv-preview-paper [data-antcv-candidate-band="1"]{' +
+        'border-radius:22px !important;' +
+        'border:1.5px solid var(--brand-accent, var(--header-line-color, #01B7BB)) !important;' +
+        'margin:7.4px 7.4px 0 7.4px !important;box-sizing:border-box !important;' +
+      '}';
+    if (isBridge()) {
+      // bridge: same vertical heights, ~3.2px horizontal from the contour.
+      css += '.antcv-preview-paper [data-antcv-document-sidebar]{margin-' + side + ':3.2px !important;box-sizing:border-box !important;}';
+    } else {
+      // non-bridge: float the sidebar panel — gap below header + inset from the
+      // bottom and the page-edge corner it aligns to.
+      css += '.antcv-preview-paper [data-antcv-document-sidebar]{' +
+        'margin-top:7.4px !important;margin-bottom:7.4px !important;margin-' + side + ':7.4px !important;' +
+        'box-sizing:border-box !important;}';
+    }
+    return css;
+  }
 
   function enabled() {
     try { return localStorage.getItem(FLAG) === '1'; } catch (_) { return false; }
@@ -54,10 +81,11 @@
       if (!el) {
         el = document.createElement('style');
         el.id = STYLE_ID;
-        el.textContent = CSS;
         (document.head || document.documentElement).appendChild(el);
-        try { console.debug('[copenhagen-v2] V1 rounded header box ON'); } catch (_) {}
+        try { console.debug('[copenhagen-v2] V1+V2 box + inset panels ON'); } catch (_) {}
       }
+      var next = buildCSS();
+      if (el.textContent !== next) el.textContent = next;  // re-derive (bridge/side can change)
     } else if (el && el.parentNode) {
       el.parentNode.removeChild(el);
     }

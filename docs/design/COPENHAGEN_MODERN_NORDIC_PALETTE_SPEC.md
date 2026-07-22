@@ -156,8 +156,46 @@ with the mockup — owner call, do not silently change.
 - Band name size: render 16pt vs mockup 23px (~17.3pt at A4 scale) — close; exact
   pinning is a docx-parity (Stage 4) decision.
 
+## Live-tuning round (owner screenshots, 2026-07-23 — SHIPPED 1.51.3121-3202)
+The owner tuned the deployed preview; these SUPERSEDE the corresponding mockup
+values above and are the CURRENT preview truth (all in antcv-copenhagen-v2-001.js
+unless noted):
+- Header band is a GRID: photo column (158px) + text column; photo **134px**
+  (1.4in) circle, left inset 18px, vertically centered; box min-height **174px**;
+  text rows even 7px gap, group vertically centered; text sizes name **24px**
+  (+.14em tracking), spec **18px**, contact **13px** + `scaleX(.73)` +
+  `white-space:nowrap` (ONE line). Band radius 22px, cyan 1.5px border.
+- NO rules inside the header box (antcv-header-rule-control defaults all OFF;
+  HEADER-RULE-DEFAULTS-002 added slogan[def-off] + application[def-ON] fields).
+- Application line: `data-antcv-app-line-native` marker; grey text (elem-colors)
+  + teal 1.5pt rule (appline-rule, merged into headerItemRule.application store);
+  pulled up toward the slogan (margin-top -7px) with 7px air above its rule.
+- "At your service," sign-off: teal, non-bold, 1.5px cyan underline
+  (SIGNOFF-UNDERLINE-001 painter). Spec line cyan #01B9BD (SPEC-LINE-COLOR-001).
+- ORPHAN-RULE-GATE-001: a headline-off section with empty/placeholder body no
+  longer draws its standalone rule (both bundles).
+
+## Stage 4 — DOCX/PDF export parity (OPEN, the one remaining leg)
+Export must match the tuned preview above. Work order (docx-worker + docx-client
++ export-HTML; hand-maintained bundle, docx-worker-bundle-no-build):
+1. Header box: navy #33446F fill + **cyan 1.5pt border, rounded** (VML roundrect
+   behind the header, the SIDEBAR-SPINE-VML-001 pattern) — square-border fallback
+   acceptable first increment.
+2. Photo **1.4in** circle, ring 1.5pt #01B9BD (verify photoBorderWidth forwards).
+3. Name: ~17.5pt + expanded tracking (`w:spacing`); spec cyan (token ✓ forwards);
+   contact **char-scaling `w:w="73"`** single line; band links WHITE.
+4. NO internal header rules by default (header_rules payload now defaults empty —
+   verify the worker draws none on absent config).
+5. CL: app-line grey #808080 + teal 1.5pt rule under it, spacing per preview;
+   sign-off teal + cyan underline (`w:u` color); orphan-rule gate parity.
+6. Verify with a REAL CloudConvert export (`/generate-pdf` + `/diag/convert-docx`)
+   against the preview screenshots; then the deliverable set per NIGHTLY hard
+   rule 8 (CV+CL DOCX, CV+CL PDF, analysis PDF).
+
 ## Status
-- ✅ Mockup locked to owner sign-off (2026-07-22) — values above are authoritative.
-- ✅ Stages 1-3 + mockup-parity tokens shipped (1.51.3001/3041/3061/3101, wk 1.14.163/164).
-- ⬜ OPEN render-structure flags above + Stage 4 docx header parity.
-- ⬜ JUDGMENT items await owner word.
+- ✅ Mockup locked (2026-07-22); live-tuning round shipped (2026-07-23, → 1.51.3202).
+- ✅ Stages 1-3 + mockup-parity tokens + five header/CL defects + band grid.
+- ⬜ **Stage 4 export parity (work order above) — the remaining leg.**
+- ⬜ Remaining OPEN render flags: rule thickness sweep (1px→1.5pt), grey #777
+  section-head underlines, role-row rule drop, Results underline, sub-head
+  rules+years, body link #0B4F8A, sidebar radius, AI-notice size/color.

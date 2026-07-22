@@ -92,6 +92,16 @@ Run log:
    phantom-ship regression that tests + static tracing miss. NEVER navigate `?hardReset=1`
    (signs the owner out + wipes languages to EN-DA). Cloud runs can't do this — they
    flag it "owed to a desktop run"; the next desktop run clears the owed verify.
+8. **EXPORT DELIVERABLES (owner 2026-07-23, standing for EVERY generation nightly):**
+   each generation run produces, per generated application, the FULL deliverable set:
+   (a) the **CV DOCX** and **CL DOCX** (docx-worker `/generate` — same buildPayload
+   path the app's Export buttons use, memory generate-deliverables-via-worker),
+   (b) the CV+CL **PDFs** (`/generate-pdf`, real CloudConvert), and
+   (c) the **analysis-report PDF** (the branded AI-watermarked report, memory
+   analysis-report-pdf) whenever the run produced/updated an analysis.
+   File them in the run's output folder with the app's own filenames; a run that
+   generates content but skips the exports is an INCOMPLETE run — the exports are
+   how render regressions (header box, table frame, banding, orphans) get caught.
 
 ## Ground truth (verified 2026-07-02 by code audit)
 

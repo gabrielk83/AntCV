@@ -68,6 +68,13 @@
         'margin-top:7.4px !important;margin-bottom:7.4px !important;margin-' + side + ':7.4px !important;' +
         'box-sizing:border-box !important;}';
     }
+    // V3 photo-corner alignment (owner 2026-07-21, measured): the main-left/
+    // main-right floated photo sits ~6px too high and ~20px off toward the
+    // centre. Nudge via transform (visual only, does not disturb the wrap):
+    // main-left -> down 6, left 20; main-right -> down 6, right 20. Pre-existing
+    // offset; the [data-antcv-main-photo] div's direct-child <img> IS the photo.
+    css += '.antcv-preview-paper [data-antcv-main-photo="main-left"] > img{transform:translate(-20px,6px) !important;}';
+    css += '.antcv-preview-paper [data-antcv-main-photo="main-right"] > img{transform:translate(20px,6px) !important;}';
     return css;
   }
 

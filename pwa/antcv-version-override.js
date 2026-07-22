@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.2146-delete-confirm-inapp';
+  const TARGET_VERSION = '1.51.2174-copenhagen-v2-photo';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.2146-delete-confirm-inapp',
     '1.51.2106-parallel-translation-keep',
     '1.51.2085-export-preview-zoom-decouple',
     '1.51.2073-cl-v5-durable2',

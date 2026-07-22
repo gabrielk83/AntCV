@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.2146-delete-confirm-inapp';
+const CACHE = 'antcv-1.51.2174-copenhagen-v2-photo';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

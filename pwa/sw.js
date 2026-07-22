@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.2980-rowfit-measure';
+const CACHE = 'antcv-1.51.3040-app-rev-guard';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',
@@ -25,6 +25,7 @@ const SHELL = [
   './antcv-mobile-fab-cleanup-351.js',
   './antcv-pub-injected-reaper-352.js',
   './antcv-cloud-put-shrink-guard-355.js',
+  './antcv-app-rev-guard.js',
   './antcv-jd-watch.js',
   './antcv-spell-annotator-384.js',
   './antcv-orphan-cloud-persist-385.js',

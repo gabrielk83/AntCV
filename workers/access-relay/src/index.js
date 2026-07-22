@@ -35,7 +35,7 @@ const VERSION='1.3.12';
 // Required binding (declare in wrangler.toml):
 //   KV_BINDING        KV namespace (stores OTPs, rate counters, prefs, signals)
 
-const RELAY_VERSION = 'auth-34-category-downgrade';
+const RELAY_VERSION = 'auth-35-autosave-rev-guard';
 const SESSION_TTL_SECONDS    = 7 * 24 * 60 * 60;       // 7 days
 // Refresh whenever the token has < 6 days left (i.e. it's more than 1 day old),
 // so ANY request past the first day rotates it to a fresh 7-day token via the
@@ -3481,7 +3481,7 @@ async function handleApiApplicationById(request, env, idStr) {
   let owned;
   try {
     owned = await env.DB.prepare(
-      'SELECT user_hash, cv_sections, cl_sections, jd_company FROM application WHERE id = ?'
+      'SELECT user_hash, cv_sections, cl_sections, jd_company, updated_at FROM application WHERE id = ?'
     ).bind(appId).first();
   } catch (e) {
     return jsonResponse(
@@ -3547,6 +3547,23 @@ async function handleApiApplicationById(request, env, idStr) {
     catch (_) { return jsonResponse({ error: 'invalid_json' }, 400, request, env, refresh); }
     if (!body || typeof body !== 'object') {
       return jsonResponse({ error: 'invalid_body' }, 400, request, env, refresh);
+    }
+    // AUTOSAVE-STALE-CLOBBER-001 (owner 2026-07-22): optimistic concurrency for the
+    // client auto-save. A PUT MAY carry base_rev = the row's updated_at the client
+    // last loaded/saved. If present and it mismatches the stored row, the writer is
+    // STALE (e.g. an open tab's 3s auto-sync replaying old localStorage over a
+    // fresher nightly-regen PUT) — reject 409 with the current rev instead of a
+    // silent clobber. base_rev absent/null keeps today's unconditional write
+    // (backward compatible: the Python nightly, the analysis partial-PUT and the
+    // row-switch save are unchanged). Same pattern as handleApiJobTracker's rev.
+    if (body.base_rev !== undefined && body.base_rev !== null) {
+      const curRev = Number(owned.updated_at || 0);
+      if (Number(body.base_rev) !== curRev) {
+        return jsonResponse(
+          { error: 'conflict', updated_at: curRev },
+          409, request, env, refresh
+        );
+      }
     }
     // AUTOSAVE-NO-DOWNGRADE-001 (register row 29/31 leg C, owner 2026-07-04 "the fuck?"
     // Trackman revert): the client auto-saves the active app on every row switch /

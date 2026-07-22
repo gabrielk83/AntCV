@@ -369,7 +369,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.2741-cl-appline-native';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.2980-rowfit-measure';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.3040-app-rev-guard';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -411,7 +411,7 @@
           app.src = 'app.js?v=1.51.2980-rowfit-measure';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.2980-rowfit-measure';
+            vo.src = 'antcv-version-override.js?v=1.51.3040-app-rev-guard';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -1049,6 +1049,10 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-settings-front-327.js?v=1.50.109-ah-front" defer></script>
 <script src="antcv-demo-toggle-357.js?v=1.50.861" defer></script>
 <script src="antcv-cloud-put-shrink-guard-289.js?v=1.40.289" defer></script>
+<!-- AUTOSAVE-STALE-CLOBBER-001: per-tab server-rev guard on PUT /api/applications/:id —
+     injects base_rev from the rev this tab last loaded/saved; a relay 409 (stale writer)
+     becomes a logged silent skip so an open tab can never revert a fresher cloud write. -->
+<script src="antcv-app-rev-guard.js?v=1.51.3040-app-rev-guard" defer></script>
 <script src="antcv-kernel-completeness-290.js?v=1.51.397-matrix-rowspec" defer></script>
 <script src="antcv-app-history-zfix-291.js?v=1.40.291" defer></script>
 <script src="antcv-app-history-back-to-preview-341.js?v=1.40.341-p0e" defer></script>

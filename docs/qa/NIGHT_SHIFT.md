@@ -45,6 +45,7 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mrwbhn6v_i2ha","started":"2026-07-22T16:49:09.803Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.2761-1.51.2780","task":"pink section highlight: module-level latch (storm/fast-fail proof)","beat":"2026-07-22T16:49:09.990Z"}
 {"id":"sh_mrwbrn0q_4edk","started":"2026-07-22T16:56:56.147Z","host":"GabyPC2","worktree":null,"branch":"claude/optimistic-jang-7b06fe","range":"1.51.2781-1.51.2800","task":"HEADER-COLOR-CONTROLS-001 per-element colour swatches","beat":"2026-07-22T16:56:57.365Z"}
 {"id":"sh_mrwi08k6_99dl","started":"2026-07-22T19:51:35.005Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.2921-1.51.2940","task":"LINE-DISTRIBUTION-001: measure-based bidirectional per-row Fit-it","beat":"2026-07-22T19:51:35.315Z"}
+{"id":"sh_mrwki3x6_hf6","started":"2026-07-22T21:01:28.035Z","host":"GabyPC2","worktree":null,"branch":"claude/determined-cannon-8d4c64","range":"1.51.3001-1.51.3020","task":"COPENHAGEN-STAGE1-PALETTE-TOKENS: cyan #01B9BD + navy box #33446F + table/sidebar tokens in va.copenhagen-modern preset + base default","beat":"2026-07-22T21:01:29.085Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

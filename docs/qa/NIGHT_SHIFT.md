@@ -41,7 +41,6 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mrw0g9sq_ky5","started":"2026-07-22T11:40:10.016Z","host":"GabyPC2","worktree":null,"branch":"shift-titleheal","range":"1.51.2331-1.51.2338","task":"TITLE-LANG-HEAL-001: reset wrong-script section titles (CJK/HE/AR on a Latin-target doc) to EN canonical; ratio detector ignored short wrong-lang titles","beat":"2026-07-22T11:40:10.717Z"}
 {"id":"sh_mrvv4t5g_aqt6","started":"2026-07-22T09:11:17.146Z","host":"GabyPC2","worktree":null,"branch":"shift-sbink","range":"1.51.2250-1.51.2256","task":"SIDEBAR-INK-BRAND-BG-001 (rebased)","beat":"2026-07-22T09:11:17.618Z"}
 {"id":"sh_mrw39srh_fnes","started":"2026-07-22T12:59:06.850Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.2481-1.51.2500","task":"rich_block row Fit-it/Enhance per-row busy feedback (hourglass + pink row)","beat":"2026-07-22T13:00:09.743Z"}
-{"id":"sh_mrw69fpk_k4gu","started":"2026-07-22T14:22:48.782Z","host":"GabyPC2","worktree":null,"branch":"claude/optimistic-jang-7b06fe","range":"1.51.2601-1.51.2620","task":"HEADER-ELEM-COLORS-001 per-element brand colours engine","beat":"2026-07-22T14:22:49.172Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

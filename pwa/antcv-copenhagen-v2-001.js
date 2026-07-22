@@ -33,7 +33,7 @@
 (function () {
   'use strict';
   if (window.__antcvCopenhagenV2) return;
-  window.__antcvCopenhagenV2 = '1.51.3161-band-size';
+  window.__antcvCopenhagenV2 = '1.51.3182-band-size2';
 
   var FLAG = 'antcv:copenhagen-v2';
   var STYLE_ID = 'antcv-copenhagen-v2-style';
@@ -116,12 +116,14 @@
       // which made the band text center on the full box far from the photo —
       // reverted; the float keeps the text beside the figure. Only neutralize any
       // stale transform from a cached nudge.
-      // CPH-BAND-SIZE-001 (owner 2026-07-23 "increase the photo and box size to
-      // fit, and slightly increase the text while keeping it centered"): photo
-      // 82px -> 120px (the registry --package-image-size), band grows to hold it
-      // (min-height + a touch more padding).
-      css += BAND + ' img{transform:none !important;width:120px !important;height:120px !important;}';
-      css += BAND + '{min-height:150px !important;padding-top:18px !important;padding-bottom:14px !important;}';
+      // CPH-BAND-SIZE-001/002 (owner 2026-07-23 "increase the photo and box size
+      // ... enlarge the circle even more and also enlarge the box height by 0.25in
+      // so that it will be possible to move the figure rightwards to keep it
+      // aligned with the corners"): photo -> 134px (the mockup 1.4in), box
+      // min-height 150+24px (0.25in), and the figure shifts RIGHT (margin-left)
+      // so the bigger circle clears the 22px rounded corner and reads nestled.
+      css += BAND + ' img{transform:none !important;width:134px !important;height:134px !important;margin-left:18px !important;}';
+      css += BAND + '{min-height:174px !important;padding-top:20px !important;padding-bottom:16px !important;}';
     }
     // STAGE 3 (structural CSS, NOT per-node inline styles — inline styles were
     // wiped by React re-renders and re-applied late, which the owner saw as the

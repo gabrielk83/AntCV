@@ -787,16 +787,16 @@ export function buildPayload({
       const coLabel = cvCo && !/^(unsolicited|open application|n\/a)$/i.test(cvCo) ? cvCo : (isDA2 ? 'Uopfordret' : (isZH2 ? '主动申请' : 'Unsolicited'));
       return (isDA2 ? 'Ansøgning: ' : (isZH2 ? '申请: ' : 'Application: ')) + __stripRoleCo(cvRole, cvCo) + ' \u2014 ' + coLabel;
     }
-    const company = (meta.company || '').trim();
-    const role = __stripRoleCo(stripFounder((meta.role || '').trim()), company);
-    const isDA = (language === 'da');
-    const isZH = (language === 'zh');   // SUBTITLE-ZH-001
-    const prefix = isDA ? 'Ansøgning: ' : (isZH ? '申请: ' : 'Application: ');
-    if (!role && !company) {
-      return prefix + (isDA ? '[rolle og virksomhed]' : (isZH ? '[职位与公司]' : '[role and company]'));
-    }
-    const sep = (role && company) ? ' \u2014 ' : '';
-    return `${prefix}${role}${sep}${company}`;
+    // CL-APP-SUBTITLE-HEADING-SWAP-001 (owner 2026-07-22): the CL header band now shows the
+    // SPECIALISATION (like the CV), NOT the "Application: <role>" label. The per-app application
+    // line moved UNDER THE SLOGAN — forwarded as meta.role/company and rendered by the worker
+    // below the slogan. Mirrors the app preview (io.subtitle = personalInfo.specialization) so
+    // preview == export. A stored subtitle that is itself an Application:/Ansøgning:/申请 label
+    // is ignored in favour of the real specialisation.
+    let spec = stripFounder(meta.subtitle || '');
+    if (/^(application:|ans[øo]gning:|申请\s*[:：])/i.test(spec)) spec = '';
+    if (!spec) { try { const pi = JSON.parse(localStorage.getItem('personalInfo') || '{}') || {}; spec = String((pi.personalInfo || pi).specialization || '').trim(); } catch (_) {} }
+    return spec.replace(/\s*\|\s*/g, ' • ');
   })();
 
   // CONTACT-LINE-DENMARK-001 (owner 2026-06-14): mirror the PWA preview's

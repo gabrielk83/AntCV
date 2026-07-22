@@ -25504,6 +25504,44 @@ function buildLinearDocument(ctx) {
       }));
     }
   }
+  // HEADER-APP-LINE-001 (owner 2026-07-22): the per-app APPLICATION LINE — "Application for
+  // [Role] at [Company]" — sits UNDER THE SLOGAN on the cover letter (OUT of the heading; the
+  // heading shows the specialisation subtitle, like the CV). Mirrors the app preview + HTML
+  // export, and replaces the retired antcv-application-line-001.js sidecar so the line never
+  // double-renders. CL-only (buildLinearDocument is CL-only); empty for an unsolicited app or
+  // one with no targeted role/company.
+  {
+    const __m2 = ctx.meta || {};
+    const __role = String(__m2.role || "").trim();
+    const __company = String(__m2.company || "").trim();
+    let __al = "";
+    if (__role || __company) {
+      const __unsol = /^(unsolicited|open application|uopfordret|åben ansøgning|speculative|主动申请)$/i;
+      if (!(__company && __unsol.test(__company))) {
+        const __lang = String(ctx.lang || "en").toLowerCase().slice(0, 2) || "en";
+        const __forW = { en: "Application for", da: "Ansøgning til", es: "Candidatura para", zh: "申请职位", he: "מועמדות לתפקיד", am: "ማመልከቻ ለ", ar: "التقدم لوظيفة" }[__lang] || "Application for";
+        const __atW = { en: "at", da: "hos", es: "en", zh: "·", he: "ב", am: "በ", ar: "في" }[__lang] || "at";
+        __al = __role ? __forW + " " + __role : "";
+        if (__company) __al = __al ? (__al + " " + __atW + " " + __company) : (__forW + " " + __company);
+        __al = __al.trim();
+      }
+    }
+    if (__al) {
+      bodyChildren.push(new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 0, after: 200, line: 240, lineRule: "auto" },
+        keepNext: true,
+        children: [new TextRun({
+          text: __al,
+          bold: false,
+          color: __m2.slogan_color ? sloganColorOnWhite(__m2.slogan_color, style.mainHeadColor) : style.mainHeadColor,
+          size: pt2hp(10.5),
+          font: style.mainBodyFont,
+          characterSpacing: 4
+        })]
+      }));
+    }
+  }
   // CL-NO-PHOTO-001 (owner 2026-07-22): the cover letter must NOT show the
   // candidate headshot — the Ibsen CL_FIX reference carries only the signature
   // (a separate image), no photo. buildLinearDocument is CL-only, so suppress

@@ -40,10 +40,24 @@ test('CV: "Founder" stripped from meta.role', () => {
   assert.equal(m.role, 'Product / Project Expert');
 });
 
-test('CL: "Founder" stripped from the synthesised Application line', () => {
-  const s = clSubtitle({ role: 'Founder & Product Expert', company: 'Novo Nordisk' });
-  assert.ok(!/founder/i.test(s), `founder leaked: ${s}`);
-  assert.ok(/Product Expert/.test(s) && /Novo Nordisk/.test(s));
+test('CL: "Founder" stripped from the role forwarded for the application line', () => {
+  // CL-APP-SUBTITLE-HEADING-SWAP-001 (owner 2026-07-22): the CL header band now carries the
+  // SPECIALISATION (p.meta.subtitle), not the "Application: <role>" line — that moved UNDER
+  // THE SLOGAN, built from p.meta.role / p.meta.company. ROLE-FOUNDER-001 still holds: the
+  // forwarded role must not leak "Founder".
+  store.clear();
+  const p = buildPayload({ sections: { cv: [], cl: [] }, doc: 'cl', personalInfo: { name: 'T' }, meta: { role: 'Founder & Product Expert', company: 'Novo Nordisk' } });
+  assert.ok(!/founder/i.test(p.meta.role), `founder leaked: ${p.meta.role}`);
+  assert.ok(/Product Expert/.test(p.meta.role), `role: ${p.meta.role}`);
+  assert.equal(p.meta.company, 'Novo Nordisk');
+});
+
+test('CL: header band shows the specialisation, not the Application line', () => {
+  // The synthesised "Application: <role>" subtitle is retired; a stored specialisation triad
+  // is what the CL header renders now (mirrors the app preview io.subtitle).
+  const s = clSubtitle({ role: 'Product Expert', company: 'Novo Nordisk', subtitle: 'Processes • Products • People' });
+  assert.equal(s, 'Processes • Products • People');
+  assert.ok(!/application:/i.test(s), `app-line leaked into subtitle: ${s}`);
 });
 
 test('Co-Founder is also stripped', () => {

@@ -26,13 +26,31 @@
 
   function killed() { try { return localStorage.getItem(KILL) === '1'; } catch (_) { return false; } }
   function editorActive() { try { var v = window.__antcvView; return !(v === 'upload' || v === 'input' || v === 'generating'); } catch (_) { return true; } }
-  function read() { try { return JSON.parse(localStorage.getItem(STORE) || '{}') || {}; } catch (_) { return {}; } }
+  // HEADER-RULE-DEFAULTS-002 (owner 2026-07-23): the application rule now lives in
+  // the SAME per-field store as the other header rules (headerItemRule.application,
+  // the "Rule line below" control) and is DEFAULT-VISIBLE. The legacy
+  // antcv:applineRule store is honoured as a fallback for values set before the merge.
+  function read() {
+    var hir = {}; try { hir = (JSON.parse(localStorage.getItem('headerItemRule') || 'null') || {}).application || {}; } catch (_) {}
+    var legacy = {}; try { legacy = JSON.parse(localStorage.getItem(STORE) || '{}') || {}; } catch (_) {}
+    var v = Object.assign({}, legacy, hir);
+    if (typeof v.on !== 'boolean') v.on = true;   // def-visible
+    return v;
+  }
   function write(patch) {
-    var s = read();
-    Object.keys(patch).forEach(function (k) { if (patch[k] === undefined || patch[k] === null) delete s[k]; else s[k] = patch[k]; });
-    try { localStorage.setItem(STORE, JSON.stringify(s)); } catch (_) {}
+    var s = {}; try { s = JSON.parse(localStorage.getItem('headerItemRule') || 'null') || {}; } catch (_) {}
+    var cur = (s.application && typeof s.application === 'object') ? s.application : {};
+    Object.keys(patch).forEach(function (k) { if (patch[k] === undefined || patch[k] === null) delete cur[k]; else cur[k] = patch[k]; });
+    s.application = cur;
+    try { localStorage.setItem('headerItemRule', JSON.stringify(s)); } catch (_) {}
     apply();
     try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { reason: 'appline-rule' } })); } catch (_) {}
+  }
+  // Slogan rule (headerItemRule.slogan, default OFF) — rendered by this sidecar too.
+  function readSlogan() {
+    var v = {}; try { v = (JSON.parse(localStorage.getItem('headerItemRule') || 'null') || {}).slogan || {}; } catch (_) {}
+    if (typeof v.on !== 'boolean') v.on = false;
+    return v;
   }
   function toHex(c) {
     var m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(c || '');
@@ -107,9 +125,31 @@
     return box;
   }
 
+  // slogan element finder (same logic as the colour controls)
+  function sloganEl() {
+    var paper = document.querySelector('.antcv-preview-paper'); if (!paper) return null;
+    return paper.querySelector('[data-antcv-cl-slogan-element]') || paper.querySelector('[title*="positioning line" i]') ||
+      (function () { var f = paper.querySelector('[data-antcv-cl-flow]'); return f ? f.querySelector('[contenteditable]:not([data-antcv-app-line])') : null; })();
+  }
+  function renderSloganRule() {
+    var el = sloganEl(); if (!el) return;
+    var s = readSlogan();
+    if (s.on) {
+      var pt = Number(s.pt); pt = (pt >= 0.25 && pt <= 4) ? pt : 0.75;
+      var px = Math.max(0.5, Math.round((pt * 4 / 3) * 2) / 2);
+      var c = (typeof s.color === 'string' && /^#?[0-9a-fA-F]{6}$/.test(s.color)) ? ('#' + s.color.replace('#', '')) : ruleColor(el);
+      el.style.setProperty('border-bottom', px + 'px solid ' + c, 'important');
+      el.style.setProperty('padding-bottom', '2px', 'important');
+      el.setAttribute('data-antcv-slogan-ruled', '1');
+    } else if (el.getAttribute('data-antcv-slogan-ruled')) {
+      el.style.removeProperty('border-bottom'); el.style.removeProperty('padding-bottom');
+      el.removeAttribute('data-antcv-slogan-ruled');
+    }
+  }
   var lastSig = null;
   function apply() {
     if (killed() || !editorActive()) return;
+    renderSloganRule();
     var el = appLine(); if (!el) return;
     renderRule(el);
     if (getComputedStyle(el).position === 'static') { try { el.style.position = 'relative'; } catch (_) {} }
@@ -124,7 +164,7 @@
   var deb = null;
   function schedule() { clearTimeout(deb); deb = setTimeout(apply, 150); }
   window.addEventListener('antcv:sections-updated', schedule);
-  window.addEventListener('storage', function (e) { if (!e || e.key === STORE || e.key == null) schedule(); });
+  window.addEventListener('storage', function (e) { if (!e || e.key === STORE || e.key === 'headerItemRule' || e.key == null) schedule(); });
   try { setInterval(apply, 1500); } catch (_) {}
   apply();
 

@@ -1166,7 +1166,10 @@ export function buildPayload({
     // Contact, none below Name. Store: localStorage 'headerItemRule' =
     // { name|specialisation|contact: { on, pt, color } }.
     header_rules: (() => {
-      const D = { name: { on: false, pt: 0.75, color: '' }, specialisation: { on: true, pt: 0.75, color: '' }, contact: { on: true, pt: 0.75, color: '' } };
+      // HEADER-RULE-DEFAULTS-002 (owner 2026-07-23): specialisation + contact rules
+      // are now DEFAULT-HIDDEN (were the copenhagen default-ON). Explicit store
+      // values still win; the worker receives explicit on/off either way (1:1).
+      const D = { name: { on: false, pt: 0.75, color: '' }, specialisation: { on: false, pt: 0.75, color: '' }, contact: { on: false, pt: 0.75, color: '' } };
       try {
         const raw = JSON.parse(localStorage.getItem('headerItemRule') || 'null');
         if (!raw || typeof raw !== 'object') return D;

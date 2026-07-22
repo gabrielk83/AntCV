@@ -59,11 +59,18 @@
       if (slog) { payload.meta.slogan_color = slog; payload.slogan_color = slog; changed = true; }
       if (app) { payload.meta.app_line_color = app; changed = true; }
     }
-    var ar = readJSON('antcv:applineRule') || {};
-    if (ar.on) {
-      if (!payload.meta || typeof payload.meta !== 'object') payload.meta = {};
-      payload.meta.app_line_rule = { on: true, color: hex6(ar.color) || app || spec || '', pt: (Number(ar.pt) || 0.75) };
-      changed = true;
+    // HEADER-RULE-DEFAULTS-002 (owner 2026-07-23): the application rule lives in
+    // headerItemRule.application (legacy antcv:applineRule as fallback) and is
+    // DEFAULT-VISIBLE; the slogan rule (headerItemRule.slogan) is default-hidden.
+    var hir = readJSON('headerItemRule') || {};
+    var ar = Object.assign({}, readJSON('antcv:applineRule') || {}, (hir.application && typeof hir.application === 'object') ? hir.application : {});
+    if (typeof ar.on !== 'boolean') ar.on = true;    // def-visible
+    if (!payload.meta || typeof payload.meta !== 'object') payload.meta = {};
+    payload.meta.app_line_rule = ar.on ? { on: true, color: hex6(ar.color) || app || spec || '', pt: (Number(ar.pt) || 0.75) } : { on: false };
+    changed = true;
+    var sr = (hir.slogan && typeof hir.slogan === 'object') ? hir.slogan : {};
+    if (sr.on === true) {
+      payload.meta.slogan_rule = { on: true, color: hex6(sr.color) || slog || '', pt: (Number(sr.pt) || 0.75) };
     }
     return changed;
   }

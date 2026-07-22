@@ -25485,10 +25485,20 @@ function buildLinearDocument(ctx) {
     if (__slogan && !__slogan.startsWith("[")) {
       const __sa = String(__m.slogan_align || "center").toLowerCase();
       const __sAlign = __sa === "left" ? AlignmentType.LEFT : __sa === "right" ? AlignmentType.RIGHT : AlignmentType.CENTER;
+      // HEADER-ITEM-RULE slogan leg (owner 2026-07-23): optional rule line below the
+      // slogan (meta.slogan_rule {on,color,pt}), mirroring app_line_rule. Default OFF.
+      const __sr = __m.slogan_rule;
+      const __srB = (__sr && __sr.on) ? (function () {
+        const _pt = Number(__sr.pt); const pt = (_pt >= 0.25 && _pt <= 4) ? _pt : 0.75;
+        const _c = (typeof __sr.color === "string" && /^[0-9a-f]{6}$/i.test(__sr.color)) ? __sr.color.toUpperCase()
+          : (__m.slogan_color ? sloganColorOnWhite(__m.slogan_color, style.mainHeadColor) : style.mainHeadColor);
+        return { border: { bottom: { color: _c, space: 4, style: BorderStyle.SINGLE, size: Math.max(2, Math.min(32, Math.round(pt * 8))) } } };
+      })() : {};
       bodyChildren.push(new Paragraph({
         alignment: __sAlign,
         spacing: { before: 0, after: 160, line: 240, lineRule: "auto" },
         keepNext: true,
+        ...__srB,
         children: [new TextRun({
           text: __slogan.toUpperCase(),
           bold: true,

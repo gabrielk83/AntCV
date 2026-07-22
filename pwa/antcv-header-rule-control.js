@@ -23,10 +23,17 @@
 
   var ACCENT = '#01B9BD';
   var KEY = 'headerItemRule';
+  // HEADER-RULE-DEFAULTS-002 (owner 2026-07-23): "specialization (def-hidden),
+  // contact (def-hidden), slogan (def-hidden), application (def-visible)".
+  // specialisation/contact flip from the old copenhagen default-ON to default-OFF;
+  // slogan + application join as first-class rule fields (application is no longer
+  // aliased to the specialisation slot — it rules the app-line below the slogan).
   var FIELDS = [
     { k: 'name', label: 'Name', defOn: false },
-    { k: 'specialisation', label: 'Specialization / Application', defOn: false },
+    { k: 'specialisation', label: 'Specialization', defOn: false },
     { k: 'contact', label: 'Contact', defOn: false },
+    { k: 'slogan', label: 'Cover letter slogan', defOn: false },
+    { k: 'application', label: 'Application line', defOn: true },
   ];
 
   function readStore() { try { var v = JSON.parse(localStorage.getItem(KEY) || 'null'); return v && typeof v === 'object' ? v : {}; } catch (_) { return {}; } }
@@ -83,8 +90,9 @@
   var FIELD_OF_LABEL = [
     [/^name/i, 'name'],
     [/^special/i, 'specialisation'],
-    [/^application/i, 'specialisation'],   // the Application line IS the specialisation slot
+    [/^application/i, 'application'],   // HEADER-RULE-DEFAULTS-002: its OWN rule (the app-line), no longer the spec slot
     [/^contact/i, 'contact'],
+    [/slogan/i, 'slogan'],
   ];
   // HEADER-RULE-DETECT-002 (owner DOM capture): the ROW text starts with the
   // move buttons, not the label — detect from the PANEL content first (the
@@ -94,10 +102,11 @@
       var pt = String(panel && panel.textContent || '');
       if (/full name/i.test(pt)) return 'name';
       var rt = String(row && row.textContent || '');
-      if (/special/i.test(rt) || /special/i.test(pt)) return 'specialisation';
-      if (/application/i.test(rt) || /application/i.test(pt)) return 'specialisation';
-      if (/contact/i.test(rt) || /contact/i.test(pt)) return 'contact';
-      if (/name/i.test(rt)) return 'name';
+      if (/slogan/i.test(rt) || /slogan/i.test(pt)) return 'slogan';
+      if (/application/i.test(rt) || /application/i.test(pt)) return 'application';
+      if (/special/i.test(rt) || /special/i.test(pt)) return 'specialisation';
+      if (/contact/i.test(rt) || /contact/i.test(pt)) return 'contact';
+      if (/name/i.test(rt)) return 'name';
     } catch (_) {}
     return null;
   }

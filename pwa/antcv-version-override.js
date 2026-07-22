@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.2501-contact-collapse-fix';
+  const TARGET_VERSION = '1.51.2520-application-line';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.2501-contact-collapse-fix',
     '1.51.2480-application-line',
     '1.51.2461-cl-no-photo',
     '1.51.2460-rowfit-marker-underline',

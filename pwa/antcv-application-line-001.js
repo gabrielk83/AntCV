@@ -27,7 +27,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.51.2480-application-line';
+  var VERSION = '1.51.2520-application-line';
   if (window.__antcvApplicationLine === VERSION) return;
   window.__antcvApplicationLine = VERSION;
 
@@ -76,6 +76,36 @@
     return t.trim();
   }
 
+  function curSpec() {
+    try { var pi = JSON.parse(get('personalInfo', '{}')) || {}; pi = pi.personalInfo || pi; return String(pi.specialization || '').trim(); }
+    catch (_) { return ''; }
+  }
+  // HEADING↔SPEC SWAP (owner 2026-07-22): the CL heading currently renders its
+  // subtitle as "Application: [role]". The owner wants the SPECIALIZATION in the
+  // heading, and the application line moved OUT of the heading (under the slogan,
+  // added separately below). So on the CL we rewrite that heading subtitle
+  // element — a leaf whose text starts with "Application" and carries the role —
+  // to the specialization. React only reverts it on an actual re-render (rare when
+  // idle), and apply() re-runs on the interval, so it holds. Degrades to a no-op
+  // if the app.src.js CL header is later changed to render the spec itself.
+  function swapHeadingToSpec(paper) {
+    var spec = curSpec();
+    if (!spec) return;
+    var meta = {}; try { meta = JSON.parse(get('meta', '{}')) || {}; } catch (_) {}
+    var frag = String(meta.role || '').trim().slice(0, 15);
+    var nodes = paper.querySelectorAll('div,p');
+    for (var i = 0; i < nodes.length; i++) {
+      var e = nodes[i];
+      if (e.hasAttribute(MARK)) continue;
+      if (e.getElementsByTagName('*').length !== 0) continue; // leaf only
+      var t = (e.textContent || '').trim();
+      if (!/^Application\b/i.test(t)) continue;
+      if (frag && t.indexOf(frag) === -1) continue; // must be THIS app's role subtitle
+      if (t === spec) continue;                      // already swapped
+      e.textContent = spec;
+    }
+  }
+
   // A header CONTACT band: the header-level element that carries the candidate's
   // contact line (email + phone). Robust marker — present on both CV and CL, and
   // not tied to a churning class name.
@@ -120,9 +150,12 @@
   function apply() {
     if (disabled()) { removeAll(); return; }
     var txt = appLineText();
+    var cl = isCL();
     var papers = document.querySelectorAll('.antcv-preview-paper');
     for (var i = 0; i < papers.length; i++) {
       var paper = papers[i];
+      // CL: swap the heading "Application: [role]" subtitle for the specialization.
+      if (cl) { try { swapHeadingToSpec(paper); } catch (_) {} }
       var existing = paper.querySelector('[' + MARK + ']');
       if (!txt) { if (existing && existing.parentNode) existing.parentNode.removeChild(existing); continue; }
       // Steady-state fast path: the line is already present and correct, so skip

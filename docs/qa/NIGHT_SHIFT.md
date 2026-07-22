@@ -45,7 +45,6 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mrwbhn6v_i2ha","started":"2026-07-22T16:49:09.803Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.2761-1.51.2780","task":"pink section highlight: module-level latch (storm/fast-fail proof)","beat":"2026-07-22T16:49:09.990Z"}
 {"id":"sh_mrwbrn0q_4edk","started":"2026-07-22T16:56:56.147Z","host":"GabyPC2","worktree":null,"branch":"claude/optimistic-jang-7b06fe","range":"1.51.2781-1.51.2800","task":"HEADER-COLOR-CONTROLS-001 per-element colour swatches","beat":"2026-07-22T16:56:57.365Z"}
 {"id":"sh_mrwi08k6_99dl","started":"2026-07-22T19:51:35.005Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.2921-1.51.2940","task":"LINE-DISTRIBUTION-001: measure-based bidirectional per-row Fit-it","beat":"2026-07-22T19:51:35.315Z"}
-{"id":"sh_mrwl20h8_a6vd","started":"2026-07-22T21:16:56.694Z","host":"GabyPC2","worktree":null,"branch":"claude/determined-cannon-8d4c64","range":"1.51.3041-1.51.3060","task":"COPENHAGEN-STAGE2-TABLE-RENDER: competency table cyan frame + centered header + justified rows (preview + export HTML + docx-worker)","beat":"2026-07-22T21:16:57.829Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

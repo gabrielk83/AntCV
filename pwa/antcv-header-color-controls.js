@@ -1,73 +1,120 @@
 /* antcv-header-color-controls.js — HEADER-COLOR-CONTROLS-001 (owner 2026-07-22)
  * ===========================================================================
- * Owner: "the side panel needs to also control the colour of the name,
- * specialisation, contact, slogan and application as part of their control
- * buttons." This injects a small COLOUR SWATCH into each candidate row's control
- * cluster (the ↔◀✎ group). Clicking it opens the native colour picker; the
- * chosen colour is written to the per-element override store
- * `antcv:headerElemColors` via the HEADER-ELEM-COLORS-001 engine
- * (AntcvHeaderColors.set), which applies it live to the band element. RIGHT-CLICK
- * a swatch to CLEAR the override (revert to the brand / default colour).
+ * Owner: "the side panel needs to control the colour of name / specialisation /
+ * contact / slogan / application as part of their control buttons." Injects a
+ * PLAIN colour SWATCH + a ↺ RESET button into each candidate row's control
+ * cluster (and the slogan editor row / the app-line element).
  *
- * Rows covered: name, specialisation (= application on the CL), contact. (Slogan
- * + the application line get their own swatches in a follow-up — they are not
- * candidate-panel rows.)
+ * The swatch shows the element's ACTUAL current colour (solid — no rainbow
+ * "kaleidoscope" look, per owner 2026-07-22). Left-click opens the native colour
+ * picker; the chosen colour is written to `antcv:headerElemColors` via the
+ * HEADER-ELEM-COLORS-001 engine (AntcvHeaderColors.set), which applies it live.
+ * The ↺ button (right next to the swatch) resets that element to the brand /
+ * visual-style default (clears its override); it's active only while an override
+ * is set.
  *
- * SAFETY: the swatch is appended to the row's LAST child (the control cluster);
- * verified live that this does NOT break React's event handling (contact still
- * expands after injection). Editor-gated + light re-inject on
+ * SAFETY: appended to the row's control cluster; verified this does NOT break
+ * React events (contact still expands). Editor-gated + light re-inject on
  * `antcv:sections-updated` + a 1.5s poll (NO global body observer — avoids the
- * ANALYSIS-HEADER React-event regression). Idempotent (one swatch per row).
- * Kill-switch: localStorage['antcv:disable-header-color-controls']='1'.
+ * ANALYSIS-HEADER regression). Idempotent. Kill: localStorage['antcv:disable-header-color-controls']='1'.
  */
 (function () {
   'use strict';
   if (window.__antcvHeaderColorControls) return;
-  window.__antcvHeaderColorControls = '1.0';
+  window.__antcvHeaderColorControls = '1.1-plain-reset';
 
   var KILL = 'antcv:disable-header-color-controls';
   var MARK = 'data-antcv-color-ctrl';
   var STORE = 'antcv:headerElemColors';
-  // candidate-row key -> engine element key
   var MAP = { name: 'name', specialisation: 'spec', contact: 'contact' };
 
   function killed() { try { return localStorage.getItem(KILL) === '1'; } catch (_) { return false; } }
   function editorActive() { try { var v = window.__antcvView; return !(v === 'upload' || v === 'input' || v === 'generating'); } catch (_) { return true; } }
   function override(elem) { try { var o = JSON.parse(localStorage.getItem(STORE) || '{}'); return o[elem] || ''; } catch (_) { return ''; } }
 
-  function paintSwatch(btn, elem) {
-    var c = override(elem);
-    // solid colour when overridden; a rainbow hint when following brand/default.
-    btn.style.background = c || 'conic-gradient(from 0deg, red, orange, yellow, lime, cyan, blue, magenta, red)';
+  // ---- resolve the live DOM element for each header element (mirrors the engine) ----
+  function bandParts() {
+    var band = document.querySelector('.antcv-preview-paper [data-antcv-candidate-band="1"]');
+    if (!band) return {};
+    var divs = Array.prototype.slice.call(band.querySelectorAll(':scope > div'))
+      .filter(function (d) { return Array.prototype.some.call(d.childNodes, function (n) { return n.nodeType === 3 && n.textContent.trim(); }); });
+    var contact = divs.filter(function (d) { return /[☎🔗⌂✉@]/.test(d.textContent) || /\d[\d\s]{6,}/.test(d.textContent); })[0];
+    var name = divs[0];
+    var spec = divs.filter(function (d) { return d !== name && d !== contact; })[0];
+    return { name: name, spec: spec, contact: contact };
+  }
+  function sloganEl() {
+    var paper = document.querySelector('.antcv-preview-paper'); if (!paper) return null;
+    return paper.querySelector('[data-antcv-cl-slogan-element]') || paper.querySelector('[title*="positioning line" i]') ||
+      (function () { var f = paper.querySelector('[data-antcv-cl-flow]'); return f ? f.querySelector('[contenteditable]:not([data-antcv-app-line])') : null; })();
+  }
+  function elemNode(elem) {
+    if (elem === 'slogan') return sloganEl();
+    if (elem === 'application') return document.querySelector('.antcv-preview-paper [data-antcv-app-line]');
+    return bandParts()[elem] || null;
+  }
+  function toHex(c) {
+    var m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(c || '');
+    if (!m) return (/^#[0-9a-f]{6}$/i.test(c || '') ? c : '');
+    function h(n) { return ('0' + Number(n).toString(16)).slice(-2); }
+    return '#' + h(m[1]) + h(m[2]) + h(m[3]);
+  }
+  // The swatch shows the element's ACTUAL current colour (override, else computed).
+  function currentColor(elem) {
+    var o = override(elem); if (o) return o;
+    try { var n = elemNode(elem); if (n) { var hx = toHex(getComputedStyle(n).color); if (hx) return hx; } } catch (_) {}
+    return '#888888';
   }
 
-  function makeSwatch(elem, label) {
+  function paintSwatch(btn, elem) { btn.style.background = currentColor(elem); }
+  function paintReset(rst, elem) {
+    var on = !!override(elem);
+    rst.disabled = !on;
+    rst.style.opacity = on ? '1' : '0.35';
+    rst.style.cursor = on ? 'pointer' : 'default';
+    rst.style.color = on ? '#e0e0e0' : '#888';
+  }
+
+  function makeControl(elem, label) {
+    var frag = document.createDocumentFragment();
+    // plain solid swatch = the element's current colour
     var btn = document.createElement('button');
-    btn.type = 'button';
-    btn.setAttribute(MARK, elem);
-    btn.title = 'Colour of the ' + label + ' line — click to pick, right-click to reset to brand';
-    btn.style.cssText = 'width:15px;height:15px;min-width:15px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.55);cursor:pointer;padding:0;margin-left:3px;flex:0 0 auto;box-sizing:border-box;';
+    btn.type = 'button'; btn.setAttribute(MARK, elem);
+    btn.title = 'Colour of the ' + label + ' line — click to pick';
+    btn.style.cssText = 'width:15px;height:15px;min-width:15px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.55);cursor:pointer;padding:0;margin-left:4px;flex:0 0 auto;box-sizing:border-box;';
     paintSwatch(btn, elem);
     var inp = document.createElement('input');
     inp.type = 'color';
     inp.style.cssText = 'position:fixed;left:-9999px;top:0;width:0;height:0;opacity:0;pointer-events:none;';
-    btn.addEventListener('click', function (e) {
-      e.preventDefault(); e.stopPropagation();
-      inp.value = override(elem) || '#ffffff';
-      inp.click();
-    });
-    btn.addEventListener('contextmenu', function (e) {
+    btn.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); inp.value = currentColor(elem); inp.click(); });
+    inp.addEventListener('input', function () { try { window.AntcvHeaderColors && window.AntcvHeaderColors.set(elem, inp.value); } catch (_) {} paintSwatch(btn, elem); paintReset(rst, elem); });
+    // ↺ reset-to-brand button, right next to the swatch
+    var rst = document.createElement('button');
+    rst.type = 'button'; rst.setAttribute(MARK + '-reset', elem);
+    rst.title = 'Reset the ' + label + ' colour to the brand / visual-style default';
+    rst.textContent = '↺';
+    rst.style.cssText = 'font-size:11px;line-height:1;background:none;border:none;padding:0 1px;margin-left:1px;flex:0 0 auto;';
+    rst.addEventListener('click', function (e) {
       e.preventDefault(); e.stopPropagation();
       try { window.AntcvHeaderColors && window.AntcvHeaderColors.set(elem, ''); } catch (_) {}
-      paintSwatch(btn, elem);
+      paintSwatch(btn, elem); paintReset(rst, elem);
     });
-    inp.addEventListener('input', function () {
-      try { window.AntcvHeaderColors && window.AntcvHeaderColors.set(elem, inp.value); } catch (_) {}
-      paintSwatch(btn, elem);
-    });
-    var wrap = document.createDocumentFragment();
-    wrap.appendChild(btn); wrap.appendChild(inp);
-    return { frag: wrap, btn: btn };
+    paintReset(rst, elem);
+    frag.appendChild(btn); frag.appendChild(inp); frag.appendChild(rst);
+    return { frag: frag, btn: btn, rst: rst };
+  }
+
+  function ensureInto(container, elem, label) {
+    if (!container) return;
+    var existing = container.querySelector('[' + MARK + '="' + elem + '"]');
+    if (existing) {
+      paintSwatch(existing, elem);
+      var er = container.querySelector('[' + MARK + '-reset="' + elem + '"]');
+      if (er) paintReset(er, elem);
+      return;
+    }
+    var c = makeControl(elem, label);
+    container.appendChild(c.frag);
   }
 
   function apply() {
@@ -76,51 +123,34 @@
       var row = document.querySelector('.antcv-editor-side-panel [data-candidate-key="' + rowKey + '"], .antcv-mobile-bottom-panel [data-candidate-key="' + rowKey + '"], [data-antcv-app-panel] [data-candidate-key="' + rowKey + '"]') ||
         document.querySelector('[data-candidate-key="' + rowKey + '"]');
       if (!row) return;
-      var cluster = row.lastElementChild;
-      if (!cluster) return;
-      var existing = cluster.querySelector('[' + MARK + ']');
-      if (existing) { paintSwatch(existing, MAP[rowKey]); return; }   // keep colour in sync, don't dup
-      var s = makeSwatch(MAP[rowKey], rowKey);
-      cluster.appendChild(s.frag);
+      ensureInto(row.lastElementChild, MAP[rowKey], rowKey);
     });
     applySlogan();
     applyAppLine();
   }
 
-  // SLOGAN swatch: the "COVER LETTER SLOGAN" editor row (BODY section) — a flex
-  // row whose label SPAN reads COVER LETTER SLOGAN and which carries a 👁 control.
   function applySlogan() {
-    var label = null, all = document.querySelectorAll('.antcv-editor-side-panel span, .antcv-mobile-bottom-panel span, [data-antcv-app-panel] span, span');
-    for (var i = 0; i < all.length; i++) {
-      var t = (all[i].textContent || '').trim();
-      if (t === 'COVER LETTER SLOGAN' || /^COVER LETTER SLOGAN$/i.test(t)) { label = all[i]; break; }
-    }
+    var label = null, all = document.querySelectorAll('span');
+    for (var i = 0; i < all.length; i++) { if ((all[i].textContent || '').trim() === 'COVER LETTER SLOGAN') { label = all[i]; break; } }
     if (!label) return;
     var row = label;
     for (var d = 0; d < 5 && row.parentElement; d++) { if (getComputedStyle(row).display === 'flex' && row.querySelector('button')) break; row = row.parentElement; }
     if (getComputedStyle(row).display !== 'flex') return;
-    if (row.querySelector('[' + MARK + '="slogan"]')) { paintSwatch(row.querySelector('[' + MARK + '="slogan"]'), 'slogan'); return; }
-    var s = makeSwatch('slogan', 'slogan');
-    row.appendChild(s.frag);
+    ensureInto(row, 'slogan', 'slogan');
   }
 
-  // APPLICATION swatch: the V5 application line renders in the PREVIEW as
-  // [data-antcv-app-line] (below the slogan) and isn't always present. Attach a
-  // small swatch as an absolutely-positioned control at its right edge (NOT inside
-  // the text flow), only when it exists. contenteditable=false so it never edits.
   function applyAppLine() {
     var el = document.querySelector('.antcv-preview-paper [data-antcv-app-line]');
     if (!el) return;
-    if (el.querySelector('[' + MARK + '="application"]')) { paintSwatch(el.querySelector('[' + MARK + '="application"]'), 'application'); return; }
+    if (el.querySelector('[' + MARK + '="application"]')) { var b = el.querySelector('[' + MARK + '="application"]'); paintSwatch(b, 'application'); var r = el.querySelector('[' + MARK + '-reset="application"]'); if (r) paintReset(r, 'application'); return; }
     if (getComputedStyle(el).position === 'static') { try { el.style.position = 'relative'; } catch (_) {} }
-    var s = makeSwatch('application', 'application');
-    s.btn.setAttribute('contenteditable', 'false');
-    s.btn.style.position = 'absolute';
-    s.btn.style.right = '-20px';
-    s.btn.style.top = '50%';
-    s.btn.style.transform = 'translateY(-50%)';
-    s.btn.style.margin = '0';
-    el.appendChild(s.frag);
+    var c = makeControl('application', 'application');
+    [c.btn, c.rst].forEach(function (b) { b.setAttribute('contenteditable', 'false'); });
+    var box = document.createElement('span');
+    box.setAttribute('contenteditable', 'false');
+    box.style.cssText = 'position:absolute;right:-42px;top:50%;transform:translateY(-50%);display:inline-flex;align-items:center;white-space:nowrap;';
+    box.appendChild(c.frag);
+    el.appendChild(box);
   }
 
   var deb = null;
@@ -130,6 +160,6 @@
   try { setInterval(apply, 1500); } catch (_) {}
   apply();
 
-  window.AntcvHeaderColorControls = { version: '1.0', apply: apply };
-  try { console.debug('[header-color-controls] installed'); } catch (_) {}
+  window.AntcvHeaderColorControls = { version: '1.1-plain-reset', apply: apply };
+  try { console.debug('[header-color-controls] installed (plain + reset)'); } catch (_) {}
 })();

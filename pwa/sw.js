@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.2821-brand-reset-btn';
+const CACHE = 'antcv-1.51.2841-swatch-plain-reset';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

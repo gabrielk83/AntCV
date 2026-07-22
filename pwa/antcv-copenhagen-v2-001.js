@@ -50,6 +50,31 @@
   function isBridge() {
     try { return !!document.querySelector('.antcv-preview-paper [data-antcv-bridge-spacer]'); } catch (_) { return false; }
   }
+  // Owner-tunable photo offset. Default dx=20 dy=6 (measured). AntcvCopenhagenV2.photo(dx,dy) overrides.
+  function photoOffset() {
+    try {
+      var raw = localStorage.getItem('antcv:cph-photo');
+      if (raw) { var p = raw.split(',').map(function (n) { return parseFloat(n); }); if (p.length === 2 && !isNaN(p[0]) && !isNaN(p[1])) return { dx: p[0], dy: p[1] }; }
+    } catch (_) {}
+    return { dx: 20, dy: 6 };
+  }
+  // The candidate-band photo is float:left OR float:right depending on placement.
+  // CSS can't branch on computed float, so we read it here and emit the matching
+  // sign: left-floated -> move left (-dx); right-floated -> move right (+dx). dy
+  // is always down (+). Falls back to targeting both floats if none is on screen.
+  function photoNudgeCSS() {
+    var o = photoOffset();
+    var floatDir = '';
+    try {
+      var img = document.querySelector('.antcv-preview-paper [data-antcv-candidate-band="1"] img');
+      if (img) floatDir = getComputedStyle(img).cssFloat || getComputedStyle(img).float || '';
+    } catch (_) {}
+    var sel = '.antcv-preview-paper [data-antcv-candidate-band="1"] img';
+    if (floatDir === 'right') return sel + '{transform:translate(' + o.dx + 'px,' + o.dy + 'px) !important;}';
+    if (floatDir === 'left') return sel + '{transform:translate(' + (-o.dx) + 'px,' + o.dy + 'px) !important;}';
+    // Unknown (not yet rendered): leave the current on-screen float as left default.
+    return sel + '{transform:translate(' + (-o.dx) + 'px,' + o.dy + 'px) !important;}';
+  }
   function buildCSS() {
     var side = sidebarSide();
     var css =
@@ -68,13 +93,14 @@
         'margin-top:7.4px !important;margin-bottom:7.4px !important;margin-' + side + ':7.4px !important;' +
         'box-sizing:border-box !important;}';
     }
-    // V3 photo-corner alignment (owner 2026-07-21, measured): the main-left/
-    // main-right floated photo sits ~6px too high and ~20px off toward the
-    // centre. Nudge via transform (visual only, does not disturb the wrap):
-    // main-left -> down 6, left 20; main-right -> down 6, right 20. Pre-existing
-    // offset; the [data-antcv-main-photo] div's direct-child <img> IS the photo.
-    css += '.antcv-preview-paper [data-antcv-main-photo="main-left"] > img{transform:translate(-20px,6px) !important;}';
-    css += '.antcv-preview-paper [data-antcv-main-photo="main-right"] > img{transform:translate(20px,6px) !important;}';
+    // V3 photo-corner alignment (owner 2026-07-21, live-probed): the photo that
+    // needs aligning is the one INSIDE the candidate band (heading-left), a
+    // float:left/right <img> under [data-antcv-candidate-band] — NOT the
+    // main-column [data-antcv-main-photo] modes. It seats ~6px too high and ~20px
+    // toward the centre. Nudge via transform (visual only, keeps the wrap): a
+    // left-floated photo -> left dx + down dy; right-floated -> right dx + down dy.
+    // Tunable live via AntcvCopenhagenV2.photo(dx,dy) (owner dials, we bake).
+    css += photoNudgeCSS();
     return css;
   }
 
@@ -110,6 +136,13 @@
     version: window.__antcvCopenhagenV2,
     on: function () { try { localStorage.setItem(FLAG, '1'); } catch (_) {} apply(); },
     off: function () { try { localStorage.setItem(FLAG, '0'); } catch (_) {} apply(); },
+    // Live photo tuner: AntcvCopenhagenV2.photo(20,6) — dx toward the corner, dy
+    // down. Re-applies immediately so the owner can dial it and report the numbers.
+    photo: function (dx, dy) {
+      try { localStorage.setItem('antcv:cph-photo', (dx == null ? 20 : dx) + ',' + (dy == null ? 6 : dy)); } catch (_) {}
+      apply();
+      try { return 'photo offset dx=' + dx + ' dy=' + dy + ' — reload not needed'; } catch (_) {}
+    },
     _apply: apply
   };
 })();

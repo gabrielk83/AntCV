@@ -743,6 +743,17 @@ export function buildPayload({
       .trim();
   };
 
+  // CL-APP-SUBTITLE-NO-DOUBLE-COMPANY-001 (owner 2026-07-22): strip a trailing
+  // "- <company>" from the role so the "Application: <role> — <company>" band never
+  // doubles the employer (the scraped jd_role often bakes it into the position name).
+  // Mirrors app.src.js __antcvSubtitleRoleCo so preview == export.
+  const __stripRoleCo = (role, company) => {
+    const c = String(company == null ? '' : company).trim();
+    let r = String(role == null ? '' : role).trim();
+    if (c) { const esc = c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); r = r.replace(new RegExp('\\s*[-–—]\\s*' + esc + '\\s*$', 'i'), '').trim(); }
+    return r;
+  };
+
   // Cover letters use a synthesised "Application: <role> — <company>"
   // line in the candidate header band — it's the slot the CV uses for
   // its specialisation. The PWA preview generates this dynamically; the
@@ -774,10 +785,10 @@ export function buildPayload({
       // so a Chinese CV band carries no English furniture.
       const isZH2 = (language === 'zh');
       const coLabel = cvCo && !/^(unsolicited|open application|n\/a)$/i.test(cvCo) ? cvCo : (isDA2 ? 'Uopfordret' : (isZH2 ? '主动申请' : 'Unsolicited'));
-      return (isDA2 ? 'Ansøgning: ' : (isZH2 ? '申请: ' : 'Application: ')) + cvRole + ' \u2014 ' + coLabel;
+      return (isDA2 ? 'Ansøgning: ' : (isZH2 ? '申请: ' : 'Application: ')) + __stripRoleCo(cvRole, cvCo) + ' \u2014 ' + coLabel;
     }
-    const role = stripFounder((meta.role || '').trim());
     const company = (meta.company || '').trim();
+    const role = __stripRoleCo(stripFounder((meta.role || '').trim()), company);
     const isDA = (language === 'da');
     const isZH = (language === 'zh');   // SUBTITLE-ZH-001
     const prefix = isDA ? 'Ansøgning: ' : (isZH ? '申请: ' : 'Application: ');

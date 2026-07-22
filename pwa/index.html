@@ -367,7 +367,7 @@
   })();
 </script>
 <script type="module">
-  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.1544-brand-parity';
+  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.2230-cl-subtitle-no-dup-company';
   window.exportDocxViaWorker = exportDocxViaWorker;
   window.ANTCV_VERSION = '1.51.2310-sidebar-ink';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
@@ -408,7 +408,7 @@
         auth.src = 'antcv-auth.js?v=1.51.92-analytics-401-scope';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.51.2310-sidebar-ink';
+          app.src = 'app.js?v=1.51.2230-cl-subtitle-no-dup-company';
           app.onload = function(){
             var vo = document.createElement('script');
             vo.src = 'antcv-version-override.js?v=1.51.2310-sidebar-ink';

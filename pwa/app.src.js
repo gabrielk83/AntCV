@@ -2414,6 +2414,19 @@
     } catch (_) { return String(s == null ? "" : s); }
   }
   try { if (typeof window !== "undefined") { window.__antcvSloganCap = __antcvSloganCap; window.__antcvSloganDeDangle = __antcvSloganDeDangle; } } catch (_) {}
+  // CL-APP-SUBTITLE-NO-DOUBLE-COMPANY-001 (owner 2026-07-22, 3Shape screenshot): the
+  // "Application: <role> - <company>" band appended the company to a role that ALREADY
+  // ended in "- <company>" (the scraped jd_role often bakes the employer into the
+  // position name), giving "… - 3Shape - 3Shape". Compose the role+company line through
+  // this helper: strip a trailing separator+company from the role FIRST (only when that
+  // tail is exactly the company, so a legit role word is never touched), then join once.
+  function __antcvSubtitleRoleCo(role, company) {
+    var c = String(company == null ? "" : company).trim();
+    var r = String(role == null ? "" : role).trim();
+    if (c) { var esc = c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); r = r.replace(new RegExp("\\s*[-–—]\\s*" + esc + "\\s*$", "i"), "").trim(); }
+    return r && c ? r + " - " + c : (r || c || "");
+  }
+  try { if (typeof window !== "undefined") window.__antcvSubtitleRoleCo = __antcvSubtitleRoleCo; } catch (_) {}
   // PALETTE-RESOLVER-A2 (STABLE-PALETTE stage A2, docs/plan/STABLE_PALETTE_AND_LOAD_FIDELITY.md):
   // the ONE unconditional paper CSS-var bridge. Branded app -> the brand slots (as before);
   // UNBRANDED app -> the active package's styleConfig (the SAME palette the export band uses),
@@ -29679,7 +29692,7 @@
             O = "topbar" === (T.contact || "topbar"),
             _ = I
               ? y
-                ? `<div style="font-family:'Cabin',${s};font-size:${qo}pt;color:#fff;text-align:${E("specialisation")};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2pt;line-height:1.1">${io.role || io.company ? `${o("Application:")} ${io.role || ""}${io.role && io.company ? " - " : ""}${io.company || ""}` : e ? "Ansøgning: [rolle og virksomhed]" : "Application: [role and company]"}</div>`
+                ? `<div style="font-family:'Cabin',${s};font-size:${qo}pt;color:#fff;text-align:${E("specialisation")};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2pt;line-height:1.1">${io.role || io.company ? `${o("Application:")} ${__antcvSubtitleRoleCo(io.role, io.company)}` : e ? "Ansøgning: [rolle og virksomhed]" : "Application: [role and company]"}</div>`
                 : `<div style="font-family:'Cabin',${s};font-size:${qo}pt;color:#fff;text-align:${E("specialisation")};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2pt;line-height:1.1">${(io.subtitle || (e ? "[Specialisering — 1–3 fokusområder, adskilt med •]" : "[Specialisation — 1–3 focus areas, separated by •]")).replace(/\s*\|\s*/g, " • ")}</div>`
               : "",
             N = A
@@ -45254,7 +45267,7 @@
           h = d
             ? "cl" === Lt
               ? io.role || io.company
-                ? `${ye("Application:", je)} ${io.role || ""}${io.role && io.company ? " - " : ""}${io.company || ""}`
+                ? `${ye("Application:", je)} ${__antcvSubtitleRoleCo(io.role, io.company)}`
                 : f
               : io.subtitle || g
             : "",

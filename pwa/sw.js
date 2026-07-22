@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.2841-swatch-plain-reset';
+const CACHE = 'antcv-1.51.2861-appline-rule';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',
@@ -67,6 +67,7 @@ const SHELL = [
   './antcv-cl-no-photo-001.js',
   './antcv-header-elem-colors.js',
   './antcv-header-color-controls.js',
+  './antcv-appline-rule.js',
   './antcv-pdf-preview-gate.js',
   './antcv-tone-helper.js',
   './antcv-jd-image-ocr.js',

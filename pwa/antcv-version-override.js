@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.2841-swatch-plain-reset';
+  const TARGET_VERSION = '1.51.2861-appline-rule';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.2841-swatch-plain-reset',
     '1.51.2821-brand-reset-btn',
     '1.51.2800-pink-latch',
     '1.51.2786-app-save-guard2',

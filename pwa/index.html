@@ -369,7 +369,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.2741-cl-appline-native';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.2841-swatch-plain-reset';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.2861-appline-rule';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -411,7 +411,7 @@
           app.src = 'app.js?v=1.51.2800-pink-latch';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.2841-swatch-plain-reset';
+            vo.src = 'antcv-version-override.js?v=1.51.2861-appline-rule';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -793,6 +793,8 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-header-elem-colors.js?v=1.51.2601-header-elem-colors" defer></script>
 <!-- HEADER-COLOR-CONTROLS-001: per-element colour swatch in each candidate row's control cluster -->
 <script src="antcv-header-color-controls.js?v=1.51.2841-swatch-plain-reset" defer></script>
+<!-- APPLINE-RULE-001 (#6): rule under the application line — visible/colour/thickness control -->
+<script src="antcv-appline-rule.js?v=1.51.2861-appline-rule" defer></script>
 <!-- v1.50.159: sidebar-bg tokenization — recolours the preview sidebar per visual
      style (var(--package-base) cascade), matching the DOCX. Companion to
      preview-header-tokens (which deliberately skips the sidebar). -->

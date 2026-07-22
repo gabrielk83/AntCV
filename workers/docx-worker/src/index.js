@@ -25504,8 +25504,12 @@ function buildLinearDocument(ctx) {
       }));
     }
   }
-  const photoInHeaderCL = maybeBuildPhotoFor(ctx, "header");
-  const photoInMainCL = maybeBuildPhotoFor(ctx, "main");
+  // CL-NO-PHOTO-001 (owner 2026-07-22): the cover letter must NOT show the
+  // candidate headshot — the Ibsen CL_FIX reference carries only the signature
+  // (a separate image), no photo. buildLinearDocument is CL-only, so suppress
+  // both photo placements here; the signature is unaffected.
+  const photoInHeaderCL = null;
+  const photoInMainCL = null;
   if (photoInHeaderCL) {
     const headerInnerW = PAGE_W - 720;
     const wrappedHeader = buildPhotoRowTable(ctx, photoInHeaderCL, headerCell.slice(), headerInnerW);

@@ -25,7 +25,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.2359-cl-skeleton-seed-storm';
+  var VERSION = '1.51.2641-cl-v5-why-roleview';
   if (window.__antcvNordicClOrder971 === VERSION) return;
   window.__antcvNordicClOrder971 = VERSION;
 
@@ -306,6 +306,45 @@
   // flag; a manual choice persists across reloads (that is the point — the move must stay).
   function orderManual() { try { var v = localStorage.getItem('antcv:cl-order-manual'); return v === '1' || v === 'true'; } catch (_) { return false; } }
 
+  // CL-V5-WHY-LEADIN-001 + CL-V5-ROLEVIEW-VISIBLE-001 (owner 2026-07-22):
+  //  (1) the WHY lead-in label is "Why this company and position" (owner reword). Converge the
+  //      known DEFAULT variants ("Why this position", "Why this company and role") on existing
+  //      docs; NEVER touch a custom label the user typed.
+  //  (2) role_view ("How I see the role") was inserted by the migration but its lead sentence is
+  //      empty, so the preview hid the whole section (owner: "I do not see it in-vivo"). Seed the
+  //      lead sentence when empty/placeholder so the SECTION RENDERS (heading + intro) even before
+  //      generation fills the three employer-priority bullets. Real content is never overwritten.
+  var WHY_LEADIN = 'Why this company and position';
+  var WHY_DEFAULTS = { 'why this position': 1, 'why this company and role': 1, 'why this company and position': 1 };
+  var ROLE_VIEW_LEAD = 'The work appears to centre on three connected priorities:';
+  function normalizeV5(list) {
+    if (!Array.isArray(list)) return { changed: false, list: list };
+    var changed = false;
+    var out = list.map(function (s) {
+      if (!s || !Array.isArray(s.items) || !s.items.length) return s;
+      if (s.id === 'why') {
+        var lead = s.items[0]; if (!lead || typeof lead !== 'object') return s;
+        var cur = String(lead.b == null ? '' : lead.b).trim();
+        if (WHY_DEFAULTS[cur.toLowerCase()] && cur !== WHY_LEADIN) {
+          var it = s.items.slice(); it[0] = Object.assign({}, lead, { b: WHY_LEADIN });
+          changed = true; return Object.assign({}, s, { items: it });
+        }
+        return s;
+      }
+      if (s.id === 'role_view') {
+        var l0 = s.items[0]; if (!l0 || typeof l0 !== 'object') return s;
+        var t = String(l0.t == null ? '' : l0.t).trim();
+        if (!t || /^\[/.test(t)) {                       // empty or bracketed placeholder -> seed
+          var it2 = s.items.slice(); it2[0] = Object.assign({}, l0, { t: ROLE_VIEW_LEAD });
+          changed = true; return Object.assign({}, s, { items: it2 });
+        }
+        return s;
+      }
+      return s;
+    });
+    return { changed: changed, list: out };
+  }
+
   function run() {
     try {
       if (disabled() || !isNordicMinimal()) return;
@@ -317,6 +356,8 @@
       var b = bringBullets(a.list);
       var g = contributeGoal(b.list);
       var sd = seedInstructions(g.list);
+      var nv = normalizeV5(sd.list);
+      sd = { changed: sd.changed || nv.changed, list: nv.list };
       if (!m.changed && !a.changed && !b.changed && !g.changed && !sd.changed) return;
       secs.cl = sd.list;
       localStorage.setItem('sections', JSON.stringify(secs));
@@ -328,5 +369,5 @@
   // Run after the per-section converters settle (they use 0/300/900/2000 + late timers),
   // and on later windows to catch a cloud-restore / regen that rewrites cl.
   [350, 1100, 2600, 5000, 9000].forEach(function (ms) { setTimeout(run, ms); });
-  window.AntcvNordicClOrder = { version: VERSION, run: run, ORDER: ORDER, migrateV5: migrateV5, bringBullets: bringBullets, reorder: reorder, isNordicMinimal: isNordicMinimal, foundationKeep: foundationKeep };
+  window.AntcvNordicClOrder = { version: VERSION, run: run, ORDER: ORDER, migrateV5: migrateV5, bringBullets: bringBullets, reorder: reorder, isNordicMinimal: isNordicMinimal, foundationKeep: foundationKeep, normalizeV5: normalizeV5 };
 })();

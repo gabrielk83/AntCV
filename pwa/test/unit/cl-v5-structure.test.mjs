@@ -278,3 +278,40 @@ test('a HALF-filled who does not release foundation — no flip-flop between loa
   assert.equal(out.changed, true, 'kept visible: Professional summary is still a placeholder');
   assert.equal(out.list.find((s) => s.id === 'foundation').on, true);
 });
+
+// ---------------------------------------- CL-V5-WHY-LEADIN-001 + ROLEVIEW-VISIBLE-001
+test('normalizeV5 rewords the why lead-in default variants to "Why this company and position"', () => {
+  const api = loadSidecar({});
+  const cl = [
+    { id: 'why', type: 'rich_block', items: [{ b: 'Why this company and role', t: 'body' }] },
+  ];
+  const out = api.normalizeV5(cl);
+  assert.equal(out.changed, true);
+  assert.equal(out.list[0].items[0].b, 'Why this company and position');
+  // idempotent + the current v5 value converges too
+  assert.equal(api.normalizeV5([{ id: 'why', type: 'rich_block', items: [{ b: 'Why this position', t: 'x' }] }]).list[0].items[0].b, 'Why this company and position');
+  assert.equal(api.normalizeV5(out.list).changed, false, 'already normalized -> no change');
+});
+
+test('normalizeV5 never touches a custom why lead-in the user typed', () => {
+  const api = loadSidecar({});
+  const cl = [{ id: 'why', type: 'rich_block', items: [{ b: 'My reasons for applying', t: 'x' }] }];
+  const out = api.normalizeV5(cl);
+  assert.equal(out.changed, false);
+  assert.equal(out.list[0].items[0].b, 'My reasons for applying');
+});
+
+test('normalizeV5 seeds the role_view lead sentence so the section renders', () => {
+  const api = loadSidecar({});
+  const cl = [{ id: 'role_view', type: 'rich_block', items: [
+    { b: 'How I see the role', t: '' },
+    { b: '[Employer priority 1]', t: '', mk: true },
+  ] }];
+  const out = api.normalizeV5(cl);
+  assert.equal(out.changed, true);
+  assert.match(out.list[0].items[0].t, /three connected priorities/);
+  // real lead sentence is preserved (idempotent, no re-seed storm)
+  assert.equal(api.normalizeV5(out.list).changed, false);
+  const real = [{ id: 'role_view', type: 'rich_block', items: [{ b: 'How I see the role', t: 'Custom intro line.' }] }];
+  assert.equal(api.normalizeV5(real).changed, false, 'real content is never overwritten');
+});

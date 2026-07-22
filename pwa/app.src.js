@@ -7034,7 +7034,7 @@
                       {
                         key: rr,
                         style: {
-                          background: (rr - 1) % 2 == 0 ? "#eaf7f7" : "#fff",
+                          background: (rr - 1) % 2 == 0 ? "#DCE5EA" : "#fff",
                         },
                       },
                       React.createElement(
@@ -29622,7 +29622,7 @@
                             .replace(/(\S+) and (?=(\S+))/gi, (_m, _w, _x) =>
                               _w.includes("&") || _x.includes("&") ? _m : _w + " &amp; ")
                             .replace(/ & /g, " &amp; ");
-                          return `<tr style="background:${(i - 1) % 2 == 0 ? "#eaf7f7" : "#fff"}"><td width="${s}" style="width:${s}pt;padding:3pt 7.5pt;border:0.5pt solid ${t.tableBorderColor};font-family:'Carlito',${d};font-size:${u.mainTblCell}pt;font-weight:700;color:${t.tableFirstColText};line-height:${p};vertical-align:middle"><div style="${h}">${r}</div></td><td width="${c}" style="width:${c}pt;padding:3pt 7.5pt;border:0.5pt solid ${t.tableBorderColor};font-family:'Carlito',${d};font-size:${u.mainTblCell}pt;color:${t.tableOtherColText};text-align:justify;line-height:${p};vertical-align:middle"><div style="${h}">${n[1] || ""}</div></td></tr>`;
+                          return `<tr style="background:${(i - 1) % 2 == 0 ? "#DCE5EA" : "#fff"}"><td width="${s}" style="width:${s}pt;padding:3pt 7.5pt;border:0.5pt solid ${t.tableBorderColor};font-family:'Carlito',${d};font-size:${u.mainTblCell}pt;font-weight:700;color:${t.tableFirstColText};line-height:${p};vertical-align:middle"><div style="${h}">${r}</div></td><td width="${c}" style="width:${c}pt;padding:3pt 7.5pt;border:0.5pt solid ${t.tableBorderColor};font-family:'Carlito',${d};font-size:${u.mainTblCell}pt;color:${t.tableOtherColText};text-align:justify;line-height:${p};vertical-align:middle"><div style="${h}">${n[1] || ""}</div></td></tr>`;
                         })
                         .join("");
                       return v

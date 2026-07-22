@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.3040-app-rev-guard';
+  const TARGET_VERSION = '1.51.3041-copenhagen-table';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.3040-app-rev-guard',
     '1.51.2980-rowfit-measure',
     '1.51.2961-swatch-picker-fix',
     '1.51.2921-gold-density-shared',

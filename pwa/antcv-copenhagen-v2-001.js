@@ -33,7 +33,7 @@
 (function () {
   'use strict';
   if (window.__antcvCopenhagenV2) return;
-  window.__antcvCopenhagenV2 = '1.51.3342-sidebar-track';
+  window.__antcvCopenhagenV2 = '1.51.3362-band-fit';
 
   var FLAG = 'antcv:copenhagen-v2';
   var STYLE_ID = 'antcv-copenhagen-v2-style';
@@ -173,31 +173,46 @@
       css += BAND + ' > div:nth-of-type(2):not(:last-of-type){grid-row:2 !important;' +
         'transform:translateY(' + specDy() + 'px) !important;}';
       css += BAND + ' > div:last-of-type:not(:first-of-type){grid-row:3 !important;white-space:nowrap !important;}';
-      // Round 3 (b): "decrease the name and contact line so they are as far from
-      // the circle as the text of the specialization's first letter" — centered
-      // lines share a left edge exactly when they share a WIDTH, so the name
-      // font shrinks and the contact condense adapts until each line's visual
-      // width ≈ the spec's width. Live-measured; re-derived on every apply and
-      // convergent (name factor -> 1, contact scale is from the stable natural
-      // width). Clamps keep it sane on odd content.
+      // CPH-BAND-FIT-001 (owner 2026-07-23 round 5, supersedes the round-3
+      // spec-width matching): (a) the NAME condenses — tracking first, then font
+      // size — until its centered box clears the figure by >=10px; (b) the
+      // CONTACT compresses/shrinks (scaleX) until its visual width fits the
+      // NAME's width. Live-measured against the actual photo rect; re-derived
+      // on every apply, convergent (each pass measures the already-applied
+      // state), 2px hysteresis so it settles.
       try {
         var __b = document.querySelector(BAND);
         var __ds = __b ? __b.querySelectorAll(':scope > div') : null;
-        if (__ds && __ds.length >= 3) {
-          var __specEl = __ds[1], __nameEl = __ds[0], __contEl = __ds[__ds.length - 1];
-          var __specW = __specEl.scrollWidth;
-          if (__specW > 80) {
-            var __nameW = __nameEl.scrollWidth;
-            var __nameFs = parseFloat(getComputedStyle(__nameEl).fontSize) || 24;
-            if (__nameW > 0) {
-              var __t = Math.max(16, Math.min(22, Math.floor(__nameFs * __specW / __nameW)));
+        if (__b && __ds && __ds.length >= 2) {
+          var __nameEl = __ds[0], __contEl = __ds[__ds.length - 1];
+          var __bR = __b.getBoundingClientRect();
+          var __img = __b.querySelector('img');
+          var __maxW = __b.clientWidth - 32;                       // horizontal padding allowance
+          if (__img) {
+            var __iR = __img.getBoundingClientRect();
+            // centered line clears the photo when width <= 2*(bandCenter - photoRight - 10)
+            var __clear = 2 * ((__bR.left + __bR.width / 2) - __iR.right - 10);
+            if (__clear > 200) __maxW = Math.min(__maxW, __clear);
+          }
+          var __Wn = __nameEl.scrollWidth;
+          var __nameTarget = __Wn;
+          if (__Wn > __maxW + 2 && __maxW > 200) {
+            var __lsCur = parseFloat(getComputedStyle(__nameEl).letterSpacing) || 0;
+            var __chars = Math.max(8, String(__nameEl.textContent || '').trim().length - 1);
+            var __lsNew = Math.max(0.5, __lsCur - (__Wn - __maxW) / __chars);
+            css += BAND + ' > div:first-of-type{letter-spacing:' + __lsNew.toFixed(2) + 'px !important;}';
+            var __WnFloor = __Wn - (__lsCur - __lsNew) * __chars;
+            if (__WnFloor > __maxW) {                              // tracking floor hit — shrink the font
+              var __fs = parseFloat(getComputedStyle(__nameEl).fontSize) || 22;
+              var __t = Math.max(15, Math.floor(__fs * __maxW / __WnFloor));
               css += BAND + ' > div:first-of-type{font-size:' + __t + 'px !important;}';
             }
-            var __contW = __contEl.scrollWidth;
-            if (__contW > 0) {
-              var __k = Math.max(0.55, Math.min(1, __specW / __contW));
-              css += BAND + ' > div:last-of-type:not(:first-of-type){transform:scaleX(' + __k.toFixed(3) + ') !important;transform-origin:center !important;}';
-            }
+            __nameTarget = Math.min(__Wn, __maxW);
+          }
+          var __Wc = __contEl !== __nameEl ? __contEl.scrollWidth : 0;
+          if (__Wc > 0 && __nameTarget > 100) {
+            var __k = Math.max(0.5, Math.min(1, __nameTarget / __Wc));
+            css += BAND + ' > div:last-of-type:not(:first-of-type){transform:scaleX(' + __k.toFixed(3) + ') !important;transform-origin:center !important;}';
           }
         }
       } catch (_) {}

@@ -42,7 +42,6 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mrvv4t5g_aqt6","started":"2026-07-22T09:11:17.146Z","host":"GabyPC2","worktree":null,"branch":"shift-sbink","range":"1.51.2250-1.51.2256","task":"SIDEBAR-INK-BRAND-BG-001 (rebased)","beat":"2026-07-22T09:11:17.618Z"}
 {"id":"sh_mrw39srh_fnes","started":"2026-07-22T12:59:06.850Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.2481-1.51.2500","task":"rich_block row Fit-it/Enhance per-row busy feedback (hourglass + pink row)","beat":"2026-07-22T13:00:09.743Z"}
 {"id":"sh_mrw7uuxu_b1xm","started":"2026-07-22T15:07:27.910Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.2641-1.51.2660","task":"rich_block row Fit-it/Enhance: storm-proof hourglass latch + roles-storm converge","beat":"2026-07-22T15:07:28.238Z"}
-{"id":"sh_mrw8647l_80mr","started":"2026-07-22T15:16:13.145Z","host":"GabyPC2","worktree":null,"branch":"shift-forcerender","range":"1.51.2661-1.51.2664","task":"CL-V5-RERENDER-FORCE-001: nordic-cl-order dispatch uses standalone force reason so why-reword/role_view/order changes repaint on load","beat":"2026-07-22T15:16:13.712Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

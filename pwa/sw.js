@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.2601-header-elem-colors';
+const CACHE = 'antcv-1.51.2621-contact-expand';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

@@ -13038,7 +13038,9 @@
             }, 360);
           },
           onPointerUp: (t) => {
-            const n = x.current.dragging;
+            // CONTACT-CLICK-EXPAND-001: capture onToggleExpand (outer `n`) BEFORE the
+            // dragging-flag shadow below, so the no-move branch can expand the row.
+            const nn = x.current.dragging, _exp = n;
             E();
             const o = t.currentTarget;
             ((o.style.opacity = ""),
@@ -13050,13 +13052,16 @@
             try {
               o.releasePointerCapture(t.pointerId);
             } catch (e) {}
-            if (n) {
+            if (nn) {
               (t.preventDefault(), t.stopPropagation());
-              // HEADER-DRAG-DROP-NOMOVE-001 (owner 2026-07-03 "pressing on contacts
-              // collapses"): an armed long-press with NO movement fell into the drop
-              // inference (nearest drop-loc / screen-thirds) and MOVED the row out of
-              // the top bar. No displacement = no drop.
-              if (Math.abs((x.current.lastX || t.clientX || 0) - x.current.sx) <= 8 && Math.abs((x.current.lastY || t.clientY || 0) - x.current.sy) <= 8) return;
+              // HEADER-DRAG-DROP-NOMOVE-001 (owner 2026-07-03) + CONTACT-CLICK-EXPAND-001
+              // (owner 2026-07-22): an armed long-press (the 360ms timer) with NO movement
+              // is a CLICK, not a drag. The browser suppresses the click after a
+              // pointer-capture drag, so a deliberate press on Contact opened NOTHING —
+              // perceived as the candidate panel "collapsing". Explicitly toggle-expand the
+              // row (what onClick does) instead of just swallowing the event. Only a real
+              // drag (movement > 8px) falls through to the drop inference.
+              if (Math.abs((x.current.lastX || t.clientX || 0) - x.current.sx) <= 8 && Math.abs((x.current.lastY || t.clientY || 0) - x.current.sy) <= 8) { try { _exp && _exp(e.key); } catch (_) {} return; }
               const n = x.current.lastX || t.clientX,
                 o = x.current.lastY || t.clientY;
               requestAnimationFrame(() => {

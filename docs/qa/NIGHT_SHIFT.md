@@ -39,7 +39,6 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mrvutbzu_9znm","started":"2026-07-22T09:02:21.693Z","host":"GabyPC2","worktree":null,"branch":"shift-sbink","range":"1.51.2221-1.51.2228","task":"SIDEBAR-INK-BRAND-BG-001: contrast-safe sidebar ink keyed on the brand-painted sidebar bg (dark brand sidebar had navy text)","beat":"2026-07-22T09:02:21.908Z"}
 {"id":"sh_mrvv0m3w_ippk","started":"2026-07-22T09:08:01.443Z","host":"GabyPC2","worktree":null,"branch":"claude/elated-wilbur-b386b8","range":"1.51.2230-1.51.2249","task":"CL-APP-SUBTITLE-NO-DOUBLE-COMPANY: strip a trailing '- <company>' from the role before the Application: subtitle appends the company (fixes doubled company e.g. 3Shape)","beat":"2026-07-22T09:08:03.004Z"}
 {"id":"sh_mrvuuqfc_hncc","started":"2026-07-22T09:10:28.910Z","host":"GabyPC2","worktree":null,"branch":"claude/optimistic-jang-7b06fe","range":"1.51.2290-1.51.2309","task":"RELAY-AUTH-FIX-001 relay bearer","beat":"2026-07-22T09:10:29.561Z"}
-{"id":"sh_mrvv4t5g_aqt6","started":"2026-07-22T09:11:17.146Z","host":"GabyPC2","worktree":null,"branch":"shift-sbink","range":"1.51.2250-1.51.2256","task":"SIDEBAR-INK-BRAND-BG-001 (rebased)","beat":"2026-07-22T09:11:17.618Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

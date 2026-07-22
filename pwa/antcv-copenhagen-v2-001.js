@@ -33,7 +33,7 @@
 (function () {
   'use strict';
   if (window.__antcvCopenhagenV2) return;
-  window.__antcvCopenhagenV2 = '1.51.3141-band-gap';
+  window.__antcvCopenhagenV2 = '1.51.3161-band-size';
 
   var FLAG = 'antcv:copenhagen-v2';
   var STYLE_ID = 'antcv-copenhagen-v2-style';
@@ -116,7 +116,12 @@
       // which made the band text center on the full box far from the photo —
       // reverted; the float keeps the text beside the figure. Only neutralize any
       // stale transform from a cached nudge.
-      css += BAND + ' img{transform:none !important;}';
+      // CPH-BAND-SIZE-001 (owner 2026-07-23 "increase the photo and box size to
+      // fit, and slightly increase the text while keeping it centered"): photo
+      // 82px -> 120px (the registry --package-image-size), band grows to hold it
+      // (min-height + a touch more padding).
+      css += BAND + ' img{transform:none !important;width:120px !important;height:120px !important;}';
+      css += BAND + '{min-height:150px !important;padding-top:18px !important;padding-bottom:14px !important;}';
     }
     // STAGE 3 (structural CSS, NOT per-node inline styles — inline styles were
     // wiped by React re-renders and re-applied late, which the owner saw as the
@@ -127,6 +132,11 @@
     css += BAND + ' > div:first-of-type{letter-spacing:.14em !important;}';
     css += BAND + ' > div:last-of-type:not(:first-of-type){transform:scaleX(.73);transform-origin:center;}';
     css += BAND + ' a{color:#fff !important;}';
+    // CPH-BAND-SIZE-001: slightly larger header text, alignment untouched
+    // (mockup name 23-24px; spec/contact scale with it).
+    css += BAND + ' > div:first-of-type{font-size:24px !important;}';
+    css += BAND + ' > div:nth-of-type(2):not(:last-of-type){font-size:18px !important;}';
+    css += BAND + ' > div:last-of-type:not(:first-of-type){font-size:13px !important;}';
     return css;
   }
 

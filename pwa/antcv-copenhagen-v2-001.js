@@ -33,7 +33,7 @@
 (function () {
   'use strict';
   if (window.__antcvCopenhagenV2) return;
-  window.__antcvCopenhagenV2 = '1.51.3322-band-symmetry3';
+  window.__antcvCopenhagenV2 = '1.51.3342-sidebar-track';
 
   var FLAG = 'antcv:copenhagen-v2';
   var STYLE_ID = 'antcv-copenhagen-v2-style';
@@ -95,7 +95,9 @@
       var v = parseFloat(localStorage.getItem('antcv:cph-spec-dy'));
       if (isFinite(v) && Math.abs(v) <= 60) return v;
     } catch (_) {}
-    return 6;
+    // Default 0 since SYMMETRY-004: the centered auto-row group already seats
+    // the spec a few px below exact center (name taller than contact).
+    return 0;
   }
 
   function buildCSS() {
@@ -144,8 +146,15 @@
       var sbW = 0;
       try { var __sb = document.querySelector('.antcv-preview-paper [data-antcv-document-sidebar]'); if (__sb) sbW = Math.round(__sb.getBoundingClientRect().width); } catch (_) {}
       if (!sbW || sbW < 150 || sbW > 500) sbW = 250;
+      // CPH-BAND-SYMMETRY-004 (owner 2026-07-23 round 4): "equal gap between the
+      // top of the name and the bottom of the contact line" — the OUTER gaps
+      // (box top -> name, contact -> box bottom) must match too. Auto rows
+      // centered as a GROUP (align-content:center) + one uniform row-gap give
+      // all three symmetries at once: outer gaps equal, internal gaps equal,
+      // spec near the midline (its natural seat is a few px below exact center
+      // because the name is taller than the contact — the specDy dial trims).
       css += BAND + '{display:grid !important;grid-template-columns:' + sbW + 'px 1fr !important;' +
-        'grid-template-rows:1fr auto 1fr !important;align-content:stretch !important;row-gap:0 !important;' +
+        'grid-template-rows:auto auto auto !important;align-content:center !important;row-gap:10px !important;' +
         'min-height:200px !important;padding-top:14px !important;padding-bottom:14px !important;}';
       css += BAND + ' img{grid-column:1 !important;grid-row:1 / span 3 !important;align-self:center !important;justify-self:center !important;' +
         'transform:none !important;width:134px !important;height:134px !important;margin:0 !important;float:none !important;}';
@@ -157,16 +166,13 @@
       // trim, dial AntcvCopenhagenV2.specDy); (b) the name→spec and spec→contact
       // gaps are EQUAL (10px each side of the spec row); (c) NAME and CONTACT may
       // run long at the SAME full-band width — both nowrap, both centered.
-      // CPH-BAND-SYMMETRY-003 (owner 2026-07-23 round 3): the specDy visual
-      // downshift was growing the name→spec gap and shrinking the spec→contact
-      // gap — compensate the margins by specDy so BOTH visual gaps equal G.
-      var sd = specDy(), G = 10;
+      // Rows carry NO margins — the uniform row-gap + group centering are the
+      // spacing truth. specDy stays a pure visual trim on the spec only.
       css += BAND + ' > div{grid-column:1 / -1 !important;margin:0 !important;}';
-      css += BAND + ' > div:first-of-type{grid-row:1 !important;align-self:end !important;margin-bottom:' + Math.max(0, G - sd) + 'px !important;white-space:nowrap !important;}';
-      css += BAND + ' > div:nth-of-type(2):not(:last-of-type){grid-row:2 !important;align-self:center !important;' +
-        'transform:translateY(' + sd + 'px) !important;}';
-      css += BAND + ' > div:last-of-type:not(:first-of-type){grid-row:3 !important;' +
-        'align-self:start !important;margin-top:' + (G + sd) + 'px !important;white-space:nowrap !important;}';
+      css += BAND + ' > div:first-of-type{grid-row:1 !important;white-space:nowrap !important;}';
+      css += BAND + ' > div:nth-of-type(2):not(:last-of-type){grid-row:2 !important;' +
+        'transform:translateY(' + specDy() + 'px) !important;}';
+      css += BAND + ' > div:last-of-type:not(:first-of-type){grid-row:3 !important;white-space:nowrap !important;}';
       // Round 3 (b): "decrease the name and contact line so they are as far from
       // the circle as the text of the specialization's first letter" — centered
       // lines share a left edge exactly when they share a WIDTH, so the name
@@ -184,7 +190,7 @@
             var __nameW = __nameEl.scrollWidth;
             var __nameFs = parseFloat(getComputedStyle(__nameEl).fontSize) || 24;
             if (__nameW > 0) {
-              var __t = Math.max(16, Math.min(24, Math.floor(__nameFs * __specW / __nameW)));
+              var __t = Math.max(16, Math.min(22, Math.floor(__nameFs * __specW / __nameW)));
               css += BAND + ' > div:first-of-type{font-size:' + __t + 'px !important;}';
             }
             var __contW = __contEl.scrollWidth;
@@ -207,7 +213,7 @@
     css += BAND + ' a{color:#fff !important;}';
     // CPH-BAND-SIZE-001: slightly larger header text, alignment untouched
     // (mockup name 23-24px; spec/contact scale with it).
-    css += BAND + ' > div:first-of-type{font-size:24px !important;}';
+    css += BAND + ' > div:first-of-type{font-size:22px !important;}';   // owner 2026-07-23: 24 -> 22px
     css += BAND + ' > div:nth-of-type(2):not(:last-of-type){font-size:18px !important;}';
     css += BAND + ' > div:last-of-type:not(:first-of-type){font-size:13px !important;}';
     // APPLINE-SPACING-001 (owner 2026-07-23 "the application line is too far from
@@ -277,6 +283,35 @@
     });
   }
 
+  // CPH-SIDEBAR-TRACK-001 (owner 2026-07-23 "if I resize the sidebar the picture
+  // is not moving with it"): the photo column is sized from the live-measured
+  // sidebar width, but apply() only re-ran on section events + boot timers — a
+  // live sidebar DRAG fires neither. Observe the sidebar panel's own size and
+  // re-derive on real width changes. Hazards respected: setTimeout debounce,
+  // NEVER rAF (memory island-raf-freeze); the observer only rewrites OUR OWN
+  // <style> tag, never React nodes (memory sidecar-global-observer-breaks-React);
+  // >1px hysteresis so band-internal changes can't feedback-loop.
+  var __sbRO = null, __sbROT = null, __sbLastW = 0;
+  function watchSidebar() {
+    try {
+      if (!window.ResizeObserver) return;
+      var sb = document.querySelector('.antcv-preview-paper [data-antcv-document-sidebar]');
+      if (!sb || sb.__antcvCphSbWatched) return;
+      if (!__sbRO) __sbRO = new ResizeObserver(function () {
+        clearTimeout(__sbROT);
+        __sbROT = setTimeout(function () {
+          try {
+            var el = document.querySelector('.antcv-preview-paper [data-antcv-document-sidebar]');
+            var w = el ? Math.round(el.getBoundingClientRect().width) : 0;
+            if (w && Math.abs(w - __sbLastW) > 1) { __sbLastW = w; apply(); }
+          } catch (_) {}
+        }, 120);
+      });
+      __sbRO.observe(sb);            // a replaced node re-registers on the next apply()
+      sb.__antcvCphSbWatched = true;
+    } catch (_) {}
+  }
+
   function enabled() {
     // DEFAULT ON (Stage 3) — '0' is the kill switch, '1' still forces on.
     try { return localStorage.getItem(FLAG) !== '0'; } catch (_) { return true; }
@@ -298,6 +333,7 @@
     }
     try { tuneBandText(); } catch (_) {}   // strip legacy 3061 inline stamps only
     try { paintSignoff(on); } catch (_) {}
+    try { watchSidebar(); } catch (_) {}   // CPH-SIDEBAR-TRACK-001: re-arm on re-renders
   }
 
   // React to the flag being toggled in this tab (custom event) or another tab

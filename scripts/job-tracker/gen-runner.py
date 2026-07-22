@@ -420,7 +420,7 @@ def prior_app_digest(category):
 # the proxy PREPENDS its task frame + anti-fabrication + banned list.
 CV_SECTIONS = [
     ("cv_profile",          "PROFILE",           "Write the CV PROFILE section (2-3 tight sentences + optional 'Work style:' clause) for this candidate résumé."),
-    ("cv_outcomes",         "SELECTED OUTCOMES", "Generate the CV SELECTED OUTCOMES section: 5-6 verb-led outcomes, each with a bold lead and a body. Return one per line as 'LEAD / body'."),
+    ("cv_outcomes",         "SELECTED OUTCOMES", "Generate the CV SELECTED OUTCOMES section: 5-6 verb-led outcomes, each with a bold lead and a body. Each body follows the RESULTS-LINE FORMULA (v5): [SUPPORTED OUTCOME] + [SCALE OR METRIC] + [MECHANISM OR OPERATIONAL CONTEXT] - e.g. 'Cut LiDAR unit cost 90% (10x) by leading substitute selection and qualification across source, detector and timing trade-offs'. Use ONLY real, supported numbers; NEVER an unsupported superlative; do not repeat the leading clause of a role bullet; do not combine unrelated achievements to fill a line. Return one per line as 'LEAD / body'."),
     ("cv_core",             "CORE COMPETENCIES", "Generate the CV CORE COMPETENCIES table: 6 rows, each 'Focus Area | Strategic Expertise'. ROLE-SPECIFIC (V5-FOCUS-PRIORITIES-001, owner ruled v5 authoritative 2026-07-21 - this REPLACES the former 'backward-looking, role-independent' rule): the FIRST THREE rows MUST MIRROR the three ranked employer priorities of THIS job description, in the SAME ORDER, as short evidence-based labels; the remaining rows carry the candidate's other strongest supporting competencies. Every row must be drawn from the candidate's REAL experience - NEVER invent or stretch a competency just to match a priority; if the candidate cannot genuinely cover a priority, use the nearest real adjacent strength instead."),
     ("cv_specialization",   "SPECIALISATION",    "Write the CV SPECIALISATION / positioning line for the header: AT MOST THREE short concepts separated by ' • ' (a bullet), tailored to THIS role's domain and drawn from the candidate's real strengths. NOT a sentence, no company name, no punctuation at the end. Return ONLY the line."),
 ]
@@ -492,7 +492,7 @@ def build_plan(profile, meta, tier):
             "id": sid, "title": title,
             "prompt": {
                 "model": model,
-                "system": "You write precise, factual CV and cover-letter sections in a calm Danish-toned professional register. No hype, no filler, no banned words.",
+                "system": "You write precise, factual CV and cover-letter sections in a calm Danish-toned professional register. No hype, no filler, no banned words. No contractions in professional documents (write 'do not', not 'don't'). When the output language is English, use British spelling. FACTUAL GUARD (v5): never infer a security clearance from residence, citizenship or work in an MISWG country, and distinguish screening eligibility from a completed clearance; if you use 'MISWG', expand it on first use as 'Multinational Industrial Security Working Group' and describe it as an international industrial-security group of member states and observers including NATO - NEVER call it a NATO body.",
                 "messages": [{"role": "user", "content": _user_turn(profile_json, meta, ask)}],
                 "max_tokens": max_tokens,
                 "stream": True,

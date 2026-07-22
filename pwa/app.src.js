@@ -361,14 +361,15 @@
       // The candidate band + table-header bar keep their navy/blue (#33446F on
       // Copenhagen), and role COMPANY (#333333) + YEAR (#595959) stay neutral.
       // Mirrored in the va.copenhagen-modern package map.
-      // CL-CV-TWO-TONE-001 (owner 2026-07-22): Copenhagen Modern is TWO-TONE — the section
-      // HEADINGS / CL lead-ins are navy #0B4F8A (mainHeadColor), while the slogan/line and
-      // bullet accents stay greenish teal #00746E (mainLineColor / mainBulletColor). Applies
-      // to BOTH the CV (section heads) and the CL (Why / How I see the role / What I bring …).
-      mainHeadColor: "#0B4F8A",
+      // CL-CV-TWO-TONE-001 (owner 2026-07-22) SUPERSEDED same day by the Copenhagen
+      // MOCKUP LOCK (docs/design/COPENHAGEN_MODERN_NORDIC_PALETTE_SPEC.md): the
+      // structure is TEAL-led — section HEADINGS / CL lead-ins are teal #00746E
+      // (mainHeadColor) like the rules/bullets; navy is reserved for the heading
+      // box (#33446F) and sidebar text (#283556). Dates/years are #777777.
+      mainHeadColor: "#00746E",
       mainSubHeadColor: "#00746E",
       mainCompanyColor: "#333333",
-      mainYearColor: "#595959",
+      mainYearColor: "#777777",
       mainTextColor: "#333333",
       mainBulletColor: "#00746E",
       mainLineColor: "#00746E",
@@ -383,7 +384,7 @@
       sidebarBg: "#DCE5EA",
       sidebarHeadColor: "#00746E",
       sidebarTextColor: "#283556",
-      sidebarLineColor: "#283556",
+      sidebarLineColor: "#00746E",
       sidebarFont: "Trebuchet MS",
       photoBorderColor: "#01B9BD",
       photoBorderWidth: 1.5,
@@ -20210,20 +20211,20 @@
               sidebarBg: "#DCE5EA",
               headerNameColor: "#FFFFFF",
               headerSpecColor: "#01B9BD",
-              headerContactColor: "#FFFFFF",
+              headerContactColor: "#DBE4F0",
               headerLineColor: "#01B9BD",
               headerFont: "Trebuchet MS",
               sidebarHeadColor: "#00746E",
               sidebarTextColor: "#283556",
-              sidebarLineColor: "#283556",
+              sidebarLineColor: "#00746E",
               sidebarFont: "Trebuchet MS",
-              mainHeadColor: "#0B4F8A",
+              mainHeadColor: "#00746E",
               mainTextColor: "#333333",
               mainBulletColor: "#00746E",
               mainLineColor: "#00746E",
               mainSubHeadColor: "#00746E",
               mainCompanyColor: "#333333",
-              mainYearColor: "#595959",
+              mainYearColor: "#777777",
               mainHeadFont: "Trebuchet MS",
               mainBodyFont: "Calibri",
               tableHeaderBg: "#33446F",

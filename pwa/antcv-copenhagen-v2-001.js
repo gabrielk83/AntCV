@@ -91,7 +91,7 @@
     var css =
       '.antcv-preview-paper [data-antcv-candidate-band="1"]{' +
         'border-radius:22px !important;' +
-        'border:1.5px solid var(--brand-accent, var(--header-line-color, #01B7BB)) !important;' +
+        'border:1.5px solid var(--brand-accent, var(--header-line-color, #01B9BD)) !important;' +
         'margin:7.4px 7.4px 0 7.4px !important;box-sizing:border-box !important;' +
       '}';
     if (isBridge()) {

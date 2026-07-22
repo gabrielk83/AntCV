@@ -24031,7 +24031,7 @@ var PACKAGES = {
   "copenhagen-modern": {
     base: "283556",
     band: "33446F",
-    ground: "C9D6EC",
+    ground: "DCE5EA",
     primary: "00746E",
     interactive: "0B74DE",
     bullet: "00746E",
@@ -28951,7 +28951,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.163-copenhagen-table";
+var VERSION = "1.14.164-copenhagen-ground";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

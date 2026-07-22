@@ -41359,7 +41359,7 @@
                                           if (!Hl) {
                                             (Ul("switch:" + e.id), Gl(""));
                                             try {
-                                              if (Fl && Fl !== e.id)
+                                              if (Fl && Fl !== e.id && "on" === (function(){try{return localStorage.getItem("antcv:switch-autosave")}catch(_){return null}})())
                                                 try {
                                                   await oo.update(Fl, {
                                                     cv_sections:
@@ -47813,7 +47813,7 @@
                                 // saving into itself.
                                 (Ul("switch:" + e.id), Gl(""));
                                 try {
-                                  if (Fl && Fl !== e.id)
+                                  if (Fl && Fl !== e.id && "on" === (function(){try{return localStorage.getItem("antcv:switch-autosave")}catch(_){return null}})())
                                     try {
                                       await oo.update(Fl, {
                                         cv_sections: (ro && ro.cv) || [],

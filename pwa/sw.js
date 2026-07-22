@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.2701-quick-contact-scope';
+const CACHE = 'antcv-1.51.2721-app-save-guard';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

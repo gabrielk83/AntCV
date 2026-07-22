@@ -50,13 +50,18 @@
   function isBridge() {
     try { return !!document.querySelector('.antcv-preview-paper [data-antcv-bridge-spacer]'); } catch (_) { return false; }
   }
-  // Owner-tunable photo offset. Default dx=20 dy=6 (measured). AntcvCopenhagenV2.photo(dx,dy) overrides.
+  // Owner-tunable photo offset. Default dx=20 dy=-8 — LIVE-MEASURED 2026-07-22 on
+  // the owner's logged-in session in the band/heading-left (Sidebar-bridge) mode
+  // they actually use: translate(-20,-8) lands the photo at ~7px left / ~6px top
+  // inset, evenly nestled in the 22px rounded corner. (The earlier +6 came from
+  // the main-COLUMN spec, a different element that this selector no longer hits.)
+  // AntcvCopenhagenV2.photo(dx,dy) overrides live for further tuning.
   function photoOffset() {
     try {
       var raw = localStorage.getItem('antcv:cph-photo');
       if (raw) { var p = raw.split(',').map(function (n) { return parseFloat(n); }); if (p.length === 2 && !isNaN(p[0]) && !isNaN(p[1])) return { dx: p[0], dy: p[1] }; }
     } catch (_) {}
-    return { dx: 20, dy: 6 };
+    return { dx: 20, dy: -8 };
   }
   // The candidate-band photo is float:left OR float:right depending on placement.
   // CSS can't branch on computed float, so we read it here and emit the matching

@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.2311-analysis-persist';
+  const TARGET_VERSION = '1.51.2339-copenhagen-photo-bridge';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.2311-analysis-persist',
     '1.51.2310-sidebar-ink',
     '1.51.2290-relay-auth-fix',
     '1.51.2229-analysis-header',

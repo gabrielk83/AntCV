@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.2311-analysis-persist';
+const CACHE = 'antcv-1.51.2339-copenhagen-photo-bridge';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

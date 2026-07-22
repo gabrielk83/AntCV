@@ -55,6 +55,56 @@ Order: greeting → opening → Why → **How I see the role (role_view: lead + 
 - Typography (11 pt sub-heads, 10.5 pt sidebar, 1 pt / 3 pt spacing) + line rules (1.5 pt, double underline) are render-code, not palette tokens.
 - **Requires live visual verification** — do this in a render-capable session.
 
+## LOCKED via interactive mockup (owner, 2026-07-22) — these OVERRIDE the tentative values above
+
+Source of truth: the print-accurate A4 mockup (artifact `91ba69e4-…`, file
+`scratchpad/copenhagen_preview.html`), iterated to owner sign-off. Implement these
+exact values into app render (preview) + docx-worker + docx-client.
+
+### Heading box (CV band + CL headbox — IDENTICAL type + spacing on both)
+- Box background **navy `#33446F`**, `border: 1.5pt solid #01B9BD` (cyan), radius ~9px.
+- **Name**: Trebuchet MS bold, **24px** (hard cap — owner tried 22/23/25, settled 24 then 23; final render at 23-24px range, `letter-spacing: .14em`) — expanded tracking so it frames the photo like a 2nd ring.
+- **Specialisation line**: **cyan `#01B9BD`** (NOT white, NOT teal), Trebuchet bold 11pt, `letter-spacing:.04em`.
+- **Contact line**: 9.5pt, `transform: scaleX(.73)` (condensed), **single space** between every word/icon (NO ` · ` middots — emojis separate), `letter-spacing:-.01em`. Width ≈ the name width.
+- **Header hyperlinks (email, LinkedIn)**: **white `#fff`** underlined (dark box → NOT blue/cyan, which "break the aesthetics").
+- CV photo: **1.4in circle**, `border: 1.5pt solid #01B9BD` (cyan contour), inset **0.15in** from box top/bottom/left; box `min-height: 1.7in`, content vertically centered, text centered.
+- CL header = same box/type; no photo; same 1.7in height + centering so placement matches the CV.
+
+### CV layout — equal horizontal spacings (owner equation)
+`X + xS + St + xS + xM + Mt + X = page width`, with **X = xS = xM = 0.15in**
+(X = page margin, xS = sidebar-text inset, xM = sidebar→main-text gap; St/Mt = the two text widths). Floating inset panels (rounded sidebar `#DCE5EA`). Narrow ~0.14-0.15in page margins throughout (anti line/page slide).
+
+### Body links
+Light-ground hyperlinks: blue `#0B4F8A`, underlined (dark-box links are white — above).
+
+### Two-tone structure (teal-led)
+- Section heads (main), sub-heads, role names, sidebar heads, bullets, all rules: **teal `#00746E`**.
+- Navy is reserved for the heading box (`#33446F`) + sidebar text (`#283556`); the per-role horizontal rule is DROPPED (bold teal role name + spacing carries it).
+- **All horizontal lines / underlines ≈ 1.5pt**, uniform. Lead-in / "At your service" underlines grey `#777777`; "At your service" is teal + NON-bold + cyan `#01B9BD` underline.
+
+### Core Competencies table (the `type:"table"` in main)
+- Heading + underline, then ~6pt gap before the table.
+- Header row: **navy `#33446F` background, white text**, centered.
+- Body rows: **banded** white / sidebar-light `#DCE5EA`; **first column bold** (navy `#283556`), second column normal; rows **justified** (short first-col labels left).
+- **Cyan `#01B9BD` outer frame** on the table.
+
+### Results / sub-sections / AI notice
+- Per-role **Results** lead-in line (teal lead-in + text) under each role's bullets, incl. Earlier career.
+- Sidebar GROUP names + main sub-subsections (e.g. "Earlier career") are **centered**; equal spacing between sub-subsections (first tighter to its section head).
+- **AI notice** ("AI-assisted document" CV / "AI-assisted" CL): auto-placed on the larger-gap side — **right** for the CL, **left** for this CV; flips for RTL.
+- Publications/patents entry pattern: lead-in + short text + hyperlink; **left-aligned** (justify opens dead space).
+
+### Global
+- **ASCII hyphen only** — never `—`/`–` anywhere (gold-rules.json typography.banned_separators; applies to output too, [[emdash-hyphen-three-layers]]).
+- Compression / Fit-it avoids visually jarring orphans (`text-wrap:pretty` in preview; density loop for content).
+
+### Implementation staging (avoid colliding with the active HEADER-COLOR / appline lane)
+1. **Palette tokens** (colors only) in the `va.copenhagen-modern` preset + base default (app.src.js + app.js): cyan `#01B9BD` spec/border/photo-ring, navy box `#33446F`, table header/band, sidebar `#DCE5EA`, link colors. Lowest-risk, targeted per-token (NEVER replace-all — shared hexes).
+2. **Competency-table render** (banding + blue header + cyan frame + bold-first-col + centered-header/justified-rows): preview React table + export HTML + docx-worker `renderCompetencyTable` — self-contained, high-value, does NOT touch the header area.
+3. **Header render** (photo ring, spec cyan, contact condense/single-space, white links, box layout, name tracking): COORDINATE with the header-color/elem-colors/appline sidecars (antcv-header-elem-colors.js, antcv-header-color-controls.js, antcv-copenhagen-v2-001.js, antcv-appline-rule.js) — this is their territory; splice in-body or extend their sidecars, do not fork.
+4. **docx parity** for all of the above (docx-worker + antcv-docx-client.js), then live-verify a real export.
+
 ## Status
-- ✅ Two-tone `mainHeadColor` → navy `#0B4F8A` (1.51.2622).
-- ⬜ Everything else above — pending a render-verified pass.
+- ✅ Two-tone `mainHeadColor` → navy `#0B4F8A` (1.51.2622) — SUPERSEDED: mockup locks teal-led heads; navy only for box + sidebar text.
+- ✅ Mockup locked to owner sign-off (2026-07-22) — values above are authoritative.
+- ⬜ Render + docx implementation per the staging plan — pending.

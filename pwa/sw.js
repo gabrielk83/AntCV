@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.2721-app-save-guard';
+const CACHE = 'antcv-1.51.2740-hourglass-toolsstorm';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

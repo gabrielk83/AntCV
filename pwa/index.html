@@ -369,7 +369,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.2230-cl-subtitle-no-dup-company';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.2721-app-save-guard';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.2740-hourglass-toolsstorm';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -411,7 +411,7 @@
           app.src = 'app.js?v=1.51.2721-app-save-guard';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.2721-app-save-guard';
+            vo.src = 'antcv-version-override.js?v=1.51.2740-hourglass-toolsstorm';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -864,7 +864,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-unsolicited-identity-guard.js?v=1.51.334-unsol-pillar" defer></script>
 <script src="antcv-ai-assisted-to-methods.js?v=1.50.817" defer></script>
 <script src="antcv-tables-core-dedup.js?v=1.50.654" defer></script>
-<script src="antcv-tools-hidden-residue.js?v=1.51.117" defer></script>
+<script src="antcv-tools-hidden-residue.js?v=1.51.2740-hourglass-toolsstorm" defer></script>
 <script src="antcv-sidebar-visibility-ux.js?v=1.51.181" defer></script>
 <script src="antcv-tables-partition.js?v=1.50.827" defer></script>
 <script src="antcv-unsolicited-cv-completeness.js?v=1.51.56" defer></script>
@@ -944,7 +944,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <!-- RICH-BLOCK-001 (2026-06-22): editor surface for the universal composite section
      type:"rich_block" (headline/rule toggles + section CJLR + {lead-in, body} rows with
      per-row CJLR/Page/Enhance/Fit/Delete). app.js delegates to window.AntcvRichBlockEditor. -->
-<script src="antcv-rich-block-editor.js?v=1.51.2680-hourglass-storm" defer></script>
+<script src="antcv-rich-block-editor.js?v=1.51.2740-hourglass-toolsstorm" defer></script>
 <!-- TABLE-TYPE-001 (2026-06-23): editor surface for the universal `table` type (CORE COMPETENCIES /
      WHAT I BRING + any 2-col table): whole-table CJLR/enhance/fit, heading/rule toggles, header-row
      CJLR (fixes the missing-header-CJLR + alignment-drift report) + header B/I, column-ratio,

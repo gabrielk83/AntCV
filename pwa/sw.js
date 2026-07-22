@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.2901-rowpink';
+const CACHE = 'antcv-1.51.2921-gold-density-shared';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

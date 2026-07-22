@@ -69,7 +69,7 @@
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.51.389';
+  const SCRIPT_VERSION = '1.51.2921-gold-density-shared';
   const STORAGE_KEY = 'antcv:bullet-targets';
   const STYLE_ID = 'antcv-bullet-targets-styles';
   const STRIP_MARKER = 'data-antcv-bullet-target-strip';
@@ -839,16 +839,18 @@
 
   function buildWidthBlock(cpl) {
     const g = currentGeometry();
+    const gd = goldDensity();
     const b = (linesMinusOne, frac) => Math.round((linesMinusOne + frac) * cpl);
     const r = {
-      l1: [b(0, 0.70), b(0, 0.97)],
-      l2: [b(1, 0.70), b(1, 0.97)],
-      l3: [b(2, 0.70), b(2, 0.97)],
+      l1: [b(0, gd.lo), b(0, gd.hi)],
+      l2: [b(1, gd.lo), b(1, gd.hi)],
+      l3: [b(2, gd.lo), b(2, gd.hi)],
     };
     return '\n\n' + WIDTH_BLOCK_TAG + ' (measured from the CURRENT column width and body font — ' +
       'these numbers OVERRIDE any chars-per-line figures above): one full rendered line here = ' +
       cpl + ' chars (' + g.font + ' ' + g.pt + 'pt, main column at the live sidebar ratio ' + g.ratio + '). ' +
-      'Every bullet/paragraph must END ON A FULL LINE: its last line must reach at least 60% of ' +
+      'Every bullet/paragraph must END ON A FULL LINE: its last line must reach at least ' +
+      Math.round(gd.runt * 100) + '% of ' +
       'the column width. Valid total lengths: 1-LINE = ' + r.l1[0] + '-' + r.l1[1] + ' chars; ' +
       '2-LINE = ' + r.l2[0] + '-' + r.l2[1] + ' chars; 3-LINE = ' + r.l3[0] + '-' + r.l3[1] + ' chars. ' +
       'FORBIDDEN dead zones: ' + (r.l1[1] + 3) + '-' + (r.l2[0] - 3) + ' and ' +
@@ -863,6 +865,16 @@
   // ── GOLD-RULES-SITE-001: the single control site (/gold-rules.json) ──────
   var goldRules = null;
   var GOLD_FALLBACK_BLOCK = "GOLD CONTENT RULES (hard requirements):\n - Every Results line states a CHANGE metric (a percentage, multiplier, from->to, time/volume/money delta) with its mechanism. A team size or site description is a bullet, never a Result.\n - Core-competency tables: 3-4 TABLE ROWS, the highest-impact ones; every cell a complete clause that RENDERS in at most two lines of its column - never a third line.\n - Professional-experience roles: at most 3 bullets per role (generation cap) - pick the strongest; never pad.\n - Table first-column labels stay SHORT (about 28 chars max): a label that wraps to three lines or one-word rows in its cell is invalid; compress the label instead.\n - Every bullet and sentence ends COMPLETE with terminal punctuation - never a dangling connector or preposition (\"...traceable from\"), never a cut enumeration (\"...optics, electronics, mechanical.\").\n - Name partner/client companies only when the job description itself signals them; otherwise describe the relationship (\"an ODM partner\").\n - Certificates carry no years; order them by relevance to this job.\n - Interests and sidebar one-liners stay compact (drop filler words); keep personality lines intact but never pad them.";
+  // LINE-DISTRIBUTION-001 (owner 2026-07-22, OPEN_REGISTER row 61): the fill-band numbers come
+  // from gold-rules.json `density` — the SAME source the Python density loop reads
+  // (measure_density.py RUNT_FRAC/FILL_LO/FILL_HI) — instead of hand-duplicated literals that
+  // had already drifted (JS 0.70 vs gold 0.65 lower bound). Fallbacks mirror gold-rules.json.
+  function goldDensity() {
+    var d = (goldRules && goldRules.density) || {};
+    var band = (Array.isArray(d.fill_band) && d.fill_band.length >= 2) ? d.fill_band : [0.65, 0.97];
+    var runt = (typeof d.runt_fraction === 'number') ? d.runt_fraction : 0.60;
+    return { lo: band[0], hi: band[1], runt: runt };
+  }
   function goldPromptBlock() {
     if (goldRules && Array.isArray(goldRules.prompt_block) && goldRules.prompt_block.length) {
       return goldRules.prompt_block.join('\n');
@@ -920,12 +932,13 @@
       if (cand > widthPx && lineW > 0) { lines += 1; lineW = ww; lastChars = w.length; }
       else { lineW = cand; lastChars = lineW === ww ? w.length : lastChars + 1 + w.length; }
     }
+    const gd = goldDensity();
     const fill = lineW / widthPx;
-    if (fill >= 0.60) return null;
+    if (fill >= gd.runt) return null;
     const acw = totalChars ? totalW / totalChars : 5;
     const n = String(text).length;
-    const addMin = Math.max(1, Math.ceil((0.60 * widthPx - lineW) / acw) + 1);
-    const addHi = Math.floor((0.97 * widthPx - lineW) / acw);
+    const addMin = Math.max(1, Math.ceil((gd.runt * widthPx - lineW) / acw) + 1);
+    const addHi = Math.floor((gd.hi * widthPx - lineW) / acw);
     const grow = addHi >= addMin ? [n + addMin, n + addHi] : null;
     const shrink = lines >= 2 ? [n - (lastChars + Math.floor(0.35 * widthPx / acw)), n - lastChars] : null;
     return { n: n, fillPct: Math.round(fill * 100), grow: grow, shrink: shrink };

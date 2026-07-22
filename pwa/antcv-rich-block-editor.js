@@ -51,6 +51,11 @@
           var sb = (window.__antcvSectionBusy = window.__antcvSectionBusy || {});
           sb[e.id] = Date.now() + 2200;
           emit("antcv:section-busy", { sid: e.id, until: sb[e.id] });
+          // ROWFIT-PINK-ROWLEVEL (owner 2026-07-22): also stamp a PER-ROW latch the preview reads
+          // so the pink lands on the ACTING row(s) (group actions latch each child → per-row pink
+          // for free). Key = "sectionId:item:i" (strip the e:/c: prefix).
+          var rb = (window.__antcvRowBusy = window.__antcvRowBusy || {});
+          rb[key.replace(/^[ec]:/, "")] = Date.now() + 2200;
         } catch (_) {}
         try { bump(function (x) { return (x | 0) + 1; }); } catch (_) {}
       }

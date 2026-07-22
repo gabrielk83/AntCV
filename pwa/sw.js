@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.2881-group-buttons';
+const CACHE = 'antcv-1.51.2901-rowpink';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

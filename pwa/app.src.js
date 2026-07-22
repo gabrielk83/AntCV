@@ -6748,6 +6748,17 @@
                   ? k.bulletMarkerGap
                   : (k.bulletIndent || 24) - 3);
               }
+              // ROWFIT-PINK-ROWLEVEL (owner 2026-07-22): pink the ACTING row while its module latch
+              // is live (mirrors the section pink but per-row; group actions latch each child → the
+              // whole group pinks). Read fresh each render so the storm/fast-fail can't swallow it.
+              try {
+                if (window.__antcvRowBusy && window.__antcvRowBusy[e.id + ":item:" + i] > Date.now()) {
+                  __pStyle.background = "rgba(255,182,193,0.20)";
+                  __pStyle.borderLeft = "3px solid #ff8fa3";
+                  __pStyle.borderRadius = 3;
+                  __pStyle.paddingLeft = (__pStyle.paddingLeft || 0) + 6;
+                }
+              } catch (_) {}
               return {
                 key: String(i),
                 node: React.createElement(

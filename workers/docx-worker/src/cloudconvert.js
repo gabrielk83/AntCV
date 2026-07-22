@@ -201,6 +201,141 @@ export async function convertDocxToPdf(docxBytes, apiKey, opts = {}) {
 }
 
 /**
+ * HTML-TO-PDF-001: convert an HTML string to PDF via CloudConvert's Chrome
+ * engine. Used by the /generate-analysis-pdf route so the JD-analysis report
+ * (a self-contained branded HTML document, not a CV/CL docx) becomes an
+ * ATS-legible, Unicode-embedded PDF — the same reason the CV/CL export uses
+ * convertDocxToPdf. Mirrors convertDocxToPdf's import/base64 → convert →
+ * export/url shape; the convert task uses input_format 'html', engine 'chrome',
+ * print_background true and A4 zero-margin.
+ *
+ * @param {string} html - the report HTML
+ * @param {string} apiKey - CloudConvert API key (from env)
+ * @param {Object} [opts]
+ * @param {string} [opts.filename] - optional filename for the import task
+ * @returns {Promise<{ buffer: Uint8Array, jobId: string, durationMs: number }>}
+ */
+export async function convertHtmlToPdf(html, apiKey, opts = {}) {
+  if (!apiKey) {
+    throw new Error('CLOUDCONVERT_API_KEY not configured on the worker');
+  }
+  const filename = (opts.filename || 'report') + '.html';
+  const startMs = Date.now();
+
+  // UTF-8 encode before base64 — the report can carry non-ASCII (Danish text,
+  // candidate names, emoji), and btoa on the raw string throws on any code
+  // point > 0xFF.
+  const bytes = new TextEncoder().encode(String(html == null ? '' : html));
+  let binStr = '';
+  const CHUNK = 8192;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binStr += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  const b64 = btoa(binStr);
+
+  console.log(`[cloudconvert] html-to-pdf: creating job, input=${bytes.length}B base64=${b64.length}ch`);
+  const createResp = await fetch(`${API_BASE}/jobs`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      tasks: {
+        'import-html': {
+          operation: 'import/base64',
+          file: b64,
+          filename,
+        },
+        'convert-to-pdf': {
+          operation: 'convert',
+          input: 'import-html',
+          input_format: 'html',
+          output_format: 'pdf',
+          // Chrome renders the report's CSS + colour blocks faithfully;
+          // print_background keeps the branded bands, and A4 zero-margin lets
+          // the report's own page padding own the layout.
+          engine: 'chrome',
+          print_background: true,
+          page_size: 'A4',
+          margin_top: '0',
+          margin_bottom: '0',
+          margin_left: '0',
+          margin_right: '0',
+        },
+        'export-pdf': {
+          operation: 'export/url',
+          input: 'convert-to-pdf',
+          inline: false,
+          archive_multiple_files: false,
+        },
+      },
+      tag: 'antcv-html-to-pdf',
+    }),
+  });
+
+  if (!createResp.ok) {
+    const errBody = await createResp.text().catch(() => '');
+    throw new Error(`CloudConvert html-to-pdf job creation failed: ${createResp.status} ${errBody.slice(0, 500)}`);
+  }
+  const createJson = await createResp.json();
+  const jobId = createJson?.data?.id;
+  if (!jobId) {
+    throw new Error('CloudConvert html-to-pdf job created but no id returned');
+  }
+  console.log(`[cloudconvert] html-to-pdf job ${jobId} created`);
+
+  let exportFileUrl = null;
+  let pollCount = 0;
+  while (Date.now() - startMs < TIMEOUT_MS) {
+    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+    pollCount++;
+    const statusResp = await fetch(`${API_BASE}/jobs/${jobId}`, {
+      headers: { 'Authorization': `Bearer ${apiKey}` },
+    });
+    if (!statusResp.ok) {
+      const errBody = await statusResp.text().catch(() => '');
+      throw new Error(`CloudConvert html-to-pdf status check failed: ${statusResp.status} ${errBody.slice(0, 500)}`);
+    }
+    const statusJson = await statusResp.json();
+    const jobStatus = statusJson?.data?.status;
+    if (jobStatus === 'error') {
+      const tasks = statusJson?.data?.tasks || [];
+      const failed = tasks.find((t) => t.status === 'error');
+      throw new Error(`CloudConvert html-to-pdf job ${jobId} errored: ${failed?.code || 'unknown'} — ${failed?.message || ''}`);
+    }
+    if (jobStatus === 'finished') {
+      const tasks = statusJson?.data?.tasks || [];
+      const exportTask = tasks.find((t) => t.name === 'export-pdf');
+      const files = exportTask?.result?.files || [];
+      if (!files.length || !files[0].url) {
+        throw new Error(`CloudConvert html-to-pdf finished but export-pdf produced no file URL`);
+      }
+      exportFileUrl = files[0].url;
+      console.log(`[cloudconvert] html-to-pdf job ${jobId} finished after ${pollCount} polls (${Date.now() - startMs}ms)`);
+      break;
+    }
+  }
+
+  if (!exportFileUrl) {
+    throw new Error(`CloudConvert html-to-pdf job ${jobId} did not complete within ${TIMEOUT_MS}ms (polled ${pollCount} times)`);
+  }
+
+  const pdfResp = await fetch(exportFileUrl);
+  if (!pdfResp.ok) {
+    throw new Error(`CloudConvert html-to-pdf download failed: ${pdfResp.status}`);
+  }
+  const pdfBuffer = new Uint8Array(await pdfResp.arrayBuffer());
+  console.log(`[cloudconvert] html-to-pdf downloaded PDF: ${pdfBuffer.length}B`);
+
+  return {
+    buffer: pdfBuffer,
+    jobId,
+    durationMs: Date.now() - startMs,
+  };
+}
+
+/**
  * Quick check whether PDF generation is configured on this worker.
  * Used by /health to advertise capability to the PWA.
  *

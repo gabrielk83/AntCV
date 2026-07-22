@@ -36,7 +36,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.51.137-analysis-print-surface';
+  var VERSION = '1.51.2072-analysis-cloudconvert';
   if (window.__antcvAnalysisReportPdf360 === VERSION) return;
   window.__antcvAnalysisReportPdf360 = VERSION;
 
@@ -605,15 +605,100 @@
     try { return hasAnalysis(model(readRationale(), readMeta(), readPersonalInfo())); }
     catch (_) { return false; }
   };
+  // ANALYSIS-HTML-PDF-001 (2026-07-22): filename for the server PDF, mirroring
+  // the CV/CL export naming — "JD Analysis — <role> — <company>", sanitised.
+  function analysisFilename(m) {
+    var base = 'JD Analysis';
+    try {
+      var extra = (m && m.application) ? (' — ' + m.application) : '';
+      base = (base + extra)
+        .replace(/[—–]/g, '-')
+        .replace(/[^a-zA-Z0-9æøåÆØÅ\- ]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 80) || 'JD Analysis';
+    } catch (_) {}
+    return base;
+  }
+
+  // ANALYSIS-HTML-PDF-001: prefer the CloudConvert docx-worker (Chrome HTML->PDF)
+  // so the analysis report is an ATS-legible, Unicode-embedded PDF — the same
+  // reason the CV/CL export moved off window.print(). Honours the app's own
+  // server-PDF policy (window.__antcvUseServerPdf) and reachability
+  // (window.isPdfWorkerAvailable); on any miss/failure it resolves(false) so the
+  // caller falls back to the existing browser-print path.
+  function exportViaWorker(html, m) {
+    return new Promise(function (resolve) {
+      try {
+        var workerUrl = (window.ANTCV_DOCX_WORKER
+          || (function () { try { return localStorage.getItem('antcv:docxWorker') || ''; } catch (_) { return ''; } })()
+          || '').toString().trim().replace(/\/+$/, '');
+        var useServer = (typeof window.__antcvUseServerPdf === 'function') ? !!window.__antcvUseServerPdf() : true;
+        if (!workerUrl || !useServer || typeof window.isPdfWorkerAvailable !== 'function') { resolve(false); return; }
+        Promise.resolve(window.isPdfWorkerAvailable()).then(function (avail) {
+          if (!avail) { resolve(false); return; }
+          var headers = { 'Content-Type': 'application/json', 'Accept': 'application/pdf' };
+          try { if (window.ANTCV_DOCX_SECRET) headers['X-AntCV-Secret'] = window.ANTCV_DOCX_SECRET; } catch (_) {}
+          try {
+            var cc = (localStorage.getItem('cloudconvertKey') || '');
+            if (cc.charAt(0) === '"' && cc.charAt(cc.length - 1) === '"') cc = cc.slice(1, -1);
+            cc = (cc || '').trim();
+            if (cc) headers['X-CloudConvert-Key'] = cc;
+          } catch (_) {}
+          fetch(workerUrl + '/generate-analysis-pdf', {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify({ html: html, filename: analysisFilename(m) })
+          }).then(function (res) {
+            var ct = (res.headers.get('content-type') || '').toLowerCase();
+            if (!res.ok || ct.indexOf('application/pdf') === -1) {
+              res.text().then(function (b) {
+                try { console.warn('[analysis-report-pdf] server PDF unavailable (' + res.status + '), browser print:', b.slice(0, 200)); } catch (_) {}
+              }).catch(function () {});
+              resolve(false);
+              return;
+            }
+            return res.blob().then(function (blob) {
+              var url = URL.createObjectURL(blob);
+              var a = document.createElement('a');
+              a.href = url;
+              a.download = analysisFilename(m) + '.pdf';
+              document.body.appendChild(a);
+              a.click();
+              setTimeout(function () { try { document.body.removeChild(a); URL.revokeObjectURL(url); } catch (_) {} }, 1500);
+              try { console.debug('[analysis-report-pdf] exported via CloudConvert worker (/generate-analysis-pdf)'); } catch (_) {}
+              resolve(true);
+            });
+          }).catch(function (e) {
+            try { console.warn('[analysis-report-pdf] server PDF fetch failed, browser print:', e && e.message); } catch (_) {}
+            resolve(false);
+          });
+        }).catch(function () { resolve(false); });
+      } catch (e) { resolve(false); }
+    });
+  }
+
   function exportPdf(btn) {
     var t = T();
     var m = model(readRationale(), readMeta(), readPersonalInfo());
     if (!hasAnalysis(m)) { window.alert(t.noData); return; }
     var label = btn ? btn.textContent : '';
     if (btn) { btn.disabled = true; btn.textContent = isDanish() ? 'Forbereder…' : 'Preparing…'; }
+    function restoreBtn() { if (btn) { btn.disabled = false; btn.textContent = label || t.download; } }
 
     loadIconDataUrl().then(function (icon) {
       var html = reportHtml(m, icon);
+      // ANALYSIS-HTML-PDF-001: try the CloudConvert worker first; on success the
+      // PDF downloads directly. Only fall back to the offscreen-iframe browser
+      // print when the server path is unavailable or fails.
+      exportViaWorker(html, m).then(function (ok) {
+        if (ok) { restoreBtn(); return; }
+        printViaIframe(html, t, btn, label);
+      });
+    });
+  }
+
+  function printViaIframe(html, t, btn, label) {
       var iframe = document.createElement('iframe');
       iframe.setAttribute('aria-hidden', 'true');
       // JD-ANALYSIS-PRINT-001 (register row 44): a visibility:hidden / 0x0 iframe
@@ -657,7 +742,6 @@
       // Wait a tick for layout + the (already-inlined) icon to settle.
       if (iframe.contentWindow.document.readyState === 'complete') setTimeout(go, 150);
       else iframe.onload = function () { setTimeout(go, 150); };
-    });
   }
 
   // ---- panel enhancement block (renders the new fields in-app) --------------

@@ -28557,6 +28557,124 @@ async function convertDocxToPdf(docxBytes, apiKey, opts = {}) {
   };
 }
 __name(convertDocxToPdf, "convertDocxToPdf");
+async function convertHtmlToPdf(html, apiKey, opts = {}) {
+  // HTML-TO-PDF-001 (2026-07-22): the JD-analysis report is a self-contained,
+  // branded HTML document (not a CV/CL docx). Render it to PDF through the SAME
+  // CloudConvert pipeline the CV/CL export uses, but via the Chrome engine
+  // (faithful HTML/CSS + backgrounds) instead of LibreOffice's docx path. Same
+  // import/base64 -> convert -> export/url shape as convertDocxToPdf.
+  if (!apiKey) {
+    throw new Error("CLOUDCONVERT_API_KEY not configured on the worker");
+  }
+  const filename = (opts.filename || "report") + ".html";
+  const startMs = Date.now();
+  // The report can contain non-ASCII (Danish text, candidate names, emoji), so
+  // encode UTF-8 bytes before base64 — btoa on the raw string would throw on any
+  // code point > 0xFF.
+  const bytes = new TextEncoder().encode(String(html == null ? "" : html));
+  let binStr = "";
+  const CHUNK = 8192;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binStr += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  const b64 = btoa(binStr);
+  console.log(`[cloudconvert] html-to-pdf: creating job, input=${bytes.length}B base64=${b64.length}ch`);
+  const createResp = await fetch(`${API_BASE}/jobs`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      tasks: {
+        "import-html": {
+          operation: "import/base64",
+          file: b64,
+          filename
+        },
+        "convert-to-pdf": {
+          operation: "convert",
+          input: "import-html",
+          input_format: "html",
+          output_format: "pdf",
+          // Chrome renders the report's CSS + colour blocks faithfully;
+          // print_background keeps the branded bands, and A4 zero-margin lets
+          // the report's own page padding own the layout (matches the print CSS).
+          engine: "chrome",
+          print_background: true,
+          page_size: "A4",
+          margin_top: "0",
+          margin_bottom: "0",
+          margin_left: "0",
+          margin_right: "0"
+        },
+        "export-pdf": {
+          operation: "export/url",
+          input: "convert-to-pdf",
+          inline: false,
+          archive_multiple_files: false
+        }
+      },
+      tag: "antcv-html-to-pdf"
+    })
+  });
+  if (!createResp.ok) {
+    const errBody = await createResp.text().catch(() => "");
+    throw new Error(`CloudConvert html-to-pdf job creation failed: ${createResp.status} ${errBody.slice(0, 500)}`);
+  }
+  const createJson = await createResp.json();
+  const jobId = createJson?.data?.id;
+  if (!jobId) {
+    throw new Error("CloudConvert html-to-pdf job created but no id returned");
+  }
+  console.log(`[cloudconvert] html-to-pdf job ${jobId} created`);
+  let exportFileUrl = null;
+  let pollCount = 0;
+  while (Date.now() - startMs < TIMEOUT_MS) {
+    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+    pollCount++;
+    const statusResp = await fetch(`${API_BASE}/jobs/${jobId}`, {
+      headers: { "Authorization": `Bearer ${apiKey}` }
+    });
+    if (!statusResp.ok) {
+      const errBody = await statusResp.text().catch(() => "");
+      throw new Error(`CloudConvert html-to-pdf status check failed: ${statusResp.status} ${errBody.slice(0, 500)}`);
+    }
+    const statusJson = await statusResp.json();
+    const jobStatus = statusJson?.data?.status;
+    if (jobStatus === "error") {
+      const tasks = statusJson?.data?.tasks || [];
+      const failed = tasks.find((t) => t.status === "error");
+      throw new Error(`CloudConvert html-to-pdf job ${jobId} errored: ${failed?.code || "unknown"} — ${failed?.message || ""}`);
+    }
+    if (jobStatus === "finished") {
+      const tasks = statusJson?.data?.tasks || [];
+      const exportTask = tasks.find((t) => t.name === "export-pdf");
+      const files = exportTask?.result?.files || [];
+      if (!files.length || !files[0].url) {
+        throw new Error(`CloudConvert html-to-pdf finished but export-pdf produced no file URL`);
+      }
+      exportFileUrl = files[0].url;
+      console.log(`[cloudconvert] html-to-pdf job ${jobId} finished after ${pollCount} polls (${Date.now() - startMs}ms)`);
+      break;
+    }
+  }
+  if (!exportFileUrl) {
+    throw new Error(`CloudConvert html-to-pdf job ${jobId} did not complete within ${TIMEOUT_MS}ms (polled ${pollCount} times)`);
+  }
+  const pdfResp = await fetch(exportFileUrl);
+  if (!pdfResp.ok) {
+    throw new Error(`CloudConvert html-to-pdf download failed: ${pdfResp.status}`);
+  }
+  const pdfBuffer = new Uint8Array(await pdfResp.arrayBuffer());
+  console.log(`[cloudconvert] html-to-pdf downloaded PDF: ${pdfBuffer.length}B`);
+  return {
+    buffer: pdfBuffer,
+    jobId,
+    durationMs: Date.now() - startMs
+  };
+}
+__name(convertHtmlToPdf, "convertHtmlToPdf");
 function pdfProvider(env2) {
   if (env2 && env2.CLOUDCONVERT_API_KEY && String(env2.CLOUDCONVERT_API_KEY).trim()) {
     return "cloudconvert";
@@ -28755,7 +28873,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.161-leadin-underline";
+var VERSION = "1.14.162-analysis-html-pdf";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);
@@ -28802,6 +28920,9 @@ var index_default = {
       }
       if (url.pathname === "/generate-pdf" && request.method === "POST") {
         return await handleGeneratePdf(request, origin, env2);
+      }
+      if (url.pathname === "/generate-analysis-pdf" && request.method === "POST") {
+        return await handleGenerateAnalysisPdf(request, origin, env2);
       }
       if (url.pathname === "/api/jd/pdf-to-docx" && request.method === "POST") {
         return await handlePdfToDocx(request, origin, env2);
@@ -29042,6 +29163,99 @@ async function handleGeneratePdf(request, origin, env2) {
   return new Response(pdfResult.buffer, { status: 200, headers });
 }
 __name(handleGeneratePdf, "handleGeneratePdf");
+async function handleGenerateAnalysisPdf(request, origin, env2) {
+  // HTML-TO-PDF-001 (2026-07-22): server-side PDF for the JD-analysis report.
+  // The PWA (antcv-analysis-report-pdf-360.js) previously printed the report via
+  // an offscreen iframe window.print() — Chrome's print pipeline gives an
+  // ATS-illegible PDF (no ToUnicode CMap), same reason the CV/CL export moved to
+  // CloudConvert. This renders the SAME report HTML through CloudConvert's Chrome
+  // engine. Same gates as /generate-pdf: optional WORKER_SECRET, allowed-origin
+  // CORS, pdfProvider check, BYOK X-CloudConvert-Key precedence. The PWA falls
+  // back to its existing browser-print path when this is unavailable or fails.
+  if (env2.WORKER_SECRET) {
+    const presented = request.headers.get("X-AntCV-Secret") || "";
+    if (presented !== env2.WORKER_SECRET) {
+      return json({ error: "unauthorized" }, 401, origin, env2);
+    }
+  }
+  const provider = pdfProvider(env2);
+  if (!provider) {
+    return json(
+      {
+        error: "pdf_not_configured",
+        message: "Server-side PDF generation is not configured on this worker. Set the CLOUDCONVERT_API_KEY secret to enable. The PWA falls back to client-side PDF print until configured.",
+        provider: null
+      },
+      503,
+      origin,
+      env2
+    );
+  }
+  const MAX_BYTES = 4 * 1024 * 1024;
+  const raw = await request.text();
+  if (raw.length > MAX_BYTES) {
+    return json(
+      { error: "payload too large", max_bytes: MAX_BYTES, received_bytes: raw.length },
+      413,
+      origin,
+      env2
+    );
+  }
+  let payload;
+  try {
+    payload = JSON.parse(raw);
+  } catch (e) {
+    return json({ error: "invalid JSON", detail: String(e.message || e) }, 400, origin, env2);
+  }
+  const html = payload && typeof payload.html === "string" ? payload.html : "";
+  if (!html.trim()) {
+    return json({ error: "missing_html", message: "Body must be JSON { html: string, filename?: string }." }, 400, origin, env2);
+  }
+  const t0 = Date.now();
+  let pdfResult;
+  try {
+    const ccKey =
+      (request.headers.get("X-CloudConvert-Key") || "").trim() ||
+      env2.CLOUDCONVERT_API_KEY;
+    pdfResult = await convertHtmlToPdf(html, ccKey, {
+      filename: payload.filename || "analysis"
+    });
+  } catch (e) {
+    console.error("[docx-worker] CloudConvert HTML->PDF conversion failed", e);
+    return json(
+      {
+        error: "pdf_conversion_failed",
+        message: String(e.message || e),
+        provider,
+        suggestion: "The PWA can fall back to client-side print (browser PDF). Check the worker logs for the upstream error."
+      },
+      502,
+      origin,
+      env2
+    );
+  }
+  const filename = sanitizeFilename(payload.filename || "analysis") + ".pdf";
+  console.log(
+    `[docx-worker] /generate-analysis-pdf ok: pdf ${pdfResult.durationMs}ms, total ${Date.now() - t0}ms, jobId=${pdfResult.jobId}`
+  );
+  const headers = {
+    ...corsHeaders(origin, env2),
+    "Content-Type": "application/pdf",
+    "Content-Disposition": `attachment; filename="${filename}"`,
+    "Content-Length": String(pdfResult.buffer.length),
+    "X-AntCV-Pdf-Provider": provider,
+    "X-AntCV-Pdf-JobId": pdfResult.jobId,
+    "X-AntCV-Pdf-Ms": String(pdfResult.durationMs),
+    "Access-Control-Expose-Headers": [
+      "X-AntCV-Pdf-Provider",
+      "X-AntCV-Pdf-JobId",
+      "X-AntCV-Pdf-Ms",
+      "Content-Disposition"
+    ].join(", ")
+  };
+  return new Response(pdfResult.buffer, { status: 200, headers });
+}
+__name(handleGenerateAnalysisPdf, "handleGenerateAnalysisPdf");
 async function handleDiagConvertDocx(request, origin, env2) {
   // DIAG-CONVERT-DOCX-001 (2026-07-13, SINGLE-SLOT-LO-DROP-001 investigation): raw
   // DOCX body -> PDF through the SAME CloudConvert pipeline /generate-pdf uses, so
@@ -29257,7 +29471,7 @@ function corsHeaders(origin, env2) {
   return {
     "Access-Control-Allow-Origin": allowed || "*",
     "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, X-AntCV-Secret",
+    "Access-Control-Allow-Headers": "Content-Type, X-AntCV-Secret, X-CloudConvert-Key",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin"
   };

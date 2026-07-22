@@ -369,7 +369,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.1544-brand-parity';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.2201-copenhagen-v2-bandphoto';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.2229-analysis-header';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -411,7 +411,7 @@
           app.src = 'app.js?v=1.51.2194-slogan-headline';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.2201-copenhagen-v2-bandphoto';
+            vo.src = 'antcv-version-override.js?v=1.51.2229-analysis-header';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -1099,6 +1099,8 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      branded, AI-watermarked PDF (client-side print). Reads `rationale`
      (incl. the new jd-analysis fields); never edits app.js. -->
 <script src="antcv-analysis-report-pdf-360.js?v=1.51.2072-analysis-cloudconvert" defer></script>
+<!-- ANALYSIS-PANEL-HEADER-001: role · company · analysis-date header at the top of the Analysis panel -->
+<script src="antcv-analysis-header.js?v=1.51.2229-analysis-header" defer></script>
 <!-- CLUSTER-QUAL-001 stage 3 (section 6 rollout step 6): "Market fit" card —
      real D1-backed fit_score/tier/matched/gaps, inserted right after the
      Analysis Report panel above. Deliberately separate from that panel's own

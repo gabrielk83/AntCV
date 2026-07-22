@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.2201-copenhagen-v2-bandphoto';
+const CACHE = 'antcv-1.51.2229-analysis-header';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',
@@ -17,6 +17,7 @@ const SHELL = [
   './antcv-analysis-merge-344.js',
   './antcv-analysis-panel-jd-block-356.js',
   './antcv-analysis-report-pdf-360.js',
+  './antcv-analysis-header.js',
   './antcv-sections-icon-346.js',
   './antcv-topbar-tools-347.js',
   './antcv-cl-ai-notice-inline.js',

@@ -27,7 +27,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.1838-latin-lang-id';
+  var VERSION = '1.51.2012-content-script';
   if (window.__antcvBabelRelang === VERSION) return;
   window.__antcvBabelRelang = VERSION;
   try { if (localStorage.getItem('antcv:disable-babel-relang') === '1') return; } catch (_) {}
@@ -454,5 +454,30 @@
     if (__wasGen && !g) schedule();   // generation just finished -> verify language
     __wasGen = g;
   }, 3000);
-  window.AntcvBabelRelang = { version: VERSION, _check: check, _snapshot: snapshot, _restore: restoreCache, _invariants: invariantSet, _missing: missingInvariants, _isInLanguage: isInLanguage, _latinScores: latinScores, lastDrift: null };
+  // APP-SWITCH-CONTENT-LANG-DETECT-001 (owner 2026-07-22 "every CV starts in Chinese and
+  // switches to English — zh is the only Chinese CV we should have"): the ROBUST content-
+  // script detector for the app-switch / boot language selector. The app.src.js sites used
+  // to return 'zh' on a SINGLE CJK codepoint anywhere in JSON.stringify(sections) — so any
+  // babel RESIDUE (one stray Chinese char) flipped the whole app to Chinese, and that in
+  // turn drove babel-relang to translate the doc to zh and persist it (the contamination
+  // loop). This uses the SAME vetted test babel-relang heals with (textOf extracts VALUES,
+  // never JSON keys; isInLanguage = the prose-ratio >= THRESHOLD_PROSE with acronyms /
+  // proper nouns / product names excluded), so the selector and the healer AGREE by
+  // construction — no more selector-vs-content tug-of-war. Returns the wide script the
+  // content is genuinely rendered in, or '' for a Latin / residue / too-short document
+  // (caller then falls back to jd_language). Latin ribbons (da/es) are intentionally not
+  // returned here — they are the jd_language's job, not a script-detection one.
+  function contentScript(cvSections, clSections) {
+    try {
+      var txt = textOf(cvSections || []) + ' ' + textOf(clSections || []);
+      var order = ['zh', 'he', 'am', 'ar'];
+      for (var i = 0; i < order.length; i++) {
+        if (SCRIPTS[order[i]] && isInLanguage(txt, order[i]) === true) return order[i];
+      }
+    } catch (_) {}
+    return '';
+  }
+  try { window.__antcvContentScript = contentScript; } catch (_) {}
+
+  window.AntcvBabelRelang = { version: VERSION, _check: check, _snapshot: snapshot, _restore: restoreCache, _invariants: invariantSet, _missing: missingInvariants, _isInLanguage: isInLanguage, _latinScores: latinScores, contentScript: contentScript, lastDrift: null };
 })();

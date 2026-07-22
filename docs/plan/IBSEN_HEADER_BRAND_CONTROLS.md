@@ -14,7 +14,7 @@ Colours are **per element** (NOT one brand ink):
 | Contact | white (`FFFFFF`) | CV + CL band (both) |
 | Band internal horizontal rules | HIDDEN (blue-on-blue, i.e. rules OFF inside the band) | band |
 | Box contour | 1.5px in the accent (orange) | band |
-| Slogan | black (`000000`) | CL body, white bg |
+| Slogan | BRAND colour (Ibsen = deep blue, the brand primary/navy — NOT black) — `brandV2.sloganColor` | CL body, white bg |
 | Application (role·company) | dark gray (~`595959`) | CL body, white bg (this is the V5 line, moved below the slogan) |
 | CL body rules | 2 orange lines (`D97706`), 1.5px | CL, white bg |
 
@@ -22,8 +22,11 @@ Implication: `COMPANY-BRAND-FIT-001` currently collapses `headerNameColor = head
 headerContactColor = __ink` (`app.src.js:27103`) — WRONG. Must set per element: name/contact = readable
 ink (white on the dark band), spec = accent (orange). Worker already has the 3 separate slots, so the
 export renders per-element once the collapse is removed. Band rules must be OFF (hidden); the box contour
-(copenhagen-v2, 1.5px accent) carries the band edge. In the CL body: slogan=black, application=dark gray,
-2 accent rules — ties to V5 (application-subtitle moved below the slogan onto the white body).
+(copenhagen-v2, 1.5px accent) carries the band edge. In the CL body: slogan = BRAND colour (Ibsen deep
+blue, `brandV2.sloganColor` — NOT black), application = dark gray, 2 accent rules — ties to V5
+(application-subtitle moved below the slogan onto the white body). EVERY header element
+(name/spec/contact/slogan/application) takes a per-element BRAND colour; white/orange/blue/gray here are
+just Ibsen's brand values, not hardcoded defaults.
 
 ## The five asks + exact hooks (from the code map)
 

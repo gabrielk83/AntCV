@@ -83,6 +83,44 @@
       var s = makeSwatch(MAP[rowKey], rowKey);
       cluster.appendChild(s.frag);
     });
+    applySlogan();
+    applyAppLine();
+  }
+
+  // SLOGAN swatch: the "COVER LETTER SLOGAN" editor row (BODY section) — a flex
+  // row whose label SPAN reads COVER LETTER SLOGAN and which carries a 👁 control.
+  function applySlogan() {
+    var label = null, all = document.querySelectorAll('.antcv-editor-side-panel span, .antcv-mobile-bottom-panel span, [data-antcv-app-panel] span, span');
+    for (var i = 0; i < all.length; i++) {
+      var t = (all[i].textContent || '').trim();
+      if (t === 'COVER LETTER SLOGAN' || /^COVER LETTER SLOGAN$/i.test(t)) { label = all[i]; break; }
+    }
+    if (!label) return;
+    var row = label;
+    for (var d = 0; d < 5 && row.parentElement; d++) { if (getComputedStyle(row).display === 'flex' && row.querySelector('button')) break; row = row.parentElement; }
+    if (getComputedStyle(row).display !== 'flex') return;
+    if (row.querySelector('[' + MARK + '="slogan"]')) { paintSwatch(row.querySelector('[' + MARK + '="slogan"]'), 'slogan'); return; }
+    var s = makeSwatch('slogan', 'slogan');
+    row.appendChild(s.frag);
+  }
+
+  // APPLICATION swatch: the V5 application line renders in the PREVIEW as
+  // [data-antcv-app-line] (below the slogan) and isn't always present. Attach a
+  // small swatch as an absolutely-positioned control at its right edge (NOT inside
+  // the text flow), only when it exists. contenteditable=false so it never edits.
+  function applyAppLine() {
+    var el = document.querySelector('.antcv-preview-paper [data-antcv-app-line]');
+    if (!el) return;
+    if (el.querySelector('[' + MARK + '="application"]')) { paintSwatch(el.querySelector('[' + MARK + '="application"]'), 'application'); return; }
+    if (getComputedStyle(el).position === 'static') { try { el.style.position = 'relative'; } catch (_) {} }
+    var s = makeSwatch('application', 'application');
+    s.btn.setAttribute('contenteditable', 'false');
+    s.btn.style.position = 'absolute';
+    s.btn.style.right = '-20px';
+    s.btn.style.top = '50%';
+    s.btn.style.transform = 'translateY(-50%)';
+    s.btn.style.margin = '0';
+    el.appendChild(s.frag);
   }
 
   var deb = null;

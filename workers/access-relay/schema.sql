@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS application (
   cv_sections_bak    TEXT,                       -- WIPE-NONDESTRUCTIVE-RESTORE-001: pre-regen snapshot; restored on reopen if a regen left cv_sections NULL
   cl_sections_bak    TEXT,                       -- WIPE-NONDESTRUCTIVE-RESTORE-001: pre-regen snapshot; restored on reopen if a regen left cl_sections NULL
   style_config       TEXT,                       -- JSON: this application's OWN brand-fit/custom colors+fonts (BRAND-FIT-PER-APP-001)
+  analysis_extra     TEXT,                       -- JSON: {gap_state:{...}, application_questions:...} — Analysis-panel per-app stores (ANALYSIS-EXTRA-PERSIST-001)
   created_at         INTEGER NOT NULL,
   updated_at         INTEGER NOT NULL,
   FOREIGN KEY (user_hash) REFERENCES user_kernel(user_hash) ON DELETE CASCADE,
@@ -52,6 +53,8 @@ CREATE TABLE IF NOT EXISTS application (
 -- existing tables: WIPE-NONDESTRUCTIVE-RESTORE-001 backups added live via
 --   `ALTER TABLE application ADD COLUMN cv_sections_bak TEXT;`
 --   `ALTER TABLE application ADD COLUMN cl_sections_bak TEXT;`
+-- existing tables: ANALYSIS-EXTRA-PERSIST-001 added live via
+--   `ALTER TABLE application ADD COLUMN analysis_extra TEXT;`
 
 CREATE TABLE IF NOT EXISTS language_view (
   application_id    INTEGER NOT NULL,

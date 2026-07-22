@@ -2317,6 +2317,13 @@ function shapeApplicationRow(row) {
     // fit on recolored every future application on every device. This
     // column lets a style live on the application it was generated for.
     style_config:       parseJsonField(row.style_config, null),
+    // ANALYSIS-EXTRA-PERSIST-001 (owner 2026-07-22): the Analysis panel's
+    // per-gap detail + "I cover this" answers (gapState_*) and the employer Q&A
+    // (applicationQuestions) used to live ONLY in the generating device's
+    // localStorage, so a load on another device (or a fresh restore) showed them
+    // blank. This JSON column carries them on the application row so they round-
+    // trip. Shape: { gap_state: {<key>:<value>...}, application_questions: <any> }.
+    analysis_extra:     parseJsonField(row.analysis_extra, null),
     created_at:         row.created_at,
     updated_at:         row.updated_at,
   };
@@ -3597,6 +3604,14 @@ async function handleApiApplicationById(request, env, idStr) {
     if (body.style_config !== undefined) {
       sets.push('style_config = ?');
       vals.push(body.style_config === null ? null : JSON.stringify(body.style_config));
+    }
+    // ANALYSIS-EXTRA-PERSIST-001: per-app gap-state + application-questions JSON.
+    // Same undefined-skip / explicit-null-clears convention as every field here,
+    // so a partial write (the client's dedicated analysis_extra PUT) never wipes
+    // sections/meta/etc., and vice-versa.
+    if (body.analysis_extra !== undefined) {
+      sets.push('analysis_extra = ?');
+      vals.push(body.analysis_extra === null ? null : JSON.stringify(body.analysis_extra));
     }
     if (!sets.length) {
       return jsonResponse({ error: 'no_fields_to_update' }, 400, request, env, refresh);

@@ -64,6 +64,32 @@
     try { return String(localStorage.getItem('proxyUrl') || '').replace(/^"|"$/g, '').replace(/\/+$/, ''); }
     catch (_) { return ''; }
   }
+  // RELAY-AUTH-FIX-001 (2026-07-22): /api/active and /api/applications/:id live on
+  // the ACCESS-RELAY and authenticate ONLY via `Authorization: Bearer <JWT>` — the
+  // relay has no cookie fallback. This sidecar was calling them with
+  // `credentials:'include'` and no Bearer, so every poll 401'd (console spam) AND
+  // learnPrimary never populated primaryByAppId — the data-loss guard silently
+  // failed open (never protected a zh/he canonical). Mirror antcv-fit-panel.js:
+  // read the RELAY base + the auth token, and send Bearer. When logged out (no
+  // base/token) we skip the request entirely instead of firing an anonymous 401.
+  function relayBase() {
+    var v = '';
+    try { v = String(localStorage.getItem('relayUrl') || ''); } catch (_) {}
+    if (!v) { try { if (window.ANTCV_RELAY_URL) v = String(window.ANTCV_RELAY_URL); } catch (_) {} }
+    v = v.replace(/^"|"$/g, '').replace(/\/+$/, '');
+    return v || proxyBase();   // fall back to proxyBase for older configs
+  }
+  function authToken() {
+    try { return String(localStorage.getItem('antcv:auth:token') || '').replace(/^"|"$/g, ''); } catch (_) { return ''; }
+  }
+  function relayGet(path) {
+    var base = relayBase(); var token = authToken();
+    if (!base || !token) return null;   // logged out -> no anonymous 401
+    return origFetch.call(window, base + path, {
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: 'Bearer ' + token }
+    });
+  }
   function safeParse(s) { try { return typeof s === 'string' ? JSON.parse(s) : s; } catch (_) { return null; } }
 
   // Content script of a {cv_sections, cl_sections} pair -> a wide script code, or 'la'.
@@ -107,9 +133,10 @@
   // ---- learn the primary language -----------------------------------------
   function learnPrimary(id) {
     if (id == null) return;
-    var base = proxyBase(); if (!base) return;
-    // Use the ORIGINAL fetch so our own learning GET is never re-entrantly guarded.
-    origFetch.call(window, base + '/api/applications/' + id, { credentials: 'include', headers: { 'Content-Type': 'application/json' } })
+    // Use the ORIGINAL fetch (via relayGet) so our own learning GET is never
+    // re-entrantly guarded, and carries the Bearer the relay requires.
+    var req = relayGet('/api/applications/' + id); if (!req) return;
+    req
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (j) {
         if (!j) return;
@@ -124,8 +151,8 @@
   var lastActive = null;
   function pollActive() {
     if (disabled()) return;
-    var base = proxyBase(); if (!base) return;
-    origFetch.call(window, base + '/api/active', { credentials: 'include', headers: { 'Content-Type': 'application/json' } })
+    var req = relayGet('/api/active'); if (!req) return;   // logged out -> skip (no 401 spam)
+    req
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (j) {
         var id = j && (j.application_id != null ? j.application_id : (j.active && j.active.application_id));

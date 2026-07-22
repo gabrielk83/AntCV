@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.3242-edu-canon-pin';
+const CACHE = 'antcv-1.51.3262-band-symmetry';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

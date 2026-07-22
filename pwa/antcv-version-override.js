@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.3242-edu-canon-pin';
+  const TARGET_VERSION = '1.51.3262-band-symmetry';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.3242-edu-canon-pin',
     '1.51.3222-quick-doc-color',
     '1.51.3182-band-size2',
     '1.51.3161-band-size',

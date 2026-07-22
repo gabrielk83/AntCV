@@ -33,7 +33,7 @@
 (function () {
   'use strict';
   if (window.__antcvCopenhagenV2) return;
-  window.__antcvCopenhagenV2 = '1.51.3202-band-grid';
+  window.__antcvCopenhagenV2 = '1.51.3262-band-symmetry';
 
   var FLAG = 'antcv:copenhagen-v2';
   var STYLE_ID = 'antcv-copenhagen-v2-style';
@@ -116,23 +116,32 @@
       // which made the band text center on the full box far from the photo —
       // reverted; the float keeps the text beside the figure. Only neutralize any
       // stale transform from a cached nudge.
-      // CPH-BAND-SIZE-001/002 + CPH-BAND-GRID-001 (owner 2026-07-23 iterations:
-      // bigger circle 134px = the mockup 1.4in, box +0.25in, figure right into the
-      // 22px corner; then "properly distribute the row spaces and let the contact
-      // line spread so it is not becoming two lines"): the float model clustered
-      // the text rows at the top and the contact WRAPPED (scaleX shrinks only
-      // visually — layout still wraps at natural width). GRID instead: photo in
-      // column 1 spanning all rows, vertically centered; text rows in column 2
-      // with an even row gap, the whole group vertically centered. Contact gets
-      // white-space:nowrap — with the scaleX(.73) visual condense it holds ONE
-      // line without changing layout wrapping rules elsewhere.
-      css += BAND + '{display:grid !important;grid-template-columns:158px 1fr !important;' +
-        'align-content:center !important;row-gap:7px !important;' +
-        'min-height:174px !important;padding-top:16px !important;padding-bottom:16px !important;}';
-      css += BAND + ' img{grid-column:1 !important;grid-row:1 / span 8 !important;align-self:center !important;justify-self:start !important;' +
-        'transform:none !important;width:134px !important;height:134px !important;margin:0 0 0 18px !important;float:none !important;}';
+      // CPH-BAND-SIZE/GRID/SYMMETRY (owner 2026-07-23 iterations, latest: "place
+      // the figure so it looks like it is in the middle of sidebar width, increase
+      // the heading box height, increase the width the contact line is allowed
+      // (from both its sides), improve spaces and symmetry — the specialization
+      // and photo are both in mid-box height"):
+      //  - photo column = the LIVE-MEASURED sidebar width, photo centered in it
+      //    -> the figure sits over the sidebar's midline;
+      //  - rows are 1fr / auto / 1fr: NAME bottom-anchored above center, SPEC
+      //    exactly at mid-box height (like the photo, align-self:center), CONTACT
+      //    top-anchored below — symmetric around the middle;
+      //  - CONTACT spans the FULL band (grid-column 1/-1), so with nowrap +
+      //    scaleX(.73) it has maximum symmetric width from both sides;
+      //  - box height 174 -> 200px.
+      var sbW = 0;
+      try { var __sb = document.querySelector('.antcv-preview-paper [data-antcv-document-sidebar]'); if (__sb) sbW = Math.round(__sb.getBoundingClientRect().width); } catch (_) {}
+      if (!sbW || sbW < 150 || sbW > 500) sbW = 250;
+      css += BAND + '{display:grid !important;grid-template-columns:' + sbW + 'px 1fr !important;' +
+        'grid-template-rows:1fr auto 1fr !important;align-content:stretch !important;row-gap:0 !important;' +
+        'min-height:200px !important;padding-top:14px !important;padding-bottom:14px !important;}';
+      css += BAND + ' img{grid-column:1 !important;grid-row:1 / span 3 !important;align-self:center !important;justify-self:center !important;' +
+        'transform:none !important;width:134px !important;height:134px !important;margin:0 !important;float:none !important;}';
       css += BAND + ' > div{grid-column:2 !important;margin:0 !important;}';
-      css += BAND + ' > div:last-of-type:not(:first-of-type){white-space:nowrap !important;}';
+      css += BAND + ' > div:first-of-type{grid-row:1 !important;align-self:end !important;margin-bottom:8px !important;}';
+      css += BAND + ' > div:nth-of-type(2):not(:last-of-type){grid-row:2 !important;align-self:center !important;}';
+      css += BAND + ' > div:last-of-type:not(:first-of-type){grid-column:1 / -1 !important;grid-row:3 !important;' +
+        'align-self:start !important;margin-top:8px !important;white-space:nowrap !important;}';
     }
     // STAGE 3 (structural CSS, NOT per-node inline styles — inline styles were
     // wiped by React re-renders and re-applied late, which the owner saw as the

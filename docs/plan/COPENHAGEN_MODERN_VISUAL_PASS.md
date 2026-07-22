@@ -60,6 +60,20 @@ Today the CL header spec-row shows `[role, company].join(" - ")` (the "applicati
   application context from the CL (regression). Render on all 3 surfaces + the panel.
 - CL order: the element slots between slogan and greeting via `pwa/antcv-nordic-cl-order-971.js`.
 
+### EXPORT PARITY (rounded box in PDF + DOCX) — concrete approach (traced 2026-07-21)
+CSS `border-radius` is a DEAD END: the PDF is docx-worker DOCX -> CloudConvert/LibreOffice, the band is a
+Word-compat TABLE, and LibreOffice ignores border-radius (would render square). The worker already:
+- shades the candidate band via a **table** `<w:shd w:fill=headerBg>` (`workers/docx-worker/src/index.js` ~23990);
+- uses **VML shapes** (`<v:rect>`, `<w:pict>`, `anchorx="page"`) for watermark/spine;
+- has `makePhotosCircular()` (rewrites `prstGeom`) + a `roundRect` map (~23773) for the photo shape.
+**Approach:** emit a **VML `<v:roundrect>`** (fill headerBg, stroke = accent, `arcsize` ≈ radius/width for
+~20pt, position/size = the band inset 7.4pt, page-anchored, z BEHIND text) as a decorative BACKGROUND; keep
+the band text/table ON TOP (ATS-safe). LibreOffice + Word both render VML, so this fixes DOCX AND the
+CloudConvert PDF together. Plumb a new `opts.copenhagenV2` from the export payload (the app reads the
+`antcv:copenhagen-v2` flag pre-POST). **MUST render-verify** (Word-COM -> PDF -> PyMuPDF, memory
+`render-and-measure`) before the manual worker deploy — a mis-positioned floating shape is worse than a
+square band. This is a focused, verification-gated task; do NOT blind-ship it.
+
 ### V6 — DOCX parity sweep
 Bring V1-V5 to the docx worker (rounded backgrounds, inset panels, photo frame, accent rules, application
 subtitle). Separate worker deploy; verify with the Word-COM → PDF → PyMuPDF measure harness (memory

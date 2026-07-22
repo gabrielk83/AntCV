@@ -9620,6 +9620,12 @@
           // map a rich_block row id "item:<i>" -> that row's roleId, so the per-row
           // ✨/⇥ run the existing per-ROLE enhance/compress on the row's role.
           const __ridOf = (id) => { const mm = /^item:(\d+)$/.exec(id || ""); if (!mm) return null; const it = __sec.items[+mm[1]]; return it ? it._rid : null; };
+          // ROWFIT-HOURGLASS-001 (owner 2026-07-22): the editor shows ⏳ when its
+          // enrichingId/compressingId === "item:<row>", but a busy enrich/compress on this
+          // surface is keyed by the REAL roleId (a/o = enrichingRoleId/compressingRoleId,
+          // already stripped by Te). Map that role id BACK to its row's "item:<i>" so the
+          // right row shows ⏳ (these props were omitted before → the row was never "busy").
+          const __itemIdForRid = (rid) => { if (rid == null) return null; const k = (__sec.items || []).findIndex((it) => it && it._rid === rid); return k >= 0 ? "item:" + k : null; };
           return React.createElement(window.AntcvRichBlockEditor, {
             section: __sec,
             update: (patch) => {
@@ -9637,6 +9643,8 @@
             accent: s,
             onEnrich: (id) => { const rid = __ridOf(id); if (rid != null) r(rid); },
             onCompress: (id) => { const rid = __ridOf(id); if (rid != null) n(rid); },
+            enrichingId: __itemIdForRid(a),
+            compressingId: __itemIdForRid(o),
           });
         }
         return React.createElement(Ae, {

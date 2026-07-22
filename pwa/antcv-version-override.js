@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.2561-cl-spec-center';
+  const TARGET_VERSION = '1.51.2600-rowfit-hourglass';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.2561-cl-spec-center',
     '1.51.2541-cl-heading-spec',
     '1.51.2520-application-line',
     '1.51.2501-contact-collapse-fix',

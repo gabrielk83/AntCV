@@ -145,3 +145,13 @@ test('per-row Fit-it/Enhance also sets the section transition key (src + app mir
   assert.ok((src.match(/t\.startsWith\("item:"\) \|\| t\.startsWith\("row:"\)/g) || []).length >= 2, 'gate present twice (src)');
   assert.ok((app.match(/t\.startsWith\("item:"\)\|\|t\.startsWith\("row:"\)/g) || []).length >= 2, 'gate present twice (app)');
 });
+
+// ROWFIT-HOURGLASS-001 (owner 2026-07-22): the experience-as-rich_block editor mount
+// omitted enrichingId/compressingId, so its per-row ✨/⇥ never showed ⏳. Fix maps the
+// busy REAL roleId back to the row's "item:i" via _rid so the correct row goes busy.
+test('experience-as-rich_block mount passes enrichingId/compressingId via _rid map (src + app)', () => {
+  assert.ok(src.includes('const __itemIdForRid ='), 'itemIdForRid helper (src)');
+  assert.ok(/enrichingId: __itemIdForRid\(a\)/.test(src) && /compressingId: __itemIdForRid\(o\)/.test(src), 'experience mount props (src)');
+  assert.ok(app.includes('__itemIdForRid=rid=>'), 'itemIdForRid helper (app)');
+  assert.ok(app.includes('enrichingId:__itemIdForRid(i),compressingId:__itemIdForRid(r)'), 'experience mount props (app)');
+});

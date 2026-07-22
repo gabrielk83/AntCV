@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.2379-title-lang-heal';
+const CACHE = 'antcv-1.51.2400-application-line';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',
@@ -62,6 +62,7 @@ const SHELL = [
   './antcv-bullet-targets.js',
   './antcv-photo-ui-427.js',
   './antcv-preview-header-tokens.js',
+  './antcv-application-line-001.js',
   './antcv-copenhagen-v2-001.js',
   './antcv-pdf-preview-gate.js',
   './antcv-tone-helper.js',

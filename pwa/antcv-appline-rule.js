@@ -83,7 +83,9 @@
       var pt = PTS.indexOf(Number(s.pt)) >= 0 ? Number(s.pt) : 1.5;
       var px = Math.max(0.5, Math.round((pt * 4 / 3) * 2) / 2);
       el.style.setProperty('border-bottom', px + 'px solid ' + ruleColor(el), 'important');
-      el.style.setProperty('padding-bottom', '2px', 'important');
+      // APPLINE-SPACING-001 (owner 2026-07-23): "too close to the horizontal
+      // line" — open air between the application text and its rule.
+      el.style.setProperty('padding-bottom', '7px', 'important');
     } else if (el.getAttribute('data-antcv-appline-ruled')) {
       el.style.removeProperty('border-bottom'); el.style.removeProperty('padding-bottom');
     }

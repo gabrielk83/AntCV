@@ -33,7 +33,7 @@
 (function () {
   'use strict';
   if (window.__antcvCopenhagenV2) return;
-  window.__antcvCopenhagenV2 = '1.51.3182-band-size2';
+  window.__antcvCopenhagenV2 = '1.51.3202-band-grid';
 
   var FLAG = 'antcv:copenhagen-v2';
   var STYLE_ID = 'antcv-copenhagen-v2-style';
@@ -116,14 +116,23 @@
       // which made the band text center on the full box far from the photo —
       // reverted; the float keeps the text beside the figure. Only neutralize any
       // stale transform from a cached nudge.
-      // CPH-BAND-SIZE-001/002 (owner 2026-07-23 "increase the photo and box size
-      // ... enlarge the circle even more and also enlarge the box height by 0.25in
-      // so that it will be possible to move the figure rightwards to keep it
-      // aligned with the corners"): photo -> 134px (the mockup 1.4in), box
-      // min-height 150+24px (0.25in), and the figure shifts RIGHT (margin-left)
-      // so the bigger circle clears the 22px rounded corner and reads nestled.
-      css += BAND + ' img{transform:none !important;width:134px !important;height:134px !important;margin-left:18px !important;}';
-      css += BAND + '{min-height:174px !important;padding-top:20px !important;padding-bottom:16px !important;}';
+      // CPH-BAND-SIZE-001/002 + CPH-BAND-GRID-001 (owner 2026-07-23 iterations:
+      // bigger circle 134px = the mockup 1.4in, box +0.25in, figure right into the
+      // 22px corner; then "properly distribute the row spaces and let the contact
+      // line spread so it is not becoming two lines"): the float model clustered
+      // the text rows at the top and the contact WRAPPED (scaleX shrinks only
+      // visually — layout still wraps at natural width). GRID instead: photo in
+      // column 1 spanning all rows, vertically centered; text rows in column 2
+      // with an even row gap, the whole group vertically centered. Contact gets
+      // white-space:nowrap — with the scaleX(.73) visual condense it holds ONE
+      // line without changing layout wrapping rules elsewhere.
+      css += BAND + '{display:grid !important;grid-template-columns:158px 1fr !important;' +
+        'align-content:center !important;row-gap:7px !important;' +
+        'min-height:174px !important;padding-top:16px !important;padding-bottom:16px !important;}';
+      css += BAND + ' img{grid-column:1 !important;grid-row:1 / span 8 !important;align-self:center !important;justify-self:start !important;' +
+        'transform:none !important;width:134px !important;height:134px !important;margin:0 0 0 18px !important;float:none !important;}';
+      css += BAND + ' > div{grid-column:2 !important;margin:0 !important;}';
+      css += BAND + ' > div:last-of-type:not(:first-of-type){white-space:nowrap !important;}';
     }
     // STAGE 3 (structural CSS, NOT per-node inline styles — inline styles were
     // wiped by React re-renders and re-applied late, which the owner saw as the
@@ -139,7 +148,53 @@
     css += BAND + ' > div:first-of-type{font-size:24px !important;}';
     css += BAND + ' > div:nth-of-type(2):not(:last-of-type){font-size:18px !important;}';
     css += BAND + ' > div:last-of-type:not(:first-of-type){font-size:13px !important;}';
+    // APPLINE-SPACING-001 (owner 2026-07-23 "the application line is too far from
+    // the slogan and too close to the horizontal line"): pull the line UP toward
+    // the slogan and open air between the text and its rule underneath.
+    css += '.antcv-preview-paper [data-antcv-app-line-native]{margin-top:-7px !important;padding-bottom:7px !important;}';
+    // SPEC-LINE-COLOR-001 (owner 2026-07-23 "proper color for the specialization
+    // line"): the band render inks the spec line with the header ink (white);
+    // mockup wants the cyan #01B9BD. Branded apps still win via the
+    // header-elem-colors inline accent paint (inline style beats stylesheet).
+    css += BAND + ' > div:nth-of-type(2):not(:last-of-type){color:var(--header-spec-color, #01B9BD) !important;}';
     return css;
+  }
+
+  // SIGNOFF-UNDERLINE-001 (owner 2026-07-23 "missing is the underline under at
+  // your service"): mockup locks the CL sign-off as teal, NON-bold, with a 1.5pt
+  // CYAN #01B9BD underline. The sign-off div carries no data attribute — find it
+  // by its text (same pattern family as antcv-cl-ai-notice-inline SIGNOFFS) and
+  // paint inline, stamped for clean removal.
+  var SIGN_RX = /^(at your service|best regards|kind regards|sincerely|warm regards|yours sincerely|yours faithfully|med venlig hilsen|saludos cordiales|atentamente)[,，]?$/i;
+  var SIGN_STAMP = 'data-antcv-cph-signoff';
+  function paintSignoff(on) {
+    var flow;
+    try { flow = document.querySelector('.antcv-preview-paper [data-antcv-cl-flow]'); } catch (_) { flow = null; }
+    if (!flow) return;
+    if (!on) {
+      Array.prototype.slice.call(flow.querySelectorAll('[' + SIGN_STAMP + ']')).forEach(function (d) {
+        d.style.removeProperty('color'); d.style.removeProperty('font-weight');
+        d.style.removeProperty('text-decoration'); d.style.removeProperty('text-decoration-color');
+        d.style.removeProperty('text-decoration-thickness'); d.style.removeProperty('text-underline-offset');
+        d.removeAttribute(SIGN_STAMP);
+      });
+      return;
+    }
+    var nodes = flow.querySelectorAll('div,p,span');
+    for (var i = 0; i < nodes.length; i++) {
+      var el = nodes[i];
+      if (el.children.length > 1) continue;                       // leaf-ish only
+      var txt = String(el.textContent || '').trim();
+      if (!SIGN_RX.test(txt)) continue;
+      el.style.setProperty('color', '#00746E', 'important');
+      el.style.setProperty('font-weight', '400', 'important');
+      el.style.setProperty('text-decoration', 'underline', 'important');
+      el.style.setProperty('text-decoration-color', '#01B9BD', 'important');
+      el.style.setProperty('text-decoration-thickness', '1.5px', 'important');
+      el.style.setProperty('text-underline-offset', '3px', 'important');
+      el.setAttribute(SIGN_STAMP, '1');
+      break;                                                      // one sign-off per letter
+    }
   }
 
   // STAGE 3 v2 (2026-07-23): the name/contact styling moved into buildCSS
@@ -180,6 +235,7 @@
       el.parentNode.removeChild(el);
     }
     try { tuneBandText(); } catch (_) {}   // strip legacy 3061 inline stamps only
+    try { paintSignoff(on); } catch (_) {}
   }
 
   // React to the flag being toggled in this tab (custom event) or another tab

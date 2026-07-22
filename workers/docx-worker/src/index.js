@@ -27467,6 +27467,27 @@ function renderCompetencyTable(s, ctx) {
   const tableHeaderInk = (style && style.tableHeaderText) || readableInk(tableHeaderBg);
   const border = { style: BorderStyle.SINGLE, size: 4, color: tableHeaderBg };
   const cellBorders = { top: border, bottom: border, left: border, right: border };
+  // COPENHAGEN-TABLE-FRAME-001 (mockup lock 2026-07-22): a 1.5pt outer frame in
+  // style.tableFrameColor (cyan #01B9BD for Copenhagen Modern), only when the
+  // package defines it. Cell borders beat table-level borders in OOXML, so the
+  // frame is drawn per-cell on the perimeter (header top, col edges, last row
+  // bottom of each page chunk — every chunk restates the header, so each page's
+  // table piece gets a complete frame). Inner gridlines keep `border`.
+  const frameHex = style && style.tableFrameColor ? String(style.tableFrameColor).replace("#", "").toUpperCase() : null;
+  const frameB = frameHex ? { style: BorderStyle.SINGLE, size: 12, color: frameHex } : null;
+  function bordersFor(colIdx, isTop, isBottom) {
+    if (!frameB) return cellBorders;
+    return {
+      top: isTop ? frameB : border,
+      bottom: isBottom ? frameB : border,
+      left: colIdx === 0 ? frameB : border,
+      right: colIdx === 1 ? frameB : border,
+    };
+  }
+  __name(bordersFor, "bordersFor");
+  // TABLE-BANDED-ROWS token (mockup lock 2026-07-22): follow style.tableEvenBg
+  // (Copenhagen #DCE5EA, the sidebar light) instead of the old hardcoded EAF7F7.
+  const evenBandHex = String(style && style.tableEvenBg || "#DCE5EA").replace("#", "").toUpperCase();
   const headerAlignT = rowAlignAt(s, 0) ?? alignType(s.headerAlign || "center");
   function makeHeaderRow() {
     return new TableRow({
@@ -27474,7 +27495,7 @@ function renderCompetencyTable(s, ctx) {
       children: (header || ["", ""]).map((cell, i) => new TableCell({
         width: { size: i === 0 ? col1 : col2, type: WidthType.DXA },
         shading: { type: ShadingType.CLEAR, fill: tableHeaderBg, color: "auto" },
-        borders: cellBorders,
+        borders: bordersFor(i, true, false),
         // CORECOMP-TABLE-CELL-PAD-001 (owner 2026-07-03): text sat on the cell
         // borders in the PDF; L/R 90 (6px) -> 150 (10px). Preview padding is
         // bumped to match (TABLE-WRAP-PARITY-001 kept).
@@ -27493,18 +27514,16 @@ function renderCompetencyTable(s, ctx) {
     });
   }
   __name(makeHeaderRow, "makeHeaderRow");
-  function makeDataRow(r, idx) {
+  function makeDataRow(r, idx, isLastInChunk) {
     return new TableRow({
       children: (r || []).slice(0, 2).map((cell, i) => new TableCell({
         width: { size: i === 0 ? col1 : col2, type: WidthType.DXA },
-        // TABLE-BANDED-ROWS-001 (owner 2026-06-14): the export zebra was both
-        // INVERTED and effectively invisible vs the preview. The React preview
-        // (app.src.js ~5149) bands EVEN data rows (full-row index rr where
-        // (rr-1)%2===0, i.e. data idx 0,2,4…) with a VISIBLE pale teal #eaf7f7.
-        // The worker banded the ODD rows with near-white FAFAFA. Match the
-        // preview: even data rows → EAF7F7, odd → none.
-        shading: idx % 2 === 0 ? { type: ShadingType.CLEAR, fill: "EAF7F7", color: "auto" } : void 0,
-        borders: cellBorders,
+        // TABLE-BANDED-ROWS-001 (owner 2026-06-14): the React preview bands EVEN
+        // data rows ((rr-1)%2===0, i.e. data idx 0,2,4…); the worker matches.
+        // Band colour now follows style.tableEvenBg (Copenhagen #DCE5EA) — see
+        // evenBandHex above (mockup lock 2026-07-22; was hardcoded EAF7F7).
+        shading: idx % 2 === 0 ? { type: ShadingType.CLEAR, fill: evenBandHex, color: "auto" } : void 0,
+        borders: bordersFor(i, false, !!isLastInChunk),
         // CORECOMP-TABLE-CELL-PAD-001 (owner 2026-07-03): text sat on the cell
         // borders in the PDF; L/R 90 (6px) -> 150 (10px). Preview padding is
         // bumped to match (TABLE-WRAP-PARITY-001 kept).
@@ -27520,11 +27539,11 @@ function renderCompetencyTable(s, ctx) {
           // CJLR-EXPORT-PARITY-001 / body-justify default (owner 2026-06-19): native
           // rowAlign wins, then the item-align cycler path, else the body default is
           // JUSTIFIED (header stays center) — matching the preview (234 getAlign).
-          // FOCUS-TABLE-LEFTCOL-JUSTIFY-001 (owner 2026-07-14): the LEFT ("[Focus]")
-          // column now DEFAULTS to JUSTIFIED too (was LEFT), mirroring the preview
-          // (app.src.js left td textAlign:"justify"). A short single-line label still
-          // renders left; only a wrapped label spreads across the column.
-          alignment: i === 1 ? (rowAlignAt(s, idx + 1) ?? paraAlignPath(s, "rows." + (idx + 1)) ?? AlignmentType.JUSTIFIED) : AlignmentType.JUSTIFIED,
+          // FOCUS-TABLE-LEFTCOL-JUSTIFY-001 (owner 2026-07-14) SUPERSEDED by the
+          // Copenhagen mockup lock (owner 2026-07-22): short first-col labels stay
+          // LEFT (justify opens dead space); rows (second column) stay justified.
+          // Mirrors the preview left td textAlign:"left".
+          alignment: i === 1 ? (rowAlignAt(s, idx + 1) ?? paraAlignPath(s, "rows." + (idx + 1)) ?? AlignmentType.JUSTIFIED) : AlignmentType.LEFT,
           children: inlineRuns(cell, {
             bold: i === 0,
             color: style.mainTextColor,
@@ -27544,7 +27563,7 @@ function renderCompetencyTable(s, ctx) {
       // PREVIEW-PDF-GEOMETRY-001: CV table is LEFT-aligned (flush with body
       // text, like the preview); CL stays CENTERED (its 0.8-width inset look).
       alignment: isCl ? AlignmentType.CENTER : AlignmentType.LEFT,
-      rows: [makeHeaderRow(), ...dataRows.map((r, i) => makeDataRow(r, offset + i))]
+      rows: [makeHeaderRow(), ...dataRows.map((r, i) => makeDataRow(r, offset + i, i === dataRows.length - 1))]
     });
   }
   __name(makeTable, "makeTable");
@@ -28932,7 +28951,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.162-analysis-html-pdf";
+var VERSION = "1.14.163-copenhagen-table";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

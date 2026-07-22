@@ -2058,6 +2058,11 @@ export function buildStyle(styleConfig, navyColor) {
     // color-blind accessibility failure. Pass the stored ink through, and
     // (below) compute a contrast-correct ink whenever the bg travels alone.
     'tableHeaderText',
+    // COPENHAGEN-TABLE-FRAME-001 (mockup lock 2026-07-22): banded rows follow
+    // the package token (worker falls back to #DCE5EA, the Copenhagen band),
+    // and the cyan outer frame renders only when the package defines it.
+    'tableEvenBg',
+    'tableFrameColor',
   ];
   for (const k of passthrough) {
     if (styleConfig[k] != null) out[k] = styleConfig[k];

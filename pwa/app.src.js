@@ -386,7 +386,7 @@
       sidebarLineColor: "#283556",
       sidebarFont: "Trebuchet MS",
       photoBorderColor: "#01B9BD",
-      photoBorderWidth: 1,
+      photoBorderWidth: 1.5,
       tableHeaderBg: "#DDE6F2",
       tableHeaderText: "#283556",
       tableOddBg: "#FFFFFF",
@@ -7010,6 +7010,10 @@
                     tableLayout: "fixed",
                     fontFamily: T,
                     margin: 0,
+                    // COPENHAGEN-TABLE-FRAME-001 (mockup lock 2026-07-22): cyan outer
+                    // frame when the package defines tableFrameColor; collapse model
+                    // lets the thicker table border win over the 0.5px cell gridlines.
+                    border: k.tableFrameColor ? `1.5pt solid ${k.tableFrameColor}` : undefined,
                   },
                 },
                 head,
@@ -7046,11 +7050,11 @@
                             fontSize: $.tbl,
                             fontWeight: 700,
                             color: k.tableFirstColText,
-                            // FOCUS-TABLE-LEFTCOL-JUSTIFY-001 (owner 2026-07-14): the left
-                            // ("[Focus]") column defaulted to left while the right column
-                            // justified. Default it to justify too (owner may switch back to
-                            // left if it opens ugly inter-word gaps on short labels).
-                            textAlign: "justify",
+                            // FOCUS-TABLE-LEFTCOL-JUSTIFY-001 (owner 2026-07-14) SUPERSEDED by
+                            // the Copenhagen mockup lock (owner 2026-07-22): short first-col
+                            // labels stay LEFT — justifying them opens dead space. Rows
+                            // (second column) stay justified; worker mirrors.
+                            textAlign: "left",
                             lineHeight: I,
                             verticalAlign: "middle",
                           },
@@ -20227,11 +20231,12 @@
               tableOddBg: "#FFFFFF",
               tableEvenBg: "#DCE5EA",
               tableBorderColor: "#D9D9D9",
+              tableFrameColor: "#01B9BD",
               tableFirstColText: "#333333",
               tableOtherColText: "#333333",
               tableFirstColBold: !0,
               photoBorderColor: "#01B9BD",
-              photoBorderWidth: 1,
+              photoBorderWidth: 1.5,
             },
           },
           "navy-executive": {
@@ -29625,9 +29630,12 @@
                           return `<tr style="background:${(i - 1) % 2 == 0 ? "#DCE5EA" : "#fff"}"><td width="${s}" style="width:${s}pt;padding:3pt 7.5pt;border:0.5pt solid ${t.tableBorderColor};font-family:'Carlito',${d};font-size:${u.mainTblCell}pt;font-weight:700;color:${t.tableFirstColText};line-height:${p};vertical-align:middle"><div style="${h}">${r}</div></td><td width="${c}" style="width:${c}pt;padding:3pt 7.5pt;border:0.5pt solid ${t.tableBorderColor};font-family:'Carlito',${d};font-size:${u.mainTblCell}pt;color:${t.tableOtherColText};text-align:justify;line-height:${p};vertical-align:middle"><div style="${h}">${n[1] || ""}</div></td></tr>`;
                         })
                         .join("");
+                      // COPENHAGEN-TABLE-FRAME-001: cyan outer frame (only when the
+                      // package defines tableFrameColor) — mirrors preview + worker.
+                      const fr = t.tableFrameColor ? `border:1.5pt solid ${t.tableFrameColor};` : "";
                       return v
-                        ? `<table align="${y ? "center" : "left"}" cellspacing="0" cellpadding="0" border="0" style="width:${r}pt;border-collapse:collapse;table-layout:fixed;${v}mso-table-lspace:0;mso-table-rspace:0"><thead>${f}</thead><tbody>${b}</tbody></table>`
-                        : `<table cellspacing="0" cellpadding="0" border="0" style="width:${r}pt;border-collapse:collapse;table-layout:fixed;mso-table-lspace:0;mso-table-rspace:0"><thead>${f}</thead><tbody>${b}</tbody></table>`;
+                        ? `<table align="${y ? "center" : "left"}" cellspacing="0" cellpadding="0" border="0" style="width:${r}pt;border-collapse:collapse;table-layout:fixed;${fr}${v}mso-table-lspace:0;mso-table-rspace:0"><thead>${f}</thead><tbody>${b}</tbody></table>`
+                        : `<table cellspacing="0" cellpadding="0" border="0" style="width:${r}pt;border-collapse:collapse;table-layout:fixed;${fr}mso-table-lspace:0;mso-table-rspace:0"><thead>${f}</thead><tbody>${b}</tbody></table>`;
                     };
                   let starts = [1];
                   for (let t = 2; t < rows.length; t++) bb[t] && starts.push(t);

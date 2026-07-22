@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.3041-copenhagen-table';
+const CACHE = 'antcv-1.51.3061-copenhagen-stage3';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

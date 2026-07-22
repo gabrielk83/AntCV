@@ -17,17 +17,23 @@
  * only to the live PREVIEW DOM. Export (PDF srcdoc + DOCX) parity is a LATER
  * stage once the look is approved (this stage is preview-only on purpose).
  *
- * OPT-IN (default OFF): applies ONLY when localStorage['antcv:copenhagen-v2']==='1'.
- * Nothing changes in production until the owner flips the flag to eyeball it;
- * removing the flag (or setting '0') reverts instantly. Later, once approved, the
- * default flips ON and export/DOCX parity lands.
+ * DEFAULT ON since 1.51.3061 (STAGE 3, mockup lock 2026-07-22): the owner signed
+ * off the Copenhagen Modern design on the interactive mockup (see
+ * docs/design/COPENHAGEN_MODERN_NORDIC_PALETTE_SPEC.md "LOCKED via interactive
+ * mockup"), which is the approval the old opt-in was waiting for. Kill switch:
+ * localStorage['antcv:copenhagen-v2']='0' reverts instantly ('1' still forces on).
  *
- * Insets / floating gaps / photo-left / accent rules = stages V2-V4, not here.
+ * STAGE 3 additions (same mockup lock): band NAME gets expanded tracking (.14em,
+ * frames the photo like a 2nd ring), the CONTACT line condenses (scaleX .73) so
+ * it holds one line at ~name width, and band hyperlinks (email/LinkedIn) render
+ * WHITE on the dark box (blue/cyan "break the aesthetics"). Name/contact nodes
+ * are identified the same way antcv-header-elem-colors.js does (first text div =
+ * name; the emoji/phone div = contact) and stamped for clean removal.
  */
 (function () {
   'use strict';
   if (window.__antcvCopenhagenV2) return;
-  window.__antcvCopenhagenV2 = '1.0-V1';
+  window.__antcvCopenhagenV2 = '1.51.3061-stage3';
 
   var FLAG = 'antcv:copenhagen-v2';
   var STYLE_ID = 'antcv-copenhagen-v2-style';
@@ -106,11 +112,48 @@
     // left-floated photo -> left dx + down dy; right-floated -> right dx + down dy.
     // Tunable live via AntcvCopenhagenV2.photo(dx,dy) (owner dials, we bake).
     css += photoNudgeCSS();
+    // STAGE 3: band hyperlinks (email/LinkedIn) render WHITE on the dark box.
+    css += '.antcv-preview-paper [data-antcv-candidate-band="1"] a{color:#fff !important;}';
     return css;
   }
 
+  // STAGE 3: name tracking + contact condense on the band text lines. Node
+  // identification mirrors antcv-header-elem-colors.js bandParts (verified live
+  // there): first text-carrying child div = NAME; the div carrying contact
+  // emojis/phone digits = CONTACT. Inline styles are stamped so disable() can
+  // remove exactly what we set and nothing else.
+  var TUNE_STAMP = 'data-antcv-cph-v3';
+  function tuneBandText(on) {
+    var band;
+    try { band = document.querySelector('.antcv-preview-paper [data-antcv-candidate-band="1"]'); } catch (_) { band = null; }
+    if (!band) return;
+    var divs = Array.prototype.slice.call(band.querySelectorAll(':scope > div'))
+      .filter(function (d) { return Array.prototype.some.call(d.childNodes, function (n) { return n.nodeType === 3 && n.textContent.trim(); }); });
+    var contact = divs.filter(function (d) { return /[☎🔗⌂✉@]/.test(d.textContent) || /\d[\d\s]{6,}/.test(d.textContent); })[0];
+    var name = divs[0];
+    if (on) {
+      if (name && name !== contact) {
+        name.style.setProperty('letter-spacing', '.14em', 'important');
+        name.setAttribute(TUNE_STAMP, 'name');
+      }
+      if (contact) {
+        contact.style.setProperty('transform', 'scaleX(.73)');
+        contact.style.setProperty('transform-origin', 'center');
+        contact.setAttribute(TUNE_STAMP, 'contact');
+      }
+    } else {
+      Array.prototype.slice.call(band.querySelectorAll('[' + TUNE_STAMP + ']')).forEach(function (d) {
+        d.style.removeProperty('letter-spacing');
+        d.style.removeProperty('transform');
+        d.style.removeProperty('transform-origin');
+        d.removeAttribute(TUNE_STAMP);
+      });
+    }
+  }
+
   function enabled() {
-    try { return localStorage.getItem(FLAG) === '1'; } catch (_) { return false; }
+    // DEFAULT ON (Stage 3) — '0' is the kill switch, '1' still forces on.
+    try { return localStorage.getItem(FLAG) !== '0'; } catch (_) { return true; }
   }
   function apply() {
     var on = enabled();
@@ -120,13 +163,14 @@
         el = document.createElement('style');
         el.id = STYLE_ID;
         (document.head || document.documentElement).appendChild(el);
-        try { console.debug('[copenhagen-v2] V1+V2 box + inset panels ON'); } catch (_) {}
+        try { console.debug('[copenhagen-v2] box + inset panels + stage-3 band text ON'); } catch (_) {}
       }
       var next = buildCSS();
       if (el.textContent !== next) el.textContent = next;  // re-derive (bridge/side can change)
     } else if (el && el.parentNode) {
       el.parentNode.removeChild(el);
     }
+    try { tuneBandText(on); } catch (_) {}
   }
 
   // React to the flag being toggled in this tab (custom event) or another tab
@@ -135,6 +179,10 @@
   window.addEventListener('antcv:sections-updated', apply);
   document.addEventListener('DOMContentLoaded', apply);
   apply();
+  // STAGE 3: the band mounts after React boot — a few delayed re-asserts cover
+  // the late mount + the first re-renders (NO global observer, see memory
+  // sidecar-global-observer-breaks-React).
+  [400, 1200, 3000, 6000].forEach(function (ms) { setTimeout(apply, ms); });
 
   // Debug API + a one-liner toggle for the owner.
   window.AntcvCopenhagenV2 = {

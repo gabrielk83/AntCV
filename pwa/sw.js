@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.2661-cl-v5-rerender-force';
+const CACHE = 'antcv-1.51.2680-hourglass-storm';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

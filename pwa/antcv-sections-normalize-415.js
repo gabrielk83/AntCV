@@ -537,7 +537,12 @@
       var parts = _mergedParts(m.title || m.role); if (parts.length < 2) continue;
       for (var j = 0; j < roles.length; j++) {
         if (i === j || drop[j]) continue;
-        var c = roles[j]; if (!c) continue;
+        // ROLES-STORM-CONVERGE-002 (owner 2026-07-22): NEVER drop an already-HIDDEN
+        // component. The merge invariant is only "no merged role beside a VISIBLE
+        // component" — a hidden (on:false) constituent already satisfies it. Dropping
+        // hidden constituents was the sole perturbation that made repairExperienceCompleteness
+        // see them as "missing" every pass and re-add them → the endless delete/restore storm.
+        var c = roles[j]; if (!c || c.on === false) continue;
         if (_mergedParts(c.title || c.role).length >= 2) continue; // never swallow another merged role
         var ct = nm(c.title || c.role); if (!ct) continue;
         if (parts.indexOf(ct) < 0) continue;                       // exact component match only

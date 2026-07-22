@@ -369,7 +369,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.2230-cl-subtitle-no-dup-company';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.2661-cl-v5-rerender-force';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.2680-hourglass-storm';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -411,7 +411,7 @@
           app.src = 'app.js?v=1.51.2641-cl-v5-why-roleview';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.2661-cl-v5-rerender-force';
+            vo.src = 'antcv-version-override.js?v=1.51.2680-hourglass-storm';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -755,7 +755,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-cluster-demand-live.js?v=1.51.167" defer></script>
 <!-- SETTINGS-PERSONAL-FREEZE-001: memoize the preview-paper querySelector shared by ~40 sidecar guards (60% of CPU in the settings freeze profile). Loads FIRST among sidecars. Kill antcv:disable-pp-memo. -->
 <script src="antcv-preview-paper-memo.js?v=1.51.59" defer></script>
-<script src="antcv-sections-normalize-415.js?v=1.51.1972-richblock-residue-converge" defer></script>
+<script src="antcv-sections-normalize-415.js?v=1.51.2680-hourglass-storm" defer></script>
 <script src="antcv-demo-watermark.js?v=1.50.340-live-keystate" defer></script>
 <script src="antcv-bullet-targets.js?v=1.51.397-matrix-rowspec" defer></script>
 <!-- SIDECAR-CONSOLIDATE G10 (1.50.427): photo-position + photo-pentagon-shape +
@@ -944,7 +944,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <!-- RICH-BLOCK-001 (2026-06-22): editor surface for the universal composite section
      type:"rich_block" (headline/rule toggles + section CJLR + {lead-in, body} rows with
      per-row CJLR/Page/Enhance/Fit/Delete). app.js delegates to window.AntcvRichBlockEditor. -->
-<script src="antcv-rich-block-editor.js?v=1.51.1524-leadin-underline" defer></script>
+<script src="antcv-rich-block-editor.js?v=1.51.2680-hourglass-storm" defer></script>
 <!-- TABLE-TYPE-001 (2026-06-23): editor surface for the universal `table` type (CORE COMPETENCIES /
      WHAT I BRING + any 2-col table): whole-table CJLR/enhance/fit, heading/rule toggles, header-row
      CJLR (fixes the missing-header-CJLR + alignment-drift report) + header B/I, column-ratio,

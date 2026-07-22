@@ -33,6 +33,16 @@
       var onEnrich = props.onEnrich, onCompress = props.onCompress;
       var enrichingId = props.enrichingId, compressingId = props.compressingId;
       var st = R.useState(0); var bump = st[1];
+      // ROWFIT-HOURGLASS-LATCH-001 (owner 2026-07-22): the App-level busy id (enrichingId/
+      // compressingId) can be set-and-cleared inside the same render-storm churn before React
+      // commits a ⏳ frame, so on a busy/oscillating page the hourglass never visibly appears.
+      // Latch it LOCALLY the instant the row's button is clicked so the ⏳ always shows for at
+      // least ~1.4s (extended by the real busy id if the op runs longer). Keyed "e:"/"c:" per row.
+      var latchSt = R.useState({}); var latch = latchSt[0], setLatch = latchSt[1];
+      function markBusy(key) {
+        setLatch(function (m) { var n = Object.assign({}, m); n[key] = 1; return n; });
+        setTimeout(function () { setLatch(function (m) { if (!m[key]) return m; var n = Object.assign({}, m); delete n[key]; return n; }); }, 1400);
+      }
       var sid = e.id;
       // ROLES-AS-RICHBLOCK-001: when editing the adapted experience section, per-row
       // CJLR is keyed by the ROLES path (item._key = "roles.R.bullets.B") instead of
@@ -151,7 +161,7 @@
         var bOff = !!ev.bOff, tOff = !!ev.tOff;
         var thisPage = getPage(i), thisAlign = getAlign(i);
         var mk = ev.mk, mkOn = !!mk, mkEmoji = typeof mk === "string" ? mk : "";
-        var busyEnrich = enrichingId === "item:" + i, busyCompress = compressingId === "item:" + i;
+        var busyEnrich = enrichingId === "item:" + i || !!latch["e:item:" + i], busyCompress = compressingId === "item:" + i || !!latch["c:item:" + i];
         return h("div", { key: i, style: { border: "1px solid #eee", borderRadius: 4, padding: 5, marginBottom: 6, background: hiddenRow ? "#fafafa" : "#fff", opacity: hiddenRow ? 0.5 : 1 } },
           // line 1: move · hide-row · lead toggle · lead input · page · CJLR · enhance · fit · delete
           h("div", { style: { display: "flex", gap: 4, alignItems: "center", flexWrap: "nowrap" } },
@@ -170,8 +180,8 @@
             (function () { var eff = (ev.colon != null) ? !!ev.colon : !mkOn; return h("button", { onClick: function () { updateRow(i, { colon: !eff }); }, title: eff ? "Colon after the lead-in (Label: …) — click to remove" : "No colon — click to add (Label: …)", style: btn({ border: "1px solid " + (eff ? accent : "#bbb"), color: eff ? accent : "#bbb", fontWeight: 700, minWidth: 22 }) }, ":"); })(),
             h("button", { onClick: function () { setPage(i, thisPage >= 4 ? 1 : thisPage + 1); }, title: "Row page: " + thisPage + ". Click to cycle 1→2→3→4.", style: btn({ border: "1px solid #01B7BB", color: "#00746E", background: thisPage === 1 ? "rgba(1,183,187,.08)" : "rgba(255,255,255,.10)", fontSize: 9, minWidth: 28 }) }, "P" + thisPage),
             h("button", { onClick: function () { setAlign(i, ALIGNS[(ALIGNS.indexOf(thisAlign) + 1) % ALIGNS.length] || "justify"); }, title: "Alignment: " + (ALABEL[thisAlign] || thisAlign) + ". Click to cycle.", style: btn({ border: "1px solid #7b2ff2", color: "#7b2ff2", background: "rgba(123,47,242,.06)", fontSize: 11, minWidth: 22 }) }, AICON[thisAlign] || AICON.justify),
-            onEnrich ? h("button", { onClick: function () { onEnrich("item:" + i); }, disabled: busyEnrich || busyCompress, title: "Enhance this row", style: btn({ border: "1px solid " + (busyEnrich ? "#ccc" : "#10b981"), color: busyEnrich ? "#ccc" : "#10b981", fontSize: 9, cursor: busyEnrich || busyCompress ? "wait" : "pointer" }) }, busyEnrich ? "⏳" : "✨") : null,
-            onCompress ? h("button", { onClick: function () { onCompress("item:" + i); }, disabled: busyCompress || busyEnrich, title: "Fit this row — tighten to one line", style: btn({ border: "1px solid " + (busyCompress ? "#ccc" : "#7c3aed"), color: busyCompress ? "#ccc" : "#7c3aed", fontSize: 9, cursor: busyCompress || busyEnrich ? "wait" : "pointer" }) }, busyCompress ? "⏳" : "⇥") : null,
+            onEnrich ? h("button", { onClick: function () { markBusy("e:item:" + i); onEnrich("item:" + i); }, disabled: busyEnrich || busyCompress, title: "Enhance this row", style: btn({ border: "1px solid " + (busyEnrich ? "#ccc" : "#10b981"), color: busyEnrich ? "#ccc" : "#10b981", fontSize: 9, cursor: busyEnrich || busyCompress ? "wait" : "pointer" }) }, busyEnrich ? "⏳" : "✨") : null,
+            onCompress ? h("button", { onClick: function () { markBusy("c:item:" + i); onCompress("item:" + i); }, disabled: busyCompress || busyEnrich, title: "Fit this row — tighten to one line", style: btn({ border: "1px solid " + (busyCompress ? "#ccc" : "#7c3aed"), color: busyCompress ? "#ccc" : "#7c3aed", fontSize: 9, cursor: busyCompress || busyEnrich ? "wait" : "pointer" }) }, busyCompress ? "⏳" : "⇥") : null,
             h("button", { onClick: function () { toggleGrp(i); }, title: "Make this a group sub-heading", style: btn({ border: "1px solid #888", color: "#888", minWidth: 22 }) }, "▾"),
             h("button", { onClick: function () { deleteRow(i); }, title: "Delete row", style: btn({ border: "1px solid #e55", color: "#e55", fontSize: 10 }) }, "✕")
           ),

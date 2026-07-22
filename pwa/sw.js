@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.3222-quick-doc-color';
+const CACHE = 'antcv-1.51.3242-edu-canon-pin';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',
@@ -51,6 +51,7 @@ const SHELL = [
   './antcv-lang-fabrication-guard.js',
   './antcv-outcomes-loss-guard.js',
   './antcv-gabriel-results-pin.js',
+  './antcv-gabriel-edu-pin.js',
   './antcv-unsolicited-cv-completeness.js',
   './antcv-profile-disclosure-strip.js',
   './antcv-outcomes-metric-order.js',

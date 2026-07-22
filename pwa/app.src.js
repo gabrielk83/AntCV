@@ -41468,12 +41468,12 @@
                                   "button",
                                   {
                                     onClick: async () => {
-                                      if (
-                                        !Hl &&
-                                        confirm(
-                                          "Delete this application? This is permanent.",
-                                        )
-                                      ) {
+                                      // DELETE-CONFIRM-INAPP-001 (owner 2026-07-22 "press delete, no response"):
+                                      // native confirm() is silently swallowed by embedded / installed-PWA
+                                      // browsers (returns false), so the delete never fired. Two-click in-app
+                                      // confirm instead: first click ARMS (label -> "Delete?"), a second click
+                                      // within 4s deletes; a timer auto-disarms so it can never get stuck.
+                                      if (Hl === "armdel:" + e.id) {
                                         (Ul("delete:" + e.id), Gl(""));
                                         try {
                                           await oo.remove(e.id);
@@ -41487,9 +41487,12 @@
                                         } finally {
                                           Ul("");
                                         }
+                                      } else if (!Hl || Hl.indexOf("armdel:") === 0) {
+                                        (Ul("armdel:" + e.id),
+                                          setTimeout(function () { Ul(function (p) { return p === "armdel:" + e.id ? "" : p; }); }, 4000));
                                       }
                                     },
-                                    disabled: !!Hl,
+                                    disabled: !!Hl && Hl.indexOf("armdel:") !== 0,
                                     style: {
                                       padding: "5px 9px",
                                       background: "rgba(220,80,80,0.08)",
@@ -41502,7 +41505,7 @@
                                       flexShrink: 0,
                                     },
                                   },
-                                  Hl === "delete:" + e.id ? "⏳" : "🗑",
+                                  Hl === "delete:" + e.id ? "⏳" : Hl === "armdel:" + e.id ? "Delete?" : "🗑",
                                 ),
                               ),
                             ),
@@ -47967,11 +47970,10 @@
                                 try {
                                   t.stopPropagation();
                                 } catch (e) {}
-                                if (
-                                  confirm(
-                                    `Delete saved application #${e.id} "${(e.jd_company || "") + (e.jd_role ? " - " + e.jd_role : "")}"?\n\nThis only removes the saved entry. Your current CV/CL in the editor is not affected.`,
-                                  )
-                                )
+                                // DELETE-CONFIRM-INAPP-001: two-click in-app confirm (native confirm()
+                                // is swallowed in embedded / installed-PWA browsers). First click arms
+                                // (label -> "Delete?"), a second within 4s deletes; timer auto-disarms.
+                                if (Hl === "armdel:" + e.id)
                                   try {
                                     (Ul("delete:" + e.id),
                                       await oo.remove(e.id));
@@ -47999,6 +48001,9 @@
                                   } finally {
                                     Ul("");
                                   }
+                                else if (!Hl || Hl.indexOf("armdel:") === 0)
+                                  (Ul("armdel:" + e.id),
+                                    setTimeout(function () { Ul(function (p) { return p === "armdel:" + e.id ? "" : p; }); }, 4000));
                               },
                               style: {
                                 color: "rgba(255,180,180,0.55)",
@@ -48024,7 +48029,7 @@
                                 } catch (e) {}
                               },
                             },
-                            Hl === "delete:" + e.id ? "⏳" : "×",
+                            Hl === "delete:" + e.id ? "⏳" : Hl === "armdel:" + e.id ? "Delete?" : "×",
                           ),
                           Hl === "switch:" + e.id
                             ? React.createElement(

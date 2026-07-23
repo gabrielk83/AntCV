@@ -33,7 +33,7 @@
 (function () {
   'use strict';
   if (window.__antcvCopenhagenV2) return;
-  window.__antcvCopenhagenV2 = '1.51.3382-photo-center';
+  window.__antcvCopenhagenV2 = '1.51.3402-contact-fit';
 
   var FLAG = 'antcv:copenhagen-v2';
   var STYLE_ID = 'antcv-copenhagen-v2-style';
@@ -240,10 +240,17 @@
           }
           var __Wc = __contEl !== __nameEl ? __contEl.scrollWidth : 0;
           if (__Wc > 0 && __nameTarget > 100) {
-            // Contact fits the NAME's width AND clears the photo (whichever is
-            // tighter) — the full-span contact was running under the figure.
+            // CPH-CONTACT-FIT-001 (owner 2026-07-23 "compress and shrink the
+            // contact line to be the same width as the name"): two-stage fit to
+            // min(name width, photo clearance) — FONT-SIZE shrinks first (13 ->
+            // floor 10px, keeps glyphs undistorted), then a residual scaleX
+            // compresses the remainder (floor 0.6).
             var __ct = Math.min(__nameTarget, __maxW);
-            var __k = Math.max(0.5, Math.min(1, __ct / __Wc));
+            var __cfs = parseFloat(getComputedStyle(__contEl).fontSize) || 13;
+            var __nfs = __Wc > __ct ? Math.max(10, Math.min(13, Math.floor(__cfs * __ct / __Wc))) : Math.min(13, __cfs);
+            if (__nfs !== __cfs) css += BAND + ' > div:last-of-type:not(:first-of-type){font-size:' + __nfs + 'px !important;}';
+            var __WcAdj = __Wc * (__nfs / __cfs);
+            var __k = Math.max(0.6, Math.min(1, __ct / __WcAdj));
             css += BAND + ' > div:last-of-type:not(:first-of-type){transform:scaleX(' + __k.toFixed(3) + ') !important;transform-origin:center !important;}';
           }
         }

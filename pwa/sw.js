@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.3382-photo-center';
+const CACHE = 'antcv-1.51.3402-contact-fit';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

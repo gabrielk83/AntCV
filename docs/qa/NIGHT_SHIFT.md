@@ -48,6 +48,7 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mrwrawky_dye9","started":"2026-07-23T00:11:49.241Z","host":"GabyPC2","worktree":null,"branch":"claude/determined-cannon-8d4c64","range":"1.51.3442-1.51.3461","task":"CPH-BAND-GAP14: row-gap 10->14px","beat":"2026-07-23T00:11:50.589Z"}
 {"id":"sh_mrwrdrst_id8b","started":"2026-07-23T00:14:03.008Z","host":"GabyPC2","worktree":null,"branch":"claude/determined-cannon-8d4c64","range":"1.51.3462-1.51.3481","task":"CPH-GAP18: row-gap 18px + contact font floor 8px","beat":"2026-07-23T00:14:03.242Z"}
 {"id":"sh_mrwth1q3_h3ww","started":"2026-07-23T01:12:35.073Z","host":"GabyPC2","worktree":null,"branch":"claude/clever-lewin-a9701f","range":"1.51.3622-1.51.3641","task":"COPENHAGEN-STAGE4-DOCX-PARITY: header VML navy box + photo ring + name/spec/contact typography + CL app-line/sign-off + CloudConvert verify","beat":"2026-07-23T01:12:35.397Z"}
+{"id":"sh_mrwtj4ig_1vg9","started":"2026-07-23T01:14:11.994Z","host":"GabyPC2","worktree":null,"branch":"claude/youthful-volhard-02392b","range":"1.51.3642-1.51.3661","task":"FULL-LIST-REGEN-EXPORT-001: re-run JD analysis + targeted gen for all saved apps, export CV/CL docx+pdf + analysis PDFs (owner 2026-07-23 night order)","beat":"2026-07-23T01:14:12.138Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

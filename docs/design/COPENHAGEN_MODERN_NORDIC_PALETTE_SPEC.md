@@ -175,7 +175,7 @@ unless noted):
 - ORPHAN-RULE-GATE-001: a headline-off section with empty/placeholder body no
   longer draws its standalone rule (both bundles).
 
-## Stage 4 — DOCX/PDF export parity (OPEN, the one remaining leg)
+## Stage 4 — DOCX/PDF export parity (SHIPPED 2026-07-23, wk 1.14.165-copenhagen-stage4 + pwa 1.51.3622-stage4-docx)
 Export must match the tuned preview above. Work order (docx-worker + docx-client
 + export-HTML; hand-maintained bundle, docx-worker-bundle-no-build):
 1. Header box: navy #33446F fill + **cyan 1.5pt border, rounded** (VML roundrect
@@ -195,7 +195,32 @@ Export must match the tuned preview above. Work order (docx-worker + docx-client
 ## Status
 - ✅ Mockup locked (2026-07-22); live-tuning round shipped (2026-07-23, → 1.51.3202).
 - ✅ Stages 1-3 + mockup-parity tokens + five header/CL defects + band grid.
-- ⬜ **Stage 4 export parity (work order above) — the remaining leg.**
+- ✅ **Stage 4 export parity SHIPPED (2026-07-23, wk 1.14.165-copenhagen-stage4,
+  pwa 1.51.3622-stage4-docx).** All six items, gated on package=copenhagen-modern
+  (`style._cph`), legacy payloads byte-identical (diag legacy checks):
+  1. Band box = page-anchored VML roundrect (navy 33446F + cyan 1.5pt, 22px-radius
+     arcsize) in a FIRST-PAGE header part + `titlePg`; band cells un-shaded, rows
+     pinned 152pt, centered; page-1 spine starts below the box.
+  2. Photo 1.4in + 1.5pt cyan ring at every medallion site (there is no
+     photoBorderWidth token anywhere — the ring width was hardcoded 1pt; now
+     hardcoded 1.5pt under the gate; colour = forwarded photoBorderColor).
+  3. Name 17.5pt + w:spacing 49; spec cyan bold 13.5pt; contact 9.5pt w:w=73
+     single-space ONE line; band links white.
+  4. Absent header_rules → NO internal rules (copenhagen only).
+  5. CL app line grey + teal 1.5pt rule (worker defaults; export-header-colors 1.1
+     now ALSO patches /generate-pdf — the PDF path never got the colour patch),
+     slogan→app-line gap tightened; sign-off teal + cyan w:u; ORPHAN-RULE-GATE
+     parity. NOTE: app-line grey is 808080 (worker default, per this work order)
+     / 595959 when the elem-colors sidecar forwards (preview APP_GRAY) — flag if
+     the owner wants one number.
+  6. VERIFIED on real CloudConvert renders (synthetic anita persona): CV + CL
+     /generate-pdf pixel-checked (rounded box, ring, one-line contact, table
+     frame, app-line rule, sign-off underline all render); 2-page CV clean (box
+     page-1-only, full spine p2, no blank-page cascade); Word COM opens both
+     DOCX without repair and renders identically. Deploy diag:
+     workers/docx-worker/test/diag-copenhagen-stage4.mjs (26 checks).
+  Owner's REAL deliverable set (NIGHTLY hard rule 8) regenerates on the next
+  nightly / owner export now that wk 1.14.165 is live.
 - ⬜ Remaining OPEN render flags: rule thickness sweep (1px→1.5pt), grey #777
   section-head underlines, role-row rule drop, Results underline, sub-head
   rules+years, body link #0B4F8A, sidebar radius, AI-notice size/color.

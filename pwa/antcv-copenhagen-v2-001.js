@@ -33,7 +33,7 @@
 (function () {
   'use strict';
   if (window.__antcvCopenhagenV2) return;
-  window.__antcvCopenhagenV2 = '1.51.3562-fit-last';
+  window.__antcvCopenhagenV2 = '1.51.3582-fit-abs';
 
   var FLAG = 'antcv:copenhagen-v2';
   var STYLE_ID = 'antcv-copenhagen-v2-style';
@@ -227,38 +227,44 @@
             var __clear = 2 * ((__cssW / 2) - __photoRightCss - 14);
             if (__clear > 0) __maxW = Math.min(__maxW, Math.max(140, __clear));
           }
-          // CPH-FIT-STABLE-001 (owner 2026-07-23 "the contact is moving from
-          // compressed to expanded position and stays expanded"): the fit rules
-          // were emitted only WHEN over — once applied, the next pass measured
-          // "fits", emitted nothing, and the static rules snapped the line back
-          // to full width (oscillation that settles expanded). The chosen fit is
-          // now CACHED module-wide and ALWAYS re-emitted; a pass only ever
-          // TIGHTENS the cache (or first-fills it), never drops it.
+          // CPH-FIT-ABS-001 (owner 2026-07-23 "now it is extremely smaller"): the
+          // tighten-only ratchet let ONE bad transient measurement (band mid-
+          // re-render) lock the smallest size forever. The fit is now computed
+          // ABSOLUTELY each good pass from the line's NATURAL width (scale-
+          // invariant: width/fontSize is constant), so recomputation is
+          // idempotent, a bad pass is simply skipped (sanity gates), and a
+          // poisoned cache self-heals on the next good pass. Floors keep the
+          // contact legible: font >= 9.5px, compression >= 0.68.
+          var __sane = __cssW > 350 && __cssW < 1600 && __maxW > 200;
           var __Wn = __nameEl.scrollWidth;
-          if (__Wn > __maxW + 2 && __maxW > 200) {
-            var __lsCur = parseFloat(getComputedStyle(__nameEl).letterSpacing) || 0;
-            var __chars = Math.max(8, String(__nameEl.textContent || '').trim().length - 1);
-            var __lsNew = Math.max(0.5, __lsCur - (__Wn - __maxW) / __chars);
-            __fit.nameLs = (__fit.nameLs == null) ? __lsNew : Math.min(__fit.nameLs, __lsNew);
-            var __WnFloor = __Wn - (__lsCur - __lsNew) * __chars;
-            if (__WnFloor > __maxW) {                              // tracking floor hit — shrink the font
-              var __fs = parseFloat(getComputedStyle(__nameEl).fontSize) || 22;
-              var __t = Math.max(15, Math.floor(__fs * __maxW / __WnFloor));
-              __fit.nameFs = (__fit.nameFs == null) ? __t : Math.min(__fit.nameFs, __t);
+          var __chars = Math.max(8, String(__nameEl.textContent || '').trim().length - 1);
+          var __lsCur = parseFloat(getComputedStyle(__nameEl).letterSpacing) || 0;
+          var __fsCur = parseFloat(getComputedStyle(__nameEl).fontSize) || 22;
+          if (__sane && __Wn > 150) {
+            var __nat0 = Math.max(50, __Wn - __lsCur * __chars);   // width at zero tracking, current font
+            var __ls = (__maxW - __nat0) / __chars;                // absolute desired tracking
+            __ls = Math.max(0.5, Math.min(3.1, __ls));             // cap = the design .14em @22px
+            var __needFs = 22;
+            var __nat0At22 = __nat0 * (22 / __fsCur);
+            if (__nat0At22 + 0.5 * __chars > __maxW) {             // even min tracking overflows at 22px
+              __needFs = Math.max(15, Math.floor((__maxW - 0.5 * __chars) * 22 / __nat0At22));
+              __ls = 0.5;
             }
-          }
-          var __nameTarget = Math.min(__Wn, __maxW);
-          var __Wc = __contEl !== __nameEl ? __contEl.scrollWidth : 0;
-          if (__Wc > 0 && __nameTarget > 100) {
-            var __ct = Math.min(__nameTarget, __maxW);
+            __fit.nameLs = __ls;
+            __fit.nameFs = __needFs === 22 ? null : __needFs;
+            var __nameFinalW = Math.min(__maxW, __nat0 * ((__fit.nameFs || 22) / __fsCur) + __ls * __chars);
+            // CONTACT: absolute from its natural width-per-font-px ratio.
+            var __Wc = __contEl !== __nameEl ? __contEl.scrollWidth : 0;
             var __cfs = parseFloat(getComputedStyle(__contEl).fontSize) || 13;
-            if (__Wc > __ct + 2) {
-              var __nfs = Math.max(8, Math.min(13, Math.floor(__cfs * __ct / __Wc)));
-              __fit.contFs = (__fit.contFs == null) ? __nfs : Math.min(__fit.contFs, __nfs);
-            } else if (__fit.contFs == null) __fit.contFs = Math.min(13, __cfs);
-            var __WcAdj = __Wc * (__fit.contFs / __cfs);
-            var __k = Math.max(0.55, Math.min(1, __ct / __WcAdj));
-            __fit.contK = __k;
+            var __per = __Wc / __cfs;                              // px of width per font-px (constant)
+            if (__Wc > 100 && __per > 15 && __per < 120) {
+              var __ct = Math.min(__nameFinalW, __maxW);
+              var __f = Math.max(9.5, Math.min(13, __ct / (__per * 0.8)));   // font does most of the work
+              __f = Math.round(__f * 2) / 2;
+              var __k = Math.max(0.68, Math.min(1, __ct / (__per * __f)));
+              __fit.contFs = __f;
+              __fit.contK = __k;
+            }
           }
         }
       } catch (_) {}

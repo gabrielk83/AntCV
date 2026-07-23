@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.3462-gap18';
+  const TARGET_VERSION = '1.51.3522-fit-stable';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.3462-gap18',
     '1.51.3442-gap14',
     '1.51.3422-photo129',
     '1.51.3402-contact-fit',

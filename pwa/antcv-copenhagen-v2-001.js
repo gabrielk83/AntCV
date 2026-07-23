@@ -33,7 +33,7 @@
 (function () {
   'use strict';
   if (window.__antcvCopenhagenV2) return;
-  window.__antcvCopenhagenV2 = '1.51.3462-gap18';
+  window.__antcvCopenhagenV2 = '1.51.3522-fit-stable';
 
   var FLAG = 'antcv:copenhagen-v2';
   var STYLE_ID = 'antcv-copenhagen-v2-style';
@@ -99,6 +99,10 @@
     // the spec a few px below exact center (name taller than contact).
     return 0;
   }
+
+  // CPH-FIT-STABLE-001: the chosen name/contact fit persists across applies so
+  // re-measurement can only TIGHTEN it, never snap the lines back to full size.
+  var __fit = { nameLs: null, nameFs: null, contFs: null, contK: null };
 
   function buildCSS() {
     var side = sidebarSide();
@@ -177,7 +181,7 @@
           }
         }
       } catch (_) {}
-      if (__phL == null) __phL = Math.max(14, sbW / 2 - 58);   // fallback approximation
+      if (__phL == null) __phL = Math.max(14, sbW / 2 - 55.5); // fallback approximation (129px half)
       css += BAND + ' img{position:absolute !important;left:' + __phL.toFixed(1) + 'px !important;top:50% !important;' +
         'transform:translateY(-50%) !important;width:129px !important;height:129px !important;margin:0 !important;float:none !important;}';
       // CPH-BAND-SYMMETRY-002 (owner 2026-07-23 round 2): (a) the spec's OPTICAL
@@ -223,36 +227,43 @@
             var __clear = 2 * ((__cssW / 2) - __photoRightCss - 10);
             if (__clear > 200) __maxW = Math.min(__maxW, __clear);
           }
+          // CPH-FIT-STABLE-001 (owner 2026-07-23 "the contact is moving from
+          // compressed to expanded position and stays expanded"): the fit rules
+          // were emitted only WHEN over — once applied, the next pass measured
+          // "fits", emitted nothing, and the static rules snapped the line back
+          // to full width (oscillation that settles expanded). The chosen fit is
+          // now CACHED module-wide and ALWAYS re-emitted; a pass only ever
+          // TIGHTENS the cache (or first-fills it), never drops it.
           var __Wn = __nameEl.scrollWidth;
-          var __nameTarget = __Wn;
           if (__Wn > __maxW + 2 && __maxW > 200) {
             var __lsCur = parseFloat(getComputedStyle(__nameEl).letterSpacing) || 0;
             var __chars = Math.max(8, String(__nameEl.textContent || '').trim().length - 1);
             var __lsNew = Math.max(0.5, __lsCur - (__Wn - __maxW) / __chars);
-            css += BAND + ' > div:first-of-type{letter-spacing:' + __lsNew.toFixed(2) + 'px !important;}';
+            __fit.nameLs = (__fit.nameLs == null) ? __lsNew : Math.min(__fit.nameLs, __lsNew);
             var __WnFloor = __Wn - (__lsCur - __lsNew) * __chars;
             if (__WnFloor > __maxW) {                              // tracking floor hit — shrink the font
               var __fs = parseFloat(getComputedStyle(__nameEl).fontSize) || 22;
               var __t = Math.max(15, Math.floor(__fs * __maxW / __WnFloor));
-              css += BAND + ' > div:first-of-type{font-size:' + __t + 'px !important;}';
+              __fit.nameFs = (__fit.nameFs == null) ? __t : Math.min(__fit.nameFs, __t);
             }
-            __nameTarget = Math.min(__Wn, __maxW);
           }
+          if (__fit.nameLs != null) css += BAND + ' > div:first-of-type{letter-spacing:' + __fit.nameLs.toFixed(2) + 'px !important;}';
+          if (__fit.nameFs != null) css += BAND + ' > div:first-of-type{font-size:' + __fit.nameFs + 'px !important;}';
+          var __nameTarget = Math.min(__Wn, __maxW);
           var __Wc = __contEl !== __nameEl ? __contEl.scrollWidth : 0;
           if (__Wc > 0 && __nameTarget > 100) {
-            // CPH-CONTACT-FIT-001 (owner 2026-07-23 "compress and shrink the
-            // contact line to be the same width as the name"): two-stage fit to
-            // min(name width, photo clearance) — FONT-SIZE shrinks first (13 ->
-            // floor 10px, keeps glyphs undistorted), then a residual scaleX
-            // compresses the remainder (floor 0.6).
             var __ct = Math.min(__nameTarget, __maxW);
             var __cfs = parseFloat(getComputedStyle(__contEl).fontSize) || 13;
-            var __nfs = __Wc > __ct ? Math.max(8, Math.min(13, Math.floor(__cfs * __ct / __Wc))) : Math.min(13, __cfs);
-            if (__nfs !== __cfs) css += BAND + ' > div:last-of-type:not(:first-of-type){font-size:' + __nfs + 'px !important;}';
-            var __WcAdj = __Wc * (__nfs / __cfs);
+            if (__Wc > __ct + 2) {
+              var __nfs = Math.max(8, Math.min(13, Math.floor(__cfs * __ct / __Wc)));
+              __fit.contFs = (__fit.contFs == null) ? __nfs : Math.min(__fit.contFs, __nfs);
+            } else if (__fit.contFs == null) __fit.contFs = Math.min(13, __cfs);
+            var __WcAdj = __Wc * (__fit.contFs / __cfs);
             var __k = Math.max(0.55, Math.min(1, __ct / __WcAdj));
-            css += BAND + ' > div:last-of-type:not(:first-of-type){transform:scaleX(' + __k.toFixed(3) + ') !important;transform-origin:center !important;}';
+            __fit.contK = __k;
           }
+          if (__fit.contFs != null) css += BAND + ' > div:last-of-type:not(:first-of-type){font-size:' + __fit.contFs + 'px !important;}';
+          if (__fit.contK != null) css += BAND + ' > div:last-of-type:not(:first-of-type){transform:scaleX(' + __fit.contK.toFixed(3) + ') !important;transform-origin:center !important;}';
         }
       } catch (_) {}
     }

@@ -33,7 +33,7 @@
 (function () {
   'use strict';
   if (window.__antcvCopenhagenV2) return;
-  window.__antcvCopenhagenV2 = '1.51.3522-fit-stable';
+  window.__antcvCopenhagenV2 = '1.51.3542-fit-guard';
 
   var FLAG = 'antcv:copenhagen-v2';
   var STYLE_ID = 'antcv-copenhagen-v2-style';
@@ -224,8 +224,8 @@
             var __iR = __img.getBoundingClientRect();
             var __photoRightCss = (__iR.right - __bR.left) / __sc;
             // centered line clears the photo when width <= 2*(bandCenter - photoRight - 10)
-            var __clear = 2 * ((__cssW / 2) - __photoRightCss - 10);
-            if (__clear > 200) __maxW = Math.min(__maxW, __clear);
+            var __clear = 2 * ((__cssW / 2) - __photoRightCss - 14);
+            if (__clear > 0) __maxW = Math.min(__maxW, Math.max(140, __clear));
           }
           // CPH-FIT-STABLE-001 (owner 2026-07-23 "the contact is moving from
           // compressed to expanded position and stays expanded"): the fit rules

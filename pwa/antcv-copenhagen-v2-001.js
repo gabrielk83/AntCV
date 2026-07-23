@@ -33,7 +33,7 @@
 (function () {
   'use strict';
   if (window.__antcvCopenhagenV2) return;
-  window.__antcvCopenhagenV2 = '1.51.3442-gap14';
+  window.__antcvCopenhagenV2 = '1.51.3462-gap18';
 
   var FLAG = 'antcv:copenhagen-v2';
   var STYLE_ID = 'antcv-copenhagen-v2-style';
@@ -154,7 +154,7 @@
       // spec near the midline (its natural seat is a few px below exact center
       // because the name is taller than the contact — the specDy dial trims).
       css += BAND + '{display:grid !important;grid-template-columns:1fr !important;' +
-        'grid-template-rows:auto auto auto !important;align-content:center !important;row-gap:14px !important;' +
+        'grid-template-rows:auto auto auto !important;align-content:center !important;row-gap:18px !important;' +
         'min-height:200px !important;padding-top:14px !important;padding-bottom:14px !important;}';
       // CPH-PHOTO-CENTER-001 (owner 2026-07-23 "this is definitely not centered
       // to the middle of the sidebar"): the old grid column carried the band's
@@ -247,7 +247,7 @@
             // compresses the remainder (floor 0.6).
             var __ct = Math.min(__nameTarget, __maxW);
             var __cfs = parseFloat(getComputedStyle(__contEl).fontSize) || 13;
-            var __nfs = __Wc > __ct ? Math.max(9, Math.min(13, Math.floor(__cfs * __ct / __Wc))) : Math.min(13, __cfs);
+            var __nfs = __Wc > __ct ? Math.max(8, Math.min(13, Math.floor(__cfs * __ct / __Wc))) : Math.min(13, __cfs);
             if (__nfs !== __cfs) css += BAND + ' > div:last-of-type:not(:first-of-type){font-size:' + __nfs + 'px !important;}';
             var __WcAdj = __Wc * (__nfs / __cfs);
             var __k = Math.max(0.55, Math.min(1, __ct / __WcAdj));

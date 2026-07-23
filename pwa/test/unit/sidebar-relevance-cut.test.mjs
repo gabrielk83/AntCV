@@ -298,3 +298,35 @@ test('stamp-in-blob: a post-cut blob with user un-hides is NEVER re-fought (stam
   api._apply();
   assert.equal(JSON.parse(store.get('sections')).cv[2].items[idx].hidden, false, 'user decision sticks');
 });
+
+// ── SECTIONS-STORM-2026-07-23: substructure stamp ───────────────────────────
+// The live DTU Wind storm: the app.js ingest rebuilt the blob root as {cv,cl},
+// dropping _sidebarCutStamp, so the cut re-armed EVERY cycle ("JD-relevance cut
+// applied … repeatedly"). The stamp now also travels on each cut-eligible
+// SECTION, which survives such root rebuilds.
+
+test('substructure stamp: an app.js-style {cv,cl} root rebuild does NOT re-arm the cut', () => {
+  const { api, store } = load(baseStore());
+  api._apply();
+  const b = JSON.parse(store.get('sections'));
+  assert.ok(b.cv[0]._cutStamp, 'tools section carries the stamp');
+  assert.ok(b.cv[1]._cutStamp, 'certs section carries the stamp');
+  assert.ok(b.cv[2]._cutStamp, 'regulatory section carries the stamp');
+  // user un-hides a row, then a root-rebuilding writer drops the ROOT stamp
+  const reg = b.cv[2];
+  const idx = reg.items.findIndex((it) => it.l === 'STANAG 4694');
+  reg.items[idx] = { ...reg.items[idx], hidden: false };
+  store.set('sections', JSON.stringify({ cv: b.cv, cl: b.cl }));   // no root stamp
+  api._apply();
+  assert.equal(JSON.parse(store.get('sections')).cv[2].items[idx].hidden, false,
+    'section stamps hold — the un-hide is not re-fought');
+});
+
+test('substructure stamp: a restored pre-cut snapshot (no stamps anywhere) still re-arms', () => {
+  const { api, store } = load(baseStore());
+  api._apply();
+  store.set('sections', baseStore().sections);   // pre-cut snapshot: neither stamp site present
+  api._apply();
+  const reg = JSON.parse(store.get('sections')).cv[2];
+  assert.ok(!reg.items.some((it) => it.l === 'STANAG 4694' && it.hidden !== true), 'cut re-armed on the stale restore');
+});

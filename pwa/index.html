@@ -367,7 +367,7 @@
   })();
 </script>
 <script type="module">
-  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.3181-rules-sig-brand';
+  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.3482-sections-storm';
   window.exportDocxViaWorker = exportDocxViaWorker;
   window.ANTCV_VERSION = '1.51.3522-fit-stable';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
@@ -408,7 +408,7 @@
         auth.src = 'antcv-auth.js?v=1.51.92-analytics-401-scope';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.51.3121-header-defects';
+          app.src = 'app.js?v=1.51.3482-sections-storm';
           app.onload = function(){
             var vo = document.createElement('script');
             vo.src = 'antcv-version-override.js?v=1.51.3522-fit-stable';
@@ -986,7 +986,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <!-- ROLES-ACTIVE-FLOOR-001 (1.51.146): a targeted CV must never have 0 active experience roles; restore real roles when a gen hid them all (keeps merge-hidden ones off). Kill antcv:disable-roles-active-floor -->
 <script src="antcv-roles-active-floor.js?v=1.51.146" defer></script>
 <!-- ROLE-MERGE-STORED-001 (1.51.154, row 34): move the same-company role merge to STORED sections so the PREVIEW matches the export (insert merged role, hide constituents on:false, eye-reversible). Reuses the exact docx-client merge. Kill antcv:disable-role-merge-stored -->
-<script src="antcv-role-merge-stored.js?v=1.51.334-unsol-pillar" defer></script>
+<script src="antcv-role-merge-stored.js?v=1.51.3482-sections-storm" defer></script>
 <!-- SIDEBAR-GROUP-MERGE-STORED-001 (1.51.159): move the near-duplicate sidebar category merge (Imaging->Optics..., Project management->Project & delivery management) to STORED sections so the PREVIEW matches the export. Reuses the exact docx-client merge (window.AntcvMergeSidebarGroups). Kill antcv:disable-sidebar-group-merge-stored -->
 <script src="antcv-sidebar-group-merge-stored.js?v=1.51.159" defer></script>
 <script src="antcv-final-role-condense.js?v=1.50.924" defer></script>
@@ -1170,7 +1170,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <!-- GEN-UNSOL-STALE-JD-001 Patch D: scrub a KNOWN PRIOR targeted company from unsolicited prose (employer names protected). Kill antcv:disable-unsol-company-scrub. -->
 <script src="antcv-unsol-company-scrub.js?v=1.51.334-unsol-pillar" defer></script>
 <!-- SIDEBAR-RELEVANCE-CUT-001 (spec rules 11/15/19/25/27/32 + 38): deterministic JD-relevance cut over tools/certs/regulatory in stored sections — hidden never deleted, exempt Interests/Languages/Accessibility, one-shot per app+JD. Kill antcv:disable-sidebar-relevance-cut. -->
-<script src="antcv-sidebar-relevance-cut.js?v=1.51.334-unsol-pillar" defer></script>
+<script src="antcv-sidebar-relevance-cut.js?v=1.51.3482-sections-storm" defer></script>
 <!-- SCHOLAR-LINK-GATE-001 (spec rules 35/39): kernel publicationsScholar drives the publications masterSite hyperlink through the research-JD gate; plain "via Google Scholar" pointers become the real link. Kill antcv:disable-scholar-links. -->
 <script src="antcv-scholar-links.js?v=1.51.122" defer></script>
 <!-- BRAND-FIT-PALETTE-001 (spec rule 37): deterministic JD-hex sampler — the gen flow falls back to it when the model omits brand_fit; the existing validated apply path consumes it. Kill antcv:disable-brandfit-sample. -->

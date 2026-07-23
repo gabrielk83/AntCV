@@ -42,7 +42,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.126-cut-v2-pm-bridge';
+  var VERSION = '1.51.3482-cut-v2-substamp';
   if (window.__antcvSidebarRelevanceCut) return;
   window.__antcvSidebarRelevanceCut = VERSION;
 
@@ -341,7 +341,20 @@
       // stamped v2, blob = restored stale content — the side key alone must
       // never veto). The pass is idempotent on already-cut content, and the
       // heal pass restores bridge-passing tokens, so a re-run is safe.
-      try { if (b._sidebarCutStamp === stamp) return; } catch (_) {}
+      // SUBSTRUCTURE-STAMP (SECTIONS-STORM-2026-07-23, per
+      // storm-guards-must-be-substructure-keyed): the ROOT stamp is dropped by
+      // any writer that rebuilds the blob as {cv,cl} (the app.js ingest did),
+      // which re-armed this cut every cycle — the "JD-relevance cut applied …
+      // repeatedly" storm. The stamp now ALSO travels on each cut-eligible
+      // SECTION (tools/certs/regulatory), which survives such root rebuilds;
+      // root match OR all-section match means "decided for this app+JD". A
+      // restored pre-cut snapshot carries neither -> re-arms, as before.
+      var CUT_IDS = { tools: 1, certs: 1, regulatory: 1 };
+      var eligible = b.cv.filter(function (sec) { return sec && sec.on !== false && sec.loc === 'sidebar' && CUT_IDS[String(sec.id || '')]; });
+      try {
+        if (b._sidebarCutStamp === stamp) return;
+        if (eligible.length && eligible.every(function (sec) { return sec._cutStamp === stamp; })) return;
+      } catch (_) {}
       var jdSet = jdSetOf(jd);
       var changed = false, counts = {};
       b.cv.forEach(function (sec) {
@@ -357,6 +370,7 @@
       // restores); the sections blob is therefore written once even when the
       // content itself needed no change.
       b._sidebarCutStamp = stamp;
+      eligible.forEach(function (sec) { sec._cutStamp = stamp; });   // substructure copy — survives root rebuilds
       try { localStorage.setItem(STAMP_KEY, stamp); } catch (_) {}
       try { localStorage.setItem('sections', JSON.stringify(b)); } catch (_) {}
       if (changed) {

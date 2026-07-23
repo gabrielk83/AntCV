@@ -17840,7 +17840,12 @@
                   ? { ...e, items: Se(e.items, 12) }
                   : e,
               );
-            return { cv: t(e.cv), cl: t(e.cl) };
+            // SECTIONS-STORM-2026-07-23: keep unknown ROOT keys (the belts'
+            // STAMP-IN-BLOB fields _roleMergeStamp/_sidebarCutStamp travel at the
+            // blob root). Rebuilding {cv,cl} here dropped them, the auto-save
+            // wrote the stampless blob back, and every one-shot belt re-armed
+            // forever — the continuous sections rewrite storm.
+            return { ...e, cv: t(e.cv), cl: t(e.cl) };
           }
           return me();
         }),
@@ -17985,7 +17990,10 @@
                       ? { ...e, items: Se(e.items, 12) }
                       : e,
                   );
-                const __nextSec = { cv: n(t.cv), cl: n(t.cl) };
+                // SECTIONS-STORM-2026-07-23: spread `t` so unknown ROOT keys (the
+                // belts' STAMP-IN-BLOB fields) survive the re-ingest → auto-save
+                // round-trip. See the matching comment at the state initialiser.
+                const __nextSec = { ...t, cv: n(t.cv), cl: n(t.cl) };
                 // STORM-IDEMPOTENT-002 (owner 2026-06-26 live probe): only push to React state when the
                 // external write ACTUALLY differs from what we last applied. The normalisers re-dispatch
                 // antcv:sections-updated with IDENTICAL content; calling ao() (setState) on every one
@@ -20214,7 +20222,19 @@
             // by navyColor). This is what makes switching the Visual style update
             // the candidate band + table header, and lets Copenhagen be a navy band
             // + pale sidebar. (Custom keeps navyColor via the [Ke] effect above.)
-            ba(() => ({ ...c, ...ps }));
+            // EXPORT-PALETTE-PARITY (SECTIONS-STORM-2026-07-23 leg 3): PERSIST the
+            // healed palette. The heal used to fix React state only, so the
+            // localStorage styleConfig kept a stale palette — and docx-client
+            // buildStyle exports FROM styleConfig, so exports ignored the preset.
+            // Merge over CURRENT state (not defaults) so non-palette prefs stored
+            // on styleConfig (expTense, indents, sectionFormats…) are never wiped.
+            // Same persist idiom as _antcvSetExpTense (u.set + Qn cloud sync).
+            ba((p) => {
+              const t = { ...p, ...ps };
+              try { u.set("styleConfig", t); } catch (_) {}
+              try { Qn({ styleConfig: t }); } catch (_) {}
+              return t;
+            });
         } catch (e) {}
       }, [Ke, ya]);
       const va = {

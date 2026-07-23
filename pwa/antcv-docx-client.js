@@ -1766,7 +1766,15 @@ function mergeSameCompanyRoles(roles) {
       const years = ys.length ? (Math.min(...ys) + ' - ' + Math.max(...ys)) : (grp[0].years || '');
       // MERGED-TITLE-JOIN-001 (owner 2026-07-04, spec rule 17a): merged roles
       // join with " & ", never "/" — "Change Request Lead & System Architect".
-      out.push({ ...grp[0], title: titles.join(' & '), bullets, years });
+      // MERGED-RESULTS-UNION (spec rule 17 ">1 Result", SECTIONS-STORM-2026-07-23):
+      // a merged role carries BOTH constituents' Results. {...grp[0]} alone kept
+      // only the first role's line (the "Results on one role only" report); union
+      // the distinct non-empty results in constituent order.
+      const rs = [];
+      grp.forEach((g) => { const t = String(g.results == null ? '' : g.results).trim(); if (t && rs.indexOf(t) < 0) rs.push(t); });
+      const mergedRole = { ...grp[0], title: titles.join(' & '), bullets, years };
+      if (rs.length) mergedRole.results = rs.join(' ');
+      out.push(mergedRole);
     });
     return out;
   } catch (_) { return null; }

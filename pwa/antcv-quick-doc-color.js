@@ -39,7 +39,10 @@
     el.textContent =
       '.antcv-preview-paper{--header-bg:' + hex + ' !important;}' +
       '.antcv-preview-paper [data-antcv-candidate-band="1"]{background:' + hex + ' !important;background-color:' + hex + ' !important;}' +
-      '.antcv-preview-paper table tr:first-child th,.antcv-preview-paper table tr:first-child td{background:' + hex + ' !important;color:#FFFFFF !important;}';
+      // CORECOMP-DARK-ROW-001: header recolour must stay in the thead. `tr:first-child`
+      // also matches the FIRST TBODY ROW (first child of its own parent), so the first
+      // data row went navy + white over its #DCE5EA band. Scope to thead only.
+      '.antcv-preview-paper table thead th,.antcv-preview-paper table thead td{background:' + hex + ' !important;color:#FFFFFF !important;}';
   }
   function writeStyleConfig(hex) {
     try {

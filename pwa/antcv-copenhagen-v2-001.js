@@ -33,7 +33,7 @@
 (function () {
   'use strict';
   if (window.__antcvCopenhagenV2) return;
-  window.__antcvCopenhagenV2 = '1.51.3582-fit-abs';
+  window.__antcvCopenhagenV2 = '1.51.3602-header-lock';
 
   var FLAG = 'antcv:copenhagen-v2';
   var STYLE_ID = 'antcv-copenhagen-v2-style';
@@ -244,24 +244,24 @@
             var __nat0 = Math.max(50, __Wn - __lsCur * __chars);   // width at zero tracking, current font
             var __ls = (__maxW - __nat0) / __chars;                // absolute desired tracking
             __ls = Math.max(0.5, Math.min(3.1, __ls));             // cap = the design .14em @22px
-            var __needFs = 22;
-            var __nat0At22 = __nat0 * (22 / __fsCur);
-            if (__nat0At22 + 0.5 * __chars > __maxW) {             // even min tracking overflows at 22px
-              __needFs = Math.max(15, Math.floor((__maxW - 0.5 * __chars) * 22 / __nat0At22));
+            var __needFs = 23;
+            var __nat0At22 = __nat0 * (23 / __fsCur);
+            if (__nat0At22 + 0.5 * __chars > __maxW) {             // even min tracking overflows at 23px
+              __needFs = Math.max(15, Math.floor((__maxW - 0.5 * __chars) * 23 / __nat0At22));
               __ls = 0.5;
             }
             __fit.nameLs = __ls;
-            __fit.nameFs = __needFs === 22 ? null : __needFs;
-            var __nameFinalW = Math.min(__maxW, __nat0 * ((__fit.nameFs || 22) / __fsCur) + __ls * __chars);
+            __fit.nameFs = __needFs === 23 ? null : __needFs;
+            var __nameFinalW = Math.min(__maxW, __nat0 * ((__fit.nameFs || 23) / __fsCur) + __ls * __chars);
             // CONTACT: absolute from its natural width-per-font-px ratio.
             var __Wc = __contEl !== __nameEl ? __contEl.scrollWidth : 0;
             var __cfs = parseFloat(getComputedStyle(__contEl).fontSize) || 13;
             var __per = __Wc / __cfs;                              // px of width per font-px (constant)
             if (__Wc > 100 && __per > 15 && __per < 120) {
               var __ct = Math.min(__nameFinalW, __maxW);
-              var __f = Math.max(9.5, Math.min(13, __ct / (__per * 0.8)));   // font does most of the work
+              var __f = Math.max(10.5, Math.min(13, __ct / (__per * 0.88)));  // font does most of the work (LOCKED sizes)
               __f = Math.round(__f * 2) / 2;
-              var __k = Math.max(0.68, Math.min(1, __ct / (__per * __f)));
+              var __k = Math.max(0.72, Math.min(1, __ct / (__per * __f)));
               __fit.contFs = __f;
               __fit.contK = __k;
             }
@@ -280,7 +280,7 @@
     css += BAND + ' a{color:#fff !important;}';
     // CPH-BAND-SIZE-001: slightly larger header text, alignment untouched
     // (mockup name 23-24px; spec/contact scale with it).
-    css += BAND + ' > div:first-of-type{font-size:22px !important;}';   // owner 2026-07-23: 24 -> 22px
+    css += BAND + ' > div:first-of-type{font-size:23px !important;}';   // owner 2026-07-23 final: 23px (LOCKED)
     css += BAND + ' > div:nth-of-type(2):not(:last-of-type){font-size:18px !important;}';
     css += BAND + ' > div:last-of-type:not(:first-of-type){font-size:13px !important;}';
     // APPLINE-SPACING-001 (owner 2026-07-23 "the application line is too far from

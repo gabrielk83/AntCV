@@ -33,7 +33,7 @@
 (function () {
   'use strict';
   if (window.__antcvCopenhagenV2) return;
-  window.__antcvCopenhagenV2 = '1.51.3422-photo129';
+  window.__antcvCopenhagenV2 = '1.51.3442-gap14';
 
   var FLAG = 'antcv:copenhagen-v2';
   var STYLE_ID = 'antcv-copenhagen-v2-style';
@@ -154,7 +154,7 @@
       // spec near the midline (its natural seat is a few px below exact center
       // because the name is taller than the contact — the specDy dial trims).
       css += BAND + '{display:grid !important;grid-template-columns:1fr !important;' +
-        'grid-template-rows:auto auto auto !important;align-content:center !important;row-gap:10px !important;' +
+        'grid-template-rows:auto auto auto !important;align-content:center !important;row-gap:14px !important;' +
         'min-height:200px !important;padding-top:14px !important;padding-bottom:14px !important;}';
       // CPH-PHOTO-CENTER-001 (owner 2026-07-23 "this is definitely not centered
       // to the middle of the sidebar"): the old grid column carried the band's

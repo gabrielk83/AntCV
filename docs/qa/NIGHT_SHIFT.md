@@ -48,7 +48,6 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mrwm59c4_8eai","started":"2026-07-22T21:47:27.763Z","host":"GabyPC2","worktree":null,"branch":"claude/determined-cannon-8d4c64","range":"1.51.3101-1.51.3120","task":"COPENHAGEN-MOCKUP-PARITY: token fixes flagged by mockup diff (mainHead teal, year 777, sidebarLine teal, contact dbe4f0, worker ground)","beat":"2026-07-22T21:47:28.582Z"}
 {"id":"sh_mrwrawky_dye9","started":"2026-07-23T00:11:49.241Z","host":"GabyPC2","worktree":null,"branch":"claude/determined-cannon-8d4c64","range":"1.51.3442-1.51.3461","task":"CPH-BAND-GAP14: row-gap 10->14px","beat":"2026-07-23T00:11:50.589Z"}
 {"id":"sh_mrwrdrst_id8b","started":"2026-07-23T00:14:03.008Z","host":"GabyPC2","worktree":null,"branch":"claude/determined-cannon-8d4c64","range":"1.51.3462-1.51.3481","task":"CPH-GAP18: row-gap 18px + contact font floor 8px","beat":"2026-07-23T00:14:03.242Z"}
-{"id":"sh_mrwt2cqu_knvl","started":"2026-07-23T01:01:09.512Z","host":"GabyPC2","worktree":null,"branch":"claude/determined-cannon-8d4c64","range":"1.51.3582-1.51.3601","task":"CPH-FIT-ABS-001: absolute idempotent fit math (tiny-contact recovery)","beat":"2026-07-23T01:01:09.658Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

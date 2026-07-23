@@ -33,7 +33,7 @@
 (function () {
   'use strict';
   if (window.__antcvCopenhagenV2) return;
-  window.__antcvCopenhagenV2 = '1.51.3402-contact-fit';
+  window.__antcvCopenhagenV2 = '1.51.3422-photo129';
 
   var FLAG = 'antcv:copenhagen-v2';
   var STYLE_ID = 'antcv-copenhagen-v2-style';
@@ -173,13 +173,13 @@
           var __sc2 = __bR2.width / __bEl2.offsetWidth;
           if (isFinite(__sc2) && __sc2 > 0.2) {
             var __cx = ((__sR2.left + __sR2.width / 2) - __bR2.left) / __sc2;
-            if (__cx > 80 && __cx < 420) __phL = __cx - 67;   // photo half = 67px
+            if (__cx > 80 && __cx < 420) __phL = __cx - 64.5;   // photo half = 64.5px (129px circle)
           }
         }
       } catch (_) {}
       if (__phL == null) __phL = Math.max(14, sbW / 2 - 58);   // fallback approximation
       css += BAND + ' img{position:absolute !important;left:' + __phL.toFixed(1) + 'px !important;top:50% !important;' +
-        'transform:translateY(-50%) !important;width:134px !important;height:134px !important;margin:0 !important;float:none !important;}';
+        'transform:translateY(-50%) !important;width:129px !important;height:129px !important;margin:0 !important;float:none !important;}';
       // CPH-BAND-SYMMETRY-002 (owner 2026-07-23 round 2): (a) the spec's OPTICAL
       // middle (the bullet-circle centers) sits on the box midline — all three
       // text rows now span the FULL band (grid-column 1/-1) so the spec centers
@@ -247,10 +247,10 @@
             // compresses the remainder (floor 0.6).
             var __ct = Math.min(__nameTarget, __maxW);
             var __cfs = parseFloat(getComputedStyle(__contEl).fontSize) || 13;
-            var __nfs = __Wc > __ct ? Math.max(10, Math.min(13, Math.floor(__cfs * __ct / __Wc))) : Math.min(13, __cfs);
+            var __nfs = __Wc > __ct ? Math.max(9, Math.min(13, Math.floor(__cfs * __ct / __Wc))) : Math.min(13, __cfs);
             if (__nfs !== __cfs) css += BAND + ' > div:last-of-type:not(:first-of-type){font-size:' + __nfs + 'px !important;}';
             var __WcAdj = __Wc * (__nfs / __cfs);
-            var __k = Math.max(0.6, Math.min(1, __ct / __WcAdj));
+            var __k = Math.max(0.55, Math.min(1, __ct / __WcAdj));
             css += BAND + ' > div:last-of-type:not(:first-of-type){transform:scaleX(' + __k.toFixed(3) + ') !important;transform-origin:center !important;}';
           }
         }

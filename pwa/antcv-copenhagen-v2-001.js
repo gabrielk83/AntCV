@@ -33,7 +33,7 @@
 (function () {
   'use strict';
   if (window.__antcvCopenhagenV2) return;
-  window.__antcvCopenhagenV2 = '1.51.3542-fit-guard';
+  window.__antcvCopenhagenV2 = '1.51.3562-fit-last';
 
   var FLAG = 'antcv:copenhagen-v2';
   var STYLE_ID = 'antcv-copenhagen-v2-style';
@@ -247,8 +247,6 @@
               __fit.nameFs = (__fit.nameFs == null) ? __t : Math.min(__fit.nameFs, __t);
             }
           }
-          if (__fit.nameLs != null) css += BAND + ' > div:first-of-type{letter-spacing:' + __fit.nameLs.toFixed(2) + 'px !important;}';
-          if (__fit.nameFs != null) css += BAND + ' > div:first-of-type{font-size:' + __fit.nameFs + 'px !important;}';
           var __nameTarget = Math.min(__Wn, __maxW);
           var __Wc = __contEl !== __nameEl ? __contEl.scrollWidth : 0;
           if (__Wc > 0 && __nameTarget > 100) {
@@ -262,8 +260,6 @@
             var __k = Math.max(0.55, Math.min(1, __ct / __WcAdj));
             __fit.contK = __k;
           }
-          if (__fit.contFs != null) css += BAND + ' > div:last-of-type:not(:first-of-type){font-size:' + __fit.contFs + 'px !important;}';
-          if (__fit.contK != null) css += BAND + ' > div:last-of-type:not(:first-of-type){transform:scaleX(' + __fit.contK.toFixed(3) + ') !important;transform-origin:center !important;}';
         }
       } catch (_) {}
     }
@@ -290,6 +286,14 @@
     // mockup wants the cyan #01B9BD. Branded apps still win via the
     // header-elem-colors inline accent paint (inline style beats stylesheet).
     css += BAND + ' > div:nth-of-type(2):not(:last-of-type){color:var(--header-spec-color, #01B9BD) !important;}';
+    // CPH-FIT-STABLE-001b: the cached fit rules are emitted LAST so they beat
+    // every static sizing rule above (same specificity — source order decides).
+    // Emitted UNCONDITIONALLY: a pass that could not measure (band mid-re-render)
+    // still re-asserts the chosen fit, so the lines can never snap back.
+    if (__fit.nameLs != null) css += BAND + ' > div:first-of-type{letter-spacing:' + __fit.nameLs.toFixed(2) + 'px !important;}';
+    if (__fit.nameFs != null) css += BAND + ' > div:first-of-type{font-size:' + __fit.nameFs + 'px !important;}';
+    if (__fit.contFs != null) css += BAND + ' > div:last-of-type:not(:first-of-type){font-size:' + __fit.contFs + 'px !important;}';
+    if (__fit.contK != null) css += BAND + ' > div:last-of-type:not(:first-of-type){transform:scaleX(' + __fit.contK.toFixed(3) + ') !important;transform-origin:center !important;}';
     return css;
   }
 

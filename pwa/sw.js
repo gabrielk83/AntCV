@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.3362-band-fit';
+const CACHE = 'antcv-1.51.3382-photo-center';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

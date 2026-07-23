@@ -33,7 +33,7 @@
 (function () {
   'use strict';
   if (window.__antcvCopenhagenV2) return;
-  window.__antcvCopenhagenV2 = '1.51.3362-band-fit';
+  window.__antcvCopenhagenV2 = '1.51.3382-photo-center';
 
   var FLAG = 'antcv:copenhagen-v2';
   var STYLE_ID = 'antcv-copenhagen-v2-style';
@@ -153,11 +153,33 @@
       // all three symmetries at once: outer gaps equal, internal gaps equal,
       // spec near the midline (its natural seat is a few px below exact center
       // because the name is taller than the contact — the specDy dial trims).
-      css += BAND + '{display:grid !important;grid-template-columns:' + sbW + 'px 1fr !important;' +
+      css += BAND + '{display:grid !important;grid-template-columns:1fr !important;' +
         'grid-template-rows:auto auto auto !important;align-content:center !important;row-gap:10px !important;' +
         'min-height:200px !important;padding-top:14px !important;padding-bottom:14px !important;}';
-      css += BAND + ' img{grid-column:1 !important;grid-row:1 / span 3 !important;align-self:center !important;justify-self:center !important;' +
-        'transform:none !important;width:134px !important;height:134px !important;margin:0 !important;float:none !important;}';
+      // CPH-PHOTO-CENTER-001 (owner 2026-07-23 "this is definitely not centered
+      // to the middle of the sidebar"): the old grid column carried the band's
+      // border+padding offset AND compared SCALED rects (the preview paper is
+      // scale-transformed) against unscaled CSS px — both skewed the center.
+      // Now: measure the sidebar's midline and the band origin in the SAME
+      // (scaled) space, divide by the live scale factor, and pin the photo
+      // ABSOLUTE at that CSS-px x, vertically centered. Out of the grid flow,
+      // so the text rows never stretch around it.
+      var __phL = null;
+      try {
+        var __sbEl2 = document.querySelector('.antcv-preview-paper [data-antcv-document-sidebar]');
+        var __bEl2 = document.querySelector(BAND);
+        if (__sbEl2 && __bEl2 && __bEl2.offsetWidth) {
+          var __sR2 = __sbEl2.getBoundingClientRect(), __bR2 = __bEl2.getBoundingClientRect();
+          var __sc2 = __bR2.width / __bEl2.offsetWidth;
+          if (isFinite(__sc2) && __sc2 > 0.2) {
+            var __cx = ((__sR2.left + __sR2.width / 2) - __bR2.left) / __sc2;
+            if (__cx > 80 && __cx < 420) __phL = __cx - 67;   // photo half = 67px
+          }
+        }
+      } catch (_) {}
+      if (__phL == null) __phL = Math.max(14, sbW / 2 - 58);   // fallback approximation
+      css += BAND + ' img{position:absolute !important;left:' + __phL.toFixed(1) + 'px !important;top:50% !important;' +
+        'transform:translateY(-50%) !important;width:134px !important;height:134px !important;margin:0 !important;float:none !important;}';
       // CPH-BAND-SYMMETRY-002 (owner 2026-07-23 round 2): (a) the spec's OPTICAL
       // middle (the bullet-circle centers) sits on the box midline — all three
       // text rows now span the FULL band (grid-column 1/-1) so the spec centers
@@ -187,11 +209,18 @@
           var __nameEl = __ds[0], __contEl = __ds[__ds.length - 1];
           var __bR = __b.getBoundingClientRect();
           var __img = __b.querySelector('img');
-          var __maxW = __b.clientWidth - 32;                       // horizontal padding allowance
+          // CPH-PHOTO-CENTER-001: rects are SCALED (preview transform) while
+          // scrollWidth is CSS px — normalize everything to CSS px via the live
+          // scale factor before comparing.
+          var __cssW = __b.offsetWidth || __b.clientWidth;
+          var __sc = __cssW ? (__bR.width / __cssW) : 1;
+          if (!isFinite(__sc) || __sc <= 0.2) __sc = 1;
+          var __maxW = __cssW - 32;                                // horizontal padding allowance
           if (__img) {
             var __iR = __img.getBoundingClientRect();
+            var __photoRightCss = (__iR.right - __bR.left) / __sc;
             // centered line clears the photo when width <= 2*(bandCenter - photoRight - 10)
-            var __clear = 2 * ((__bR.left + __bR.width / 2) - __iR.right - 10);
+            var __clear = 2 * ((__cssW / 2) - __photoRightCss - 10);
             if (__clear > 200) __maxW = Math.min(__maxW, __clear);
           }
           var __Wn = __nameEl.scrollWidth;
@@ -211,7 +240,10 @@
           }
           var __Wc = __contEl !== __nameEl ? __contEl.scrollWidth : 0;
           if (__Wc > 0 && __nameTarget > 100) {
-            var __k = Math.max(0.5, Math.min(1, __nameTarget / __Wc));
+            // Contact fits the NAME's width AND clears the photo (whichever is
+            // tighter) — the full-span contact was running under the figure.
+            var __ct = Math.min(__nameTarget, __maxW);
+            var __k = Math.max(0.5, Math.min(1, __ct / __Wc));
             css += BAND + ' > div:last-of-type:not(:first-of-type){transform:scaleX(' + __k.toFixed(3) + ') !important;transform-origin:center !important;}';
           }
         }

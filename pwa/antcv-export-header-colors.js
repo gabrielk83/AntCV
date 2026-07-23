@@ -20,7 +20,7 @@
 (function () {
   'use strict';
   if (window.__antcvExportHeaderColors) return;
-  window.__antcvExportHeaderColors = '1.0';
+  window.__antcvExportHeaderColors = '1.1';
   var origFetch = window.fetch;
   if (typeof origFetch !== 'function') return;
 
@@ -34,13 +34,16 @@
   // Mirror the engine's per-element mapping (colorFor).
   function colorFor(elem) {
     var o = ov(elem); if (o) return o;
+    // COPENHAGEN-STAGE4 (2026-07-23): the preview paints the app line grey for
+    // EVERY app (elem-colors APP_GRAY), branded or not — forward it before the
+    // brand gate so a brandless DOCX/PDF matches the screen.
+    if (elem === 'application') return '595959';
     var b = brand(); if (!b) return '';
     switch (elem) {
       case 'name':
       case 'contact': return hex6(b.headerInk) || hex6(b.headerNameColor) || '';
       case 'spec': return hex6(b.accent) || '';
       case 'slogan': return hex6(b.sloganColor) || hex6(b.accent) || '';
-      case 'application': return '595959';
       default: return '';
     }
   }
@@ -66,7 +69,10 @@
     var ar = Object.assign({}, readJSON('antcv:applineRule') || {}, (hir.application && typeof hir.application === 'object') ? hir.application : {});
     if (typeof ar.on !== 'boolean') ar.on = true;    // def-visible
     if (!payload.meta || typeof payload.meta !== 'object') payload.meta = {};
-    payload.meta.app_line_rule = ar.on ? { on: true, color: hex6(ar.color) || app || spec || '', pt: (Number(ar.pt) || 0.75) } : { on: false };
+    // COPENHAGEN-STAGE4: rule colour prefers TEAL (the preview appline-rule
+    // accent default), never the grey app-line text; default thickness 1.5pt
+    // (the mockup-locked preview default — was 0.75).
+    payload.meta.app_line_rule = ar.on ? { on: true, color: hex6(ar.color) || spec || '', pt: (Number(ar.pt) || 1.5) } : { on: false };
     changed = true;
     var sr = (hir.slogan && typeof hir.slogan === 'object') ? hir.slogan : {};
     if (sr.on === true) {
@@ -79,7 +85,10 @@
     try {
       if (!killed() && init && init.method === 'POST' && init.body) {
         var u = ''; try { u = (typeof url === 'string') ? url : (url && url.url) || ''; } catch (_) {}
-        if (/\/generate(\?|$)/.test(String(u)) && typeof init.body === 'string' && init.body.charAt(0) === '{') {
+        // COPENHAGEN-STAGE4: /generate-pdf builds from the SAME payload — the
+        // old /generate-only match left every CloudConvert PDF unpatched (the
+        // screen showed per-element colours the PDF never got).
+        if (/\/generate(-pdf)?(\?|$)/.test(String(u)) && typeof init.body === 'string' && init.body.charAt(0) === '{') {
           var p = null; try { p = JSON.parse(init.body); } catch (_) { p = null; }
           if (p && (p.sections !== undefined || p.style !== undefined)) {
             if (patch(p)) {
@@ -95,6 +104,6 @@
     return origFetch.call(window, url, init);
   };
 
-  window.AntcvExportHeaderColors = { version: '1.0', _colorFor: colorFor, _patch: patch };
+  window.AntcvExportHeaderColors = { version: '1.1', _colorFor: colorFor, _patch: patch };
   try { console.debug('[export-header-colors] installed'); } catch (_) {}
 })();

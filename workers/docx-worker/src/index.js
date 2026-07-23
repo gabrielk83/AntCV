@@ -23943,7 +23943,23 @@ function postProcessDocx(input, opts = {}) {
       : "";
     const hasWm = !!(opts && opts.watermark && String(opts.watermark).trim());
     const headerBgHex = (opts && opts.headerBg ? String(opts.headerBg).trim().replace(/[^0-9A-Fa-f]/g, "") : "").slice(0, 6);
-    if (hasWm || headerBgHex || spineRun) {
+    // COPENHAGEN-STAGE4 (spec "Stage 4" item 1): the rounded navy header box.
+    // A page-anchored VML roundrect (fill = band navy, 1.5pt cyan stroke,
+    // arcsize ≈ the preview's 22px radius) hosted in a FIRST-PAGE header part
+    // — the SIDEBAR-SPINE-VML-001 layer proven to render behind content in
+    // Word AND LibreOffice/CloudConvert (a body-anchored negative-z rect gets
+    // dropped by the converter). <w:titlePg/> keeps it on page 1 only. The
+    // geometry mirrors the band rows generateDocx pins: A4 595.3pt wide, box
+    // inset 6pt L/R + 4pt top, height 144pt inside the 152pt band rows.
+    const __hbox = opts && opts.headerBox && opts.headerBox.fill ? opts.headerBox : null;
+    const headerBoxRun = __hbox
+      ? ('<w:r><w:rPr><w:noProof/></w:rPr><w:pict>' +
+         '<v:roundrect id="AntCVHeadBox" o:spid="_x0000_s6098" style="position:absolute;margin-left:6pt;margin-top:4pt;width:583.3pt;height:144pt;' +
+         'mso-position-horizontal-relative:page;mso-position-vertical-relative:page;z-index:-251655000;mso-wrap-style:square" arcsize="15000f" ' +
+         'fillcolor="#' + String(__hbox.fill).replace(/[^0-9A-Fa-f]/g, "").slice(0, 6) + '" strokecolor="#' + String(__hbox.stroke || "01B9BD").replace(/[^0-9A-Fa-f]/g, "").slice(0, 6) + '" strokeweight="1.5pt">' +
+         '<w10:wrap anchorx="page" anchory="page"/></v:roundrect></w:pict></w:r>')
+      : "";
+    if (hasWm || headerBgHex || spineRun || headerBoxRun) {
       const wm = hasWm ? String(opts.watermark).trim().replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" })[c]) : "";
       const watermarkRun = hasWm ? '<w:r><w:rPr><w:noProof/></w:rPr><w:pict><v:shapetype id="_x0000_t136" coordsize="21600,21600" o:spt="136" adj="10800" path="m@7,l@8,m@5,21600l@6,21600e"><v:formulas><v:f eqn="sum #0 0 10800"/><v:f eqn="prod #0 2 1"/><v:f eqn="sum 21600 0 @1"/><v:f eqn="sum 0 0 @2"/><v:f eqn="sum 21600 0 @3"/><v:f eqn="if @0 @3 0"/><v:f eqn="if @0 21600 @1"/><v:f eqn="if @0 0 @2"/><v:f eqn="if @0 @4 21600"/><v:f eqn="mid @5 @6"/><v:f eqn="mid @8 @5"/><v:f eqn="mid @7 @8"/><v:f eqn="mid @6 @7"/><v:f eqn="sum @6 0 @5"/></v:formulas><v:path o:extrusionok="f" gradientshapeok="t" o:connecttype="custom" o:connectlocs="@9,0;@10,10800;@11,21600;@12,10800" o:connectangles="270,180,90,0" textpathok="t"/><v:textpath on="t" fitshape="t"/><v:handles><v:h position="#0,bottomRight" xrange="6629,14971"/></v:handles><o:lock v:ext="edit" text="t" shapetype="t"/></v:shapetype><v:shape id="AntCVWatermark" type="#_x0000_t136" style="position:absolute;margin-left:0;margin-top:0;width:468pt;height:117pt;rotation:-30;z-index:-251654144;mso-position-horizontal:center;mso-position-horizontal-relative:margin;mso-position-vertical:center;mso-position-vertical-relative:margin" fillcolor="#D0D0D0" stroked="f"><v:fill opacity=".4"/><v:textpath style="font-family:&quot;Arial&quot;;font-size:1pt" string="' + wm + '"/><w10:wrap anchorx="margin" anchory="margin"/></v:shape></w:pict></w:r>' : "";
       // 1.14.20: HEADER-based Word watermark (the standard, robust approach). The
@@ -24014,6 +24030,52 @@ function postProcessDocx(input, opts = {}) {
       // header applies to ALL pages.
       if (xml2.indexOf("w:headerReference") < 0) {
         xml2 = xml2.replace(/<w:sectPr(\s[^>]*)?>/g, (m0) => m0 + '<w:headerReference w:type="default" r:id="' + rid + '"/>');
+      }
+      // COPENHAGEN-STAGE4: a FIRST-PAGE header part carries the rounded band
+      // box; it repeats the spine + watermark runs because <w:titlePg/> makes
+      // it REPLACE the default header on page 1. Its 1pt paragraph is NOT
+      // shaded — the box is inset from the page top, so the sliver above it
+      // stays white (no TOP-STRIP band on the rounded look).
+      if (headerBoxRun) {
+        // Page-1 spine starts BELOW the band box (preview: the sidebar panel
+        // opens ~7px under the header) — the full-height default-header spine
+        // would otherwise peek out pale around the rounded navy box now that
+        // the band cells carry no shading. Pages 2+ keep the full spine.
+        const spineRun1 = spineRun
+          ? spineRun.replace("margin-top:0;", "margin-top:158pt;").replace("height:842pt", "height:684pt")
+          : "";
+        const header2Xml =
+          '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+          '<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w10="urn:schemas-microsoft-com:office:word">' +
+          '<w:p><w:pPr>' +
+          '<w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/>' +
+          '<w:rPr><w:sz w:val="2"/><w:szCs w:val="2"/></w:rPr></w:pPr>' + spineRun1 + watermarkRun + headerBoxRun + '</w:p></w:hdr>';
+        files["word/headerCph.xml"] = strToU8(header2Xml);
+        let rels2 = files[relsName] ? strFromU8(files[relsName]) : '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
+        let maxRid2 = 0;
+        rels2.replace(/Id="rId(\d+)"/g, (m0, n) => { const k = parseInt(n, 10); if (k > maxRid2) maxRid2 = k; return m0; });
+        const rid2 = "rId" + (maxRid2 + 1);
+        if (rels2.indexOf('Target="headerCph.xml"') < 0) {
+          rels2 = rels2.replace("</Relationships>", '<Relationship Id="' + rid2 + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="headerCph.xml"/></Relationships>');
+          files[relsName] = strToU8(rels2);
+        }
+        if (files["[Content_Types].xml"]) {
+          let ct2 = strFromU8(files["[Content_Types].xml"]);
+          if (ct2.indexOf("/word/headerCph.xml") < 0) {
+            ct2 = ct2.replace("</Types>", '<Override PartName="/word/headerCph.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/></Types>');
+            files["[Content_Types].xml"] = strToU8(ct2);
+          }
+        }
+        if (xml2.indexOf('w:headerReference w:type="first"') < 0) {
+          xml2 = xml2.replace(/<w:sectPr(\s[^>]*)?>/g, (m0) => m0 + '<w:headerReference w:type="first" r:id="' + rid2 + '"/>');
+        }
+        // titlePg activates the first-page header. sectPr child order: it must
+        // sit AFTER pgSz/pgMar/cols etc. — insert just before docGrid when
+        // present, else right before the close tag.
+        if (xml2.indexOf("<w:titlePg") < 0) {
+          if (xml2.indexOf("<w:docGrid") >= 0) xml2 = xml2.replace(/<w:docGrid/g, "<w:titlePg/><w:docGrid");
+          else xml2 = xml2.replace(/<\/w:sectPr>/g, "<w:titlePg/></w:sectPr>");
+        }
       }
       watermarked = true;
     }
@@ -24493,6 +24555,17 @@ function inlineRuns(text, baseRun) {
 __name(inlineRuns, "inlineRuns");
 async function generateDocx(payload) {
   const style = mergeStyle(payload.style || {}, payload.package, payload.legacy_ats_tier === true);
+  // COPENHAGEN-STAGE4-DOCX-PARITY (owner 2026-07-23, spec
+  // docs/design/COPENHAGEN_MODERN_NORDIC_PALETTE_SPEC.md "Stage 4"): the tuned
+  // Copenhagen preview (rounded navy band, cyan ring/border, tracked name,
+  // condensed one-line contact, white band links, grey app line + teal rule,
+  // teal sign-off with cyan underline) applies ONLY when the payload names the
+  // copenhagen-modern package — legacy payloads without a package keep the old
+  // look. Cyan follows the forwarded photoBorderColor (a branded export sends
+  // its own accent), else the locked #01B9BD.
+  style._cph = typeof payload.package === "string" && !!payload.package.trim() && normalisePackageId(payload.package) === "copenhagen-modern";
+  style._cphCyan = (payload.style && hex(payload.style.photoBorderColor)) || "01B9BD";
+  if (style._cph && !(payload.style && payload.style.headerSpecColor)) style.headerSpecColor = style._cphCyan;
   const fontSizes = { ...FONT_DEFAULTS, ...payload.font_sizes || {} };
   const lang = payload.language || "en";
   // CJK-FONT-ZH-001 (owner 2026-07-09): the package fonts are Latin faces
@@ -24645,6 +24718,11 @@ async function generateDocx(payload) {
   let markersRemaining = 0;
   try {
     const result = postProcessDocx(raw, { watermark: payload.watermark || "", photoShape: resolvePhotoShape(payload), headerBg: (style && style.headerBg) || "", aiNotice: style && style._aiNotice, aiFont: style && style._aiFont,
+      // COPENHAGEN-STAGE4: rounded navy header box + cyan 1.5pt border as a
+      // page-anchored VML roundrect in a FIRST-PAGE header part (titlePg) —
+      // the band cells above dropped their shading for it. Page 1 only; the
+      // default header (spine/watermark) keeps serving pages 2+.
+      headerBox: style && style._cph ? { fill: style.headerBg, stroke: style._cphCyan } : null,
       // SIDEBAR-SPINE-VML-001: full-height header-hosted rect behind the
       // sidebar (two-column CVs only; kill: style_config sidebarSpine:false)
       spineColor: (layout === "two_column" && ctx.sidebarSpine && style && style.sidebarBg) || "",
@@ -25169,12 +25247,20 @@ function buildTwoColumnDocument(ctx) {
     // so it still rises over the sidebar column; the centred name/spec begin well
     // to the right of the photo's right edge, so no reserved photo cell is needed
     // and a long name keeps the full page width (no wrap).
+    // COPENHAGEN-STAGE4: on a copenhagen payload the band CELLS drop their
+    // navy shading — the rounded navy box + cyan border is a page-anchored
+    // VML roundrect in the FIRST-PAGE header part (postProcessDocx), the
+    // SIDEBAR-SPINE-VML-001 layer that survives CloudConvert. The rows pin
+    // to the box height (3040 tw ≈ 152pt ≈ the tuned preview's 200px box)
+    // with content vertically centered, so text sits inside the rect.
     new TableRow({
+      ...(style._cph ? { height: { value: 2e3, rule: "atLeast" } } : {}),
       children: [
         new TableCell({
           columnSpan: 2,
           width: { size: PAGE_W, type: WidthType.DXA },
-          shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+          shading: style._cph ? void 0 : { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+          ...(style._cph ? { verticalAlign: VerticalAlign.CENTER } : {}),
           borders: noBorders(),
           margins: { top: 240, bottom: 80, left: 360, right: 360 },
           children: __topParas
@@ -25183,11 +25269,12 @@ function buildTwoColumnDocument(ctx) {
     })
   ].concat(__contactParas.length ? [
     new TableRow({
+      ...(style._cph ? { height: { value: 1040, rule: "atLeast" } } : {}),
       children: [
         new TableCell({
           columnSpan: 2,
           width: { size: PAGE_W, type: WidthType.DXA },
-          shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+          shading: style._cph ? void 0 : { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
           borders: noBorders(),
           margins: { top: 0, bottom: 80, left: 360, right: 360 },
           children: __contactParas
@@ -25196,11 +25283,13 @@ function buildTwoColumnDocument(ctx) {
     })
   ] : []) : [
     new TableRow({
+      ...(style._cph ? { height: { value: 3040, rule: "atLeast" } } : {}),
       children: [
         new TableCell({
           columnSpan: 2,
           width: { size: PAGE_W, type: WidthType.DXA },
-          shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+          shading: style._cph ? void 0 : { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+          ...(style._cph ? { verticalAlign: VerticalAlign.CENTER } : {}),
           borders: noBorders(),
           // Candidate header pad: 0.25" L/R (360 DXA), matches preview band.
           margins: { top: 240, bottom: 80, left: 360, right: 360 },
@@ -25470,6 +25559,26 @@ function buildLinearDocument(ctx) {
   // slogan_align. An empty override falls back to meta.subtitle (the old default; Gabriel
   // unsolicited = "PROCESSES • PRODUCTS • PEOPLE"). Skipped when hidden or empty/placeholder.
   // Mirrors the preview srcdoc builder (app.src.js CL branch) for preview/export parity.
+  // COPENHAGEN-STAGE4: the app line is computed BEFORE the slogan renders so
+  // the slogan's after-spacing can tighten when an app line follows (preview
+  // APPLINE-SPACING-001 pulls the line up toward the slogan).
+  let __alText = "";
+  {
+    const __m2 = ctx.meta || {};
+    const __role = String(__m2.role || "").trim();
+    const __company = String(__m2.company || "").trim();
+    if (__role || __company) {
+      const __unsol = /^(unsolicited|open application|uopfordret|åben ansøgning|speculative|主动申请)$/i;
+      if (!(__company && __unsol.test(__company))) {
+        const __lang = String(ctx.lang || "en").toLowerCase().slice(0, 2) || "en";
+        const __forW = { en: "Application for", da: "Ansøgning til", es: "Candidatura para", zh: "申请职位", he: "מועמדות לתפקיד", am: "ማመልከቻ ለ", ar: "التقدم لوظيفة" }[__lang] || "Application for";
+        const __atW = { en: "at", da: "hos", es: "en", zh: "·", he: "ב", am: "በ", ar: "في" }[__lang] || "at";
+        __alText = __role ? __forW + " " + __role : "";
+        if (__company) __alText = __alText ? (__alText + " " + __atW + " " + __company) : (__forW + " " + __company);
+        __alText = __alText.trim();
+      }
+    }
+  }
   {
     const __m = ctx.meta || {};
     let __slogan = "";
@@ -25496,7 +25605,10 @@ function buildLinearDocument(ctx) {
       })() : {};
       bodyChildren.push(new Paragraph({
         alignment: __sAlign,
-        spacing: { before: 0, after: 160, line: 240, lineRule: "auto" },
+        // COPENHAGEN-STAGE4 / APPLINE-SPACING-001 parity: when the app line
+        // follows, pull it up toward the slogan (preview margin-top -7px →
+        // after 160-105=55 twips); no app line keeps the legacy 160.
+        spacing: { before: 0, after: style._cph && __alText ? 55 : 160, line: 240, lineRule: "auto" },
         keepNext: true,
         ...__srB,
         children: [new TextRun({
@@ -25522,33 +25634,29 @@ function buildLinearDocument(ctx) {
   // one with no targeted role/company.
   {
     const __m2 = ctx.meta || {};
-    const __role = String(__m2.role || "").trim();
-    const __company = String(__m2.company || "").trim();
-    let __al = "";
-    if (__role || __company) {
-      const __unsol = /^(unsolicited|open application|uopfordret|åben ansøgning|speculative|主动申请)$/i;
-      if (!(__company && __unsol.test(__company))) {
-        const __lang = String(ctx.lang || "en").toLowerCase().slice(0, 2) || "en";
-        const __forW = { en: "Application for", da: "Ansøgning til", es: "Candidatura para", zh: "申请职位", he: "מועמדות לתפקיד", am: "ማመልከቻ ለ", ar: "التقدم لوظيفة" }[__lang] || "Application for";
-        const __atW = { en: "at", da: "hos", es: "en", zh: "·", he: "ב", am: "በ", ar: "في" }[__lang] || "at";
-        __al = __role ? __forW + " " + __role : "";
-        if (__company) __al = __al ? (__al + " " + __atW + " " + __company) : (__forW + " " + __company);
-        __al = __al.trim();
-      }
-    }
+    const __al = __alText;
     if (__al) {
       // EXPORT-HEADER-COLORS-001 (owner 2026-07-22): 1:1 parity with the preview —
       // the application line takes its OWN colour (app_line_color; muted gray by
       // default) rather than the slogan colour, and an optional rule under it
       // (app_line_rule {on,color,pt}) matching the #6 preview control.
+      // COPENHAGEN-STAGE4 defaults (tuned preview): app-line text GREY (the
+      // elem-colors default) + a TEAL 1.5pt rule under it. An explicit
+      // app_line_color / app_line_rule from the export sidecar always wins
+      // (including an explicit rule off).
       const __alColor = (typeof __m2.app_line_color === "string" && /^[0-9a-f]{6}$/i.test(__m2.app_line_color))
         ? __m2.app_line_color.toUpperCase()
+        : style._cph ? "808080"
         : (__m2.slogan_color ? sloganColorOnWhite(__m2.slogan_color, style.mainHeadColor) : style.mainHeadColor);
-      const __alRule = __m2.app_line_rule;
+      const __alRule = (__m2.app_line_rule && typeof __m2.app_line_rule === "object")
+        ? __m2.app_line_rule
+        : style._cph ? { on: true, color: "00746E", pt: 1.5 } : null;
       const __alBorder = (__alRule && __alRule.on) ? (function () {
         const _pt = Number(__alRule.pt); const pt = (_pt >= 0.25 && _pt <= 4) ? _pt : 0.75;
-        const _c = (typeof __alRule.color === "string" && /^[0-9a-f]{6}$/i.test(__alRule.color)) ? __alRule.color.toUpperCase() : __alColor;
-        return { border: { bottom: { color: _c, space: 4, style: BorderStyle.SINGLE, size: Math.max(2, Math.min(32, Math.round(pt * 8))) } } };
+        const _c = (typeof __alRule.color === "string" && /^[0-9a-f]{6}$/i.test(__alRule.color)) ? __alRule.color.toUpperCase() : (style._cph ? "00746E" : __alColor);
+        // COPENHAGEN-STAGE4: 7px air between the text and its rule (preview
+        // padding-bottom 7px ≈ space 5pt); legacy keeps space 4.
+        return { border: { bottom: { color: _c, space: style._cph ? 5 : 4, style: BorderStyle.SINGLE, size: Math.max(2, Math.min(32, Math.round(pt * 8))) } } };
       })() : {};
       bodyChildren.push(new Paragraph({
         alignment: AlignmentType.CENTER,
@@ -25642,9 +25750,13 @@ function buildLinearDocument(ctx) {
     alignment: ({ left: AlignmentType.LEFT, center: AlignmentType.CENTER, right: AlignmentType.RIGHT })[String((ctx.meta && ctx.meta.cl_closing_align) || "center").toLowerCase()] || AlignmentType.CENTER,
     children: [new TextRun({
       text: closeWord,
-      color: style.mainTextColor,
+      // COPENHAGEN-STAGE4 / SIGNOFF-UNDERLINE-001 parity: sign-off teal,
+      // non-bold, with a CYAN single underline (w:u color) — the tuned
+      // preview's "At your service," treatment.
+      color: style._cph ? "00746E" : style.mainTextColor,
       size: pt2hp(fs.mainBody),
-      font: style.mainBodyFont
+      font: style.mainBodyFont,
+      ...(style._cph ? { underline: { type: "single", color: "01B9BD" } } : {})
     })]
   }));
   // CL sign-off order: "Kind regards," -> optional signature image -> typed name.
@@ -25771,10 +25883,14 @@ function buildLinearDocument(ctx) {
     indent: fullBleedIndent,
     borders: noBorders(),
     rows: [
+      // COPENHAGEN-STAGE4: CL band = CV band — shading moves to the rounded
+      // first-page-header VML box, row pins to the same 152pt, centered.
       new TableRow({
+        ...(style._cph ? { height: { value: 3040, rule: "atLeast" } } : {}),
         children: [new TableCell({
           width: { size: PAGE_W, type: WidthType.DXA },
-          shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+          shading: style._cph ? void 0 : { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+          ...(style._cph ? { verticalAlign: VerticalAlign.CENTER } : {}),
           borders: noBorders(),
           margins: { top: 240, bottom: 200, left: 360, right: 360 },
           children: headerCell
@@ -25793,9 +25909,11 @@ function buildLinearDocument(ctx) {
     borders: noBorders(),
     rows: [
       new TableRow({
+        ...(style._cph ? { height: { value: 3040, rule: "atLeast" } } : {}),
         children: [new TableCell({
           width: { size: PAGE_W, type: WidthType.DXA },
-          shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+          shading: style._cph ? void 0 : { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+          ...(style._cph ? { verticalAlign: VerticalAlign.CENTER } : {}),
           borders: noBorders(),
           // Candidate header pad: 0.25" L/R (360 DXA), matches CV header.
           margins: { top: 240, bottom: 200, left: 360, right: 360 },
@@ -25986,15 +26104,22 @@ function buildHeaderCell(ctx, bridgePhoto) {
       // 1.14.27: the running-header strip is now a thin 2pt line, so give the
       // name back 3pt (before:60) of top space inside the band so it isn't
       // clipped at the top edge of the candidate section.
-      spacing: { before: 60, after: __cgAfter(40), line: 240, lineRule: "exact" },
-      shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+      // COPENHAGEN-STAGE4: tuned band type — name ~17.5pt (preview 23px) with
+      // expanded tracking (.14em of 17.5pt = 2.45pt = 49 twentieths) so it
+      // frames the photo like a 2nd ring; line grows with the size (auto, was
+      // 240 exact for the 16pt legacy name — exact would clip the taller face).
+      spacing: style._cph
+        ? { before: 60, after: __cgAfter(40), line: 240, lineRule: "auto" }
+        : { before: 60, after: __cgAfter(40), line: 240, lineRule: "exact" },
+      shading: style._cph ? void 0 : { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
       children: [
         new TextRun({
           text: pi.name,
           bold: true,
           color: style.headerNameColor,
-          size: pt2hp(fs.nameSize),
-          font: style.headerFont
+          size: pt2hp(style._cph ? 17.5 : fs.nameSize),
+          font: style.headerFont,
+          ...(style._cph ? { characterSpacing: 49 } : {})
         })
       ]
     }));
@@ -26008,13 +26133,17 @@ function buildHeaderCell(ctx, bridgePhoto) {
       alignment: alignType(headerAlign.specialisation),
       ...__hdrIndent,
       spacing: { before: 0, after: __cgAfter(60) },
-      shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+      shading: style._cph ? void 0 : { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
       children: [
         new TextRun({
           text: subtitle,
+          // COPENHAGEN-STAGE4: spec line cyan (headerSpecColor defaulted to
+          // _cphCyan in generateDocx when the payload sends no override),
+          // 13.5pt = the tuned preview's 18px, bold like the preview band.
           color: style.headerSpecColor,
-          size: pt2hp(fs.specialisation),
-          font: style.headerFont
+          size: pt2hp(style._cph ? 13.5 : fs.specialisation),
+          font: style.headerFont,
+          ...(style._cph ? { bold: true, characterSpacing: 11 } : {})
         })
       ]
     }));
@@ -26057,8 +26186,13 @@ function buildHeaderCell(ctx, bridgePhoto) {
     // paragraph's TOP border; rule below Contact = its BOTTOM border; none
     // below Name). DOCX border size is EIGHTHS of a point (6 = 0.75pt).
     const __hr = (ctx && ctx.headerRules) || {};
-    const __ruleFor = (k, defOn) => {
+    // COPENHAGEN-STAGE4 / HEADER-RULE-DEFAULTS-002 parity: the tuned preview
+    // draws NO rules inside the header box by default — on a copenhagen
+    // payload an ABSENT header_rules config means none (an explicit on:true
+    // still wins). Non-copenhagen packages keep the legacy default-on look.
+    const __ruleFor = (k, defOnLegacy) => {
       const v = __hr[k] || {};
+      const defOn = style._cph ? false : defOnLegacy;
       const on = typeof v.on === "boolean" ? v.on : defOn;
       if (!on) return null;
       const pt = Number(v.pt);
@@ -26077,14 +26211,14 @@ function buildHeaderCell(ctx, bridgePhoto) {
     const __bridgePhotoOn = bridgePhoto === true && normalisePhotoPosition(pi.photoPosition) === "band-overlap" && !!pi.photo_b64 && ctx.doc !== "cl";
     if (__bridgePhotoOn) ctx.__bridgePhotoInContact = true;
     out.push(new Paragraph({
-      shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+      shading: style._cph ? void 0 : { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
       spacing: { before: 0, after: 60, line: 40, lineRule: "exact" },
       children: []
     }));
     out.push(new Paragraph({
       alignment: __bridgePhotoOn ? AlignmentType.JUSTIFIED : alignType(headerAlign.contact),
       ...(__bridgePhotoOn ? { indent: { left: 2592, right: -216 } } : {}),
-      shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+      shading: style._cph ? void 0 : { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
       border: { ...(__ruleSpec ? { top: { ...__ruleSpec } } : {}), ...(__ruleContact ? { bottom: { ...__ruleContact } } : {}) },
       spacing: { before: 0, after: __cgAfter(60) },
       children: (() => {
@@ -26104,7 +26238,10 @@ function buildHeaderCell(ctx, bridgePhoto) {
         // CONTACT-CONVERGE-001 (owner 2026-07-14: manually made the export converge with
         // "only '  ' not '   '" between contact elements + 8.5pt): two nbsp, not three \u2014
         // the third space was overflowing the one-line contact and forcing a wrap/shrink.
-        const sep = "\u00a0\u00a0";
+        // COPENHAGEN-STAGE4 (mockup lock): copenhagen contact joins with ONE
+        // space between items \u2014 the w:w=73 char compression below holds the
+        // single line; legacy packages keep the CONTACT-CONVERGE-001 two-nbsp.
+        const sep = style._cph ? "\u00a0" : "\u00a0\u00a0";
         // CONTACT-BRIDGE-NOSHRINK-001 (owner 2026-06-30): do NOT shrink the
         // contact line in bridge mode. The split header now widens the text
         // cell leftward to the figure's right edge (see buildCandidateHeader
@@ -26112,11 +26249,16 @@ function buildHeaderCell(ctx, bridgePhoto) {
         // second line if long, instead of being crammed unreadably small.
         // FIGURE-CONTACT-REF-001: bridge contact is pinned to 8pt per the
         // owner reference (w:sz 16); non-bridge keeps fs.contactSize.
-        const pt = __bridgePhotoOn ? 8.5 : fs.contactSize;
+        // COPENHAGEN-STAGE4: contact pinned 9.5pt (mockup lock; preview 13px
+        // scaled) in EVERY copenhagen mode, bridge included.
+        const pt = style._cph ? 9.5 : __bridgePhotoOn ? 8.5 : fs.contactSize;
         // CONTACT-TRACK-TIGHT-001 (owner 2026-07-03, on the 1.14.120 PDF:
         // "same size but letter separation a bit smaller"): condense the
         // bridge contact runs by 0.5pt (w:spacing -10 twentieths). Size stays 8pt.
-        const base = { color: style.headerContactColor, size: pt2hp(pt), font: style.headerFont, ...(__bridgePhotoOn ? { characterSpacing: -10 } : {}) };
+        // COPENHAGEN-STAGE4: char-scale w:w=73 = the preview's scaleX(.73)
+        // condense, plus the mockup's -.01em tracking — the whole contact
+        // stays ONE line at ~name width without shrinking the glyph height.
+        const base = { color: style.headerContactColor, size: pt2hp(pt), font: style.headerFont, ...(style._cph ? { scale: 73, characterSpacing: -2 } : __bridgePhotoOn ? { characterSpacing: -10 } : {}) };
         const kids = [];
         if (__bridgePhotoOn) {
           // The 1.50" page-anchored medallion, first run of this paragraph —
@@ -26124,8 +26266,10 @@ function buildHeaderCell(ctx, bridgePhoto) {
           kids.push(new ImageRun({
             data: base64ToUint8Array(pi.photo_b64),
             type: detectImageType(pi.photo_b64),
-            transformation: { width: 144, height: 144 },
-            outline: { width: 12700, solidFillType: "rgb", value: (style && style.photoBorderColor || style && style.sidebarHeadColor || style && style.accent || "01B7BB").replace(/^#/, "") },
+            // COPENHAGEN-STAGE4: 1.4in circle (134px @96dpi) + 1.5pt cyan ring
+            // (19050 EMU); legacy keeps the 1.5in / 1pt reference medallion.
+            transformation: style._cph ? { width: 134, height: 134 } : { width: 144, height: 144 },
+            outline: { width: style._cph ? 19050 : 12700, solidFillType: "rgb", value: style._cph ? style._cphCyan : (style && style.photoBorderColor || style && style.sidebarHeadColor || style && style.accent || "01B7BB").replace(/^#/, "") },
             floating: {
               horizontalPosition: { relative: HorizontalPositionRelativeFrom.PAGE, offset: 396240 },
               verticalPosition: { relative: VerticalPositionRelativeFrom.PARAGRAPH, offset: -365760 },
@@ -26148,7 +26292,9 @@ function buildHeaderCell(ctx, bridgePhoto) {
             if (prefix) kids.push(new TextRun({ text: prefix, ...base }));
             kids.push(new ExternalHyperlink({
               link: b.link,
-              children: [new TextRun({ text: b.text, ...base, underline: {} })]
+              // COPENHAGEN-STAGE4: band links render WHITE underlined on the
+              // dark box (blue/cyan "break the aesthetics" — mockup lock).
+              children: [new TextRun({ text: b.text, ...base, ...(style._cph ? { color: "FFFFFF" } : {}), underline: {} })]
             }));
           } else {
             kids.push(new TextRun({ text: prefix + b.text, ...base }));
@@ -26212,11 +26358,14 @@ function buildPhotoParagraph(ctx, position) {
   const fwdPx = Number(pi.photoSizePx);
   const fwdOk = Number.isFinite(fwdPx) && fwdPx >= 40 && fwdPx <= 260 ? Math.round(fwdPx) : null;
   let inches = 1.25;
-  if (pos === "header-left" || pos === "header-right") inches = 0.85;
+  // COPENHAGEN-STAGE4: header (in-band) photo is the mockup's 1.4in circle.
+  if (pos === "header-left" || pos === "header-right") inches = style && style._cph ? 1.4 : 0.85;
   if (pos === "main-left" || pos === "main-right" || pos === "main-left-bottom" || pos === "main-right-bottom") inches = 1.2;
   let sizePx = Math.round(inches * EMU_PER_INCH / 9525);
   if ((pos === "sidebar-top" || pos === "sidebar-bottom") && fwdOk) sizePx = fwdOk;
-  const outlineColor = (style && style.photoBorderColor || style && style.sidebarHeadColor || style && style.accent || "01B7BB").replace(/^#/, "");
+  const outlineColor = (style && style._cph && style._cphCyan) || (style && style.photoBorderColor || style && style.sidebarHeadColor || style && style.accent || "01B7BB").replace(/^#/, "");
+  // COPENHAGEN-STAGE4: 1.5pt ring (19050 EMU) on every copenhagen medallion.
+  const outlineW = style && style._cph ? 19050 : 12700;
   if (pos === "bridge-middle" || pos === "bridge-bottom") {
     // PHOTO-POSITIONS-EXPORT-001 (1.14.53): the medallion STRADDLES the
     // VERTICAL sidebar/main seam — a floating image anchored on the first
@@ -26239,7 +26388,7 @@ function buildPhotoParagraph(ctx, position) {
           data,
           type: detectImageType(pi.photo_b64),
           transformation: { width: px, height: px },
-          outline: { width: 12700, solidFillType: "rgb", value: outlineColor },
+          outline: { width: outlineW, solidFillType: "rgb", value: outlineColor },
           floating: {
             horizontalPosition: { relative: HorizontalPositionRelativeFrom.PAGE, offset: seamOffsetEmu },
             verticalPosition: vert,
@@ -26269,7 +26418,7 @@ function buildPhotoParagraph(ctx, position) {
           data,
           type: detectImageType(pi.photo_b64),
           transformation: { width: sizePx, height: sizePx },
-          outline: { width: 12700, solidFillType: "rgb", value: outlineColor },
+          outline: { width: outlineW, solidFillType: "rgb", value: outlineColor },
           altText: {
             title: "Profile photo",
             description: pi.name ? "Profile photo of " + pi.name : "Profile photo",
@@ -26311,7 +26460,7 @@ function buildPhotoParagraph(ctx, position) {
           data,
           type: detectImageType(pi.photo_b64),
           transformation: { width: Math.min(px, 144), height: Math.min(px, 144) },
-          outline: { width: 12700, solidFillType: "rgb", value: outlineColor },
+          outline: { width: outlineW, solidFillType: "rgb", value: outlineColor },
           floating: {
             // PHOTO-BRIDGE-EXPORT-001 (owner 2026-06-14): the band-overlap
             // medallion must RISE OUT of the sidebar cell to straddle the band
@@ -26367,7 +26516,7 @@ function buildPhotoParagraph(ctx, position) {
           data,
           type: detectImageType(pi.photo_b64),
           transformation: { width: sizePx, height: sizePx },
-          outline: { width: 12700, solidFillType: "rgb", value: outlineColor },
+          outline: { width: outlineW, solidFillType: "rgb", value: outlineColor },
           altText: {
             title: "Profile photo",
             description: pi.name ? "Profile photo of " + pi.name : "Profile photo",
@@ -26385,7 +26534,7 @@ function buildPhotoParagraph(ctx, position) {
         data,
         type: detectImageType(pi.photo_b64),
         transformation: { width: sizePx, height: sizePx },
-        outline: { width: 12700, solidFillType: "rgb", value: outlineColor },
+        outline: { width: outlineW, solidFillType: "rgb", value: outlineColor },
         altText: {
           title: "Profile photo",
           description: pi.name ? "Profile photo of " + pi.name : "Profile photo",
@@ -26838,7 +26987,20 @@ function renderSection(s, ctx, isSidebar) {
   if (skipHeading || s.headlineOff || !s.title) {
     // RULE-INDEPENDENT-001 (owner 2026-07): a headline-OFF section can still opt IN to a
     // standalone rule line (headlineRule) — render just the accent rule, no title text.
-    if (s.headlineOff && s.headlineRule && body.length && !skipHeading) {
+    // ORPHAN-RULE-GATE-001 parity (owner 2026-07-23 "extra lines below", preview
+    // app.src.js ~8328): all-placeholder / empty content still yields body
+    // paragraphs here, so body.length alone let an orphan rule float between
+    // sections. Require REAL renderable content, same test as the preview.
+    const __hasRealBody = (function () { try {
+      if (Array.isArray(s.items)) return s.items.some(function (q) {
+        if (!q || q.hidden) return false;
+        if (q.grp) return true;
+        const t = String(q.t || "").trim();
+        return !!t && !/^\[[\s\S]*\]$/.test(t);
+      });
+      if (typeof s.content === "string") { const c = s.content.trim(); return !!c && !/^\[[\s\S]*\]$/.test(c); }
+    } catch (_) {} return true; })();
+    if (s.headlineOff && s.headlineRule && body.length && __hasRealBody && !skipHeading) {
       const __rule = new Paragraph({
         // CL-RULE-BALANCE-001 (owner 2026-07-04): the empty rule paragraph
         // carried a FULL line box, so the gap above the line was ~3x the gap
@@ -28961,7 +29123,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.164-copenhagen-ground";
+var VERSION = "1.14.165-copenhagen-stage4";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

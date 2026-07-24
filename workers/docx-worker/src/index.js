@@ -26130,8 +26130,8 @@ function __cphNameFit(ctx, contactPt, bridgePhotoOn) {
   let target = (__estWidthPt1(contact) * contactPt - 0.1 * (contact.length - 1)) * 0.73 * 0.885;
   // CV band-overlap medallion floats into the band from the left — a centered
   // name must clear it on BOTH sides (mirror of the preview's __clear math):
-  // band ≈ 575pt, photo right edge ≈ 0.433" + 1.4" = 132pt, 10pt air.
-  if (bridgePhotoOn) target = Math.min(target, 2 * (575 / 2 - 132 - 10));
+  // band ≈ 575pt, photo right edge ≈ 0.433" + 1.29" = 124pt, 10pt air (CPH-PHOTO-124).
+  if (bridgePhotoOn) target = Math.min(target, 2 * (575 / 2 - 124 - 10));
   const units = __estWidthPt1(name) + TRACK_EM * Math.max(1, name.length - 1);
   let pt = target / units;
   pt = Math.max(15, Math.min(30, Math.round(pt * 2) / 2));
@@ -26206,6 +26206,26 @@ function buildHeaderCell(ctx, bridgePhoto) {
   // the banned em/en dash reached the "Application: role \u2014 company" line; sanitise to a hyphen here
   // so it never renders regardless of how the app built the subtitle.
   const subtitle = (meta.subtitle || "").replace(/\s*[\u2014\u2013]\s*/g, " - ").replace(/\s*\|\s*/g, "  \u2022  ");
+  // SPEC-SHORTER-001 (owner 2026-07-24 "decrease the specialization line to
+  // always be shorter"): the spec line must render NARROWER than the fitted
+  // name (<= 0.92x its tracked width; floor 10pt). An explicit Font sizes (pt)
+  // panel value wins \u2014 same convention as the preview leg. Uses the SAME width
+  // model as __cphNameFit so the rule agrees across surfaces.
+  const __cphSpecPtFit = (() => {
+    if (!style._cph || !subtitle) return __cphSpecPt;
+    if (typeof __fsRaw.specialisation === "number" && __fsRaw.specialisation > 0) return __cphSpecPt;
+    let sp = __cphSpecPt;
+    try {
+      const nm = String(pi.name || "");
+      const nameW = __cphFit ? __cphFit.pt * (__estWidthPt1(nm) + 0.14 * Math.max(1, nm.length - 1)) : 0;
+      if (nameW > 40) {
+        const est = (p) => __estWidthPt1(subtitle) * p + 0.55 * Math.max(0, subtitle.length - 1);
+        let guard = 0;
+        while (est(sp) > 0.92 * nameW && sp > 10 && guard++ < 16) sp -= 0.5;
+      }
+    } catch (_) {}
+    return sp;
+  })();
   if (subtitle) {
     out.push(new Paragraph({
       alignment: alignType(headerAlign.specialisation),
@@ -26219,7 +26239,7 @@ function buildHeaderCell(ctx, bridgePhoto) {
           // _cphCyan in generateDocx when the payload sends no override),
           // 13.5pt = the tuned preview's 18px, bold like the preview band.
           color: style.headerSpecColor,
-          size: pt2hp(style._cph ? __cphSpecPt : fs.specialisation),
+          size: pt2hp(style._cph ? __cphSpecPtFit : fs.specialisation),
           font: style.headerFont,
           ...(style._cph ? { bold: true, characterSpacing: 11 } : {})
         })
@@ -26344,9 +26364,10 @@ function buildHeaderCell(ctx, bridgePhoto) {
           kids.push(new ImageRun({
             data: base64ToUint8Array(pi.photo_b64),
             type: detectImageType(pi.photo_b64),
-            // COPENHAGEN-STAGE4: 1.4in circle (134px @96dpi) + 1.5pt cyan ring
-            // (19050 EMU); legacy keeps the 1.5in / 1pt reference medallion.
-            transformation: style._cph ? { width: 134, height: 134 } : { width: 144, height: 144 },
+            // COPENHAGEN-STAGE4 + CPH-PHOTO-124 (owner 2026-07-24 "decrease the figure
+            // by 0.05in"): 1.29in circle (124px @96dpi, matches the tuned preview) +
+            // 1.5pt cyan ring (19050 EMU); legacy keeps the 1.5in / 1pt medallion.
+            transformation: style._cph ? { width: 124, height: 124 } : { width: 144, height: 144 },
             outline: { width: style._cph ? 19050 : 12700, solidFillType: "rgb", value: style._cph ? style._cphCyan : (style && style.photoBorderColor || style && style.sidebarHeadColor || style && style.accent || "01B7BB").replace(/^#/, "") },
             floating: {
               horizontalPosition: { relative: HorizontalPositionRelativeFrom.PAGE, offset: 396240 },
@@ -26437,7 +26458,7 @@ function buildPhotoParagraph(ctx, position) {
   const fwdOk = Number.isFinite(fwdPx) && fwdPx >= 40 && fwdPx <= 260 ? Math.round(fwdPx) : null;
   let inches = 1.25;
   // COPENHAGEN-STAGE4: header (in-band) photo is the mockup's 1.4in circle.
-  if (pos === "header-left" || pos === "header-right") inches = style && style._cph ? 1.4 : 0.85;
+  if (pos === "header-left" || pos === "header-right") inches = style && style._cph ? 1.29 : 0.85;
   if (pos === "main-left" || pos === "main-right" || pos === "main-left-bottom" || pos === "main-right-bottom") inches = 1.2;
   let sizePx = Math.round(inches * EMU_PER_INCH / 9525);
   if ((pos === "sidebar-top" || pos === "sidebar-bottom") && fwdOk) sizePx = fwdOk;
@@ -29201,7 +29222,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.170-p1-notice-vml";
+var VERSION = "1.14.171-spec-photo";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

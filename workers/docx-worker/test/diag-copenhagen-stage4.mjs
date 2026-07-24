@@ -49,13 +49,22 @@ check('CV: first-page spine starts below the box', cphXml.includes('margin-top:1
 check('CV: titlePg present', cvXml.includes('<w:titlePg/>'));
 check('CV: headerReference first present', /w:headerReference w:type="first"/.test(cvXml));
 check('CV: band cells NOT navy-shaded (no 33446F shd)', !/w:shd[^>]*w:fill="33446F"/.test(cvXml));
-check('CV: name 17.5pt (w:sz 35)', /<w:sz w:val="35"\/>/.test(cvXml));
-check('CV: name tracking w:spacing 49', /<w:spacing w:val="49"\/>/.test(cvXml));
+// CPH-NAME-WIDTH-001 (wk 1.14.166) superseded the pinned 17.5pt/49: the name
+// AUTO-SCALES to the contact width. Assert the model instead: a sane fitted
+// size (15-30pt) whose tracking is .14em of it (round(0.14 * pt * 20)).
+{
+  const nameRun = (cvXml.match(/<w:r><w:rPr>(?:(?!<\/w:r>).)*?Anita Test Person/s) || [''])[0];
+  const sz = Number((nameRun.match(/<w:sz w:val="(\d+)"\/>/) || [])[1] || 0);
+  const track = Number((nameRun.match(/<w:spacing w:val="(-?\d+)"\/>/) || [])[1] || 0);
+  const pt = sz / 2;
+  check('CV: name fitted 15-30pt (CPH-NAME-WIDTH)', pt >= 15 && pt <= 30);
+  check('CV: name tracking = .14em of fitted size', track === Math.round(0.14 * pt * 20));
+}
 check('CV: spec cyan 01B9BD', /w:color w:val="01B9BD"/.test(cvXml));
 check('CV: contact char-scaled w:w=73', /<w:w w:val="73"\/>/.test(cvXml));
 check('CV: band link white (FFFFFF colored run)', /w:color w:val="FFFFFF"/.test(cvXml));
 check('CV: no default spec/contact header rules (no bottom border on contact para)', !/<w:pBdr>(?:(?!<\/w:pBdr>).)*w:sz w:val="6"(?:(?!<\/w:pBdr>).)*<\/w:pBdr>/s.test(cvXml.slice(0, cvXml.indexOf('PROFESSIONAL SUMMARY'))));
-check('CV: photo 1.4in (cx 1276350 EMU)', cvXml.includes('cx="1276350"'));
+check('CV: photo 1.29in / 124px (cx 1181100 EMU; CPH-PHOTO-124)', cvXml.includes('cx="1181100"'));
 check('CV: photo ring 1.5pt (a:ln w="19050")', /a:ln w="19050"/.test(cvXml));
 
 // ── Copenhagen CL ──

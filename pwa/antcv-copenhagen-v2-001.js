@@ -102,7 +102,7 @@
 
   // CPH-FIT-STABLE-001: the chosen name/contact fit persists across applies so
   // re-measurement can only TIGHTEN it, never snap the lines back to full size.
-  var __fit = { nameLs: null, nameFs: null, contFs: null, contK: null };
+  var __fit = { nameLs: null, nameFs: null, contFs: null, contK: null, specFs: null };
 
   function buildCSS() {
     var side = sidebarSide();
@@ -177,13 +177,13 @@
           var __sc2 = __bR2.width / __bEl2.offsetWidth;
           if (isFinite(__sc2) && __sc2 > 0.2) {
             var __cx = ((__sR2.left + __sR2.width / 2) - __bR2.left) / __sc2;
-            if (__cx > 80 && __cx < 420) __phL = __cx - 64.5;   // photo half = 64.5px (129px circle)
+            if (__cx > 80 && __cx < 420) __phL = __cx - 62;   // photo half = 62px (124px circle; CPH-PHOTO-124: owner 2026-07-24 "decrease the figure by 0.05in" -> 129 - 4.8 ~= 124)
           }
         }
       } catch (_) {}
-      if (__phL == null) __phL = Math.max(14, sbW / 2 - 55.5); // fallback approximation (129px half)
+      if (__phL == null) __phL = Math.max(14, sbW / 2 - 53); // fallback approximation (124px half)
       css += BAND + ' img{position:absolute !important;left:' + __phL.toFixed(1) + 'px !important;top:50% !important;' +
-        'transform:translateY(-50%) !important;width:129px !important;height:129px !important;margin:0 !important;float:none !important;}';
+        'transform:translateY(-50%) !important;width:124px !important;height:124px !important;margin:0 !important;float:none !important;}';
       // CPH-BAND-SYMMETRY-002 (owner 2026-07-23 round 2): (a) the spec's OPTICAL
       // middle (the bullet-circle centers) sits on the box midline — all three
       // text rows now span the FULL band (grid-column 1/-1) so the spec centers
@@ -322,6 +322,25 @@
             }
             __fit.nameFs = __fs2;
             __fit.nameLs = __ls2;
+            // SPEC-SHORTER-001 (owner 2026-07-24 "decrease the specialization
+            // line to always be shorter"): the spec line must render NARROWER
+            // than the fitted name. An explicit Font sizes (pt) panel value
+            // wins (owner's choice); otherwise shrink the spec font until its
+            // ink is <= 0.92x the name target width (floor 11px). Released
+            // with hysteresis when clearly roomy again, so it cannot thrash.
+            try {
+              if (__ds.length >= 3 && !(typeof __fsOv.specialisation === 'number' && __fsOv.specialisation > 0)) {
+                var __specEl = __ds[1];
+                var __Ws = __rngW(__specEl) / __sc;
+                var __sfs = parseFloat(getComputedStyle(__specEl).fontSize) || 18;
+                var __allow = 0.92 * __target;
+                if (__Ws > 40 && __allow > 60 && __Ws > __allow) {
+                  __fit.specFs = Math.max(11, Math.min(18, Math.floor((__sfs * __allow / __Ws) * 2) / 2));
+                } else if (__Ws > 40 && __allow > 60 && __Ws <= __allow * 0.9) {
+                  __fit.specFs = null;
+                }
+              }
+            } catch (_) {}
           }
         }
       } catch (_) {}
@@ -369,6 +388,8 @@
     if (__fit.nameFs != null) css += BAND + ' > div:first-of-type{font-size:' + __fit.nameFs + 'px !important;}';
     if (__fit.contFs != null) css += BAND + ' > div:last-of-type:not(:first-of-type){font-size:' + __fit.contFs + 'px !important;}';
     if (__fit.contK != null) css += BAND + ' > div:last-of-type:not(:first-of-type){transform:scaleX(' + __fit.contK.toFixed(3) + ') !important;transform-origin:center !important;}';
+    // SPEC-SHORTER-001: fitted spec size beats the static 18px rule above.
+    if (__fit.specFs != null) css += BAND + ' > div:nth-of-type(2):not(:last-of-type){font-size:' + __fit.specFs + 'px !important;}';
     return css;
   }
 

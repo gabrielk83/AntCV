@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.3742-load-no-retranslate';
+const CACHE = 'antcv-1.51.3743-spec-photo124';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

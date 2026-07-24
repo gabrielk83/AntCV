@@ -35,7 +35,7 @@ const VERSION='1.3.12';
 // Required binding (declare in wrangler.toml):
 //   KV_BINDING        KV namespace (stores OTPs, rate counters, prefs, signals)
 
-const RELAY_VERSION = 'auth-35-autosave-rev-guard';
+const RELAY_VERSION = 'auth-36-jd-cross-app-guard';
 const SESSION_TTL_SECONDS    = 7 * 24 * 60 * 60;       // 7 days
 // Refresh whenever the token has < 6 days left (i.e. it's more than 1 day old),
 // so ANY request past the first day rotates it to a fresh 7-day token via the
@@ -3377,14 +3377,46 @@ async function handleApiApplications(request, env) {
     try {
       let row;
       if (dedupeId) {
+        // JD-CROSS-APP-GUARD-001 (owner 2026-07-24; JD-SCOPE-KERNEL-CONTAMINATION
+        // family): a tab whose per-tab JD scope is STUCK on another application's
+        // JD auto-POSTs that foreign jd_text with THIS row's company/role — the
+        // dedupe UPDATE below then overwrote the healthy row's jd_text (and its
+        // meta, killing the stored slogan) on every app open. Live census
+        // 2026-07-24: 8 of 28 apps re-poisoned with one JD this way. Detection is
+        // exact: the incoming jd_text REPLACES a different non-empty jd_text AND
+        // verbatim-equals ANOTHER of this user's applications' jd_text — a real
+        // JD revision for the same job matches no other row. On detection the
+        // WHOLE update is refused (nothing in that POST is trustworthy) and the
+        // existing row returns unchanged (ok:true + guarded, so no client retry
+        // storm). A user's ~30 rows make the equality scan cheap.
+        let __foreignJd = null;
+        try {
+          const cur = await env.DB.prepare('SELECT jd_text FROM application WHERE id = ?').bind(dedupeId).first();
+          const curJd = String(cur && cur.jd_text || '').trim();
+          if (curJd && curJd !== jdText) {
+            __foreignJd = await env.DB.prepare(
+              'SELECT id FROM application WHERE user_hash = ? AND id != ? AND jd_text = ? LIMIT 1'
+            ).bind(userHash, dedupeId, jdText).first();
+          }
+        } catch (_) { __foreignJd = null; /* guard is best-effort — never block a save on a read error */ }
+        if (__foreignJd) {
+          try { console.log('[apps] JD-CROSS-APP-GUARD-001: refused dedupe update of app', dedupeId, '— incoming jd_text belongs to app', __foreignJd.id); } catch (_) {}
+          row = await env.DB.prepare('SELECT * FROM application WHERE id = ?').bind(dedupeId).first();
+          return jsonResponse(
+            { ok: true, guarded: 'jd_cross_app', application: shapeApplicationRow(row) },
+            200, request, env, refresh
+          );
+        }
         // DEDUP-BY-EMPLOYER-ROLE-001: update the existing job row in place. jd_hash is
         // LEFT UNCHANGED — the row is keyed by employer+role now, and rewriting the hash
         // could collide with the UNIQUE(user_hash, jd_hash) index; dedup no longer
         // depends on the hash matching jd_text.
+        // JD-CROSS-APP-GUARD-001(b): meta is COALESCE'd — a POST without meta
+        // (auto-save) must never null out a stored slogan/brand record.
         await d1RunWithRetry(env.DB.prepare(
           'UPDATE application SET ' +
           '  jd_text = ?, supporting_context = ?, jd_language = ?, jd_company = ?, ' +
-          '  jd_role = ?, subtitle = ?, meta = ?, category = ?, ' +
+          '  jd_role = ?, subtitle = ?, meta = COALESCE(?, meta), category = ?, ' +
           '  rationale = COALESCE(?, rationale), updated_at = ? ' +
           'WHERE id = ?'
         ).bind(
@@ -3403,7 +3435,8 @@ async function handleApiApplications(request, env) {
           '  jd_company = excluded.jd_company, ' +
           '  jd_role = excluded.jd_role, ' +
           '  subtitle = excluded.subtitle, ' +
-          '  meta = excluded.meta, ' +
+          '  meta = COALESCE(excluded.meta, application.meta), ' + // JD-CROSS-APP-GUARD-001(b)
+
           '  jd_language = excluded.jd_language, ' +
           '  supporting_context = excluded.supporting_context, ' +
           '  category = excluded.category, ' +

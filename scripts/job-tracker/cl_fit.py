@@ -91,6 +91,13 @@ def _body_items(cl, include_leads=False):
 
 
 def _droppable(s):
+    # ROLE-VIEW-3-BULLETS-001 (owner 2026-07-24 "most saved apps do not detail
+    # the How I see the role (3 bullets)"): role_view's 3 bullets are a
+    # STRUCTURAL feature of the v5 CL (cl-v5-structure) — never drop from it.
+    # The 2026-07-24 backfill's drop lever took its tail bullets on 17/19 apps;
+    # restored from the pre-fit exports the same day.
+    if (s.get("id") or "") == "role_view":
+        return []
     out = []
     for it in (s.get("items") or []):
         if not isinstance(it, dict) or it.get("b") == "lead":

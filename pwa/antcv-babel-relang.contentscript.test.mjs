@@ -95,3 +95,51 @@ test('empty / too-short content is ambiguous, not zh', () => {
 test('residue in the cover letter half is ignored too', () => {
   assert.equal(detect(EN_CV_CLEAN, [{ id: 'why', type: 'rich_block', items: [{ b: 'Foundation', t: 'I connect 基础 what I do best.' }] }]), '');
 });
+
+// ── APP-LOAD-NO-RETRANSLATE-001 + TRANSLATE-TAB-ISOLATION-001 (owner 2026-07-24:
+// "when loading an application, it starts translating it from one language to
+// other and starts translating applications in all open windows") ─────────────
+// Source-level guarantees: the healer snaps the ribbon instead of translating
+// without a local gesture, gates the LLM path on OS focus, exposes the FULL
+// content-language detector, and the app bundles stamp the load + use it.
+
+test('healer: app-load / no-gesture mismatch snaps the ribbon, never translates', () => {
+  assert.match(SRC, /appLoadFresh\(\) \|\| !gestureFresh\(\)/);
+  assert.match(SRC, /snapRibbon\(K\)/);
+  // the snap block returns BEFORE the lease/translate machinery
+  const snapIdx = SRC.indexOf('appLoadFresh() || !gestureFresh()');
+  const leaseIdx = SRC.indexOf('if (leaseHeld()) return;');
+  assert.ok(snapIdx > 0 && leaseIdx > snapIdx, 'snap gate must precede the translate path');
+});
+
+test('healer: LLM path requires OS focus (one window per desktop)', () => {
+  assert.match(SRC, /document\.hasFocus === 'function' && !document\.hasFocus\(\)/);
+});
+
+test('healer: automated dispatches (app-load / lang-bar-filter) are not gestures', () => {
+  assert.match(SRC, /src === 'app-load' \|\| src === 'lang-bar-filter'/);
+});
+
+test('full content-language detector exported (Latin included)', () => {
+  assert.match(SRC, /window\.__antcvContentLang = contentLang/);
+  assert.match(SRC, /function contentLangFull/);
+});
+
+test('app bundles: both load sites stamp antcv:app-load-lang + tag the dispatch', () => {
+  const appSrc = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'app.src.js'), 'utf8');
+  const appMin = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'app.js'), 'utf8');
+  for (const [name, s, stamp, tag] of [
+    ['app.src.js', appSrc, /antcv:app-load-lang/g, /source: "app-load"/g],
+    ['app.js', appMin, /antcv:app-load-lang/g, /source:"app-load"/g],
+  ]) {
+    assert.equal((s.match(stamp) || []).length, 2, name + ': both sites stamp the load');
+    assert.equal((s.match(tag) || []).length, 2, name + ': both dispatches are tagged');
+    assert.equal((s.match(/__antcvContentLang/g) || []).length >= 2, true, name + ': both sites use the full detector');
+  }
+});
+
+test('lang-bar filter: never flips the ribbon off the loaded app language', () => {
+  const ui = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'antcv-language-ui-429.js'), 'utf8');
+  assert.match(ui, /appLang !== active/);
+  assert.match(ui, /source: 'lang-bar-filter'/);
+});

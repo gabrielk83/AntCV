@@ -174,13 +174,25 @@
       var wantedSet = new Set((wanted || ['en', 'da']).map(function (c) { return c.toLowerCase(); }));
 
       if (wanted && wanted.length && !wantedSet.has(active)) {
-        var next = wanted[0];
-        try {
-          localStorage.setItem('language', next);
-          localStorage.setItem('uiLang', next);
-          window.dispatchEvent(new StorageEvent('storage', { key: 'language', newValue: next }));
-          window.dispatchEvent(new CustomEvent('antcv:language-changed', { detail: { language: next } }));
-        } catch (_) {}
+        // APP-LOAD-NO-RETRANSLATE-001 (owner 2026-07-24): the loaded
+        // application's OWN language wins over the preference bar. This flip
+        // used to shove the ribbon back to the preferred language right after
+        // an app load, and babel-relang then LLM-re-translated the whole app
+        // to follow. When the active language is the one the app was loaded
+        // in (antcv:app-load-lang stamp), leave the ribbon alone.
+        var appLang = '';
+        try { var __st = JSON.parse(localStorage.getItem('antcv:app-load-lang') || 'null'); appLang = (__st && __st.lang) || ''; } catch (_) {}
+        if (appLang !== active) {
+          var next = wanted[0];
+          try {
+            localStorage.setItem('language', next);
+            localStorage.setItem('uiLang', next);
+            window.dispatchEvent(new StorageEvent('storage', { key: 'language', newValue: next }));
+            // source-tagged so babel-relang never treats this automated flip
+            // as a user gesture that licenses an LLM translate.
+            window.dispatchEvent(new CustomEvent('antcv:language-changed', { detail: { language: next, source: 'lang-bar-filter' } }));
+          } catch (_) {}
+        }
       }
 
       var hidden = 0, shown = 0, changed = false;

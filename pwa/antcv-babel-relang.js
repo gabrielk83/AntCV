@@ -27,7 +27,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.2012-content-script';
+  var VERSION = '1.51.3742-load-no-retranslate';
   if (window.__antcvBabelRelang === VERSION) return;
   window.__antcvBabelRelang = VERSION;
   try { if (localStorage.getItem('antcv:disable-babel-relang') === '1') return; } catch (_) {}
@@ -370,6 +370,59 @@
       return g > 0 && (Date.now() - g) < 180000;
     } catch (_) { return false; }
   }
+  // APP-LOAD-NO-RETRANSLATE-001 (owner 2026-07-24 "when loading an application,
+  // it starts translating it from one language to other ... do not translate -
+  // load app from memory and force change of the language button without
+  // re-translating from llm"): the app-switch/boot setter stamps
+  // antcv:app-load-lang when it loads an application. While the stamp is fresh
+  // NO tab auto-translates — a ribbon/content mismatch right after a load means
+  // the RIBBON is wrong, not the content, so the ribbon snaps to the content.
+  var APP_LOAD_MS = 180000;
+  function appLoadFresh() {
+    try {
+      var g = JSON.parse(localStorage.getItem('antcv:app-load-lang') || 'null');
+      return !!(g && (Date.now() - (g.at || 0)) < APP_LOAD_MS);
+    } catch (_) { return false; }
+  }
+  // TRANSLATE-TAB-ISOLATION-001 (owner 2026-07-24 "starts translating
+  // applications in all open windows"): the LLM heal may only FOLLOW a local
+  // user action — a language-bar gesture or a generation finishing — observed
+  // in this tab. A mismatch that arrives without one (an app load, a cloud echo
+  // from another tab/device, the lang-bar preference flip) never translates:
+  // the ribbon snaps to the content language instead.
+  var lastGesture = 0;
+  window.addEventListener('antcv:language-changed', function (ev) {
+    try {
+      var src = ev && ev.detail && ev.detail.source;
+      if (src === 'app-load' || src === 'lang-bar-filter') return;
+    } catch (_) {}
+    if (!appLoadFresh()) lastGesture = Date.now();
+  });
+  function gestureFresh() { return (Date.now() - lastGesture) < 240000; }
+  // Full content-language detection: wide scripts via the vetted ratio test,
+  // then POSITIVE Latin identification — a Latin language wins only when it
+  // clearly dominates every other candidate (the heal margins, reused).
+  function contentLangFull(txt) {
+    var order = ['zh', 'he', 'am', 'ar'];
+    for (var i = 0; i < order.length; i++) {
+      if (isInLanguage(txt, order[i]) === true) return order[i];
+    }
+    if (letterCount(txt) < MIN_LETTERS) return '';
+    var sc = latinScores(txt), best = '', bestV = 0, second = 0;
+    for (var k in sc) {
+      if (!Object.prototype.hasOwnProperty.call(sc, k)) continue;
+      if (sc[k] > bestV) { second = bestV; bestV = sc[k]; best = k; }
+      else if (sc[k] > second) second = sc[k];
+    }
+    if (best && bestV >= LATIN_FOREIGN_MIN && second < bestV * LATIN_FOREIGN_RATIO) return best;
+    return '';
+  }
+  function snapRibbon(K) {
+    try { localStorage.setItem('antcv:app-load-lang', JSON.stringify({ lang: K, at: Date.now() })); } catch (_) {}
+    try { localStorage.setItem('language', K); localStorage.setItem('uiLang', K); } catch (_) {}
+    try { window.dispatchEvent(new CustomEvent('antcv:language-changed', { detail: { language: K, source: 'app-load' } })); } catch (_) {}
+    try { console.info('[babel-relang] ribbon snapped to content language', K, '(no auto-translate)'); } catch (_) {}
+  }
   function check() {
     var L = lang();
     if (typeof window.__antcvRelang !== 'function') return;   // app not ready yet
@@ -396,13 +449,27 @@
       return;
     }
     if (inL === null) return;                                 // not enough content to judge
+
+    // APP-LOAD-NO-RETRANSLATE-001 / TRANSLATE-TAB-ISOLATION-001: without a
+    // recent LOCAL user action the mismatch is an app load or an echo — the
+    // RIBBON moves to the content language; the content NEVER moves to the
+    // ribbon. Undetectable content (mixed/short) -> do nothing, never LLM.
+    if (appLoadFresh() || !gestureFresh()) {
+      var K = contentLangFull(txt);
+      if (K && K !== L) snapRibbon(K);
+      return;
+    }
     if ((attempts[L] || 0) >= MAX_ATTEMPTS) return;           // give up (likely invariant residue, not real mixing)
 
     // RELANG-SINGLE-FLIGHT-001: background tabs never heal (both the cache
     // restore and the translate MUTATE sections — a hidden tab healing behind
     // the visible one is exactly the write-war), and only one tab per profile
     // heals within the lease window.
+    // TRANSLATE-TAB-ISOLATION-001: visibility is not enough — two side-by-side
+    // OS windows are both "visible". Require true FOCUS: exactly one window on
+    // the desktop has it, so at most one window can ever start a translate.
     try { if (document.hidden) return; } catch (_) {}
+    try { if (typeof document.hasFocus === 'function' && !document.hasFocus()) return; } catch (_) {}
     if (leaseHeld()) return;
 
     // Content is NOT in the (non-Latin) ribbon language L.
@@ -451,7 +518,10 @@
   var __wasGen = false;
   setInterval(function () {
     var g = genInProgress();
-    if (__wasGen && !g) schedule();   // generation just finished -> verify language
+    // TRANSLATE-TAB-ISOLATION-001: a finishing generation counts as a local
+    // action, so the post-gen heal (mixed render -> ribbon language) stays
+    // armed; the focus gate still limits it to the one focused window.
+    if (__wasGen && !g) { lastGesture = Date.now(); schedule(); }
     __wasGen = g;
   }, 3000);
   // APP-SWITCH-CONTENT-LANG-DETECT-001 (owner 2026-07-22 "every CV starts in Chinese and
@@ -478,6 +548,14 @@
     return '';
   }
   try { window.__antcvContentScript = contentScript; } catch (_) {}
+  // APP-LOAD-NO-RETRANSLATE-001: the FULL content-language detector (wide
+  // scripts + positive Latin) for the app-switch/boot selector — so a loaded
+  // Danish/Spanish/English app pins its button to what the content IS, instead
+  // of falling back to a possibly-wrong jd_language.
+  function contentLang(cvSections, clSections) {
+    try { return contentLangFull(textOf(cvSections || []) + ' ' + textOf(clSections || [])); } catch (_) { return ''; }
+  }
+  try { window.__antcvContentLang = contentLang; } catch (_) {}
 
-  window.AntcvBabelRelang = { version: VERSION, _check: check, _snapshot: snapshot, _restore: restoreCache, _invariants: invariantSet, _missing: missingInvariants, _isInLanguage: isInLanguage, _latinScores: latinScores, contentScript: contentScript, lastDrift: null };
+  window.AntcvBabelRelang = { version: VERSION, _check: check, _snapshot: snapshot, _restore: restoreCache, _invariants: invariantSet, _missing: missingInvariants, _isInLanguage: isInLanguage, _latinScores: latinScores, contentScript: contentScript, contentLang: contentLang, _contentLangFull: contentLangFull, _snapRibbon: snapRibbon, lastDrift: null };
 })();

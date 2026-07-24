@@ -240,31 +240,57 @@
           var __chars = Math.max(8, String(__nameEl.textContent || '').trim().length - 1);
           var __lsCur = parseFloat(getComputedStyle(__nameEl).letterSpacing) || 0;
           var __fsCur = parseFloat(getComputedStyle(__nameEl).fontSize) || 22;
+          // CPH-NAME-WIDTH-001 (owner 2026-07-24, supersedes the round-5
+          // direction): the CONTACT fits the band first; the NAME then grows
+          // (or shrinks) so its tracked width MATCHES the contact's fitted
+          // width. Explicit Font sizes (pt) panel values (sparse
+          // styleConfig.fontSizes) win over the auto-fit on every line. The
+          // same rule runs worker-side (__cphNameFit, docx-worker 1.14.166)
+          // for export parity-by-rule.
+          var __fsOv = {};
+          try {
+            var __scRaw = localStorage.getItem('styleConfig');
+            var __scP = __scRaw ? JSON.parse(__scRaw) : null;
+            if (typeof __scP === 'string') __scP = JSON.parse(__scP);
+            __fsOv = (__scP && __scP.fontSizes) || {};
+          } catch (_) { __fsOv = {}; }
+          var __pt2px = function (pt) { return pt * 96 / 72; };
           if (__sane && __Wn > 150) {
             var __nat0 = Math.max(50, __Wn - __lsCur * __chars);   // width at zero tracking, current font
-            var __ls = (__maxW - __nat0) / __chars;                // absolute desired tracking
-            __ls = Math.max(0.5, Math.min(3.1, __ls));             // cap = the design .14em @22px
-            var __needFs = 23;
-            var __nat0At22 = __nat0 * (23 / __fsCur);
-            if (__nat0At22 + 0.5 * __chars > __maxW) {             // even min tracking overflows at 23px
-              __needFs = Math.max(15, Math.floor((__maxW - 0.5 * __chars) * 23 / __nat0At22));
-              __ls = 0.5;
-            }
-            __fit.nameLs = __ls;
-            __fit.nameFs = __needFs === 23 ? null : __needFs;
-            var __nameFinalW = Math.min(__maxW, __nat0 * ((__fit.nameFs || 23) / __fsCur) + __ls * __chars);
-            // CONTACT: absolute from its natural width-per-font-px ratio.
+            // CONTACT first: fill the band (photo-cleared) width.
             var __Wc = __contEl !== __nameEl ? __contEl.scrollWidth : 0;
             var __cfs = parseFloat(getComputedStyle(__contEl).fontSize) || 13;
             var __per = __Wc / __cfs;                              // px of width per font-px (constant)
+            var __contactFinalW = __maxW;
             if (__Wc > 100 && __per > 15 && __per < 120) {
-              var __ct = Math.min(__nameFinalW, __maxW);
-              var __f = Math.max(10.5, Math.min(13, __ct / (__per * 0.88)));  // font does most of the work (LOCKED sizes)
-              __f = Math.round(__f * 2) / 2;
-              var __k = Math.max(0.72, Math.min(1, __ct / (__per * __f)));
+              var __f, __k;
+              if (typeof __fsOv.contactSize === 'number' && __fsOv.contactSize > 0) {
+                __f = Math.round(__pt2px(__fsOv.contactSize) * 2) / 2;   // panel value wins
+                __k = Math.max(0.72, Math.min(1, __maxW / (__per * __f)));
+              } else {
+                __f = Math.max(10.5, Math.min(13, __maxW / (__per * 0.88)));
+                __f = Math.round(__f * 2) / 2;
+                __k = Math.max(0.72, Math.min(1, __maxW / (__per * __f)));
+              }
               __fit.contFs = __f;
               __fit.contK = __k;
+              __contactFinalW = Math.min(__maxW, __per * __f * __k);
             }
+            // NAME second: width-match the contact line.
+            var __target = Math.min(__contactFinalW, __maxW);
+            var __TRACK_EM = 0.14;
+            var __fs2, __ls2;
+            if (typeof __fsOv.nameSize === 'number' && __fsOv.nameSize > 0) {
+              __fs2 = Math.round(__pt2px(__fsOv.nameSize) * 2) / 2;      // panel value wins
+              __ls2 = (__target - __nat0 * (__fs2 / __fsCur)) / __chars; // tracking absorbs the remainder
+              __ls2 = Math.max(0.5, Math.min(4.8, __ls2));
+            } else {
+              __fs2 = __target / ((__nat0 / __fsCur) + __TRACK_EM * __chars);
+              __fs2 = Math.max(15, Math.min(34, Math.round(__fs2 * 2) / 2));
+              __ls2 = Math.max(0.5, Math.min(4.8, __TRACK_EM * __fs2));
+            }
+            __fit.nameFs = __fs2;
+            __fit.nameLs = __ls2;
           }
         }
       } catch (_) {}
@@ -280,9 +306,21 @@
     css += BAND + ' a{color:#fff !important;}';
     // CPH-BAND-SIZE-001: slightly larger header text, alignment untouched
     // (mockup name 23-24px; spec/contact scale with it).
-    css += BAND + ' > div:first-of-type{font-size:23px !important;}';   // owner 2026-07-23 final: 23px (LOCKED)
-    css += BAND + ' > div:nth-of-type(2):not(:last-of-type){font-size:18px !important;}';
-    css += BAND + ' > div:last-of-type:not(:first-of-type){font-size:13px !important;}';
+    // CPH-NAME-WIDTH-001 (owner 2026-07-24, supersedes the 2026-07-23 23px
+    // lock): 23px is only the PRE-FIT default — the measured fit rules emitted
+    // last override it with the width-matched size. Spec/contact statics honor
+    // the Font sizes (pt) panel when set (pt -> px at 96/72).
+    var __fsOv0 = {};
+    try {
+      var __scR0 = localStorage.getItem('styleConfig');
+      var __scP0 = __scR0 ? JSON.parse(__scR0) : null;
+      if (typeof __scP0 === 'string') __scP0 = JSON.parse(__scP0);
+      __fsOv0 = (__scP0 && __scP0.fontSizes) || {};
+    } catch (_) { __fsOv0 = {}; }
+    var __px0 = function (pt, dflt) { return (typeof pt === 'number' && pt > 0) ? Math.round(pt * 96 / 72 * 2) / 2 : dflt; };
+    css += BAND + ' > div:first-of-type{font-size:' + __px0(__fsOv0.nameSize, 23) + 'px !important;}';
+    css += BAND + ' > div:nth-of-type(2):not(:last-of-type){font-size:' + __px0(__fsOv0.specialisation, 18) + 'px !important;}';
+    css += BAND + ' > div:last-of-type:not(:first-of-type){font-size:' + __px0(__fsOv0.contactSize, 13) + 'px !important;}';
     // APPLINE-SPACING-001 (owner 2026-07-23 "the application line is too far from
     // the slogan and too close to the horizontal line"): pull the line UP toward
     // the slogan and open air between the text and its rule underneath.

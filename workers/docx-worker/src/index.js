@@ -24647,6 +24647,11 @@ async function generateDocx(payload) {
     sidebarW: __sidebarW,
     mainW: __mainW,
     fs: fontSizes,
+    // CPH-NAME-WIDTH-001: the RAW payload font_sizes (sparse — the PWA sends
+    // only user-set keys). Presence of a key here = an explicit owner choice
+    // that must win over the copenhagen auto-fit; fs above is defaults-merged
+    // and cannot carry that signal.
+    fsRaw: payload.font_sizes && typeof payload.font_sizes === "object" ? payload.font_sizes : {},
     lang,
     contSuffix,
     pi: payload.personal_info || {},
@@ -26069,6 +26074,56 @@ function buildLinearDocument(ctx) {
   });
 }
 __name(buildLinearDocument, "buildLinearDocument");
+// CPH-NAME-WIDTH-001 (owner 2026-07-24 "increase the name so its width equals
+// the contact line width"): approximate rendered width of a string at 1pt of
+// the band face (Carlito/Calibri-class metrics). Only the name/contact RATIO
+// matters, so a coarse per-class table is enough; the same rule runs in the
+// preview sidecar (antcv-copenhagen-v2-001.js) for parity-by-rule.
+function __estWidthPt1(text) {
+  let w = 0;
+  for (const ch of String(text || "")) {
+    if (ch === " " || ch === " ") w += 0.28;
+    else if (/[iIljt.,:;'|!()[\]]/.test(ch)) w += 0.24;
+    else if (/[mwMW@]/.test(ch)) w += 0.85;
+    else if (/[A-Z0-9ÆØÅ]/.test(ch)) w += 0.6;
+    else if (/[a-zæøå\-]/.test(ch)) w += 0.5;
+    else w += 0.85;
+  }
+  return w;
+}
+__name(__estWidthPt1, "__estWidthPt1");
+// Fitted copenhagen name size: grow (or shrink) the name so its tracked width
+// matches the contact line's condensed width. An explicit font_sizes.nameSize
+// from the Font sizes (pt) panel wins outright.
+function __cphNameFit(ctx, contactPt, bridgePhotoOn) {
+  const { pi, fsRaw } = ctx;
+  const TRACK_EM = 0.14;
+  if (fsRaw && typeof fsRaw.nameSize === "number" && fsRaw.nameSize > 0) {
+    return { pt: fsRaw.nameSize, track: Math.round(TRACK_EM * fsRaw.nameSize * 20) };
+  }
+  const name = String(pi.name || "");
+  const bits = [];
+  if (pi.location) bits.push("⌂ " + pi.location);
+  if (pi.citizenship) bits.push("★ " + pi.citizenship);
+  if (pi.email) bits.push("✉ " + pi.email);
+  if (pi.phone) bits.push("☎ " + pi.phone);
+  if (pi.linkedin) bits.push("\u{1F517} " + pi.linkedin);
+  if (pi.website) bits.push("\u{1F517} " + pi.website);
+  if (Array.isArray(pi.contact_extra)) for (const it of pi.contact_extra) if (it && it.value) bits.push("• " + it.value);
+  const contact = bits.join(" ");
+  if (!name || name.length < 4 || contact.length < 12) return { pt: 17.5, track: 49 };
+  // contact width: est * pt, minus the -0.1pt/char tracking, all condensed w:w=73
+  let target = (__estWidthPt1(contact) * contactPt - 0.1 * (contact.length - 1)) * 0.73;
+  // CV band-overlap medallion floats into the band from the left — a centered
+  // name must clear it on BOTH sides (mirror of the preview's __clear math):
+  // band ≈ 575pt, photo right edge ≈ 0.433" + 1.4" = 132pt, 10pt air.
+  if (bridgePhotoOn) target = Math.min(target, 2 * (575 / 2 - 132 - 10));
+  const units = __estWidthPt1(name) + TRACK_EM * Math.max(1, name.length - 1);
+  let pt = target / units;
+  pt = Math.max(15, Math.min(30, Math.round(pt * 2) / 2));
+  return { pt, track: Math.round(TRACK_EM * pt * 20) };
+}
+__name(__cphNameFit, "__cphNameFit");
 function buildHeaderCell(ctx, bridgePhoto) {
   const { style, fs, pi, meta, headerAlign } = ctx;
   const out = [];
@@ -26085,6 +26140,15 @@ function buildHeaderCell(ctx, bridgePhoto) {
   // name + subtitle the SAME indent so all three share the contact's axis. Universal (every
   // bridge-photo CV). CL (no bridge) is unaffected.
   const __bridgeHdr = bridgePhoto === true && normalisePhotoPosition(pi.photoPosition) === "band-overlap" && !!pi.photo_b64 && ctx.doc !== "cl";
+  // CPH-NAME-WIDTH-001 + FONT-SIZES-HONORED-001 (owner 2026-07-24): the
+  // copenhagen band sizes were pinned (name 17.5 / spec 13.5 / contact 9.5)
+  // and IGNORED the Font sizes (pt) panel. Explicit panel values (sparse
+  // fsRaw) now win on every line; absent a nameSize, the name auto-scales so
+  // its tracked width matches the contact line's condensed width.
+  const __fsRaw = ctx.fsRaw || {};
+  const __cphContactPt = typeof __fsRaw.contactSize === "number" && __fsRaw.contactSize > 0 ? __fsRaw.contactSize : 9.5;
+  const __cphSpecPt = typeof __fsRaw.specialisation === "number" && __fsRaw.specialisation > 0 ? __fsRaw.specialisation : 13.5;
+  const __cphFit = style._cph ? __cphNameFit(ctx, __cphContactPt, __bridgeHdr) : null;
   const __hdrIndent = __bridgeHdr ? { indent: { left: 2592, right: -216 } } : {};
   if (pi.name) {
     out.push(new Paragraph({
@@ -26117,9 +26181,9 @@ function buildHeaderCell(ctx, bridgePhoto) {
           text: pi.name,
           bold: true,
           color: style.headerNameColor,
-          size: pt2hp(style._cph ? 17.5 : fs.nameSize),
+          size: pt2hp(style._cph ? __cphFit.pt : fs.nameSize),
           font: style.headerFont,
-          ...(style._cph ? { characterSpacing: 49 } : {})
+          ...(style._cph ? { characterSpacing: __cphFit.track } : {})
         })
       ]
     }));
@@ -26141,7 +26205,7 @@ function buildHeaderCell(ctx, bridgePhoto) {
           // _cphCyan in generateDocx when the payload sends no override),
           // 13.5pt = the tuned preview's 18px, bold like the preview band.
           color: style.headerSpecColor,
-          size: pt2hp(style._cph ? 13.5 : fs.specialisation),
+          size: pt2hp(style._cph ? __cphSpecPt : fs.specialisation),
           font: style.headerFont,
           ...(style._cph ? { bold: true, characterSpacing: 11 } : {})
         })
@@ -26251,7 +26315,7 @@ function buildHeaderCell(ctx, bridgePhoto) {
         // owner reference (w:sz 16); non-bridge keeps fs.contactSize.
         // COPENHAGEN-STAGE4: contact pinned 9.5pt (mockup lock; preview 13px
         // scaled) in EVERY copenhagen mode, bridge included.
-        const pt = style._cph ? 9.5 : __bridgePhotoOn ? 8.5 : fs.contactSize;
+        const pt = style._cph ? __cphContactPt : __bridgePhotoOn ? 8.5 : fs.contactSize;
         // CONTACT-TRACK-TIGHT-001 (owner 2026-07-03, on the 1.14.120 PDF:
         // "same size but letter separation a bit smaller"): condense the
         // bridge contact runs by 0.5pt (w:spacing -10 twentieths). Size stays 8pt.
@@ -29123,7 +29187,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.165-copenhagen-stage4";
+var VERSION = "1.14.166-name-width";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

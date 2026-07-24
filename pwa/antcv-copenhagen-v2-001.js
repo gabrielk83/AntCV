@@ -33,7 +33,7 @@
 (function () {
   'use strict';
   if (window.__antcvCopenhagenV2) return;
-  window.__antcvCopenhagenV2 = '1.51.3684-name-width2';
+  window.__antcvCopenhagenV2 = '1.51.3685-name-width3';
 
   var FLAG = 'antcv:copenhagen-v2';
   var STYLE_ID = 'antcv-copenhagen-v2-style';
@@ -291,7 +291,13 @@
               __fit.contK = __k;
               __contactFinalW = Math.min(__maxW, __per * __f * __k);
             }
-            // NAME second: width-match the contact line.
+            // NAME second: width-match the contact line. CPH-NAME-WIDTH-001c:
+            // the one-shot nat0 solve inherited whatever measurement bias the
+            // pass had (a pre-webfont pass measured the FALLBACK face and its
+            // cached result stuck ~12% narrow). Feedback form instead: scale
+            // the CURRENT font by the RENDERED width error — each scheduled
+            // pass measures the applied state, so any model bias divides out
+            // and the ink converges onto the target (2% hysteresis).
             var __target = Math.min(__contactFinalW, __maxW);
             var __TRACK_EM = 0.14;
             var __fs2, __ls2;
@@ -300,7 +306,8 @@
               __ls2 = (__target - __nat0 * (__fs2 / __fsCur)) / __chars; // tracking absorbs the remainder
               __ls2 = Math.max(0.5, Math.min(4.8, __ls2));
             } else {
-              __fs2 = __target / ((__nat0 / __fsCur) + __TRACK_EM * __chars);
+              var __err = __Wn > 0 ? (__target / __Wn) : 1;
+              __fs2 = (__err > 1.02 || __err < 0.98) ? (__fsCur * __err) : __fsCur;
               __fs2 = Math.max(15, Math.min(34, Math.round(__fs2 * 2) / 2));
               __ls2 = Math.max(0.5, Math.min(4.8, __TRACK_EM * __fs2));
             }
@@ -469,6 +476,9 @@
   window.addEventListener('storage', function (e) { if (!e || e.key === FLAG || e.key == null) apply(); });
   window.addEventListener('antcv:sections-updated', apply);
   document.addEventListener('DOMContentLoaded', apply);
+  // CPH-NAME-WIDTH-001c: a pass that measured the FALLBACK face caches a
+  // skewed fit — re-derive once the real webfonts are in.
+  try { if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { setTimeout(apply, 50); }); } catch (_) {}
   apply();
   // STAGE 3: the band mounts after React boot — a few delayed re-asserts cover
   // the late mount + the first re-renders (NO global observer, see memory

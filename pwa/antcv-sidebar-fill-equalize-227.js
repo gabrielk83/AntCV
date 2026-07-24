@@ -117,7 +117,23 @@
         // scroll → React re-render → MutationObserver → equalize loop (re-armed by
         // every real scroll). Skipping the write when the main height is unchanged
         // (the case while merely scrolling) breaks the loop and the jitter.
-        if (side.getAttribute('data-antcv-eq-h') === String(mainH) && side.style.height) return;
+        //
+        // CPH-HEADER-BAND-OVERFLOW-STORM-001 (2026-07-24): the guard USED to key on
+        // `String(mainH)` — the STRETCHED box height of the main column. That is not
+        // idempotent with the Copenhagen header band (default ON): extending the
+        // sidebar to mainH makes the page-row grow, `main` (align-self:stretch)
+        // re-stretches, and its getBoundingClientRect reads a few px TALLER every
+        // cycle — so String(mainH) is a NEW value each time and the guard never
+        // holds. The sidebar then chases `main` up without bound (usablePx 1053 →
+        // 1600+; antcv-main-overflow-detect-364 re-writes localStorage ~4×/s → the
+        // continuous-reflow storm). The main CONTENT height (children-bottom, via
+        // mainContentH) is STABLE under this self-feedback — it only moves on a real
+        // content edit — so gate on the CONTENT signature instead of the stretched
+        // box. We still FILL the sidebar to the stretched mainH once (the A4/overflow
+        // navy fill is unchanged); we just stop re-filling until the content actually
+        // changes, which converges in every case (A4-fill, overflow, pure scroll).
+        var mcSig = 'm' + mainContentH(main);
+        if (side.getAttribute('data-antcv-eq-h') === mcSig && side.style.height) return;
         // Clear any prior write FIRST so we measure the natural intrinsic
         // height of the sidebar (not the height we last set on it).
         side.style.removeProperty('height');
@@ -134,9 +150,10 @@
           side.style.setProperty('align-self', 'stretch', 'important');
           changed = true;
         }
-        // Record the main height we reconciled against either way, so a pure
-        // scroll (main height unchanged) is skipped next cycle.
-        side.setAttribute('data-antcv-eq-h', String(mainH));
+        // Record the main CONTENT signature we reconciled against either way, so a
+        // pure scroll or a self-inflated stretched-box climb (content unchanged) is
+        // skipped next cycle — CPH-HEADER-BAND-OVERFLOW-STORM-001.
+        side.setAttribute('data-antcv-eq-h', mcSig);
       });
       if (!changed) { applying = false; return; }
       // 1.50.242: after writing sidebar styles, scrollHeight of the preview

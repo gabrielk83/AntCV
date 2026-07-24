@@ -1752,6 +1752,24 @@ def persist_application(doc, r, res, category, language, kernel=None, measure=Fa
                             print(f"   [page-flow] skipped ({str(e)[:70]})")
                     except Exception as e:
                         print(f"   [density] skipped ({str(e)[:80]})")
+                # CL-PAGE-BUDGET-ORPHAN-001 (owner 2026-07-24 "fix CL to one
+                # page"): the cover letter gets its own page budget — the v5
+                # structure under the copenhagen band orphaned the sign-off
+                # onto page 2 on every 2026-07-23 regen. Measured, structure-
+                # safe (cl_fit levers: relevance-tail item drops + line-aware
+                # gated shrinks); fail-open — an unfitted CL persists as-is
+                # and is REPORTED, never blocked.
+                try:
+                    import cl_fit
+                    cl3, _crep = cl_fit.fit_cl(cv, cl, _pi_from_kernel(kernel),
+                                               _export_style_config(), _meta_m, language)
+                    if _crep.get("fitted") and _crep.get("pages") == 1:
+                        cl[:] = cl3
+                        print(f"   [cl-fit] CL fits 1 page ({_crep.get('renders')} renders)")
+                    else:
+                        print(f"   [cl-fit] NOT fitted (pages={_crep.get('pages')}) — persisting as-is")
+                except Exception as e:
+                    print(f"   [cl-fit] skipped ({str(e)[:80]})")
         print(f"   [skeleton] overlaid: cv={len(cv)} cl={len(cl)} sections (full-fidelity)")
     else:
         print("   [skeleton] MISSING ~/.antcv/cv_skeleton.json — falling back to flat text blocks (low fidelity)")

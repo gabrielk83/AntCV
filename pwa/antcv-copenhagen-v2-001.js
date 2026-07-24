@@ -33,7 +33,7 @@
 (function () {
   'use strict';
   if (window.__antcvCopenhagenV2) return;
-  window.__antcvCopenhagenV2 = '1.51.3602-header-lock';
+  window.__antcvCopenhagenV2 = '1.51.3684-name-width2';
 
   var FLAG = 'antcv:copenhagen-v2';
   var STYLE_ID = 'antcv-copenhagen-v2-style';
@@ -236,7 +236,22 @@
           // poisoned cache self-heals on the next good pass. Floors keep the
           // contact legible: font >= 9.5px, compression >= 0.68.
           var __sane = __cssW > 350 && __cssW < 1600 && __maxW > 200;
-          var __Wn = __nameEl.scrollWidth;
+          // CPH-NAME-WIDTH-001b: scrollWidth equals the GRID CELL once the
+          // text is narrower than the band (the stretched child clips nothing),
+          // which fed the fit a 745px "name width" and shrank the name to 15px.
+          // Measure the true text INK width via a Range (normalized to CSS px);
+          // the contact's condense transform is divided back out via its
+          // matrix a-value so __Wc is the UNSCALED text width.
+          var __rngW = function (el) {
+            try { var r = document.createRange(); r.selectNodeContents(el); return r.getBoundingClientRect().width; }
+            catch (_) { return 0; }
+          };
+          var __kCur = 1;
+          try {
+            var __tm = getComputedStyle(__contEl).transform;
+            if (__tm && __tm !== 'none') { var __ma = __tm.match(/matrix\(([-\d.]+)/); if (__ma) __kCur = Math.max(0.5, Math.min(1.2, parseFloat(__ma[1]) || 1)); }
+          } catch (_) {}
+          var __Wn = __rngW(__nameEl) / __sc;
           var __chars = Math.max(8, String(__nameEl.textContent || '').trim().length - 1);
           var __lsCur = parseFloat(getComputedStyle(__nameEl).letterSpacing) || 0;
           var __fsCur = parseFloat(getComputedStyle(__nameEl).fontSize) || 22;
@@ -258,7 +273,7 @@
           if (__sane && __Wn > 150) {
             var __nat0 = Math.max(50, __Wn - __lsCur * __chars);   // width at zero tracking, current font
             // CONTACT first: fill the band (photo-cleared) width.
-            var __Wc = __contEl !== __nameEl ? __contEl.scrollWidth : 0;
+            var __Wc = __contEl !== __nameEl ? (__rngW(__contEl) / __sc / __kCur) : 0;
             var __cfs = parseFloat(getComputedStyle(__contEl).fontSize) || 13;
             var __per = __Wc / __cfs;                              // px of width per font-px (constant)
             var __contactFinalW = __maxW;

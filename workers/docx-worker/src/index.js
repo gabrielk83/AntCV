@@ -24049,7 +24049,7 @@ function postProcessDocx(input, opts = {}) {
           '<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w10="urn:schemas-microsoft-com:office:word">' +
           '<w:p><w:pPr>' +
           '<w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/>' +
-          '<w:rPr><w:sz w:val="2"/><w:szCs w:val="2"/></w:rPr></w:pPr>' + spineRun1 + watermarkRun + headerBoxRun + '</w:p></w:hdr>';
+          '<w:rPr><w:sz w:val="2"/><w:szCs w:val="2"/></w:rPr></w:pPr>' + spineRun1 + watermarkRun + headerBoxRun + (opts && opts.docType === "cl" ? aiNoticeVmlRun("right", 90, opts && opts.aiNotice, opts && opts.aiFont, true, "") : "") + '</w:p></w:hdr>';
         files["word/headerCph.xml"] = strToU8(header2Xml);
         let rels2 = files[relsName] ? strFromU8(files[relsName]) : '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
         let maxRid2 = 0;
@@ -24069,37 +24069,12 @@ function postProcessDocx(input, opts = {}) {
         if (xml2.indexOf('w:headerReference w:type="first"') < 0) {
           xml2 = xml2.replace(/<w:sectPr(\s[^>]*)?>/g, (m0) => m0 + '<w:headerReference w:type="first" r:id="' + rid2 + '"/>');
         }
-        // CL-NOTICE-FIRSTPAGE-001 (2026-07-24): <w:titlePg/> makes page 1 use
-        // the FIRST-page FOOTER too — with none referenced, the CL's AI-notice
-        // footer (CL-AI-NOTICE-FOOTER-001) vanished from page 1, and a 1-page
-        // CL lost it entirely (caught by the 2026-07-24 uniform re-export;
-        // STAGE4 regression, present since 1.14.165). Referencing the SAME
-        // default footer part from type="first" is valid OOXML but LibreOffice/
-        // CloudConvert ignores the shared relationship — clone the footer into
-        // its OWN part (same pattern as headerCph.xml above).
-        if (xml2.indexOf('w:footerReference w:type="first"') < 0) {
-          const __fDef = xml2.match(/<w:footerReference w:type="default" r:id="(rId\d+)"\/>/);
-          let __relsF = files[relsName] ? strFromU8(files[relsName]) : "";
-          const __mT = __fDef ? __relsF.match(new RegExp('Id="' + __fDef[1] + '"[^>]*Target="([^"]+)"')) : null;
-          const __tgt = __mT ? __mT[1].replace(/^\//, "").replace(/^word\//, "") : null;
-          const __src = __tgt ? (files["word/" + __tgt] || files[__tgt]) : null;
-          if (__src) {
-            files["word/footerCph.xml"] = __src;
-            let __maxRf = 0;
-            __relsF.replace(/Id="rId(\d+)"/g, (m0, n) => { const k = parseInt(n, 10); if (k > __maxRf) __maxRf = k; return m0; });
-            const __ridF = "rId" + (__maxRf + 1);
-            __relsF = __relsF.replace("</Relationships>", '<Relationship Id="' + __ridF + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footerCph.xml"/></Relationships>');
-            files[relsName] = strToU8(__relsF);
-            if (files["[Content_Types].xml"]) {
-              let __ctF = strFromU8(files["[Content_Types].xml"]);
-              if (__ctF.indexOf("/word/footerCph.xml") < 0) {
-                __ctF = __ctF.replace("</Types>", '<Override PartName="/word/footerCph.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>');
-                files["[Content_Types].xml"] = strToU8(__ctF);
-              }
-            }
-            xml2 = xml2.replace(/<w:sectPr(\s[^>]*)?>/g, (m0) => m0 + '<w:footerReference w:type="first" r:id="' + __ridF + '"/>');
-          }
-        }
+        // CL-NOTICE-FIRSTPAGE-001 (2026-07-24): <w:titlePg/> starves page 1 of
+        // the default AI-notice footer (STAGE4 regression since 1.14.165). A
+        // type="first" footerReference — shared OR cloned part — is IGNORED by
+        // LibreOffice/CloudConvert here, so the page-1 notice rides the injected
+        // first-page header itself instead (aiNoticeVmlRun above, CL only);
+        // pages 2+ keep the CL-AI-NOTICE-FOOTER-001 default footer.
         // titlePg activates the first-page header. sectPr child order: it must
         // sit AFTER pgSz/pgMar/cols etc. — insert just before docGrid when
         // present, else right before the close tag.
@@ -24753,7 +24728,7 @@ async function generateDocx(payload) {
   let postProcessError = null;
   let markersRemaining = 0;
   try {
-    const result = postProcessDocx(raw, { watermark: payload.watermark || "", photoShape: resolvePhotoShape(payload), headerBg: (style && style.headerBg) || "", aiNotice: style && style._aiNotice, aiFont: style && style._aiFont,
+    const result = postProcessDocx(raw, { watermark: payload.watermark || "", photoShape: resolvePhotoShape(payload), headerBg: (style && style.headerBg) || "", aiNotice: style && style._aiNotice, aiFont: style && style._aiFont, docType: payload.doc,
       // COPENHAGEN-STAGE4: rounded navy header box + cyan 1.5pt border as a
       // page-anchored VML roundrect in a FIRST-PAGE header part (titlePg) —
       // the band cells above dropped their shading for it. Page 1 only; the
@@ -29226,7 +29201,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.169-first-footer2";
+var VERSION = "1.14.170-p1-notice-vml";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

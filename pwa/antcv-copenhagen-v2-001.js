@@ -33,7 +33,7 @@
 (function () {
   'use strict';
   if (window.__antcvCopenhagenV2) return;
-  window.__antcvCopenhagenV2 = '1.51.3685-name-width3';
+  window.__antcvCopenhagenV2 = '1.51.3686-name-width4';
 
   var FLAG = 'antcv:copenhagen-v2';
   var STYLE_ID = 'antcv-copenhagen-v2-style';
@@ -298,7 +298,16 @@
             // the CURRENT font by the RENDERED width error — each scheduled
             // pass measures the applied state, so any model bias divides out
             // and the ink converges onto the target (2% hysteresis).
-            var __target = Math.min(__contactFinalW, __maxW);
+            // CPH-NAME-WIDTH-001d: the equality target is the contact line AS
+            // RENDERED — its owner-locked floors (10.5px / scaleX .72) can keep
+            // it wider than the photo-cleared __maxW, and clamping the name to
+            // __maxW left a permanent 390-vs-417 gap. Cap only at the band
+            // padding; the few px past the photo clearance are accepted (the
+            // contact already runs that wide).
+            var __contactInkNow = __contEl !== __nameEl ? (__rngW(__contEl) / __sc) : 0;
+            var __target = (__contactInkNow > 100)
+              ? Math.min(__contactInkNow, __cssW - 32)
+              : Math.min(__contactFinalW, __maxW);
             var __TRACK_EM = 0.14;
             var __fs2, __ls2;
             if (typeof __fsOv.nameSize === 'number' && __fsOv.nameSize > 0) {

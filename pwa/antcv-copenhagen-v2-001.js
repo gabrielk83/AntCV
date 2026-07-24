@@ -33,7 +33,7 @@
 (function () {
   'use strict';
   if (window.__antcvCopenhagenV2) return;
-  window.__antcvCopenhagenV2 = '1.51.3686-name-width4';
+  window.__antcvCopenhagenV2 = '1.51.3702-photo-center';
 
   var FLAG = 'antcv:copenhagen-v2';
   var STYLE_ID = 'antcv-copenhagen-v2-style';
@@ -478,6 +478,33 @@
     try { tuneBandText(); } catch (_) {}   // strip legacy 3061 inline stamps only
     try { paintSignoff(on); } catch (_) {}
     try { watchSidebar(); } catch (_) {}   // CPH-SIDEBAR-TRACK-001: re-arm on re-renders
+    // CPH-PHOTO-CENTER-002 (owner 2026-07-24 "the photo is again misaligned
+    // versus the middle of sidebar"): the absolute pin is computed from the
+    // sidebar rect AT APPLY TIME — when the sidebar settles later (fonts,
+    // pagination, panel margins) the stale pin stands, 20+px off. Verify the
+    // applied state shortly after every pass and re-derive while the photo
+    // center is >1.5px from the sidebar midline (bounded, self-terminating —
+    // each re-apply measures fresh rects, so it converges in 1-2 rounds).
+    if (on) {
+      try { clearTimeout(window.__cphPhotoChk); } catch (_) {}
+      window.__cphPhotoChk = setTimeout(function () {
+        try {
+          var b2 = document.querySelector('.antcv-preview-paper [data-antcv-candidate-band="1"]');
+          var sb2 = document.querySelector('.antcv-preview-paper [data-antcv-document-sidebar]');
+          var im2 = b2 && b2.querySelector('img');
+          if (!b2 || !sb2 || !im2 || !b2.offsetWidth) { window.__cphPhotoIter = 0; return; }
+          var bR2 = b2.getBoundingClientRect(), sR3 = sb2.getBoundingClientRect(), iR2 = im2.getBoundingClientRect();
+          var sc3 = bR2.width / b2.offsetWidth;
+          if (!isFinite(sc3) || sc3 <= 0.2) sc3 = 1;
+          var dd = ((iR2.left + iR2.width / 2) - (sR3.left + sR3.width / 2)) / sc3;
+          if (Math.abs(dd) > 1.5) {
+            window.__cphPhotoIter = (window.__cphPhotoIter || 0) + 1;
+            if (window.__cphPhotoIter < 8) { apply(); return; }
+          }
+          window.__cphPhotoIter = 0;
+        } catch (_) {}
+      }, 450);
+    }
   }
 
   // React to the flag being toggled in this tab (custom event) or another tab

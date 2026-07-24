@@ -26112,8 +26112,12 @@ function __cphNameFit(ctx, contactPt, bridgePhotoOn) {
   if (Array.isArray(pi.contact_extra)) for (const it of pi.contact_extra) if (it && it.value) bits.push("• " + it.value);
   const contact = bits.join(" ");
   if (!name || name.length < 4 || contact.length < 12) return { pt: 17.5, track: 49 };
-  // contact width: est * pt, minus the -0.1pt/char tracking, all condensed w:w=73
-  let target = (__estWidthPt1(contact) * contactPt - 0.1 * (contact.length - 1)) * 0.73;
+  // contact width: est * pt, minus the -0.1pt/char tracking, all condensed w:w=73.
+  // 0.885 = ground-truth calibration against the real CloudConvert render
+  // (2026-07-24, app 2729: uncalibrated fit gave 19.5pt / width ratio 1.13;
+  // measured equality sits at 17.3pt — the est model overstates the contact
+  // line, mostly the icon glyphs + LO's condensed-run metrics).
+  let target = (__estWidthPt1(contact) * contactPt - 0.1 * (contact.length - 1)) * 0.73 * 0.885;
   // CV band-overlap medallion floats into the band from the left — a centered
   // name must clear it on BOTH sides (mirror of the preview's __clear math):
   // band ≈ 575pt, photo right edge ≈ 0.433" + 1.4" = 132pt, 10pt air.

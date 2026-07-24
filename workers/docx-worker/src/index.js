@@ -25863,11 +25863,15 @@ function buildLinearDocument(ctx) {
           })]
         })]
       }));
-      // CL-SIGNATURE-CLIP-003 (owner 2026-07: lower part STILL cut). The borderless cell sizes
-      // to the image, but when the sign-off lands on the page-bottom margin LibreOffice/
-      // CloudConvert crops the descenders. A fixed-height spacer paragraph after the signature
-      // keeps a guaranteed gap below it so the glyph tails never sit flush against the margin.
-      bodyChildren.push(new Paragraph({ spacing: { before: 120, after: 120 }, children: [new TextRun({ text: "" })] }));
+      // CL-SIGNATURE-CLIP-003 -> CL-BLANK-TRAIL-001 (2026-07-24): the fixed-height
+      // spacer paragraph that used to follow the signature ("guaranteed gap below
+      // it") was the LAST block of the document — whenever the sign-off landed in
+      // the bottom ~26pt band it spilled ALONE onto a blank trailing page (every
+      // v5 CL in the 2026-07-23 full-list regen rendered 2 pages this way). The
+      // descender protection it duplicated already exists TWICE inside the sig
+      // table itself — the line box (CLIP-005 w:line atLeast = imageH + 120) and
+      // the cell's bottom margin (260 twips) — both un-splittable from the image,
+      // so the spacer is dropped rather than shrunk.
     } catch (__sigErr) { /* bad signature image -> skip; never break the CL */ }
   }
   // 1.14.32 CL-PAGINATE-001: the candidate band stays a full-bleed table, but the
@@ -29191,7 +29195,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.166-name-width";
+var VERSION = "1.14.167-cl-blank-trail";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

@@ -1,5 +1,28 @@
 # FULL-LIST-REGEN-EXPORT-001 — 2026-07-23 night run report
 
+> **2026-07-24 addendum (owner follow-ups "fix CL to one page" + "name width =
+> contact width" + "font sizes changeable"): ALL DONE.**
+> (1) **CL-PAGE-BUDGET-ORPHAN-001 CLOSED** — two real causes: the post-signature
+> spacer paragraph spawned a BLANK trailing page whenever the sign-off landed low
+> (CL-BLANK-TRAIL-001, dropped in wk `1.14.167` — descender protection stays via
+> the CLIP-005 line box + the sig cell's bottom margin), and the v5 CL body was
+> genuinely ~6-9 lines too long under the copenhagen band. NEW
+> `scripts/job-tracker/cl_fit.py` (measured one-page fitter: relevance-tail item
+> drops + line-aware gated shrinks + closing lever; page count is the only
+> acceptance) is wired into gen-runner's persist path, and the 19 regenerated
+> apps were backfilled: **19/19 CLs now render 1 page**, cl_sections PUT with
+> base_rev guard.
+> (2) **CPH-NAME-WIDTH-001 SHIPPED** (`1.51.3683`→`1.51.3686` + wk
+> `1.14.166`): the band NAME auto-scales so its width equals the CONTACT line's
+> rendered width — preview via a Range-measured feedback fit (converges ratio
+> 1.014; scrollWidth-vs-grid-cell and photo-clear-vs-contact-floor stalls fixed
+> in 001b/001d), worker via a calibrated width model (DOCX ratio 0.982). The
+> **Font sizes (pt) panel is now honored on copenhagen** in preview AND worker
+> (name/spec/contact were pinned 17.5/13.5/9.5pt) — an explicit panel value wins
+> over the auto-fit everywhere.
+> (3) All deliverables re-exported uniformly on wk `1.14.167` →
+> `Downloads\antcv-full-regen-2026-07-23\deliverables-v2\`.
+
 Owner order (2026-07-23 night): re-run all JD-list analysis + application generation,
 export CV/CL DOCX + PDFs + analysis PDFs. Lane `1.51.3642-3661` (sh_mrwtj4ig_1vg9,
 released unused — data-only run, no pwa asset changed). Worker 1.14.164. Outputs:

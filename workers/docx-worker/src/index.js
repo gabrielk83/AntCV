@@ -24069,6 +24069,18 @@ function postProcessDocx(input, opts = {}) {
         if (xml2.indexOf('w:headerReference w:type="first"') < 0) {
           xml2 = xml2.replace(/<w:sectPr(\s[^>]*)?>/g, (m0) => m0 + '<w:headerReference w:type="first" r:id="' + rid2 + '"/>');
         }
+        // CL-NOTICE-FIRSTPAGE-001 (2026-07-24): <w:titlePg/> makes page 1 use
+        // the FIRST-page FOOTER too — with none referenced, the CL's AI-notice
+        // footer (CL-AI-NOTICE-FOOTER-001) vanished from page 1, and a 1-page
+        // CL lost it entirely (caught by the 2026-07-24 uniform re-export;
+        // STAGE4 regression, present since 1.14.165). Point the first page at
+        // the SAME default footer part.
+        if (xml2.indexOf('w:footerReference w:type="first"') < 0) {
+          const __fDef = xml2.match(/<w:footerReference w:type="default" r:id="(rId\d+)"\/>/);
+          if (__fDef) {
+            xml2 = xml2.replace(/<w:sectPr(\s[^>]*)?>/g, (m0) => m0 + '<w:footerReference w:type="first" r:id="' + __fDef[1] + '"/>');
+          }
+        }
         // titlePg activates the first-page header. sectPr child order: it must
         // sit AFTER pgSz/pgMar/cols etc. — insert just before docGrid when
         // present, else right before the close tag.
@@ -29195,7 +29207,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.167-cl-blank-trail";
+var VERSION = "1.14.168-first-footer";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

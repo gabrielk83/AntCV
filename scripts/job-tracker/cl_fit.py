@@ -223,6 +223,30 @@ def fit_cl(cv, cl0, pi, sc, meta, language, max_renders=10):
         renders += 1
         log.append("-> %dp body_end %.0f" % (pages, body_end))
 
+    # CLOSING LEVER: boundary cases stall ~1 line over with every item
+    # single-shot exhausted — up to 3 more structural tail drops.
+    extra = 0
+    while pages > 1 and extra < 3 and renders < max_renders:
+        best = None
+        for s in cl:
+            if not isinstance(s, dict) or s.get("on") is False or (s.get("id") or "") in VERBATIM_IDS:
+                continue
+            nonlead = [it for it in (s.get("items") or []) if isinstance(it, dict) and it.get("b") != "lead"]
+            dr = _droppable(s)
+            if len(nonlead) <= 2 or not dr:
+                continue
+            if best is None or len(nonlead) > best[0]:
+                best = (len(nonlead), s, dr[-1])
+        if best is None:
+            break
+        _, s, it = best
+        s["items"] = [x for x in s["items"] if x is not it]
+        extra += 1
+        log.append("closing drop %s: %r" % (s.get("id"), str(it.get("t"))[:50]))
+        pages, pdf, body_end = _render(gr, cv, cl, pi, sc, meta, language)
+        renders += 1
+        log.append("-> %dp body_end %.0f" % (pages, body_end))
+
     fitted = pages == 1
     return (cl if fitted else cl0), {"fitted": fitted, "pages": pages,
                                      "body_end": body_end, "log": log,

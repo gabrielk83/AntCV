@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.3622-stage4-docx';
+  const TARGET_VERSION = '1.51.3682-cph-storm';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.3622-stage4-docx',
     '1.51.3602-header-lock',
     '1.51.3582-fit-abs',
     '1.51.3562-fit-last',

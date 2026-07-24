@@ -24073,12 +24073,31 @@ function postProcessDocx(input, opts = {}) {
         // the FIRST-page FOOTER too — with none referenced, the CL's AI-notice
         // footer (CL-AI-NOTICE-FOOTER-001) vanished from page 1, and a 1-page
         // CL lost it entirely (caught by the 2026-07-24 uniform re-export;
-        // STAGE4 regression, present since 1.14.165). Point the first page at
-        // the SAME default footer part.
+        // STAGE4 regression, present since 1.14.165). Referencing the SAME
+        // default footer part from type="first" is valid OOXML but LibreOffice/
+        // CloudConvert ignores the shared relationship — clone the footer into
+        // its OWN part (same pattern as headerCph.xml above).
         if (xml2.indexOf('w:footerReference w:type="first"') < 0) {
           const __fDef = xml2.match(/<w:footerReference w:type="default" r:id="(rId\d+)"\/>/);
-          if (__fDef) {
-            xml2 = xml2.replace(/<w:sectPr(\s[^>]*)?>/g, (m0) => m0 + '<w:footerReference w:type="first" r:id="' + __fDef[1] + '"/>');
+          let __relsF = files[relsName] ? strFromU8(files[relsName]) : "";
+          const __mT = __fDef ? __relsF.match(new RegExp('Id="' + __fDef[1] + '"[^>]*Target="([^"]+)"')) : null;
+          const __tgt = __mT ? __mT[1].replace(/^\//, "").replace(/^word\//, "") : null;
+          const __src = __tgt ? (files["word/" + __tgt] || files[__tgt]) : null;
+          if (__src) {
+            files["word/footerCph.xml"] = __src;
+            let __maxRf = 0;
+            __relsF.replace(/Id="rId(\d+)"/g, (m0, n) => { const k = parseInt(n, 10); if (k > __maxRf) __maxRf = k; return m0; });
+            const __ridF = "rId" + (__maxRf + 1);
+            __relsF = __relsF.replace("</Relationships>", '<Relationship Id="' + __ridF + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footerCph.xml"/></Relationships>');
+            files[relsName] = strToU8(__relsF);
+            if (files["[Content_Types].xml"]) {
+              let __ctF = strFromU8(files["[Content_Types].xml"]);
+              if (__ctF.indexOf("/word/footerCph.xml") < 0) {
+                __ctF = __ctF.replace("</Types>", '<Override PartName="/word/footerCph.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>');
+                files["[Content_Types].xml"] = strToU8(__ctF);
+              }
+            }
+            xml2 = xml2.replace(/<w:sectPr(\s[^>]*)?>/g, (m0) => m0 + '<w:footerReference w:type="first" r:id="' + __ridF + '"/>');
           }
         }
         // titlePg activates the first-page header. sectPr child order: it must
@@ -29207,7 +29226,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.168-first-footer";
+var VERSION = "1.14.169-first-footer2";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

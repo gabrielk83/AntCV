@@ -47,6 +47,7 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mrwm59c4_8eai","started":"2026-07-22T21:47:27.763Z","host":"GabyPC2","worktree":null,"branch":"claude/determined-cannon-8d4c64","range":"1.51.3101-1.51.3120","task":"COPENHAGEN-MOCKUP-PARITY: token fixes flagged by mockup diff (mainHead teal, year 777, sidebarLine teal, contact dbe4f0, worker ground)","beat":"2026-07-22T21:47:28.582Z"}
 {"id":"sh_mrwrawky_dye9","started":"2026-07-23T00:11:49.241Z","host":"GabyPC2","worktree":null,"branch":"claude/determined-cannon-8d4c64","range":"1.51.3442-1.51.3461","task":"CPH-BAND-GAP14: row-gap 10->14px","beat":"2026-07-23T00:11:50.589Z"}
 {"id":"sh_mrwrdrst_id8b","started":"2026-07-23T00:14:03.008Z","host":"GabyPC2","worktree":null,"branch":"claude/determined-cannon-8d4c64","range":"1.51.3462-1.51.3481","task":"CPH-GAP18: row-gap 18px + contact font floor 8px","beat":"2026-07-23T00:14:03.242Z"}
+{"id":"sh_mryzd70h_ff09","started":"2026-07-24T13:33:05.346Z","host":"GabyPC2","worktree":null,"branch":"claude/youthful-volhard-02392b","range":"1.51.3682-1.51.3701","task":"CPH-NAME-WIDTH-001: name auto-scales to contact-line width (preview+worker), Font sizes panel honored on Copenhagen; CL-PAGE-BUDGET-ORPHAN-001 one-page fit","beat":"2026-07-24T13:33:05.427Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

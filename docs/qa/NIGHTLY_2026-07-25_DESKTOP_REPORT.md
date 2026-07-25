@@ -82,7 +82,39 @@ regression in its 128 tests would pass CI and deploy uncaught.
 - Client-side stuck-JD-scope root (per-tab scope 'kernel' on cold start) — OPEN, relay `auth-36`
   guard contains the damage.
 
+## Continuation 2026-07-26 (owner: "keep fixes implementation") — DOCX test-infra batch (SHIPPED)
+Continued the CI-coverage sweep into `workers/docx-worker`. Three linked test-infra fixes, no worker
+SOURCE touched (`src/index.js` untouched → no deploy, no version bump):
+
+1. **HTMLPDF-TEST-VERSIONPIN-STALE-001 (FIXED):** `test/html-to-pdf.test.mjs:73` locked the
+   `/generate-analysis-pdf` source with a literal `/var VERSION = "1\.14\.16[2-9]/` — a floor written
+   as a narrow range that broke once VERSION crossed `1.14.170` (live = `1.14.171`). Replaced with a
+   numeric `>=162` floor (behaviour-preserving; the other 4 asserts already lock route/handler/CORS).
+   Test 3/3; full docx `.test.mjs` suite 32/32.
+2. **DOCX-SMOKE-SUITE-DEAD-001 (RESOLVED, was report-only debt):** docx `npm test`
+   (`node test/smoke.js`) crashed with a SyntaxError — the 15 legacy smoke `.js` files import
+   `generateDocx` from the 0-line `src/generate.js` placeholder (retired at `e2034255`). Repointed
+   `package.json` "test" → `node --test --test-force-exit test/*.test.mjs` (32 green, exercises the
+   live bundle); added named non-default scripts `test:diags` (the render V&V set) + `test:smoke-legacy`
+   (the retired smoke suite, KEPT as history per `run-docx-diags.mjs`'s own comment — NOT deleted).
+   `npm test` now exits 0.
+3. **CI-COVERAGE-GAP-DOCX-TESTMJS-001 (FIXED):** the CI docx step ran only `palette.test.mjs` + 2
+   diags, leaving 7 `.test.mjs` files uncovered. Now runs the full `workers/docx-worker/test/*.test.mjs`
+   suite + the 2 palette/banded diags (re-verified green from repo root: 32 + 6).
+
+**NEW finding filed, NOT fixed (render domain, honest report over a guess):**
+**DOCX-DIAG-STALE-OR-REGRESSED-001** — `run-docx-diags.mjs` = 42/48 on `1.14.171`; 6 diags FAIL
+(`diag-ai-notice-anchor`, `diag-cjlr-table-export`, `diag-header-navy-invisible`, `diag-pageflow-export`,
+`diag-photo-bridge-export`, `diag-spacing-linkedin-export`). Likely STALE/superseded (passing newer
+companions exist after the CL-NOTICE VML-frame + Stage-4 header reworks), but confirming
+stale-vs-regression per-assertion is a render-domain task (blue-screen-prone per CLAUDE.md) — owed to a
+render-capable session. NOT wired into CI, so no deploy gate. PRE-EXISTING on main (untouched here).
+
+**Verification:** docx `.test.mjs` suite 32/32, palette/banded diags 6/6, `npm test` exit 0, PWA suite
+1480/1480, deploy.yml YAML structurally re-validated (no tabs, both new/changed steps present). CI run
+watched to success after push (see below).
+
 ## No regression to main
-Sync forward-only (branch fast-forwarded to origin/main + one docs/CI commit). Never forced. The only
-code change is a CI-harness YAML file with zero production/deploy behaviour beyond adding two test
-steps. Report + register edits committed with the fix.
+Sync forward-only (branch fast-forwarded to origin/main + docs/CI/test-infra commits). Never forced.
+No production code changed — only a CI-harness YAML, a worker test file, a worker `package.json` test
+script, and docs/registers. Report + register edits committed with each fix.

@@ -70,5 +70,9 @@ test('the bundled worker wires /generate-analysis-pdf to its handler', () => {
   assert.ok(idx.includes('handleGenerateAnalysisPdf'), 'handler referenced + defined');
   assert.ok(/async function convertHtmlToPdf\(/.test(idx), 'convertHtmlToPdf inlined in the bundle');
   assert.ok(idx.includes('X-CloudConvert-Key'), 'CORS allow-headers include the BYOK key');
-  assert.ok(/var VERSION = "1\.14\.16[2-9]/.test(idx), 'worker VERSION bumped past 1.14.161');
+  // Floor guard: the /generate-analysis-pdf route shipped at 1.14.162 and must stay in the
+  // bundle. Compare the patch number numerically so a normal minor bump (1.14.170+) does not
+  // trip this — the earlier /1\.14\.16[2-9]/ literal broke the moment VERSION crossed 1.14.170.
+  const vm = idx.match(/var VERSION = "1\.14\.(\d+)/);
+  assert.ok(vm && Number(vm[1]) >= 162, 'worker VERSION at or past 1.14.162 (route shipped)');
 });

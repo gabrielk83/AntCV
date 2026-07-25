@@ -48,7 +48,6 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mrwrawky_dye9","started":"2026-07-23T00:11:49.241Z","host":"GabyPC2","worktree":null,"branch":"claude/determined-cannon-8d4c64","range":"1.51.3442-1.51.3461","task":"CPH-BAND-GAP14: row-gap 10->14px","beat":"2026-07-23T00:11:50.589Z"}
 {"id":"sh_mrwrdrst_id8b","started":"2026-07-23T00:14:03.008Z","host":"GabyPC2","worktree":null,"branch":"claude/determined-cannon-8d4c64","range":"1.51.3462-1.51.3481","task":"CPH-GAP18: row-gap 18px + contact font floor 8px","beat":"2026-07-23T00:14:03.242Z"}
 {"id":"sh_ms0icv5u_gwn9","started":"2026-07-25T15:12:28.868Z","host":"GabyPC2","worktree":null,"branch":"HEAD","range":"1.51.3782-1.51.3801","task":"FULL-BUGFIX-SESSION 2026-07-25: CV-3P refit + APP-CAP-50 + foreign-night-writer + copenhagen render-flag batch","beat":"2026-07-25T15:12:28.982Z"}
-{"id":"sh_ms0iitpa_bjfo","started":"2026-07-25T15:17:06.912Z","host":"GabyPC2","worktree":null,"branch":"claude/clever-lewin-a9701f","range":"1.51.3802-1.51.3821","task":"SALMON-BREAK-SITE-001: salmon shows the TRUE export break site in BOTH main and sidebar","beat":"2026-07-25T15:17:07.007Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

@@ -114,6 +114,27 @@ render-capable session. NOT wired into CI, so no deploy gate. PRE-EXISTING on ma
 1480/1480, deploy.yml YAML structurally re-validated (no tabs, both new/changed steps present). CI run
 watched to success after push (see below).
 
+## Continuation 2026-07-26 (owner: "keep fixing") — PWA CI coverage + tooling verify (SHIPPED)
+**CI-COVERAGE-GAP-PWA-FULLTREE-001 (FIXED):** the CI PWA step globbed only
+`pwa/test/unit/*.test.mjs` (201 files), leaving **16 pwa test files uncovered by CI** — including the
+storm/salmon/watchdog regression guards (`antcv-sections-normalize-415.storm`,
+`antcv-richblock-residue.storm`, `antcv-salmon-break-site`, `overlay-watchdog-heartbeat` = row-35 guard,
+`unsolicited-corecomp-broad` = row-36 guard, `template-derive`, +10). A regression in any would pass CI
+and deploy uncaught. The step now runs `node scripts/run-tests.mjs pwa` (the canonical runner the local
+suite + pre-push hook already use) → CI == local == pre-push. Re-verified 217 files / 1482 tests / 0
+fail, exit 0. No production code touched.
+
+**Systematic RED sweep (to confirm nothing else is broken):** whole-repo unified suite
+`node scripts/run-tests.mjs` = **1800/1800**; proxy 103/103; job-tracker python self-tests all pass. The
+ONLY remaining reds anywhere are the 6 render diags already filed as DOCX-DIAG-STALE-OR-REGRESSED-001
+(examined all 6 — every failure asserts a specific render/layout value: spacing before=200/80,
+repeatHeader row-shrink, photo-bridge, AI-notice anchor, navy strip, cjlr jc — genuinely render-domain,
+not safely fixable headlessly; filing stands).
+
+**Tooling verify:** `scripts/shift.mjs` worktree release is CONFIRMED FIXED (`resolveGitDir()` uses
+`git rev-parse --absolute-git-dir` → real `.git/worktrees/<name>` dir; self-test write/read/unlink OK).
+Stale "likely fixed" auto-memory updated to confirmed.
+
 ## No regression to main
 Sync forward-only (branch fast-forwarded to origin/main + docs/CI/test-infra commits). Never forced.
 No production code changed — only a CI-harness YAML, a worker test file, a worker `package.json` test

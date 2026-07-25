@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.3743-spec-photo124';
+const CACHE = 'antcv-1.51.3762-jd-staging-consume';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

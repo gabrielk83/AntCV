@@ -498,7 +498,7 @@ CL_SECTIONS = [
     ("cl_opening",          "Opening",           "Write the COVER LETTER OPENING line (1-2 first-person sentences): a specific, engaging hook that names the role and gives a genuine, concrete reason this candidate is drawn to it - NOT a flat 'I am applying for the X position at Y'. Calm professional register, no filler, no greeting line, no name."),
     ("cl_who_i_am",         "WHO I AM",          "Write the COVER LETTER WHO I AM end-block (CL-V5-STRUCT-001 - it sits near the END of the letter, after HOW I WILL CONTRIBUTE) in FIVE lines, in this exact order and format: (1) ONE lead sentence on the conditions the candidate works best in; then four labelled lines, each starting with its label and a colon - (2) 'Professional summary:' years, disciplines and the environments the candidate has come from; (3) 'How I operate:' ONE sentence of work style; (4) 'Eligibility:' ONLY when the candidate's stored record CONFIRMS it AND the role makes it relevant (residence/citizenship, criminal-record status, family-tie declarations) - omit the whole line otherwise, and NEVER infer eligibility or clearance from residence or citizenship; (5) 'My goal:' the contribution the candidate wants to make, never unilateral control. Each line at most ~30 words."),
     ("cl_what_i_bring",     "WHAT I BRING",      "Write the COVER LETTER WHAT I BRING section (CL-V5-STRUCT-001) as: (1) ONE short linking line naming what the candidate brings, ending with a colon; then (2) EXACTLY THREE rows, one per line, each 'Label | Evidence' (evidence cell max ~110 chars): row 1 = the DECISION FOUNDATION (evidence, requirements, supplier input, risk, gates), row 2 = the STRONGEST hands-on cost or technical result with its real number, row 3 = PROJECT, TEAM AND STAKEHOLDER DIRECTION with real scope. Lead with the most role-critical metric; never invent a number. These are the candidate's EVIDENCE - do NOT restate the employer problems from HOW I SEE THE ROLE and do NOT propose what you would do (that is HOW I WILL CONTRIBUTE). Return the lead-in line first, then the three rows."),
-    ("cl_why_this_position","WHY THIS POSITION", "Write the COVER LETTER WHY THIS POSITION section: 2-3 SHORT sentences specific to this role and company, at most ~50 words (3-4 lines). Tight and readable."),
+    ("cl_why_this_position","WHY THIS POSITION", "Write the COVER LETTER WHY THIS POSITION section: 2-3 SHORT sentences specific to this role and company, at most ~50 words (3-4 lines). Tight and readable. WHY-JOINED-SENTENCE-001 (hard): EVERY sentence must JOIN the employer to the CANDIDATE inside that same sentence - the employer's activity or product is the SUBJECT and the sentence lands on the candidate's named territory (a domain, system, method or result). A sentence that only states a fact about the employer is a FAILURE: they already know their own founding year, size, location and product line, and at this word budget a recited fact eats the whole section. NEVER write a standalone heritage line ('X has built Y since 1975', 'founded in 1968', 'a leading supplier of Y') and NEVER an empty bridge ('This role aligns with my background', 'This position matches my experience'). GOOD: \"Aimpoint's red-dot sights sit exactly where my career has been: optical-systems architecture, sensor integration and verification across defence sighting, camera optics and automotive LiDAR.\" BAD: \"Aimpoint has built red dot sights in Sweden since 1975. This role aligns with my defence-optics work: ...\" - the fact carries no candidate content and the second sentence never connects back."),
     ("cl_how_i_see_role",   "HOW I SEE THE ROLE","Write the COVER LETTER HOW I SEE THE ROLE section (CL-V5-STRUCT-001, NEW in v5) as: (1) ONE lead sentence naming the connected priorities the work centres on, ENDING WITH A COLON (example shape: 'The work appears to centre on three connected priorities:'); then (2) EXACTLY THREE rows, one per line, each 'Short label | ONE sentence'. Each row states the EMPLOYER'S problem ONLY - what this role has to solve, drawn from the job description. NO candidate evidence, NO proposed solution, no 'I'. Return the lead-in line first, then the three rows."),
     ("cl_how_i_would_contribute","HOW I WOULD CONTRIBUTE","Write the COVER LETTER HOW I WOULD CONTRIBUTE section in THREE parts, in this exact order and format: (1) ONE lead-in sentence (~12-18 words) that frames the first priorities and ENDS WITH A COLON; (2) 3-4 SHORT verb-led action bullets, one per line, each starting with '- '; (3) a FINAL line starting with 'Goal:' naming the concrete outcome the team gains. Return only those lines."),
     # CL-V5-STRUCT-001: cl_foundation retired - v5 carries this content in the WHO I AM
@@ -1024,6 +1024,148 @@ def _cap_para(s, maxlen=None):
     p = max(win.rfind(". "), win.rfind("! "), win.rfind("? "))
     if p >= maxlen * 0.5: return win[:p + 1].strip()
     return _clean_cut(win.rsplit(" ", 1)[0])
+# WHY-JOINED-SENTENCE-001 (owner 2026-07-26, on a live Aimpoint letter: "how the f
+# this sentence makes sense?? 'Aimpoint has built red dot sights in Sweden since
+# 1975. This role aligns with my defence-optics work: ...'").
+# The WHY section must JOIN the employer to the candidate in EVERY sentence. The
+# failure shape is a recited company fact standing alone (the employer already
+# knows their own founding year) followed by an empty bridge that never connects
+# back. The prompts now forbid it in both layers (proxy task frame + runner slot
+# prompt), and this belt CATCHES it anyway - a prompt is guidance, a gate is a
+# guarantee.
+# DETECTOR - three PRECISE rules. An earlier draft flagged any employer-naming
+# sentence without a first-person word; the live sweep proved that over-fires on
+# GOOD prose ("NKT Photonics builds photonic hardware where ... meet production
+# reality. That is the work I have run ...") where the next sentence connects
+# back, and on every non-English letter (the first-person test was English-only).
+# Precision beats zeal here: a false positive rewrites the owner's good writing.
+#  (1) RECITED FACT - the employer's own heritage/scale, which they already know,
+#      stated with no candidate anchor. This is exactly what the owner caught.
+#  (2) HOLLOW BRIDGE - a sentence that would survive being pasted into any other
+#      application ("This role aligns with my background").
+#  (3) META LEAK - the model talking ABOUT the task inside the letter (prompt
+#      commentary, injection notes). Never acceptable in shipped prose.
+_WHY_RECITED_RX = re.compile(
+    r"\bsince\s+(?:19|20)\d\d\b|\b(?:founded|established|started|created)\s+in\s+(?:19|20)\d\d\b"
+    r"|\bis\s+(?:a|the)\s+(?:leading|largest|biggest|world'?s|global|premier|foremost)\b"
+    r"|\bemploys\s+\d|\bhas\s+(?:over\s+)?[\d,]+\s+employees\b"
+    r"|\bhas\s+been\s+(?:building|making|producing|delivering)\b",
+    re.I)
+_WHY_BRIDGE_RX = re.compile(
+    r"^\s*(?:and\s+)?(?:this|the)\s+(?:role|position|opportunity|job|vacancy)\s+"
+    r"(?:really\s+|closely\s+|directly\s+)?(?:aligns?|matches?|fits?|corresponds?|speaks?|maps?)\b"
+    r"|^\s*i\s+(?:believe|feel|think)\s+i\s+(?:would|will|could)\s+be\s+a\s+(?:good|great|strong)\s+fit",
+    re.I)
+_WHY_META_RX = re.compile(
+    # The letter must never TALK ABOUT its own inputs. Any mention of the job
+    # description/prompt AS A DOCUMENT, of injections, or of the drafting process
+    # is a leak - the window-limited first draft let a reworded leak slip through
+    # ("the job description excerpt is mostly corporate boilerplate ... no
+    # injection attempt visible"), so the JD-as-object mention alone is enough.
+    r"\b(?:job description|job posting|the listing|prompt|instructions?)\b[^.]{0,140}"
+    r"\b(?:injection|bracketed|fragment|flagged|boilerplate|excerpt|placeholder)\b"
+    r"|\b(?:possible|prompt|attempted) injection\b|\bi have ignored (?:it|that|this)\b"
+    r"|\bas an ai\b|\bthe (?:user|system) (?:prompt|message)\b"
+    r"|\bi (?:cannot|can't|will not|won'?t) (?:comply|fabricate|invent)\b"
+    r"|^\s*note\s*:\s*the\s+(?:job|listing|posting|jd)\b"
+    r"|\b(?:i (?:have )?)?drafted (?:only )?from the (?:legitimate|real|actual)\b",
+    re.I)
+# Kept for the joined-ness signal; multilingual so a da/es/zh letter is judged on
+# the same footing as an English one.
+_FIRST_PERSON_RX = re.compile(
+    r"\b(i|i'?ve|i'?m|my|me|mine|myself"          # en
+    r"|jeg|mig|min|mit|mine"                        # da
+    r"|yo|mi|mis|me|conmigo)\b"                     # es
+    r"|我|我的",                                     # zh
+    re.I)
+
+def _why_company_tokens(company):
+    """Distinctive tokens of the employer name (>=4 chars, no legal suffixes)."""
+    stop = {"group", "technologies", "technology", "solutions", "systems", "holding",
+            "holdings", "international", "denmark", "sweden", "norway", "global"}
+    toks = [t for t in re.sub(r"[^A-Za-z0-9]+", " ", str(company or "")).split()
+            if len(t) >= 4 and t.lower() not in stop]
+    return toks[:3]
+
+def _why_defects(text, company):
+    """Return a list of human-readable defects in a WHY paragraph ('' = clean)."""
+    out = []
+    t = str(text or "").strip()
+    if not t: return out
+    toks = _why_company_tokens(company)
+    # naive sentence split is enough here (the section is 2-4 short sentences)
+    sents = [s.strip() for s in re.split(r"(?<=[.!?])\s+", t) if s.strip()]
+    for s in sents:
+        names_employer = any(re.search(r"\b" + re.escape(tok), s, re.I) for tok in toks)
+        # (1) recited heritage/scale fact with no candidate anchor in the sentence
+        if names_employer and _WHY_RECITED_RX.search(s) and not _FIRST_PERSON_RX.search(s):
+            out.append("recited employer fact: %r" % s[:90])
+        # (2) hollow bridge - says nothing, fits any application
+        if _WHY_BRIDGE_RX.search(s):
+            out.append("hollow bridge opener: %r" % s[:70])
+        # (3) model meta-commentary leaked into the letter
+        if _WHY_META_RX.search(s):
+            out.append("model meta-commentary in letter: %r" % s[:90])
+    return out
+
+def _cap_para_sentences(s, maxlen=280):
+    """Cap a paragraph to WHOLE sentences only. _cap_para falls back to a hard
+    word-cut when no sentence boundary sits inside the window, which ships a
+    dangling fragment ('... to ASPICE guidelines and passed.') - the owner saw
+    exactly that on 2026-07-26. Here a paragraph is trimmed to the last COMPLETE
+    sentence that fits; if not even the first sentence fits, return '' so the
+    caller regenerates instead of shipping a fragment."""
+    t = (s or "").strip()
+    if not t: return ""
+    if len(t) <= maxlen: return t
+    parts, buf = [], t
+    sents = re.split(r"(?<=[.!?])\s+", buf)
+    out = ""
+    for sent in sents:
+        cand = (out + " " + sent).strip() if out else sent.strip()
+        if len(cand) > maxlen: break
+        out = cand
+    return out if out and out.rstrip().endswith((".", "!", "?")) else ""
+
+def _why_repair(text, company, role, jd, log=None):
+    """One-shot LLM repair of a defective WHY paragraph: same evidence, joined
+    sentences. Returns the repaired text, or '' when repair failed/was worse."""
+    try:
+        import density_fit as _DF
+    except Exception:
+        return ""
+    sys_p = ("You repair ONE cover-letter paragraph (the WHY THIS POSITION section). "
+             "RULE: every sentence must JOIN the employer to the CANDIDATE inside that same sentence - "
+             "the employer's activity or product is the SUBJECT and the sentence lands on the candidate's "
+             "named territory (a domain, system, method or result). A sentence that only states a fact about "
+             "the employer is forbidden: they know their own founding year, size, location and product line. "
+             "Forbidden too: empty bridges like 'This role aligns with my background'. "
+             "KEEP every concrete fact about the CANDIDATE that is already in the paragraph - reuse the same "
+             "evidence, do not invent any new fact, do not add numbers. Keep it to at most 3 sentences and "
+             "roughly the same length. Only plain hyphens, never em or en dashes. "
+             "Return ONLY the repaired paragraph, no preamble, no quotes.")
+    user = ("EMPLOYER: %s\nROLE: %s\nJOB DESCRIPTION (excerpt):\n%s\n\nPARAGRAPH TO REPAIR:\n%s"
+            % (company, role, str(jd or "")[:900], text))
+    body = {"model": os.environ.get("ANTCV_DENSITY_MODEL", "claude-sonnet-5"),
+            "max_tokens": 500, "system": sys_p, "stream": True,
+            "messages": [{"role": "user", "content": user}]}
+    try:
+        req = urllib.request.Request(
+            _DF.PROXY + "/v1/messages", data=json.dumps(body).encode(),
+            headers={"Content-Type": "application/json", "x-provider": "anthropic",
+                     "User-Agent": UA, "Origin": ORIGIN, "Authorization": "Bearer " + _token()})
+        with urllib.request.urlopen(req, timeout=180) as r:
+            new = _DF._sse_text(r.read().decode("utf-8", "replace")).strip().strip('"')
+    except Exception as e:
+        if log is not None: log.append("why-repair llm error " + str(e)[:60])
+        return ""
+    new = sanitize_text(new)
+    if not new or len(new) < 40:
+        return ""
+    if _why_defects(new, company):
+        return ""            # repair still defective -> keep the original, flag it
+    return new
+
 def _yr(years, first=False):
     ys = re.findall(r"\b(19\d\d|20\d\d)\b", years or "")
     if ys: return int(ys[0] if first else ys[-1])
@@ -1463,7 +1605,26 @@ def build_structured_sections(sk, sections, company, role, language="en"):
             items = list(items); items[0] = {**items[0], "t": text}
             s["items"] = items
     # why: capped to ~3-4 lines (owner: paragraphs too long).
-    set_lead(cl, "why", _cap_para(gen("cl_why_this_position"), 280))
+    # WHY-JOINED-SENTENCE-001: gate the generated paragraph - a recited employer
+    # fact or an empty bridge is repaired once, and a still-defective repair keeps
+    # the original text while printing the defect (visible, never silently shipped).
+    # WHY-JOINED-SENTENCE-001b: whole-sentence cap (never a dangling fragment);
+    # if not even one sentence fits, fall back to the legacy cap so the section
+    # is never blanked, and let the gate below flag whatever comes out.
+    __why_raw = gen("cl_why_this_position")
+    __why = _cap_para_sentences(__why_raw, 280) or _cap_para(__why_raw, 280)
+    if __why:
+        __d = _why_defects(__why, company)
+        if __d:
+            print("   [why-gate] defect: " + "; ".join(__d[:2]))
+            __fixed = _why_repair(__why, company, role, "")
+            if __fixed:
+                __fixed = _cap_para(__fixed, 280)
+                print("   [why-gate] repaired -> " + __fixed[:110])
+                __why = __fixed
+            else:
+                print("   [why-gate] repair FAILED - keeping original (flag for review)")
+    set_lead(cl, "why", __why)
 
     # who: CL-V5-STRUCT-001 - the identity block moved to the END of the letter and became
     # a lead sentence + Professional summary / How I operate / Eligibility / My goal.

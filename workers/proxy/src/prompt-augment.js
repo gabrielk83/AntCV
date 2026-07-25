@@ -273,10 +273,27 @@ ${bannedListBlock()}`,
 
 OUTPUT: 2-4 sentences explaining what about THIS role and THIS company drew the candidate. Specific to the listing — generic "I am excited about" content is a failure.
 
-Pattern:
-1. Name a specific aspect of the role/company that fits the candidate. (Drawn from the JD, named accurately.)
-2. Anchor that fit in the candidate's actual experience or working preference.
-3. Optionally, name a value/cultural element from the listing that resonates.
+THE ONE RULE (WHY-JOINED-SENTENCE-001): EVERY sentence must JOIN the employer to the CANDIDATE inside that same sentence. A sentence that only states a fact about the employer is a FAILURE, no matter how accurate — the employer already knows their own history, size, location and product line, so reciting it back spends a line and says nothing.
+
+Therefore:
+1. The employer's activity/product/challenge is the SUBJECT, and the same sentence lands on the candidate's specific territory (a named domain, system, method or result). One connected statement, not two glued fragments.
+2. Anchor the fit in the candidate's actual experience — named companies, systems or work, never a vague category.
+3. Optionally, name a value/cultural element from the listing that resonates, again joined to something real in the candidate's source.
+
+BANNED SHAPES (rewrite before returning):
+- A standalone heritage/scale fact: "X has built Y since 1975.", "X was founded in 1968.", "X is a leading supplier of Y.", "X employs 2000 people." Fold the fact into a joined sentence or drop it.
+- A hollow bridge with no content: "This role aligns with my background.", "This position matches my experience.", "I believe I would be a good fit." If the sentence would survive being pasted into a different application, it is filler.
+- Two sentences where the first names the company and the second starts "This role/position ..." — that is the glued-fragment failure this rule exists to stop.
+
+Real approved example (Aimpoint / Optical Engineer) — the company's product is the SUBJECT and the sentence lands on the candidate's territory:
+  "Aimpoint's red-dot sights sit exactly where my career has been: optical-systems architecture, sensor integration and verification across defence sighting, camera optics and automotive LiDAR."
+
+Real approved example (NKT Photonics / Senior Process Engineer) — company activity joined to the candidate's arc by a linking clause:
+  "NKT Photonics matures optical and photonic processes from concept through NPI to production, which is the arc I have run for over 15 years."
+
+REJECTED example (same Aimpoint role) — recited fact, then a disconnected filler bridge:
+  "Aimpoint has built red dot sights in Sweden since 1975. This role aligns with my defence-optics work: sighting systems and SWIR demonstrators at Meprolight, plus optical design and stray-light work at Sirin."
+  Why it fails: sentence 1 tells Aimpoint their own founding year and carries zero candidate content; sentence 2 opens with an empty bridge and never connects back. The evidence in it is good — join it to the company instead: "Aimpoint's sighting systems are the work I have done hands-on: SWIR sight demonstrators at Meprolight, plus optical design and stray-light control at Sirin."
 
 Real approved example (Sigma Connectivity / Optics Engineer):
   "Sigma Connectivity's focus on challenging multi-disciplinary connectivity projects aligns precisely with my experience in complex imaging systems. Your emphasis on working across competence areas — from optics through electronics to software development — matches my background leading cross-functional teams and managing the intricate trade-offs that define successful camera products. The opportunity to work on miniaturized systems while maintaining system-level ownership particularly appeals to my experience linking design decisions to tested performance and practical delivery."

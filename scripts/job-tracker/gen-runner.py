@@ -236,8 +236,25 @@ def capture_brand_for(row):
         import brand_fit
     except Exception as e:
         print(f"   [brand] brand_fit import failed ({str(e)[:80]})"); return None
+    url = row.get("url") or ""
+    # BRAND-URL-RECRUITER-GUARD-001 (2026-07-25): a posting hosted on a job board /
+    # recruiter domain must NOT drive brand research - iheadhunt.dk poisoned
+    # Napatech's brand record twice this way (the "brand" became the recruiter's
+    # own pitch). If the posting URL's host shares no >=4-char token with the
+    # employer name, drop the URL so brand_fit resolves the employer's CANONICAL
+    # site from the company name instead. Worst case is no-brand (honest neutral),
+    # never a wrong brand.
     try:
-        rec = brand_fit.capture_brand(row.get("url") or "", row.get("company") or "", _brand_post)
+        from urllib.parse import urlparse
+        host = (urlparse(url).hostname or "").lower()
+        toks = [t for t in re.sub(r"[^a-z0-9]+", " ", str(row.get("company") or "").lower()).split() if len(t) >= 4]
+        if host and toks and not any(t in host for t in toks):
+            print(f"   [brand] posting host {host} unrelated to employer - resolving canonical site by name")
+            url = ""
+    except Exception:
+        pass
+    try:
+        rec = brand_fit.capture_brand(url, row.get("company") or "", _brand_post)
     except Exception as e:
         print(f"   [brand] capture failed ({str(e)[:80]})"); return None
     rsr = rec.get("research") or {}

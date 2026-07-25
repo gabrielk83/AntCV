@@ -58,29 +58,36 @@
   // whole-map first-paint fallback (preview map absent) still applies to both docs.
   const __antcvAutoPB = (sid) => {
     try {
+      let doc = "cv";
+      try { const d = JSON.parse(localStorage.getItem("doc") || '""'); doc = (typeof d === "string" ? d : "cv").toLowerCase(); } catch (_) {}
+      if (doc !== "cl") {
+        // SALMON-BREAK-SITE-001 (owner 2026-07-25 "fix the salmon pagination to
+        // show the correct page break site, it needs to be correct both for main
+        // AND SIDEBAR"): the CV preview now paginates BOTH columns from the
+        // EXPORT map (antcv:autoPages) — the one map calibrated against the real
+        // Word/PDF line (USABLE_PDF + WORD_INFLATE). Before this, MAIN read the
+        // A4-fill preview map (breaks LATER than the export, or not at all when
+        // the entry was missing — the 1.50.318 rule) while SIDEBAR preferred the
+        // preview map's force-inflated entries (breaks EARLIER) — the two
+        // columns' salmons disagreed with each other AND with the DOCX in
+        // opposite directions. One source of truth ends that. SUPERSEDES the CV
+        // DISPLAY legs of PREVIEW-A4-FILL (1.50.316), PREVIEW-A4-FILL-SCOPE
+        // (1.50.318) and PREVIEW-SIDEBAR-PAGINATE-001; the map WRITERS and the
+        // export client are untouched. Cost: a page-box can show bottom
+        // whitespace where Word's taller content fills the sheet — the honest
+        // break site wins (owner's order). If the whitespace bothers, the
+        // follow-up is shrinking the CV page-box height to the Word-equivalent
+        // line, never moving the break back.
+        const exp = (JSON.parse(localStorage.getItem("antcv:autoPages") || "{}") || {})[sid];
+        if (exp && typeof exp === "object" && Object.keys(exp).length) return exp;
+        const prevCv = (JSON.parse(localStorage.getItem("antcv:autoPagesPreview") || "{}") || {})[sid];
+        return (prevCv && typeof prevCv === "object") ? prevCv : {};
+      }
       const prevRaw = localStorage.getItem("antcv:autoPagesPreview");
       const prevMap = prevRaw ? (JSON.parse(prevRaw) || {}) : null;
       if (prevMap) {
         const prev = prevMap[sid];
         if (prev && typeof prev === "object" && Object.keys(prev).length) return prev;
-        let doc = "cv";
-        try { const d = JSON.parse(localStorage.getItem("doc") || '""'); doc = (typeof d === "string" ? d : "cv").toLowerCase(); } catch (_) {}
-        if (doc !== "cl") {
-          // PREVIEW-SIDEBAR-PAGINATE-001 (owner 2026-06-24 "cvc still sliding badly"): the CV
-          // PREVIEW map (antcv:autoPagesPreview) omits the SIDEBAR sections entirely, so with
-          // no fallback they got NO break and the WHOLE sidebar CRAMMED onto page 1 — the export
-          // (antcv:autoPages) splits them (regulatory->p2, languages/accessibility->p3). For a
-          // CV SIDEBAR section, fall back to autoPages so the PREVIEW paginates the sidebar like
-          // the EXPORT (mirror). MAIN sections keep returning {} — the 1.50.318 fix that avoids an
-          // early break + dead gap in the shorter column applies to the main column only.
-          let isSidebar = false;
-          try {
-            const secs = JSON.parse(localStorage.getItem("sections") || "{}");
-            const found = (Array.isArray(secs.cv) ? secs.cv : []).find((s) => s && s.id === sid);
-            isSidebar = !!(found && found.loc === "sidebar");
-          } catch (_) {}
-          if (!isSidebar) return {};   // CV main: no export-break fallback (avoids early break + gap)
-        }
       }
       return (JSON.parse(localStorage.getItem("antcv:autoPages") || "{}") || {})[sid] || {};
     } catch (_) { return {}; }
@@ -622,10 +629,11 @@
   // actually renders instead of contradicting the visible salmon.
   const __antcvEffPageLabel = (sid, idx, manual) => {
     try {
-      const m = JSON.parse(
-        localStorage.getItem("antcv:autoPagesPreview") || "{}",
-      );
-      const b = m && m[sid];
+      // SALMON-BREAK-SITE-001: the label must read the SAME effective bucket the
+      // salmon renders from (__antcvAutoPB: export map for the CV, preview map
+      // for the CL) — reading the raw preview map here contradicted the visible
+      // salmon once the CV display moved to the export map.
+      const b = __antcvAutoPB(sid);
       const a = b && parseInt(b[String(idx)], 10);
       if (Number.isFinite(a) && a > manual) return "📄" + a + "ᵃ";
     } catch (_) {}

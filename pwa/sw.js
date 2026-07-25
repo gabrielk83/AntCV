@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.3763-pagemap-per-app';
+const CACHE = 'antcv-1.51.3802-salmon-break-site';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

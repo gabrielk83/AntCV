@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.3802-salmon-break-site';
+  const TARGET_VERSION = '1.51.3803-word-sheet';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.3802-salmon-break-site',
     '1.51.3763-pagemap-per-app',
     '1.51.3762-jd-staging-consume',
     '1.51.3743-spec-photo124',

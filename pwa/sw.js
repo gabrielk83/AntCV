@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.3802-salmon-break-site';
+const CACHE = 'antcv-1.51.3803-word-sheet';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

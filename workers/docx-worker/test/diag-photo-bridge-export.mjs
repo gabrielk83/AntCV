@@ -107,7 +107,8 @@ function paraAround(xml, needle) {
 const contactPara = paraAround(bridge, '31 71');
 const bAnchorInContact = /<wp:anchor/.test(contactPara);
 const bContactInd = /w:left="2592"/.test(contactPara) && /w:right="-216"/.test(contactPara);
-const bContact8pt = /<w:sz w:val="16"\/>/.test(contactPara);
+// CONTACT-CONVERGE-001 (3e6f1ef, 2026-07-14): bridge contact font 8 -> 8.5pt (w:sz 16 -> 17) to match the owner's converged export.
+const bContact85pt = /<w:sz w:val="17"\/>/.test(contactPara);
 // CONTACT-TRACK-TIGHT-001 (1.14.123): bridge contact runs condensed 0.5pt
 // (rPr w:spacing w:val="-10"); non-bridge contact keeps default tracking.
 const bContactTight = /<w:spacing w:val="-10"\/>/.test(contactPara);
@@ -121,8 +122,8 @@ const nNoTight = !/<w:spacing w:val="-10"\/>/.test(nContactPara);
 
 log('bridge name row gridSpan=2 (rule-2 stack):', bNameSpan, '| normal gridSpan-2 kept:', nSpan);
 log('bridge medallion FLOAT 1.50":', bFloat && bSized, '| posH page 396240:', bPosH, '| posV -365760:', bPosV, '| escapes cell:', bEscapesCell, '| band row empty:', bNotInBandRow);
-log('anchor rides contact para:', bAnchorInContact, '| contact ind 2592/-216:', bContactInd, '| contact 8pt:', bContact8pt, '| contact tracking -10:', bContactTight, '| sidebar spacer 990:', bSpacer);
+log('anchor rides contact para:', bAnchorInContact, '| contact ind 2592/-216:', bContactInd, '| contact 8.5pt:', bContact85pt, '| contact tracking -10:', bContactTight, '| sidebar spacer 990:', bSpacer);
 log('normal sidebar-top photo stays inline:', nInline, '| normal contact no ind:', nNoInd, '| normal no tracking:', nNoTight);
-const ok = bNameSpan && nSpan && bFloat && bSized && bPosH && bPosV && bEscapesCell && bNotInBandRow && bAnchorInContact && bContactInd && bContact8pt && bContactTight && bSpacer && nInline && nNoInd && nNoTight;
+const ok = bNameSpan && nSpan && bFloat && bSized && bPosH && bPosV && bEscapesCell && bNotInBandRow && bAnchorInContact && bContactInd && bContact85pt && bContactTight && bSpacer && nInline && nNoInd && nNoTight;
 log(ok ? 'PHOTO-BRIDGE-EXPORT OK' : 'PHOTO-BRIDGE-EXPORT FAIL');
 process.exit(ok ? 0 : 1);

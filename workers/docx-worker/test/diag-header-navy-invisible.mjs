@@ -1,6 +1,9 @@
 /* DIAGNOSTIC — HEADER-NAVY-STRIP-001 (owner 2026-07-07).
- * Header must be INVISIBLE: no shd navy strip, 1pt para font, watermark preserved,
- * line spacing a multiple of 0.5pt. Run: node test/diag-header-navy-invisible.mjs */
+ * Header running-strip stays MINIMAL: 1px (line=20), 1pt para font, watermark preserved,
+ * band-matched shd (33446F) when branded, line spacing a multiple of 0.5pt.
+ * Updated 2026-07-26 (DOCX-DIAG-STALE-OR-REGRESSED-001 triage): navy renders via the Stage-4
+ * VML roundrect on page 1 (see diag-copenhagen-stage4) + this band-matched strip on cont pages.
+ * Run: node test/diag-header-navy-invisible.mjs */
 import { writeSync } from 'node:fs';
 import { inflateRawSync } from 'node:zlib';
 const log = (...a) => writeSync(1, a.join(' ') + '\n');
@@ -38,9 +41,13 @@ for (const wm of [true, false]) {
   log('\n=== watermark=' + wm + ' header1.xml ' + (h ? 'present' : 'MISSING'));
   if (!h) { if (wm) { fail++; log('  FAIL header missing with watermark'); } else { log('  (no header without band/wm)'); } continue; }
   const s = h.toString('utf8');
-  chk(!/<w:shd\b/i.test(s), 'no shd navy strip');
+  // TOP-STRIP-MATCH-BAND-001 (faa3d9a, 1.14.154): the continuation running-header strip is
+  // PAINTED the candidate-band colour when branded so the top margin reads as one piece with
+  // the band (was: no shd at all). The strip's shd, if present, must equal the band 33446F.
+  chk(!/<w:shd\b/i.test(s) || /<w:shd[^>]*w:fill="33446F"/i.test(s), 'strip shd, if any, matches band 33446F');
   chk(/<w:sz w:val="2"\/>/.test(s), '1pt para font (sz=2)');
-  chk(/w:line="40" w:lineRule="exact"/.test(s), 'line=40 exact (2pt = multiple of 0.5pt)');
+  // cbfa7ae (2026-07-13): header strip back to 1px (line=20), keeping band-colour shading.
+  chk(/w:line="20" w:lineRule="exact"/.test(s), 'line=20 exact (1pt = multiple of 0.5pt)');
   if (wm) chk(/AntCVWatermark/.test(s) && /DEMO - AntCV/.test(s), 'demo watermark VML preserved');
 }
 log('\n' + (fail ? ('FAILED ' + fail) : 'ALL PASS') + ' (' + pass + ' checks)');

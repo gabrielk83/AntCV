@@ -4,7 +4,7 @@
  *   2. contHeadlines:false → NO "(Cont.)" anywhere in document.xml.
  *   3. repeatHeader:true → page-2 table opens with the slim strip (candidate
  *      name appears once per page table) and the cont body row min drops to
- *      16238-900=15338.
+ *      15538-900=14638 (post PDF-BLANK-PAGE-002, CONT_BODY_MIN = PAGE_H-1300).
  *   4. pageNumbers:'bottom-right' → footer part exists with a PAGE field,
  *      referenced from sectPr; 'top-right' → header part instead.
  */
@@ -97,7 +97,9 @@ const check = (n, ok, d) => { checks.push(ok); log(`${n}: ${ok ? 'OK' : 'FAIL'}$
   const { xml } = await gen({ repeatHeader: true });
   const bands = (xml.match(/Gabriel K/g) || []).length;
   check('repeatHeader: name on both pages', bands === 2, 'count ' + bands);
-  check('repeatHeader: cont row min shrunk', xml.includes('w:val="15338"'), '');
+  // PDF-BLANK-PAGE-002 (38ec068, 1.14.83): CONT_BODY_MIN PAGE_H-600 -> PAGE_H-1300 (16238->15538),
+  // so the repeatHeader cont row min = 15538-900 = 14638 (was 16238-900 = 15338).
+  check('repeatHeader: cont row min shrunk', xml.includes('w:val="14638"'), '');
 }
 {
   const { xml, entries, buf } = await gen({ pageNumbers: 'bottom-right' });

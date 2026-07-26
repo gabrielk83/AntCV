@@ -1,10 +1,14 @@
-/* DIAGNOSTIC — AI-WATERMARK-EXPORT-LOCATION-001 / WM-001..005 (worker 1.14.75).
- * The AI notice is no longer a flowed paragraph: buildAiDisclosureHangingTextbox
- * emits a SENTINEL run at the end of the last page's content, which
- * postProcessDocx swaps for a bottom-corner-anchored VML text frame.
- * Asserts (spec §7): (a) no flowed "AI-assisted" run remains; (b) exactly ONE
- * anchored AI-notice shape; (c) it lives in the LAST page's XML; (d) the sentinel
- * is fully consumed; (e) the bottom anchor + encoded corner are present.
+/* DIAGNOSTIC — AI-WATERMARK-EXPORT-LOCATION-001 / WM-001..005.
+ * Updated 2026-07-26 (DOCX-DIAG-STALE-OR-REGRESSED-001 triage): the CV notice is a
+ * bottom-corner-anchored VML text frame swapped in for a sentinel by postProcessDocx;
+ * the CL notice moved OUT of document.xml into the section FOOTER (CL-AI-NOTICE-FOOTER-001,
+ * teal 4D7976) — for a copenhagen/titlePg CL page 1 also gets a first-page-header VML frame
+ * (CL-NOTICE-FIRSTPAGE-001), but a plain linear CL's single footer already covers page 1.
+ * Notice text uses an ASCII hyphen (banned-dash policy), NOT an em-dash.
+ * Asserts (spec §7): CV — (a) no flowed run / sentinel consumed; (b) exactly ONE anchored
+ * shape on the LAST page; (c) page-relative vertical anchor via margin-top (LO ignores the
+ * mso-position-vertical:bottom keyword) + encoded corner; (d) no fill/stroke.
+ * CL — notice rendered in the footer (teal), none left flowed in the body.
  * Drives the real fetch handler. */
 import { writeSync } from 'node:fs';
 import { inflateRawSync } from 'node:zlib';
@@ -33,15 +37,16 @@ async function build(payload) {
   const res = await mod.default.fetch(req, {}, { waitUntil() {}, passThroughOnException() {} });
   const buf = Buffer.from(await res.arrayBuffer());
   if (res.status !== 200) { log('status', res.status, buf.toString().slice(0, 200)); process.exit(1); }
-  return unzipEntry(buf, 'word/document.xml').toString('utf8');
+  return buf;
 }
 
 const checks = [];
 const check = (n, ok, d) => { checks.push(ok); log(`${n}: ${ok ? 'OK' : 'FAIL'}${ok ? '' : ' ' + (d || '')}`); };
-const NOTICE = 'AI-assisted — author retains responsibility for content.';
+// Notice furniture uses an ASCII hyphen (banned-dash policy — CONTACT/610b80f + BANNED-DASH-MEASURE-001).
+const NOTICE = 'AI-assisted - author retains responsibility for content.';
 
 // ---- CV: force two pages (role.page=2) + ask for the LEFT corner. ----
-const cvXml = await build({
+const cvBuf = await build({
   schema_version: '1.0', doc: 'cv', language: 'en', layout: 'two_column', filename: 't',
   ai_wm_side: 'left',
   personal_info: { name: 'G K', email: 'g@b.c' }, meta: { subtitle: 'S' }, style: {}, font_sizes: {},
@@ -54,6 +59,7 @@ const cvXml = await build({
     { id: 'tools', title: 'TOOLS', loc: 'sidebar', on: true, type: 'labeled_list', items: [{ l: 'E', v: 'P' }] },
   ],
 });
+const cvXml = unzipEntry(cvBuf, 'word/document.xml').toString('utf8');
 
 const noticeCount = (cvXml.match(/AntCVAiNotice/g) || []).length;
 check('CV: no sentinel leftover', cvXml.indexOf('__ANTCV_AIWM_') < 0, cvXml.slice(cvXml.indexOf('__ANTCV_AIWM_'), cvXml.indexOf('__ANTCV_AIWM_') + 40));
@@ -70,34 +76,36 @@ check('CV: two-page doc has a page break', lastBreak >= 0);
 check('CV: shape is after the last page break (last page)', ni > lastBreak, `break=${lastBreak} shape=${ni}`);
 // Anchoring + corner (ai_wm_side:'left').
 const shape = cvXml.slice(ni, cvXml.indexOf('</v:rect>', ni) + 9);
-// worker 1.14.78 ("page anchor", fixes 3-copies flow) deliberately anchors the notice
-// to the PAGE edge (relative:page), not the bottom margin. Test follows the shipped intent.
-check('CV: anchored to page-edge bottom', /mso-position-vertical:bottom/.test(shape) && /mso-position-vertical-relative:page/.test(shape));
+// AI-NOTICE-BOTTOM-CLOUDCONVERT-001 (owner 2026-07-04): LibreOffice/CloudConvert IGNORES the
+// mso-position-vertical:bottom keyword from inside a table cell, so the worker anchors the notice
+// to the PAGE edge via an EXPLICIT page-relative margin-top (806pt in-cell/overflow, 822pt body-level).
+// The diag asserted the abandoned keyword — RED since then. Assert the shipped page-relative encoding.
+check('CV: anchored to page edge (margin-top page-relative)',
+  /mso-position-vertical-relative:page/.test(shape) && /margin-top:\d+pt/.test(shape), shape.slice(0, 140));
 // AI-NOTICE-LEFT-CLOUDCONVERT-001 (owner 2026-07-01): LibreOffice/CloudConvert IGNORES
 // the mso-position-horizontal:left|center keyword, so the worker encodes the corner as
-// an EXPLICIT page-relative margin-left offset (+ matching text justification). The
-// diag asserted the abandoned keyword — RED since then. Assert the shipped encoding.
+// an EXPLICIT page-relative margin-left offset (+ matching text justification).
 check('CV: left corner honoured (margin-left:0pt page-relative + jc left)',
   /margin-left:0pt/.test(shape) && /mso-position-horizontal-relative:page/.test(shape) && /<w:jc w:val="left"\/>/.test(shape),
   shape.slice(0, 160));
 check('CV: no fill/stroke (WM-003)', /filled="f"/.test(shape) && /stroked="f"/.test(shape));
 
-// ---- CL 1-page: notice present, bottom-right, not on signature line. ----
-const clXml = await build({
+// ---- CL 1-page: notice moved to the FOOTER (CL-AI-NOTICE-FOOTER-001), teal, not in the body. ----
+const clBuf = await build({
   schema_version: '1.0', doc: 'cl', language: 'en', layout: 'linear', filename: 't',
   personal_info: { name: 'Gabriel K', email: 'g@b.c' }, meta: {}, style: {}, font_sizes: {},
   sections: [
     { id: 'body', title: '', loc: 'main', on: true, type: 'text', content: 'Dear hiring team, here is my letter.' },
   ],
 });
-const clNotice = (clXml.match(/AntCVAiNotice/g) || []).length;
-check('CL: one anchored notice shape', clNotice === 1, `count=${clNotice}`);
-check('CL: no sentinel leftover', clXml.indexOf('__ANTCV_AIWM_') < 0);
-const clShape = clXml.slice(clXml.indexOf('AntCVAiNotice'), clXml.indexOf('</v:rect>', clXml.indexOf('AntCVAiNotice')) + 9);
-// right corner = margin-left (pageW 595pt - box 320pt) = 275pt + jc right (see CV note)
-check('CL: right corner (margin-left:275pt page-relative + jc right)',
-  /margin-left:275pt/.test(clShape) && /mso-position-horizontal-relative:page/.test(clShape) && /<w:jc w:val="right"\/>/.test(clShape));
-check('CL: bottom anchor', /mso-position-vertical:bottom/.test(clShape));
+const clDoc = unzipEntry(clBuf, 'word/document.xml').toString('utf8');
+const clFooter = (unzipEntry(clBuf, 'word/footer1.xml') || Buffer.from('')).toString('utf8');
+// The CL body carries NO VML notice shape and no leftover sentinel — it lives in the footer now.
+check('CL: no VML notice / sentinel in the body', (clDoc.match(/AntCVAiNotice/g) || []).length === 0 && clDoc.indexOf('__ANTCV_AIWM_') < 0);
+// The footer carries the notice run in the CL teal (4D7976).
+check('CL: notice rendered in the footer (teal 4D7976)',
+  clFooter.indexOf(NOTICE) >= 0 && /w:color w:val="4D7976"/.test(clFooter),
+  `hasText=${clFooter.indexOf(NOTICE) >= 0} hasTeal=${/w:color w:val="4D7976"/.test(clFooter)}`);
 
 const ok = checks.every(Boolean);
 log(ok ? 'AI-NOTICE-ANCHOR OK' : 'AI-NOTICE-ANCHOR FAIL');

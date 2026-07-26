@@ -135,6 +135,30 @@ not safely fixable headlessly; filing stands).
 `git rev-parse --absolute-git-dir` → real `.git/worktrees/<name>` dir; self-test write/read/unlink OK).
 Stale "likely fixed" auto-memory updated to confirmed.
 
+## Continuation 2026-07-26 (owner: "I Authorize render-domain work on the 6 diags") — DOCX-DIAG-STALE-001 CLOSED
+Triaged all 6 failing render diags with 6 parallel read-only investigations (each gathered: the live
+`1.14.171` bundle's actual output, git-history of the asserted value, a passing companion diag, and
+register/spec-doc corroboration). **All 6 verdicts: STALE, high confidence — NONE a worker regression.**
+The bundle is correct throughout; each diag had drifted behind an intentional, documented change. I
+captured the exact current output directly (probe) before writing each new assertion, so they assert
+verified reality that matches the documented intent — not a rubber-stamp.
+
+| Diag | Was asserting | Superseded by | Fix |
+|---|---|---|---|
+| diag-ai-notice-anchor | em-dash text; `:bottom` keyword; CL VML in body | banned-dash policy; AI-NOTICE-BOTTOM-CLOUDCONVERT-001; CL-AI-NOTICE-FOOTER-001 | hyphen; page-relative `margin-top`; CL notice read from footer (teal 4D7976) |
+| diag-header-navy-invisible | `no shd`; `line=40` | TOP-STRIP-MATCH-BAND-001 (faa3d9a); cbfa7ae | band-matched navy `shd` 33446F; `line=20`/1px (navy proven live by passing diag-copenhagen-stage4) |
+| diag-photo-bridge-export | contact `w:sz 16` (8pt) | CONTACT-CONVERGE-001 (3e6f1ef) | `w:sz 17` (8.5pt) |
+| diag-pageflow-export | cont-row min `15338` | PDF-BLANK-PAGE-002 (38ec068, CONT_BODY_MIN PAGE_H-600→-1300) | `14638` |
+| diag-cjlr-table-export | focus cell `both` | Copenhagen mockup lock (2026-07-22) | focus first-column `left` |
+| diag-spacing-linkedin-export | heading before 200/80 (1 main section) | PROFILE-TOPGAP-001 (5e89d67 zeroes first main heading) | added a 2nd main section so the intact 80/200 formula is exercised |
+
+**Result:** `scripts/run-docx-diags.mjs` **42/48 → 48/48** (deterministic across 2 runs); docx `.test.mjs`
+32/32. No worker `src/index.js` change — the output was already correct. Then **wired the full render V&V
+set into CI**: the docx `unit-tests` step now runs `node scripts/run-docx-diags.mjs` (a superset of the
+palette/banded diags), so a future intentional render change must keep the V&V set green or update it —
+closing the silent-rot gap that let these 6 drift. 7 files changed (6 diags + deploy.yml), no production
+code. This fully closes DOCX-DIAG-STALE-OR-REGRESSED-001 — no render-domain item remains owed.
+
 ## No regression to main
 Sync forward-only (branch fast-forwarded to origin/main + docs/CI/test-infra commits). Never forced.
 No production code changed — only a CI-harness YAML, a worker test file, a worker `package.json` test

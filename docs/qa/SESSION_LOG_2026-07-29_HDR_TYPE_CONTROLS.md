@@ -121,8 +121,10 @@ was already close (15px preview vs 11pt export) and is now exactly 11pt on both.
   there, `ca` in `app.js`), so a mechanical mirror is impossible and a partial one
   would be misleading. A divergence note naming this change was added to its
   header instead. `pwa/app.js` is authoritative — grep it directly.
-- **The docx-worker deploy is manual.** PWA auto-deploys from `main`; the worker
-  needs a `workflow_dispatch` run. Until that runs, the DOCX/PDF leg still
-  renders the pinned slogan/app-line sizes while the preview honours the panel.
+- **Deployed.** PWA push run 30450455893 (auto, from `main`), then docx-worker
+  `workflow_dispatch` run 30450517787 — one deployer at a time, PWA first. Live:
+  `antcv.pages.dev` serves `app.js?v=1.51.3862-hdr-type-ctrl` with `__antcvTrkStep`
+  present in the deployed bundle and `sw.js` CACHE bumped; docx-worker `/health`
+  reports `1.14.173-hdr-type-ctrl`.
 - `workers/docx-worker/CHANGELOG.md` still has the documented 1.14.161–172 gap
   (pre-existing debt, not backfilled here); the 1.14.173 entry sits on top of it.

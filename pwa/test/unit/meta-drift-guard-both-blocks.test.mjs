@@ -22,12 +22,21 @@ for (const [name, text] of [['app.src.js', src], ['app.js', app]]) {
     assert.ok(g1 >= 1, `${name}: original META-DRIFT-GUARD missing`);
     assert.ok(g2 >= 1, `${name}: META-DRIFT-GUARD-002 missing`);
     // every unconditional meta adoption is gone: each jd_company meta-adoption
-    // site must have a draftDrift check within the preceding 900 chars
+    // site must sit inside a draftDrift-guarded block. STRUCTURAL check (not a
+    // fixed char-distance): the drift guard token must appear between the site
+    // and the nearest preceding `active_application` — i.e. the guard lives in
+    // the SAME cloud-adoption block that reads the row. The earlier 900-char
+    // proximity heuristic went false-positive when CL-OPENING-SEED-985 inserted
+    // a ~700-char clProseGuard seed blob between the guard's `else{` and the
+    // `lo(/Ro({ company: e.jd_company... })` adoption (both blocks stayed
+    // guarded — the token just fell outside 900 chars). This block-scoped check
+    // is immune to such insertions and still fails if a guard is removed.
     const re = /company:\s*e\.jd_company\s*\|\|\s*""/g;
     let m, unguarded = 0;
     while ((m = re.exec(text)) !== null) {
-      const pre = text.slice(Math.max(0, m.index - 900), m.index);
-      if (!/draftDrift|__ddB|__dd2/i.test(pre)) unguarded++;
+      const aa = text.lastIndexOf('active_application', m.index);
+      const region = aa >= 0 ? text.slice(aa, m.index) : text.slice(0, m.index);
+      if (!/draftDrift|__ddB|__dd2/i.test(region)) unguarded++;
     }
     assert.equal(unguarded, 0, `${name}: ${unguarded} unguarded meta-adoption site(s)`);
   });

@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.4025-jt-identity-edit';
+const CACHE = 'antcv-1.51.4045-cl-opening-mandatory';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

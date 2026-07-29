@@ -27481,6 +27481,30 @@
                 } catch (e) {
                   if (e && "PartialResponse" === e.name) throw e;
                 }
+                // GEN-COMPANY-MISSING-RETRY-001 (owner 2026-07-29, an Aimpoint fresh gen
+                // came out "unspecified"): with a JD present the prompt REQUIRES
+                // meta.company (the exact employer copied from the JD), but the accept
+                // gate above scored only the CL/CV BODY fields — so a response with a
+                // complete letter but an EMPTY/placeholder company passed and committed
+                // with no company, rendering the app Unsolicited/"unspecified". Mirror
+                // the CL/CV critical-field gates: an empty/placeholder company under a
+                // real JD is a failed extraction -> cycle the provider ladder. After L
+                // attempts it falls through and commits as before (never hard-fails).
+                try {
+                  if (!__noJD && N < L) {
+                    const __mc = String((T && T.meta && T.meta.company) || "").trim();
+                    const __mcBad = !__mc || /^[<\[]/.test(__mc) || !!(window.__antcvUnsol && window.__antcvUnsol(__mc));
+                    if (__mcBad) {
+                      console.warn(
+                        `[generate] attempt ${N}/${L}${B ? " (" + B + ")" : ""}: JD present but meta.company empty/placeholder ("${__mc}") — cycling provider`,
+                      );
+                      const e = new Error("PARTIAL_META_COMPANY");
+                      throw ((e.name = "PartialResponse"), (e._partialCount = 1), e);
+                    }
+                  }
+                } catch (e) {
+                  if (e && "PartialResponse" === e.name) throw e;
+                }
                 break;
               } catch (e) {
                 const t =

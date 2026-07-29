@@ -46816,8 +46816,12 @@
                                       f,
                                     ),
                                     React.createElement("div", {
+                                      // CPH-RENDER-FLAGS-001 flags 1 + 2: the
+                                      // PAGINATED continuation head draws its own
+                                      // rule (this render path, not the section
+                                      // head above) - it takes the same 1.5pt grey.
                                       style: {
-                                        borderBottom: `1px solid ${s}`,
+                                        borderBottom: `${__antcvCphRule()} solid ${__antcvCphRuleInk(s)}`,
                                         marginBottom: 4,
                                       },
                                     }),
@@ -51496,7 +51500,9 @@
                             // disclosure, not a third accent colour. Copenhagen only,
                             // and a BRANDED app still wins (the brand var is checked
                             // first, exactly as before).
-                            fontSize: __antcvCphPkg() ? 7.5 : 7,
+                            // 8px preview == the export's 7.5pt (the preview paper
+                            // runs ~1.077 px per pt: the old 7px paired with 6.5pt).
+                            fontSize: __antcvCphPkg() ? 8 : 7,
                             lineHeight: 1.15,
                             letterSpacing: 0.3,
                             fontWeight: 600,

@@ -103,7 +103,10 @@ test('JobTracker.tsx sends the JD as jd_text and never folds it into supporting_
   // ...and the owner block is what goes into supporting_context.
   assert.ok(tsx.includes(OWNER_SIGNALS_HEADING), 'supporting_context must carry the ADDITIONAL SIGNALS (owner-added) heading');
   // The supporting_context variable must be assembled from ownerSig, not jd.
-  const m = tsx.match(/const supporting =([\s\S]*?);\n/);
+  // EOL-AGNOSTIC (2026-07-26): the terminator was `;\n`, which never matches on a
+  // Windows CRLF checkout (`;\r\n`) - the assertion failed on the desktop while
+  // passing in Linux CI, the eol-fragile-tests class. Accept either ending.
+  const m = tsx.match(/const supporting =([\s\S]*?);\r?\n/);
   assert.ok(m, 'could not locate the supporting_context assembly');
   assert.ok(!/\bjd\b/.test(m[1]), 'the supporting_context assembly must not reference the jd variable');
 });

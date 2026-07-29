@@ -12835,7 +12835,40 @@
                                                                 e.bullets || [],
                                                             })),
                                                         }
-                                                      : null
+                                                      : // GAP-APPLY-RICHBLOCK-001 (owner 2026-07-29, UNSOL-APP-DEFECTS item a):
+                                                        // this builder had NO rich_block branch, so every rich_block section
+                                                        // returned null and never reached the model. The CV/CL migrated to
+                                                        // rich_block (roles cutover + CL v5), so on a real document — Terma
+                                                        // app 2751: CV 15/15 rich_block, CL 7/9 — "I cover this — apply to
+                                                        // docs" asked the model to patch sections it was never shown. Emit
+                                                        // EXACTLY the rows Pe()'s rich_block applier consumes, in order
+                                                        // (skip grp sub-headings, hidden rows and empty bodies), so the
+                                                        // value→row mapping stays aligned (FIXIT-DESYNC-001).
+                                                        "rich_block" === e.type
+                                                        ? {
+                                                            id: e.id,
+                                                            type: "rich_block",
+                                                            items: (
+                                                              e.items || []
+                                                            )
+                                                              .filter(
+                                                                (t, n) =>
+                                                                  t &&
+                                                                  !t.grp &&
+                                                                  !(
+                                                                    e.hidden &&
+                                                                    e.hidden[n]
+                                                                  ) &&
+                                                                  (
+                                                                    t.t || ""
+                                                                  ).trim(),
+                                                              )
+                                                              .map((e) => ({
+                                                                b: e.b || "",
+                                                                t: e.t || "",
+                                                              })),
+                                                          }
+                                                        : null
                                           : null;
                                     ((a.cv || []).forEach((e) => {
                                       const t = o(e);
@@ -12845,7 +12878,7 @@
                                         const t = o(e);
                                         t && (n.cl[e.id] = t);
                                       }));
-                                    const i = `A gap was identified in the CV/cover letter vs. the job description:\nGAP: "${e}"\nUSER RESPONSE (what they actually have/do that covers this gap): "${t}"\nJob context: ${r.role || "Unknown role"} at ${r.company || "Unknown company"}. Language: ${"da" === l ? "Danish" : "English"}.\nTASK: Apply this correction to the CV and cover letter by surfacing the capability the user described. For each section where the gap is currently hurting the narrative, produce a patched version. Only patch sections where the change is meaningful — do NOT rewrite untouched text. Keep all other facts intact.\nRules:\n- PROFILE / WHO I AM / SELECTED OUTCOMES / experience bullets / WHAT I BRING table / CORE COMPETENCIES table: these are the highest-leverage places to add the capability.\n- Preserve section structure exactly (same type, same item count, same role IDs, same column count).\n- For tables, keep "focus" frozen and only tighten/extend "expertise" (10–18 words, ~60–110 chars, 2 lines max at Calibri 10pt).\n- For experience, only touch bullets of the role where the capability naturally lives (pick the most relevant role; don't scatter).\n- Danish output if language=da; English otherwise.\n- Never invent credentials — only reframe what the user stated.\nReturn ONLY JSON in this shape:\n{\n "summary": "1-sentence description of what you changed",\n "cv_patches": { "<section_id>": <patched-section-payload-matching-input-shape>, ... },\n "cl_patches": { "<section_id>": <patched-section-payload-matching-input-shape>, ... }\n}\nOnly include sections you actually changed. Current state:\n${JSON.stringify(n)}`,
+                                    const i = `A gap was identified in the CV/cover letter vs. the job description:\nGAP: "${e}"\nUSER RESPONSE (what they actually have/do that covers this gap): "${t}"\nJob context: ${r.role || "Unknown role"} at ${r.company || "Unknown company"}. Language: ${"da" === l ? "Danish" : "English"}.\nTASK: Apply this correction to the CV and cover letter by surfacing the capability the user described. For each section where the gap is currently hurting the narrative, produce a patched version. Only patch sections where the change is meaningful — do NOT rewrite untouched text. Keep all other facts intact.\nRules:\n- PROFILE / WHO I AM / SELECTED OUTCOMES / experience bullets / WHAT I BRING table / CORE COMPETENCIES table: these are the highest-leverage places to add the capability.\n- Preserve section structure exactly (same type, same item count, same role IDs, same column count).\n- For tables, keep "focus" frozen and only tighten/extend "expertise" (10–18 words, ~60–110 chars, 2 lines max at Calibri 10pt).\n- For rich_block sections, keep every "b" lead-in label FROZEN and rewrite only "t"; return the SAME number of items in the SAME order as the input.\n- For experience, only touch bullets of the role where the capability naturally lives (pick the most relevant role; don't scatter).\n- Danish output if language=da; English otherwise.\n- Never invent credentials — only reframe what the user stated.\nReturn ONLY JSON in this shape:\n{\n "summary": "1-sentence description of what you changed",\n "cv_patches": { "<section_id>": <patched-section-payload-matching-input-shape>, ... },\n "cl_patches": { "<section_id>": <patched-section-payload-matching-input-shape>, ... }\n}\nOnly include sections you actually changed. Current state:\n${JSON.stringify(n)}`,
                                       c =
                                         '\n\nABSOLUTE: Your response MUST start with the character "{" and contain ONLY a single valid JSON object. NO prose. NO markdown fences. NO commentary. First character: "{". Last character: "}".';
                                     await U();

@@ -58,11 +58,13 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.3922-hdr-type-source-key';
+  const TARGET_VERSION = '1.51.3942-gap-richblock';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.3922-hdr-type-source-key',
+    '1.51.3902-jt-open-fix',
     '1.51.3882-cl-load-fidelity',
     '1.51.3862-hdr-type-ctrl',
     '1.51.3824-tracker-notes',

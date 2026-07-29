@@ -35,7 +35,7 @@ const VERSION='1.3.12';
 // Required binding (declare in wrangler.toml):
 //   KV_BINDING        KV namespace (stores OTPs, rate counters, prefs, signals)
 
-const RELAY_VERSION = 'auth-36-jd-cross-app-guard';
+const RELAY_VERSION = 'auth-37-cap-disposable-only';
 const SESSION_TTL_SECONDS    = 7 * 24 * 60 * 60;       // 7 days
 // Refresh whenever the token has < 6 days left (i.e. it's more than 1 day old),
 // so ANY request past the first day rotates it to a fresh 7-day token via the
@@ -3261,9 +3261,14 @@ async function handleApiApplications(request, env) {
       }
     }
     try {
+      // APP-CAP-50-BULK-REGEN-001: the sweep below no longer deletes a row that
+      // carries content, so the account can legitimately hold more than 50
+      // applications. A 50-row LIST limit would then HIDE the owner's own saved
+      // work rather than delete it, which is the same bug wearing a different
+      // hat. Bounded at 200 so the response stays small.
       const res = await env.DB.prepare(
         'SELECT id, jd_company, jd_role, category, jd_language, updated_at ' +
-        'FROM application WHERE user_hash = ? ORDER BY updated_at DESC LIMIT 50'
+        'FROM application WHERE user_hash = ? ORDER BY updated_at DESC LIMIT 200'
       ).bind(userHash).all();
       const rows = (res && res.results) ? res.results : [];
       // Group by category for the Settings UI. Categories with zero
@@ -3452,11 +3457,56 @@ async function handleApiApplications(request, env) {
       }
       // Set as active on creation. This matches the PWA's "you just
       // pasted a JD — work on it" expectation.
+      //
+      // FOREIGN-NIGHT-WRITER-2026-07-23: at 04:37-04:42 an unidentified
+      // headless automation created an empty stub application, MOVED THE GLOBAL
+      // ACTIVE POINTER onto it, and the owner's real active application then
+      // came back blank. Nothing in the row identified the writer, so the run
+      // could not be traced to a routine. Two changes, both here:
+      //
+      //  (1) IDENTIFY. Every POST that creates a row with no sections yet is
+      //      logged with everything the request carries about its caller. A
+      //      browser and a script are trivially distinguishable in that line,
+      //      so the next occurrence names itself in the worker tail.
+      //  (2) DO NOT LET A SCRIPT STEAL THE POINTER. "You just pasted a JD" is a
+      //      BROWSER expectation; a headless caller has no screen to update. So
+      //      the global pointer only moves for a caller that looks like a
+      //      browser - it sent a device_id (the PWA always does, via
+      //      AntcvJdScope.deviceId) or it sent the fetch-metadata headers only
+      //      a real browser sends. gen-runner already treats a moved pointer as
+      //      damage and saves/restores it by hand; this stops the damage
+      //      happening in the first place, including when the script dies
+      //      before it can restore.
       if (row && row.id) {
-        try {
-          const deviceId = typeof body.device_id === 'string' ? body.device_id.slice(0, 64) : null;
-          await writeActivePointer(env, userHash, row.id, deviceId, now); // PARALLEL-GEN-POINTER-002
-        } catch (_) { /* best-effort */ }
+        const deviceId = typeof body.device_id === 'string' ? body.device_id.slice(0, 64) : null;
+        const h = (n) => request.headers.get(n) || '';
+        const browserish = !!(deviceId || h('sec-fetch-site') || h('sec-ch-ua'));
+        const isStub = !row.cv_sections && !row.cl_sections;
+        if (isStub) {
+          try {
+            console.log('[apps] STUB-CREATE app=' + row.id +
+              ' company=' + JSON.stringify(String(row.jd_company || '')) +
+              ' device_id=' + (deviceId || 'none') +
+              ' browserish=' + browserish +
+              ' ua=' + JSON.stringify(h('user-agent').slice(0, 120)) +
+              ' origin=' + JSON.stringify(h('origin')) +
+              ' referer=' + JSON.stringify(h('referer').slice(0, 80)) +
+              ' sec-fetch-site=' + JSON.stringify(h('sec-fetch-site')) +
+              ' ray=' + JSON.stringify(h('cf-ray')) +
+              ' country=' + JSON.stringify(h('cf-ipcountry')));
+          } catch (_) { /* logging must never break a save */ }
+        }
+        if (browserish) {
+          try {
+            await writeActivePointer(env, userHash, row.id, deviceId, now); // PARALLEL-GEN-POINTER-002
+          } catch (_) { /* best-effort */ }
+        } else {
+          try {
+            console.log('[apps] ACTIVE-POINTER-SUPPRESSED app=' + row.id +
+              ' — headless caller (no device_id, no browser fetch metadata); ' +
+              'global pointer left where the owner had it');
+          } catch (_) { /* best-effort */ }
+        }
       }
       // CLUSTER-QUAL-001 stage 1: extract qualifications from the rationale
       // the client already computed (jd-analysis.js's qualifications[] field)
@@ -3684,20 +3734,45 @@ async function handleApiApplicationById(request, env, idStr) {
       // (renew UPSERTs the same row in place). Only company-named apps are
       // capped; the kernel is excluded from both the count and the delete.
       // Run AFTER the update so the just-touched row is freshest and survives.
+      //
+      // APP-CAP-50-BULK-REGEN-001 (owner 2026-07-23 run, fixed 2026-07-26):
+      // the sweep used to delete ANY row that fell out of the newest 50. Once
+      // the account actually reached 50 that made every bulk process
+      // destructive: a regen writes new rows, each PUT re-runs this sweep, and
+      // the owner's OLDEST generated applications were deleted to pay for
+      // them. The 2026-07-23 full-list regen had to be stopped at 49 by hand to
+      // stop it eating originals. A cap enforced by DELETE cannot tell a stub
+      // from a finished application, so now it only sweeps rows that carry NO
+      // generated content - the empty stubs a crashed generation or a stray
+      // POST leaves behind. A row with a CV or a cover letter on it is the
+      // owner's work and is never swept, cap or no cap; the count going over 50
+      // is reported to the client instead (history_over_cap) so pruning stays a
+      // deliberate act. See docs/qa/ACTIVE_BUGS.md.
+      let overCap = 0;
       try {
+        const REAL = "LOWER(TRIM(COALESCE(jd_company, ''))) NOT IN ('', 'unsolicited')";
+        // A row is DISPOSABLE only when neither sections column holds content.
+        const EMPTY = "(COALESCE(TRIM(cv_sections), '') IN ('', '[]', '{}', 'null') " +
+                      "AND COALESCE(TRIM(cl_sections), '') IN ('', '[]', '{}', 'null'))";
         await env.DB.prepare(
           'DELETE FROM application WHERE user_hash = ? ' +
-          "AND LOWER(TRIM(COALESCE(jd_company, ''))) NOT IN ('', 'unsolicited') " +
+          'AND ' + REAL + ' AND ' + EMPTY + ' ' +
           'AND id NOT IN (SELECT id FROM application WHERE user_hash = ? ' +
-          "AND LOWER(TRIM(COALESCE(jd_company, ''))) NOT IN ('', 'unsolicited') " +
+          'AND ' + REAL + ' ' +
           'ORDER BY updated_at DESC LIMIT 50)'
         ).bind(userHash, userHash).run();
+        const kept = await env.DB.prepare(
+          'SELECT COUNT(*) AS n FROM application WHERE user_hash = ? AND ' + REAL
+        ).bind(userHash).first();
+        overCap = Math.max(0, Number((kept && kept.n) || 0) - 50);
       } catch (_) { /* sweep is best-effort */ }
       const row = await env.DB.prepare(
         'SELECT * FROM application WHERE id = ?'
       ).bind(appId).first();
       return jsonResponse(
-        { ok: true, application: shapeApplicationRow(row) },
+        overCap
+          ? { ok: true, application: shapeApplicationRow(row), history_over_cap: overCap }
+          : { ok: true, application: shapeApplicationRow(row) },
         200, request, env, refresh
       );
     } catch (e) {

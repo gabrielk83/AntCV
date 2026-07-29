@@ -1544,6 +1544,20 @@ def fit_to_pages(cv, cl, jd, pi, meta, language, max_pages=2, max_iters=4):
     if pages is None:
         return None, []
     steps = []
+    # CV-3P-UNDER-STAGE4-001: every lever below DELETES (sidebar rows, a whole
+    # role, bullets->2). Compression is always the cheaper way to buy a line, so
+    # the non-destructive fitter gets first refusal and the delete levers only
+    # run on a CV that compression could not bring under budget. Fail-open.
+    if pages > max_pages:
+        try:
+            import cv_fit
+            cv2, rep = cv_fit.fit_cv(cv, cl, pi, style_config, meta, language, max_pages=max_pages)
+            if rep.get("fitted") and cv2 is not cv:
+                cv[:] = cv2
+                pages = rep.get("pages") or pages
+                steps.append("compress -> %dpg" % pages)
+        except Exception as e:
+            print(f"   [cv-fit] skipped ({str(e)[:70]})")
     it = 0
     while pages and pages > max_pages and it < max_iters:
         it += 1

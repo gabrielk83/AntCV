@@ -31,8 +31,14 @@ const payload = {
   meta: { subtitle: 'Application — Product Manager' },
   font_sizes: { mainBody: 10.5 },
   sections: [
-    { id: 'greeting', title: '', loc: 'main', on: true, type: 'text', text: 'Dear Hiring Team,' },
-    { id: 'why', title: 'WHY THIS ROLE', loc: 'main', on: true, type: 'text', text: 'I bring product leadership across regulated domains.' },
+    // FIXTURE-FIELD-FIX (2026-07-26): these carried `text:`, which the worker's
+    // text renderer does not read (it reads `content:`), so BOTH sections rendered
+    // EMPTY - and a titled section with no body emits no heading at all. CHECK D
+    // was therefore asserting a heading colour on a document that contained no
+    // headings. Same fixture bug the 07-26 nightly flagged on the pagination
+    // harness. With real content the headings render and the check has teeth.
+    { id: 'greeting', title: '', loc: 'main', on: true, type: 'text', content: 'Dear Hiring Team,' },
+    { id: 'why', title: 'WHY THIS ROLE', loc: 'main', on: true, type: 'text', content: 'I bring product leadership across regulated domains.' },
     { id: 'bring', title: 'WHAT I BRING', loc: 'main', on: true, type: 'table',
       rows: [ ['Focus Area', 'Strategic Expertise'], ['Product', 'Roadmap & discovery'], ['Delivery', 'Cross-functional execution'] ] },
   ],
@@ -45,10 +51,26 @@ const joined = texts.join('');
 
 const bandBright = fills.includes('33446F');
 const noOldBand = !fills.includes('283556'); // band/table fills should no longer be the old navy
-const sepTight = joined.includes(' • ') && !joined.includes('   •   ');
+// HEADER-BANNER rule 2 (KOMBIT gold) dropped the ' • ' bullets entirely - the
+// icon glyphs ARE the separators - then CONTACT-CONVERGE-001 tightened the gap
+// to two nbsp and COPENHAGEN-STAGE4 to a SINGLE nbsp on copenhagen (this
+// payload sends package copenhagen-modern). So a ' • ' can no longer appear.
+// Intent kept and made stricter: the separator must be TIGHT - no wide
+// middot form, and no middot separators at all between contact items.
+const sepTight = !joined.includes('   •   ') && !joined.includes(' • ');
 const allContact = ['København', 'anita@ex.dk', '12 34 56 78', 'linkedin.com/in/anita'].every(t => joined.includes(t));
 // parity: main-column heading text/rule keeps the dark navy 283556 (it is a colour attr, not a fill)
-const headingNavy = /w:color="283556"/i.test(xml);
+// CL-CV-TWO-TONE / the 2026-07-22 mockup lock superseded this: mainHeadColor
+// is TEAL 00746E now, and navy is reserved for the heading box (33446F) and
+// SIDEBAR text (283556) - a linear CL has no sidebar, so 283556 is absent by
+// design. Verified against the live bundle + palette.js 2026-07-26. The
+// parity intent (main headings carry the documented head colour) is kept.
+// NOTE the two OOXML colour syntaxes: a RUN colour is `<w:color w:val="X"/>`
+// while a BORDER colour is `w:color="X"` inline. The original assertion used
+// the BORDER form, so it was really testing the heading RULE (navy 283556
+// back then). Today the head RUN is teal 00746E and its rule is grey 777777
+// (CPH-RENDER-FLAGS-001). Assert BOTH, in their correct syntaxes.
+const headingNavy = /<w:color w:val="00746E"\/>/i.test(xml) && /w:color="777777"/i.test(xml);
 
 log('distinct fills:', [...new Set(fills)].join(','));
 log('33446F band/table fill present:', bandBright, '| no 283556 fill:', noOldBand);
@@ -62,7 +84,7 @@ const D = headingNavy;
 log(`CHECK A (candidate band + table header = 33446F, no 283556 fill): ${A ? 'PASS' : 'FAIL'}`);
 log(`CHECK B (contact separator tightened to single-space): ${B ? 'PASS' : 'FAIL'}`);
 log(`CHECK C (all contact items retained): ${C ? 'PASS' : 'FAIL'}`);
-log(`CHECK D (parity: main headings stay navy 283556): ${D ? 'PASS' : 'FAIL'}`);
+log(`CHECK D (two-tone: head run teal 00746E + grey 777777 rule): ${D ? 'PASS' : 'FAIL'}`);
 const ok = A && B && C && D;
 log(ok ? 'COPENHAGEN-BLUE-CL OK (4/4)' : 'COPENHAGEN-BLUE-CL FAIL');
 process.exitCode = ok ? 0 : 1;

@@ -49,10 +49,15 @@ const sigPos = xml.indexOf('<w:drawing', kindPos);
 const signoffName = xml.lastIndexOf('Gabriel K');
 const hasSlogan = xml.includes('PROCESSES') && xml.includes('PRODUCTS') && xml.includes('PEOPLE');
 const A = hasSlogan && sloganPos >= 0 && greetPos > 0 && sloganPos < greetPos;
-const B = sigPos > kindPos && signoffName > sigPos;
+// CL-SIGNOFF-ALIGN-001 (owner 2026-06-29) REVERSED the order this asserted:
+// the sign-off block is closing -> NAME -> signature (the signature now comes
+// AFTER the typed name, was closing -> signature -> name). Verified against
+// the live bundle 2026-07-26. Intent kept: both sit after the closing word,
+// in the documented order.
+const B = sigPos > kindPos && signoffName > kindPos && sigPos > signoffName;
 log('slogan@' + sloganPos, 'greet@' + greetPos, 'kind@' + kindPos, 'sig@' + sigPos, 'signoffName@' + signoffName);
 log(`CHECK A (slogan present + before greeting/opening): ${A ? 'PASS' : 'FAIL'}`);
-log(`CHECK B (signature after sign-off, before the name): ${B ? 'PASS' : 'FAIL'}`);
+log(`CHECK B (order: closing -> name -> signature, CL-SIGNOFF-ALIGN-001): ${B ? 'PASS' : 'FAIL'}`);
 const ok = A && B;
 log(ok ? 'CL-SLOGAN-SIG OK (2/2)' : 'CL-SLOGAN-SIG FAIL');
 process.exitCode = ok ? 0 : 1;

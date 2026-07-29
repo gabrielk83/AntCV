@@ -102,3 +102,11 @@ English (Native), Hebrew (Native), Spanish (Professional), Danish (B1)
 - Managed logistics for ~25 players and coaches across Denmark and abroad.
 - Practical team support including equipment handling, storage and setup.
 - Helped prepare and maintain training and event environments.
+
+## INTERESTS (default section — owner 2026-07-29; add to LIVE kernel)
+- Rugby & inclusive sport: Team operations, Pan Idræt, foreningsarbejde; literally a team player.
+- Tai-chi: Calm, focused execution under pressure
+- Culture & Social: Language, food & board games
+- Hiking: Outdoor recovery and mental reset
+- Reading: Society, technology & systems thinking
+- Home supervision: of three feline strategic napping experts (cats)

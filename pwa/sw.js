@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.3824-tracker-notes';
+const CACHE = 'antcv-1.51.3882-cl-load-fidelity';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

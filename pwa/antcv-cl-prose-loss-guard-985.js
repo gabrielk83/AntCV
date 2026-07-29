@@ -139,6 +139,30 @@
   function snapshot() {
     if (isUnsolicited()) return;   // never capture prose under an unsolicited key
     var secs = readSections(); if (!secs || !Array.isArray(secs.cl)) return;
+    // CL-OPENING-EMPTY-GEN-001 (owner 2026-07-29): the OPENING can be persisted EMPTY at
+    // GENERATION (LLM omits/rejects the slot) with no snapshot to restore. When the CL is
+    // otherwise generated (why is real) but the opening is empty/placeholder and not
+    // unsolicited, fill it with a real JD-derived fallback so an empty opening never persists.
+    try {
+      var __opIdx = -1, __why = null;
+      for (var __i = 0; __i < secs.cl.length; __i++) {
+        var __c = secs.cl[__i];
+        if (__c && __c.id === 'opening') __opIdx = __i;
+        if (__c && __c.id === 'why') __why = __c;
+      }
+      if (__opIdx >= 0 && __why && isReal(__why) && !isReal(secs.cl[__opIdx]) && !isUnsolicited()) {
+        var __m = {}; try { __m = JSON.parse(localStorage.getItem('meta') || '{}') || {}; } catch (_) {}
+        var __role = String(__m.role || '').trim(), __co = String(__m.company || '').trim();
+        if (__role || __co) {
+          var __t = 'Following my interest in the ' + (__role || 'role') + (__co ? (' position at ' + __co) : '') +
+            ', I am writing to introduce how my background in systems architecture, requirements and cross-domain integration maps to what the role needs.';
+          secs.cl[__opIdx] = Object.assign({}, secs.cl[__opIdx], { type: 'rich_block', headlineOff: true, content: '', items: [{ b: '', t: __t, bullets: [] }] });
+          try { localStorage.setItem('sections', JSON.stringify(secs)); } catch (_) {}
+          try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { reason: 'cl-opening-empty-gen-fill' } })); } catch (_) {}
+          try { console.log('[CL-PROSE-LOSS-GUARD] CL-OPENING-EMPTY-GEN-001: filled empty opening with JD-derived fallback'); } catch (_) {}
+        }
+      }
+    } catch (_) {}
     var key = appKey();
     var store = readStore();
     var bucket = (store[key] && typeof store[key] === 'object') ? store[key] : {};

@@ -29,6 +29,8 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 ## ACTIVE CLAIMS
 
 <!-- SHIFT:BEGIN — one JSON object per line; managed by scripts/shift.mjs, safe to hand-edit a line if a session died without releasing -->
+{"id":"sh_ms0icv5u_gwn9","started":"2026-07-29T12:08:28.400Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.3902-1.51.3921","task":"JD-list Open dead-ends when the row has no stored JD (walled URL fetch) — recover + surface","beat":"2026-07-29T12:08:28.612Z"}
+{"id":"sh_ms62qiys_d8rm","started":"2026-07-29T12:41:49.446Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.3922-1.51.3941","task":"brand-colors-persist: runner+island build styleConfig from slots palette; backfill 17 rows","beat":"2026-07-29T12:41:49.821Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

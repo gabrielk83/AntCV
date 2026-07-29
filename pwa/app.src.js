@@ -17820,8 +17820,8 @@
                               company: e.jd_company || "",
                               role: e.jd_role || "",
                               subtitle: (io && io.subtitle) || "",
-                              greeting: (io && io.greeting) || "",
-                              opening: (io && io.opening) || "",
+                              greeting: ((Array.isArray(e.cl_sections)?((e.cl_sections.find(s=>s&&s.id==="greeting")||{}).content||""):"")||(io&&io.greeting)||""),
+                              opening: (((cs=>{const o=cs.find(s=>s&&s.id==="opening")||{};return o.content||(Array.isArray(o.items)&&o.items[0]&&o.items[0].t)||"";})(Array.isArray(e.cl_sections)?e.cl_sections:[]))||(io&&io.opening)||""),
                             });
                           } catch (e) {}
                         if (
@@ -23527,8 +23527,8 @@
                         company: e.jd_company || "",
                         role: e.jd_role || "",
                         subtitle: (io && io.subtitle) || "",
-                        greeting: (io && io.greeting) || "",
-                        opening: (io && io.opening) || "",
+                        greeting: ((Array.isArray(e.cl_sections)?((e.cl_sections.find(s=>s&&s.id==="greeting")||{}).content||""):"")||(io&&io.greeting)||""),
+                        opening: (((cs=>{const o=cs.find(s=>s&&s.id==="opening")||{};return o.content||(Array.isArray(o.items)&&o.items[0]&&o.items[0].t)||"";})(Array.isArray(e.cl_sections)?e.cl_sections:[]))||(io&&io.opening)||""),
                       });
                     } catch (e) {}
                   if (

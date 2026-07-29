@@ -221,6 +221,26 @@ Export must match the tuned preview above. Work order (docx-worker + docx-client
      workers/docx-worker/test/diag-copenhagen-stage4.mjs (26 checks).
   Owner's REAL deliverable set (NIGHTLY hard rule 8) regenerates on the next
   nightly / owner export now that wk 1.14.165 is live.
-- ⬜ Remaining OPEN render flags: rule thickness sweep (1px→1.5pt), grey #777
-  section-head underlines, role-row rule drop, Results underline, sub-head
-  rules+years, body link #0B4F8A, sidebar radius, AI-notice size/color.
+- ✅ **ALL eight render flags SHIPPED (2026-07-26, CPH-RENDER-FLAGS-001; PWA
+  `1.51.3822-cph-flags` + `1.51.3823-cph-flags2`, wk `1.14.172-cph-render-flags`,
+  both deployed).** Gated on copenhagen-modern (preview `__antcvCphPkg`, export
+  `style._cph`) so every other package renders byte-identically:
+  rule thickness sweep 1px→1.5pt via one helper (`__antcvCphRule`; export mirror
+  border size 8→12 eighths of a point); grey `#777777` section-head underlines
+  (MAIN heads only — sidebar heads keep `sidebarHeadColor`); per-role rule
+  DROPPED (the worker never drew one, so this was preview catching up to export);
+  "Results:" lead-in upright with a 1.5pt grey underline (italics stay reserved
+  for the company line); {grp} sub-heads on their own rule (teal main / grey
+  sidebar) with the group's years right-set in `#777777`, floated so the
+  heading's own centered alignment is untouched; body links `#0563C1`→`#0B4F8A`
+  (preview + both worker sites); sidebar panel radius 9px in the copenhagen-v2
+  sidecar (no `overflow:hidden`, so a straddling photo is still never clipped).
+  **Gotcha worth keeping:** since ROLES-AS-RICHBLOCK-001 the role rows render in
+  `pwa/antcv-roles-richblock-adapter.js`, NOT the app.js experience branch — the
+  per-role-rule fix applied to app.js alone left the rule on screen; 1.51.3823
+  drops it in the adapter path too and gives the PAGINATED continuation head the
+  same 1.5pt grey (it draws its rule on a separate render path from the section
+  head). AI notice 7→7.5pt on copenhagen in the same pass.
+  Logs: `docs/qa/SESSION_LOG_2026-07-26_BUGFIX.md`.
+- ⬜ Nothing open in this spec beyond the JUDGMENT items above, which are
+  owner-locked by design (band radius 22px, panel insets, photo size).

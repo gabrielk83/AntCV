@@ -477,6 +477,12 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     return persist({ ...doc, webintel: { ...(doc.webintel || {}), [uk]: text } }, true);
   }, [doc, persist]);
 
+  // TARGET-FACTS-CAPTURE-001: per-row hiring-manager / deadline / "why me" (Top-5 card).
+  const saveNotes = useCallback(async (uk: string, n: { hm?: string; deadline?: string; why?: string }): Promise<boolean> => {
+    if (!doc) return false;
+    return persist({ ...doc, notes: { ...(doc.notes || {}), [uk]: n } }, true);
+  }, [doc, persist]);
+
   // Append a row from a JD (shared by URL + file paths). Returns the new row's uk
   // so the caller can run the async enrich pass (AUTOFILL-REFINE-001).
   function appendRow(company: string, role: string, jdText: string, url?: string, support?: string, web?: string): string {
@@ -708,8 +714,14 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
       if (locBits) tf.push('Location / mobility: ' + locBits + '. If this needs relocation or weekly fly-in, the candidate is open to it per the envelope — acknowledge fit naturally, never over-explain.');
       if (String(row[6] || '').trim()) tf.push('Fit angle for this role: ' + String(row[6]).trim());
       if (String(row[10] || '').trim()) tf.push('Watch / risk to handle: ' + String(row[10]).trim());
+      // TARGET-FACTS-CAPTURE-001: per-row captured notes — hiring manager (→ greeting), deadline, "why me".
+      const nt = (d.notes || {})[uk] || {};
+      const hmName = String(nt.hm || '').trim();
+      if (String(nt.deadline || '').trim()) tf.push('Application deadline: ' + String(nt.deadline).trim() + '.');
+      if (String(nt.why || '').trim()) tf.push('Why this role for the candidate (their OWN words — weave the genuine motivation into WHY-THIS-POSITION; do not quote verbatim): ' + String(nt.why).trim());
       const targetFacts = tf.length ? '\n\nTARGET FACTS (calibration only — use to set altitude, emphasis and tone; NEVER copy verbatim into the CV or cover letter, and never state the salary figure or the tier):\n• ' + tf.join('\n• ') : '';
-      const supporting = 'TARGET-ROLE GUIDELINES (Dream Envelope):\n' + envText
+      const hmDirective = hmName ? '\n\nHIRING MANAGER: ' + hmName + ' — address the cover-letter greeting to this person by name (e.g. "Dear ' + hmName + ',"), not the generic hiring team.' : '';
+      const supporting = 'TARGET-ROLE GUIDELINES (Dream Envelope):\n' + envText + hmDirective
         + targetFacts
         // RESEARCH-MERGE-001: one merged, deduped research block (JD role intel
         // + web company research) instead of two blocks restating each other.
@@ -890,7 +902,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
               {top5.map((r) => <FocusCard key={r[11]} row={r} doc={doc} cluster={cluster} mobile={isMobile} busy={busyKey === r[11]}
                 onPrepare={() => void prepareAndOpen(r)} onOpen={() => void openSaved(r)}
                 pinned={pinnedOf(r[11])} onTogglePin={() => togglePin(r[11])} onPark={() => togglePark(r[11])} onReject={() => void rejectRow(r)}
-                onSaveSupport={saveSupport} onSaveWeb={saveWeb} onResearch={researchRow} />)}
+                onSaveSupport={saveSupport} onSaveWeb={saveWeb} onResearch={researchRow} onSaveNotes={saveNotes} />)}
               {top5.length === 0 && <div>No Top-5 roles yet.</div>}
             </div>
           )}
@@ -1012,11 +1024,12 @@ function buildSupport(p: ReturnType<typeof parseSupport>): string {
   return out.join('\n');
 }
 
-function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, pinned, onTogglePin, onPark, onReject, onSaveSupport, onSaveWeb, onResearch }: {
+function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, pinned, onTogglePin, onPark, onReject, onSaveSupport, onSaveWeb, onResearch, onSaveNotes }: {
   row: Row; doc: TrackerDoc | null; cluster: { qual: string }[]; mobile: boolean; busy: boolean;
   onPrepare: () => void; onOpen: () => void; pinned: boolean; onTogglePin: () => void; onPark: () => void; onReject: () => void;
   onSaveSupport: (uk: string, text: string) => Promise<boolean>;
   onSaveWeb: (uk: string, text: string) => Promise<boolean>; onResearch: (uk: string, company: string, role: string) => Promise<string>;
+  onSaveNotes: (uk: string, n: { hm?: string; deadline?: string; why?: string }) => Promise<boolean>;
 }): JSX.Element {
   const uk = row[11]; const t = tierOf(row[12]);
   const rawSupport = (doc?.support || {})[uk] || '';
@@ -1036,6 +1049,12 @@ function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, pinned,
   useEffect(() => { if (!webDirty) setWeb(rawWeb); }, [rawWeb, webDirty]);
   async function saveWebEdit(): Promise<void> { setSavingWeb(true); try { if (await onSaveWeb(uk, web)) setWebDirty(false); } finally { setSavingWeb(false); } }
   async function doResearch(): Promise<void> { setResearching(true); try { const w = await onResearch(uk, row[1], row[2]); if (w) { setWeb(w); setWebDirty(false); } else alert('Web search returned no results for "' + row[1] + '" — try again in a moment; if it persists, check the proxy URL and any BYOK Brave key in Settings → API Keys.'); } catch (e) { alert('Research failed: ' + String((e as Error).message || e)); } finally { setResearching(false); } }
+
+  const [notes, setNotesState] = useState<{ hm?: string; deadline?: string; why?: string }>((doc?.notes || {})[uk] || {});
+  const [notesDirty, setNotesDirty] = useState(false);
+  const [savingNotes, setSavingNotes] = useState(false);
+  function setField(f: 'hm' | 'deadline' | 'why', v: string): void { setNotesState((p) => ({ ...p, [f]: v })); setNotesDirty(true); }
+  async function saveNotesEdit(): Promise<void> { setSavingNotes(true); try { if (await onSaveNotes(uk, notes)) setNotesDirty(false); } finally { setSavingNotes(false); } }
 
   const hasJd = ((doc?.jd || {})[uk] || '').length > 200;
   const saved = doc?.artifacts?.[uk]?.application_id;
@@ -1137,6 +1156,19 @@ function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, pinned,
             placeholder="Holistic + specific employer context from the web — feeds the WHY-this-company, cover letter and employer Q&As. Tap Research to fetch."
             style={{ ...ta, fontSize: fs(12, 14), lineHeight: 1.4, background: '#f6f9fe', border: '1px solid #cfddf0', color: '#1d2a44' }} />
           {webDirty && <button onClick={() => void saveWebEdit()} disabled={savingWeb} style={{ ...btn('#1d3a6e', '#fff', fs(11, 13)), marginTop: 6 }}>{savingWeb ? 'Saving…' : '💾 Save research'}</button>}
+        </div>
+        <div style={{ marginTop: 12, borderTop: '1px dashed #d5deec', paddingTop: 10 }}>
+          <div style={{ fontSize: fs(11, 13), fontWeight: 800, color: t.accent, letterSpacing: 0.3, textTransform: 'uppercase', marginBottom: 6 }}>📇 Contact &amp; notes</div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
+            <input value={notes.hm || ''} onChange={(e) => setField('hm', e.target.value)} placeholder="Hiring manager (→ greeting)"
+              style={{ ...ta, flex: '1 1 150px', minHeight: 0, fontSize: fs(12, 14) }} />
+            <input value={notes.deadline || ''} onChange={(e) => setField('deadline', e.target.value)} placeholder="Deadline"
+              style={{ ...ta, flex: '0 1 110px', minHeight: 0, fontSize: fs(12, 14) }} />
+          </div>
+          <textarea value={notes.why || ''} onChange={(e) => setField('why', e.target.value)} rows={2}
+            placeholder="Why this role for me — your genuine motivation (woven into WHY-THIS-POSITION, never quoted verbatim)"
+            style={{ ...ta, fontSize: fs(12, 14), lineHeight: 1.4 }} />
+          {notesDirty && <button onClick={() => void saveNotesEdit()} disabled={savingNotes} style={{ ...btn('#2e7d32', '#fff', fs(11, 13)), marginTop: 6 }}>{savingNotes ? 'Saving…' : '💾 Save notes'}</button>}
         </div>
         <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           {saved

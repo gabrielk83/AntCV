@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.3823-cph-flags2';
+const CACHE = 'antcv-1.51.3824-tracker-notes';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

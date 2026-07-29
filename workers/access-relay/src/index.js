@@ -3366,17 +3366,26 @@ async function handleApiApplications(request, env) {
     // HYGIENE-CATEGORY-DOWNGRADE-001: read the EXISTING row's category (the dedupe row
     // when matched, else the jd_hash row) so an unsolicited-coerced save cannot downgrade
     // an application that already holds a valid targeted category.
-    let existingCategory = null;
+    let existingCategory = null, existingMeta = null;
     try {
       const prevRow = dedupeId
-        ? await env.DB.prepare('SELECT category FROM application WHERE id = ?').bind(dedupeId).first()
-        : await env.DB.prepare('SELECT category FROM application WHERE user_hash = ? AND jd_hash = ?').bind(userHash, jdHash).first();
+        ? await env.DB.prepare('SELECT category, meta FROM application WHERE id = ?').bind(dedupeId).first()
+        : await env.DB.prepare('SELECT category, meta FROM application WHERE user_hash = ? AND jd_hash = ?').bind(userHash, jdHash).first();
       existingCategory = prevRow && prevRow.category;
+      if (prevRow && prevRow.meta) { try { existingMeta = JSON.parse(prevRow.meta); } catch (_) { existingMeta = null; } }
     } catch (_) { /* best-effort; fall through to the incoming category */ }
     const category         = resolveTargetedCategory(incomingCategory, existingCategory, jdCompany, jdText);
     const supportingCtx    = typeof body.supporting_context === 'string' ? body.supporting_context : '';
     const rationale        = (body.rationale && typeof body.rationale === 'object') ? JSON.stringify(body.rationale) : null;
-    const meta             = (body.meta && typeof body.meta === 'object') ? JSON.stringify(body.meta) : null;
+    // BRAND-META-PRESERVE-001: an in-app auto-save rebuilds meta from company/role/
+    // greeting/opening and drops meta.styleConfig (the tracker-Open brand palette,
+    // BRAND-FIT-OPEN-001). Carry it forward from the existing row so the applied
+    // brand survives edits/re-saves rather than being nulled on the next upsert.
+    let metaObj = (body.meta && typeof body.meta === 'object') ? body.meta : null;
+    if (metaObj && !metaObj.styleConfig && existingMeta && existingMeta.styleConfig) {
+      metaObj = { ...metaObj, styleConfig: existingMeta.styleConfig };
+    }
+    const meta             = metaObj ? JSON.stringify(metaObj) : null;
     const now = Date.now();
 
     try {

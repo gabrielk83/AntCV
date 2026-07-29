@@ -77,6 +77,7 @@ export interface TrackerDoc {
   sigfiles?: Record<string, { name: string; text: string; added?: number }[]>; // per-row attached signal materials (extracted text, capped)
   support?: Record<string, string>;
   webintel?: Record<string, string>;    // per-row distilled web research on the employer (HOLISTIC + SPECIFIC), cached
+  notes?: Record<string, { hm?: string; deadline?: string; why?: string }>; // per-row capture: hiring-manager name (→ greeting), application deadline, "why me"
   scores?: Record<string, { fit?: number; rank?: number; why?: string }>;
   pin?: Record<string, boolean>;         // JOBTRACKER-AUTOFILL-TOP5-001: force into Top-5 (independent of fit rank)
   park?: Record<string, boolean>;        // out of Top-5 candidacy but STAYS LIVE in the weekly list (not archived)

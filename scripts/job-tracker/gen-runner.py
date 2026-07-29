@@ -528,8 +528,15 @@ def _user_turn(profile_json, meta, section_ask):
     if meta.get("support"):
         lines.append("=== ROLE INTEL (needs / bring / signals; subordinate) ===")
         lines.append(json.dumps(meta["support"])[:2500]); lines.append("")
+    _notes = meta.get("notes") or {}
+    if isinstance(_notes, dict) and (_notes.get("hm") or _notes.get("deadline") or _notes.get("why")):
+        lines.append("=== APPLICATION NOTES (owner-captured; subordinate framing, never a source of the candidate's facts) ===")
+        if _notes.get("hm"): lines.append("Hiring manager: " + str(_notes["hm"]).strip() + " — address the cover-letter greeting to this person by name.")
+        if _notes.get("deadline"): lines.append("Application deadline: " + str(_notes["deadline"]).strip() + ".")
+        if _notes.get("why"): lines.append("Why this role for the candidate (their OWN words — weave the genuine motivation into WHY-THIS-POSITION; do not quote verbatim): " + str(_notes["why"]).strip())
+        lines.append("")
     if meta.get("research"):
-        lines.append("=== RECENT WEB RESEARCH on the employer (Google CSE; SUBORDINATE — may be dated, verify; NEVER a source of the candidate's identity/history) ===")
+        lines.append("=== RECENT WEB RESEARCH on the employer (Brave web search; SUBORDINATE — may be dated, verify; NEVER a source of the candidate's identity/history) ===")
         lines.append(str(meta["research"])[:2500]); lines.append("")
     if meta.get("brand_brief"):
         # BRAND-DECIDES-RESEARCH-001: the employer's own brand voice (spirit/
@@ -716,6 +723,7 @@ def cmd_run(args):
         except Exception as _e:
             print(f"   [active-guard] could not read current active ({_e})")
     support = doc.get("support") or {}; signals = doc.get("signals") or {}
+    notes = doc.get("notes") or {}  # TARGET-FACTS-CAPTURE-001: per-row {hm, deadline, why}
     sigfiles = doc.get("sigfiles") or {}  # SIGNAL-MATERIALS-001: per-row attached materials (extracted text)
     def _signals_for(uk):
         """Typed signals + attached signal-material texts, composed the same way
@@ -751,7 +759,7 @@ def cmd_run(args):
         meta = {"company": r["company"], "role": r["role"], "jd": r["jd"],
                 "signals": _signals_for(uk), "support": support.get(uk),
                 "research": rsch, "language": language, "prior_app": prior,
-                "baseline": baseline,
+                "baseline": baseline, "notes": notes.get(uk),
                 "brand_brief": (brand or {}).get("slogan_brief") or None}
         sections, model = build_plan(profile, meta, r["tier"])
         print(f"\n== {uk} [{r['tier']}] {r['company']} / {r['role']} — {len(sections)} sections, model={model}")
@@ -1568,7 +1576,7 @@ def fit_to_pages(cv, cl, jd, pi, meta, language, max_pages=2, max_iters=4):
         steps.append(f"{what} -> {pages}pg")
     return pages, steps
 
-def build_structured_sections(sk, sections, company, role, language="en"):
+def build_structured_sections(sk, sections, company, role, language="en", hm=""):
     """Overlay the 8 generated sections onto a copy of the me() skeleton,
     converting each into the app's native structured shape. Returns (cv, cl)."""
     cv = copy.deepcopy(sk["cv"]); cl = copy.deepcopy(sk["cl"])
@@ -1730,10 +1738,15 @@ def build_structured_sections(sk, sections, company, role, language="en"):
             if goal: items.append({"b": "Goal", "t": goal, "bullets": []})
             cs["items"] = items
 
-    # Greeting: clean, JOB-language furniture (no hiring-manager name captured;
-    # owner rule = greet only a named manager).
+    # Greeting: address a CAPTURED hiring manager by name (owner rule = greet only
+    # a NAMED manager, in the job language); else clean JOB-language furniture.
     g = _ov_find(cl, "greeting")
-    if g: g["content"] = _furn(language, "greeting", company, role)
+    if g:
+        _hm = str(hm or "").strip()
+        if _hm:
+            g["content"] = {"da": "Kære ", "sv": "Hej ", "en": "Dear "}.get(language, "Dear ") + _hm + ","
+        else:
+            g["content"] = _furn(language, "greeting", company, role)
     # Opening + closure are GENERATED; fall back to clean JOB-language furniture
     # (never the skeleton's bracket scaffolding).
     op = _ov_find(cl, "opening")
@@ -1879,7 +1892,8 @@ def persist_application(doc, r, res, category, language, kernel=None, measure=Fa
     company, role = str(r["company"]), str(r["role"])
     sk = load_skeleton()
     if sk:
-        cv, cl = build_structured_sections(sk, res["sections"], company, role, language=language)
+        cv, cl = build_structured_sections(sk, res["sections"], company, role, language=language,
+                                           hm=str(((doc.get("notes") or {}).get(uk) or {}).get("hm") or "").strip())
         # PERSIST-QUALITY-001 (owner 2026-07-13, generalized from the 808/797
         # review): certs relevance + no years + rugby-class last, FVU compress,
         # sidebar one-liner compressions, core_comp top-4 + clause-complete

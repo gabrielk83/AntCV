@@ -98,10 +98,16 @@ jobs:
         run: |
           cd workers/proxy
           node --test
-      - name: PWA import/normalise unit tests + sidecar drift guard
-        run: node --test --test-force-exit pwa/test/unit/*.test.mjs
-      - name: DOCX worker palette + registry-drift unit tests
-        run: node --test workers/docx-worker/test/palette.test.mjs workers/docx-worker/test/diag-bundle-palette-sync.mjs workers/docx-worker/test/diag-banded-rows.mjs
+      - name: PWA suite (unit + sidecar/storm/salmon/watchdog guards — full pwa/ tree)
+        run: node scripts/run-tests.mjs pwa
+      - name: DOCX worker unit tests (.test.mjs suite) + full render V&V diags
+        run: |
+          node --test --test-force-exit workers/docx-worker/test/*.test.mjs
+          node scripts/run-docx-diags.mjs
+      - name: Access-relay unit tests (auth / JD-guard / cluster-demand / cost)
+        run: node --test --test-force-exit workers/access-relay/tests/*.test.mjs
+      - name: Demo-proxy unit tests (demo enforcement / model-table / cost)
+        run: node --test --test-force-exit workers/demo-proxy/test/*.test.mjs
 
   deploy-pwa:
     needs: lint

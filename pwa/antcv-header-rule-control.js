@@ -8,23 +8,32 @@
  *      side panel!"): a compact "Rule line below" row injected into each header
  *      field DETAILED EDITOR (the ← Back panel that opens from the candidate
  *      rows), next to the CJLR control: on/off + thickness (pt) + colour + auto.
- * DEFAULTS (absent store) = copenhagen-modern = today's look: rule below
- * Spec/Application + below Contact, none below Name, 0.75pt, theme teal.
+ * DEFAULTS (absent store): NO rules inside the header box — the Copenhagen
+ * MOCKUP LOCK (owner 2026-07-23: "we still have separation lines inside the
+ * header") has a clean navy box with no internal lines. A user who explicitly
+ * turned a rule ON in the field editor keeps it (store.on wins over defOn).
  * Kill (UI only; helpers keep honoring the store):
  * localStorage['antcv:disable-header-rule-control']='1'.
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.87-header-rule-detect2';
+  var VERSION = '1.51.3121-header-rules-off';
   if (window.__antcvHeaderRuleControl === VERSION) return;
   window.__antcvHeaderRuleControl = VERSION;
 
-  var ACCENT = '#01B7BB';
+  var ACCENT = '#01B9BD';
   var KEY = 'headerItemRule';
+  // HEADER-RULE-DEFAULTS-002 (owner 2026-07-23): "specialization (def-hidden),
+  // contact (def-hidden), slogan (def-hidden), application (def-visible)".
+  // specialisation/contact flip from the old copenhagen default-ON to default-OFF;
+  // slogan + application join as first-class rule fields (application is no longer
+  // aliased to the specialisation slot — it rules the app-line below the slogan).
   var FIELDS = [
     { k: 'name', label: 'Name', defOn: false },
-    { k: 'specialisation', label: 'Specialization / Application', defOn: true },
-    { k: 'contact', label: 'Contact', defOn: true },
+    { k: 'specialisation', label: 'Specialization', defOn: false },
+    { k: 'contact', label: 'Contact', defOn: false },
+    { k: 'slogan', label: 'Cover letter slogan', defOn: false },
+    { k: 'application', label: 'Application line', defOn: true },
   ];
 
   function readStore() { try { var v = JSON.parse(localStorage.getItem(KEY) || 'null'); return v && typeof v === 'object' ? v : {}; } catch (_) { return {}; } }
@@ -81,8 +90,9 @@
   var FIELD_OF_LABEL = [
     [/^name/i, 'name'],
     [/^special/i, 'specialisation'],
-    [/^application/i, 'specialisation'],   // the Application line IS the specialisation slot
+    [/^application/i, 'application'],   // HEADER-RULE-DEFAULTS-002: its OWN rule (the app-line), no longer the spec slot
     [/^contact/i, 'contact'],
+    [/slogan/i, 'slogan'],
   ];
   // HEADER-RULE-DETECT-002 (owner DOM capture): the ROW text starts with the
   // move buttons, not the label — detect from the PANEL content first (the
@@ -92,10 +102,11 @@
       var pt = String(panel && panel.textContent || '');
       if (/full name/i.test(pt)) return 'name';
       var rt = String(row && row.textContent || '');
-      if (/special/i.test(rt) || /special/i.test(pt)) return 'specialisation';
-      if (/application/i.test(rt) || /application/i.test(pt)) return 'specialisation';
-      if (/contact/i.test(rt) || /contact/i.test(pt)) return 'contact';
-      if (/name/i.test(rt)) return 'name';
+      if (/slogan/i.test(rt) || /slogan/i.test(pt)) return 'slogan';
+      if (/application/i.test(rt) || /application/i.test(pt)) return 'application';
+      if (/special/i.test(rt) || /special/i.test(pt)) return 'specialisation';
+      if (/contact/i.test(rt) || /contact/i.test(pt)) return 'contact';
+      if (/name/i.test(rt)) return 'name';
     } catch (_) {}
     return null;
   }

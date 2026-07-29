@@ -84,14 +84,35 @@ test('dedup + residue reconcile reach a FIXED POINT (no write ping-pong)', () =>
   assert.equal(tools.items.filter((it) => /^Hidden - /.test(String(it.b || it.l || ''))).length, 1, 'exactly one residue row, stable');
 });
 
-test('a REAL duplicated tools row is still dropped once (dedup behaviour unregressed)', () => {
+// TOOLS-GRP-STORM-CONVERGE-001 (owner 2026-07-21): the dedup now HIDES a real
+// duplicate via the section-level hidden map instead of SPLICING it out. The
+// delete shifted every following index (corrupting the rich_block hidden map ->
+// a group heading flapped) and made the category's kernel tokens vanish (residue
+// re-created a twin -> relevance-cut heal resurrected the row -> loop). Hiding
+// keeps indices stable and the tokens in the reconciler's view, so preview/export
+// are byte-identical (both drop section-hidden rich rows) while the loop dies.
+test('a REAL duplicated tools row is HIDDEN not deleted (index-stable; render-identical)', () => {
   const f = FIXTURE();
   const secs = JSON.parse(f.sections);
+  const dupIdx = secs.cv[1].items.length; // appended at the end
   secs.cv[1].items.push({ b: 'Optics, photonics & sensing', t: 'Electro-optics, sensing platforms', bullets: [] });
   f.sections = JSON.stringify(secs);
   const { dedup, store } = load(f);
   dedup.run();
   const tools = JSON.parse(store.get('sections')).cv[1];
-  assert.ok(!tools.items.some((it) => String(it.b || '') === 'Optics, photonics & sensing'), 'real duplicate row dropped');
+  assert.ok(tools.items.some((it) => String(it.b || '') === 'Optics, photonics & sensing'), 'duplicate row is kept in items (no index shift)');
+  assert.ok(tools.hidden && tools.hidden[dupIdx] === true, 'duplicate row is hidden via the section-level hidden map');
   assert.ok(tools.items.some((it) => /^Hidden - Optics/.test(String(it.b || ''))), 'residue row untouched');
+});
+
+test('re-running dedup on already-hidden dup is idempotent (no further write)', () => {
+  const f = FIXTURE();
+  const secs = JSON.parse(f.sections);
+  secs.cv[1].items.push({ b: 'Optics, photonics & sensing', t: 'Electro-optics, sensing platforms', bullets: [] });
+  f.sections = JSON.stringify(secs);
+  const { dedup, store, writesCount } = load(f);
+  dedup.run();               // first pass hides it
+  const afterFirst = writesCount();
+  dedup.run(); dedup.run();  // subsequent passes see it already hidden
+  assert.equal(writesCount(), afterFirst, 'no further sections write once the dup is hidden');
 });

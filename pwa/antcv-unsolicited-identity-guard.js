@@ -85,7 +85,10 @@
   // A value that is NOT a real targeted company: the canonical unsolicited
   // labels (or empty). Anything else is a real employer name.
   function isUnsolicitedLabel(s) {
-    return /^(unsolicited|open\s+application|n\/?a)?$/i.test(String(s || '').trim());
+    s = String(s || '').trim();
+    // UNSOL-PILLAR-LANG-001: empty still counts (original behaviour), and any
+    // language variant of the pillar word counts via the shared matcher.
+    return !s || /^(unsolicited|open\s+application|n\/?a)$/i.test(s) || !!(window.__antcvUnsol && window.__antcvUnsol(s));
   }
 
   function readMeta() {

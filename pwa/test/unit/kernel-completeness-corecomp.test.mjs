@@ -63,9 +63,12 @@ test('core_comp_rows with 4 data rows still passes', () => {
   assert.doesNotThrow(() => parseInCtx(output(4)));
 });
 
-test('core_comp_rows with 2 data rows STILL throws (floor is 3, not removed)', () => {
+// CORE-COMP-ROWSPEC-001 (owner 2026-07-13): 'we need 3-4 TABLE rows' — the
+// matrix row spec is min 3 / max 4 (cells <=2 rendered lines is a SEPARATE
+// rule, density.cell_max_lines). The guard floor = the matrix minimum, 3.
+test('core_comp_rows with 2 data rows throws (below the 3-4 row spec)', () => {
   let threw = null;
   try { parseInCtx(output(2)); } catch (e) { threw = e; }
-  assert.ok(threw, 'a 2-row table should still be flagged incomplete');
+  assert.ok(threw, 'a 2-row table is below the 3-4 table-row spec');
   assert.match(String(threw.message || ''), /core_comp_rows/, 'the failure must cite core_comp_rows');
 });

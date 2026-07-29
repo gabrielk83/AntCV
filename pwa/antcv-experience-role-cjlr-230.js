@@ -11,6 +11,14 @@
   // inside .antcv-preview-paper must not get CJLR buttons.
   const isInPreviewPaper = el => { if(!el) return false; const p=document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]'); return !!(p && p.contains(el)); };
   const KEY = 'antcv.experienceRoleContentAlignment.v2';
+  // CJLR-EXPERIENCE-EXPORT-001 (owner 2026-07-13): the export payload builder
+  // (antcv-docx-client alignFor) reads antcvItemAlignment[<sid>] and forwards it
+  // to the worker as item_alignment. Bridge the experience CJLR here so the PDF
+  // stops ignoring it. Keyed by the SAME path the worker reads (paraAlignPath
+  // "roles.<ri>.bullets.<bi>").
+  const ITEM_ALIGN_KEY = 'antcvItemAlignment';
+  const EXP_SID = 'experience';
+  const BULLET_PATH_RE = /^roles\.\d+\.bullets\.\d+$/;
   const ALIGN = ['center','justify','left','right'];
   const ICON = { left:'⇤', center:'↔', justify:'☰', right:'⇥' };
   const LABEL = { left:'Left aligned', center:'Centered', justify:'Justified', right:'Right aligned' };
@@ -190,10 +198,39 @@
     }
   }
 
+  // CJLR-EXPERIENCE-EXPORT-001: write-on-change persist of the EFFECTIVE preview
+  // alignment into the export bridge. We forward ONLY the role-bullet paths the
+  // preview actually resolved this pass, so the PDF mirrors the preview exactly
+  // (no index math, no unilateral default — pure parity). Non role-bullet keys
+  // already under experience (e.g. a manual __group__) are preserved.
+  function persistBridge(bridge){
+    try{
+      // ROLES-AS-RICHBLOCK-001 (owner 2026-07-14, root-caused live): when the
+      // rich_block adapter drives experience, this CHIMERA bridge must NOT rewrite
+      // the bullet-path alignments — it recomputes them from the chimera preview and
+      // overwrites the per-row CJLR the rich_block editor just wrote, so every
+      // per-row alignment reverts within a frame. Bail when the flag is on; the
+      // rich_block editor + section-align/item-align own the CJLR then.
+      if (window.AntcvRolesRichBlock && window.AntcvRolesRichBlock.isOn && window.AntcvRolesRichBlock.isOn()) return;
+      if(typeof localStorage === 'undefined') return;
+      const raw = localStorage.getItem(ITEM_ALIGN_KEY);
+      const all = raw ? (JSON.parse(raw) || {}) : {};
+      if(!all || typeof all !== 'object' || Array.isArray(all)) return;
+      const prev = (all[EXP_SID] && typeof all[EXP_SID] === 'object' && !Array.isArray(all[EXP_SID])) ? all[EXP_SID] : {};
+      const next = {};
+      for(const k of Object.keys(prev)) if(!BULLET_PATH_RE.test(k)) next[k] = prev[k];
+      for(const k of Object.keys(bridge)) next[k] = bridge[k];
+      if(JSON.stringify(prev) === JSON.stringify(next)) return; // no mutation → no write
+      if(Object.keys(next).length) all[EXP_SID] = next; else delete all[EXP_SID];
+      localStorage.setItem(ITEM_ALIGN_KEY, JSON.stringify(all));
+    }catch(_){}
+  }
+
   function applyPreview(){
     const sec = previewSection();
     if(!sec) return;
     const used = new Set();
+    const bridge = {};
     roleData().forEach(role=>{
       // Apply every content line for this role, in preview DOM order. This prevents role 1
       // from stealing role 2+ content when placeholder text is repeated.
@@ -204,8 +241,17 @@
         if(!el) return;
         used.add(el);
         applyPreviewElement(el, role.align);
+        // CJLR-EXPERIENCE-EXPORT-001: capture the preview block's own path marker
+        // (roles.<t>.bullets.<n>, set in app.src.js) and mirror this alignment to
+        // the export bridge so the PDF stops justifying what the preview left/etc.
+        try{
+          const pe = el.closest ? el.closest('[data-antcv-row-path]') : null;
+          const rp = pe && pe.getAttribute('data-antcv-row-path');
+          if(rp && BULLET_PATH_RE.test(rp)) bridge[rp] = role.align;
+        }catch(_){}
       });
     });
+    persistBridge(bridge);
   }
 
   let pending=false;

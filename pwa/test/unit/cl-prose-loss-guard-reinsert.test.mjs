@@ -68,18 +68,21 @@ test('D — HWIC (contribute) DELETED outright is re-inserted from snapshot', ()
   assert.match(back.items[0].t, /first quarter/, 'full HWIC content preserved');
 });
 
-test('E — re-insertion lands at the canonical Nordic-CL position (between bring and closure)', () => {
+// CL-V5-STRUCT-001 (2026-07-21): the canonical order is now the v5 sequence
+// greeting -> opening -> why -> role_view -> bring -> contribute -> who -> closure,
+// and this guard's ORDER is kept in step with antcv-nordic-cl-order-971's.
+test('E — re-insertion lands at the canonical v5 CL position (between bring and who)', () => {
   const { api, store } = makeCtx();
   store.set('meta', meta);
-  // full letter, all real
-  setCl(store, [greeting(), opening(), why(), who(), foundation(), bring(), contribute(), closure()]);
+  // full letter in the v5 order, all real
+  setCl(store, [greeting(), opening(), why(), bring(), contribute(), who(), foundation(), closure()]);
   api.snapshot();
-  // delete just contribute — leaves a gap between bring and closure
-  setCl(store, [greeting(), opening(), why(), who(), foundation(), bring(), closure()]);
+  // delete just contribute — leaves a gap between bring and who
+  setCl(store, [greeting(), opening(), why(), bring(), who(), foundation(), closure()]);
   api.reapply();
   const ids = clIds(store);
-  assert.deepEqual(ids, ['greeting', 'opening', 'why', 'who', 'foundation', 'bring', 'contribute', 'closure'],
-    'contribute restored to its canonical slot, not appended to the end');
+  assert.deepEqual(ids, ['greeting', 'opening', 'why', 'bring', 'contribute', 'who', 'foundation', 'closure'],
+    'contribute restored to its canonical v5 slot, not appended to the end');
 });
 
 test('F — no real snapshot → an absent section is NOT re-inserted (no fabrication)', () => {

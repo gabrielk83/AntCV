@@ -192,10 +192,11 @@ export async function insertLlmCall(env, identity, event) {
            latency_ms, ttft_ms,
            prompt_tokens, completion_tokens, total_tokens,
            placeholder_leak_count, fabrication_flag, banned_word_count,
+           malformed_output_count,
            was_retry, retry_attempt,
            estimated_cost_usd,
            request_id, augmentation_task, client_version, jd_fingerprint
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .bind(
         ts,
@@ -215,6 +216,9 @@ export async function insertLlmCall(env, identity, event) {
         asInt(event.placeholder_leak_count) ?? 0,
         event.fabrication_flag ? 1 : 0,
         asInt(event.banned_word_count) ?? 0,
+        // malformed = format-broken output; the PWA may report it inline on the
+        // llm_call event, or emit it later as a `malformed_output` quality signal.
+        asInt(event.malformed_output_count) ?? 0,
         // was_retry is 1 when the PWA had to fall back to another provider
         // (fallback_step > 0) OR when the caller explicitly flagged it.
         (event.was_retry || (asInt(event.fallback_step) || 0) > 0) ? 1 : 0,
@@ -325,6 +329,9 @@ const QUALITY_SIGNAL_TYPES = new Set([
   'banned_word',
   'wrong_field_name',
   'user_thumbs_down',
+  // RELAY-DETECTION-GAP-001: format-broken output (SSE-leak / empty-despite-tokens /
+  // control-garbage / off-language) — see detectMalformedOutput.
+  'malformed_output',
 ]);
 
 const QUALITY_SEVERITIES = new Set(['critical', 'warning', 'info']);
@@ -431,6 +438,10 @@ export async function insertQualitySignal(env, identity, body) {
       await env.DB.prepare(
         `UPDATE llm_calls SET banned_word_count = COALESCE(banned_word_count, 0) + 1 WHERE id = ?`
       ).bind(callId).run();
+    } else if (signalType === 'malformed_output') {
+      await env.DB.prepare(
+        `UPDATE llm_calls SET malformed_output_count = COALESCE(malformed_output_count, 0) + 1 WHERE id = ?`
+      ).bind(callId).run();
     }
     // wrong_field_name and user_thumbs_down don't have a llm_calls
     // counter column — they live only in llm_quality_signals.
@@ -466,7 +477,126 @@ function percentile(sorted, p) {
 // in llm-telemetry-schema.sql.
 // ---------------------------------------------------------------------
 
-function scoreHealth(metrics) {
+// RELAY-COST-TIEBREAK-001 (2026-07-13, owner "make scoreHealth cost-aware so
+// equal-quality providers tie-break by cost"): mechanical / high-volume passes
+// where two ADEQUATE providers are ~interchangeable on quality, so cost should
+// break the tie. Quality-critical tasks (generate_cv/cl, parse_jd, analyze_fit)
+// are deliberately ABSENT — their provider choice must stay quality-led (the
+// client's per-task qW weights already encode that; we must never demote a
+// better-but-pricier writer on a quality-critical task).
+export const COST_SENSITIVE_TASKS = new Set([
+  'compress', 'long_context', 'consensus_poll', 'consensus_reinforce',
+  'fix_orphans', 'enrich', 'apply_correction',
+]);
+
+// Bounded cost penalty for the tie-break. Log-scaled on the cost RATIO vs the
+// task's cheapest ADEQUATE provider, so only a big spread (compress: openai is
+// ~1700x gemini) earns the full penalty; a 1.5-3x spread stays a near-tie. Cap
+// 0.15 = the headroom on a perfect 1.0 quality score down to the 'ok' floor
+// (0.85), so the tie-break can NEVER by itself push an adequate provider into a
+// false 'warning'/'degraded'.
+export const COST_TIEBREAK_MAX = 0.15;
+export const COST_RATIO_CAP = 100;   // >=100x pricier than the cheapest = full penalty
+export function costPenalty(costPerCall, minCostPerCall) {
+  if (!(costPerCall > 0) || !(minCostPerCall > 0) || costPerCall <= minCostPerCall) return 0;
+  const frac = Math.min(1, Math.log10(costPerCall / minCostPerCall) / Math.log10(COST_RATIO_CAP));
+  return COST_TIEBREAK_MAX * frac;
+}
+
+// ---------------------------------------------------------------------
+// MALFORMED-OUTPUT DETECTION (RELAY-DETECTION-GAP-001, owner 2026-07-13).
+//
+// The quality signals to date — placeholder_leak / fabrication / banned_word —
+// only inspect the MEANING of well-formed text. They are blind to FORMAT-broken
+// output: a raw SSE frame leaking into the body (`data: {"choices":…}`), an
+// empty/whitespace body despite the provider billing completion tokens, or a
+// response that is structurally garbage. A provider can emit that all week and
+// still score health 1.0 (this is exactly how openai stayed "healthy" through the
+// 3.8.0-3.8.2 SSE-leak bugs — the scorer never saw it), so the cost-quality
+// optimizer could keep routing to a silently-broken-but-cheap provider.
+//
+// detectMalformedOutput inspects the RAW response text (text-only heuristics — no
+// model call) and returns a reason string when the output is format-broken, else
+// null. It is the SAME logic the client's post-call scanner uses to emit a
+// `malformed_output` quality signal; keeping it here (pure + exported + tested)
+// makes it reusable and the single source of truth.
+//
+// ctx (all optional): { completionTokens, targetLang, expectJson }.
+//  - completionTokens: enables the empty-despite-tokens check.
+//  - targetLang ('en'|'da'|'es'|'zh'|'he'|'ar'|'am'): enables a cheap
+//    script-family off-language check (only fires on a HARD script mismatch —
+//    e.g. a CJK/Cyrillic/Arabic/Hebrew body when a Latin language was asked, or
+//    the reverse — never on ambiguous Latin-vs-Latin).
+// ---------------------------------------------------------------------
+
+const SSE_LEAK_RE = /(^|\n)\s*data:\s*(\{|\[DONE\])|"object"\s*:\s*"chat\.completion|"delta"\s*:\s*\{|^\s*event:\s*\w+\s*\n/i;
+
+function scriptClass(s) {
+  // Coarse dominant-script bucket from a text sample. Returns a Set of families seen.
+  const fams = new Set();
+  for (const ch of s) {
+    const c = ch.codePointAt(0);
+    if (c >= 0x4E00 && c <= 0x9FFF) fams.add('cjk');
+    else if (c >= 0x0590 && c <= 0x05FF) fams.add('hebrew');
+    else if (c >= 0x0600 && c <= 0x06FF) fams.add('arabic');
+    else if (c >= 0x1200 && c <= 0x137F) fams.add('ethiopic');
+    else if (c >= 0x0400 && c <= 0x04FF) fams.add('cyrillic');
+    else if ((c >= 0x41 && c <= 0x5A) || (c >= 0x61 && c <= 0x7A)) fams.add('latin');
+  }
+  return fams;
+}
+
+const LATIN_LANGS = new Set(['en', 'da', 'es', 'de', 'fr', 'it', 'nl', 'sv', 'no', 'pt']);
+const LANG_SCRIPT = { zh: 'cjk', he: 'hebrew', ar: 'arabic', am: 'ethiopic', ru: 'cyrillic' };
+
+export function detectMalformedOutput(text, ctx = {}) {
+  const s = typeof text === 'string' ? text : (text == null ? '' : String(text));
+  const trimmed = s.trim();
+  const { completionTokens = null, targetLang = null } = ctx;
+
+  // 1) Empty / whitespace body despite the provider billing output tokens.
+  //    (An honestly-empty response bills ~0 completion tokens; >12 tokens of
+  //    "output" that renders to <2 chars of text is a broken/stripped body.)
+  if (Number(completionTokens) > 12 && trimmed.length < 2) return 'empty_despite_tokens';
+
+  // 2) Raw SSE / streaming envelope leaking into the body.
+  if (SSE_LEAK_RE.test(s)) return 'sse_leak';
+
+  // 3) Control-character garbage: a body that is mostly non-printable /
+  //    replacement characters (mojibake, binary leak). Sample the first 4k.
+  const sample = trimmed.slice(0, 4000);
+  if (sample.length >= 20) {
+    let bad = 0;
+    for (const ch of sample) {
+      const c = ch.codePointAt(0);
+      if (c === 0xFFFD || (c < 0x20 && c !== 0x09 && c !== 0x0A && c !== 0x0D)) bad++;
+    }
+    if (bad / sample.length > 0.15) return 'control_garbage';
+  }
+
+  // 4) Hard off-language: only when a non-Latin script language was requested
+  //    and the body carries NONE of that script (or a Latin language got a body
+  //    dominated by a non-Latin script). Never fires on Latin-vs-Latin.
+  if (targetLang && trimmed.length >= 16) {
+    const fams = scriptClass(trimmed.slice(0, 2000));
+    const want = LANG_SCRIPT[String(targetLang).toLowerCase()];
+    if (want && !fams.has(want)) return 'off_language';
+    if (LATIN_LANGS.has(String(targetLang).toLowerCase())) {
+      const nonLatin = ['cjk', 'hebrew', 'arabic', 'ethiopic', 'cyrillic'].filter((f) => fams.has(f));
+      if (nonLatin.length && !fams.has('latin')) return 'off_language';
+    }
+  }
+  return null;
+}
+
+// scoreHealth(metrics[, costCtx]) — QUALITY score + status as before. When
+// costCtx = { costPerCall, minCostPerCall } is supplied (a cost-sensitive task
+// with a known cheapest-adequate cost) AND the provider is adequate ('ok'), a
+// bounded cost penalty is folded into health_score so the pricier-among-equals
+// reads lower. STATUS stays QUALITY-only (a pricey-but-adequate provider is
+// still 'ok' — healthy, just not the cheap pick); the client seed turns the
+// resulting health GAP vs the task's cheapest into the actual routing demotion.
+export function scoreHealth(metrics, costCtx = null) {
   let s = 1.0;
   if (metrics.success_rate < 0.90)          s -= 0.4;
   if (metrics.p95_latency_ms > 30000)       s -= 0.3;
@@ -474,12 +604,34 @@ function scoreHealth(metrics) {
   if (metrics.fabrication_rate > 0.05)      s -= 0.2;
   if (metrics.retry_rate > 0.30)            s -= 0.1;
   if (metrics.banned_word_rate > 0.05)      s -= 0.1;
+  // RELAY-DETECTION-GAP-001: format-broken output (SSE-leak / empty-despite-tokens /
+  // control-garbage / off-language) is a HARD failure the older signals miss. A low
+  // rate still bites (a provider leaking raw frames a few % of the time is broken, not
+  // "mostly fine"): >2% malformed drops it out of 'ok' by itself (-0.30), >20% floors it.
+  const mf = Number(metrics.malformed_output_rate) || 0;
+  if (mf > 0.20)      s -= 0.6;
+  else if (mf > 0.02) s -= 0.3;
   s = Math.max(0, Math.min(1, s));
   const status = s >= 0.85 ? 'ok'
               : s >= 0.60 ? 'warning'
               : s >= 0.30 ? 'degraded'
               : 'down';
-  return { health_score: Number(s.toFixed(3)), status };
+  let health = s, cost_penalty = 0;
+  // Adequacy for the tie-break is judged on SUCCESS, not status: the cost-sensitive
+  // tasks (compress/long_context/consensus_*) are inherently high-latency, so they
+  // sit at 'warning' on quality alone — gating on status==='ok' made the tie-break
+  // NEVER fire on exactly the tasks it targets (RELAY-COST-TIEBREAK-001 v1 was inert
+  // in production, 2026-07-13). Two providers that both succeed are equal-quality
+  // enough for cost to decide. STATUS stays quality-only (unchanged for the
+  // dashboard); health_score is the cost-aware ROUTING signal the client seed reads.
+  // Clamp health >= 0.30 so a pricey provider is at worst 'degraded', never 'down'
+  // (which must mean broken). The cheapest-adequate provider gets penalty 0, so it
+  // keeps its quality score and always ranks above its pricier equals.
+  if (costCtx && metrics.success_rate >= 0.85) {
+    cost_penalty = costPenalty(costCtx.costPerCall, costCtx.minCostPerCall);
+    health = Math.max(0.30, s - cost_penalty);
+  }
+  return { health_score: Number(health.toFixed(3)), status, cost_penalty: Number(cost_penalty.toFixed(3)) };
 }
 
 // ---------------------------------------------------------------------
@@ -516,7 +668,7 @@ export async function aggregateHealth(env, now = Math.floor(Date.now() / 1000)) 
       .prepare(
         `SELECT provider, task, success, latency_ms, total_tokens,
                 estimated_cost_usd, placeholder_leak_count, fabrication_flag,
-                banned_word_count, retry_attempt
+                banned_word_count, malformed_output_count, retry_attempt
          FROM llm_calls
          WHERE ts >= ?`
       )
@@ -533,7 +685,7 @@ export async function aggregateHealth(env, now = Math.floor(Date.now() / 1000)) 
           calls: 0, successes: 0,
           latencies: [], tokens_sum: 0, tokens_n: 0,
           cost_sum: 0,
-          leak_calls: 0, fab_calls: 0, banned_calls: 0,
+          leak_calls: 0, fab_calls: 0, banned_calls: 0, malformed_calls: 0,
           retry_sum: 0,
         };
         buckets.set(key, b);
@@ -546,8 +698,25 @@ export async function aggregateHealth(env, now = Math.floor(Date.now() / 1000)) 
       if ((r.placeholder_leak_count || 0) > 0) b.leak_calls += 1;
       if (r.fabrication_flag === 1) b.fab_calls += 1;
       if ((r.banned_word_count || 0) > 0) b.banned_calls += 1;
+      if ((r.malformed_output_count || 0) > 0) b.malformed_calls += 1;
       // retry_rate per the spec is "(sum of retry_attempt - 1) / call_count"
       b.retry_sum += Math.max(0, (r.retry_attempt || 1) - 1);
+    }
+
+    // RELAY-COST-TIEBREAK-001: cheapest ADEQUATE cost-per-call per cost-sensitive
+    // task — the floor the cost tie-break scores every other provider against.
+    // Adequacy is judged on SUCCESS RATE (>= 0.85), NOT quality status: these tasks
+    // are inherently high-latency ('warning' on quality alone), so a status gate
+    // would leave the floor empty and the whole tie-break inert. A hard-failing
+    // provider still can't set an artificially low floor.
+    const minCostByTask = new Map();
+    for (const b of buckets.values()) {
+      if (!COST_SENSITIVE_TASKS.has(b.task) || !(b.calls > 0)) continue;
+      const cpc = b.cost_sum / b.calls;
+      if (!(cpc > 0)) continue;
+      if ((b.successes / b.calls) < 0.85) continue;   // only adequate providers set the floor
+      const cur = minCostByTask.get(b.task);
+      if (cur == null || cpc < cur) minCostByTask.set(b.task, cpc);
     }
 
     let upserts = 0;
@@ -561,9 +730,15 @@ export async function aggregateHealth(env, now = Math.floor(Date.now() / 1000)) 
         placeholder_leak_rate: b.leak_calls / b.calls,
         fabrication_rate: b.fab_calls / b.calls,
         banned_word_rate: b.banned_calls / b.calls,
+        malformed_output_rate: b.malformed_calls / b.calls,
         retry_rate: b.retry_sum / b.calls,
       };
-      const { health_score, status } = scoreHealth(metrics);
+      // RELAY-COST-TIEBREAK-001: fold a bounded cost penalty into health_score for
+      // an adequate provider on a cost-sensitive task (status stays quality-only).
+      const costPerCall = b.calls > 0 ? b.cost_sum / b.calls : 0;
+      const minCost = COST_SENSITIVE_TASKS.has(b.task) ? minCostByTask.get(b.task) : null;
+      const costCtx = (minCost != null && costPerCall > 0) ? { costPerCall, minCostPerCall: minCost } : null;
+      const { health_score, status } = scoreHealth(metrics, costCtx);
 
       await env.DB
         .prepare(
@@ -572,9 +747,9 @@ export async function aggregateHealth(env, now = Math.floor(Date.now() / 1000)) 
              call_count, success_count, success_rate,
              p50_latency_ms, p95_latency_ms, p99_latency_ms,
              avg_tokens, total_cost_usd,
-             placeholder_leak_rate, fabrication_rate, banned_word_rate, retry_rate,
+             placeholder_leak_rate, fabrication_rate, banned_word_rate, malformed_output_rate, retry_rate,
              health_score, status
-           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(provider, task, window_start, window_minutes) DO UPDATE SET
              call_count = excluded.call_count,
              success_count = excluded.success_count,
@@ -587,6 +762,7 @@ export async function aggregateHealth(env, now = Math.floor(Date.now() / 1000)) 
              placeholder_leak_rate = excluded.placeholder_leak_rate,
              fabrication_rate = excluded.fabrication_rate,
              banned_word_rate = excluded.banned_word_rate,
+             malformed_output_rate = excluded.malformed_output_rate,
              retry_rate = excluded.retry_rate,
              health_score = excluded.health_score,
              status = excluded.status`
@@ -600,6 +776,7 @@ export async function aggregateHealth(env, now = Math.floor(Date.now() / 1000)) 
           Number(metrics.placeholder_leak_rate.toFixed(4)),
           Number(metrics.fabrication_rate.toFixed(4)),
           Number(metrics.banned_word_rate.toFixed(4)),
+          Number(metrics.malformed_output_rate.toFixed(4)),
           Number(metrics.retry_rate.toFixed(4)),
           health_score, status
         )

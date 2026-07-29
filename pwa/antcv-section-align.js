@@ -88,6 +88,19 @@
     'contact_line',
   ]);
 
+  // ALIGN-STORM-001 (owner 2026-07-20, live-diagnosed): sections whose per-cell/row
+  // text-align is OWNED by a dedicated row-controls sidecar. This sidecar must NOT also
+  // write their alignment — two writers with DIFFERENT target values (234 writes the
+  // header 'center' / body getAlign, this one wrote editables 'left') never converge, so
+  // the idempotent "write if different" guards keep re-firing and wake each other's
+  // MutationObservers → the ~200 text-align-writes/sec storm (core_comp alone was 1638
+  // flips / 25s). Skip alignment application for these ids here (table-edge width handles
+  // are applied by a separate pass, so drag-resize is unaffected). core_comp = the
+  // CORE COMPETENCIES table, owned by antcv-core-competencies-row-controls-234.js.
+  const ALIGN_OWNED_ELSEWHERE = new Set([
+    'core_comp',
+  ]);
+
   // Unicode glyphs for the cycler face. Each face shows the CURRENT
   // alignment; clicking advances to the NEXT one. Using monospace box
   // characters keeps the button width stable across the four states.
@@ -200,6 +213,11 @@
     // contributor to the re-render storm. Stable state now produces no writes.
     if (sectionEl.getAttribute('data-antcv-align') !== alignment) sectionEl.setAttribute('data-antcv-align', alignment);
     const targets = sectionEl.querySelectorAll(TEXT_TARGET_SELECTOR);
+    // Live per-row alignment map for this section (fresh each pass) — the app does
+    // NOT re-render on antcv:item-align-changed, so reading it here is what makes a
+    // per-row CJLR take effect at all.
+    var __ia = {};
+    try { __ia = (JSON.parse(localStorage.getItem('antcvItemAlignment') || '{}') || {})[sectionEl.getAttribute('data-sid')] || {}; } catch (_) {}
     for (const t of targets) {
       // Skip targets that live inside a child section (nested data-sid).
       // Each section owns its own alignment; the inner one wins.
@@ -213,8 +231,18 @@
       // alone; the body cells + text still follow the section alignment. The
       // export already defaults the header to center (worker s.headerAlign).
       if (t.closest('th')) continue;
-      if (t.style.textAlign !== alignment) t.style.textAlign = alignment;
-      if (t.getAttribute('data-antcv-aligned') !== alignment) t.setAttribute('data-antcv-aligned', alignment);
+      // PER-ROW-CJLR-001 (owner 2026-07-14): a row the preview aligned PER-ROW stamps
+      // data-antcv-rowalign with the resolved value; honour it over the section
+      // alignment, otherwise this section-level reapply reverts every per-row CJLR
+      // back to justify within a frame (esp. roles, whose per-row key
+      // "roles.R.bullets.B" never matched the section value).
+      var __rkEl = t.closest('[data-antcv-rowkey]');
+      var __perRow = __rkEl && __ia[__rkEl.getAttribute('data-antcv-rowkey')];
+      var __raEl = t.closest('[data-antcv-rowalign]');
+      var __raVal = (__perRow && ALIGNMENTS.indexOf(__perRow) >= 0) ? __perRow : (__raEl && __raEl.getAttribute('data-antcv-rowalign'));
+      var __use = (__raVal && ALIGNMENTS.indexOf(__raVal) >= 0) ? effectiveAlignment(sectionEl, __raVal) : alignment;
+      if (t.style.textAlign !== __use) t.style.textAlign = __use;
+      if (t.getAttribute('data-antcv-aligned') !== __use) t.setAttribute('data-antcv-aligned', __use);
     }
     // Also align the section block itself so block-level elements
     // (like single-line headers) line up.
@@ -225,14 +253,35 @@
     // headline. Align the heading DIV (parent of the title editable) directly — but ONLY when the
     // user EXPLICITLY set an alignment via the cycler, so an untouched sidebar heading keeps its
     // centered default. Idempotent (guarded write); re-applied after each React commit by the observer.
+    // HEADLINE-CJLR-001 (revived 2026-07-14): align the section HEADLINE block.
+    // The heading is a marked DIV ([data-antcv-section-headline]); ITS textAlign
+    // is what positions the title — the inner editable span is display:inline, so
+    // aligning the span (as the loop above does) is visually inert. The old hook
+    // [data-edit-path="title"] no longer exists in the render, which is exactly
+    // why the "MAIN/SIDEBAR headline alignment" control did nothing on the preview.
     try {
       var __sid = sectionEl.getAttribute && sectionEl.getAttribute('data-sid');
-      var __map = (readPi()[PREFS_KEY] || {})[FIELD] || {};
-      if (__sid && ALIGNMENTS.indexOf(__map[__sid]) >= 0) {
-        var __titleEd = sectionEl.querySelector('[data-edit-path="title"]');
-        if (__titleEd && __titleEd.closest('[data-sid]') === sectionEl) {
-          var __head = __titleEd.parentElement;
-          if (__head && __head.style.textAlign !== alignment) __head.style.textAlign = alignment;
+      var __head = sectionEl.querySelector('[data-antcv-section-headline]');
+      if (__head && __head.closest('[data-sid]') === sectionEl) {
+        var __hAlign = null;
+        var __map = (readPi()[PREFS_KEY] || {})[FIELD] || {};
+        if (__sid && ALIGNMENTS.indexOf(__map[__sid]) >= 0) {
+          // explicit per-section cycler wins for its own headline.
+          __hAlign = alignment;
+        } else {
+          // Loc-level headline control (antcv-section-panel-211 store) — already
+          // drives EXPORT (docx-client loc-map); honour it in the PREVIEW too so
+          // the two agree. Only when the user explicitly touched that loc, so an
+          // untouched install keeps its default headline look.
+          var __loc = (sectionEl.closest && sectionEl.closest('[data-antcv-document-sidebar], .antcv-document-sidebar')) ? 'sidebar' : 'main';
+          var __lm = {}, __lt = {};
+          try { __lm = JSON.parse(localStorage.getItem('antcv.sectionHeadlineAlignment.v1') || '{}') || {}; } catch (_) {}
+          try { __lt = JSON.parse(localStorage.getItem('antcv.sectionHeadlineAlignment.userTouched.v1') || '{}') || {}; } catch (_) {}
+          if (__lt[__loc] && ALIGNMENTS.indexOf(__lm[__loc]) >= 0) __hAlign = __lm[__loc];
+        }
+        if (__hAlign) {
+          var __hUse = effectiveAlignment(sectionEl, __hAlign);
+          if (__head.style.textAlign !== __hUse) __head.style.textAlign = __hUse;
         }
       }
     } catch (_) {}
@@ -450,6 +499,7 @@
     for (const s of sections) {
       const sid = s.getAttribute('data-sid');
       if (!sid || SKIP_SECTION_IDS.has(sid)) continue;
+      if (ALIGN_OWNED_ELSEWHERE.has(sid)) continue;   // ALIGN-STORM-001: defer to the section's own row-controls owner
       applyAlignmentToSection(s, readAlignment(sid));
     }
   }
@@ -1475,7 +1525,7 @@
   window.AntcvSectionAlign = (function () {
     const prev = window.AntcvSectionAlign || {};
     return Object.assign({}, prev, {
-      version: '1.40.203',
+      version: '1.51.1604-align-storm-001',
       _injectPanelDefaultCyclers: function () { return false; },
       _readPanelDefault: readPanelDefault,
       _writePanelDefault: writePanelDefault,

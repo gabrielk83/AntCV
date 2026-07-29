@@ -34,7 +34,14 @@
 English (Native), Hebrew (Native), Spanish (Professional), Danish (B1)
 
 ## Eligibility
+> Structured eligibility fields mirrored from `personalInfo` v12 (2026-07-17); contact PII (phone, address, email) intentionally excluded. Re-run `gen_kernel_snapshot.mjs` for a canonical regen from D1.
 - **Security-clearance eligibility:** Resident in MISWG / NATO / EU countries (incl. Israel, a MISWG participant); eligible for Danish DDIS clearance review
+- **Security context:** Multinational industrial-security exposure across NATO, partner-nation and MISWG contexts; no existing clearance claimed
+- **Clean criminal record:** yes
+- **Family ties to Russia / Russian-allied territories:** none recorded
+- **Citizenship / base:** EU citizen; Copenhagen, Denmark
+- **References:** Danish and international references available on request
+- **Project availability:** available for Danish and global projects
 
 ## Work history
 ### Product / Project Expert — Kanzen Konsulenter ApS (2022 - 2026)

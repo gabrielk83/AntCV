@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.60-empty-optional-leak';
+  var VERSION = '1.51.1644-compl-selflimit';
   if (window.__antcvSectionsNormalize === VERSION) return;
   window.__antcvSectionsNormalize = VERSION;
 
@@ -136,24 +136,278 @@
     s = s.split(/[-–—,]/)[0].replace(/\([^)]*\)/g, ' ');
     return s.replace(/[^a-z0-9]+/g, ' ').trim();
   }
+  // BABEL-DEDUP-SCRIPT-001 (owner 2026-07-11 "13 pages of CV"): the dedup was
+  // TRANSLATION-BLIND. _titleCore stripped every non-[a-z0-9] char, so a zh/he/ar
+  // title normalised to EMPTY and never matched anything — every canon backfill /
+  // partial translate re-added roles as duplicates (en+zh trios, 52 roles, 13 pages).
+  // Fixes: (1) Unicode-aware cores so same-script duplicates match textually;
+  // (2) 至今/היום/עד היום/حتى الآن/إلى الآن/እስከ አሁን count as "present";
+  // (3) cross-script pairs (one wide-script title, one Latin) fall back to
+  // company+years identity — the babel-fish view: same position, two renderings.
+  var _WIDE_RE = /[一-鿿㐀-䶿֐-׿؀-ۿሀ-፿]/;
+  function _isWideTitle(t) { return _WIDE_RE.test(String(t == null ? '' : t)); }
   function _titleCore(t) {
     var s = String(t == null ? '' : t).toLowerCase().replace(/\([^)]*\)/g, ' ');
     s = s.split(/\s+[&/]\s+|\s+and\s+/)[0];
-    return s.replace(/[^a-z0-9]+/g, ' ').trim();
+    try { return s.replace(/[^\p{L}\p{N}]+/gu, ' ').trim(); }
+    catch (_) { return s.replace(/[^a-z0-9]+/g, ' ').trim(); }
+  }
+  // MERGE-COMPONENT-SWALLOW-001 (owner 2026-07-18): the normalised COMPONENTS of an
+  // explicit "X & Y" / "X / Y" / "X and Y" merged title. Splits on a SEPARATOR WITH
+  // SURROUNDING SPACES only, so "R&D" (no spaces) stays intact while "… & Team Leader"
+  // splits. Returns [] for a non-merged (single-part) title. Used to drop a bare
+  // component role that a merged role already covers (never both merged + a component).
+  function _mergedParts(t) {
+    var s = String(t == null ? '' : t).replace(/\([^)]*\)/g, ' ');
+    var parts = s.split(/\s+[&/]\s+|\s+and\s+/i);
+    if (parts.length < 2) return [];
+    var nm = function (x) {
+      x = String(x || '').toLowerCase();
+      try { return x.replace(/[^\p{L}\p{N}]+/gu, ' ').trim(); }
+      catch (_) { return x.replace(/[^a-z0-9]+/g, ' ').trim(); }
+    };
+    return parts.map(nm).filter(Boolean);
   }
   function _yrKey(y) {
     var n = (String(y == null ? '' : y).match(/\d{4}/g) || []).map(Number);
-    var present = /present|current|nu(?:værende|tid)?|pågår|løbende|ongoing/i.test(String(y || ''));
+    var present = /present|current|nu(?:værende|tid)?|pågår|løbende|ongoing|至今|现在|היום|עד\s*היום|حتى\s*الآن|إلى\s*الآن|እስከ\s*አሁን/i.test(String(y || ''));
     var start = n.length ? Math.min.apply(null, n) : 0;
     var end = present ? 9999 : (n.length ? Math.max.apply(null, n) : start);
     return start + '-' + end;
   }
+  // GEN-ID-CANON-MATCH-001 helper: same start year; ends equal, or one side is
+  // open-ended (present/nu/至今 → 9999) while the other ends this year or last
+  // ("2022 - 2026" vs "2022 - present" is the same tenure written two ways).
+  function _yrLoose(ya, yb) {
+    var ka = _yrKey(ya).split('-'), kb = _yrKey(yb).split('-');
+    if (ka[0] !== kb[0] || ka[0] === '0') return false;
+    var ea = +ka[1], eb = +kb[1];
+    if (ea === eb) return true;
+    var hi = Math.max(ea, eb), lo = Math.min(ea, eb);
+    return hi === 9999 && lo >= (new Date().getFullYear() - 1);
+  }
   function _samePosition(a, b) {
     if (!a || !b) return false;
+    // SAME-ID-SAME-POSITION-001 (owner 2026-07-12 "you kept english and danish
+    // versions at once"): roles carry stable canonical ids (kanzen, innoviz-ccr…)
+    // from generation/import — the LANGUAGE-agnostic identity. A Danish-titled
+    // gen role and its English PI source share the id; title/year text
+    // comparison can never see that across Latin↔Latin languages.
+    if (a.id != null && b.id != null && String(a.id) === String(b.id)) return true;
+    // BASE-ID-SAME-POSITION-001 (owner 2026-07-12, 25 visible roles): the
+    // completeness backfill re-adds a role under a SUFFIXED id (innoviz-ccr-2,
+    // mepro-tl-3) when the stored title is in another LANGUAGE (its compare is
+    // translation-blind). The id ROOT is the language-agnostic identity: same
+    // root = the same position in two renderings.
+    if (a.id != null && b.id != null) {
+      var __ba = String(a.id).replace(/-\d+$/, ''), __bb = String(b.id).replace(/-\d+$/, '');
+      if (__ba && __ba === __bb) return true;
+    }
+    // GEN-ID-CANON-MATCH-001: a generation emits schema ids (r1..r10) for the
+    // same positions the canon knows by name (kanzen). Same company key (company
+    // names are keep-verbatim invariants) + the same tenure (strict start, loose
+    // open end) = the same position. Start-year strictness keeps the Innoviz
+    // CCR/SA split (different starts, same company) apart.
+    var __gA = /^r\d+$/.test(String(a.id || '')), __gB = /^r\d+$/.test(String(b.id || ''));
+    if (__gA !== __gB) {
+      var __cka = _companyKey(a.company), __ckb = _companyKey(b.company);
+      if (__cka && __cka === __ckb && _yrLoose(a.years, b.years)) return true;
+    }
     if (_yrKey(a.years) !== _yrKey(b.years)) return false;
-    var ta = _titleCore(a.title || a.role), tb = _titleCore(b.title || b.role);
-    if (!ta || !tb) return false;
-    return ta === tb || ta.indexOf(tb + ' ') === 0 || tb.indexOf(ta + ' ') === 0;
+    var ra = a.title || a.role, rb = b.title || b.role;
+    var ta = _titleCore(ra), tb = _titleCore(rb);
+    if (ta && tb && (ta === tb || ta.indexOf(tb + ' ') === 0 || tb.indexOf(ta + ' ') === 0)) return true;
+    // BABEL-DEDUP-SCRIPT-001: cross-script pair (translated title vs canon) —
+    // same company + same span = the SAME real position in two renderings.
+    // BABEL-DEDUP-SCRIPT-002 (owner 2026-07-11 8-page PDF): a TRANSLATED company
+    // (特拉维夫大学) strips to an EMPTY Latin key, so the canon twin never
+    // matched and stayed/was un-hidden as an extra English role. Cross-script +
+    // same span + an unparseable company key on either side counts as the same
+    // position (the years gate at the top already matched).
+    if (_isWideTitle(ra) !== _isWideTitle(rb)) {
+      var ca = _companyKey(a.company), cb = _companyKey(b.company);
+      if (ca === cb || !ca || !cb) return true;
+    }
+    return false;
+  }
+
+  // ROLE-CANON-LANG-001 (owner 2026-07-13 "make sure your work fits in the golden
+  // gating matrix role control ... I want also danish spanish and chinese canon"):
+  // canonical role titles per language live in gold-rules.json `roles.canon_titles`
+  // (the ONE control site, GOLD-RULES-SITE-001); this embedded copy is the
+  // fetch-failure fallback, mirror-drift-gated by
+  // pwa/test/unit/gold-role-canon.test.mjs. The stable role id is the IDENTITY
+  // (SAME-ID/BASE-ID/GEN-ID-SAME-POSITION); the title is a per-language
+  // RENDERING — deterministic from this table, so LLM title drift
+  // ("Videnskabelig assistent" vs "Forskningsassistent") can never fork the
+  // same position across languages. Strict JSON between the markers.
+  var ROLE_CANON_FALLBACK = /* GOLD-ROLES-MIRROR-BEGIN */ {
+    "kanzen": { "en": "Product / Project Expert", "da": "Produkt- og projektekspert", "es": "Experto en Producto y Proyectos", "zh": "产品/项目专家" },
+    "innoviz-ccr": { "en": "Change Request Lead", "da": "Ansvarlig for ændringsanmodninger", "es": "Líder de Solicitudes de Cambio", "zh": "变更请求负责人" },
+    "innoviz-sa": { "en": "System Architect", "da": "Systemarkitekt", "es": "Arquitecto de Sistemas", "zh": "系统架构师" },
+    "sirin": { "en": "Senior Optics & Electro-Optics Engineer", "da": "Senioringeniør i optik og elektrooptik", "es": "Ingeniero Sénior de Óptica y Electroóptica", "zh": "高级光学与电光工程师" },
+    "mepro-tl": { "en": "Electro-Optics Team Leader", "da": "Teamleder for elektrooptik", "es": "Líder del Equipo de Electroóptica", "zh": "电光团队负责人" },
+    "mepro-eng": { "en": "R&D Electro-Optics Engineer", "da": "Udviklingsingeniør i elektrooptik", "es": "Ingeniero de I+D en Electroóptica", "zh": "电光研发工程师" },
+    "tau-security": { "en": "Security Guard, Student Dormitories", "da": "Vagt i studenterboliger", "es": "Guardia de Seguridad, Residencias Estudiantiles", "zh": "学生宿舍保安" },
+    "tau-research": { "en": "Research Assistant", "da": "Videnskabelig assistent", "es": "Asistente de Investigación", "zh": "研究助理" },
+    "tau-teaching": { "en": "Teaching Assistant", "da": "Undervisningsassistent", "es": "Asistente de Docencia", "zh": "助教" },
+    "tau-council": { "en": "Students Council Representative", "da": "Studenterrepræsentant", "es": "Representante del Consejo Estudiantil", "zh": "学生会代表" },
+    "idf": { "en": "Computer Systems Administrator", "da": "It-systemadministrator", "es": "Administrador de Sistemas Informáticos", "zh": "计算机系统管理员" },
+    "volunteer-wolves": { "en": "Team Operations Manager (foreningsarbejde)", "da": "Team Operations Manager (foreningsarbejde)", "es": "Gerente de Operaciones del Equipo (voluntariado)", "zh": "球队运营经理（协会志愿工作）" },
+    "earlier-career": { "en": "Earlier career", "da": "Tidligere karriere", "es": "Trayectoria inicial", "zh": "早期职业" }
+  } /* GOLD-ROLES-MIRROR-END */;
+  var __roleCanon = ROLE_CANON_FALLBACK;
+  try {
+    fetch('gold-rules.json?v=' + VERSION, { cache: 'no-cache' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) { if (j && j.roles && j.roles.canon_titles) __roleCanon = j.roles.canon_titles; })
+      .catch(function () {});
+  } catch (_) {}
+  function __roleCanonTitle(id, L) {
+    var e = __roleCanon[String(id == null ? '' : id).replace(/-\d+$/, '')];
+    if (!e) return null;
+    return e[L] || e.en || null;
+  }
+  function roleCanonTitles(cv) {
+    var L = 'en';
+    try { L = String(localStorage.getItem('language') || 'en').replace(/"/g, '').slice(0, 2); } catch (_) {}
+    if (L !== 'en' && L !== 'da' && L !== 'es' && L !== 'zh') return null; // he/am/ar: keep the translate output
+    var xi = cv.findIndex(function (e) { return e && e.type === 'experience' && Array.isArray(e.roles); });
+    if (xi < 0) return null;
+    var changed = false;
+    var roles = cv[xi].roles.map(function (r) {
+      if (!r || r.id == null) return r;
+      var e = __roleCanon[String(r.id).replace(/-\d+$/, '')];
+      if (!e) return r;
+      var want = e[L];
+      if (!want || r.title === want) return r;
+      // A merged title with MORE "&"-segments than the canon is a deliberate
+      // merge-or-split structure (gen prompt rule) — never overwrite it.
+      var segs = function (t) { return String(t == null ? '' : t).split(' & ').length; };
+      if (segs(r.title) > segs(e.en)) return r;
+      changed = true;
+      return Object.assign({}, r, { title: want });
+    });
+    if (!changed) return null;
+    var copy = cv.slice();
+    copy[xi] = Object.assign({}, copy[xi], { roles: roles });
+    return copy;
+  }
+
+  // MERGED-TITLE-ORDER-001 (owner, repeatedly: "Electro-Optics Team Leader &
+  // R&D Electro-Optics Engineer" must read "Electro-Optics Engineer & Team
+  // Leader"). The merge rule is CORE (IC) function FIRST, the management
+  // descriptor second, with a repeated domain phrase collapsed. The gen prompt
+  // says this but the LLM leaks the wrong order, and roleCanonTitles SKIPS
+  // merged titles (more &-segments than the single canon), so nothing enforced
+  // it. Deterministic reorder here — runs on every experience title.
+  var _MGMT_RE = /\b(team\s+lead(?:er)?|lead(?:er)?|manager|head|chief|director|coordinator|supervisor)\b/i;
+  var _IC_RE = /\b(engineer|architect|scientist|developer|specialist|analyst|designer|researcher|consultant|expert|administrator|assistant|representative|guard)\b/i;
+  function _reorderTitle(t) {
+    var s = String(t == null ? '' : t);
+    if (s.indexOf(' & ') < 0) return t;
+    var segs = s.split(' & ').map(function (x) { return x.trim(); }).filter(Boolean);
+    if (segs.length < 2) return t;
+    var firstIc = -1, firstMg = -1, i;
+    for (i = 0; i < segs.length; i++) {
+      if (firstIc < 0 && _IC_RE.test(segs[i])) firstIc = i;
+      if (firstMg < 0 && _MGMT_RE.test(segs[i])) firstMg = i;
+    }
+    if (firstIc < 0 || firstMg < 0 || firstIc < firstMg) return t; // absent or already IC-first
+    var ic = [], mg = [], other = [];
+    segs.forEach(function (seg) {
+      if (_IC_RE.test(seg)) ic.push(seg);
+      else if (_MGMT_RE.test(seg)) mg.push(seg);
+      else other.push(seg);
+    });
+    var ordered = ic.concat(other, mg);
+    // word-level dedup: drop, from each following segment, words already in the
+    // lead (the shared domain), but always keep the role-kind keyword.
+    var inLead = {};
+    ordered[0].toLowerCase().split(/\s+/).forEach(function (w) { inLead[w] = 1; });
+    for (i = 1; i < ordered.length; i++) {
+      var kept = ordered[i].split(/\s+/).filter(function (w) {
+        return !inLead[w.toLowerCase()] || _MGMT_RE.test(w) || _IC_RE.test(w);
+      });
+      if (kept.length) ordered[i] = kept.join(' ');
+    }
+    return ordered.join(' & ');
+  }
+  function reorderMergedTitles(cv) {
+    var xi = cv.findIndex(function (e) { return e && e.type === 'experience' && Array.isArray(e.roles); });
+    if (xi < 0) return null;
+    var changed = false;
+    var roles = cv[xi].roles.map(function (r) {
+      if (!r || r.title == null) return r;
+      var nt = _reorderTitle(r.title);
+      if (nt !== r.title) { changed = true; return Object.assign({}, r, { title: nt }); }
+      return r;
+    });
+    if (!changed) return null;
+    var copy = cv.slice();
+    copy[xi] = Object.assign({}, copy[xi], { roles: roles });
+    return copy;
+  }
+
+  // BABEL-RICHBLOCK-RESIDUE-001: see the call site in the pipeline. Wide ribbon
+  // only; drops pure-Latin lead-in rows (Foundation/Hands-on/Professionally)
+  // from a rich_block that already carries a wide-script item.
+  // BABEL-RICHBLOCK-RESIDUE-CONVERGE-001 (2026-07-21): the drop is RE-ENABLED. It was
+  // disabled on 2026-07-11 because it entered a write war with legacy re-adders
+  // (foundation-758 pre-345 caches, shape-guard eager writes, languageCache echoes) —
+  // "preview jumpy / edit closes", one cycle every ~5s. Rather than complete the
+  // re-adder inventory (open-ended, and a NEW re-adder would reopen it), the drop now
+  // carries the same STICKY, remover-agnostic decision that converged the roles storm:
+  // drop a given residue set ONCE per (document x ribbon language x the content that
+  // SURVIVES the drop). If the identical residue is back while everything else is
+  // byte-identical, a re-adder owns those rows — hold, log once, and let the wide-script
+  // twin stand alongside it rather than flicker the editor. The write-side per-section
+  // guard is the second net. A real edit / translate pass changes the surviving content
+  // and re-arms the drop; a page reload re-arms it too.
+  var __rbrDone = { key: '', sigs: {} };
+  function dropRichBlockLatinResidue(list, docTag) {
+    var wideRibbon = false;
+    var L = 'en';
+    try { L = String(localStorage.getItem('language') || 'en').replace(/"/g, '').slice(0, 2); wideRibbon = L === 'zh' || L === 'he' || L === 'am' || L === 'ar'; } catch (_) {}
+    if (!wideRibbon) return null;
+    var LEAD_RE = /^(foundation|hands-?on|professionally)\s*:?\s*$/i;
+    var changed = false;
+    var dropped = [];
+    var out = list.map(function (s, si) {
+      if (!s || s.type !== 'rich_block' || !Array.isArray(s.items) || s.items.length < 2) return s;
+      var hasWide = s.items.some(function (it) { return it && _WIDE_RE.test(String(it.b || '') + String(it.t || '')); });
+      if (!hasWide) return s;
+      var kept = s.items.filter(function (it) {
+        if (!it) return false;
+        var b = String(it.b || ''), t = String(it.t || '');
+        var latinOnly = !_WIDE_RE.test(b + t);
+        if (latinOnly && LEAD_RE.test(b.trim())) {
+          changed = true;
+          dropped.push(__secKey(s, si) + '|' + b.trim().toLowerCase() + '|' + t.slice(0, 40));
+          return false;
+        }
+        return true;
+      });
+      return kept.length !== s.items.length ? Object.assign({}, s, { items: kept }) : s;
+    });
+    if (!changed) return null;
+    // STICKY decision — see the note above. The key is what SURVIVES (JSON.stringify(out)),
+    // so the add/drop churn itself cannot move it, while any genuine content change does.
+    var __doc = '';
+    try { var __m = JSON.parse(localStorage.getItem('meta') || '{}') || {}; __doc = String(__m.company || '') + '|' + String(__m.role || ''); } catch (_) {}
+    var __key = String(docTag || '') + '||' + __doc + '||' + L + '||' + JSON.stringify(out);
+    var __sig = dropped.join('~');
+    if (__rbrDone.key !== __key) __rbrDone = { key: __key, sigs: {} };   // real change -> re-arm
+    if (__rbrDone.sigs[__sig]) {
+      if (__rbrDone.sigs[__sig] === 1) {
+        __rbrDone.sigs[__sig] = 2;         // log once, not once per cycle
+        try { console.warn('[415] rich_block Latin-residue drop HELD (BABEL-RICHBLOCK-RESIDUE-CONVERGE-001) — the ' + dropped.length + ' row(s) it dropped were re-added while the rest of the block was unchanged, so a legacy re-adder owns them; leaving the residue in place rather than flickering the editor.'); } catch (_) {}
+      }
+      return null;
+    }
+    __rbrDone.sigs[__sig] = 1;
+    try { console.log('[415] dropped ' + dropped.length + ' Latin lead-in residue row(s) from a wide-script rich_block'); } catch (_) {}
+    return out;
   }
 
   // ROLE-DECOMP-001 (owner 2026-06-16): "decompose the merged roles ... merging is
@@ -169,7 +423,14 @@
   function dedupeRoles(cv) {
     var xi = cv.findIndex(function (e) { return e && e.type === 'experience' && Array.isArray(e.roles); });
     if (xi < 0) return null;
-    var norm = function (s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); };
+    // BABEL-DEDUP-SCRIPT-001: Unicode-aware like _titleCore — a zh/he/ar title used
+    // to norm to EMPTY here, so same-script exact duplicates (产品 / 项目专家 ×3)
+    // never collapsed.
+    var norm = function (s) {
+      s = String(s || '').toLowerCase();
+      try { return s.replace(/[^\p{L}\p{N}]+/gu, ' ').trim(); }
+      catch (_) { return s.replace(/[^a-z0-9]+/g, ' ').trim(); }
+    };
     var yearsOf = function (s) { return (String(s || '').match(/\d{4}/g) || []).map(Number); };
     var overlap = function (a, b) {
       var ya = yearsOf(a), yb = yearsOf(b);
@@ -184,16 +445,115 @@
       var a = roles[i], b = roles[j];
       if (!a || !b) continue;
       var ta = norm(a.title), tb = norm(b.title);
-      if (!ta || !tb || ta !== tb) continue; // ROLE-DECOMP-001: exact-title dup only (was containment)
-      if (_companyKey(a.company) !== _companyKey(b.company)) continue; // COMPANY-VARIANT-KEY-001
-      if (!overlap(a.years, b.years)) continue;
+      var crossScript = _isWideTitle(a.title) !== _isWideTitle(b.title);
+      if (crossScript) {
+        // BABEL-DEDUP-SCRIPT-001: a translated title vs its canon (产品 / 项目专家 vs
+        // Product / Project Expert) is the SAME position in two renderings — the
+        // exact-title rule can never see it. Collapse via _samePosition (years +
+        // company identity). Survivor = the RIBBON-language rendering: when the
+        // ribbon is a wide-script language keep the wide-script title, else the
+        // Latin one. (i is dropped below, so arrange a=dropped, b=survivor.)
+        if (!_samePosition(a, b)) continue;
+        var wantWide = (function () { try { var L = String(localStorage.getItem('language') || 'en').replace(/"/g, '').slice(0, 2); return L === 'zh' || L === 'he' || L === 'am' || L === 'ar'; } catch (_) { return false; } })();
+        if (_isWideTitle(b.title) !== wantWide) continue; // only drop i when j is the wanted rendering
+      } else {
+        // BASE-ID-DEDUP-001 + GEN-ID-CANON-MATCH-001 (owner 2026-07-12, 25 VISIBLE
+        // roles): same-Latin cross-LANGUAGE twins (da title vs en title) never hit
+        // the exact-title rule. Same id root (innoviz-ccr vs innoviz-ccr-2), or a
+        // gen schema id (r1) vs the canonical id at the same company/tenure, is
+        // the same position. Survivor = richer bullets; tie → the canonical
+        // (suffixless, non-schema) id. Bullets are NOT moved across (they may be
+        // in another language; the id-resolved translate pass heals the survivor).
+        var __idA = String(a.id == null ? '' : a.id), __idB = String(b.id == null ? '' : b.id);
+        var __sameRoot = __idA && __idB && __idA !== __idB && __idA.replace(/-\d+$/, '') === __idB.replace(/-\d+$/, '');
+        var __genPair = /^r\d+$/.test(__idA) !== /^r\d+$/.test(__idB) &&
+          _companyKey(a.company) && _companyKey(a.company) === _companyKey(b.company) &&
+          _yrLoose(a.years, b.years);
+        if (__genPair) {
+          // Survivor must be the CANONICAL id — the Results pin machinery keys
+          // on it (id:kanzen). Adopt the gen twin's fresh title + bullets: they
+          // are the tailored rendering; the identity (id, canonical years) stays.
+          if (/^r\d+$/.test(__idB)) continue;
+          if (nbul(a) > 0) { b.title = a.title || b.title; b.bullets = a.bullets; }
+        } else if (__sameRoot) {
+          var __synthA = /-\d+$/.test(__idA);
+          var __synthB = /-\d+$/.test(__idB);
+          if (nbul(b) < nbul(a)) continue;                       // survivor must not be poorer
+          if (nbul(b) === nbul(a) && __synthB && !__synthA) continue; // tie: keep the suffixless id
+        } else {
+          if (!ta || !tb || ta !== tb) continue; // ROLE-DECOMP-001: exact-title dup only (was containment)
+          if (_companyKey(a.company) !== _companyKey(b.company)) continue; // COMPANY-VARIANT-KEY-001
+          if (!overlap(a.years, b.years)) continue;
+        }
+      }
       drop[i] = true;
       if (a.on !== false) b.on = true;
-      // keep the richer content: if the dropped role carried MORE bullets, move them to the survivor.
-      if (nbul(a) > nbul(b)) b.bullets = a.bullets;
+      // keep the richer content: if the dropped role carried MORE bullets, move them to the
+      // survivor — but NEVER move cross-script bullets onto a ribbon-language survivor
+      // (that would re-inject the other language's content).
+      if (!crossScript && nbul(a) > nbul(b)) b.bullets = a.bullets;
     }
     var keys = Object.keys(drop);
     if (!keys.length) return null;
+    var kept = roles.filter(function (_, i) { return !drop[i]; });
+    var copy = cv.slice();
+    copy[xi] = Object.assign({}, copy[xi], { roles: kept });
+    return copy;
+  }
+
+  // MERGE-COMPONENT-SWALLOW-001 (owner 2026-07-18, "I see both 'System Architect &
+  // Change Request Lead' and 'System Architect'"): the kernel stores ATOMIC roles and
+  // MERGING is the app's job at generation; the rule is NEVER both a merged role AND
+  // one of its atomic components (gabriel-cv-facts). dedupeRoles is exact-title-only
+  // (ROLE-DECOMP-001 dropped containment because it over-merged), so it deliberately
+  // will not collapse a merged "X & Y" against a bare "X" or "Y". This pass enforces
+  // the rule PRECISELY: when a role's title is an explicit "X & Y" merge and ANOTHER
+  // role's exact title equals X or Y (same company, overlapping years), the bare
+  // COMPONENT is dropped and the merged role kept. It fires only on an explicit merge
+  // (not generic containment), so "Product Manager" never swallows "Project Manager".
+  // Covers the three the owner reported: "System Architect & Change Request Lead" ⊃
+  // "System Architect"; "Research Assistant & Teaching Assistant" ⊃ "Teaching
+  // Assistant" (2nd component — the reason _titleCore's first-part-only match missed
+  // it); "R&D Electro-Optics Engineer & Team Leader" ⊃ "R&D Electro-Optics Engineer".
+  function swallowMergedComponents(cv) {
+    var xi = cv.findIndex(function (e) { return e && e.type === 'experience' && Array.isArray(e.roles); });
+    if (xi < 0) return null;
+    var nm = function (s) {
+      s = String(s || '').toLowerCase();
+      try { return s.replace(/[^\p{L}\p{N}]+/gu, ' ').trim(); }
+      catch (_) { return s.replace(/[^a-z0-9]+/g, ' ').trim(); }
+    };
+    var yearsOf = function (s) { return (String(s || '').match(/\d{4}/g) || []).map(Number); };
+    var overlap = function (a, b) {
+      var ya = yearsOf(a), yb = yearsOf(b);
+      if (!ya.length || !yb.length) return true;
+      return Math.min.apply(null, ya) <= Math.max.apply(null, yb) && Math.min.apply(null, yb) <= Math.max.apply(null, ya);
+    };
+    var nbul = function (r) { return Array.isArray(r && r.bullets) ? r.bullets.length : 0; };
+    var roles = cv[xi].roles.slice();
+    var drop = {};
+    for (var i = 0; i < roles.length; i++) {
+      var m = roles[i]; if (!m || drop[i]) continue;
+      var parts = _mergedParts(m.title || m.role); if (parts.length < 2) continue;
+      for (var j = 0; j < roles.length; j++) {
+        if (i === j || drop[j]) continue;
+        // ROLES-STORM-CONVERGE-002 (owner 2026-07-22): NEVER drop an already-HIDDEN
+        // component. The merge invariant is only "no merged role beside a VISIBLE
+        // component" — a hidden (on:false) constituent already satisfies it. Dropping
+        // hidden constituents was the sole perturbation that made repairExperienceCompleteness
+        // see them as "missing" every pass and re-add them → the endless delete/restore storm.
+        var c = roles[j]; if (!c || c.on === false) continue;
+        if (_mergedParts(c.title || c.role).length >= 2) continue; // never swallow another merged role
+        var ct = nm(c.title || c.role); if (!ct) continue;
+        if (parts.indexOf(ct) < 0) continue;                       // exact component match only
+        if (_companyKey(m.company) !== _companyKey(c.company)) continue;
+        if (!overlap(m.years, c.years)) continue;
+        drop[j] = true;
+        if (c.on !== false) m.on = true;              // component was visible → keep the merged visible
+        if (!nbul(m) && nbul(c)) m.bullets = c.bullets; // never lose content if the merged had none
+      }
+    }
+    var keys = Object.keys(drop); if (!keys.length) return null;
     var kept = roles.filter(function (_, i) { return !drop[i]; });
     var copy = cv.slice();
     copy[xi] = Object.assign({}, copy[xi], { roles: kept });
@@ -244,7 +604,18 @@
     var roles = cv[xi].roles;
     var cwIdx = []; roles.forEach(function (r, i) { if (isCW(r)) cwIdx.push(i); });
     if (!cwIdx.length) return null;
-    var TITLE = 'Team Operations Manager (foreningsarbejde)';
+    // CW-CANON-LANG-001 (owner 2026-07-11 "this should be translated fully"): the
+    // canonical title was forced back to ENGLISH on every pass, reverting the
+    // translated 球队运营经理（协会志愿工作）. On a zh ribbon the canon target IS the
+    // zh form; other wide ribbons keep whatever the translate produced (no forcing).
+    var __cwL = 'en';
+    try { __cwL = String(localStorage.getItem('language') || 'en').replace(/"/g, '').slice(0, 2); } catch (_) {}
+    // ROLE-CANON-LANG-001: the CW canonical title now comes from the gold-rules
+    // roles.canon_titles table (en/da/es/zh; unknown Latin languages fall back
+    // to the en canon, matching the old behavior); he/am/ar keep the translate
+    // output (null = leave the rendered title alone).
+    var TITLE = (__cwL === 'he' || __cwL === 'am' || __cwL === 'ar') ? null
+      : (__roleCanonTitle('volunteer-wolves', __cwL) || 'Team Operations Manager (foreningsarbejde)');
     var COMPANY = 'Pan Idræt';
     var CW_BULLET = 'Operations and assistant-coaching for Copenhagen Wolves RFC, an inclusive amateur rugby club under Pan Idræt.';
     var keep = cwIdx[0];
@@ -253,7 +624,7 @@
     for (var k = 1; k < cwIdx.length; k++) { (Array.isArray(roles[cwIdx[k]].bullets) ? roles[cwIdx[k]].bullets : []).forEach(function (b) { if (bullets.indexOf(b) < 0) bullets.push(b); }); }
     if (!bullets.some(function (b) { return /copenhagen wolves rfc/i.test(String(typeof b === 'string' ? b : (b && (b.b || b.t)) || '')); })) bullets.unshift(CW_BULLET);
     var changed = false;
-    if (base.title !== TITLE) { base.title = TITLE; changed = true; }
+    if (TITLE && base.title !== TITLE) { base.title = TITLE; changed = true; } // CW-CANON-LANG-001: null TITLE = leave the rendered title alone
     if (base.company !== COMPANY) { base.company = COMPANY; changed = true; }
     if (cwIdx.length > 1 || (Array.isArray(roles[keep].bullets) ? roles[keep].bullets.length : 0) !== bullets.length) { base.bullets = bullets; changed = true; }
     if (!changed) return null;
@@ -870,6 +1241,25 @@
   // real personalInfo role whose title+company is NOT present in the section is re-inserted as
   // HIDDEN (on:false) — present and recoverable in one click, never lost. Owner rule (the gen
   // prompt's own words): a hidden role keeps its content; a DROPPED role forces a retype.
+  // ROLES-STORM-CONVERGE-001 (owner 2026-07-21, live antcv.pages.dev 1.51.1792, Ibsen
+  // Photonics app AT REST): `sections` written ~40x in 31s forever, the console looping
+  // "restored 3 missing role(s) hidden" + "re-applied normalisers after restore". The
+  // add-side __complRepeat counter below could not converge it: it is TIME-windowed
+  // (3 hits / 6s) while the poll is 2.5s, so it suppressed at most one pass in three
+  // and re-armed — and it RESET on any pass that found nothing missing, which a strict
+  // add/remove alternation produces. Replaced by a STICKY decision:
+  //
+  //   restore a given missing-set ONCE per (document x VISIBLE experience substructure).
+  //
+  // If the same set is missing AGAIN while the visible CV is byte-identical, then
+  // something removed what we just restored — restoring it a second time can only
+  // sustain the storm. The restored roles are HIDDEN (a recover-in-one-click safety
+  // net, never visible content), so holding costs the user nothing. Keying on the
+  // VISIBLE substructure is what makes this remover-agnostic: the churn only toggles
+  // the hidden roles, so the key is stable across the loop, while any genuine edit or
+  // regeneration changes it and re-arms the restore. A page reload also re-arms it.
+  var __complDone = { key: '', sigs: {} };
+  var __complRepeat = null;   // STORM-OSCILLATION-GUARD-001 (add-side): { sig, first, n } churn tracker
   function repairExperienceCompleteness(cv) {
     var idx = -1;
     for (var i = 0; i < cv.length; i++) { if (cv[i] && cv[i].id === 'experience') { idx = i; break; } }
@@ -892,13 +1282,62 @@
       if (!r || ph(r)) return false;
       var t = norm(r.title || r.role);
       if (!t) return false;                           // unnamed PI slot -> skip
+      // ROLE-COVERS-001 (gen-runner merged / 'Earlier career' entries): such an
+      // entry declares the source kernel-role ids it covers via __covers, so its
+      // constituents are ALREADY represented and must NOT be re-added (the year
+      // span differs from the merged entry, so _samePosition alone misses them —
+      // the 6-role compaction was doubling back to 13 on open). Owner option (b).
+      var rid = r.id != null ? String(r.id) : '';
+      if (rid && roles.some(function (s) {
+        return s && Array.isArray(s.__covers) && s.__covers.map(String).indexOf(rid) >= 0;
+      })) return false;
       return !roles.some(function (s) { return s && _samePosition(s, r); });
     }).map(function (r) {
       var o = {}; KEEP.forEach(function (k) { if (r[k] !== undefined) o[k] = r[k]; });
       o.on = false;                                   // restore HIDDEN — does not change the visible CV
       return o;
     });
-    if (!missing.length) return null;
+    // NOTE (ROLES-STORM-CONVERGE-001): do NOT clear __complDone here. "Nothing missing"
+    // is the state right after our own restore lands; clearing on it is precisely how the
+    // old counter re-armed itself every other pass and kept the storm alive.
+    if (!missing.length) { __complRepeat = null; return null; }
+    // STORM-OSCILLATION-GUARD-001 (add-side): this restore keeps finding the SAME roles
+    // "missing" every pass because roleCanonTitles shortens a title so _samePosition no
+    // longer matches its PI source, and dropCanonHiddenDups / a competing writer strips the
+    // restored hidden copy right back out — an endless add<->drop churn that dispatches
+    // antcv:sections-updated and re-renders the whole app (the freeze + downstream text-align
+    // storm). The restored roles are HIDDEN (on:false) — a recover-in-one-click safety net,
+    // NOT visible content — so it is safe to STOP re-adding them once we detect the churn.
+    // Signature = the missing set's identity (id|title|company); if we produce the identical
+    // set 3+ times within 6s, suppress the restore (return null) until the signature changes
+    // or the window lapses. A genuine, new missing set (real edit/regen) resets the counter
+    // and restores normally.
+    var __sig = missing.map(function (r) { return String(r.id != null ? r.id : '') + '|' + norm(r.title || r.role) + '|' + norm(r.company); }).join('~');
+    var __nowC = Date.now();
+    if (__complRepeat && __complRepeat.sig === __sig && (__nowC - __complRepeat.first) < 6000) {
+      __complRepeat.n++;
+      if (__complRepeat.n >= 3) return null;   // churning — hold the add side so the storm can converge
+    } else {
+      __complRepeat = { sig: __sig, first: __nowC, n: 1 };
+    }
+    // ROLES-STORM-CONVERGE-001 (sticky, remover-agnostic — see the note on __complDone):
+    // one restore per (document x visible experience substructure x missing set). The
+    // second time the same set turns up missing under an unchanged visible CV, a
+    // competing writer is stripping our restore; hold instead of feeding the loop.
+    var __vis = roles.filter(function (r) { return r && r.on !== false; })
+      .map(function (r) { return String(r.id != null ? r.id : '') + '|' + norm(r.title || r.role) + '|' + norm(r.company); }).join('~');
+    var __doc = '';
+    try { var __m = JSON.parse(localStorage.getItem('meta') || '{}') || {}; __doc = String(__m.company || '') + '|' + String(__m.role || ''); } catch (_) {}
+    var __key = __doc + '||' + __vis;
+    if (__complDone.key !== __key) __complDone = { key: __key, sigs: {} };   // real change -> re-arm
+    if (__complDone.sigs[__sig]) {
+      if (__complDone.sigs[__sig] === 1) {
+        __complDone.sigs[__sig] = 2;          // log once, not once per cycle
+        try { console.warn('[415] experience-completeness HELD (ROLES-STORM-CONVERGE-001) — the ' + missing.length + ' role(s) it restored were removed again while the visible CV was unchanged, so a competing writer owns them; not restoring a second time. Un-hide from Settings if you want them back.'); } catch (_) {}
+      }
+      return null;
+    }
+    __complDone.sigs[__sig] = 1;
     var copy = cv.slice();
     copy[idx] = Object.assign({}, sec, { roles: roles.concat(missing) });
     try { console.log('[415] experience-completeness restored ' + missing.length + ' missing role(s) hidden'); } catch (_) {}
@@ -958,6 +1397,78 @@
   // Forces, Communication Corps" beside the visible "IDF, Communication Corps". A genuinely-missing
   // role restored HIDDEN by repairExperienceCompleteness has NO visible counterpart, so it is kept.
   // Idempotent: returns null once no hidden role duplicates a visible one.
+  // UNSOL-FULL-BREADTH-001 (owner 2026-07-11 "some roles are still hidden for
+  // unsolicited — should not happen"): the owner rule is "Unsolicited keeps the
+  // full breadth". On an unsolicited doc (pillar match): (a) DROP hidden merge
+  // artifacts — 3+ "&"-joined title segments are targeted-mode merge products
+  // (a legit dual title like "Team Operations Manager & Assistant Coach" has 2
+  // segments and is kept); (b) UN-HIDE a hidden role that is NOT a duplicate of
+  // a visible one (dropCanonHiddenDups owns the duplicate case).
+  function unsolFullBreadth(cv) {
+    var unsol = false;
+    try {
+      var m = JSON.parse(localStorage.getItem('meta') || '{}') || {};
+      var co = String(m.company || '').trim();
+      unsol = !!(co && window.__antcvUnsol && window.__antcvUnsol(co));
+      if (!unsol && !co) {
+        var ac = String(localStorage.getItem('antcv:activeAppCompany') || '').replace(/"/g, '').trim();
+        unsol = !!(ac && window.__antcvUnsol && window.__antcvUnsol(ac));
+      }
+    } catch (_) {}
+    if (!unsol) return null;
+    var xi = cv.findIndex(function (e) { return e && e.type === 'experience' && Array.isArray(e.roles); });
+    if (xi < 0) return null;
+    var roles = cv[xi].roles;
+    var changed = false;
+    var out = [];
+    for (var i = 0; i < roles.length; i++) {
+      var r = roles[i];
+      if (!r) continue;
+      if (r.on === false) {
+        var t = String(r.title || '');
+        if (t.split(/\s&\s/).length >= 3) { changed = true; continue; } // merge artifact — drop
+        // UNSOL-FULL-BREADTH-002 (owner 2026-07-11 8-page PDF, pages 7-8 English):
+        // never un-hide a LATIN-titled role onto a wide-script doc — it is the
+        // English canon rendering of a role already visible in the ribbon
+        // language (years-format drift hid it from _samePosition), not a missing
+        // role. Un-hiding it appended English pages.
+        var wideRibbonUFB = false;
+        try { var LU = String(localStorage.getItem('language') || 'en').replace(/"/g, '').slice(0, 2); wideRibbonUFB = LU === 'zh' || LU === 'he' || LU === 'am' || LU === 'ar'; } catch (_) {}
+        if (wideRibbonUFB && !_isWideTitle(r.title)) { out.push(r); continue; } // wrong-language rendering — stays hidden
+        var dup = false;
+        for (var j = 0; j < roles.length; j++) {
+          var v = roles[j];
+          if (v && v !== r && v.on !== false && _samePosition(r, v)) { dup = true; break; }
+        }
+        if (!dup) { r = Object.assign({}, r, { on: true }); changed = true; } // full breadth — un-hide
+      } else {
+        // UNSOL-FULL-BREADTH-002 reverse leg: a VISIBLE Latin-titled role on a
+        // wide-script ribbon whose company/years match a visible wide-script
+        // role is the English canon twin the earlier pass wrongly un-hid
+        // (the 8-page PDF). Re-hide it.
+        var wideR2 = false;
+        try { var LU2 = String(localStorage.getItem('language') || 'en').replace(/"/g, '').slice(0, 2); wideR2 = LU2 === 'zh' || LU2 === 'he' || LU2 === 'am' || LU2 === 'ar'; } catch (_) {}
+        if (wideR2 && !_isWideTitle(r.title)) {
+          for (var j2 = 0; j2 < roles.length; j2++) {
+            var v2 = roles[j2];
+            if (!v2 || v2 === r || v2.on === false || !_isWideTitle(v2.title)) continue;
+            var ck = _companyKey(r.company);
+            if ((ck && ck === _companyKey(v2.company)) || _samePosition(r, v2)) {
+              r = Object.assign({}, r, { on: false });
+              changed = true;
+              break;
+            }
+          }
+        }
+      }
+      out.push(r);
+    }
+    if (!changed) return null;
+    var copy = cv.slice();
+    copy[xi] = Object.assign({}, copy[xi], { roles: out });
+    return copy;
+  }
+
   function dropCanonHiddenDups(cv) {
     var idx = -1;
     for (var i = 0; i < cv.length; i++) { if (cv[i] && cv[i].id === 'experience') { idx = i; break; } }
@@ -1491,6 +2002,46 @@
     return changed ? out : null;
   }
 
+  // STORM-OSCILLATION-GUARD-001 (owner 2026-07-20, live-diagnosed): the normalize pipeline
+  // can enter an A/B ping-pong with a COMPETING writer — roleCanonTitles shortens a role
+  // title so _samePosition no longer matches its personalInfo source, repairExperienceCompleteness
+  // re-adds that PI role HIDDEN, and dropCanonHiddenDups / another sidecar strips it again, so
+  // every pass produces a genuinely-different `sections` (the "restored N missing role(s)" +
+  // "re-applied normalisers after restore" logs looping endlessly). That write+dispatch storm
+  // re-renders the whole app continuously — the measured freeze AND the downstream text-align
+  // re-apply storm (certs/interests "jumpiness"). The per-pass `__after === __before` guard can't
+  // catch it (each pass IS a real diff). Fix: refuse to WRITE a serialised result we already wrote
+  // in the last few seconds — reproducing a recent state means another writer is reverting us, so
+  // feeding it again only sustains the loop. A genuine, distinct normalisation (different content)
+  // always writes. Time-bounded so a legitimate later re-visit of an old state is unaffected.
+  var __recentWrites = [];   // [{ h: serialisedSections, t: ms }]
+  var __OSC_WINDOW_MS = 4000;
+  // ROLES-STORM-CONVERGE-001 (write-side): the whole-blob key above is defeated by a
+  // PARALLEL writer. On the live Ibsen app a translation/babel pass rewrote unrelated
+  // rows (the zh/English tools residue) on every cycle, so the serialised blob was never
+  // byte-identical twice and this guard never matched — while the experience section
+  // ping-ponged between exactly two shapes. Key a second guard on the EXPERIENCE
+  // SUBSTRUCTURE alone: if we are about to re-produce an experience section we already
+  // wrote seconds ago (i.e. it was reverted in between), keep the STORED one and let the
+  // rest of the normalisation through. Unrelated work still lands; only the contested
+  // substructure stops being re-fed.
+  // Generalised over SECTIONS (not just experience): the same tug-of-war shape shows up
+  // wherever a belt and a legacy re-adder disagree about one section — the rich_block
+  // Latin-residue war (BABEL-RICHBLOCK-RESIDUE-001) is the second instance. One guard
+  // covers both docs and every future belt.
+  var __recentSecWrites = [];   // [{ k: 'cv:experience', h: serialised section, t: ms }]
+  function __secKey(s, i) { return String((s && (s.id || s.type)) || ('#' + i)); }
+  // Serialise each section by key. A DUPLICATED key is unusable (we could not tell the
+  // two apart on the next pass), so it maps to null and is never held.
+  function __secMap(list) {
+    var m = {};
+    (list || []).forEach(function (s, i) {
+      var k = __secKey(s, i);
+      m[k] = Object.prototype.hasOwnProperty.call(m, k) ? null : JSON.stringify(s);
+    });
+    return m;
+  }
+
   function normalize() {
     // EDIT-GUARD-001 (owner 2026-06-19): defer all normalisation while the user is
     // actively editing — rewriting sections mid-edit re-renders the preview and
@@ -1527,6 +2078,15 @@
       var fe = foundedToEstablished(cv); if (fe) { cv = fe; changed = true; }
       var pt = stripPatentFromRoles(cv); if (pt) { cv = pt; changed = true; }
       var d = dedupeRoles(cv); if (d) { cv = d; changed = true; }
+      // MERGE-COMPONENT-SWALLOW-001: after dedupe (exact-title twins gone), drop a bare
+      // component role that an explicit merged "X & Y" title already covers — BEFORE
+      // roleCanonTitles rewrites titles, so the component/part text still matches.
+      var msc = swallowMergedComponents(cv); if (msc) { cv = msc; changed = true; }
+      // ROLE-CANON-LANG-001: canonical per-language titles AFTER dedupe has
+      // collapsed twins, so the survivor gets the ribbon-language canon title.
+      var rct = roleCanonTitles(cv); if (rct) { cv = rct; changed = true; }
+      // MERGED-TITLE-ORDER-001: core (IC) function FIRST in a merged title.
+      var rmt = reorderMergedTitles(cv); if (rmt) { cv = rmt; changed = true; }
       var ro = canonicalRoleOrder(cv); if (ro) { cv = ro; changed = true; }
       var bo = canonicalBulletOrder(cv); if (bo) { cv = bo; changed = true; }
       var f = stripFounder(cv); if (f) { cv = f; changed = true; }
@@ -1542,6 +2102,7 @@
       var rec = repairExperienceCompleteness(cv); if (rec) { cv = rec; changed = true; }
       var hes = hideEmptyRoleSlots(cv); if (hes) { cv = hes; changed = true; }
       var dch = dropCanonHiddenDups(cv); if (dch) { cv = dch; changed = true; }
+      var ufb = unsolFullBreadth(cv); if (ufb) { cv = ufb; changed = true; }
       var ex = explodeAdditionalToSections(cv); if (ex) { cv = ex; changed = true; }
       var pa = partitionAdditional(cv); if (pa) { cv = pa; changed = true; }
       var jr = scrubJuniorRugby(cv); if (jr) { cv = jr; changed = true; }
@@ -1564,6 +2125,28 @@
       var clChanged = false;
       if (cl) { var dlc = defaultLoc(cl); if (dlc) { cl = dlc; clChanged = true; } }
       if (cl) { var wic = inlineifyLabeledText(cl, { workStyleOnly: true }); if (wic) { cl = wic; clChanged = true; } }
+      // BABEL-RICHBLOCK-RESIDUE-001 (owner 2026-07-11 screenshot: "Foundation: I
+      // connect what I do best…" stayed English inside an otherwise-zh CL): a
+      // rich_block accumulated a LATIN duplicate of a lead-in row next to its
+      // ribbon-language twin (partial-pass damage). On a wide-script ribbon, drop
+      // a pure-Latin item whose lead label is one of the known lead-ins
+      // (Foundation / Hands-on / Professionally) when the same block already
+      // carries at least one wide-script item — the residue class only, so a
+      // legit English quote inside a zh item is never touched.
+      // BABEL-RICHBLOCK-RESIDUE-CONVERGE-001 (2026-07-21): RE-ENABLED. It was disabled on
+      // 2026-07-11 ("preview jumpy / edit closes") because it lost a write war to legacy
+      // re-adders (foundation-758 pre-345 caches, shape-guard eager writes, languageCache
+      // echoes) at ~one cycle / 5s. The re-adder inventory is still incomplete and a NEW
+      // re-adder would reopen it either way, so the drop is now remover-agnostic instead:
+      // a sticky one-shot decision (see dropRichBlockLatinResidue) plus the per-section
+      // write guard below. Worst case it drops the residue once and then stands down —
+      // never the endless cycle. Kill switch: antcv:disable-richblock-residue-drop.
+      var __rbrOff = false;
+      try { var __rv = localStorage.getItem('antcv:disable-richblock-residue-drop'); __rbrOff = (__rv === '1' || __rv === 'true'); } catch (_) {}
+      if (!__rbrOff) {
+        var rbr = dropRichBlockLatinResidue(cv, 'cv'); if (rbr) { cv = rbr; changed = true; }
+        if (cl) { var rbc = dropRichBlockLatinResidue(cl, 'cl'); if (rbc) { cl = rbc; clChanged = true; } }
+      }
       if (clChanged) changed = true;
       if (!changed) return;
       var next = Object.assign({}, b, { cv: cv });
@@ -1573,6 +2156,45 @@
       // else this fires the antcv:sections-updated storm that flickers the whole app.
       var __after = JSON.stringify(next);
       if (__after === __before) return;
+      // ROLES-STORM-CONVERGE-001 (write-side, substructure-keyed): hold back any CONTESTED
+      // section — one we already wrote within the window and that has since been reverted —
+      // while still writing everything else this pass normalised. Applies per section, to
+      // BOTH docs, so one belt losing a tug-of-war never blocks the other belts' work.
+      var __nowE = Date.now();
+      __recentSecWrites = __recentSecWrites.filter(function (e) { return __nowE - e.t < __OSC_WINDOW_MS; });
+      ['cv', 'cl'].forEach(function (doc) {
+        if (!Array.isArray(next[doc]) || !Array.isArray(b[doc])) return;
+        var mBefore = __secMap(b[doc]), mAfter = __secMap(next[doc]);
+        var held = null;
+        var out = next[doc].map(function (s, i) {
+          var k = __secKey(s, i);
+          var h = mAfter[k];
+          if (!k || h == null || mBefore[k] == null || h === mBefore[k]) return s;   // unchanged / ambiguous key
+          if (!__recentSecWrites.some(function (e) { return e.k === doc + ':' + k && e.h === h; })) {
+            __recentSecWrites.push({ k: doc + ':' + k, h: h, t: __nowE });
+            return s;
+          }
+          held = (held || []).concat(k);
+          try { return JSON.parse(mBefore[k]); } catch (_) { return s; }             // keep the STORED one
+        });
+        if (held) {
+          next = Object.assign({}, next);
+          next[doc] = out;
+          try { console.warn('[sections-normalize-415] ' + doc + ' section oscillation held (ROLES-STORM-CONVERGE-001) — a competing writer keeps reverting ' + held.join(', ') + '; keeping the stored one and writing the rest'); } catch (_) {}
+        }
+      });
+      __after = JSON.stringify(next);
+      if (__after === __before) return;          // the contested sections were the only change
+      // STORM-OSCILLATION-GUARD-001: if we already wrote this exact result within the window,
+      // a competing writer is reverting it every cycle — writing again only sustains the
+      // sections-updated storm (continuous re-render + text-align re-apply). Hold instead.
+      var __nowW = Date.now();
+      __recentWrites = __recentWrites.filter(function (e) { return __nowW - e.t < __OSC_WINDOW_MS; });
+      if (__recentWrites.some(function (e) { return e.h === __after; })) {
+        try { console.warn('[sections-normalize-415] oscillation held — a competing writer keeps reverting this normalisation; not re-dispatching to break the storm'); } catch (_) {}
+        return;
+      }
+      __recentWrites.push({ h: __after, t: __nowW });
       localStorage.setItem('sections', __after);
       try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: SRC } })); } catch (_) {}
       try { console.log('[sections-normalize-415] re-applied normalisers (recs/founder/loc-default) after restore'); } catch (_) {}

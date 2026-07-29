@@ -176,7 +176,8 @@
     Array.prototype.forEach.call(document.querySelectorAll('[data-antcv-altcircle="1"]'), function (c) { c.removeAttribute('data-antcv-altcircle'); c.removeAttribute('data-antcv-alttrigger'); });
   }
   function c354_paint() {
-    if (!isMobile()) { c354_clearAll(); return; }
+    // ALT-CIRCLES-ALL-WIDTHS-001 (owner 2026-07-23 "open vertically instead of
+    // horizontally"): collapse + vertical dropdown at EVERY width (was mobile-only).
     c354_groups().forEach(function (g) {
       g.host.setAttribute('data-antcv-altdrop', '1');
       if (g.host.getAttribute('data-antcv-altdrop-open') !== '1') g.host.setAttribute('data-antcv-altdrop-open', '0');
@@ -199,7 +200,6 @@
   }
   // 354 capture-phase click: collapsed → open (swallow); open → switch + close.
   document.addEventListener('click', function (ev) {
-    if (!isMobile()) return;
     var t = ev.target; if (!t || !t.closest) return;
     var host = t.closest('[data-antcv-altdrop="1"]'); if (!host) return;
     var circle = t.closest('[data-antcv-altcircle="1"]'); if (!circle || !host.contains(circle)) return;
@@ -212,7 +212,6 @@
   }, true);
   // tap elsewhere closes any open group
   document.addEventListener('click', function (ev) {
-    if (!isMobile()) return;
     Array.prototype.forEach.call(document.querySelectorAll('[data-antcv-altdrop="1"][data-antcv-altdrop-open="1"]'), function (h) {
       if (!h.contains(ev.target)) h.setAttribute('data-antcv-altdrop-open', '0');
     });
@@ -236,7 +235,7 @@
       '}',
       '@media (max-width:380px){.antcv-react-bottom-nav button,.antcv-react-bottom-nav [role="button"]{font-size:9px!important;padding:0 4px!important;}}',
       /* [354] */
-      '@media ' + MQ + '{',
+      '@media all{',
       '[data-antcv-altdrop="1"][data-antcv-altdrop-open="0"] [data-antcv-altcircle="1"]:not([data-antcv-alttrigger="1"]){display:none!important;}',
       '[data-antcv-altdrop="1"]{position:relative;}',
       '[data-antcv-altdrop="1"][data-antcv-altdrop-open="1"]{z-index:9002;}',

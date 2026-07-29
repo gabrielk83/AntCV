@@ -208,10 +208,55 @@ function stripBlock(html, tag) {
   return html.replace(re, ' ');
 }
 
+// STRIP-SMALL-FORM-001 (2026-07-22): strip only SMALL <tag> blocks (cookie-consent /
+// search boxes). SAP SuccessFactors RMK wraps the ENTIRE job listing — JD included — in
+// one large <form> (its apply/save form), so a blanket form-strip deleted the JD and left
+// only the <title>. A consent/search form is tiny; a JD-bearing form is large. The cap
+// keeps small forms stripped while preserving the big one.
+function stripSmallBlocks(html, tag, maxLen) {
+  const re = new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)</${tag}>`, 'gi');
+  return html.replace(re, (m, inner) => (inner.length <= maxLen ? ' ' : m));
+}
+
 function extractTitle(html) {
   const m = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html);
   if (!m) return '';
   return decodeEntities(m[1].replace(/\s+/g, ' ').trim()).slice(0, 300);
+}
+
+// LINKEDIN-CARD-EXTRACT-001 (owner 2026-07-21 "manual add lost company/position for LinkedIn"):
+// the LinkedIn guest jobPosting FRAGMENT (what the guest rewrite fetches) has NO <title> tag, so
+// extractTitle() returned '' and the tracker's Company/Role auto-fill had nothing to derive from.
+// The fragment DOES carry the role in <h2 class="…top-card-layout__title / topcard__title…"> and
+// the company in <a class="…topcard__org-name-link…"> (verified live on job 4439533198). Pull both
+// so the tracker can pre-fill the table again.
+function extractLinkedInCard(html, bodyText) {
+  const clean = (s) => decodeEntities(String(s || '').replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
+  let role = '', company = '';
+  const tm = /<h2\b[^>]*class="[^"]*(?:top-card-layout__title|topcard__title)[^"]*"[^>]*>([\s\S]*?)<\/h2>/i.exec(html);
+  if (tm) role = clean(tm[1]).slice(0, 200);
+  // org-name-link is the POSTING company — but for a recruiter posting that is the AGENCY
+  // ("PMs for Hire"), not the hiring employer (owner 2026-07-21: "the company is DTU Wind").
+  let orgName = '';
+  const cm = /<a\b[^>]*class="[^"]*topcard__org-name-link[^"]*"[^>]*>([\s\S]*?)<\/a>/i.exec(html);
+  if (cm) orgName = clean(cm[1]).slice(0, 120);
+  if (!orgName) { const fm = /<span\b[^>]*class="[^"]*topcard__flavor(?![-\w])[^"]*"[^>]*>([\s\S]*?)<\/span>/i.exec(html); if (fm) orgName = clean(fm[1]).slice(0, 120); }
+  // Real employer: recruiters append the actual employer as the title's trailing "- <Employer>".
+  // Prefer it over the agency org-name when it is SHORT and appears VERBATIM in the JD body (a
+  // strong signal it is the hiring company, not part of the role), and strip it from the role.
+  // Direct postings have no such suffix -> orgName (the real employer) is kept.
+  const body = String(bodyText || '');
+  const parts = role.split(/\s+[–—-]\s+/);
+  if (parts.length >= 2) {
+    const last = parts[parts.length - 1].trim();
+    const esc = last.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (last && last.split(/\s+/).length <= 5 && esc && new RegExp('\\b' + esc + '\\b', 'i').test(body)) {
+      company = last;
+      role = parts.slice(0, -1).join(' - ').trim();
+    }
+  }
+  if (!company) company = orgName;
+  return { role, company };
 }
 
 
@@ -466,7 +511,7 @@ function htmlToText(html) {
   s = stripBlock(s, 'header');
   s = stripBlock(s, 'footer');
   s = stripBlock(s, 'aside');
-  s = stripBlock(s, 'form');     // cookie consent, search forms
+  s = stripSmallBlocks(s, 'form', 2500);   // STRIP-SMALL-FORM-001: consent/search forms only — keep a JD-bearing form
 
   // Convert structural tags to newlines so block boundaries survive.
   s = s.replace(/<\/(p|div|section|article|li|h[1-6]|tr|td|th|br)>/gi, '\n');
@@ -609,6 +654,46 @@ async function tryEightfoldJson(apiUrl, originalUrl, getCORS, request, env, t0, 
   }), { status: 200, headers: { 'Content-Type': 'application/json', ...CORS } });
 }
 
+
+// JD-FETCH-JSONLD-001 (2026-07-22): SEO-optimised career SPAs — SAP SuccessFactors RMK
+// (career*.successfactors.eu), many Workday / Phenom tenants — render the JD only via
+// JavaScript, so the server HTML BODY is a near-empty shell and the fetch returned only
+// the <title>. But for Google Jobs they DO embed the full posting as a schema.org
+// JobPosting in <script type="application/ld+json">. htmlToText strips <script>, so that
+// description was invisible. Parse the JSON-LD and use its description when it beats the
+// body extraction. Generic — helps every ATS that ships the JobPosting microdata.
+export function extractJobPostingJsonLd(html) {
+  try {
+    var re = /<script\b[^>]*type\s*=\s*["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+    var m;
+    while ((m = re.exec(html))) {
+      var raw = (m[1] || '').trim();
+      if (!raw) continue;
+      var data;
+      try { data = JSON.parse(raw); } catch (_) { continue; }
+      var nodes = Array.isArray(data) ? data : (data && Array.isArray(data['@graph']) ? data['@graph'] : [data]);
+      for (var i = 0; i < nodes.length; i++) {
+        var n = nodes[i];
+        if (!n || typeof n !== 'object') continue;
+        var ty = n['@type'];
+        var isJob = ty === 'JobPosting' || (Array.isArray(ty) && ty.indexOf('JobPosting') >= 0);
+        if (!isJob) continue;
+        var desc = htmlToText(String(n.description || ''));
+        if (desc.length < MIN_GOOD_TEXT_CHARS) continue;
+        var org = n.hiringOrganization;
+        var company = (org && typeof org === 'object') ? String(org.name || '').trim() : (typeof org === 'string' ? org.trim() : '');
+        var loc = '';
+        try {
+          var jl = n.jobLocation; if (Array.isArray(jl)) jl = jl[0];
+          var addr = jl && jl.address;
+          if (addr && typeof addr === 'object') loc = [addr.addressLocality, addr.addressRegion, addr.addressCountry].filter(Boolean).join(', ');
+        } catch (_) {}
+        return { description: desc, title: String(n.title || '').trim(), company: company, location: loc };
+      }
+    }
+  } catch (_) {}
+  return null;
+}
 
 // ─── Main handler ────────────────────────────────────────────────
 
@@ -765,13 +850,15 @@ export async function handleFetchJdUrl(request, env, getCORS) {
   }
 
   const htmlLen = html.length;
-  const title = extractTitle(html);
+  let title = extractTitle(html);
+  let liCompany = '';
+  const __isLinkedIn = String(rewriteNote || '').startsWith('linkedin-guest-rewrite');
 
   // L3: strip consent banners + commercial popups before extraction.
   const cleaned = stripConsentAndPopups(html);
 
   // L1: locate the main JD content region.
-  const { html: mainHtml, via: extractedVia } = extractMainContent(cleaned);
+  let { html: mainHtml, via: extractedVia } = extractMainContent(cleaned);
 
   // Convert to text.
   let text = htmlToText(mainHtml);
@@ -782,10 +869,46 @@ export async function handleFetchJdUrl(request, env, getCORS) {
     text = htmlToText(cleaned);
   }
 
+  // JD-FETCH-JSONLD-001: SPA career sites (SuccessFactors, Workday…) embed the full JD as
+  // a schema.org JobPosting even when the body is a JS shell — prefer it when it beats the
+  // body extraction (it is the clean, Google-Jobs-grade description).
+  const __jsonLd = extractJobPostingJsonLd(html);
+  if (__jsonLd && __jsonLd.description.length > text.length) {
+    const __hdr = [__jsonLd.title, __jsonLd.location].filter(Boolean).join(' — ');
+    text = (__hdr && !__jsonLd.description.slice(0, 200).includes(__jsonLd.title) ? __hdr + '\n\n' : '') + __jsonLd.description;
+    extractedVia = 'schema-jsonld';
+    if (__jsonLd.company && !liCompany) liCompany = __jsonLd.company;
+    if (__jsonLd.title) title = __jsonLd.title;
+  }
+
+  // JD-FETCH-STUB-REGION-001: SAP SuccessFactors RMK (career*.successfactors.eu) renders the
+  // JD as real DOM but OUTSIDE <main>/[role=main] with no semantic container, so
+  // extractMainContent locks onto a short header stub (title + requisition line ~260 chars)
+  // that clears MIN_GOOD_TEXT_CHARS and the real JD, deeper in the page, is never reached. A
+  // genuine JD is rarely under ~700 chars, so when the located region is that short AND the
+  // full cleaned document carries far more text (>3x), the region is a stub — prefer the
+  // fuller document (nav noise is harmless to the JD-analysis prompt; a title-only "JD" is
+  // useless). Never overrides a clean schema.org JobPosting result.
+  if (extractedVia !== 'schema-jsonld' && extractedVia !== 'whole-document' && text.length < 700) {
+    const whole = htmlToText(cleaned);
+    if (whole.length > text.length * 3 && whole.length >= MIN_GOOD_TEXT_CHARS) {
+      text = whole;
+      extractedVia = 'whole-document-stub-rescue';
+    }
+  }
+
   let truncated = false;
   if (text.length > MAX_TEXT_CHARS) {
     text = text.slice(0, MAX_TEXT_CHARS);
     truncated = true;
+  }
+
+  // LINKEDIN-CARD-EXTRACT-001: the guest fragment has no <title>; pull role + REAL employer from
+  // the top-card (body-confirming a recruiter-appended employer) so the tracker pre-fills again.
+  if (__isLinkedIn) {
+    const card = extractLinkedInCard(html, text);
+    if (card.role) title = card.role;
+    if (card.company) liCompany = card.company;
   }
 
   // L1 gate: flag low-quality / consent / wall content.
@@ -795,6 +918,7 @@ export async function handleFetchJdUrl(request, env, getCORS) {
     ok: true,
     text,
     title,
+    company: liCompany || undefined,   // LINKEDIN-CARD-EXTRACT-001: employer for the tracker pre-fill
     source: url.toString(),
     fetched_url: fetchUrl,
     rewrite: rewriteNote,

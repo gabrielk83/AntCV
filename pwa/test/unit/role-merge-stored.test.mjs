@@ -26,7 +26,11 @@ function stubMerge(roles) {
     if (!grp || grp.length < 2) { out.push(r); return; }
     if (emitted[k]) return; emitted[k] = true;
     const titles = []; grp.forEach((g) => { if (g.title && titles.indexOf(g.title) < 0) titles.push(g.title); });
-    out.push(Object.assign({}, grp[0], { title: titles.join(' & ') }));
+    // MERGED-RESULTS-UNION (rule 17): mirror of the real merge's results union.
+    const rs = []; grp.forEach((g) => { const t = String(g.results == null ? '' : g.results).trim(); if (t && rs.indexOf(t) < 0) rs.push(t); });
+    const m = Object.assign({}, grp[0], { title: titles.join(' & ') });
+    if (rs.length) m.results = rs.join(' ');
+    out.push(m);
   });
   return out;
 }
@@ -126,4 +130,73 @@ test('re-arms on a restored pre-merge snapshot (stamp travels in the blob)', () 
   store.set('sections', JSON.stringify(secs(INNOVIZ)));
   api._apply();
   assert.ok(roles(store).some((r) => r.__antcvStoredMergeRole), 're-merged after restore');
+});
+
+// ── SECTIONS-STORM-2026-07-23 ───────────────────────────────────────────────
+
+test('substructure stamp: an app.js-style {cv,cl} root rebuild does NOT re-arm the merge', () => {
+  const { api, store } = load({ ...TARGETED, sections: JSON.stringify(secs(INNOVIZ)) });
+  api._apply();
+  const b = JSON.parse(store.get('sections'));
+  assert.ok(b._roleMergeStamp, 'root stamp written');
+  assert.ok(b.cv.find((s) => s.id === 'experience')._roleMergeStamp, 'section stamp written');
+  // the storm shape: a writer rebuilds the blob root as {cv,cl}, dropping the root stamp
+  store.set('sections', JSON.stringify({ cv: b.cv, cl: b.cl }));
+  const before = store.get('sections');
+  api._apply();
+  assert.equal(store.get('sections'), before, 'section stamp holds — no rewrite, no re-merge');
+  assert.equal(roles(store).filter((r) => r.__antcvStoredMergeRole).length, 1, 'no doubling');
+});
+
+test('merged role carries BOTH constituents\' results (rule 17 union)', () => {
+  const { api, store } = load({ ...TARGETED, sections: JSON.stringify(secs(INNOVIZ)) });
+  api._apply();
+  const merged = roles(store).find((r) => r.__antcvStoredMergeRole);
+  assert.equal(merged.results, 'R1 R2', 'both results, constituent order');
+});
+
+test('RESULTS-HEAL: a stored merged role with collapsed results is repaired from its hidden constituents', () => {
+  // the live DTU Wind shape: merged role kept only grp[0].results after repeated re-merges
+  const stored = secs([
+    { id: 'r1__merged', title: 'Change Request Lead & System Architect', company: 'Innoviz', years: '2017 - 2025', on: true, bullets: ['a'], results: 'R1', __antcvStoredMergeRole: true },
+    { id: 'r1', title: 'Change Request Lead', company: 'Innoviz', years: '2020 - 2025', on: false, bullets: ['a'], results: 'R1', __antcvStoredMergeHidden: true },
+    { id: 'r2', title: 'System Architect', company: 'Innoviz', years: '2017 - 2020', on: false, bullets: ['b'], results: 'R2', __antcvStoredMergeHidden: true },
+    { id: 'r3', title: 'Product Expert', company: 'Kanzen', years: '2022 - 2026', on: true, bullets: ['c'], results: 'R3' },
+  ]);
+  const { api, store } = load({ ...TARGETED, sections: JSON.stringify(stored) });
+  api._apply();
+  const merged = roles(store).find((r) => r.__antcvStoredMergeRole);
+  assert.equal(merged.results, 'R1 R2', 'collapsed results healed to the full union');
+  assert.equal(roles(store).filter((r) => r.__antcvStoredMergeRole).length, 1, 'heal does not re-merge');
+});
+
+test('RESULTS-HEAL: an owner-edited results line is never clobbered', () => {
+  const stored = secs([
+    { id: 'r1__merged', title: 'Change Request Lead & System Architect', company: 'Innoviz', years: '2017 - 2025', on: true, bullets: ['a'], results: 'Owner wrote this line herself.', __antcvStoredMergeRole: true },
+    { id: 'r1', title: 'Change Request Lead', company: 'Innoviz', years: '2020 - 2025', on: false, bullets: ['a'], results: 'R1', __antcvStoredMergeHidden: true },
+    { id: 'r2', title: 'System Architect', company: 'Innoviz', years: '2017 - 2020', on: false, bullets: ['b'], results: 'R2', __antcvStoredMergeHidden: true },
+  ]);
+  const { api, store } = load({ ...TARGETED, sections: JSON.stringify(stored) });
+  api._apply();
+  const merged = roles(store).find((r) => r.__antcvStoredMergeRole);
+  assert.equal(merged.results, 'Owner wrote this line herself.', 'owner edit sticks');
+});
+
+test('RESULTS-HEAL: runs even when the blob is already stamped (repairs without re-merging)', () => {
+  const stored = secs([
+    { id: 'r1__merged', title: 'Change Request Lead & System Architect', company: 'Innoviz', years: '2017 - 2025', on: true, bullets: ['a'], results: '', __antcvStoredMergeRole: true },
+    { id: 'r1', title: 'Change Request Lead', company: 'Innoviz', years: '2020 - 2025', on: false, bullets: ['a'], results: 'R1', __antcvStoredMergeHidden: true },
+    { id: 'r2', title: 'System Architect', company: 'Innoviz', years: '2017 - 2020', on: false, bullets: ['b'], results: 'R2', __antcvStoredMergeHidden: true },
+  ]);
+  const { api, store } = load({ ...TARGETED, sections: JSON.stringify(stored) });
+  api._apply();                                     // stamps + heals
+  const merged1 = roles(store).find((r) => r.__antcvStoredMergeRole);
+  assert.equal(merged1.results, 'R1 R2', 'empty results healed');
+  // collapse again (a stale writer) while the stamp is in place
+  const b = JSON.parse(store.get('sections'));
+  b.cv.find((s) => s.id === 'experience').roles.find((r) => r.__antcvStoredMergeRole).results = 'R2';
+  store.set('sections', JSON.stringify(b));
+  api._apply();
+  const merged2 = roles(store).find((r) => r.__antcvStoredMergeRole);
+  assert.equal(merged2.results, 'R1 R2', 'stamped blob still heals collapsed results');
 });

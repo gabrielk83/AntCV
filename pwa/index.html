@@ -13,8 +13,23 @@
   <link rel="manifest" href="manifest.json?v=1.50.400-enctype">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="antcv-packages-registry.css?v=1.50.849">
+  <link rel="stylesheet" href="antcv-packages-registry.css?v=1.51.3101-copenhagen-mockup-parity">
   <title>AntCV</title>
+  <!-- UNSOL-PILLAR-LANG-001 (owner 2026-07-11): the "Unsolicited" sentinel is a PILLAR
+       that must match every language variant of the word, not the English literal only —
+       the babel-fish translate pass stores io.company in the ribbon language. ONE canonical
+       matcher, defined before every external script; app.js comparisons + sidecar gates all
+       route through it. The variant set below is PINNED in the translate prompt (app.js Pr)
+       so a translated company value always re-matches. Writes still seed the canonical
+       English "Unsolicited". Strict: empty/blank does NOT match (callers add their own
+       empty-handling, as before). -->
+  <script>
+    window.__ANTCV_UNSOL_RE = /^(unsolicited|open\s+application|n\/?a|uopfordret(\s+ansøgning)?|åben\s+ansøgning|candidatura\s+espontánea|postulación\s+espontánea|solicitud\s+espontánea|主动申请|自荐|开放式申请|מועמדות\s+יזומה|פנייה\s+יזומה|ያልተጠየቀ\s+ማመልከቻ|طلب\s+عفوي|تقديم\s+عفوي|طلب\s+توظيف\s+عفوي)$/i;
+    window.__antcvUnsol = function (v) {
+      v = String(v == null ? "" : v).trim();
+      return !!v && window.__ANTCV_UNSOL_RE.test(v);
+    };
+  </script>
   <!-- v1.50.167: in-app debug logger. Loads FIRST so window error handlers are
        installed earliest. Captures uncaught errors + breadcrumbs to localStorage
        SYNCHRONOUSLY (survives a crash + reload) and renders a plain-DOM viewer
@@ -29,7 +44,16 @@
        installed first. Namespaces antcv:lastJdText/applicationQuestions/
        activeAppCompany per current-app-id (tracked per TAB) so two parallel sessions
        (two tabs / desktop+mobile / two browsers) can't contaminate each other's JD. -->
-  <script src="antcv-jd-scope.js?v=1.51.73"></script>
+  <script src="antcv-jd-scope.js?v=1.51.3762-jd-staging-consume"></script>
+  <!-- TAB-DOC-ISOLATION-001 (2026-07-10): per-TAB snapshot of THIS tab's own
+       generated document. Same-device tabs share localStorage; a parallel tab
+       generating a CV clobbers the shared `sections`/`meta`. This sidecar keeps a
+       private per-tab sessionStorage snapshot and, on boot, restores this tab's own
+       document if a DIFFERENT tab last wrote the shared sections. Additive, no fetch
+       wrap. MUST run before app.js reads `sections` — placed here among the early
+       sidecars. (Wired 1.51.300 after browser-qa sidecars-live found it served but
+       never <script>-tagged, dead since it shipped at 1.51.253.) -->
+  <script src="antcv-tab-doc-isolation.js?v=1.51.300-tab-doc-iso"></script>
   <!-- PTR-STALE-GUARD-001 (register row 39a residual, 2026-07-04): pure staleness
        check for the active_application pointer adoption in app.js cold-restore /
        Read-from-Cloud — a SAME-device pointer can still be stale (race / lagging
@@ -37,7 +61,7 @@
        protects against a DIFFERENT device. Self-contained, no dependencies beyond
        localStorage + the optional AntcvJdScope.deviceId() above; must load before
        app.js reads window.AntcvPointerStaleGuard at cold-restore. -->
-  <script src="antcv-pointer-stale-guard.js?v=1.51.135"></script>
+  <script src="antcv-pointer-stale-guard.js?v=1.51.334-unsol-pillar"></script>
   <!-- BOOT-STORM-DAMP-001: coalesce bursts of antcv:sections-updated so the boot storm
        doesn't peg the main thread (the "gate hangs / refresh twice" freeze). Loaded FIRST
        so its listener registers before any other; kill switch antcv:disable-storm-damp. -->
@@ -317,7 +341,7 @@
        island sets inline order:27; override to 20. */
     #antcv-react-personal-languages { order:20 !important; width:100% !important; flex:0 0 100% !important; box-sizing:border-box; }
   </style>
-<link rel="stylesheet" href="./antcv-mobile-controls.css?v=1.51.163">
+<link rel="stylesheet" href="./antcv-mobile-controls.css?v=1.51.195">
 <script>
   (function hydrateDocxWorker(){
     function isUsable(u){
@@ -343,9 +367,9 @@
   })();
 </script>
 <script type="module">
-  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.162';
+  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.3482-sections-storm';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.175-babel-fish';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.3803-word-sheet';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -384,10 +408,10 @@
         auth.src = 'antcv-auth.js?v=1.51.92-analytics-401-scope';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.51.175';
+          app.src = 'app.js?v=1.51.3802-salmon-break-site';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.175-babel-fish';
+            vo.src = 'antcv-version-override.js?v=1.51.3803-word-sheet';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -434,20 +458,30 @@
 (function(){
   async function clearAntcvHardReset(opts){
     opts=opts||{};
-    var keepProxy='';
-    try{ keepProxy=localStorage.getItem('proxyUrl')||''; }catch(e){}
-    try{ localStorage.clear(); }catch(e){}
-    try{ localStorage.removeItem('session'); localStorage.removeItem('antcv:auth:token'); localStorage.removeItem('antcv:auth:email'); localStorage.removeItem('antcv:auth:expires_at'); }catch(e){}
-    try{ if(keepProxy) localStorage.setItem('proxyUrl', keepProxy); }catch(e){}
-    try{ sessionStorage.clear(); }catch(e){}
-    try{
-      document.cookie.split(';').forEach(function(c){
-        var name=c.replace(/^ +/,'').split('=')[0];
-        if(!name) return;
-        document.cookie=name+'=;expires='+new Date(0).toUTCString()+';path=/';
-        document.cookie=name+'=;expires='+new Date(0).toUTCString()+';path=/;SameSite=None;Secure';
-      });
-    }catch(e){}
+    // HARDRESET-LOCAL-ONLY-001 (owner 2026-07-11): a bare ?hardReset=1 must NOT wipe
+    // local data or sign the user out. Clearing localStorage/auth fired 'storage' events
+    // that cascaded a logout+reset to every OTHER tab on the device (and felt like it hit
+    // other devices), destroying in-flight generations. Tabs now auto-detect new versions,
+    // so a plain hard reset only needs to drop the service worker + caches and reload to
+    // pick up fresh code — no data loss, no logout, no cross-tab cascade. Only an EXPLICIT
+    // logout / erase (opts.gentle !== true — e.g. the sign-out flow, ?logout=1) still wipes
+    // local state below.
+    if(!opts.gentle){
+      var keepProxy='';
+      try{ keepProxy=localStorage.getItem('proxyUrl')||''; }catch(e){}
+      try{ localStorage.clear(); }catch(e){}
+      try{ localStorage.removeItem('session'); localStorage.removeItem('antcv:auth:token'); localStorage.removeItem('antcv:auth:email'); localStorage.removeItem('antcv:auth:expires_at'); }catch(e){}
+      try{ if(keepProxy) localStorage.setItem('proxyUrl', keepProxy); }catch(e){}
+      try{ sessionStorage.clear(); }catch(e){}
+      try{
+        document.cookie.split(';').forEach(function(c){
+          var name=c.replace(/^ +/,'').split('=')[0];
+          if(!name) return;
+          document.cookie=name+'=;expires='+new Date(0).toUTCString()+';path=/';
+          document.cookie=name+'=;expires='+new Date(0).toUTCString()+';path=/;SameSite=None;Secure';
+        });
+      }catch(e){}
+    }
     try{
       if('caches' in window){
         var keys=await caches.keys();
@@ -460,6 +494,11 @@
         await Promise.all(regs.map(function(r){return r.unregister()}));
       }
     }catch(e){}
+    // F5-FRESH-001 (owner 2026-07-11): we just unregistered the SW, so the reload below
+    // starts UNCONTROLLED. Flag it so the boot listener reloads ONCE when the freshly
+    // re-registered SW takes control — that second load is fully SW-controlled, so preview
+    // sidecars (the hovering export button) initialise normally, with no manual refresh.
+    try{ sessionStorage.setItem('antcv:sw-reclaim-reload','1'); }catch(e){}
     if(opts.redirect!==false){
       try{
         var clean=location.origin+location.pathname;
@@ -570,8 +609,32 @@
   try{
     var p=new URLSearchParams(location.search);
     if(p.get('hardReset')=='1'){
-      clearAntcvHardReset({target:location.origin+location.pathname});
+      // Bare ?hardReset=1 = gentle code refresh (keep data + session). Only an explicit
+      // logout / erase intent (?logout=1 / ?resetDone=1) does the full local wipe.
+      var __wipe = p.get('logout')=='1' || p.get('resetDone')=='1';
+      clearAntcvHardReset({target:location.origin+location.pathname, gentle: !__wipe});
     }
+  }catch(e){}
+})();
+</script>
+<script>
+/* F5-FRESH-001 (owner 2026-07-11): after a reset (SW unregistered), the first load is
+   UNCONTROLLED. Reload ONCE when the freshly-registered SW claims control, so the app comes
+   up fully SW-controlled and preview sidecars (the hovering export button) initialise
+   normally — the automatic replacement for the manual browser refresh. Scoped to a reset via
+   the antcv:sw-reclaim-reload flag, so normal loads and first-time visitors are never
+   double-loaded. */
+(function(){
+  try{
+    if(sessionStorage.getItem('antcv:sw-reclaim-reload')!=='1') return;
+    sessionStorage.removeItem('antcv:sw-reclaim-reload');
+    if(!('serviceWorker' in navigator)) return;
+    if(navigator.serviceWorker.controller) return; /* already SW-controlled — nothing to do */
+    var done=false;
+    navigator.serviceWorker.addEventListener('controllerchange', function(){
+      if(done) return; done=true;
+      try{ location.reload(); }catch(_){}
+    });
   }catch(e){}
 })();
 </script>
@@ -580,7 +643,7 @@
 <a href="#root" class="antcv-skip-link">Skip to main content</a>
 <div id="root" role="main" aria-label="AntCV application"></div>
 <script>
-const PHOTO_B64 = "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";
+const PHOTO_B64 = "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";
 </script>
 
 <script>
@@ -632,21 +695,25 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-overlay.js?v=1.50.402-ja-cache" defer></script>
 <script src="antcv-data-importer.js?v=1.51.87" defer></script>
 <script src="antcv-jd-pdf-to-docx-341.js?v=1.40.341-p0f" defer></script>
+<script src="antcv-malformed-detect.js?v=1.51.580-detection-gap" defer></script>
 <script src="antcv-personality.js?v=1.40.296-loopgate" defer></script>
 <script src="antcv-cloud-delete-296.js?v=1.40.302" defer></script>
-<script src="antcv-cloud-restore-filter-298.js?v=1.40.339-d" defer></script>
+<script src="antcv-cloud-restore-filter-298.js?v=1.51.342-pi-echo-guard" defer></script>
 <script src="antcv-i18n.js?v=1.40.341-p0b" defer></script>
 <script src="antcv-format-prefs.js?v=1.50.472" defer></script>
 <script src="antcv-page-budget.js?v=1.40.349" defer></script>
 <script src="antcv-cl-length-560.js?v=1.50.568" defer></script>
+<!-- STYLE-PAGE-BUDGET-001 (owner 2026-07-10): writing style drives CV Target-length
+     (pageBudget) + commercial-section order; loads after the budget cards it complements. -->
+<script src="antcv-style-page-budget.js?v=1.51.235-style-page-budget" defer></script>
 <script src="antcv-budget-rows-collapse.js?v=1.50.927" defer></script>
 <!-- SIDECAR-CONSOLIDATE G6 (1.50.429): lang-bar-filter + language-prefs +
      language-prefs-defaults merged into ONE file behind a single shared rAF
      scheduler + ONE MutationObserver. The owner-touched wizard-language-slide,
      i18n, translation-patch, and language-ui-fixes stay separate. The three old
      files stay on disk, unreferenced. -->
-<script src="antcv-language-ui-429.js?v=1.51.59" defer></script>
-<script src="antcv-section-align.js?v=1.51.43" defer></script>
+<script src="antcv-language-ui-429.js?v=1.51.3742-load-no-retranslate" defer></script>
+<script src="antcv-section-align.js?v=1.51.1604-align-storm-001" defer></script>
 <script src="antcv-subsection-reorder.js?v=1.50.702" defer></script>
 <script src="antcv-disclosure-triangle.js?v=1.50.703" defer></script>
 <script src="antcv-recheck-fit.js?v=1.50.161-proxy-relay" defer></script>
@@ -682,40 +749,61 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <!-- CLUSTER-QUAL-001: 20-most-demanded-skills model (read half); loaded before the
      normalizer + docx-client so its window.AntcvClusterDemand is available to the
      blended numeric+demand ordering. -->
-<script src="antcv-cluster-demand.js?v=1.51.171" defer></script>
+<script src="antcv-cluster-demand.js?v=1.51.3722-demand-seed-refresh" defer></script>
 <!-- CLUSTER-QUAL-001 stage 2b (section 3.4): real D1-backed top-20 for the CURRENT
      application's category, preferred by __clusterRule over the static seed above. -->
 <script src="antcv-cluster-demand-live.js?v=1.51.167" defer></script>
 <!-- SETTINGS-PERSONAL-FREEZE-001: memoize the preview-paper querySelector shared by ~40 sidecar guards (60% of CPU in the settings freeze profile). Loads FIRST among sidecars. Kill antcv:disable-pp-memo. -->
 <script src="antcv-preview-paper-memo.js?v=1.51.59" defer></script>
-<script src="antcv-sections-normalize-415.js?v=1.51.68" defer></script>
+<script src="antcv-sections-normalize-415.js?v=1.51.2680-hourglass-storm" defer></script>
 <script src="antcv-demo-watermark.js?v=1.50.340-live-keystate" defer></script>
-<script src="antcv-bullet-targets.js?v=1.40.136" defer></script>
+<script src="antcv-bullet-targets.js?v=1.51.2980-rowfit-measure" defer></script>
 <!-- SIDECAR-CONSOLIDATE G10 (1.50.427): photo-position + photo-pentagon-shape +
      photo-bridge-button merged into ONE file behind a single shared rAF
      scheduler + ONE MutationObserver. The three old files stay on disk,
      unreferenced. -->
-<script src="antcv-photo-ui-427.js?v=1.51.156" defer></script>
+<script src="antcv-photo-ui-427.js?v=1.51.942-photo-flip-vision" defer></script>
+<!-- PHOTO-LIBRARY-001 (owner 2026-07-13): multi-photo library strip in the Profile Photo panel;
+     activation re-drives the app's own upload input; cloud field photoLibrary (relay auth-32). -->
+<script src="antcv-photo-library.js?v=1.51.499-owner-followups" defer></script>
 <script src="antcv-photo-control-collapse.js?v=1.51.156" defer></script>
 <script src="antcv-cl-signature-control.js?v=1.51.34" defer></script>
 <!-- AI-NOTICE-POSITION-CONTROL-001: Layout-tab control to pin the CV AI-notice corner (auto/left/center/right). -->
 <script src="antcv-ai-notice-position-control.js?v=1.51.156" defer></script>
-<script src="antcv-cl-slogan-control.js?v=1.51.130" defer></script>
-<script src="antcv-cl-slogan-element.js?v=1.51.130" defer></script>
+<script src="antcv-cl-slogan-control.js?v=1.51.746-slogan-place-ctrl" defer></script>
+<script src="antcv-cl-slogan-element.js?v=1.51.1992-slogan-cap-4-13" defer></script>
 <!-- SLOGAN-FRESH-GEN-001 + SLOGAN-SMART-STATEMENT-001 (spec rules 23/33): stale overrides yield; the gen's meta.cl_slogan (smart statement) is adopted; a targeted CL never falls back to the specialization. Kill antcv:disable-slogan-fresh. -->
-<script src="antcv-cl-slogan-fresh.js?v=1.51.150" defer></script>
+<script src="antcv-cl-slogan-fresh.js?v=1.51.1504-slogan-lang-gate" defer></script>
 <!-- CL-FORMAT-PANEL-001 (F3): distinct "COVER LETTER FORMAT" panel in Settings→Layout wrapping the CL signature + slogan/sign-off controls. Kill antcv:disable-cl-format-panel. -->
 <script src="antcv-cl-format-panel.js?v=1.51.82" defer></script>
 <!-- HEADER-ITEM-RULE-001 UI + preview parity: per-field header rule lines (on/off + pt + colour) writing headerItemRule; helpers __antcvHdrRuleDiv/Html/Style feed the live preview + HTML export. Kill antcv:disable-header-rule-control (UI only). -->
-<script src="antcv-header-rule-control.js?v=1.51.87" defer></script>
+<script src="antcv-header-rule-control.js?v=1.51.3181-rules-sig-brand" defer></script>
 <!-- SETTINGS-ROLLER-RESET-001: sentinel history state while Settings is open — a mouse side/tilt-button Back closes the panel like ✕ instead of navigating away (the "mini-reset"). Kill antcv:no-settings-history-guard. -->
 <script src="antcv-settings-history-guard.js?v=1.51.90" defer></script>
+<!-- APP-HISTORY-STYLE-KERNELS-001 (owner 2026-07-10): Settings history tab — a SEPARATE
+     collapsible "Saved style kernels" table (per writing-style x language, from
+     /api/kernel-showcase) BELOW the regular saved-app table; both collapsed by default.
+     Sidecar-owned DOM. Kill: antcv:disable-style-kernels-table. -->
+<script src="antcv-app-history-style-kernels.js?v=1.51.349-kernel-table-time" defer></script>
 <script src="antcv-preview-header-tokens.js?v=1.50.41" defer></script>
+<script src="antcv-copenhagen-v2-001.js?v=1.51.3743-spec-photo124" defer></script>
+<!-- CL-NO-PHOTO-001 (preview): hide the candidate headshot inside the band on the cover letter (export already suppresses it) -->
+<script src="antcv-cl-no-photo-001.js?v=1.51.2561-cl-spec-center" defer></script>
+<!-- HEADER-ELEM-COLORS-001: per-element BRAND colours (name/spec/contact/slogan/application) from brandV2 -->
+<script src="antcv-header-elem-colors.js?v=1.51.3121-header-defects" defer></script>
+<!-- EXPORT-HEADER-COLORS-001: inject per-element header colours + app-line rule into the DOCX export payload (1:1 parity) -->
+<script src="antcv-export-header-colors.js?v=1.51.3622-stage4-docx" defer></script>
+<!-- SIG-BRAND-TINT-001: tint the signature to the brand signature colour when a brand is on -->
+<script src="antcv-sig-brand-tint.js?v=1.51.3181-rules-sig-brand" defer></script>
+<!-- HEADER-COLOR-CONTROLS-001: per-element colour swatch in each candidate row's control cluster -->
+<script src="antcv-header-color-controls.js?v=1.51.2961-swatch-picker-fix" defer></script>
+<!-- APPLINE-RULE-001 (#6): rule under the application line — visible/colour/thickness control -->
+<script src="antcv-appline-rule.js?v=1.51.3202-band-grid" defer></script>
 <!-- v1.50.159: sidebar-bg tokenization — recolours the preview sidebar per visual
      style (var(--package-base) cascade), matching the DOCX. Companion to
      preview-header-tokens (which deliberately skips the sidebar). -->
-<script src="antcv-sidebar-bg-token.js?v=1.50.625" defer></script>
-<script src="antcv-pdf-preview-gate.js?v=1.51.158" defer></script>
+<script src="antcv-sidebar-bg-token.js?v=1.51.883-editable-marks" defer></script>
+<script src="antcv-pdf-preview-gate.js?v=1.51.2085-export-preview-zoom-decouple" defer></script>
 <!-- EXPORT-SETTLED-001: defer the FIRST export until the doc is settled (cloud-restore + migrations
      converged) so it isn't stale — the real fix for "refresh twice for a good PDF". -->
 <script src="antcv-export-settled-gate.js?v=1.51.14" defer></script>
@@ -734,7 +822,8 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      preview paint (the line that was previously empty until app-switch).
      Cooperates with candidate-preview-editor-341 (which makes it editable).
      Escape hatch: localStorage['antcv:disable-subtitle-sequence']='1'. -->
-<script src="antcv-subtitle-sequence-368.js?v=1.50.319" defer></script>
+<script src="antcv-subtitle-sequence-368.js?v=1.51.1558-unsol-subtitle-slogan-gate" defer></script>
+<script src="antcv-application-line-001.js?v=1.51.2741-cl-appline-native" defer></script>
 <script src="antcv-name-align-fix.js?v=1.1.0-norace" defer></script>
 <script src="antcv-table-headers-editable-341.js?v=1.40.341-tb004-fix2" defer></script>
 <script src="antcv-section-move-button-341.js?v=1.40.341-p0d" defer></script>
@@ -746,7 +835,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-preview-hyperlink-style.js?v=1.51.39" defer></script>
 <!-- PREVIEW-SPELL-001: spell underlines on the RENDERED preview (non-destructive
      rect overlay; reuses the annotator engine). Owner: grammar also on preview. -->
-<script src="antcv-preview-spell-overlay-425.js?v=1.50.443" defer></script>
+<script src="antcv-preview-spell-overlay-425.js?v=1.51.1164-slogan-ctl" defer></script>
 <!-- TENSE-RELOCATE-001: EXPERIENCE TENSE control relocated into Settings ->
      Personal beside the languages + grammar controls (uses window._antcvSetExpTense). -->
 <script src="antcv-tense-control-422.js?v=1.50.626" defer></script>
@@ -780,11 +869,11 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      (NVIDIA) from the kernel showcase cloud slot. When the context is unsolicited (no real
      JD) but meta wears a real company, force the identity back to Unsolicited/Open Application;
      the app's kernel autosave then re-persists the cleaned slot (self-heal). -->
-<script src="antcv-unsolicited-identity-guard.js?v=1.51.144" defer></script>
+<script src="antcv-unsolicited-identity-guard.js?v=1.51.334-unsol-pillar" defer></script>
 <script src="antcv-ai-assisted-to-methods.js?v=1.50.817" defer></script>
 <script src="antcv-tables-core-dedup.js?v=1.50.654" defer></script>
-<script src="antcv-tools-hidden-residue.js?v=1.51.117" defer></script>
-<script src="antcv-sidebar-visibility-ux.js?v=1.51.117" defer></script>
+<script src="antcv-tools-hidden-residue.js?v=1.51.2740-hourglass-toolsstorm" defer></script>
+<script src="antcv-sidebar-visibility-ux.js?v=1.51.181" defer></script>
 <script src="antcv-tables-partition.js?v=1.50.827" defer></script>
 <script src="antcv-unsolicited-cv-completeness.js?v=1.51.56" defer></script>
 <script src="antcv-profile-disclosure-strip.js?v=1.50.834" defer></script>
@@ -797,9 +886,9 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-sidebar-position.js?v=1.50.818" defer></script>
 <script src="antcv-splitter-flip.js?v=1.50.818" defer></script>
 <script src="antcv-section-panel-tweaks.js?v=1.51.128" defer></script>
-<script src="antcv-item-align.js?v=1.50.690-edit-guard" defer></script>
-<script src="antcv-page-fit.js?v=1.51.168" defer></script>
-<script src="antcv-auto-pagebreak-block-001.js?v=1.51.165" defer></script>
+<script src="antcv-item-align.js?v=1.51.1604-align-storm-001" defer></script>
+<script src="antcv-page-fit.js?v=1.51.3803-word-sheet" defer></script>
+<script src="antcv-auto-pagebreak-block-001.js?v=1.51.945-revert-pb-freeze" defer></script>
 <script src="antcv-table-fast-drag.js?v=1.50.490" defer></script>
 <script src="antcv-pdf-error-toast.js?v=1.40.194" defer></script>
 <script src="antcv-item-pages-render.js?v=1.50.202-native-render-retired" defer></script>
@@ -840,11 +929,12 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      predecessors were overridden dead weight (3 redundant MutationObservers +
      intervals). Verified: 211's CSS replicates each 206/207/208 rule; no
      external consumer of their APIs/attrs. Review: docs/refactor/SIDECAR_CONSOLIDATION_REVIEW.md -->
-<script src="antcv-section-panel-211.js?v=1.50.418" defer></script>
-<script src="antcv-experience-role-cjlr-230.js?v=1.51.59" defer></script>
-<script src="antcv-core-competencies-row-controls-234.js?v=1.51.94" defer></script>
+<script src="antcv-section-panel-211.js?v=1.51.1224-headline-cjlr2" defer></script>
+<script src="antcv-roles-richblock-adapter.js?v=1.51.1265-autopages-role" defer></script>
+<script src="antcv-experience-role-cjlr-230.js?v=1.51.1126-cjlr-persist" defer></script>
+<script src="antcv-core-competencies-row-controls-234.js?v=1.51.1604-align-storm-001" defer></script>
 <script src="antcv-selected-outcomes-row-controls-237.js?v=1.51.56" defer></script>
-<script src="antcv-profile-workstyle-cjlr-238.js?v=1.51.56" defer></script>
+<script src="antcv-profile-workstyle-cjlr-238.js?v=1.51.391-photo-fuse" defer></script>
 <script src="antcv-how-contribute-controls-245.js?v=1.50.944" defer></script>
 <script src="antcv-foundation-controls-327.js?v=1.50.944" defer></script>
 <script src="antcv-what-i-bring-cjlr-cleanup-246.js?v=1.40.246" defer></script>
@@ -862,7 +952,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <!-- RICH-BLOCK-001 (2026-06-22): editor surface for the universal composite section
      type:"rich_block" (headline/rule toggles + section CJLR + {lead-in, body} rows with
      per-row CJLR/Page/Enhance/Fit/Delete). app.js delegates to window.AntcvRichBlockEditor. -->
-<script src="antcv-rich-block-editor.js?v=1.51.149" defer></script>
+<script src="antcv-rich-block-editor.js?v=1.51.2901-rowpink" defer></script>
 <!-- TABLE-TYPE-001 (2026-06-23): editor surface for the universal `table` type (CORE COMPETENCIES /
      WHAT I BRING + any 2-col table): whole-table CJLR/enhance/fit, heading/rule toggles, header-row
      CJLR (fixes the missing-header-CJLR + alignment-drift report) + header B/I, column-ratio,
@@ -874,7 +964,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-publications-editor.js?v=1.50.855" defer></script>
 <!-- RICH-BLOCK-001 Phase B: convert legacy `foundation` sections into `rich_block` so they
      gain the full rich-block controls. Idempotent; runs on CV + CL. -->
-<script src="antcv-foundation-to-rich-block-758.js?v=1.51.64" defer></script>
+<script src="antcv-foundation-to-rich-block-758.js?v=1.51.345-foundation-loop-fix" defer></script>
 <!-- CV-SUBTITLE-PIN-001: keep Gabriel's unsolicited specialization line "Processes • Products • People"
      from reverting to the template on kernel-showcase restore. Name-guarded, restore-proof, CV-only. -->
 <script src="antcv-cv-subtitle-pin-760.js?v=1.50.954" defer></script>
@@ -890,12 +980,13 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <!-- TOOLS-MERGE-DEDUP-001: collapse the duplicated TOOLS & METHODS (concise top + repeating groups)
      that bloats the sidebar to 4 pages; stash the trimmed version on section.trimmedItems. -->
 <script src="antcv-tools-merge-dedup.js?v=1.51.60" defer></script>
+<script src="antcv-sidebar-compact-001.js?v=1.51.2941-sidebar-compact" defer></script>
 <script src="antcv-dup-group-merge.js?v=1.51.173" defer></script>
 <script src="antcv-role-merge-dedup.js?v=1.50.883" defer></script>
 <!-- ROLES-ACTIVE-FLOOR-001 (1.51.146): a targeted CV must never have 0 active experience roles; restore real roles when a gen hid them all (keeps merge-hidden ones off). Kill antcv:disable-roles-active-floor -->
 <script src="antcv-roles-active-floor.js?v=1.51.146" defer></script>
 <!-- ROLE-MERGE-STORED-001 (1.51.154, row 34): move the same-company role merge to STORED sections so the PREVIEW matches the export (insert merged role, hide constituents on:false, eye-reversible). Reuses the exact docx-client merge. Kill antcv:disable-role-merge-stored -->
-<script src="antcv-role-merge-stored.js?v=1.51.154" defer></script>
+<script src="antcv-role-merge-stored.js?v=1.51.3482-sections-storm" defer></script>
 <!-- SIDEBAR-GROUP-MERGE-STORED-001 (1.51.159): move the near-duplicate sidebar category merge (Imaging->Optics..., Project management->Project & delivery management) to STORED sections so the PREVIEW matches the export. Reuses the exact docx-client merge (window.AntcvMergeSidebarGroups). Kill antcv:disable-sidebar-group-merge-stored -->
 <script src="antcv-sidebar-group-merge-stored.js?v=1.51.159" defer></script>
 <script src="antcv-final-role-condense.js?v=1.50.924" defer></script>
@@ -903,42 +994,46 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-core-comp-compress.js?v=1.51.43" defer></script>
 <script src="antcv-orphan-measure-bind.js?v=1.51.52" defer></script>
 <!-- ORPHANS v2 (owner 2026-07-03): export-metric measurer + export preflight (EXPORT-METRIC-MEASURE-001 / EXPORT-PREFLIGHT-ORPHANS-001). Awaited from antcv-docx-client before the POST; kill antcv:disable-orphan-preflight. -->
-<script src="antcv-orphan-export-preflight.js?v=1.51.130" defer></script>
+<script src="antcv-orphan-export-preflight.js?v=1.51.334-unsol-pillar" defer></script>
 <!-- EMPTY-ROLE-HIDE-001 (1.51.52): hide fully-empty skeleton roles (gray "[Role title]" placeholder rows) -->
 <script src="antcv-empty-role-hide.js?v=1.51.52" defer></script>
 <!-- PAN-IDRAET-BACKFILL-001: when a role's near-dups would collapse below 2 bullets, append a DISTINCT bullet from the user's data to the STORED role (build-time, so preview+PDF match). Append-only + once-per-role (r._ndBackfill) + idempotent. Kill antcv:disable-neardup-backfill. -->
 <script src="antcv-neardup-backfill.js?v=1.51.95" defer></script>
 <!-- PAN-IDRAET-PREVIEW-HIDE-001: visually hide the near-dup bullets the EXPORT collapses (index-safe display:none; predicate = the export own via window.AntcvCollapseRoleBullets). Kill antcv:disable-neardup-preview-hide. -->
 <script src="antcv-neardup-preview-hide.js?v=1.51.81" defer></script>
-<script src="antcv-gabriel-results-pin.js?v=1.51.150" defer></script>
+<script src="antcv-gabriel-results-pin.js?v=1.51.242-zh-guards-kernelsave" defer></script>
+<!-- EDU-CANON-PIN-001: Gabriel education facts pin — restores the canonical 4 rows when a degree/token is lost -->
+<script src="antcv-gabriel-edu-pin.js?v=1.51.3242-edu-canon-pin" defer></script>
 <!-- TOOLS-CORECOMP-DEDUP-001: drop TOOLS rows that duplicate CORE COMPETENCIES focus areas (owner 2026-07). -->
-<script src="antcv-tools-corecomp-dedup.js?v=1.51.125" defer></script>
+<script src="antcv-tools-corecomp-dedup.js?v=1.51.1772-tools-grp-storm" defer></script>
 <!-- GEN-LANGFAB-001 (1.51.136): drop fabricated languages + correct levels against kernel personalInfo.languages ({lang,level}), name-neutral. Runs before concise so hallucinated rows are removed first. Kill antcv:disable-lang-fabrication-guard -->
 <script src="antcv-lang-fabrication-guard.js?v=1.51.136" defer></script>
 <!-- LANGUAGES-CONCISE-001: trim language proficiency to its concise core (CEFR→word, drop qualifiers). -->
-<script src="antcv-languages-concise.js?v=1.50.796" defer></script>
+<script src="antcv-languages-concise.js?v=1.51.242-zh-guards-kernelsave" defer></script>
 <!-- SKELETON-LEAK-001: strip leaked me() authoring instructions ("[PROFILE - 2-3 sentences…]") that
      got appended to real profile/work_style/opening/who/why/foundation content. -->
 <script src="antcv-strip-skeleton-placeholders.js?v=1.50.773" defer></script>
 <!-- APPLICATION-QA-001 P1: render a CL Application Q&A page (candidate header + Q/A rich_block) from
      antcv:applicationQuestions; hidden when empty. -->
 <script src="antcv-application-qa-section.js?v=1.51.111" defer></script>
-<script src="antcv-application-qa-detect.js?v=1.51.72" defer></script>
+<script src="antcv-application-qa-detect.js?v=1.51.334-unsol-pillar" defer></script>
 <!-- TWIN-TABLE-DEDUP-001: hide CORE COMPETENCIES rows that exactly duplicate WHAT I BRING (reversible). -->
 <script src="antcv-twin-table-dedup.js?v=1.50.767" defer></script>
 <!-- RICH-BLOCK-001 / HWIC: convert HOW I WOULD CONTRIBUTE (text_bullets) into rich_block —
      intro/closing as paragraphs, bullets as marker rows (mk:true). Idempotent. -->
 <script src="antcv-hwic-to-rich-block-760.js?v=1.51.64" defer></script>
 <script src="antcv-bring-to-rich-block-761.js?v=1.51.64" defer></script>
-<script src="antcv-nordic-cl-order-971.js?v=1.51.45" defer></script>
+<script src="antcv-nordic-cl-order-971.js?v=1.51.2661-cl-v5-rerender-force" defer></script>
 <script src="antcv-core-wib-strict-row-layout-274.js?v=1.50.943" defer></script>
 <script src="antcv-row-controls-wording-341.js?v=1.40.357-p1b3" defer></script>
 <script src="antcv-help-text-wording-357.js?v=1.40.357-p1b2" defer></script>
 <script src="antcv-page-break-icon-357.js?v=1.40.357-pb005b" defer></script>
 <script src="antcv-pub-injected-reaper-352.js?v=1.40.352" defer></script>
 <!-- SIDECAR-MERGE-G5 (2026-06-13): mobile-topbar-cleanup-275 + mobile-fab-cleanup-351 + mobile-bottom-compact-352 + mobile-alt-circles-dropdown-354 consolidated into one file with a single shared rAF scheduler + one MutationObserver (was 4). Behaviour preserved verbatim. -->
-<script src="antcv-mobile-ui-418.js?v=1.51.161" defer></script>
-<script src="antcv-generate-cloud-sync-277.js?v=1.51.124" defer></script>
+<script src="antcv-mobile-ui-418.js?v=1.51.3222-quick-doc-color" defer></script>
+<!-- QUICK-COLOR-RETARGET-001: topbar quick colours paint the DOCUMENT header box + tables (not the app chrome) -->
+<script src="antcv-quick-doc-color.js?v=1.51.3502-corecomp-row" defer></script>
+<script src="antcv-generate-cloud-sync-277.js?v=1.51.341-lang-restore-guard" defer></script>
 <!-- GEN-BACKGROUND-001 client engine (window.AntcvGenJob): resumable /job/* driver, INERT until called. Spec: docs/qa/GEN-BACKGROUND-001-CLIENT-SPEC.md -->
 <script src="antcv-gen-job-client.js?v=1.51.132" defer></script>
 <!-- GEN-BACKGROUND-001 approach A (the fit for AntCV's DEPENDENT gen pipeline): checkpoint-memo at the ee() LLM chokepoint. During a gen run an interrupted generation replays completed calls from the checkpoint instead of re-running (mobile tab-backgrounding no longer restarts the whole run). Output-neutral; OPT-IN antcv:gen-resume=1 (default off, owner A/B), kill antcv:disable-gen-memo. app.js's ee() wrapper reads window.AntcvGenMemo (null-safe until loaded). -->
@@ -960,15 +1055,20 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-settings-front-327.js?v=1.50.109-ah-front" defer></script>
 <script src="antcv-demo-toggle-357.js?v=1.50.861" defer></script>
 <script src="antcv-cloud-put-shrink-guard-289.js?v=1.40.289" defer></script>
-<script src="antcv-kernel-completeness-290.js?v=1.50.489" defer></script>
+<!-- AUTOSAVE-STALE-CLOBBER-001: per-tab server-rev guard on PUT /api/applications/:id —
+     injects base_rev from the rev this tab last loaded/saved; a relay 409 (stale writer)
+     becomes a logged silent skip so an open tab can never revert a fresher cloud write. -->
+<script src="antcv-app-rev-guard.js?v=1.51.3040-app-rev-guard" defer></script>
+<script src="antcv-kernel-completeness-290.js?v=1.51.397-matrix-rowspec" defer></script>
 <script src="antcv-app-history-zfix-291.js?v=1.40.291" defer></script>
 <script src="antcv-app-history-back-to-preview-341.js?v=1.40.341-p0e" defer></script>
 <script src="antcv-preview-shell-sticky-341.js?v=1.50.364-editor-only" defer></script>
-<script src="antcv-language-ui-fixes-292.js?v=1.40.292" defer></script>
+<script src="antcv-language-ui-fixes-292.js?v=1.51.397-matrix-rowspec" defer></script>
 <script src="antcv-table-row-page-controls-328.js?v=1.50.637" defer></script>
-<script src="antcv-sidebar-subsection-pagebreaks-329.js?v=1.50.446" defer></script>
+<script src="antcv-sidebar-subsection-pagebreaks-329.js?v=1.51.3803-word-sheet" defer></script>
 <script src="antcv-sidebar-item-page-controls-359.js?v=1.50.151-cldoc" defer></script>
-<script src="antcv-sidebar-fill-equalize-227.js?v=1.51.168" defer></script>
+<script src="antcv-edit-freeze.js?v=1.51.785-edit-freeze" defer></script>
+<script src="antcv-sidebar-fill-equalize-227.js?v=1.51.3682-cph-storm" defer></script>
 <!-- PB-MAIN-OVERFLOW-001 step 1 (1.50.811): READ-ONLY main-column overflow detector.
      Measures the main column total content height across all page-rows vs live A4
      usable height; writes antcv:mainOverflow {verdict, overshootLines, ...}. Renders
@@ -976,7 +1076,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      squeeze (<=3 lines over, auto-eligible later) / too-much / desync-suspected.
      Verify: JSON.parse(localStorage['antcv:mainOverflow']). Writes a DIFFERENT key
      than autoPages, so it never collides with antcv-auto-pagebreak-block-001. -->
-<script src="antcv-main-overflow-detect-364.js?v=1.50.812" defer></script>
+<script src="antcv-main-overflow-detect-364.js?v=1.51.701-osc-damp" defer></script>
 <!-- PB-MAIN-OVERFLOW-001 step 2 (1.50.816): auto density-squeeze. Listens for
      antcv:main-overflow-changed and applies a bounded, REVERSIBLE line-height
      nudge to the PREVIEW main column ONLY when verdict==='squeeze' (1-3 lines
@@ -1015,21 +1115,25 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      renders them; retires the JD-analysis FAB once the matching app.js
      release is detected live. Companion app.js render blocks ship via deploy. -->
 <script src="antcv-analysis-merge-344.js?v=1.51.54-upper-reorg" defer></script>
-<script src="antcv-analysis-panel-jd-block-356.js?v=1.51.54-upper-reorg" defer></script>
+<script src="antcv-analysis-panel-jd-block-356.js?v=1.51.1768-analysis-on-load" defer></script>
 <!-- v1.50.146: Analysis report — enhances the panel with assumptions /
      confidence review / recommendations, and exports the analysis as a
      branded, AI-watermarked PDF (client-side print). Reads `rationale`
      (incl. the new jd-analysis fields); never edits app.js. -->
-<script src="antcv-analysis-report-pdf-360.js?v=1.51.137-analysis-print-surface" defer></script>
+<script src="antcv-analysis-report-pdf-360.js?v=1.51.2072-analysis-cloudconvert" defer></script>
+<!-- ANALYSIS-PANEL-HEADER-001: role · company · analysis-date header at the top of the Analysis panel -->
+<script src="antcv-analysis-header.js?v=1.51.2401-analysis-header-editor-gate" defer></script>
 <!-- CLUSTER-QUAL-001 stage 3 (section 6 rollout step 6): "Market fit" card —
      real D1-backed fit_score/tier/matched/gaps, inserted right after the
      Analysis Report panel above. Deliberately separate from that panel's own
      LLM-narrative "Overall fit" section (this one is deterministic, scored
      against the user's own accumulated real-JD demand data). -->
-<script src="antcv-fit-panel.js?v=1.51.169" defer></script>
+<script src="antcv-fit-panel.js?v=1.51.2311-market-fit-copy" defer></script>
+<!-- ANALYSIS-EXTRA-PERSIST-001: round-trip per-app gapState_* + application Q&A via the application row's analysis_extra column -->
+<script src="antcv-analysis-persist.js?v=1.51.2311-analysis-persist" defer></script>
 <script src="antcv-sections-icon-346.js?v=1.40.347-preview-eye" defer></script>
 <script src="antcv-label-history.js?v=1.0.0" defer></script>
-<script src="antcv-topbar-tools-347.js?v=1.50.356-unhide" defer></script>
+<script src="antcv-topbar-tools-347.js?v=1.51.178-mobile-skip-relocate" defer></script>
 <!-- v1.40.351: mobile-only FAB cleanup. Hides the redundant mobile JD-analysis
      and Fusion FABs (title-keyed; they lack the data-attrs topbar-tools-347
      uses) and relocates the mobile Privacy FAB into the top bar as a compact
@@ -1049,25 +1153,33 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      first" checkbox into the red Delete-account card, and wraps AntcvFullErase to
      back up before erasing. Loads AFTER cloud-delete-296 + app.js so its erase
      wrap composes outside the original. Escape: localStorage['antcv:disable-data-export']='1'. -->
-<script src="antcv-quick-contact-collapse.js?v=1.51.128" defer></script>
+<script src="antcv-quick-contact-collapse.js?v=1.51.2701-quick-contact-scope" defer></script>
 <script src="antcv-data-export-360.js?v=1.50.929" defer></script>
 <script src="antcv-personal-dedup-hide.js?v=1.50.861" defer></script>
-<script src="antcv-settings-sync-extra.js?v=1.50.629" defer></script>
-<script src="antcv-cl-cloud-sync-extra.js?v=1.51.164" defer></script>
-<script src="antcv-cl-prose-loss-guard-985.js?v=1.51.120" defer></script>
+<script src="antcv-settings-sync-extra.js?v=1.51.381-sig-backfill" defer></script>
+  <script src="antcv-babel-relang.js?v=1.51.3742-load-no-retranslate" defer></script>
+  <!-- TITLE-LANG-HEAL-001: reset a wrong-SCRIPT section title (CJK/HE/AR/AM on a
+       Latin-target doc) to its English canonical — the ratio detector above ignores
+       short wrong-language titles, so they stranded (the 3Shape Chinese-headings bug). -->
+  <script src="antcv-title-lang-heal.js?v=1.51.2379-title-lang-heal" defer></script>
+  <!-- PARALLEL-TRANSLATION-KEEP-001 (1.51.2106): a translated VIEW must never overwrite an app's canonical cv_sections in cloud — request-only PUT guard, strips sections on a non-primary wide-script flip (server preserves omitted fields); translations stay in langRenders. Loads after babel-relang for __antcvContentScript. Kill antcv:disable-parallel-translation-keep -->
+  <script src="antcv-parallel-translation-keep.js?v=1.51.2290-relay-auth-fix" defer></script>
+  <script src="antcv-identity-lang-heal.js?v=1.51.397-matrix-rowspec" defer></script>
+<script src="antcv-cl-cloud-sync-extra.js?v=1.51.381-sig-backfill" defer></script>
+<script src="antcv-cl-prose-loss-guard-985.js?v=1.51.2200-lang-guard-key" defer></script>
 <!-- GEN-UNSOL-STALE-JD-001 Patch D: scrub a KNOWN PRIOR targeted company from unsolicited prose (employer names protected). Kill antcv:disable-unsol-company-scrub. -->
-<script src="antcv-unsol-company-scrub.js?v=1.51.120" defer></script>
+<script src="antcv-unsol-company-scrub.js?v=1.51.334-unsol-pillar" defer></script>
 <!-- SIDEBAR-RELEVANCE-CUT-001 (spec rules 11/15/19/25/27/32 + 38): deterministic JD-relevance cut over tools/certs/regulatory in stored sections — hidden never deleted, exempt Interests/Languages/Accessibility, one-shot per app+JD. Kill antcv:disable-sidebar-relevance-cut. -->
-<script src="antcv-sidebar-relevance-cut.js?v=1.51.129" defer></script>
+<script src="antcv-sidebar-relevance-cut.js?v=1.51.3482-sections-storm" defer></script>
 <!-- SCHOLAR-LINK-GATE-001 (spec rules 35/39): kernel publicationsScholar drives the publications masterSite hyperlink through the research-JD gate; plain "via Google Scholar" pointers become the real link. Kill antcv:disable-scholar-links. -->
 <script src="antcv-scholar-links.js?v=1.51.122" defer></script>
 <!-- BRAND-FIT-PALETTE-001 (spec rule 37): deterministic JD-hex sampler — the gen flow falls back to it when the model omits brand_fit; the existing validated apply path consumes it. Kill antcv:disable-brandfit-sample. -->
 <script src="antcv-brandfit-sample.js?v=1.51.123" defer></script>
 <script src="antcv-profile-access-scrub.js?v=1.51.109" defer></script>
 <!-- CV CORE COMPETENCIES last-good snapshot guard: heals a stale-restore placeholder table back to the laminated rows (CV-CORECOMP-BLANK-001, owner 2026-07-01). -->
-<script src="antcv-corecomp-loss-guard.js?v=1.51.36" defer></script>
+<script src="antcv-corecomp-loss-guard.js?v=1.51.2200-lang-guard-key" defer></script>
 <!-- SELECTED OUTCOMES last-good snapshot guard: heals an outcomes items:[] wipe (e.g. a core_comp row-count change) back to the last real bullets (SO-003, owner row 40, DATA LOSS). Kill antcv:disable-outcomes-guard -->
-<script src="antcv-outcomes-loss-guard.js?v=1.51.138" defer></script>
+<script src="antcv-outcomes-loss-guard.js?v=1.51.2200-lang-guard-key" defer></script>
 <!-- CL render-side text heals: C4 lead-continuation case (Professionally that) + C3 bring/contribute dangling-truncation cleanup (owner 2026-07). -->
 <script src="antcv-cl-text-cleanup.js?v=1.51.26" defer></script>
 <script src="antcv-cl-prose-richblock-fill-987.js?v=1.51.60" defer></script>
@@ -1086,7 +1198,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      SettingsRouter, wizardState). See docs/plan/AntCV_Plan_v2_LockedSources.md
      §7 Pass 1. -->
       <script src="antcv-357-loader.js?v=1.50.400" defer></script>
-      <script src="antcv-react-islands.js?v=1.51.157" defer></script>
+      <script src="antcv-react-islands.js?v=1.51.3081-queued-filter" defer></script>
       <!-- v1.50.164: auto-apply the correct palette when the stored package is the
            legacy orphan default ("scandinavian"), by pressing the Copenhagen Modern
            button — fixes the permanent palette mix on load without a manual click. -->

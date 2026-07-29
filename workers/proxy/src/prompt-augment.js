@@ -273,10 +273,27 @@ ${bannedListBlock()}`,
 
 OUTPUT: 2-4 sentences explaining what about THIS role and THIS company drew the candidate. Specific to the listing — generic "I am excited about" content is a failure.
 
-Pattern:
-1. Name a specific aspect of the role/company that fits the candidate. (Drawn from the JD, named accurately.)
-2. Anchor that fit in the candidate's actual experience or working preference.
-3. Optionally, name a value/cultural element from the listing that resonates.
+THE ONE RULE (WHY-JOINED-SENTENCE-001): EVERY sentence must JOIN the employer to the CANDIDATE inside that same sentence. A sentence that only states a fact about the employer is a FAILURE, no matter how accurate — the employer already knows their own history, size, location and product line, so reciting it back spends a line and says nothing.
+
+Therefore:
+1. The employer's activity/product/challenge is the SUBJECT, and the same sentence lands on the candidate's specific territory (a named domain, system, method or result). One connected statement, not two glued fragments.
+2. Anchor the fit in the candidate's actual experience — named companies, systems or work, never a vague category.
+3. Optionally, name a value/cultural element from the listing that resonates, again joined to something real in the candidate's source.
+
+BANNED SHAPES (rewrite before returning):
+- A standalone heritage/scale fact: "X has built Y since 1975.", "X was founded in 1968.", "X is a leading supplier of Y.", "X employs 2000 people." Fold the fact into a joined sentence or drop it.
+- A hollow bridge with no content: "This role aligns with my background.", "This position matches my experience.", "I believe I would be a good fit." If the sentence would survive being pasted into a different application, it is filler.
+- Two sentences where the first names the company and the second starts "This role/position ..." — that is the glued-fragment failure this rule exists to stop.
+
+Real approved example (Aimpoint / Optical Engineer) — the company's product is the SUBJECT and the sentence lands on the candidate's territory:
+  "Aimpoint's red-dot sights sit exactly where my career has been: optical-systems architecture, sensor integration and verification across defence sighting, camera optics and automotive LiDAR."
+
+Real approved example (NKT Photonics / Senior Process Engineer) — company activity joined to the candidate's arc by a linking clause:
+  "NKT Photonics matures optical and photonic processes from concept through NPI to production, which is the arc I have run for over 15 years."
+
+REJECTED example (same Aimpoint role) — recited fact, then a disconnected filler bridge:
+  "Aimpoint has built red dot sights in Sweden since 1975. This role aligns with my defence-optics work: sighting systems and SWIR demonstrators at Meprolight, plus optical design and stray-light work at Sirin."
+  Why it fails: sentence 1 tells Aimpoint their own founding year and carries zero candidate content; sentence 2 opens with an empty bridge and never connects back. The evidence in it is good — join it to the company instead: "Aimpoint's sighting systems are the work I have done hands-on: SWIR sight demonstrators at Meprolight, plus optical design and stray-light control at Sirin."
 
 Real approved example (Sigma Connectivity / Optics Engineer):
   "Sigma Connectivity's focus on challenging multi-disciplinary connectivity projects aligns precisely with my experience in complex imaging systems. Your emphasis on working across competence areas — from optics through electronics to software development — matches my background leading cross-functional teams and managing the intricate trade-offs that define successful camera products. The opportunity to work on miniaturized systems while maintaining system-level ownership particularly appeals to my experience linking design decisions to tested performance and practical delivery."
@@ -530,4 +547,102 @@ export function augmentBodyText(bodyText) {
 
   applyTaskAugmentation(parsed, task);
   return { bodyText: JSON.stringify(parsed), task };
+}
+
+// ------------------------------------------------------------------
+// PROXY-GOLD-RULES-FETCH-001 (register row 86c).
+// The generation rules live in ONE control site — pwa/gold-rules.json,
+// SERVED at https://antcv.pages.dev/gold-rules.json. The client injects its
+// `prompt_block` into the outgoing prompt (antcv-bullet-targets.js), but a
+// STALE client bundle carries a stale block. So the proxy fetches the SERVED
+// block itself and prepends it too, making the current control site authoritative
+// regardless of client version.
+//
+// Hard rule: this must NEVER block or fail a generation. Any fetch/parse error
+// falls back to whatever block the client already put in the body (i.e. we
+// inject nothing extra). A per-isolate cache with a TTL keeps the hot path from
+// hitting the network on every request; a stale cached block is preferred over a
+// live fetch failure.
+export const GOLD_RULES_URL = 'https://antcv.pages.dev/gold-rules.json';
+const GOLD_RULES_TTL_MS = 5 * 60 * 1000; // 5 min per-isolate
+let _goldCache = { at: 0, block: null }; // block: string | null
+
+// Reset hook for tests (lets a test inject a stub fetch and re-prime).
+export function _resetGoldRulesCache() { _goldCache = { at: 0, block: null }; }
+
+function goldRulesBlockFromJson(j) {
+  if (j && Array.isArray(j.prompt_block) && j.prompt_block.length) {
+    const lines = j.prompt_block.filter((x) => typeof x === 'string');
+    if (lines.length) return 'GOLD STANDARD RULES (control site — apply to all output):\n' + lines.join('\n');
+  }
+  return null;
+}
+
+export async function fetchGoldRulesBlock(fetchImpl) {
+  const now = Date.now();
+  if (_goldCache.block !== null && (now - _goldCache.at) < GOLD_RULES_TTL_MS) {
+    return _goldCache.block; // fresh — includes a cached "" miss (no prompt_block)
+  }
+  const f = fetchImpl || (typeof fetch === 'function' ? fetch : null);
+  if (!f) return _goldCache.block; // no fetch available — keep prior (maybe null)
+  try {
+    const r = await f(GOLD_RULES_URL, { cf: { cacheTtl: 300, cacheEverything: true } });
+    if (!r || !r.ok) return _goldCache.block; // keep prior on non-2xx
+    const j = await r.json();
+    const block = goldRulesBlockFromJson(j);
+    _goldCache = { at: now, block: block == null ? '' : block };
+    return _goldCache.block;
+  } catch {
+    return _goldCache.block; // ANY error → prior cached value (never throw)
+  }
+}
+
+// Prepend an extra system block across the three provider shapes (same logic
+// applyTaskAugmentation uses). No-op when text is empty.
+function prependSystemBlock(parsed, text) {
+  if (!text) return parsed;
+  if ('system' in parsed || Array.isArray(parsed.messages)) {
+    const existing = parsed.system;
+    if (typeof existing === 'string') parsed.system = `${text}\n\n---\n\n${existing}`;
+    else if (Array.isArray(existing)) parsed.system = [{ type: 'text', text }, ...existing];
+    else parsed.system = text;
+    return parsed;
+  }
+  if (parsed.contents !== undefined || parsed.systemInstruction !== undefined) {
+    const existing = parsed.systemInstruction;
+    if (existing && Array.isArray(existing.parts)) {
+      parsed.systemInstruction = { ...existing, parts: [{ text }, ...existing.parts] };
+    } else if (typeof existing === 'string') {
+      parsed.systemInstruction = `${text}\n\n---\n\n${existing}`;
+    } else if (existing && typeof existing.text === 'string') {
+      parsed.systemInstruction = { ...existing, text: `${text}\n\n---\n\n${existing.text}` };
+    } else {
+      parsed.systemInstruction = { parts: [{ text }] };
+    }
+    return parsed;
+  }
+  return parsed;
+}
+
+// Async augment: same task detection + task augmentation as augmentBodyText,
+// PLUS the served gold-rules block prepended on top. Fail-soft — a fetch error
+// degrades to exactly the sync behaviour (client block only).
+export async function augmentBodyTextAsync(bodyText, fetchImpl) {
+  let parsed;
+  try { parsed = JSON.parse(bodyText); }
+  catch { return { bodyText, task: null, gold: false }; }
+  if (!parsed || typeof parsed !== 'object') return { bodyText, task: null, gold: false };
+
+  const task = detectCVTask(parsed);
+  if (!task) return { bodyText, task: null, gold: false };
+
+  applyTaskAugmentation(parsed, task);
+  // PROXY-GOLD-RULES-DOUBLE-INJECT-001 (2026-07-13, core-comp-wipe regression):
+  // the client (antcv-bullet-targets.js) ALREADY injects the gold-rules prompt_block
+  // into the outgoing prompt. Prepending the SAME block again here double-injected a
+  // large rules block onto an already-huge system prompt and degraded field adherence
+  // (live gens dropped CORE COMPETENCIES). Disabled the proxy prepend — the client is
+  // the single injection site. Re-enable only WITH a dedup guard vs the client block.
+  const gold = false;
+  return { bodyText: JSON.stringify(parsed), task, gold };
 }

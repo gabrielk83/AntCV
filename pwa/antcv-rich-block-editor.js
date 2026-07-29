@@ -26,6 +26,12 @@
     function writeJSON(k, m) { try { localStorage.setItem(k, JSON.stringify(m)); } catch (_) {} }
     function emit(name, detail) { try { window.dispatchEvent(new CustomEvent(name, { detail: detail })); } catch (_) {} }
 
+    // ROWFIT-HOURGLASS-LATCH-002 (owner 2026-07-22): the per-row busy ⏳ latch lives at MODULE
+    // level (not component state) so it SURVIVES an editor remount. The render storm can
+    // unmount/remount this editor between the button click and the next paint, which reset the
+    // earlier component-state latch → the ⏳ never showed. Keyed "e:"/"c:" + sectionId + item.
+    var __rowBusy = {};   // key -> expiry timestamp (ms)
+
     function RichBlockEditor(props) {
       var e = props.section || {};
       var d = props.update || function () {};
@@ -33,13 +39,51 @@
       var onEnrich = props.onEnrich, onCompress = props.onCompress;
       var enrichingId = props.enrichingId, compressingId = props.compressingId;
       var st = R.useState(0); var bump = st[1];
+      // Module-level latch (see __rowBusy above): on click stamp an expiry + force a re-render;
+      // on (re)mount the render reads __rowBusy so the ⏳ persists across storm remounts. ~1.8s.
+      function markBusy(key) {
+        __rowBusy[key] = Date.now() + 1800;
+        // ROWFIT-PINK-LATCH-001 (owner 2026-07-22): also stamp a SECTION-level module latch so the
+        // preview turns pink even when the App-level "working" transition state is swallowed by the
+        // storm / fast-failing relay (same root cause the ⏳ latch solved). The preview Ce reads
+        // window.__antcvSectionBusy; the App repaints on the antcv:section-busy event + at expiry.
+        try {
+          var sb = (window.__antcvSectionBusy = window.__antcvSectionBusy || {});
+          sb[e.id] = Date.now() + 2200;
+          emit("antcv:section-busy", { sid: e.id, until: sb[e.id] });
+          // ROWFIT-PINK-ROWLEVEL (owner 2026-07-22): also stamp a PER-ROW latch the preview reads
+          // so the pink lands on the ACTING row(s) (group actions latch each child → per-row pink
+          // for free). Key = "sectionId:item:i" (strip the e:/c: prefix).
+          var rb = (window.__antcvRowBusy = window.__antcvRowBusy || {});
+          rb[key.replace(/^[ec]:/, "")] = Date.now() + 2200;
+        } catch (_) {}
+        try { bump(function (x) { return (x | 0) + 1; }); } catch (_) {}
+      }
+      function isBusy(key) { return !!__rowBusy[key] && __rowBusy[key] > Date.now(); }
+      // The CURRENTLY-mounted instance owns the clearing timer: schedule a re-render just after
+      // the soonest-expiring latch so the ⏳ reverts even if the click happened on a prior
+      // (since-remounted) instance. Idle when nothing is latched.
+      R.useEffect(function () {
+        var now = Date.now(), soonest = Infinity;
+        for (var k in __rowBusy) { if (__rowBusy[k] > now && __rowBusy[k] < soonest) soonest = __rowBusy[k]; }
+        if (soonest === Infinity) return;
+        var t = setTimeout(function () { try { bump(function (x) { return (x | 0) + 1; }); } catch (_) {} }, (soonest - now) + 60);
+        return function () { clearTimeout(t); };
+      });
       var sid = e.id;
+      // ROLES-AS-RICHBLOCK-001: when editing the adapted experience section, per-row
+      // CJLR is keyed by the ROLES path (item._key = "roles.R.bullets.B") instead of
+      // the ephemeral "items.i" — the docx-worker already reads paraAlignPath on that
+      // key, so CJLR EXPORTS with no worker change. Hide is per-item (ev.hidden ->
+      // roles bulletMeta / role.on) not the section.hidden array.
+      var fromRoles = !!e.__fromRoles;
       function rerender() { bump(function (x) { return x + 1; }); }
 
       function getPage(i) { try { var b = readJSON("antcv:itemPages")[sid] || {}; var n = Number(b[String(i)] || b["items." + i] || 1); return n >= 1 && n <= 4 ? (n | 0) : 1; } catch (_) { return 1; } }
       function setPage(i, n) { var m = readJSON("antcv:itemPages"); if (!m[sid] || typeof m[sid] !== "object") m[sid] = {}; m[sid][String(i)] = n; m[sid]["items." + i] = n; writeJSON("antcv:itemPages", m); emit("antcv:item-pages-changed", { sid: sid, index: i, page: n }); rerender(); }
-      function getAlign(i) { try { var b = readJSON("antcvItemAlignment")[sid] || {}; var v = b["items." + i] || b[String(i)] || "justify"; return ALIGNS.indexOf(v) >= 0 ? v : "justify"; } catch (_) { return "justify"; } }
-      function setAlign(i, v) { var m = readJSON("antcvItemAlignment"); if (!m[sid] || typeof m[sid] !== "object") m[sid] = {}; m[sid]["items." + i] = v; m[sid][String(i)] = v; writeJSON("antcvItemAlignment", m); emit("antcv:item-align-changed", { sid: sid, index: i, alignment: v }); rerender(); }
+      function keyFor(i) { return (fromRoles && rows[i] && rows[i]._key) ? rows[i]._key : ("items." + i); }
+      function getAlign(i) { try { var b = readJSON("antcvItemAlignment")[sid] || {}; var v = b[keyFor(i)] || b["items." + i] || b[String(i)] || "justify"; return ALIGNS.indexOf(v) >= 0 ? v : "justify"; } catch (_) { return "justify"; } }
+      function setAlign(i, v) { var m = readJSON("antcvItemAlignment"); if (!m[sid] || typeof m[sid] !== "object") m[sid] = {}; m[sid][keyFor(i)] = v; if (!fromRoles) { m[sid]["items." + i] = v; m[sid][String(i)] = v; } writeJSON("antcvItemAlignment", m); emit("antcv:item-align-changed", { sid: sid, index: i, alignment: v }); rerender(); }
       function getGroup() { try { var b = readJSON("antcvItemAlignment")[sid] || {}; var v = b.__group__; return ALIGNS.indexOf(v) >= 0 ? v : "justify"; } catch (_) { return "justify"; } }
       function setGroup(v) { var m = readJSON("antcvItemAlignment"); if (!m[sid] || typeof m[sid] !== "object") m[sid] = {}; m[sid].__group__ = v; writeJSON("antcvItemAlignment", m); emit("antcv:item-align-changed", { sid: sid, index: -1, alignment: v }); rerender(); }
 
@@ -51,7 +95,7 @@
       function deleteRow(i) { d({ items: rows.filter(function (x, j) { return j !== i; }), hidden: (e.hidden || []).filter(function (x, j) { return j !== i; }) }); }
       function addRow() { d({ items: rows.concat([{ b: "", t: "" }]) }); }
       function addGroup() { d({ items: rows.concat([{ grp: true, t: "" }]) }); }
-      function toggleGrp(i) { var o = rows.map(function (x, j) { return j === i ? (x.grp ? { b: x.b || "", t: x.t || "" } : { grp: true, t: x.t || "" }) : x; }); d({ items: o }); }
+      function toggleGrp(i) { var o = rows.map(function (x, j) { return j === i ? (x.grp ? { b: x.b || "", t: x.t || "" } : { grp: true, t: x.t || "", grpKeep: true }) : x; }); d({ items: o }); }
       function toggleRowHidden(i) { var hd = (e.hidden || []).slice(); hd[i] = !hd[i]; d({ hidden: hd }); }
 
       var btn = function (extra) { return Object.assign({ fontSize: 10, padding: "2px 6px", borderRadius: 3, cursor: "pointer", background: "none", whiteSpace: "nowrap", flexShrink: 0 }, extra || {}); };
@@ -61,6 +105,8 @@
       var headOff = !!e.headlineOff, ruleOff = !!e.ruleOff;
       // Whole-section lead-in ("Verb"/starter) style — bold / italic / colour / colon (NOT per row).
       var leadBold = e.leadBold !== false, leadItalic = !!e.leadItalic, leadColor = e.leadColor || accent, leadColon = !!e.leadColon;
+      // LEAD-UNDERLINE-001 (owner 2026-07-16): whole-section lead-in underline + its colour.
+      var leadUnderline = !!e.leadUnderline, leadUnderlineColor = e.leadUnderlineColor || leadColor;
       var bar = h("div", { style: { display: "flex", gap: 6, alignItems: "center", marginBottom: 8, flexWrap: "wrap", paddingBottom: 6, borderBottom: "1px dashed #e3e3e3" } },
         h("button", { onClick: function () { d({ headlineOff: !headOff }); }, title: headOff ? "Headline hidden — show it" : "Headline shown — hide it", style: btn({ border: "1px solid " + (headOff ? "#999" : accent), color: headOff ? "#999" : accent }) }, (headOff ? "🙈" : "👁") + " Headline"),
         // RULE-INDEPENDENT-001 (owner 2026-07: "still not editable independently"). The rule
@@ -71,19 +117,75 @@
         // headline TEXT is hidden — gives the section a visual marker. Enabled only
         // while the headline is off (that is when the cue is needed).
         h("button", { onClick: function () { if (headOff) d({ headlineVRule: !e.headlineVRule }); }, disabled: !headOff, title: headOff ? (e.headlineVRule ? "Vertical cue line shown — hide it" : "Show a vertical cue line marking this section while the headline is hidden") : "Hide the headline first to use the vertical cue", style: btn({ border: "1px solid " + (headOff ? (e.headlineVRule ? accent : "#999") : "#ddd"), color: headOff ? (e.headlineVRule ? accent : "#999") : "#ddd", cursor: headOff ? "pointer" : "not-allowed" }) }, (e.headlineVRule ? "│" : "┊") + " Cue"),
-        h("button", { onClick: function () { setGroup(ALIGNS[(ALIGNS.indexOf(groupAlign) + 1) % ALIGNS.length] || "justify"); }, title: "Whole-section alignment: " + (ALABEL[groupAlign] || groupAlign) + ". Click to cycle.", style: btn({ border: "1px solid #7b2ff2", color: "#7b2ff2", background: "rgba(123,47,242,.06)", fontSize: 11 }) }, (AICON[groupAlign] || AICON.justify) + " Section"),
+        h("button", { onClick: function () { setGroup(ALIGNS[(ALIGNS.indexOf(groupAlign) + 1) % ALIGNS.length] || "justify"); }, title: "GROUP HEADINGS alignment: " + (ALABEL[groupAlign] || groupAlign) + ". Aligns the group/role-line headings only (not the body rows — use the per-row control for those). Click to cycle.", style: btn({ border: "1px solid #7b2ff2", color: "#7b2ff2", background: "rgba(123,47,242,.06)", fontSize: 11 }) }, (AICON[groupAlign] || AICON.justify) + " Groups"),
         h("span", { style: { fontSize: 10, color: "#888", marginLeft: 4 } }, "Lead:"),
         h("button", { onClick: function () { d({ leadBold: !leadBold }); }, title: "Lead-in bold (whole section)", style: btn({ border: "1px solid " + (leadBold ? accent : "#bbb"), color: leadBold ? accent : "#bbb", fontWeight: 800, minWidth: 22 }) }, "B"),
         h("button", { onClick: function () { d({ leadItalic: !leadItalic }); }, title: "Lead-in italic (whole section)", style: btn({ border: "1px solid " + (leadItalic ? accent : "#bbb"), color: leadItalic ? accent : "#bbb", fontStyle: "italic", fontWeight: 700, minWidth: 22 }) }, "I"),
         h("input", { type: "color", value: leadColor, onChange: function (x) { d({ leadColor: x.target.value }); }, title: "Lead-in colour (whole section)", style: { width: 26, height: 22, padding: 0, border: "1px solid #ccc", borderRadius: 3, cursor: "pointer", flexShrink: 0 } }),
-        h("button", { onClick: function () { d({ leadColon: !leadColon }); }, title: leadColon ? "Lead-in followed by a colon (Label: value) — click to remove" : "No colon after the lead-in — click to add (Label: value)", style: btn({ border: "1px solid " + (leadColon ? accent : "#bbb"), color: leadColon ? accent : "#bbb", fontWeight: 700, minWidth: 22 }) }, "L:")
+        h("button", { onClick: function () { d({ leadColon: !leadColon }); }, title: leadColon ? "Lead-in followed by a colon (Label: value) — click to remove" : "No colon after the lead-in — click to add (Label: value)", style: btn({ border: "1px solid " + (leadColon ? accent : "#bbb"), color: leadColon ? accent : "#bbb", fontWeight: 700, minWidth: 22 }) }, "L:"),
+        h("button", { onClick: function () { d({ leadUnderline: !leadUnderline }); }, title: "Lead-in underline (whole section)", style: btn({ border: "1px solid " + (leadUnderline ? accent : "#bbb"), color: leadUnderline ? accent : "#bbb", textDecoration: "underline", fontWeight: 700, minWidth: 22 }) }, "U"),
+        h("input", { type: "color", value: leadUnderlineColor, disabled: !leadUnderline, onChange: function (x) { d({ leadUnderline: true, leadUnderlineColor: x.target.value }); }, title: "Lead-in underline colour (whole section)", style: { width: 26, height: 22, padding: 0, border: "1px solid #ccc", borderRadius: 3, cursor: leadUnderline ? "pointer" : "not-allowed", opacity: leadUnderline ? 1 : 0.5, flexShrink: 0 } }),
+        // BRAND-RESET-001 (owner 2026-07-22): a "back to default" button next to the two colour
+        // pickers (text + underline). leadColor = e.leadColor || accent and leadUnderlineColor =
+        // e.leadUnderlineColor || leadColor, so clearing BOTH overrides reverts them to the
+        // brand / visual-style accent. Highlighted only while a manual colour is set.
+        h("button", { onClick: function () { d({ leadColor: null, leadUnderlineColor: null }); }, disabled: !e.leadColor && !e.leadUnderlineColor, title: "Reset the lead-in text + underline colour to the brand / visual-style default", style: btn({ border: "1px solid " + ((e.leadColor || e.leadUnderlineColor) ? accent : "#ccc"), color: (e.leadColor || e.leadUnderlineColor) ? accent : "#ccc", minWidth: 22, marginLeft: 1, cursor: (e.leadColor || e.leadUnderlineColor) ? "pointer" : "default" }) }, "↺")
       );
 
       // ---- rows ----
       var rowEls = rows.map(function (ev, i) {
-        var hiddenRow = !!(e.hidden && e.hidden[i]);
+        var hiddenRow = fromRoles
+          ? (ev.roleHead ? ev.on === false : !!ev.hidden)
+          : !!(e.hidden && e.hidden[i]);
+        // ROLES-AS-RICHBLOCK-001: a role-line group head (3 segments role/company/
+        // years + horizontal-line toggle + per-segment colour). The adapter emits
+        // these for professional experience; editing them flows back to roles[] via
+        // the wrapped update (itemsToRoles reads seg[]/hr). reorder/delete reuse the
+        // shared row ops so a role moves/deletes as one unit.
+        if (ev.grp && ev.roleHead) {
+          var seg = Array.isArray(ev.seg) ? ev.seg : [{}, {}, {}];
+          var setSeg = function (idx, patch2) {
+            var ns = [0, 1, 2].map(function (j) { return Object.assign({}, seg[j] || {}, j === idx ? patch2 : null); });
+            updateRow(i, { seg: ns });
+          };
+          // Owner 2026-07-14: effective per-segment defaults — seg0 (role) BOLD,
+          // seg1 (company) ITALIC, seg2 (years) NORMAL. The B/I toggles reflect the
+          // effective state and write an explicit override (mirrors renderRoleHead).
+          var effBold = function (idx, sg) { return sg.bold != null ? !!sg.bold : idx === 0; };
+          var effItalic = function (idx, sg) { return sg.italic != null ? !!sg.italic : idx === 1; };
+          var segInput = function (idx, ph, extra) {
+            var sg = seg[idx] || {};
+            var eb = effBold(idx, sg), ei = effItalic(idx, sg);
+            return h("div", { style: { display: "flex", alignItems: "center", gap: 3, flex: extra && extra.flex || "1 1 auto", minWidth: 0 } },
+              h("input", { value: sg.t || "", onChange: function (x) { setSeg(idx, { t: x.target.value }); }, placeholder: ph, style: Object.assign({ flex: "1 1 auto", fontSize: 11, padding: 4, border: "1px solid #cfe6e3", borderRadius: 3, minWidth: 0, fontWeight: idx === 0 ? 700 : 500, color: "#0a6b66" }, extra && extra.style || {}) }),
+              h("input", { type: "color", value: sg.color || (idx === 0 ? "#00746E" : idx === 1 ? "#333333" : "#595959"), onChange: function (x) { setSeg(idx, { color: x.target.value }); }, title: ph + " colour", style: { width: 22, height: 20, padding: 0, border: "1px solid #ccc", borderRadius: 3, cursor: "pointer", flexShrink: 0 } }),
+              h("button", { onClick: function () { setSeg(idx, { bold: !eb }); }, title: ph + " bold", style: btn({ border: "1px solid " + (eb ? accent : "#bbb"), color: eb ? accent : "#bbb", fontWeight: 800, minWidth: 20, padding: "2px 4px" }) }, "B"),
+              h("button", { onClick: function () { setSeg(idx, { italic: !ei }); }, title: ph + " italic", style: btn({ border: "1px solid " + (ei ? accent : "#bbb"), color: ei ? accent : "#bbb", fontStyle: "italic", fontWeight: 700, minWidth: 20, padding: "2px 4px" }) }, "I")
+            );
+          };
+          return h("div", { key: i, style: { border: "1px solid #cbe0dd", borderRadius: 4, padding: 5, marginBottom: 6, background: hiddenRow ? "#fafafa" : "#eaf6f5", opacity: hiddenRow ? 0.5 : 1, display: "flex", gap: 4, alignItems: "center", flexWrap: "wrap" } },
+            h("div", { style: { display: "grid", gap: 0, justifyItems: "center", width: 20, flexShrink: 0 } },
+              h("button", { onClick: function () { moveRow(i, -1); }, disabled: i === 0, title: "Move role up", style: { fontSize: 10, border: "none", background: "none", color: i === 0 ? "#ccc" : "#666", padding: 0, cursor: i === 0 ? "default" : "pointer" } }, "▲"),
+              h("button", { onClick: function () { moveRow(i, 1); }, disabled: i === rows.length - 1, title: "Move role down", style: { fontSize: 10, border: "none", background: "none", color: i === rows.length - 1 ? "#ccc" : "#666", padding: 0, cursor: i === rows.length - 1 ? "default" : "pointer" } }, "▼")
+            ),
+            h("button", { onClick: function () { updateRow(i, { on: ev.on === false ? true : false }); }, title: ev.on === false ? "Role hidden — click to show" : "Role shown — click to hide the whole role", style: btn({ border: "1px solid " + (ev.on === false ? "#999" : accent), color: ev.on === false ? "#999" : accent, fontSize: 11, minWidth: 22 }) }, ev.on === false ? "🙈" : "👁"),
+            h("span", { style: { fontSize: 9, color: "#0a8", fontWeight: 700, flexShrink: 0, width: 26 } }, "ROLE"),
+            segInput(0, "Role title", { flex: "2 1 160px" }),
+            segInput(1, "Company", { flex: "1 1 110px" }),
+            segInput(2, "Years", { flex: "0 1 90px" }),
+            h("button", { onClick: function () { updateRow(i, { hr: ev.hr === false ? true : false }); }, title: ev.hr === false ? "Horizontal line OFF — click to show a line under the role" : "Horizontal line ON — click to hide", style: btn({ border: "1px solid " + (ev.hr === false ? "#bbb" : "#0a8"), color: ev.hr === false ? "#bbb" : "#0a8", fontWeight: 700, minWidth: 24 }) }, "—"),
+            h("button", { onClick: function () { var end = i + 1; while (end < rows.length && !(rows[end] && rows[end].grp)) end++; d({ items: rows.filter(function (x, j) { return j < i || j >= end; }) }); }, title: "Delete this role (and its bullets below)", style: btn({ border: "1px solid #e55", color: "#e55", fontSize: 10 }) }, "✕")
+          );
+        }
         // group sub-heading row — a single heading input + reorder/un-group/delete.
         if (ev.grp) {
+          // ROWFIT-GROUP-BUTTONS (owner 2026-07-22): a group runs from this {grp} row to the next
+          // {grp} or the end; group-level ✨/⇥ act on every child content row (loops the proven
+          // per-item path via a "group:i" id). ⏳ shows on the group while any child is busy.
+          var __gEnd = i + 1; while (__gEnd < rows.length && !(rows[__gEnd] && rows[__gEnd].grp)) __gEnd++;
+          var __grpBusyE = false, __grpBusyC = false;
+          for (var __gj = i + 1; __gj < __gEnd; __gj++) { if (isBusy("e:" + (e.id || "") + ":item:" + __gj)) __grpBusyE = true; if (isBusy("c:" + (e.id || "") + ":item:" + __gj)) __grpBusyC = true; }
+          var __grpBusy = __grpBusyE || __grpBusyC;
           return h("div", { key: i, style: { border: "1px solid #d8e8e6", borderRadius: 4, padding: 5, marginBottom: 6, background: hiddenRow ? "#fafafa" : "#f1faf9", opacity: hiddenRow ? 0.5 : 1, display: "flex", gap: 4, alignItems: "center" } },
             h("div", { style: { display: "grid", gap: 0, justifyItems: "center", width: 20, flexShrink: 0 } },
               h("button", { onClick: function () { moveRow(i, -1); }, disabled: i === 0, title: "Move up", style: { fontSize: 10, border: "none", background: "none", color: i === 0 ? "#ccc" : "#666", padding: 0, cursor: i === 0 ? "default" : "pointer" } }, "▲"),
@@ -91,6 +193,8 @@
             ),
             h("span", { style: { fontSize: 10, color: "#0a8", fontWeight: 700, flexShrink: 0 } }, "▾ Group"),
             h("input", { value: ev.t || "", onChange: function (x) { updateRow(i, { t: x.target.value }); }, placeholder: "Sub-group heading (e.g. Engineering)", style: { flex: "1 1 auto", fontSize: 11, padding: 4, border: "1px solid #cfe6e3", borderRadius: 3, minWidth: 0, fontWeight: 700, color: "#0a8" } }),
+            onEnrich ? h("button", { onClick: function () { for (var j = i + 1; j < __gEnd; j++) markBusy("e:" + (e.id || "") + ":item:" + j); onEnrich("group:" + i); }, disabled: __grpBusy, title: "Enhance every row in this group", style: btn({ border: "1px solid " + (__grpBusy ? "#ccc" : "#10b981"), color: __grpBusy ? "#ccc" : "#10b981", fontSize: 9, cursor: __grpBusy ? "wait" : "pointer" }) }, __grpBusyE ? "⏳" : "✨") : null,
+            onCompress ? h("button", { onClick: function () { for (var j = i + 1; j < __gEnd; j++) markBusy("c:" + (e.id || "") + ":item:" + j); onCompress("group:" + i); }, disabled: __grpBusy, title: "Fit every row in this group to one line", style: btn({ border: "1px solid " + (__grpBusy ? "#ccc" : "#7c3aed"), color: __grpBusy ? "#ccc" : "#7c3aed", fontSize: 9, cursor: __grpBusy ? "wait" : "pointer" }) }, __grpBusyC ? "⏳" : "⇥") : null,
             h("button", { onClick: function () { toggleGrp(i); }, title: "Convert to a normal row", style: btn({ border: "1px solid #888", color: "#888", minWidth: 22 }) }, "↩"),
             h("button", { onClick: function () { deleteRow(i); }, title: "Delete group", style: btn({ border: "1px solid #e55", color: "#e55", fontSize: 10 }) }, "✕")
           );
@@ -98,7 +202,8 @@
         var bOff = !!ev.bOff, tOff = !!ev.tOff;
         var thisPage = getPage(i), thisAlign = getAlign(i);
         var mk = ev.mk, mkOn = !!mk, mkEmoji = typeof mk === "string" ? mk : "";
-        var busyEnrich = enrichingId === "item:" + i, busyCompress = compressingId === "item:" + i;
+        var __ek = "e:" + (e.id || "") + ":item:" + i, __ck = "c:" + (e.id || "") + ":item:" + i;
+        var busyEnrich = enrichingId === "item:" + i || isBusy(__ek), busyCompress = compressingId === "item:" + i || isBusy(__ck);
         return h("div", { key: i, style: { border: "1px solid #eee", borderRadius: 4, padding: 5, marginBottom: 6, background: hiddenRow ? "#fafafa" : "#fff", opacity: hiddenRow ? 0.5 : 1 } },
           // line 1: move · hide-row · lead toggle · lead input · page · CJLR · enhance · fit · delete
           h("div", { style: { display: "flex", gap: 4, alignItems: "center", flexWrap: "nowrap" } },
@@ -106,7 +211,7 @@
               h("button", { onClick: function () { moveRow(i, -1); }, disabled: i === 0, title: "Move up", style: { fontSize: 10, border: "none", background: "none", color: i === 0 ? "#ccc" : "#666", padding: 0, cursor: i === 0 ? "default" : "pointer" } }, "▲"),
               h("button", { onClick: function () { moveRow(i, 1); }, disabled: i === rows.length - 1, title: "Move down", style: { fontSize: 10, border: "none", background: "none", color: i === rows.length - 1 ? "#ccc" : "#666", padding: 0, cursor: i === rows.length - 1 ? "default" : "pointer" } }, "▼")
             ),
-            h("button", { onClick: function () { toggleRowHidden(i); }, title: hiddenRow ? "Row hidden — show" : "Row shown — hide", style: btn({ border: "1px solid " + (hiddenRow ? "#999" : accent), color: hiddenRow ? "#999" : accent, fontSize: 11, minWidth: 22 }) }, hiddenRow ? "🙈" : "👁"),
+            h("button", { onClick: function () { fromRoles ? updateRow(i, { hidden: !ev.hidden }) : toggleRowHidden(i); }, title: hiddenRow ? "Row hidden — show" : "Row shown — hide", style: btn({ border: "1px solid " + (hiddenRow ? "#999" : accent), color: hiddenRow ? "#999" : accent, fontSize: 11, minWidth: 22 }) }, hiddenRow ? "🙈" : "👁"),
             h("button", { onClick: function () { updateRow(i, { mk: mkOn ? false : true }); }, title: mkOn ? "Marker ON — click to remove" : "No marker — click to add a bullet marker (then type an emoji to customise)", style: btn({ border: "1px solid " + (mkOn ? "#0a8" : "#bbb"), color: mkOn ? "#0a8" : "#bbb", minWidth: 22 }) }, mkOn ? (mkEmoji || "•") : "◦"),
             mkOn ? h("input", { value: mkEmoji, onChange: function (x) { var v = x.target.value; updateRow(i, { mk: v ? v : true }); }, title: "Row marker — leave blank for a bullet, or type any emoji (e.g. 🚀, ✅, ▸)", placeholder: "•", maxLength: 4, style: { width: 26, textAlign: "center", fontSize: 13, padding: "2px 2px", border: "1px solid #0a8", borderRadius: 3, flexShrink: 0 } }) : null,
             h("button", { onClick: function () { updateRow(i, { bOff: !bOff }); }, title: bOff ? "Lead-in hidden — show it" : "Lead-in shown — hide it", style: btn({ border: "1px solid " + (bOff ? "#999" : "#0a8"), color: bOff ? "#999" : "#0a8", fontWeight: 700, minWidth: 24 }) }, bOff ? "a̶" : "Aa"),
@@ -117,8 +222,8 @@
             (function () { var eff = (ev.colon != null) ? !!ev.colon : !mkOn; return h("button", { onClick: function () { updateRow(i, { colon: !eff }); }, title: eff ? "Colon after the lead-in (Label: …) — click to remove" : "No colon — click to add (Label: …)", style: btn({ border: "1px solid " + (eff ? accent : "#bbb"), color: eff ? accent : "#bbb", fontWeight: 700, minWidth: 22 }) }, ":"); })(),
             h("button", { onClick: function () { setPage(i, thisPage >= 4 ? 1 : thisPage + 1); }, title: "Row page: " + thisPage + ". Click to cycle 1→2→3→4.", style: btn({ border: "1px solid #01B7BB", color: "#00746E", background: thisPage === 1 ? "rgba(1,183,187,.08)" : "rgba(255,255,255,.10)", fontSize: 9, minWidth: 28 }) }, "P" + thisPage),
             h("button", { onClick: function () { setAlign(i, ALIGNS[(ALIGNS.indexOf(thisAlign) + 1) % ALIGNS.length] || "justify"); }, title: "Alignment: " + (ALABEL[thisAlign] || thisAlign) + ". Click to cycle.", style: btn({ border: "1px solid #7b2ff2", color: "#7b2ff2", background: "rgba(123,47,242,.06)", fontSize: 11, minWidth: 22 }) }, AICON[thisAlign] || AICON.justify),
-            onEnrich ? h("button", { onClick: function () { onEnrich("item:" + i); }, disabled: busyEnrich || busyCompress, title: "Enhance this row", style: btn({ border: "1px solid " + (busyEnrich ? "#ccc" : "#10b981"), color: busyEnrich ? "#ccc" : "#10b981", fontSize: 9, cursor: busyEnrich || busyCompress ? "wait" : "pointer" }) }, busyEnrich ? "⏳" : "✨") : null,
-            onCompress ? h("button", { onClick: function () { onCompress("item:" + i); }, disabled: busyCompress || busyEnrich, title: "Fit this row — tighten to one line", style: btn({ border: "1px solid " + (busyCompress ? "#ccc" : "#7c3aed"), color: busyCompress ? "#ccc" : "#7c3aed", fontSize: 9, cursor: busyCompress || busyEnrich ? "wait" : "pointer" }) }, busyCompress ? "⏳" : "⇥") : null,
+            onEnrich ? h("button", { onClick: function () { markBusy(__ek); onEnrich("item:" + i); }, disabled: busyEnrich || busyCompress, title: "Enhance this row", style: btn({ border: "1px solid " + (busyEnrich ? "#ccc" : "#10b981"), color: busyEnrich ? "#ccc" : "#10b981", fontSize: 9, cursor: busyEnrich || busyCompress ? "wait" : "pointer" }) }, busyEnrich ? "⏳" : "✨") : null,
+            onCompress ? h("button", { onClick: function () { markBusy(__ck); onCompress("item:" + i); }, disabled: busyCompress || busyEnrich, title: "Fit this row — tighten to one line", style: btn({ border: "1px solid " + (busyCompress ? "#ccc" : "#7c3aed"), color: busyCompress ? "#ccc" : "#7c3aed", fontSize: 9, cursor: busyCompress || busyEnrich ? "wait" : "pointer" }) }, busyCompress ? "⏳" : "⇥") : null,
             h("button", { onClick: function () { toggleGrp(i); }, title: "Make this a group sub-heading", style: btn({ border: "1px solid #888", color: "#888", minWidth: 22 }) }, "▾"),
             h("button", { onClick: function () { deleteRow(i); }, title: "Delete row", style: btn({ border: "1px solid #e55", color: "#e55", fontSize: 10 }) }, "✕")
           ),

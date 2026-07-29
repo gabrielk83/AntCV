@@ -36,4 +36,23 @@ globalThis.getComputedStyle = () => ({ getPropertyValue: (n) => tokens2[n] || ''
 const outCustom = buildStyle({ sidebarBg: '#112233' }, '#1B627F');
 ok('custom (no token) keeps styleConfig sidebarBg', H(outCustom.sidebarBg) === '112233');
 
+// BRAND-EXPORT-PARITY-001 — an ACTIVE per-app brand (antcv:brandV2 + __antcvBrandFit)
+// must WIN over the package --header-bg/--sidebar-bg tokens the body block resolves,
+// because the brand var lives inline on the paper-wrapper (invisible to document.body).
+// This is the fix for the owner's "export reverts to the default teal/navy palette".
+globalThis.getComputedStyle = () => ({ getPropertyValue: (n) => tokens[n] || '' }); // package tokens present
+globalThis.localStorage = { getItem: (k) => (k === 'antcv:brandV2' ? JSON.stringify({ version: 2, slots: { headerBg: '#0B4F8A', headerInk: '#FFFFFF', sidebarBg: '#0B4F8A', accent: '#D97706' } }) : null), setItem() {} };
+globalThis.window = { __antcvBrandFit: true };
+const outBrand = buildStyle({ headerBg: '#33446F', sidebarBg: '#DCE5EA', photoBorderColor: '#00746E' }, '#283556');
+ok('BRAND wins over package --header-bg token', H(outBrand.headerBg) === '0B4F8A');
+ok('BRAND wins over package --sidebar-bg token', H(outBrand.sidebarBg) === '0B4F8A');
+ok('BRAND accent drives the photo border', H(outBrand.photoBorderColor) === 'D97706');
+ok('BRAND band ink stays white (contrast)', H(outBrand.headerNameColor) === 'FFFFFF');
+ok('BRAND table header matches the brand band', H(outBrand.tableHeaderBg) === '0B4F8A');
+
+// brand OFF -> package token wins (no regression to non-branded package exports)
+globalThis.window = { __antcvBrandFit: false };
+const outOff = buildStyle({ headerBg: '#33446F' }, '#283556');
+ok('brand OFF keeps the package --header-bg token (no regression)', H(outOff.headerBg) === '283556');
+
 console.log(`\nBUILDSTYLE-PALETTE OK (${pass} checks)`);

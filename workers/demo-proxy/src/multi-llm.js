@@ -123,6 +123,7 @@ const PROVIDER_MODELS = {
     // Current flagship + 4.x family (2025-2026)
     'claude-sonnet-5',           // 2026-07 preferred: best speed/intelligence, drop-in for 4.6. Adaptive thinking is ON by default -> we send thinking:disabled (see callAnthropic); NO sampling params anywhere in AntCV, so no 400.
     'claude-sonnet-4-20250514',  // stable, current production default for this proxy
+    'claude-opus-4-8',           // 2026-07 flagship (AntCV gen pin since 1.51.332) — supersedes 4-7
     'claude-opus-4-7',           // 2026-04 flagship, available with appropriate tier
     'claude-sonnet-4-6',         // 2026-02 mainline
     'claude-haiku-4-5',          // fast/cheap current
@@ -385,6 +386,18 @@ const PROVIDER_FNS = {
 // the var behave byte-identically to before this change.
 // Design: docs/plan/GEN-MODELROLE-001_design.md
 // ------------------------------------------------------------------
+// RELAY-TUNE-COVERAGE-GAP-001 (2026-07-13): the roles MODEL_ROLES may pin a head
+// for. The 3 original internal-cascade roles — writer (auto-repair rewrite),
+// supervisor (grounding check), coherence (cross-section review) — PLUS the two
+// PROXY-SIDE cascade endpoints: analysis (jd-analysis.js) and kernel
+// (kernel-extraction.js), which run callAnyLLMForJSON but previously passed no
+// role, so the weekly cost-quality tune could not steer their head. NOTE: the
+// raw generation passthrough (compress / long_context / generate) is deliberately
+// NOT a role here — it forwards the client's x-provider + model id verbatim, so
+// reordering it would 404 (see model-roles.test.mjs "raw-passthrough" lock). An
+// unknown key (typo, or a client-side task label) is ignored — fail-soft.
+export const ROLE_KEYS = ['writer', 'supervisor', 'coherence', 'analysis', 'kernel'];
+
 export function parseModelRoles(env) {
   try {
     const raw = env && env.MODEL_ROLES;
@@ -392,7 +405,7 @@ export function parseModelRoles(env) {
     const map = typeof raw === 'string' ? JSON.parse(raw) : raw;
     if (!map || typeof map !== 'object' || Array.isArray(map)) return null;
     const out = {};
-    for (const role of ['writer', 'supervisor', 'coherence']) {
+    for (const role of ROLE_KEYS) {
       const p = String(map[role] || '').toLowerCase().trim();
       if (PROVIDER_FNS[p]) out[role] = p;
     }

@@ -13,17 +13,63 @@ This is a MULTI-RUN order. Each nightly run: (1) SYNC FIRST, (2) read the STATUS
 block below, (3) do the next unchecked phase, (4) update STATUS + append a run log
 line, (5) commit/push. Do not skip phases; do not start a phase you cannot verify.
 
+## SHIFT PROTOCOL — claim before you work (parallel-session safety)
+
+Multiple sessions push to `origin/main`. Before editing, reserve your lane so you never
+collide on a version number or a shared working tree (full detail: `docs/qa/NIGHT_SHIFT.md`):
+
+1. **SYNC** — `git fetch origin && git pull --rebase origin main`.
+2. **CLAIM** — `node scripts/shift.mjs claim --task "<what you're doing>"` reserves a
+   version-number range for you and records it in the ledger; it prints your range + a
+   `git worktree add` line.
+3. **WORKTREE** — run that `git worktree add ../AntCV-<name> -b <name>` and work THERE, not
+   in the shared clone (kills the "another session's uncommitted app.js under my commits" bug).
+4. Use only version numbers **inside your claimed range**; `node scripts/shift.mjs beat` to heartbeat.
+5. **RELEASE** — `node scripts/shift.mjs release` when done. `status` lists active claims; `reap` clears dead ones.
+
 ## STATUS (update every run)
 
-- [ ] R1 Language register registry + client wiring (en/da/es/zh -> 23)
-- [ ] R2 Export path: filename suffixes; RTL + CJK in docx-worker (may split into 2 runs)
-- [ ] R3 Style structure registry: sectionOrder + CL skeleton variant for all 12 styles
+- [~] R1 Language register registry + client wiring (en/da/es/zh -> 23) — PARTIAL: `__langGenLock`
+      directive covers zh/es/he/am/fr/de (+generic) in targeted+unsolicited prompts (1.51.237/250/252);
+      translation round-trip now covers subtitle + CL slogan (1.51.248). **BABEL-FISH stack SHIPPED +
+      verified live (1.51.262→324, spec BABEL_FISH_LANGUAGE_ARCHITECTURE.md):** 1a honest `LANGUAGE:` line
+      (`__langPromptName`, killed the hardcoded "UK English" for non-Danish — the root cause of "unsolicited
+      zh → English"); 1b `antcv-babel-relang.js` re-renders wrong-script content to the ribbon language; 2
+      lazy per-language cache w/ genSpeed split; 2b cross-device `langRenders` cloud sync (relay auth-30); 2c-A
+      fact-preservation invariant check. **SLOGAN-LANG-GATE-001 SHIPPED (1.51.1404, 2026-07-15):** a
+      defensive gate on top of babel-fish — a stored slogan OVERRIDE whose language/script mismatches the
+      ribbon is rejected (`window.__antcvSloganLangGate`) → yields to the specialisation fallback, in preview
+      AND export, so branded==non-branded parity holds. Every multi-language run should now spot-check the
+      rendered + exported CL slogan is in the ribbon language (not a leaked Danish/other-language override).
+      NOT done: the full 23-language `__ANTCV_LANG_REGISTRY` sidecar +
+      register/voice/name-map lookups this phase specifies; 2c-B pre-warm (needs a headless translate).
+- [~] R2 Export path: filename suffixes; RTL + CJK in docx-worker — SUBSTANTIALLY SHIPPED: CJK font
+      (zh Microsoft YaHei), RTL he/ar (w:rtl + w:bidi + `visuallyRightToLeft` layout mirror), Ethiopic am
+      font (worker 1.14.143/144). STILL OPEN: filename-suffix registry (still `_Dansk`-only) + owner VISUAL
+      gate on ar/zh PDFs.
+- [~] R3 Style structure registry: sectionOrder + CL skeleton variant for all 12 styles — FIRST SLICE:
+      `antcv-style-page-budget.js` seeds per-style pageBudget + commercial-section order (1.51.235).
+      NOT done: full registry.json sectionOrder[]/clSectionOrder[] for all 12 + clSkeletonDelta.
 - [ ] R4 Personality-fit style adapters (12 styles x 6 trait clusters)
 - [ ] R5 Nordic Minimal generic-baseline regression + Research Formal edge case
 - [ ] R6 Wizard/Settings surface + full matrix smoke + server readiness sign-off
 
 Run log:
-- (none yet)
+- 2026-07-10 (desktop, parallel-gen/lang track — see SESSION_2026-07-10_PARALLEL_GEN_AND_LANG.md):
+  advanced R2 (CJK+RTL+Ethiopic export, worker 1.14.143/144), R1 (per-tab `__langGenLock` zh/es/he/am/fr/de
+  + translation subtitle/slogan round-trip), R3 (per-style page-budget + commercial order sidecar). he/am/ar
+  now selectable in the language bar. NEXT unchecked full phases: finish R1 registry, R2 filename-suffix +
+  owner ar/zh visual gate, then R3 full registry orders.
+- 2026-07-11 (desktop, babel-fish track — spec `docs/qa/BABEL_FISH_LANGUAGE_ARCHITECTURE.md`, memory
+  `babel-fish-language`): shipped the full babel-fish language stack answering the owner's "unsolicited zh
+  still generates English" + "meaning is canonical, every language is a rendering" model. 1a
+  `__langPromptName` honest `LANGUAGE:` line (1.51.262, root-cause fix); 1b relang sidecar (1.51.320); 2 lazy
+  per-lang cache + genSpeed split (1.51.321); 2b `langRenders` cloud sync + relay auth-30 (1.51.323); 2c-A
+  fact-preservation invariant check (1.51.324). Verified live signed-in (real zh render on
+  karp.gabriel.a@antcv.net) + cloud round-trip + invariant drift detection. This substantially advances R1
+  (client wiring for real per-language output) — the remaining R1 gap is the declarative 23-language
+  `__ANTCV_LANG_REGISTRY`. OPEN: 2c-B pre-warm (headless translate); R1 registry; R2 filename-suffix + owner
+  ar/zh visual gate; R3 full registry orders.
 
 ## Hard rules (same as every nightly; violating any = failed run)
 
@@ -38,6 +84,24 @@ Run log:
 5. Suite green via `node scripts/run-tests.mjs pwa` + `node pwa/test/boot-smoke.mjs`
    before every push. Workers deploy via `gh workflow run deploy.yml` only.
 6. Flagship gen model stays claude-opus-4-7 unless the owner flips it.
+7. **POST-DEPLOY LIVE VERIFY (desktop runs, owner 2026-07-10):** after push + the
+   Pages auto-deploy, open the in-app Browser pane on `https://antcv.pages.dev/` and
+   run the checklist in `docs/qa/LIVE_VERIFY_BROWSER_PANE.md` — confirm the deployed
+   version is live (freshness-guard), each changed sidecar loaded at its NEW `?v=`, and
+   each edit's code marker is present in the built bundle. This catches the stale-`?v`
+   phantom-ship regression that tests + static tracing miss. NEVER navigate `?hardReset=1`
+   (signs the owner out + wipes languages to EN-DA). Cloud runs can't do this — they
+   flag it "owed to a desktop run"; the next desktop run clears the owed verify.
+8. **EXPORT DELIVERABLES (owner 2026-07-23, standing for EVERY generation nightly):**
+   each generation run produces, per generated application, the FULL deliverable set:
+   (a) the **CV DOCX** and **CL DOCX** (docx-worker `/generate` — same buildPayload
+   path the app's Export buttons use, memory generate-deliverables-via-worker),
+   (b) the CV+CL **PDFs** (`/generate-pdf`, real CloudConvert), and
+   (c) the **analysis-report PDF** (the branded AI-watermarked report, memory
+   analysis-report-pdf) whenever the run produced/updated an analysis.
+   File them in the run's output folder with the app's own filenames; a run that
+   generates content but skips the exports is an INCOMPLETE run — the exports are
+   how render regressions (header box, table frame, banding, orphans) get caught.
 
 ## Ground truth (verified 2026-07-02 by code audit)
 

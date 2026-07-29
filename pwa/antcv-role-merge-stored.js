@@ -21,7 +21,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.154-role-merge-stored';
+  var VERSION = '1.51.3482-substamp-resultsheal';
   if (window.__antcvRoleMergeStored === VERSION) return;
   window.__antcvRoleMergeStored = VERSION;
 
@@ -33,10 +33,39 @@
   function hash(s) { var h = 0; s = String(s); for (var i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0; return h; }
   function isTargeted(m) {
     var c = String((m && m.company) || '').trim();
-    return !!c && !/^unsolicited$/i.test(c) && !/^open application$/i.test(c);
+    return !!c && !(window.__ANTCV_UNSOL_RE || /^unsolicited$/i).test(c) && !/^open application$/i.test(c); // UNSOL-PILLAR-LANG-001: any language variant
   }
   function clone(o) { var n = {}; for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) n[k] = o[k]; return n; }
   function coKey(r) { return String((r && r.company) || '').trim().toLowerCase(); }
+
+  // RESULTS-HEAL (SECTIONS-STORM-2026-07-23, spec rule 17 ">1 Result"): a merged
+  // role must carry the results of BOTH constituents. The pre-3482 merge kept only
+  // grp[0].results, and the storm's repeated re-merges persisted that collapsed
+  // value into stored sections. Recompute each stored merged role's results from
+  // its hidden constituents (same company, __antcvStoredMergeHidden) and repair
+  // ONLY the collapsed states — empty, or exactly one constituent's line. Any
+  // other text is an owner edit and sticks (RESULTS-PIN-OWNER-EDIT-001 rule).
+  function healMergedResults(exp) {
+    var changed = false;
+    (exp.roles || []).forEach(function (m) {
+      if (!m || !m.__antcvStoredMergeRole) return;
+      var co = coKey(m);
+      var rs = [];
+      exp.roles.forEach(function (r) {
+        if (!r || !r.__antcvStoredMergeHidden || coKey(r) !== co) return;
+        var t = String(r.results == null ? '' : r.results).trim();
+        if (t && rs.indexOf(t) === -1) rs.push(t);
+      });
+      if (rs.length < 2) return;                    // nothing beyond a single line to restore
+      var want = rs.join(' ');
+      var cur = String(m.results == null ? '' : m.results).trim();
+      if (cur === want) return;
+      if (cur && rs.indexOf(cur) === -1) return;    // owner edit — never clobber
+      m.results = want;
+      changed = true;
+    });
+    return changed;
+  }
 
   function apply() {
     if (disabled() || erasing()) return;
@@ -51,13 +80,34 @@
       var exp = b.cv.find(function (s) { return s && s.type === 'experience' && Array.isArray(s.roles); });
       if (!exp) return;
       var stamp = String(hash('rm-v1|' + String(m.company) + '|' + String(m.role || '') + '|' + jd.slice(0, 2000)));
-      if (b._roleMergeStamp === stamp) return;             // decided for this app+JD already
+      // RESULTS-HEAL runs even on a stamped blob (repairs collapsed results in place).
+      var healed = healMergedResults(exp);
+      // STAMP-IN-BLOB, substructure-keyed (SECTIONS-STORM-2026-07-23, per
+      // storm-guards-must-be-substructure-keyed): the ROOT stamp is dropped by any
+      // writer that rebuilds the blob as {cv,cl} (the app.js ingest did exactly
+      // that), which re-armed this belt every cycle — the sections rewrite storm.
+      // The stamp now ALSO travels on the experience SECTION, which survives such
+      // root rebuilds; either site matching means "decided for this app+JD".
+      if (b._roleMergeStamp === stamp || exp._roleMergeStamp === stamp) {
+        if (healed) {
+          b._roleMergeStamp = stamp; exp._roleMergeStamp = stamp;
+          try { localStorage.setItem('sections', JSON.stringify(b)); } catch (_) {}
+          try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: SRC } })); } catch (_) {}
+          try { console.log('[role-merge-stored] restored merged-role Results from constituents (rule 17) for "' + m.company + '"'); } catch (_) {}
+        }
+        return;
+      }
 
       // Idempotency / anti-doubling: if a stored merged role is already present,
       // do not re-merge (a merged role + an un-hidden constituent would otherwise
       // re-merge into a double). Just stamp and stop.
       if (exp.roles.some(function (r) { return r && r.__antcvStoredMergeRole; })) {
-        b._roleMergeStamp = stamp; try { localStorage.setItem('sections', JSON.stringify(b)); } catch (_) {}
+        b._roleMergeStamp = stamp; exp._roleMergeStamp = stamp;
+        try { localStorage.setItem('sections', JSON.stringify(b)); } catch (_) {}
+        if (healed) {
+          try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: SRC } })); } catch (_) {}
+          try { console.log('[role-merge-stored] restored merged-role Results from constituents (rule 17) for "' + m.company + '"'); } catch (_) {}
+        }
         return;
       }
 
@@ -69,7 +119,8 @@
       if (Array.isArray(out)) out.forEach(function (r) { var k = coKey(r); if (k && visCount[k] >= 2 && !mergedByCo[k]) mergedByCo[k] = r; });
 
       if (!Object.keys(mergedByCo).length) {                // nothing to merge
-        b._roleMergeStamp = stamp; try { localStorage.setItem('sections', JSON.stringify(b)); } catch (_) {}
+        b._roleMergeStamp = stamp; exp._roleMergeStamp = stamp;
+        try { localStorage.setItem('sections', JSON.stringify(b)); } catch (_) {}
         return;
       }
 
@@ -96,7 +147,7 @@
       });
 
       exp.roles = newRoles;
-      b._roleMergeStamp = stamp;
+      b._roleMergeStamp = stamp; exp._roleMergeStamp = stamp;
       try { localStorage.setItem('sections', JSON.stringify(b)); } catch (_) {}
       try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: SRC } })); } catch (_) {}
       try { console.log('[role-merge-stored] merged same-company roles into stored sections (' + Object.keys(mergedByCo).join(', ') + ') for "' + m.company + '" — preview now matches export'); } catch (_) {}

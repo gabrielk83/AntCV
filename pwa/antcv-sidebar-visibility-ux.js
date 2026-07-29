@@ -38,7 +38,7 @@
 (function () {
   'use strict';
   if (window.__antcvSidebarVisibilityUx) return;
-  window.__antcvSidebarVisibilityUx = '1.51.117';
+  window.__antcvSidebarVisibilityUx = '1.51.181';
 
   var SRC = 'sidebar-visibility-ux';
   var LOG_KEY = 'antcv:visibilityAnalytics';
@@ -410,7 +410,14 @@
       var proto = window.HTMLInputElement && window.HTMLInputElement.prototype;
       var desc = proto && Object.getOwnPropertyDescriptor(proto, 'value');
       if (desc && typeof desc.set === 'function') desc.set.call(input, pct); else input.value = pct;
-      input.dispatchEvent(new Event('input', { bubbles: true }));
+      // TOPBAR-UNDO-UNIFY-001 follow-up (owner 2026-07-05, live-verify catch):
+      // a plain `new Event('input')` does not carry the shape React's
+      // synthetic ChangeEventPlugin expects — the DOM value visibly updated
+      // but the app's onChange (and therefore its localStorage persist)
+      // never fired, so the "undo" silently did nothing. InputEvent is what
+      // real user typing/dragging dispatches natively.
+      var InputEventCtor = window.InputEvent || Event;
+      input.dispatchEvent(new InputEventCtor('input', { bubbles: true }));
       input.dispatchEvent(new Event('change', { bubbles: true }));
       return true;
     } catch (_) { return false; }
@@ -427,7 +434,7 @@
           var prevVal = null;
           try { prevVal = JSON.parse(resizeSeen[key]); } catch (_) { prevVal = Number(resizeSeen[key]); }
           if (prevVal != null && isFinite(Number(prevVal))) {
-            undoStack.push({ desc: RESIZE_KEYS[key].desc, kind: 'key', key: key, prev: Number(prevVal) });
+            undoStack.push({ desc: RESIZE_KEYS[key].desc, kind: 'key', key: key, prev: Number(prevVal), ts: Date.now() });
             if (undoStack.length > 20) undoStack.shift();
             showToast(RESIZE_KEYS[key].desc);
           }
@@ -438,6 +445,71 @@
     } catch (_) {}
   }
   setInterval(watchResizes, 1300);
+
+  // ---------- TOPBAR-UNDO-UNIFY-001 (owner 2026-07-05): one undo button ----------
+  // The topbar's own undo (.antcv-top-undo, EDITOR-GEAR-UNDO-001) only covers
+  // the app's sections/meta history (dr/xr in app.src.js) — it has no idea
+  // resize actions exist, since those live in localStorage keys, never in
+  // React state. Rather than a second dedicated undo surface for resizing
+  // (the toast UNDO button above), make the ONE topbar button also reach
+  // this stack: whichever action is more recent — a normal edit (inferred
+  // from the topbar's own undo-count in its title, "(N)") or a resize —
+  // wins when the button is clicked.
+  var lastRegularEditTs = 0, lastSeenDrCount = null;
+  var UNDO_WIRED_ATTR = 'data-antcv-undo-unify-wired';
+  function parseDrCount(title) {
+    var m = /\((\d+)\)/.exec(title || '');
+    return m ? Number(m[1]) : 0;
+  }
+  function wireTopbarUndo() {
+    var btn = document.querySelector('.antcv-top-undo');
+    if (!btn) return;
+    var count = parseDrCount(btn.getAttribute('title'));
+    if (lastSeenDrCount === null) {
+      // First sight: don't backdate an unknown pre-existing history to "now"
+      // unless it's non-empty, in which case treat it as roughly current so
+      // a fresh resize still correctly wins the race going forward.
+      lastSeenDrCount = count;
+      if (count > 0) lastRegularEditTs = Date.now();
+    } else if (count > lastSeenDrCount) {
+      lastSeenDrCount = count;
+      lastRegularEditTs = Date.now();
+    } else {
+      lastSeenDrCount = count;
+    }
+
+    var resizePending = undoStack.length && undoStack[undoStack.length - 1].ts > lastRegularEditTs;
+    if (resizePending && btn.disabled) {
+      // The app disables this button whenever ITS OWN history (dr) is
+      // empty — force it clickable while our separately-tracked resize
+      // undo is the more recent action, exactly like antcv-topbar-tools-347
+      // already overrides other topbar control styling.
+      btn.disabled = false;
+      btn.style.setProperty('color', '#f59e0b', 'important');
+      btn.style.setProperty('cursor', 'pointer', 'important');
+    }
+
+    if (btn.getAttribute(UNDO_WIRED_ATTR) !== '1') {
+      // Per-NODE marker, not a bare module-level flag — if React ever
+      // replaces this button (rather than updating it in place, e.g. on
+      // its disabled/enabled transition), a global flag would silently
+      // leave the fresh node with no listener at all and clicks would
+      // just fall through to the app's own (often no-op) handler. Caught
+      // live: the button clicked, no error, but the value never reverted.
+      btn.setAttribute(UNDO_WIRED_ATTR, '1');
+      btn.addEventListener('click', function (e) {
+        var top = undoStack[undoStack.length - 1];
+        if (top && top.ts > lastRegularEditTs) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          undoLast();
+        }
+        // else: fall through to the app's own onClick (xr) untouched.
+      }, true);
+    }
+  }
+  setInterval(wireTopbarUndo, 1000);
+  [500, 1500, 3000].forEach(function (d) { setTimeout(wireTopbarUndo, d); });
 
   function cancelPress() {
     if (press.timer) { clearTimeout(press.timer); press.timer = null; }
@@ -486,7 +558,7 @@
   setInterval(tick, 4000);
 
   window.AntcvSidebarVisibilityUx = {
-    version: '1.51.117',
+    version: '1.51.181',
     _undoLast: undoLast,
     _undoStack: function () { return undoStack; },
     _restoreToken: restoreToken,

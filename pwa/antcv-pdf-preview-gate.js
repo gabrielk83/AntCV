@@ -44,7 +44,7 @@
   'use strict';
 
   if (window.__antcvPdfPreviewGateInstalled) return;
-  window.__antcvPdfPreviewGateInstalled = '1.50.374-page2-print';
+  window.__antcvPdfPreviewGateInstalled = '1.51.2085-export-preview-zoom-decouple';
 
   const FAB_ID = 'antcv-pdf-preview-fab';
   const MODAL_ID = 'antcv-pdf-preview-modal';
@@ -90,7 +90,11 @@
          glyph rendered as an invisible Tofu box on some systems
          where the user couldn't find the FAB at all). z-index now
          clears the overlay (99999) and most editor chrome but stays
-         below the mobile bottom-nav (2147481600). */
+         below the mobile bottom-nav (2147481600).
+         EXPORT-FAB-DRAGGABLE-001 (owner 2026-07-05: "make the mobile export
+         button floating so I can move it if it hides stuff"): cursor/touch-action
+         now match the draggable Ask-AI launcher (antcv-doc-chatbot-440.js) —
+         drag logic + position persistence added below in injectFab(). */
       #${FAB_ID} {
         position: fixed;
         bottom: 100px;
@@ -103,7 +107,8 @@
         background: #00746E;
         color: #fff;
         border: 1px solid #00867F;
-        cursor: pointer;
+        cursor: grab;
+        touch-action: none;
         font-size: 13px;
         font-weight: 700;
         letter-spacing: 0.02em;
@@ -115,6 +120,7 @@
         opacity: 0.96;
         transition: opacity 0.15s, transform 0.15s, background 0.15s;
       }
+      #${FAB_ID}:active { cursor: grabbing; }
       #${FAB_ID}:hover { opacity: 1; background: #00867F; transform: translateY(-1px); }
       #${FAB_ID}:focus-visible { outline: 2.5px solid #01B7BB; outline-offset: 2px; }
       #${FAB_ID} svg { width: 16px; height: 16px; flex: 0 0 auto; }
@@ -472,6 +478,18 @@ ${inlineStyles}
        keep its inherited PWA-rendered dimensions. */
   }
   .antcv-preview-paper:last-child { margin-bottom: 0; }
+  /* EXPORT-PREVIEW-ZOOM-DECOUPLE-001 (owner 2026-07-22: "export preview cuts
+     pages ~half AND its zoom follows the editor's zoom"). The live editor bakes
+     its own zoom onto the paper as an INLINE transform (app.src.js ~51102:
+     transform: scale(<editor-zoom>); transform-origin: top left). p.outerHTML
+     copies that inline transform into this clone, so (a) every editor zoom change
+     also rescaled THIS preview, and (b) it stacked on top of fitWidth's own zoom
+     — the transformed paper's layout box stays full-size while its content shrinks
+     top-left, which desynced the page-row math and chopped pages to ~half. Strip
+     it so the export preview always starts at natural 100% and does its OWN
+     independent fit (body zoom via --antcv-fit below). !important beats the inline
+     style; covers both the initial build and the doc-toggle rebuild. */
+  .antcv-preview-paper { transform: none !important; transform-origin: top left !important; }
   /* Fit-to-width (owner: export preview was "too stretched", main column
      cut on the right on mobile). The A4 paper (~794px) is wider than a
      phone iframe, so we scale the whole body down to fit via a JS-set CSS
@@ -744,26 +762,9 @@ ${inlineStyles}
     print.title =
       'Save as PDF. Uses the app’s server-side ATS PDF export when available, ' +
       'falling back to the browser print dialog (choose "Save as PDF").';
-    print.addEventListener('click', () => {
-      // EXPORT-PDF-WRONG-DOC-001 (owner 2026-06-16: "the document output for CV
-      // is the Analysis"). The modal's "Save as PDF" used to DIVERT to the
-      // analysis exporter whenever the analysis panel happened to be the
-      // foreground surface BEHIND the modal — but this modal is explicitly
-      // previewing the CV/CL (the CV/CL toggle picks which), so Save-as-PDF must
-      // export the PREVIEWED document, never the analysis. The analysis has its
-      // OWN dedicated "Analysis (PDF)" button in this modal (added 1.50.377), so
-      // the divert is both redundant and the cause of the wrong-doc export.
-      // Removed — Save-as-PDF now always exports the previewed CV/CL.
-      // Prefer the app's real PDF export (CloudConvert /generate-pdf when the
-      // docx-worker has CLOUDCONVERT_API_KEY — proper Unicode-embedded ATS
-      // PDF). Identify it by its stable title prefix. Fall back to printing
-      // the iframe clone if that button isn't present.
-      const realPdf = document.querySelector('button[title^="Export as PDF"]');
-      if (realPdf) {
-        closeModal();
-        setTimeout(() => { try { realPdf.click(); } catch (_) {} }, 60);
-        return;
-      }
+    // Browser-print the iframe clone (last resort when the server PDF path is
+    // genuinely unavailable). Prints ONLY the iframe content, not the PWA chrome.
+    function iframePrint() {
       const target = modal._antcvPrintTarget;
       if (!target || !target.contentWindow) {
         try { window.print(); } catch (_) {}
@@ -776,6 +777,70 @@ ${inlineStyles}
         // Fallback to top-level print if iframe print is blocked.
         try { window.print(); } catch (_) {}
       }
+    }
+    print.addEventListener('click', () => {
+      // EXPORT-PDF-WRONG-DOC-001 (owner 2026-06-16: "the document output for CV
+      // is the Analysis"). The modal's "Save as PDF" used to DIVERT to the
+      // analysis exporter whenever the analysis panel happened to be the
+      // foreground surface BEHIND the modal — but this modal is explicitly
+      // previewing the CV/CL (the CV/CL toggle picks which), so Save-as-PDF must
+      // export the PREVIEWED document, never the analysis. The analysis has its
+      // OWN dedicated "Analysis (PDF)" button in this modal (added 1.50.377), so
+      // the divert is both redundant and the cause of the wrong-doc export.
+      // Removed — Save-as-PDF now always exports the previewed CV/CL.
+      // Prefer the app's real PDF export (CloudConvert /generate-pdf when the
+      // docx-worker has CLOUDCONVERT_API_KEY — proper Unicode-embedded ATS
+      // PDF). Identify it by its stable title prefix.
+      const realPdf = document.querySelector('button[title^="Export as PDF"]');
+      if (realPdf) {
+        closeModal();
+        setTimeout(() => { try { realPdf.click(); } catch (_) {} }, 60);
+        return;
+      }
+      // EXPORT-PDF-PANEL-WORKER-001 (owner 2026-07-18): the app's PDF export
+      // button only mounts on the PREVIEW tab (app.src.js `"preview" === ei`
+      // gate on the .antcv-preview-actions bar). On the Analysis / Sections /
+      // Edit tab that bar is unmounted, so the querySelector above returns null
+      // — but the preview paper still renders, so the export FAB stays visible
+      // and the user opens this modal from a non-preview tab. PDF then dropped
+      // straight to browser print, even though the CloudConvert worker was fully
+      // available (the reported "open panel => printer export instead of the
+      // Cloudflare worker" bug). DOCX never had this bug because triggerDocxExport
+      // already calls the worker directly when the app button is missing. Mirror
+      // that here: call /generate-pdf directly, honouring the SAME server-PDF
+      // policy the app uses (window.__antcvUseServerPdf — BYOK on a shared demo
+      // deployment without a CloudConvert key stays on browser print), and fall
+      // back to the iframe browser-print only when server PDF is genuinely
+      // unavailable or the worker call fails.
+      const useServer = (typeof window.__antcvUseServerPdf === 'function')
+        ? !!window.__antcvUseServerPdf()
+        : true;
+      const canServer = useServer
+        && typeof window.exportPdfViaWorker === 'function'
+        && typeof window.isPdfWorkerAvailable === 'function'
+        && !!window.ANTCV_DOCX_WORKER;
+      if (canServer) {
+        const restore = () => { try { print.disabled = false; print.textContent = 'Save as PDF'; } catch (_) {} };
+        try { print.disabled = true; print.textContent = 'Preparing…'; } catch (_) {}
+        Promise.resolve(window.isPdfWorkerAvailable()).then((avail) => {
+          if (!avail) { restore(); iframePrint(); return; }
+          const payload = buildExportPayloadFromStorage();
+          const ph = (typeof window._antcvShrinkPhoto === 'function')
+            ? Promise.resolve(window._antcvShrinkPhoto(payload.photo)).catch(() => payload.photo)
+            : Promise.resolve(payload.photo);
+          return ph.then((p) => { payload.photo = p; return window.exportPdfViaWorker(payload); })
+            .then(() => {
+              try { console.debug('[pdf-preview-gate] PDF: app button not found — exported via CloudConvert worker directly'); } catch (_) {}
+              closeModal();
+            });
+        }).catch((e) => {
+          try { console.warn('[pdf-preview-gate] direct server PDF unavailable/failed, browser print:', e && e.message); } catch (_) {}
+          restore();
+          iframePrint();
+        });
+        return;
+      }
+      iframePrint();
     });
 
     // Save as DOCX — delegates to the app's existing DOCX export button
@@ -985,7 +1050,7 @@ ${inlineStyles}
     }
     return null;
   }
-  function buildDocxPayloadFromStorage() {
+  function buildExportPayloadFromStorage() {
     function s(k, d) { try { var v = localStorage.getItem(k); return v == null ? d : v; } catch (_) { return d; } }
     function j(k, d) { try { var v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (_) { return d; } }
     // The DOCX worker schema only accepts language en|da. Sending anything else
@@ -1008,6 +1073,13 @@ ${inlineStyles}
       return String(d).toLowerCase() === 'cl' ? 'cl' : 'cv';
     })();
     var pi = j('personalInfo', {}) || {};
+    // Match the app's DEMO watermark policy for the from-storage fallback path:
+    // a demo user's export (DOCX or PDF) must carry the DEMO watermark, exactly
+    // as the app's own export buttons do (watermark: __antcvDemoActive() ? 'DEMO').
+    // window.__antcvDemoActive is exposed by app.js; absent (stale cache) => no
+    // watermark, which is the correct value for the non-demo owner deployment.
+    var demo = false;
+    try { demo = (typeof window.__antcvDemoActive === 'function') && !!window.__antcvDemoActive(); } catch (_) { demo = false; }
     return {
       sections: j('sections', { cv: [], cl: [] }),
       meta: j('meta', {}),
@@ -1018,6 +1090,7 @@ ${inlineStyles}
       fontSizes: pi.fontSizes || undefined,
       language: clampLang(s('language', 'en')),
       navyColor: s('navyColor', '#283556'),
+      watermark: demo ? 'DEMO' : '',
     };
   }
   function triggerDocxExport() {
@@ -1030,7 +1103,7 @@ ${inlineStyles}
       try {
         console.debug('[pdf-preview-gate] DOCX: app button not found — calling exportDocxViaWorker directly');
         var p = window._antcvShrinkPhoto && (typeof window._antcvShrinkPhoto === 'function');
-        var payload = buildDocxPayloadFromStorage();
+        var payload = buildExportPayloadFromStorage();
         Promise.resolve(p ? window._antcvShrinkPhoto(payload.photo).catch(function () { return payload.photo; }) : payload.photo)
           .then(function (ph) { payload.photo = ph; return window.exportDocxViaWorker(payload); })
           .catch(function (e) { try { console.warn('[pdf-preview-gate] DOCX export failed', e && e.message); } catch (_) {} alert('DOCX export failed: ' + (e && e.message || e)); });
@@ -1082,14 +1155,65 @@ ${inlineStyles}
     else fab.setAttribute('tabindex', '-1');
   }
 
+  // EXPORT-FAB-DRAGGABLE-001 (owner 2026-07-05): "make the mobile export
+  // button floating so I can move it if it hides stuff". The FAB already
+  // floated at a fixed position; a prior separate draggable Export FAB
+  // (antcv-mobile-export-fab.js) was removed as redundant clutter (owner
+  // feedback: it didn't open print preview, and this pill already floats
+  // naturally). Rather than reintroduce a second control, this pill itself
+  // becomes draggable — same pointerdown/move/up + 4px drag-vs-click
+  // threshold + localStorage-persisted position as the Ask-AI launcher
+  // (antcv-doc-chatbot-440.js ensureLauncher()), so there is still exactly
+  // one floating Export control, just a movable one.
+  const FAB_POS_KEY = 'antcv:pdfPreviewFabPos';
+  function applyFabSavedPosition(fab) {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(FAB_POS_KEY) || 'null'); } catch (_) {}
+    if (saved && typeof saved.left === 'number' && typeof saved.top === 'number') {
+      fab.style.left = Math.max(4, Math.min(saved.left, (window.innerWidth || 800) - 60)) + 'px';
+      fab.style.top = Math.max(4, Math.min(saved.top, (window.innerHeight || 600) - 50)) + 'px';
+      fab.style.right = '';
+      fab.style.bottom = '';
+    }
+    // No saved position — leave the CSS defaults (bottom:100px; left:16px) in place.
+  }
+  function wireFabDrag(fab) {
+    let dragging = false, moved = false, sx = 0, sy = 0, ox = 0, oy = 0;
+    fab.addEventListener('pointerdown', (ev) => {
+      dragging = true; moved = false; sx = ev.clientX; sy = ev.clientY;
+      const r = fab.getBoundingClientRect(); ox = r.left; oy = r.top;
+      fab.style.cursor = 'grabbing';
+      try { fab.setPointerCapture(ev.pointerId); } catch (_) {}
+    });
+    fab.addEventListener('pointermove', (ev) => {
+      if (!dragging) return;
+      const dx = ev.clientX - sx, dy = ev.clientY - sy;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) moved = true;
+      if (moved) {
+        fab.style.left = Math.max(4, Math.min(ox + dx, (window.innerWidth || 800) - 60)) + 'px';
+        fab.style.top = Math.max(4, Math.min(oy + dy, (window.innerHeight || 600) - 50)) + 'px';
+        fab.style.right = ''; fab.style.bottom = '';
+      }
+    });
+    fab.addEventListener('pointerup', (ev) => {
+      dragging = false; fab.style.cursor = 'grab';
+      try { fab.releasePointerCapture(ev.pointerId); } catch (_) {}
+      if (moved) {
+        const r = fab.getBoundingClientRect();
+        try { localStorage.setItem(FAB_POS_KEY, JSON.stringify({ left: r.left, top: r.top })); } catch (_) {}
+      } else {
+        openModal();
+      }
+    });
+  }
   function injectFab() {
     if (document.getElementById(FAB_ID)) return;
     injectStylesOnce();
     const fab = document.createElement('button');
     fab.id = FAB_ID;
     fab.type = 'button';
-    fab.setAttribute('aria-label', 'Export — preview and save as PDF or DOCX');
-    fab.title = 'Export — preview the document and save as PDF or DOCX';
+    fab.setAttribute('aria-label', 'Export — preview and save as PDF or DOCX. Drag to move.');
+    fab.title = 'Export — preview the document and save as PDF or DOCX. Drag to move.';
     // v1.50.51 — keep the SVG document icon (the "page" affordance the user
     // asked to retain) but shorten the visible text label from
     // "Document export" to "Export". innerHTML is safe here — no user input
@@ -1101,7 +1225,8 @@ ${inlineStyles}
         '<path d="M9 14h6"/>' +
         '<path d="M9 18h4"/>' +
       '</svg><span>Export</span>';
-    fab.addEventListener('click', () => openModal());
+    applyFabSavedPosition(fab);
+    wireFabDrag(fab);
     document.body.appendChild(fab);
     syncFabVisibility();
   }
@@ -1155,7 +1280,7 @@ ${inlineStyles}
 
   // Public API for diagnostics / power-users.
   window.AntcvPdfPreviewGate = {
-    version: '1.50.604-width-fit',
+    version: '1.51.188-draggable-fab',
     open: openModal,
     close: closeModal,
   };

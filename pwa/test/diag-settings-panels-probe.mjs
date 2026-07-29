@@ -10,7 +10,10 @@ import { chromium } from 'playwright';
 import http from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
-const ROOT = 'C:/Users/karpg/GitHub/AntCV/pwa';
+import { fileURLToPath } from 'node:url';
+// Portable repo-relative root (this file lives in pwa/test) — a hardcoded desktop
+// path 404'd every asset in CI, so the app never booted (DIAG-PROBE-WINPATH-001).
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json' };
 const server = http.createServer(async (req, res) => {
   try { let rel = decodeURIComponent((req.url || '/').split('?')[0]); if (rel === '/') rel = '/index.html'; const fp = path.join(ROOT, rel); const s = await stat(fp).catch(() => null); if (!s || !s.isFile()) { res.writeHead(404); res.end('nf'); return; } res.writeHead(200, { 'content-type': MIME[path.extname(fp)] || 'application/octet-stream' }); res.end(await readFile(fp)); } catch (e) { res.writeHead(500); res.end('e'); }
@@ -28,6 +31,9 @@ await page.addInitScript(() => {
   localStorage.setItem('step', JSON.stringify('editor')); localStorage.setItem('doc', JSON.stringify('cv'));
   localStorage.setItem('sections', JSON.stringify({ cv: [{ id: 'profile', title: 'PROFILE', loc: 'main', on: true, type: 'text', content: 'P.' }], cl: [] }));
   localStorage.setItem('personalInfo', JSON.stringify({ name: 'Diag', wizardCompleted: true }));
+  // The editor no longer mounts (blank body → no settings gear) without a meta
+  // identity — seed it like diag-panel-button-audit does (DIAG-PROBE-NO-META-001).
+  localStorage.setItem('meta', JSON.stringify({ company: 'Diag Co', role: 'Diag Role' }));
   localStorage.setItem('language', JSON.stringify('en')); localStorage.setItem('wizardCompleted', JSON.stringify(true));
   // hook setItem to bucket writes by key
   window.__setCounts = {};
@@ -37,7 +43,14 @@ await page.addInitScript(() => {
 await page.goto(base + '/index.html', { waitUntil: 'load', timeout: 30000 });
 await page.waitForTimeout(5000);
 // open Settings (gear)
-try { await page.locator('text=⚙').first().click({ timeout: 2500 }); } catch (e) { console.log('settings open fail', e.message); }
+// open Settings via a direct DOM click — the ⚙ button carries an emoji
+// variation-selector that defeats Playwright text matching, and a real-mouse
+// click times out on the re-rendering toolbar (DIAG-PROBE-NO-META-001).
+const openedSettings = await page.evaluate(() => {
+  const gear = Array.from(document.querySelectorAll('button')).find(b => (b.textContent || '').includes('⚙'));
+  if (!gear) return false; gear.click(); return true;
+});
+if (!openedSettings) console.log('settings open fail: no ⚙ button found');
 await page.waitForTimeout(1200);
 
 async function measure(label) {
@@ -77,12 +90,20 @@ async function measure(label) {
 
 const results = {};
 for (const tab of ['Personal', 'Account', 'Layout']) {
-  try { await page.getByText(tab, { exact: true }).first().click({ timeout: 2500 }); } catch (e) { console.log(`subtab ${tab} click fail`, e.message); }
+  const clicked = await page.evaluate((label) => {
+    const el = Array.from(document.querySelectorAll('button,[role="tab"],a,span,div'))
+      .find(e => e.children.length === 0 && (e.textContent || '').trim() === label);
+    if (!el) return false; (el.closest('button,[role="tab"],a') || el).click(); return true;
+  }, tab);
+  if (!clicked) console.log(`subtab ${tab} click fail: not found`);
   await page.waitForTimeout(1500);
   results[tab] = await measure(tab);
+  results[tab].rootFound = clicked;
 }
 console.log('\npage errors:', errs.length ? errs.slice(0, 3) : 0);
-const pass = Object.values(results).every(r => r.n <= 8 && !r.hotKey) && errs.length === 0;
+// require the settings modal actually opened — a blank page (all subtabs missing)
+// used to vacuously PASS with 0 mutations on document.body.
+const pass = openedSettings && Object.values(results).every(r => r.n <= 8 && !r.hotKey && r.rootFound) && errs.length === 0;
 console.log(pass ? 'DIAG PASS — all standard settings panels at rest' : 'DIAG FAIL — a panel churns (see hot mut/set keys above)');
 process.exitCode = pass ? 0 : 1;
 await browser.close(); server.close();

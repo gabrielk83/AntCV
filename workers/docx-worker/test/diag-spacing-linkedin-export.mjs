@@ -32,7 +32,11 @@ const basePayload = (style) => ({
   personal_info: { name: 'G K', email: 'g@b.c', linkedin: 'linkedin.com/in/gabriel-karp', location: '2300, København S' },
   meta: { subtitle: 'Processes • Products • People' }, style: style || {}, font_sizes: {},
   sections: [
+    // PROFILE is the FIRST main heading (before=0 per PROFILE-TOPGAP-001, 5e89d67); the
+    // gap-driven before spacing (80 default / 200 at mainSectionGap 16) only applies to a
+    // SUBSEQUENT main heading, so EXPERIENCE is here to exercise the formula.
     { id: 'profile', title: 'PROFILE', loc: 'main', on: true, type: 'text', content: 'P.' },
+    { id: 'experience', title: 'EXPERIENCE', loc: 'main', on: true, type: 'text', content: 'E.' },
     { id: 'tools', title: 'TOOLS', loc: 'sidebar', on: true, type: 'labeled_list', items: [{ l: 'Engineering', v: 'Python, MATLAB, LabVIEW and a long enough value to wrap lines' }] },
   ],
 });

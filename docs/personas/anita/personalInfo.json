@@ -15,6 +15,8 @@
   "firstName": "Anita",
   "lastName": "Myre-Kornfeldt",
   "headline": "Operations and Winter Preparedness Specialist | Colony Logistics, Granary Planning & Seasonal Risk Control",
+  "clSlogan": "I keep operations steady through every winter",
+  "_clSlogan_comment": "Default CL slogan (7 words, SLOGAN-WORDCAP-001 4-8 range) for the Anita NSRA demo (owner 2026-07-14). Brand-fit may re-derive it; placement (tagline vs opening lead-in) is chosen per antcv:clSloganMode.",
   "email": "anita.kornfeldt@winterready.eu",
   "phone": "+45 26 22 26 22",
   "linkedin": "linkedin.com/in/anita-myre-kornfeldt",

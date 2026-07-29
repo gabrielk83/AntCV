@@ -9,7 +9,9 @@
     "dev": "npx wrangler dev --env=\"\"",
     "deploy": "npx wrangler deploy --env=\"\"",
     "tail": "wrangler tail",
-    "test": "node test/smoke.js"
+    "test": "node --test --test-force-exit test/*.test.mjs",
+    "test:diags": "node ../../scripts/run-docx-diags.mjs",
+    "test:smoke-legacy": "node test/smoke.js"
   },
   "engines": {
     "node": ">=18"

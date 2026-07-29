@@ -32,12 +32,33 @@ import { readFile } from 'node:fs/promises';
 const pageFitSrc = await readFile(new URL('../../antcv-page-fit.js', import.meta.url), 'utf8');
 const equalizeSrc = await readFile(new URL('../../antcv-sidebar-fill-equalize-227.js', import.meta.url), 'utf8');
 
-test('antcv-page-fit.js: the A4 min-height is forced only when there is a single page-row', () => {
+test('antcv-page-fit.js: the sheet min-height is forced only when there is a single page-row', () => {
+  // PREVIEW-SHEET-WORD-HEIGHT-001 (2026-07-26) superseded the exact literal this
+  // test used to pin (PAGE_HEIGHT_PX -> sheetHeightPx(), the Word-equivalent
+  // height). The INTENT is unchanged and is what is asserted now: a multi-page
+  // document forces no min-height on any row, a single-page document keeps a
+  // full-sheet look.
   assert.match(
     pageFitSrc,
-    /var wantMin = \(rows\.length === 1\) \? \(PAGE_HEIGHT_PX \+ 'px'\) : '0px';/,
-    'a multi-page document (rows.length > 1) must NOT force PAGE_HEIGHT_PX min-height on any row, including the last'
+    /var wantMin = \(rows\.length === 1\) \? \((?:PAGE_HEIGHT_PX|sheetHeightPx\(\)) \+ 'px'\) : '0px';/,
+    'a multi-page document (rows.length > 1) must NOT force a sheet min-height on any row, including the last'
   );
+});
+
+test('antcv-page-fit.js: the single-page sheet follows the Word-equivalent line, not true A4', () => {
+  // The salmon breaks both CV columns at the export line, so a sheet pinned to
+  // true A4 would end below the last item the export can fit (dead white space).
+  assert.match(pageFitSrc, /function sheetHeightPx\(\)/, 'the Word-equivalent sheet helper must exist');
+  assert.match(pageFitSrc, /return Math\.round\(PAGE_HEIGHT_PX \/ infl\);/, 'the sheet is A4 divided by the measurer inflate');
+  assert.match(pageFitSrc, /antcv:disable-word-sheet/, 'a kill switch must restore the true-A4 sheet');
+  assert.match(pageFitSrc, /window\.__antcvSheetHeightPx = sheetHeightPx/, 'the helper is shared so every pin agrees');
+});
+
+test('antcv-sidebar-subsection-pagebreaks-329.js: its forced pins use the shared sheet height', async () => {
+  const src329 = await readFile(new URL('../../antcv-sidebar-subsection-pagebreaks-329.js', import.meta.url), 'utf8');
+  assert.equal(/min-height:1123px!important/.test(src329), false,
+    'the hard 1123px pins must be gone - they re-imposed a true-A4 sheet over the Word-equivalent one');
+  assert.match(src329, /window\.__antcvSheetHeightPx/, 'it must read the shared sheet height from page-fit');
 });
 
 test('antcv-page-fit.js: the old "only the last row" A4-forcing condition is gone', () => {

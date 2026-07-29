@@ -58,6 +58,9 @@
       'es': 'es', 'español': 'es', 'espanol': 'es', 'spanish': 'es',
       'fr': 'fr', 'français': 'fr', 'francais': 'fr', 'french': 'fr',
       'de': 'de', 'deutsch': 'de', 'german': 'de',
+      'he': 'he', 'עב': 'he', 'עברית': 'he', 'hebrew': 'he', 'iw': 'he',
+      'am': 'am', 'አማ': 'am', 'አማርኛ': 'am', 'amharic': 'am',
+      'ar': 'ar', 'ع': 'ar', 'العربية': 'ar', 'arabic': 'ar',
     };
 
     function labelToCode(text) {
@@ -69,6 +72,25 @@
     }
 
     function readPreference() {
+      // LANG-BAR-STALE-STYLEPREFS-001 (owner 2026-07-10): read the SYNCED
+      // enabled-languages keys FIRST. prefs.enabledLanguages round-trips into
+      // 'enabledLanguages' / 'antcv:enabledLanguages' (LANG-CLOUD-SYNC-001); the
+      // older personalInfo.stylePrefs copy can be STALE (e.g. ['en','da'] after
+      // zh was added) — reading it before the synced keys HID zh on every hard
+      // refresh even though the cloud + the dropdown had zh.
+      try {
+        var SYNCED_KEYS = ['enabledLanguages', 'antcv:enabledLanguages'];
+        for (var si = 0; si < SYNCED_KEYS.length; si++) {
+          var sraw = localStorage.getItem(SYNCED_KEYS[si]);
+          if (!sraw) continue;
+          var sarr = JSON.parse(sraw);
+          if (Array.isArray(sarr)) {
+            var snorm = sarr.map(function (v) { return labelToCode(String(v)) || String(v).toLowerCase(); })
+                            .filter(Boolean);
+            if (snorm.length) return snorm;
+          }
+        }
+      } catch (_) {}
       try {
         var raw = localStorage.getItem(STORAGE_KEY);
         if (raw) {
@@ -125,7 +147,7 @@
         byParent.get(parent).push({ btn: b, code: code });
       }
       byParent.forEach(function (list) {
-        if (list.length < 2 || list.length > 6) return;
+        if (list.length < 2 || list.length > 8) return;
         for (var j = 0; j < list.length; j++) out.push(list[j]);
       });
       return out;
@@ -152,13 +174,25 @@
       var wantedSet = new Set((wanted || ['en', 'da']).map(function (c) { return c.toLowerCase(); }));
 
       if (wanted && wanted.length && !wantedSet.has(active)) {
-        var next = wanted[0];
-        try {
-          localStorage.setItem('language', next);
-          localStorage.setItem('uiLang', next);
-          window.dispatchEvent(new StorageEvent('storage', { key: 'language', newValue: next }));
-          window.dispatchEvent(new CustomEvent('antcv:language-changed', { detail: { language: next } }));
-        } catch (_) {}
+        // APP-LOAD-NO-RETRANSLATE-001 (owner 2026-07-24): the loaded
+        // application's OWN language wins over the preference bar. This flip
+        // used to shove the ribbon back to the preferred language right after
+        // an app load, and babel-relang then LLM-re-translated the whole app
+        // to follow. When the active language is the one the app was loaded
+        // in (antcv:app-load-lang stamp), leave the ribbon alone.
+        var appLang = '';
+        try { var __st = JSON.parse(localStorage.getItem('antcv:app-load-lang') || 'null'); appLang = (__st && __st.lang) || ''; } catch (_) {}
+        if (appLang !== active) {
+          var next = wanted[0];
+          try {
+            localStorage.setItem('language', next);
+            localStorage.setItem('uiLang', next);
+            window.dispatchEvent(new StorageEvent('storage', { key: 'language', newValue: next }));
+            // source-tagged so babel-relang never treats this automated flip
+            // as a user gesture that licenses an LLM translate.
+            window.dispatchEvent(new CustomEvent('antcv:language-changed', { detail: { language: next, source: 'lang-bar-filter' } }));
+          } catch (_) {}
+        }
       }
 
       var hidden = 0, shown = 0, changed = false;
@@ -258,7 +292,10 @@
       {code:'en',label:'EN',name:'English'},
       {code:'da',label:'DA',name:'Dansk'},
       {code:'es',label:'ES',name:'Español'},
-      {code:'zh',label:'中文',name:'中文'}
+      {code:'zh',label:'中文',name:'中文'},
+      {code:'he',label:'עב',name:'עברית'},
+      {code:'am',label:'አማ',name:'አማርኛ'},
+      {code:'ar',label:'ع',name:'العربية'}
     ];
     const CODES=OPTIONS.map(o=>o.code), DEFAULT=['en','da'];
     function norm(x){return String(x||'').replace(/[ \t\r\n]+/g,' ').trim()}
@@ -348,17 +385,34 @@
    * Runs in boot AFTER Filter so window.AntcvLangBarFilter exists.
    * ===================================================================== */
   var Defaults = (function () {
-    if (window.__antcvLanguagePrefsDefaults === '1.40.339') return { boot: function () {} };
-    window.__antcvLanguagePrefsDefaults = '1.40.339';
+    if (window.__antcvLanguagePrefsDefaults === '1.51.228-hardreset') return { boot: function () {} };
+    window.__antcvLanguagePrefsDefaults = '1.51.228-hardreset';
     const DEFAULT_LANGS=['en','da'];
     function valid(arr){arr=(Array.isArray(arr)?arr:[]).map(x=>String(x||'').trim().toLowerCase()).filter(x=>['en','da','es','zh'].includes(x));arr=Array.from(new Set(arr));return arr.length?arr:DEFAULT_LANGS.slice()}
     function readStored(){try{const raw=localStorage.getItem('enabledLanguages')||localStorage.getItem('antcv:enabledLanguages')||localStorage.getItem('antcv:visibleLanguages');if(raw)return valid(JSON.parse(raw))}catch(_){}return null}
     function save(arr){const next=valid(arr),raw=JSON.stringify(next);try{localStorage.setItem('enabledLanguages',raw)}catch(_){}try{localStorage.setItem('antcv:enabledLanguages',raw)}catch(_){}try{localStorage.setItem('antcv:visibleLanguages',raw)}catch(_){}try{const pi=JSON.parse(localStorage.getItem('personalInfo')||'{}')||{};pi.stylePrefs=pi.stylePrefs||{};pi.stylePrefs.visibleLanguages=next;pi.stylePrefs.languageBar=next;localStorage.setItem('personalInfo',JSON.stringify(pi))}catch(_){}try{window.dispatchEvent(new CustomEvent('antcv:language-prefs-changed',{detail:{visibleLanguages:next,scope:'topbar-only'}}))}catch(_){}try{if(window.AntcvLangBarFilter&&window.AntcvLangBarFilter._applyAll)window.AntcvLangBarFilter._applyAll()}catch(_){}return next}
     function justDeletedRecent(){try{const ck=document.cookie||'';const m=ck.match(/(?:^|;\s*)antcv-just-deleted=([^;]+)/);if(!m)return false;const ts=parseInt(decodeURIComponent(m[1]),10);if(!ts)return false;return (Date.now()-ts)<24*60*60*1000}catch(_){return false}}
-    window.AntcvLanguagePrefsDefaults={version:'1.40.339',save,readStored,justDeletedRecent};
+    // HARDRESET-LANG-RESTORE-001 (owner 2026-07-09): a language list the CLOUD
+    // restore has written into personalInfo.stylePrefs.
+    function readCloudLang(){try{const pi=JSON.parse(localStorage.getItem('personalInfo')||'{}')||{};const sp=pi.stylePrefs||{};const v=sp.visibleLanguages||sp.enabledLanguages||sp.languageBar;if(Array.isArray(v)&&v.length)return valid(v)}catch(_){}return null}
+    window.AntcvLanguagePrefsDefaults={version:'1.51.228-hardreset',save,readStored,justDeletedRecent,readCloudLang};
     function boot(){
-      if(justDeletedRecent()){try{console.info('[language-prefs-defaults] antcv-just-deleted set; forcing EN+DA defaults')}catch(_){}save(DEFAULT_LANGS);}
-      else if(!readStored())save(DEFAULT_LANGS);
+      // DELETE flow (antcv-just-deleted cookie): force a fresh EN+DA start.
+      // Owner 2026-07-09: "if the user is deleted I want no restore."
+      if(justDeletedRecent()){try{console.info('[language-prefs-defaults] antcv-just-deleted set; forcing EN+DA defaults')}catch(_){}save(DEFAULT_LANGS);return;}
+      // Normal reload: local cache already holds the languages — leave it.
+      if(readStored())return;
+      // HARD RESET: local cache was cleared and the user's languages are arriving
+      // from the CLOUD restore. Do NOT clobber with EN+DA — wait for the restored
+      // list, and only fall back to defaults if none ever arrives (genuinely
+      // anonymous / no cloud data). Owner: "languages are supposed to come from
+      // the cloud as well as everything else."
+      var applied=false;
+      function tryApply(){if(applied)return true;var got=readStored()||readCloudLang();if(got){applied=true;save(got);return true}return false;}
+      if(tryApply())return;
+      var tries=0;
+      var iv=setInterval(function(){tries++;if(tryApply()||tries>=24){clearInterval(iv);if(!applied)save(DEFAULT_LANGS);}},300);
+      try{window.addEventListener('antcv:cloud-restored',tryApply);}catch(_){}
     }
     return { boot: boot };
   })();

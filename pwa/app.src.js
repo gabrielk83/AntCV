@@ -58,29 +58,36 @@
   // whole-map first-paint fallback (preview map absent) still applies to both docs.
   const __antcvAutoPB = (sid) => {
     try {
+      let doc = "cv";
+      try { const d = JSON.parse(localStorage.getItem("doc") || '""'); doc = (typeof d === "string" ? d : "cv").toLowerCase(); } catch (_) {}
+      if (doc !== "cl") {
+        // SALMON-BREAK-SITE-001 (owner 2026-07-25 "fix the salmon pagination to
+        // show the correct page break site, it needs to be correct both for main
+        // AND SIDEBAR"): the CV preview now paginates BOTH columns from the
+        // EXPORT map (antcv:autoPages) — the one map calibrated against the real
+        // Word/PDF line (USABLE_PDF + WORD_INFLATE). Before this, MAIN read the
+        // A4-fill preview map (breaks LATER than the export, or not at all when
+        // the entry was missing — the 1.50.318 rule) while SIDEBAR preferred the
+        // preview map's force-inflated entries (breaks EARLIER) — the two
+        // columns' salmons disagreed with each other AND with the DOCX in
+        // opposite directions. One source of truth ends that. SUPERSEDES the CV
+        // DISPLAY legs of PREVIEW-A4-FILL (1.50.316), PREVIEW-A4-FILL-SCOPE
+        // (1.50.318) and PREVIEW-SIDEBAR-PAGINATE-001; the map WRITERS and the
+        // export client are untouched. Cost: a page-box can show bottom
+        // whitespace where Word's taller content fills the sheet — the honest
+        // break site wins (owner's order). If the whitespace bothers, the
+        // follow-up is shrinking the CV page-box height to the Word-equivalent
+        // line, never moving the break back.
+        const exp = (JSON.parse(localStorage.getItem("antcv:autoPages") || "{}") || {})[sid];
+        if (exp && typeof exp === "object" && Object.keys(exp).length) return exp;
+        const prevCv = (JSON.parse(localStorage.getItem("antcv:autoPagesPreview") || "{}") || {})[sid];
+        return (prevCv && typeof prevCv === "object") ? prevCv : {};
+      }
       const prevRaw = localStorage.getItem("antcv:autoPagesPreview");
       const prevMap = prevRaw ? (JSON.parse(prevRaw) || {}) : null;
       if (prevMap) {
         const prev = prevMap[sid];
         if (prev && typeof prev === "object" && Object.keys(prev).length) return prev;
-        let doc = "cv";
-        try { const d = JSON.parse(localStorage.getItem("doc") || '""'); doc = (typeof d === "string" ? d : "cv").toLowerCase(); } catch (_) {}
-        if (doc !== "cl") {
-          // PREVIEW-SIDEBAR-PAGINATE-001 (owner 2026-06-24 "cvc still sliding badly"): the CV
-          // PREVIEW map (antcv:autoPagesPreview) omits the SIDEBAR sections entirely, so with
-          // no fallback they got NO break and the WHOLE sidebar CRAMMED onto page 1 — the export
-          // (antcv:autoPages) splits them (regulatory->p2, languages/accessibility->p3). For a
-          // CV SIDEBAR section, fall back to autoPages so the PREVIEW paginates the sidebar like
-          // the EXPORT (mirror). MAIN sections keep returning {} — the 1.50.318 fix that avoids an
-          // early break + dead gap in the shorter column applies to the main column only.
-          let isSidebar = false;
-          try {
-            const secs = JSON.parse(localStorage.getItem("sections") || "{}");
-            const found = (Array.isArray(secs.cv) ? secs.cv : []).find((s) => s && s.id === sid);
-            isSidebar = !!(found && found.loc === "sidebar");
-          } catch (_) {}
-          if (!isSidebar) return {};   // CV main: no export-break fallback (avoids early break + gap)
-        }
       }
       return (JSON.parse(localStorage.getItem("antcv:autoPages") || "{}") || {})[sid] || {};
     } catch (_) { return {}; }
@@ -174,7 +181,7 @@
       __isCL ? React.createElement("div", { className: "no-print", "aria-hidden": "true", style: { borderTop: "3px solid rgba(200,40,40,0.6)", margin: "10px 0 5px", display: "flex", justifyContent: "center", background: "rgba(200,40,40,0.06)", padding: "2px 0" } },
         React.createElement("span", { style: { background: "rgba(200,40,40,0.7)", color: "#fff", fontSize: 8, padding: "2px 10px", borderRadius: 2, fontFamily: "Arial,sans-serif", letterSpacing: 0.5, whiteSpace: "nowrap" } }, "▼ PAGE " + pg + " ▼")) : null,
       React.createElement("div", { "aria-hidden": "true", style: { pageBreakBefore: "always", breakBefore: "page", height: 0, lineHeight: 0 } }),
-      (__isCL && contTitle) ? React.createElement("div", { style: { color: "#00746E", fontWeight: 700, fontSize: "12pt", marginTop: "4pt", marginBottom: "8pt", borderBottom: "1pt solid #00746E", paddingBottom: "2pt", fontFamily: "Trebuchet MS, Calibri, sans-serif" } }, contTitle + " (CONT.)") : null
+      (__isCL && contTitle) ? React.createElement("div", { style: { color: "#00746E", fontWeight: 700, fontSize: "12pt", marginTop: "4pt", marginBottom: "8pt", borderBottom: "1pt solid #00746E", paddingBottom: "2pt", fontFamily: "Trebuchet MS, Calibri, sans-serif" } }, contTitle + (function () { /* SALMON-CONT-LANG-001 (tune only — splitter is PERMANENT): continuation label in the ribbon language, forms matched to the furniture dict */ try { var L = String(localStorage.getItem("language") || "en").replace(/"/g, "").toLowerCase().slice(0, 2); return { da: " (FORTS.)", zh: "（续）", he: " (המשך)", am: " (ቀጣይ)", ar: " (تابع)" }[L] || " (CONT.)"; } catch (_) { return " (CONT.)"; } })()) : null
     );
   };
   // renderWithBreaks (docs/plan §2): walk ordered items in document order, keep a
@@ -361,10 +368,15 @@
       // The candidate band + table-header bar keep their navy/blue (#33446F on
       // Copenhagen), and role COMPANY (#333333) + YEAR (#595959) stay neutral.
       // Mirrored in the va.copenhagen-modern package map.
+      // CL-CV-TWO-TONE-001 (owner 2026-07-22) SUPERSEDED same day by the Copenhagen
+      // MOCKUP LOCK (docs/design/COPENHAGEN_MODERN_NORDIC_PALETTE_SPEC.md): the
+      // structure is TEAL-led — section HEADINGS / CL lead-ins are teal #00746E
+      // (mainHeadColor) like the rules/bullets; navy is reserved for the heading
+      // box (#33446F) and sidebar text (#283556). Dates/years are #777777.
       mainHeadColor: "#00746E",
       mainSubHeadColor: "#00746E",
       mainCompanyColor: "#333333",
-      mainYearColor: "#595959",
+      mainYearColor: "#777777",
       mainTextColor: "#333333",
       mainBulletColor: "#00746E",
       mainLineColor: "#00746E",
@@ -376,13 +388,13 @@
       headerContactColor: "#283556",
       headerLineColor: "#283556",
       headerFont: "Trebuchet MS",
-      sidebarBg: "#DDE6F2",
+      sidebarBg: "#DCE5EA",
       sidebarHeadColor: "#00746E",
       sidebarTextColor: "#283556",
-      sidebarLineColor: "#283556",
+      sidebarLineColor: "#00746E",
       sidebarFont: "Trebuchet MS",
-      photoBorderColor: "#00746E",
-      photoBorderWidth: 1,
+      photoBorderColor: "#01B9BD",
+      photoBorderWidth: 1.5,
       tableHeaderBg: "#DDE6F2",
       tableHeaderText: "#283556",
       tableOddBg: "#FFFFFF",
@@ -431,6 +443,61 @@
   const __nzPx = (v, d) => {
     const n = Number(v);
     return null != v && isFinite(n) ? n : d;
+  };
+  // SEAM-LINE-001b / HEADER-SEAM-#0b (owner 2026-07-14): the header↔sidebar seam.
+  // A thin bottom rule under the candidate band, in the PHOTO-CONTOUR colour
+  // (photoBorderColor), shown ONLY when the header band and the sidebar share ONE
+  // background (headerBg === sidebarBg) — then the two same-coloured regions need a
+  // rule to read as distinct. When they differ, the colour change IS the separator,
+  // so no line is drawn (Copenhagen: navy band + pale sidebar → no seam). The
+  // contour is contrast-guarded against the shared bg so a 1px rule stays visible
+  // (accessibility); if the accent is too close to the background it falls back to
+  // a high-contrast neutral. __antcvSeamStyle returns a style fragment ({} or
+  // {borderBottom}) so the populated band and the empty-state strip spread it
+  // identically — and the docx-worker export mirrors this exact rule for parity.
+  // Distinct from the CONTACT line (#0a), which uses headerLineColor and is drawn
+  // unconditionally around the name/spec/contact block.
+  const __antcvSeamLum = (hex) => {
+    try {
+      let h = String(hex || "").replace(/^#/, "").trim();
+      if (3 === h.length) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+      if (h.length < 6) return null;
+      const f = (i) => {
+        const c = parseInt(h.slice(i, i + 2), 16) / 255;
+        return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+      };
+      return 0.2126 * f(0) + 0.7152 * f(2) + 0.0722 * f(4);
+    } catch (_) {
+      return null;
+    }
+  };
+  const __antcvSeamContour = (contour, bg) => {
+    try {
+      const lc = __antcvSeamLum(contour),
+        lb = __antcvSeamLum(bg);
+      if (null == lc || null == lb) return contour || "#00746E";
+      const ratio = (Math.max(lc, lb) + 0.05) / (Math.min(lc, lb) + 0.05);
+      if (ratio >= 1.8) return contour; // visible enough as a thin rule
+      // guard: fall back to a high-contrast neutral vs the shared bg (mirrors the
+      // docx-worker's readableInk: white on dark, #283556 on light).
+      return lb < 0.5 ? "#FFFFFF" : "#283556";
+    } catch (_) {
+      return contour || "#00746E";
+    }
+  };
+  const __antcvSeamStyle = (cfg) => {
+    try {
+      const a = String((cfg && cfg.headerBg) || "").trim().toLowerCase(),
+        b = String((cfg && cfg.sidebarBg) || "").trim().toLowerCase();
+      if (!a || a !== b) return {}; // colour change is the separator
+      const col = __antcvSeamContour(
+        (cfg && cfg.photoBorderColor) || "#00746E",
+        a,
+      );
+      return { borderBottom: `1px solid ${col}` };
+    } catch (_) {
+      return {};
+    }
   };
   // GEN-SPEED-001 (owner 2026-06-12: "prevent long convergence time for
   // the generation"): one persisted preset drives the convergence knobs.
@@ -562,10 +629,11 @@
   // actually renders instead of contradicting the visible salmon.
   const __antcvEffPageLabel = (sid, idx, manual) => {
     try {
-      const m = JSON.parse(
-        localStorage.getItem("antcv:autoPagesPreview") || "{}",
-      );
-      const b = m && m[sid];
+      // SALMON-BREAK-SITE-001: the label must read the SAME effective bucket the
+      // salmon renders from (__antcvAutoPB: export map for the CV, preview map
+      // for the CL) — reading the raw preview map here contradicted the visible
+      // salmon once the CV display moved to the export map.
+      const b = __antcvAutoPB(sid);
       const a = b && parseInt(b[String(idx)], 10);
       if (Number.isFinite(a) && a > manual) return "📄" + a + "ᵃ";
     } catch (_) {}
@@ -1071,14 +1139,19 @@
         // COST-QUALITY-SONNET-001 (owner 2026-07): Claude Sonnet 4.6 ($3/$15 per 1M) is the
         // cost-quality optimum for structured CV/CL generation — near-Opus quality + strong
         // Danish at ~1/5 the cost and lower latency than Opus 4.x. (There is no "Sonnet 5";
-        // 4.6 is the latest Sonnet.) Was claude-opus-4-7 priced (wrongly) at $15/$75.
-        model: "claude-sonnet-4-6",
+        // COST-QUALITY-BENCH-002 (owner 2026-07-11): upgraded sonnet-4-6 -> sonnet-5
+        // (current Sonnet; drop-in, same $3/$15 tier — the old "no Sonnet 5" note
+        // was stale). openai model gpt-5.5 -> gpt-5.4-mini: the 46-run benchmark
+        // (docs/qa/LLM_ROUTER_PROPOSAL_2026-07-11.md) scored gpt-5.4-mini 7.67 ~
+        // opus-4-8's 7.83 at ~1/13 the cost ($0.75/$4.5 vs $30/$60). Thorough gen
+        // stays on opus-4-8 (the max_tokens:32768 flagship path below).
+        model: "claude-sonnet-5",
         quality: 9,
         danish: 8,
         cost: 2,
         latency: 3,
       },
-      openai: { model: "gpt-5.5", quality: 10, danish: 9, cost: 4, latency: 3 },
+      openai: { model: "gpt-5.4-mini", quality: 8, danish: 9, cost: 2, latency: 3 },
       mistral: {
         model: "mistral-large-latest",
         quality: 7,
@@ -1096,7 +1169,7 @@
     },
     C = {
       anthropic: { inputPer1M: 3, outputPer1M: 15 },
-      openai: { inputPer1M: 30, outputPer1M: 60 },
+      openai: { inputPer1M: 0.75, outputPer1M: 4.5 }, // gpt-5.4-mini (was gpt-5.5 30/60)
       mistral: { inputPer1M: 3, outputPer1M: 9 },
       gemini: { inputPer1M: 0.15, outputPer1M: 0.6 },
     };
@@ -1526,6 +1599,18 @@
       return true;
     }
   }
+  // EXPORT-PDF-PANEL-WORKER-001 (owner 2026-07-18): expose the server-PDF policy
+  // and demo state so the preview-modal sidecar (antcv-pdf-preview-gate.js) can
+  // route "Save as PDF" through the CloudConvert worker with the SAME decision
+  // the app's own PDF button makes, even when that button is unmounted (a
+  // non-Preview tab, e.g. the Analysis panel, is open). Without this the modal
+  // fell back to browser print with a panel open.
+  try {
+    if ("undefined" != typeof window) {
+      window.__antcvUseServerPdf = __antcvUseServerPdf;
+      window.__antcvDemoActive = __antcvDemoActive;
+    }
+  } catch (_) {}
   function Y(e) {
     let t = "";
     return (
@@ -1581,6 +1666,87 @@
       .sort((e, t) => t.s - e.s)[0].p;
     return { provider: s, model: null == (r = S[s]) ? void 0 : r.model };
   }
+  // ROW 74C — visibility-aware abort budget (SSE background stall).
+  // Pure state machine: foreground-only elapsed does NOT count time while the
+  // tab is hidden, so a briefly-backgrounded gen isn't killed by wall-clock and
+  // gets to resume on foreground. An absolute wall ceiling still aborts a truly
+  // dead stream. Injected `now` keeps this testable under node:vm.
+  function __antcvMakeAbortBudget(fgLimit, wallLimit, now) {
+    const start = now();
+    let bankedFg = 0,
+      lastResume = start; // ms of last foreground resume, or null while hidden
+    return {
+      onHidden() {
+        if (lastResume != null) {
+          bankedFg += now() - lastResume;
+          lastResume = null;
+        }
+      },
+      onVisible() {
+        if (lastResume == null) lastResume = now();
+      },
+      check() {
+        const wall = now() - start,
+          fg = bankedFg + (lastResume != null ? now() - lastResume : 0);
+        return fg >= fgLimit || wall >= wallLimit;
+      },
+    };
+  }
+  // Wires the pure budget to document visibility + a low-freq interval that
+  // fires ctl.abort(). Kill-switch localStorage 'antcv:disable-bg-timeout-pause'
+  // === '1' restores the exact old fixed 10-min setTimeout. Returns { clear }.
+  function __antcvAbortBudget(ctl) {
+    const FG = 6e5, // 10 min foreground-only
+      WALL = 12e5; // 20 min absolute wall-clock ceiling
+    let disabled = false;
+    try {
+      disabled =
+        localStorage.getItem("antcv:disable-bg-timeout-pause") === "1";
+    } catch (e) {}
+    if (disabled) {
+      const to = setTimeout(() => {
+        try {
+          ctl.abort();
+        } catch (e) {}
+      }, FG);
+      return {
+        clear() {
+          clearTimeout(to);
+        },
+      };
+    }
+    const budget = __antcvMakeAbortBudget(FG, WALL, () => Date.now());
+    try {
+      if (typeof document !== "undefined" && document.hidden) budget.onHidden();
+    } catch (e) {}
+    const onVis = () => {
+      try {
+        document.hidden ? budget.onHidden() : budget.onVisible();
+      } catch (e) {}
+    };
+    try {
+      document.addEventListener("visibilitychange", onVis);
+    } catch (e) {}
+    const iv = setInterval(() => {
+      if (budget.check()) {
+        try {
+          ctl.abort();
+        } catch (e) {}
+        clearInterval(iv);
+        try {
+          document.removeEventListener("visibilitychange", onVis);
+        } catch (e) {}
+      }
+    }, 5e3);
+    return {
+      clear() {
+        clearInterval(iv);
+        try {
+          document.removeEventListener("visibilitychange", onVis);
+        } catch (e) {}
+      },
+    };
+  }
   async function q(e, t) {
     var n, o, r, a, i, l, s, c;
     (p("Anthropic"), await U());
@@ -1602,10 +1768,10 @@
     const f = await b();
     try {
       const p = new AbortController(),
-        u = setTimeout(() => p.abort(), 6e5);
+        u = __antcvAbortBudget(p);
       let m;
       const f = JSON.stringify({
-          model: "claude-opus-4-7",
+          model: "claude-opus-4-8",
           max_tokens: 32768,
           system: t,
           messages: e,
@@ -1631,7 +1797,7 @@
           signal: p.signal,
         });
       } catch (e) {
-        if ((clearTimeout(u), "AbortError" === e.name))
+        if ((u.clear(), "AbortError" === e.name))
           throw new Error(
             "Request was interrupted — this usually happens when the app is backgrounded or the screen locks on Android. Try keeping the app visible while it runs, or retry the operation.",
           );
@@ -1646,7 +1812,7 @@
         );
       }
       if (!m.ok) {
-        clearTimeout(u);
+        u.clear();
         const e = await m.text().catch(() => "");
         if (405 === m.status)
           throw new Error(
@@ -1701,7 +1867,7 @@
             }
           }
         } catch (e) {
-          if ((clearTimeout(u), n.length > 500))
+          if ((u.clear(), n.length > 500))
             return (
               console.warn(
                 `[v23] Stream interrupted after ${n.length} chars — returning partial for JSON repair`,
@@ -1715,7 +1881,7 @@
               )
             : e;
         }
-        clearTimeout(u);
+        u.clear();
         try {
           const e = n.match(/"input_tokens"\s*:\s*(\d+)/),
             t = n.match(/"output_tokens"\s*:\s*(\d+)/g);
@@ -1728,7 +1894,7 @@
         } catch (e) {}
         return n;
       }
-      clearTimeout(u);
+      u.clear();
       const w = await m.json();
       return (
         (O = {
@@ -1739,7 +1905,24 @@
           output_tokens:
             (null == (c = w.usage) ? void 0 : c.output_tokens) || null,
         }),
-        w.content.map((e) => e.text || "").join("")
+        // ANTHROPIC-CONTENT-GUARD-001 (owner 2026-07-11 mid-gen popup): an API
+        // error body has NO content array — w.content.map threw the raw
+        // "Cannot read properties of undefined (reading 'map')" instead of a
+        // real provider error, killing the task unrecoverably when the cost
+        // ceiling had already collapsed the cascade to one provider.
+        (Array.isArray(w.content)
+          ? w.content
+          : (() => {
+              throw new Error(
+                "anthropic response has no content" +
+                  (w && w.error && w.error.message
+                    ? ": " + w.error.message
+                    : w && w.type
+                      ? " (type " + w.type + ")"
+                      : ""),
+              );
+            })()
+        ).map((e) => e.text || "").join("")
       );
     } finally {
       await w(f);
@@ -1820,25 +2003,60 @@
       await w(f);
     }
   }
-  window.routeLLMDebug = function (e = "en") {
+  // ROUTE-DEBUG-MATCHES-PRODUCTION-001 (owner 2026-07-11): resolve the way ee()
+  // dispatches — Z[task] filtered to available providers, then __antcvScoreOrder
+  // (the cost-quality-latency ordering ee runs on the default path), first provider,
+  // model from S. The old path used K()/J() (a separate S-map scorer over L's alias
+  // keys) which DISAGREED with the live dispatch (e.g. showed da->gemini while ee
+  // routes da->openai). Now the console table reflects the stable production order.
+  // (Transient session demotions — the inline reorder in ee — are a rare runtime
+  // overlay and are not shown; this is the deterministic resolution.)
+  window.routeLLMDebug = function () {
     const t = {};
-    for (const n of Object.keys(L)) t[n] = K(n, e);
+    for (const e of Object.keys(Z)) {
+      if ("default" === e) continue;
+      const o = (Z[e] || Z.default || []).filter((p) => Q(p)),
+        s = __antcvScoreOrder(e, o.slice())[0] || null;
+      t[e] = {
+        provider: s,
+        model: s ? (S["claude" === s ? "anthropic" : s] || {}).model || null : null,
+      };
+    }
     return (console.table(t), t);
   };
   const Z = {
     generate_cv: ["openai", "claude"],
     generate_cl: ["openai", "claude"],
-    compress: ["mistral", "openai", "gemini", "claude"],
+    // COMPRESS-COST-OPENAI-DROP-001 (owner 2026-07-13): openai was winning ~1/4
+    // of compress calls (D1 7d: 503 calls, $62.35 = ~58% of the week's LLM spend)
+    // at $0.12395/call vs gemini $0.00007 / mistral $0.012 / anthropic $0.017 —
+    // all at 100% success + zero leak/fabrication/banned flags. compress is a
+    // mechanical TIGHTENING pass, so the quality gap is ~nil and cost should win.
+    // openai scored highest here only because __LLM_BASE.openai.c (0.45) is a
+    // GENERATION-tuned proxy that inverts compress's real economics (it makes the
+    // actually-cheap anthropic look priciest at c=0.9). Removing openai from the
+    // compress candidate list makes the scorer lead with gemini (cheapest, 100%
+    // success); the full cascade fallback still runs. Anthropic stays reachable.
+    compress: ["mistral", "gemini", "claude"],
     fix_orphans: ["mistral", "openai", "gemini", "claude"],
     enrich: ["openai", "claude", "mistral", "gemini"],
     parse_jd: ["mistral", "gemini", "openai", "claude"],
     extract_keywords: ["mistral", "gemini", "openai", "claude"],
     match_skills: ["mistral", "gemini", "openai", "claude"],
     extract_pdf: ["gemini", "claude"],
-    translate: ["mistral", "gemini", "openai", "claude"],
-    translate_da: ["claude", "openai", "mistral", "gemini"],
-    refine_da: ["claude", "openai", "mistral"],
+    translate: ["openai", "gemini", "mistral", "claude"],
+    translate_da: ["openai", "claude", "mistral", "gemini"],
+    refine_da: ["openai", "claude", "mistral"],
     refine_en: ["openai", "claude", "mistral"],
+    // long_context / consensus_poll cost is handled WITHOUT a manual provider drop:
+    // RELAY-COST-TIEBREAK-001 (1.51.578) folds a bounded cost penalty into health_score for
+    // the cost-sensitive class (both are members), and the client seed demotes the pricey
+    // provider by the resulting health gap — openai long_context ($0.00686/call vs gemini
+    // $0.00024, 28x → ~0.108 penalty ≥ the 0.10 demotion threshold) auto-sinks each cron cycle
+    // while STAYING reachable (no voter lost for the consensus vote, fallback intact for
+    // long_context). RELAY-DETECTION-GAP-001 (1.51.580) makes that auto-demotion SAFE — a
+    // format-broken cheap provider now self-demotes. So no per-task Z edit is needed here
+    // (unlike the pre-tiebreak compress drop, kept above for the record).
     long_context: ["claude", "openai", "gemini"],
     analyze_fit: ["claude", "openai", "mistral", "gemini"],
     apply_correction: ["openai", "claude", "mistral", "gemini"],
@@ -1917,7 +2135,7 @@
     // anthropic<->openai quality gap so the quality-dominant tasks below can
     // actually lead with Claude (the .05 gap was too small to overcome cost).
     anthropic: { q: 1.0, c: 0.9, lat: 0.6 },
-    openai: { q: 0.92, c: 0.6, lat: 0.5 },
+    openai: { q: 0.92, c: 0.45, lat: 0.5 }, // c 0.6->0.45: gpt-5.4-mini is genuinely cheap (benchmark 2026-07-11)
     gemini: { q: 0.65, c: 0.3, lat: 0.3 },
     mistral: { q: 0.5, c: 0.2, lat: 0.3 },
   };
@@ -1947,9 +2165,16 @@
     const b = __LLM_BASE[k] || { q: 0.6, c: 0.5, lat: 0.5 };
     let s = (w.qW || 0) * b.q - (w.cW || 0) * b.c - (w.lW || 0) * b.lat;
     // refine_danish etc. carry danishBias: keep the strong-prose providers
-    // (anthropic/openai) ahead for Danish output, where the cost-led demotion
-    // would otherwise bury Claude — the hand-tuned Danish lead.
-    if (w.danishBias && ("anthropic" === k || "openai" === k)) s += 0.15;
+    // ahead for Danish. TRANSLATE-NUMINVARIANT-001 (owner 2026-07-11, benchmark
+    // docs/qa/COST_QUALITY_BENCHMARK_2026-07-11.md): translating a CV to Danish,
+    // OpenAI preserves 100% of numbers/metrics while Claude/Gemini/Mistral drop
+    // ~23% (num_survival 1.0 vs 0.769) — a CV invariant failure. Both write
+    // fluent Danish (fidelity 8-9), so lead with OpenAI for number safety; keep
+    // Claude a strong #2 (best prose). Openai gets the larger boost.
+    if (w.danishBias) {
+      if ("openai" === k) s += 0.28;
+      else if ("anthropic" === k) s += 0.12;
+    }
     return s;
   }
   function __llmScorerDisabled() {
@@ -2022,6 +2247,39 @@
           seeded++;
         }
       }
+      // RELAY-COST-TIEBREAK-001 (2026-07-13): the relay folds a BOUNDED cost
+      // penalty into health_score for cost-sensitive tasks (compress, long_context,
+      // consensus_*, apply_correction, enrich, fix_orphans), so an adequate-but-
+      // pricey provider reads lower than the cheapest EQUAL-quality one. Among the
+      // ADEQUATE providers for a task (those not already demoted above), a clear
+      // health GAP below the task's best = a cost-loser -> soft-demote it to the
+      // BACK of that task's ladder (never removed; failover + adequacy-gate still
+      // run). The relay only penalizes a >~20x cost spread, so this fires only on
+      // real waste (e.g. compress openai $0.124 vs gemini $0.00007), never a
+      // 1.5-3x near-tie, and never on quality-critical tasks (generate_cv/cl,
+      // parse_jd, analyze_fit are NOT cost-sensitive server-side). Kill switch:
+      // localStorage 'antcv:disable-cost-tiebreak'='1'. Off the hot path (seed only).
+      let __ctbOff = false;
+      try { __ctbOff = (typeof localStorage !== "undefined" && localStorage.getItem("antcv:disable-cost-tiebreak") === "1"); } catch (_) {}
+      if (!__ctbOff) {
+        const COST_GAP = 0.10;
+        const byTask = new Map();
+        for (const r of rows) {
+          if (!r || !r.provider || !r.task) continue;
+          const sc = Number(r.health_score);
+          const st = String(r.status || "").toLowerCase();
+          if (st === "degraded" || st === "down" || !Number.isFinite(sc) || sc < 0.6) continue; // handled above
+          let a = byTask.get(r.task);
+          if (!a) { a = []; byTask.set(r.task, a); }
+          a.push({ provider: r.provider, score: sc });
+        }
+        for (const [task, arr] of byTask) {
+          if (arr.length < 2) continue;
+          let best = -Infinity;
+          for (const x of arr) if (x.score > best) best = x.score;
+          for (const x of arr) if (best - x.score >= COST_GAP) { __antcvDemoteProvider(task, x.provider, __ANTCV_SEED_TTL_MS); seeded++; }
+        }
+      }
       if (seeded) {
         try { console.debug("[v1.50.294 llm-quality-persist] seeded " + seeded + " demotion(s) from D1 provider health"); } catch (_) {}
       }
@@ -2042,6 +2300,387 @@
   // stronger model for those tasks only (cost-quality: flash stays for the
   // cheap tasks). A user-set geminiModel still wins (handled inside re()).
   function __antcvBigGen(task) { return /^(parse_jd|generate_cv)$/.test(String(task || "")); }
+  // RATIONALE-OBJECT-RENDER-GUARD-001 (owner 2026-07-08, React #31 crash): the LLM sometimes
+  // returns a rationale string field (tailoring_decisions, cover_letter_strategy, fit_summary) as
+  // an OBJECT ({"Merged Innoviz roles":"…", …}) instead of a string; rendering it raw as a React
+  // child crashes the WHOLE analysis panel mid-generation (leaving sections looking templated).
+  // Coerce any object/array to a readable string so the render never throws.
+  function __ratStr(v) {
+    if (typeof v === "string") return v;
+    if (Array.isArray(v)) return v.map(__ratStr).filter(Boolean).join("; ");
+    if (v && typeof v === "object") return Object.entries(v).map(function (e) { return e[0] + ": " + __ratStr(e[1]); }).join("; ");
+    return v == null ? "" : String(v);
+  }
+  // DATE-NO-PRESENT-001 (owner 2026-07-09, "not present instead of 2+26"): a role
+  // date must never read "present"/localized/parenthetical equivalent — the end
+  // reads as the CURRENT YEAR. Deterministic belt (mirrors the docx-worker
+  // __scrubYears); scoped to the years string only, so body prose is untouched.
+  function __antcvScrubYears(y) {
+    if (!y) return y;
+    var Y = String(new Date().getFullYear());
+    return String(y)
+      .replace(/\s*\(\s*(?:present|nuv[æa]rende|nutid|ongoing|current(?:ly)?|now|p[åa]g[åa]ende|actual)\s*\)/gi, "")
+      .replace(/\b(?:present|nuv[æa]rende|nutid|ongoing|currently|current|now|p[åa]g[åa]ende)\b/gi, Y)
+      .replace(/\s{2,}/g, " ").trim();
+  }
+  // LANG-GEN-LOCK-001 (owner 2026-07-10, "all selected languages get the controls"):
+  // a data-driven forceful output-language directive for the targeted-gen prompt,
+  // parallel to the Danish 'a' lock. ANY non-English / non-Danish output language —
+  // whether a known one (zh/es/he/am) or any future code the user adds to the
+  // selected-languages set — gets a strong "write EVERYTHING in the target language,
+  // keep invariant tokens verbatim" instruction (generic fallback names the code).
+  // Danish keeps its own dedicated 🇩🇰 lock; English returns "". Add a language to
+  // __LANG here to give it a tailored name / script note.
+  function __langGenLock(code) {
+    code = String(code || "").toLowerCase();
+    if (!code || "en" === code || "da" === code) return "";
+    var __LANG = {
+      zh: { flag: "🇨🇳", name: "Simplified Chinese (中文 / 简体)", extra: " Render the candidate's personal name in Chinese characters (surname first) — for Gabriel Alexander Karp-Gershon use EXACTLY 加布里埃尔·亚历山大·卡普·格申." },
+      es: { flag: "🇪🇸", name: "Spanish (Latin American business register)", extra: " Keep person names in Latin script unchanged." },
+      he: { flag: "🇮🇱", name: "Hebrew (Israeli professional register, written RIGHT-TO-LEFT)", extra: " Write the prose in Hebrew; render the candidate's name in Hebrew where a natural form exists, otherwise keep it in Latin script. Numbers stay left-to-right." },
+      am: { flag: "🇪🇹", name: "Amharic (Ethiopian formal register, Ge'ez / Fidäl script)", extra: " Keep person names and all Latin proper nouns unchanged." },
+      ar: { flag: "🇸🇦", name: "Arabic (Modern Standard Arabic, formal register, written RIGHT-TO-LEFT)", extra: " Write the prose in Arabic; keep person names in Latin script where no natural Arabic form exists; numbers stay left-to-right." },
+      fr: { flag: "🇫🇷", name: "French (formal professional register)", extra: " Keep person names in Latin script unchanged." },
+      de: { flag: "🇩🇪", name: "German (formal professional register, Sie-form)", extra: " Keep person names in Latin script unchanged." }
+    };
+    var e = __LANG[code],
+      flag = e ? e.flag : "🌐",
+      name = e ? e.name : "the language with ISO code '" + code + "'",
+      extra = e ? e.extra : "";
+    return "\n\n" + flag + " FINAL LANGUAGE CHECK BEFORE OUTPUTTING (LANG-GEN-LOCK-001): the OUTPUT LANGUAGE is " + name + ". EVERY value — profile, work style, all bullets, section prose, table cells, focus areas, cover-letter paragraphs, and any headings or labels — MUST be written in " + name + ". Keep these INVARIANT (verbatim, unchanged): company / organisation names; tool / framework / standard / protocol names (Jira, SQL, ASPICE, ISO 26262, FMEA, MBSE); ALL numbers and metrics; patent numbers; and quoted publication / patent titles. TRANSLATE into natural " + name + ": role / job titles, city and country names, and civic terms (e.g. 'EU citizen')." + extra + " The schema below shows English EXAMPLE values for clarity ONLY — your actual values MUST be in the target language. If you catch ANY English sentence, heading, or label, translate it before returning.";
+  }
+  // BABEL-FISH-LANG-NAME-001 (owner 2026-07-11): the prominent prompt `LANGUAGE:` line
+  // used to be hardcoded to "UK English" for every non-Danish language, contradicting the
+  // trailing __langGenLock and letting the model drift back to English. This names the
+  // TRUE target so the prominent directive and the lock agree. Fallback = UK English.
+  function __langPromptName(code) {
+    code = String(code || "").toLowerCase();
+    var M = {
+      da: "Copenhagen Danish (simple everyday words, hverdagssprog, no buzzwords, short sentences)",
+      zh: "Simplified Chinese (中文 / 简体, formal business register, concise factual phrasing)",
+      es: "Spanish (Latin American business register, formal, descriptive)",
+      he: "Hebrew (עברית, Israeli professional register, written RIGHT-TO-LEFT)",
+      am: "Amharic (አማርኛ, Ethiopian formal register, Ge'ez / Fidäl script)",
+      ar: "Arabic (العربية, Modern Standard Arabic, formal register, written RIGHT-TO-LEFT)",
+      fr: "French (formal professional register, vous-form)",
+      de: "German (formal professional register, Sie-form)"
+    };
+    return M[code] || "UK English (clear, professional, no Americanisms)";
+  }
+  // LANG-TRANSLATE-RENDER-SOURCES-001 (owner 2026-07-10): the header renders the SLOGAN
+  // from the standalone localStorage key antcv:clSlogan and the SUBTITLE from
+  // personalInfo.specialization — NOT from io.cl_slogan / io.subtitle. Translate updates
+  // io only, so those two fields never showed the target language. These helpers read /
+  // write / snapshot / restore those render sources so translation reaches them AND they
+  // round-trip across language switches (snapshot into the per-language cache entry, restore
+  // on switch). ie() and the slogan render read these localStorage keys fresh, so a write
+  // + the existing re-render updates the preview.
+  function __antcvWriteSlogan(v) { try { if ("string" == typeof v) localStorage.setItem("antcv:clSlogan", v); } catch (_) {} }
+  // SLOGAN-WORDCAP-001 (owner 2026-07-14: slogan limited to 4-13 words even when
+  // fused to the brand). A LOAD-time safety net: generation clamps it, but a
+  // legacy/override slogan may exceed 8 words on any of the load paths. Clause-
+  // aware: keep the first 13 words, then drop a trailing dangling connector /
+  // punctuation so the cut reads clean. Shared by both preview renders + export.
+  // SLOGAN-CAP-DANGLE-VERB-001 (owner 2026-07-15): a hard word-count chop can
+  // leave a dangling "pronoun + transitive verb" fragment with no object
+  // ("...I bridge", "...that connect", "...we deliver"). Drop it so a truncated
+  // slogan ends on a complete phrase. Only trims a chop that still has body
+  // (>=6 words in, so >=4 survive) — a genuinely short complete slogan is never
+  // touched. Mirrors the Python _scrub_dangle_verb (scripts/job-tracker/gen-runner.py).
+  function __antcvSloganDeDangle(s) {
+    try {
+      var t = String(s == null ? "" : s).replace(/[\s,;:•\-–—&]+$/, "").trim();
+      var w = t.split(/\s+/).filter(Boolean);
+      if (w.length < 6) return t;
+      var norm = function (x) { try { return String(x || "").toLowerCase().replace(/[^\p{L}]/gu, ""); } catch (_) { return String(x || "").toLowerCase().replace(/[^a-zæøåäöü]/g, ""); } };
+      var pron = /^(?:i|we|they|he|she|you|it|that|which|who|whom|jeg|vi|de|man|som|der)$/;
+      var stop = /^(?:and|or|nor|but|with|to|through|for|of|the|a|an|my|our|your|their|its|his|her|og|eller|som|både|med|til|af)$/;
+      var last = norm(w[w.length - 1]), prev = norm(w[w.length - 2]);
+      if (pron.test(prev) && last && !stop.test(last)) {
+        return w.slice(0, w.length - 2).join(" ").replace(/[\s,;:•\-–—&]+$/, "").trim();
+      }
+      return t;
+    } catch (_) { return String(s == null ? "" : s); }
+  }
+  function __antcvSloganCap(s) {
+    try {
+      var t = String(s == null ? "" : s).trim();
+      if (!t) return t;
+      var w = t.split(/\s+/).filter(Boolean);
+      if (w.length <= 13) return t;
+      // SLOGAN-CAP-DANGLE-VERB-001: prefer a CLAUSE cut over a hard mid-clause
+      // chop — if the first comma / dash / semicolon falls at 4..8 words, keep
+      // the head clause (matches the Python _cap_slogan_words). Else hard-chop to
+      // 13 words, scrub a trailing connector/punctuation, THEN drop a dangling
+      // pronoun+verb fragment so it ends on a complete phrase.
+      var cm = t.search(/\s*[,;–—]\s*|\s+-\s+/);
+      if (cm > 0) {
+        var head = t.slice(0, cm).trim();
+        var hw = head.split(/\s+/).filter(Boolean);
+        if (hw.length >= 4 && hw.length <= 13) return __antcvSloganDeDangle(head);
+      }
+      var cut = w.slice(0, 13).join(" ")
+        .replace(/[\s,;:•\-–—&]+$/, "")
+        .replace(/\s+(?:and|or|nor|but|with|to|through|for|of|the|a|an|og|eller|som|både)$/i, "")
+        .trim();
+      return __antcvSloganDeDangle(cut);
+    } catch (_) { return String(s == null ? "" : s); }
+  }
+  try { if (typeof window !== "undefined") { window.__antcvSloganCap = __antcvSloganCap; window.__antcvSloganDeDangle = __antcvSloganDeDangle; } } catch (_) {}
+  // CL-APP-SUBTITLE-NO-DOUBLE-COMPANY-001 (owner 2026-07-22, 3Shape screenshot): the
+  // "Application: <role> - <company>" band appended the company to a role that ALREADY
+  // ended in "- <company>" (the scraped jd_role often bakes the employer into the
+  // position name), giving "… - 3Shape - 3Shape". Compose the role+company line through
+  // this helper: strip a trailing separator+company from the role FIRST (only when that
+  // tail is exactly the company, so a legit role word is never touched), then join once.
+  function __antcvSubtitleRoleCo(role, company) {
+    var c = String(company == null ? "" : company).trim();
+    var r = String(role == null ? "" : role).trim();
+    if (c) { var esc = c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); r = r.replace(new RegExp("\\s*[-–—]\\s*" + esc + "\\s*$", "i"), "").trim(); }
+    return r && c ? r + " - " + c : (r || c || "");
+  }
+  try { if (typeof window !== "undefined") window.__antcvSubtitleRoleCo = __antcvSubtitleRoleCo; } catch (_) {}
+  // PALETTE-RESOLVER-A2 (STABLE-PALETTE stage A2, docs/plan/STABLE_PALETTE_AND_LOAD_FIDELITY.md):
+  // the ONE unconditional paper CSS-var bridge. Branded app -> the brand slots (as before);
+  // UNBRANDED app -> the active package's styleConfig (the SAME palette the export band uses),
+  // instead of leaving the vars unset and falling back to navyColor (Ke) — the preview!=export
+  // "colour mix". Self-contained (reads stable localStorage keys, no component vars). Kill:
+  // antcv:disable-palette-resolver=1 (returns exact prior behaviour).
+  (function(){if("undefined"==typeof window)return;function bv(b){return b?{"--header-bg":b.headerBg,"--header-name-color":b.headerInk,"--header-spec-color":b.headerInk,"--header-contact-color":b.headerInk,"--header-line-color":b.accent||b.headerInk,"--sidebar-bg":b.sidebarBg,"--package-base":b.sidebarBg,"--sidebar-text-color":b.sidebarInk,"--sidebar-head-color":b.sidebarInk||b.accent,"--brand-accent":b.accent,"--brand-slogan-color":b.sloganColor,"--brand-signature-color":b.signatureColor,"--brand-ai-notice-color":b.aiNoticeColor}:{}}window.__antcvResolvePaperVars=function(brandSlots){try{if("1"===localStorage.getItem("antcv:disable-palette-resolver"))return bv(brandSlots);var sc=null;try{sc=JSON.parse(localStorage.getItem("styleConfig")||"null")}catch(_){}var scOk=sc&&"object"==typeof sc&&sc.headerBg;/* BRAND-OWNS-COLORS-001 (owner 2026-07-21): the old STALE-BRAND-GATE required brandV2.headerBg to MATCH styleConfig.headerBg. Once A4 (1.51.1793) reset styleConfig per-app, a genuinely branded app whose brand lives in meta.brandV2 (NOT meta.styleConfig) stopped matching -> its brand was rejected and it lost its colours. The gate is redundant now that A4 fixes the stale-palette root, so a present brand is simply honored. */if(brandSlots&&brandSlots.headerBg)return bv(brandSlots);/* A2b (owner 2026-07-21): the unbranded band used to paint from styleConfig here, but styleConfig can be STALE on kernel/topbar load (not reset per-app) — surfacing e.g. NVIDIA colours on a kernel. Return {} so unbranded defers to the existing navyColor/package fallback (== kill-switch, the known-correct behaviour). Re-enable styleConfig painting only after A4 resets styleConfig per-app. */return{}}catch(_){return bv(brandSlots)}};})();
+  // SLOGAN-PLACEMENT-001 (owner 2026-07-14): the slogan can either be VISIBLE
+  // between heading and body ('heading', default) OR HIDDEN as a standalone and
+  // instead injected as the LEAD-IN (b) of the CL opening's first sentence
+  // ('leadin' — rich_content shows a per-item lead-in). The brand helps choose
+  // the default. antcv:clSloganMode holds it.
+  function __antcvSloganMode() { try { return String(localStorage.getItem("antcv:clSloganMode") || "heading").toLowerCase() === "leadin" ? "leadin" : "heading"; } catch (_) { return "heading"; } }
+  function __antcvSloganStandaloneHidden() { try { return localStorage.getItem("antcv:clSloganHidden") === "1" || __antcvSloganMode() === "leadin"; } catch (_) { return false; } }
+  // Given the CL opening section + the resolved slogan, return it with the
+  // slogan as the first item's lead-in when in 'leadin' mode (else unchanged).
+  // Shared by the preview map + the docx-client export so preview == export.
+  function __antcvSloganOpeningLeadIn(sec, slogan) {
+    try {
+      if (!sec || sec.id !== "opening" || __antcvSloganMode() !== "leadin") return sec;
+      var sl = String(slogan == null ? "" : slogan).trim();
+      // no slogan passed -> resolve from the standalone override key (populated on
+      // every load path + at generation), so callers need no scope-specific `io`.
+      if (!sl) { try { var __ov = String(localStorage.getItem("antcv:clSlogan") || "").trim(); if (__ov && window.__antcvSloganLangGate && !window.__antcvSloganLangGate(__ov)) __ov = ""; sl = __antcvSloganCap(__ov); } catch (_) {} }
+      if (!sl || /^\[/.test(sl)) return sec;
+      var items = Array.isArray(sec.items) && sec.items.length ? sec.items.slice() : [{ b: "", t: "" }];
+      items[0] = Object.assign({}, items[0], { b: sl, bOff: false });
+      return Object.assign({}, sec, { items: items });
+    } catch (_) { return sec; }
+  }
+  // SLOGAN-UNSOL-GENERIC-001 (owner 2026-07-15): an UNSOLICITED application uses
+  // the GENERIC standing default (the specialization triad), never a role-tailored
+  // slogan (no employer + no brand block to anchor one to). Generation no longer
+  // emits a tailored slogan for unsolicited, but an ALREADY-generated unsolicited
+  // app still has io.cl_slogan + an auto-copied antcv:clSlogan override. So at
+  // every slogan read: if this app is unsolicited, skip io.cl_slogan AND skip an
+  // override that merely equals the auto-copied gen slogan → fall through to
+  // io.subtitle. A genuinely USER-EDITED override (differs from the gen slogan)
+  // is still honored. Kill: antcv:disable-slogan-unsol-generic.
+  function __antcvSloganUnsolActive(io) {
+    try {
+      if (localStorage.getItem("antcv:disable-slogan-unsol-generic") === "1") return false;
+      var co = io && io.company;
+      if (!co) { try { var mm = JSON.parse(localStorage.getItem("meta") || "{}") || {}; co = mm.company; } catch (_) {} }
+      return !!(co && window.__antcvUnsol && window.__antcvUnsol(co));
+    } catch (_) { return false; }
+  }
+  function __antcvSloganNorm(s) { try { return String(s == null ? "" : s).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").replace(/\s+/g, " ").trim(); } catch (_) { return String(s == null ? "" : s).toLowerCase().replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim(); } }
+  // Is this override merely the auto-copied generated slogan (io.cl_slogan or
+  // io.slogan) rather than a user edit? Normalise, then compare.
+  function __antcvSloganOverrideIsGen(ov, io) {
+    try {
+      var o = __antcvSloganNorm(ov); if (!o) return false;
+      var a = __antcvSloganNorm(io && io.cl_slogan), b = __antcvSloganNorm(io && io.slogan);
+      return (!!a && o === a) || (!!b && o === b);
+    } catch (_) { return false; }
+  }
+  // The resolved, capped slogan (same chain both preview renders use), so the
+  // opening lead-in and the standalone render never disagree.
+  function __antcvResolveSlogan(io) {
+    try {
+      var __uns = __antcvSloganUnsolActive(io);
+      var st = __uns ? "" : String((io && io.cl_slogan) || "").trim();
+      // SLOGAN-LANG-GATE-001 (owner 2026-07-14): a stale OVERRIDE in the wrong
+      // language for the current ribbon is rejected so the app's own current-
+      // language slogan (io.cl_slogan / specialization) wins — same window gate
+      // the docx-client export uses, so preview == export.
+      if (!st || /^\[/.test(st)) {
+        st = String(localStorage.getItem("antcv:clSlogan") || "").trim();
+        if (st && window.__antcvSloganLangGate && !window.__antcvSloganLangGate(st)) st = "";
+        // SLOGAN-UNSOL-GENERIC-001: unsolicited yields the auto-copied gen slogan
+        // to the generic; a user-edited override is kept.
+        if (st && __uns && __antcvSloganOverrideIsGen(st, io)) st = "";
+      }
+      if ((!st || /^\[/.test(st)) && __uns) st = String((io && io.subtitle) || "").trim();
+      st = __antcvSloganCap(String(st).replace(/\s*\|\s*/g, " • ").trim());
+      return (!st || /^\[/.test(st)) ? "" : st;
+    } catch (_) { return ""; }
+  }
+  // HEADER-APP-LINE-001 (owner 2026-07-22): the per-app APPLICATION LINE — "Application
+  // for [Role] at [Company]" — is the ONE-line hook that sits UNDER THE SLOGAN on the
+  // COVER LETTER (out of the heading; the heading now shows the specialisation subtitle,
+  // like the CV). Single source of truth for all three CL render sites (preview React,
+  // export HTML srcdoc, client DOCX subtitle-XML) AND mirrored in the docx-worker —
+  // replaces antcv-application-line-001.js so the line never double-renders. role/company
+  // come from io first, then localStorage `meta`. Empty for a CV, an unsolicited app, or
+  // an app with no targeted role/company. CL-only gating is the caller's job (this only
+  // suppresses unsolicited/empty).
+  function __antcvAppLineText(io) {
+    try {
+      var role = String((io && io.role) || "").trim();
+      var company = String((io && io.company) || "").trim();
+      if (!role && !company) {
+        try { var m = JSON.parse(localStorage.getItem("meta") || "{}") || {}; role = role || String(m.role || "").trim(); company = company || String(m.company || "").trim(); } catch (_) {}
+      }
+      if (!role && !company) return "";
+      if (company && window.__antcvUnsol && window.__antcvUnsol(company)) return "";
+      var lang = "en";
+      try { lang = String(localStorage.getItem("language") || "en").replace(/["']/g, "").toLowerCase().slice(0, 2) || "en"; } catch (_) {}
+      var forW = { en: "Application for", da: "Ansøgning til", es: "Candidatura para", zh: "申请职位", he: "מועמדות לתפקיד", am: "ማመልከቻ ለ", ar: "التقدم لوظيفة" }[lang] || "Application for";
+      var atW = { en: "at", da: "hos", es: "en", zh: "·", he: "ב", am: "በ", ar: "في" }[lang] || "at";
+      var t = role ? forW + " " + role : "";
+      if (company) t = t ? (t + " " + atW + " " + company) : (forW + " " + company);
+      return t.trim();
+    } catch (_) { return ""; }
+  }
+  try {
+    if (typeof window !== "undefined") {
+      window.__antcvSloganMode = __antcvSloganMode;
+      window.__antcvSloganStandaloneHidden = __antcvSloganStandaloneHidden;
+      window.__antcvSloganOpeningLeadIn = __antcvSloganOpeningLeadIn;
+      window.__antcvResolveSlogan = __antcvResolveSlogan;
+      window.__antcvSloganUnsolActive = __antcvSloganUnsolActive;
+      window.__antcvSloganOverrideIsGen = __antcvSloganOverrideIsGen;
+      window.__antcvAppLineText = __antcvAppLineText;
+    }
+  } catch (_) {}
+  function __antcvWriteSpec(v) {
+    try {
+      if ("string" != typeof v) return;
+      var pi = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {};
+      if (pi && "object" == typeof pi) { pi.specialization = v; localStorage.setItem("personalInfo", JSON.stringify(pi)); }
+    } catch (_) {}
+  }
+  // TRANSLATE-PI-IDENTITY-001 (owner 2026-07-11): the header identity fields (candidate
+  // NAME, city "Copenhagen", "EU Citizen") render from personalInfo directly and were
+  // never collected by the translate pass — they stayed English under every ribbon.
+  // Same render-source pattern as specialization: write-back + snapshot + restore.
+  // LANG-IDENTITY-SWITCH-001 (owner 2026-07-11 "my name stayed in Chinese ... make
+  // sure these changes are able to handle language change"): a wide-script identity
+  // rendering (加布里埃尔·亚历山大·卡普·格申) written into personalInfo is STICKY on Latin
+  // ribbons — the collector only translates identity INTO wide scripts, never back.
+  // Stash the Latin canonical before a wide overwrite; restore it whenever the user
+  // switches to a Latin language (en/da/es).
+  var __ANTCV_WIDE_ID_RE = /[一-鿿㐀-䶿֐-׿؀-ۿሀ-፿]/;
+  function __antcvWritePi(field, v) {
+    try {
+      if ("string" != typeof v || !v.trim()) return;
+      var pi = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {};
+      if (pi && "object" == typeof pi) {
+        var cur = pi[field];
+        if ("string" == typeof cur && cur.trim() && !__ANTCV_WIDE_ID_RE.test(cur) && __ANTCV_WIDE_ID_RE.test(v)) pi["__latin_" + field] = cur;
+        pi[field] = v;
+        localStorage.setItem("personalInfo", JSON.stringify(pi));
+      }
+    } catch (_) {}
+  }
+  function __antcvRestoreLatinIdentity() {
+    try {
+      var pi = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {};
+      var changed = false;
+      ["name", "city", "citizenship", "specialization", "location"].forEach(function (f) {
+        var cur = pi[f], stash = pi["__latin_" + f];
+        if ("string" == typeof cur && __ANTCV_WIDE_ID_RE.test(cur) && "string" == typeof stash && stash.trim()) { pi["__zh_" + f] = cur; pi[f] = stash; changed = true; }
+      });
+      if (Array.isArray(pi.contactItems)) pi.contactItems.forEach(function (ci) {
+        if (ci && "string" == typeof ci.value && __ANTCV_WIDE_ID_RE.test(ci.value) && "string" == typeof ci.__latin && ci.__latin.trim()) { ci.__zh = ci.value; ci.value = ci.__latin; changed = true; }
+      });
+      if (changed) localStorage.setItem("personalInfo", JSON.stringify(pi));
+      var sn = localStorage.getItem("antcv:clSignName");
+      var snL = localStorage.getItem("antcv:clSignName_latin");
+      if (sn && __ANTCV_WIDE_ID_RE.test(sn) && snL) { localStorage.setItem("antcv:clSignName_zh", sn); localStorage.setItem("antcv:clSignName", snL); }
+    } catch (_) {}
+  }
+  // LANG-IDENTITY-SWITCH-001 reverse leg (owner: "do not forget 哥本哈根"): switching
+  // BACK to a wide-script ribbon restores the stashed wide renderings instantly
+  // (加布里埃尔·亚历山大·卡普·格申 / 哥本哈根 / 欧盟公民 / 加布里埃尔) — no LLM round trip needed.
+  function __antcvRestoreWideIdentity() {
+    try {
+      var pi = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {};
+      var changed = false;
+      ["name", "city", "citizenship", "specialization", "location"].forEach(function (f) {
+        var cur = pi[f], stash = pi["__zh_" + f];
+        if ("string" == typeof cur && !__ANTCV_WIDE_ID_RE.test(cur) && "string" == typeof stash && __ANTCV_WIDE_ID_RE.test(stash)) { pi["__latin_" + f] = cur; pi[f] = stash; changed = true; }
+      });
+      if (Array.isArray(pi.contactItems)) pi.contactItems.forEach(function (ci) {
+        if (ci && "string" == typeof ci.value && !__ANTCV_WIDE_ID_RE.test(ci.value) && "string" == typeof ci.__zh && __ANTCV_WIDE_ID_RE.test(ci.__zh)) { ci.__latin = ci.value; ci.value = ci.__zh; changed = true; }
+      });
+      if (changed) localStorage.setItem("personalInfo", JSON.stringify(pi));
+      var sn = localStorage.getItem("antcv:clSignName");
+      var snZ = localStorage.getItem("antcv:clSignName_zh");
+      if (sn && !__ANTCV_WIDE_ID_RE.test(sn) && snZ && __ANTCV_WIDE_ID_RE.test(snZ)) { localStorage.setItem("antcv:clSignName_latin", sn); localStorage.setItem("antcv:clSignName", snZ); }
+    } catch (_) {}
+  }
+  // PREVIEW-MD-LINK-001 (owner 2026-07-11): the preview labeled_list showed markdown
+  // links as raw text ("[Google Scholar](https://…)") while the EXPORT renders real
+  // hyperlinks (RICH-BLOCK-HYPERLINK-001). Same http(s)/mailto restriction so
+  // bracketed placeholders are never mistaken for links. Returns an array of React
+  // nodes when the string carries at least one link, else null (caller keeps the
+  // editable component).
+  function __antcvMdLinkNodes(s) {
+    try {
+      s = String(s == null ? "" : s);
+      if (s.indexOf("](") < 0) return null;
+      var re = /\[([^\]]+)\]\(\s*((?:https?:\/\/|mailto:)[^)\s]+)\s*\)/g;
+      var out = [], cursor = 0, m, found = false, k = 0;
+      while ((m = re.exec(s)) !== null) {
+        found = true;
+        if (m.index > cursor) out.push(s.slice(cursor, m.index));
+        out.push(React.createElement("a", { key: "mdl" + k++, href: m[2], target: "_blank", rel: "noopener noreferrer", style: { color: "#0563C1", textDecoration: "underline" } }, m[1]));
+        cursor = m.index + m[0].length;
+      }
+      if (!found) return null;
+      if (cursor < s.length) out.push(s.slice(cursor));
+      return out;
+    } catch (_) { return null; }
+  }
+  function __antcvWriteContactItem(idx, v) {
+    try {
+      if ("string" != typeof v || !v.trim()) return;
+      var i = parseInt(idx, 10);
+      if (!(i >= 0)) return;
+      var pi = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {};
+      if (pi && Array.isArray(pi.contactItems) && pi.contactItems[i] && "string" == typeof pi.contactItems[i].value) {
+        // LANG-IDENTITY-SWITCH-001: stash the Latin original before the FIRST
+        // wide-script overwrite so a later Latin ribbon can restore it.
+        var cur = pi.contactItems[i].value;
+        if (cur.trim() && !__ANTCV_WIDE_ID_RE.test(cur) && __ANTCV_WIDE_ID_RE.test(v)) pi.contactItems[i].__latin = cur;
+        pi.contactItems[i].value = v;
+        localStorage.setItem("personalInfo", JSON.stringify(pi));
+      }
+    } catch (_) {}
+  }
+  function __antcvSnapStandalone() {
+    var s = {};
+    try { var sl = localStorage.getItem("antcv:clSlogan"); if (null != sl) s.clSlogan = sl; } catch (_) {}
+    try { var sn = localStorage.getItem("antcv:clSignName"); if (null != sn) s.clSignName = sn; } catch (_) {}
+    try { var pi = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; if ("string" == typeof pi.specialization) s.specialization = pi.specialization; if ("string" == typeof pi.name) s.piName = pi.name; if ("string" == typeof pi.city) s.piCity = pi.city; if ("string" == typeof pi.citizenship) s.piCitizen = pi.citizenship; if ("string" == typeof pi.location) s.piLocation = pi.location; if (Array.isArray(pi.contactItems)) s.contactVals = pi.contactItems.map(function (c) { return c && "string" == typeof c.value ? c.value : null; }); } catch (_) {}
+    return s;
+  }
+  function __antcvRestoreStandalone(s) {
+    if (!s || "object" != typeof s) return;
+    if ("string" == typeof s.clSlogan) __antcvWriteSlogan(s.clSlogan);
+    if ("string" == typeof s.clSignName) { try { localStorage.setItem("antcv:clSignName", s.clSignName); } catch (_) {} }
+    if ("string" == typeof s.specialization) __antcvWriteSpec(s.specialization);
+    if ("string" == typeof s.piName) __antcvWritePi("name", s.piName);
+    if ("string" == typeof s.piCity) __antcvWritePi("city", s.piCity);
+    if ("string" == typeof s.piCitizen) __antcvWritePi("citizenship", s.piCitizen);
+    if ("string" == typeof s.piLocation) __antcvWritePi("location", s.piLocation);
+    if (Array.isArray(s.contactVals)) s.contactVals.forEach(function (v, i) { if ("string" == typeof v) __antcvWriteContactItem(i, v); });
+  }
   function __antcvModelFor(prov, task) {
     try { if ("gemini" === prov && __antcvBigGen(task)) return "gemini-2.5-pro"; } catch (_) {}
     return void 0;
@@ -2059,9 +2698,23 @@
   //   (b) truncated  — unbalanced braces (more "{" than "}") ⇒ cut mid-object.
   function __antcvOutputInadequate(task, text) {
     try {
-      if (!/^(parse_jd|generate_cv)$/.test(String(task || ""))) return false;
       const s = String(text || "").trim();
-      if (s.length < 800) return true;
+      const __task = String(task || "");
+      // MALFORMED-OUTPUT-DETECT-001 (owner 2026-07-11, docs/qa/LLM_ROUTER_PROPOSAL_
+      // 2026-07-11.md): a provider returning its OWN raw SSE (the 3.8.0 stream-leak
+      // class) or a stream envelope is malformed for EVERY task — no valid CV/CL/
+      // translation/JSON output starts with `data: {`/`event:` or carries a bare
+      // chat-completion chunk. This is exactly the failure the health signals never
+      // caught (openai held health 1.0 while emitting `data:{chatcmpl…}`). Universal,
+      // cheap, ~zero false-positive; makes ee() reject + fall through + demote.
+      if (/^\s*(data:\s*[{[]|event:\s)/.test(s) ||
+          /data:\s*\{"(id|choices|object)"/.test(s.slice(0, 400))) return true;
+      // PARSE-JD-ADEQUACY-FLOOR-001 (owner 2026-07-06): task-specific floor +
+      // brace-balance guard, ONLY for the JSON-shaped tasks (a prose translation
+      // legitimately has no braces, so these checks must not run on it).
+      if (!/^(parse_jd|generate_cv|generate_cl)$/.test(__task)) return false;
+      const __floor = "parse_jd" === __task ? 80 : 800;
+      if (s.length < __floor) return true;
       let open = 0, close = 0;
       for (let i = 0; i < s.length; i++) {
         const ch = s.charCodeAt(i);
@@ -2070,6 +2723,16 @@
       }
       if (open === 0) return true;      // no JSON object at all
       if (open > close) return true;    // truncated mid-object
+      // PARSE-JD-CL-ADEQUACY-001 (owner 2026-07-11, D1-confirmed): a clipped
+      // response loses its TRAILING fields — the whole cover letter — while
+      // passing the floor + brace checks (a truncated-then-model-closed JSON
+      // balances braces). The main generation is inadequate unless the CL
+      // fields are present, so the cascade retries the next provider instead
+      // of silently shipping a CV-only document.
+      // Scope: only the BIG full-generation responses (>= 3000 chars) must carry
+      // the CL fields — parse_jd also serves small legitimate payloads (JD
+      // analysis ~400-800 chars) that have no CL by design.
+      if ("parse_jd" === __task && s.length >= 3000 && !/"(cl_opening|opening|who_i_am|who|why)[^"]*"\s*:/.test(s)) return true;
       return false;
     } catch (_) {
       return false;
@@ -2401,6 +3064,12 @@
             input_tokens: g,
             output_tokens: f,
             tokens_real: null != u.input_tokens,
+            // RELAY-DETECTION-GAP-001: flag format-broken output (SSE-leak / empty-despite-
+            // tokens / control-garbage) so the relay demotes a silently-broken provider.
+            malformed_output_count:
+              window.AntcvMalformed && window.AntcvMalformed.detect(n, { completionTokens: f })
+                ? 1
+                : 0,
             duration_ms: p,
             cost_usd: y,
             session_cost_usd: parseFloat(A.toFixed(6)),
@@ -2785,7 +3454,7 @@
       key: "citizenship",
       label: "Citizenship",
       icon: "★",
-      placeholder: "EU Citizen",
+      placeholder: "EU citizen",
     },
     {
       key: "email",
@@ -2856,11 +3525,17 @@
     );
   }
   function de(e) {
+    // CONTACT-LOC-DEDUP-001 (owner 2026-07-12): when a Location line is stored
+    // it already carries city+country ("2300, København S") — rendering City and
+    // Country as separate rows beside it is redundant. Drop them from the LIST
+    // (they stay editable in the contact grid; clearing Location brings them back).
+    const __hasLoc = !!String((e && e.location) || "").trim();
     return ce(e || {})
       .filter(
-        (e) =>
-          String(e.value || "").trim() ||
-          ["city", "country", "email", "phone", "linkedin"].includes(e.key),
+        (t) =>
+          !(__hasLoc && ("city" === t.key || "country" === t.key)) &&
+          (String(t.value || "").trim() ||
+            ["city", "country", "email", "phone", "linkedin"].includes(t.key)),
       )
       .map((e) => ({
         l: `${e.icon} ${e.label}`,
@@ -2869,7 +3544,7 @@
         icon: e.icon,
       }));
   }
-  function pe(e, t = !1, n = !1) {
+  function pe(e, t = !1, n = !1, __rl = "") {
     const o = [],
       r = [e.city, e.country].filter(Boolean).join(", "),
       a = e.location || r;
@@ -2881,6 +3556,12 @@
     // other cities pass through untouched.
     const __localForm = (v) => {
       let s = String(v || "").trim();
+      // LOCALFORM-DA-CONDITIONAL-001 (owner 2026-07-12, refines DA-ALWAYS same
+      // day): Danish local form ("2300, København S") when the app is DANISH or
+      // the JOB is in Denmark; otherwise the location follows the app language
+      // (a China-job zh app localizes it; a Sweden-job en app keeps English).
+      const __keepDa = (() => { try { const L = String(__rl || localStorage.getItem("language") || "en").replace(/"/g, "").slice(0, 2); if ("da" === L) return true; const jd = String(localStorage.getItem("antcv:app:kernel:jdText") || "") + " " + String(localStorage.getItem("antcv:lastJdText") || ""); return /(danmark|denmark|københavn|copenhagen|aarhus|århus|odense|aalborg|ballerup|birkerød|smørum|dk-\d{4})/i.test(jd); } catch (_) { return true; } })();
+      if (!__keepDa) return s.replace(/københavn/gi, "Copenhagen");
       if (!/copenhagen|københavn/i.test(s)) return s;
       s = s
         .replace(/copenhagen/gi, "København")
@@ -2900,14 +3581,32 @@
       if (m) return `${m[1]}, ${m[2]}`;
       return s;
     };
+    // OWNER-PINNED-ZH-001 / CONTACT-LINE-DICT-ROUTE-001 (owner 2026-07-11: header
+    // showed "Copenhagen" + "EU Citizen" in English on a zh ribbon even though the
+    // zh dict holds 哥本哈根/欧盟公民 — the builder pushed RAW values, never dict-
+    // routed). Route the two text values through ye(); on zh also swap the city
+    // name inside composite location strings ("2300, København S" → "2300, 哥本哈根 S").
+    const __ctL = (() => { try { return String(__rl || localStorage.getItem("language") || "en").replace(/"/g, "").slice(0, 2); } catch (_) { return "en"; } })();
+    const __ctF = (v) => {
+      try {
+        if ("string" != typeof v || !v) return v;
+        v = ye(v, __ctL);
+        if ("zh" === __ctL) v = v.replace(/Copenhagen|København/g, "哥本哈根");
+        return v;
+      } catch (_) { return v; }
+    };
     return (
       (a || n) &&
         o.push([
           "⌂",
-          __localForm(t ? a || "København, Danmark" : a || "Copenhagen, Denmark"),
+          // CL-IDENTITY-LANG-001 (owner 2026-07-12, supersedes LOCALFORM-DA-ALWAYS-001):
+          // the location IS dict-routed now — a zh ribbon shows "2300, 哥本哈根 S";
+          // __keepDa still holds the Danish form on da apps / Denmark jobs (exact-dict
+          // misses leave the string untouched, so Latin ribbons are unaffected).
+          __ctF(__localForm(t ? a || "København, Danmark" : a || "Copenhagen, Denmark")),
         ]),
-      e.citizenship && o.push(["★", e.citizenship]),
-      e.email && o.push(["@", e.email]),
+      e.citizenship && o.push(["★", __ctF(e.citizenship)]),
+      e.email && o.push(["✉︎", e.email]),
       e.phone && o.push(["☎", e.phone]),
       e.linkedin && o.push(["🔗︎", e.linkedin]),
       e.github && o.push(["⌘", e.github]),
@@ -3245,6 +3944,16 @@
           );
         } catch (_) {}
       })();
+      // CL-V5-STRUCT-001 (owner 2026-07-21, docs/plan/AntCV_Generation_Upgrade_Plan_2026-07-17.md
+      // §1, source General_CV_CL_Generator_Prompt_v5.docx): the mandatory Danish cover-letter
+      // sequence. Employer NEED, candidate EVIDENCE and proposed APPROACH are three SEPARATE
+      // subsections, and the identity block moves to the END.
+      r.push(
+        "COVER-LETTER SEQUENCE v5 (CL-V5-STRUCT-001) - MANDATORY, OVERRIDES any earlier ordering guidance. Write the letter in EXACTLY this order: (1) headline + subtitle + greeting; (2) OPENING & APPLICATION CONTEXT (opening_content) - name the role and company, mention verified prior contact only if it genuinely happened, then bridge to professional identity in a second sentence; no full summary; (3) 'Why this position:' (why_content) - role- and company-specific, why this mix of work, interfaces and company stage fits; no generic praise; (4) 'How I see the role:' (role_view_intro + role_view_rows) - one lead sentence naming the connected priorities and ending with a colon (example shape: 'The work appears to centre on three connected priorities:'), then EXACTLY THREE employer-centred bullets, each a short bold label plus ONE sentence; (5) 'What I bring:' (bring_intro + bring_rows) - one linking sentence, then EXACTLY THREE evidence bullets: (a) decision foundation (evidence, requirements, supplier input, risk, gates), (b) the strongest hands-on cost or technical result, (c) project, team and stakeholder direction; lead with the most role-critical metric; (6) 'How I will contribute:' (contribute_intro + contribute_items) - an adapt-with-the-team lead-in, then 3-4 bullets: shared direction in the first weeks; decision rhythm; connecting technical or lab work to validation and production; and a SEPARATE team-trust bullet when people coordination is central. Name only role-relevant tools, each tied to a concrete purpose, in collaborative voice ('I would', 'with the team'); (7) 'Who I am' AT THE END (who_lead + who_summary + who_operate + who_eligibility + who_goal) - a lead sentence, then Professional summary / How I operate / Eligibility / My goal. who_eligibility is the ONE cl_overrides field you may return as an empty string: fill it ONLY when the candidate has CONFIRMED the facts AND the role makes them relevant (e.g. security-relevant work) - residence and citizenship, criminal-record status, family-tie declarations - and NEVER infer eligibility or clearance from residence or citizenship. 'My goal' is the contribution wanted, never unilateral control; (8) CLOSING (closure_content) - connect the strongest match, invite a conversation, and stay SHORTER than the body. " +
+          "STRUCTURAL SEPARATION RULE (v5, non-negotiable): the EMPLOYER'S NEED (4), the CANDIDATE'S EVIDENCE (5) and the PROPOSED APPROACH (6) must NEVER be fused into one bullet. A 'How I see the role' bullet states the problem ONLY - no 'I', no evidence, no proposed fix. A 'What I bring' bullet is evidence from the real record. A 'How I will contribute' bullet is what the candidate would do with the team. If a sentence does two of those jobs, split it across the two subsections. " +
+          "The v5 sequence REPLACES the older greeting-opening-why-who-foundation-bring-contribute-closure order: do NOT emit foundation_hands_on / foundation_professionally for a v5 letter - that content belongs in who_summary and who_operate. " +
+          "DOCUMENT-PURPOSE VARIANTS: FORMAL = the full logic above; PRE-APPLICATION = shorter, focused questions, one invitation; POST-APPLICATION = brief reference to the prior application, the new context, and the next-step ask.",
+      );
       // COMPRESSION-TIGHT-001 (owner 2026-06-30, CV + CL review): bullets/cells/paragraphs were
       // wrapping with short orphan trailing lines — write TIGHTER.
       r.push(
@@ -3771,7 +4480,7 @@
                     ],
             },
           ],
-          cl: !0 /* TEMPLATE-STRUCT-DEFAULT-001 (owner 2026-07-03): the docx-matching CL skeleton (greeting-opening-why-who-foundation-bring-contribute-closure, rich_block lead-ins) is the BASE for EVERY tone register. The old toneRegister gate made an ABSENT key fall to the legacy pre-Nordic shape (Dear [Hiring Manager], Focus-area table, text_bullets contribute) even though the app's tone DEFAULT is scandinavian - so fresh/demo/wiped sessions got the off-struct base and the rich-block converter sidecars had to patch over it. Legacy branch kept below for reference only. */ ? [{"id":"greeting","title":"Greeting","loc":"main","on":true,"type":"text","content":"Dear [Hiring Team / Name],"},{"id":"opening","title":"Opening","loc":"main","on":true,"type":"rich_block","headlineOff":true,"items":[{"b":"","t":"I am applying for [Role title] at [Company], where I can contribute to [main JD need 1 (example: a core responsibility from the JD)], [main JD need 2 (example: a second responsibility)], and [main company need (example: the broader outcome the team is after)]."}]},{"id":"why","title":"WHY THIS POSITION","loc":"main","on":true,"type":"rich_block","headlineOff":true,"items":[{"b":"Why this company and role","t":"[NO-JD RULE (whole letter): with no JD (unsolicited), never leave a part empty and never invent facts - use the candidate's real background, strongest general skills, and the target role type, mark assumptions. WHY THIS COMPANY AND ROLE: one specific company observation (e.g. \"<Company> is moving from <A> to <B>\"), then connect to the candidate's profile, then end on a topic to discuss. Use Company Info + Leads + JD (no JD: company info + role type).]"}]},{"id":"who","title":"WHO I AM","loc":"main","on":true,"type":"rich_block","headlineOff":true,"items":[{"b":"Who I am","t":"[WHO I AM - identity tied to the role (e.g. \"<discipline> professional with <N>+ years across <fields>\") plus one work-style clause (e.g. \"listens first, writes decisions down\"). From the candidate's own background, calm and direct. Follow the WRITING RULES above.]"}]},{"id":"foundation","title":"FOUNDATION","loc":"main","on":true,"type":"rich_block","headlineOff":true,"items":[{"b":"Foundation","t":"I connect [your foundation, example: your core discipline / methods / domain strengths] with [company need, example: the outcome this employer is after - clearer decisions / faster delivery / better quality / lower risk]."},{"b":"Hands-on","t":"[Select only skills that match Company Info + Holistic Leads + Specific Leads + JD analysis. Example shape: name 4-6 concrete, JD-relevant skills from your own toolkit (methods, tools, domains you actually use), comma-separated.]","mk":true},{"b":"Professionally","t":"[Translate those skills into value for this company and role. Example shape: turn your inputs into a clear outcome the employer cares about, while keeping the relevant stakeholders aligned.]","mk":true}]},{"id":"bring","title":"WHAT I BRING","loc":"main","on":true,"type":"rich_block","headlineOff":true,"items":[{"b":"What I bring","t":"[INTRO LINE - one short, plain phrase naming what you bring, no overselling: an anchor word then the areas it covers (e.g. \"structure - across scope, suppliers, validation, and business decisions\"). End with a colon.] [Then give 3-4 skills as the bullets below, matched from Company Info + Leads + JD (unsolicited: company info + role type, mark assumptions). Evidence = real proof points, prefer a measurable one (%, count, time/cost change, shipped output, team size); never invent numbers. Follow the WRITING RULES above.]"},{"b":"[Need from JD/company (example: a specific requirement the JD names)]","t":"[Your matching action/evidence/result (example shape: <action you took> that produced <a concrete, ideally measurable result>).]","mk":true},{"b":"[Need from JD/company (example: a specific requirement the JD names)]","t":"[Your matching action/evidence/result (example shape: <action you took> that produced <a concrete, ideally measurable result>).]","mk":true},{"b":"[Need from JD/company (example: a second named requirement)]","t":"[Your matching action/evidence/result (example shape: <action> that produced <result>).]","mk":true},{"b":"[Need from JD/company (example: a third named requirement)]","t":"[Your matching action/evidence/result (example shape: <action> that produced <result>).]","mk":true}]},{"id":"contribute","title":"HOW I WOULD CONTRIBUTE","loc":"main","on":true,"type":"rich_block","headlineOff":true,"items":[{"b":"How I would contribute","t":"I would start by learning where [Company/team] loses time, clarity, trust, or traceability. From there:"},{"b":"","t":"[Action tied to Holistic Lead (example shape: map where <the work> slows down across <the relevant teams>).]","mk":true},{"b":"","t":"[Action tied to Specific Lead from JD (example shape: create a clear view of <scope, risks, owners, milestones> for <the work>).]","mk":true},{"b":"","t":"[Action tied to Specific Lead from JD (example shape: set written criteria for <the decisions this role keeps making>).]","mk":true},{"b":"","t":"[Action tied to values/company culture (example shape: keep communication direct, respectful, and useful for both technical and non-technical people).]","mk":true},{"b":"Goal","t":"[Outcome based on the role/company needs (example shapes: faster decisions and cleaner execution; clearer scope and fewer repeated discussions; smoother handover from <input> to <decision>).]"}]},{"id":"closure","title":"Closure","loc":"main","on":true,"type":"text","content":"[CLOSURE - 1-2 sentences: \"I would welcome the chance to talk through how I could support [Company] in [position/department] by contributing to [relevant scope].\" No generic sign-offs. Write in the target language (en/da/es/zh, etc.); default to the role's local language if the JD is in it.]"}] : [
+          cl: !0 /* TEMPLATE-STRUCT-DEFAULT-001 (owner 2026-07-03): the docx-matching CL skeleton (greeting-opening-why-who-foundation-bring-contribute-closure, rich_block lead-ins) is the BASE for EVERY tone register. The old toneRegister gate made an ABSENT key fall to the legacy pre-Nordic shape (Dear [Hiring Manager], Focus-area table, text_bullets contribute) even though the app's tone DEFAULT is scandinavian - so fresh/demo/wiped sessions got the off-struct base and the rich-block converter sidecars had to patch over it. Legacy branch kept below for reference only. */ ? [{"id":"greeting","title":"Greeting","loc":"main","on":true,"type":"text","content":"Dear [Hiring Team / Name],"},{"id":"opening","title":"Opening","loc":"main","on":true,"type":"rich_block","headlineOff":true,"items":[{"b":"","t":"[OPENING & APPLICATION CONTEXT - name the role and the company. Mention verified prior contact briefly (e.g. \"Following our earlier coffee meeting\") ONLY when it genuinely happened. A second sentence bridges to the candidate's professional identity. Do NOT summarise the whole background here.]"}]},{"id":"why","title":"WHY THIS POSITION","loc":"main","on":true,"type":"rich_block","headlineOff":true,"leadColon":true,"items":[{"b":"Why this company and position","t":"[NO-JD RULE (whole letter): with no JD (unsolicited), never leave a part empty and never invent facts - use the candidate's real background, strongest general skills, and the target role type, mark assumptions. WHY THIS POSITION: role- and company-specific - why this mix of work, interfaces and company stage fits. One specific company observation (e.g. \"<Company> is moving from <A> to <B>\"), then connect to the candidate's profile. No generic praise.]"}]},{"id":"role_view","title":"HOW I SEE THE ROLE","loc":"main","on":true,"type":"rich_block","headlineOff":true,"leadColon":true,"items":[{"b":"How I see the role","t":"[LEAD SENTENCE - one line naming the connected priorities the work centres on, ending with a colon (example shape: \"The work appears to centre on three connected priorities:\").]"},{"b":"[Employer priority 1 - short label]","t":"[ONE sentence stating the EMPLOYER'S problem only - what this role has to solve. NO candidate evidence, NO proposed solution, no \"I\".]","mk":true},{"b":"[Employer priority 2 - short label]","t":"[ONE sentence stating the second employer problem. Employer-centred only.]","mk":true},{"b":"[Employer priority 3 - short label]","t":"[ONE sentence stating the third employer problem. Employer-centred only.]","mk":true}]},{"id":"bring","title":"WHAT I BRING","loc":"main","on":true,"type":"rich_block","headlineOff":true,"leadColon":true,"items":[{"b":"What I bring","t":"[LINKING SENTENCE - one short, plain phrase naming what the candidate brings and the areas it covers, ending so the bullets below read as proof (example shape: \"Technical depth, project discipline and collaborative team direction relevant to these challenges\"). No overselling, no adjectives like strong/proven/passionate.]"},{"b":"[Decision foundation - short label]","t":"[EVIDENCE: how the candidate builds the decision foundation - evidence, requirements, supplier input, risk, gates. Real proof points only; lead with the most role-critical metric.]","mk":true},{"b":"[Strongest hands-on result - short label]","t":"[EVIDENCE: the strongest hands-on cost or technical result, with its real measurable outcome. Never invent a number.]","mk":true},{"b":"[Project, team and stakeholder direction - short label]","t":"[EVIDENCE: project, team and stakeholder direction the candidate has actually run, with scope (team size, cycle time, named forums).]","mk":true}]},{"id":"contribute","title":"HOW I WILL CONTRIBUTE","loc":"main","on":true,"type":"rich_block","headlineOff":true,"leadColon":true,"items":[{"b":"How I will contribute","t":"[ADAPT-WITH-THE-TEAM LEAD-IN - one line, ending with a colon (example shape: \"I would bring this approach, adapting tools and rhythm with the team:\").]"},{"b":"[First weeks - short label]","t":"[What the candidate would review and agree in the first weeks to build a shared direction. Collaborative voice (\"I would\", \"with the team\").]","mk":true},{"b":"[Decision rhythm - short label]","t":"[How the candidate would turn meetings, prototypes and test results into traceable actions with owners and deadlines.]","mk":true},{"b":"[Technical work to validation/production - short label]","t":"[How the candidate would connect the technical or lab work to validation and production. Name only role-relevant tools, each tied to a concrete purpose.]","mk":true},{"b":"[Team trust - short label]","t":"[SEPARATE team-trust bullet - include when people coordination is central to the role; drop it when it is not.]","mk":true}]},{"id":"who","title":"WHO I AM","loc":"main","on":true,"type":"rich_block","headlineOff":true,"leadColon":true,"items":[{"b":"Who I am","t":"[LEAD SENTENCE - one line on the conditions the candidate works best in (example shape: \"I work best where technical uncertainty, people and delivery decisions move forward together.\").]"},{"b":"Professional summary","t":"[Identity tied to the role: years, disciplines, the environments the candidate has come from. From the real background, calm and direct.]","mk":true},{"b":"How I operate","t":"[Work style in one sentence - how the candidate decides, prioritises and follows up across teams.]","mk":true},{"b":"Eligibility","t":"[ONLY when candidate-confirmed AND relevant to the role (e.g. security-relevant work): residence and citizenship, criminal-record status, family-tie declarations. Never infer eligibility or clearance from residence or citizenship. Omit the whole bullet when not confirmed or not relevant.]","mk":true},{"b":"My goal","t":"[The contribution the candidate wants to make in this role - never unilateral control.]","mk":true}]},{"id":"foundation","title":"FOUNDATION","loc":"main","on":false,"type":"rich_block","headlineOff":true,"items":[{"b":"Foundation","t":"[Legacy pre-v5 section. v5 carries this content in the end-block \"Who I am\" (Professional summary / How I operate). Left off by default.]"},{"b":"Hands-on","t":"[Select only skills that match Company Info + Holistic Leads + Specific Leads + JD analysis.]","mk":true},{"b":"Professionally","t":"[Translate those skills into value for this company and role.]","mk":true}]},{"id":"closure","title":"Closure","loc":"main","on":true,"type":"text","content":"[CLOSING - connect the strongest match, invite a conversation, and stay SHORTER than the body: \"I would welcome a talk on how [strongest match] could support [Company] in [scope].\" No generic sign-offs. Write in the target language (en/da/es/zh, etc.); default to the role's local language if the JD is in it.]"}] : [
             {
               id: "greeting",
               title: "Greeting",
@@ -4260,6 +4969,14 @@
       "SELECTED OUTCOMES": "UDVALGTE RESULTATER",
       "PROFESSIONAL EXPERIENCE": "ERFARING",
       "EXPERIENCE (CONT.)": "ERFARING (FORTS.)",
+      // LANGS-ENUM-DICT-001: spoken-language names + fluency levels are data enums
+      "English": "Engelsk",
+      "Hebrew": "Hebraisk",
+      "Spanish": "Spansk",
+      "Danish": "Dansk",
+      "native / fluent": "modersmål / flydende",
+      "professional": "professionelt niveau",
+      "intermediate (B1)": "mellemniveau (B1)",
       "TOOLS & METHODS": "VÆRKTØJER OG METODER",
       CERTIFICATIONS: "CERTIFIKATER",
       "CERTIFICATES & COURSES": "CERTIFIKATER & KURSER",
@@ -4276,6 +4993,8 @@
       "HOW I WOULD CONTRIBUTE": "HVORDAN JEG VILLE BIDRAGE",
       FOUNDATION: "GRUNDLAG",
       "Application:": "Ansøgning:",
+      "Results: ": "Resultat: ",
+      "AI-assisted document": "AI-assisteret dokument",
       "Focus Area": "Fokusområde",
       "Strategic Expertise": "Strategisk ekspertise",
       "Hands-on:": "Praktisk:",
@@ -4291,6 +5010,7 @@
       "Best regards,": "Med venlig hilsen,",
       "Sincerely,": "Med venlig hilsen,",
       "Copenhagen, Denmark": "København, Danmark",
+      "EU citizen": "EU-borger",
       "EU Citizen": "EU-borger",
       "Project & workflow": "Projekt & workflow",
       "Reporting & data": "Rapportering & data",
@@ -4481,6 +5201,8 @@
         "HOW I WOULD CONTRIBUTE": "CÓMO CONTRIBUIRÍA",
         FOUNDATION: "FUNDAMENTO",
         "Application:": "Postulación:",
+        "Results: ": "Resultado: ",
+        "AI-assisted document": "Documento asistido por IA",
         "Focus Area": "Área de enfoque",
         "Strategic Expertise": "Experiencia estratégica",
         "Hands-on:": "En la práctica:",
@@ -4500,6 +5222,45 @@
         Requirements: "Requisitos",
         Analysis: "Análisis",
         Engineering: "Ingeniería",
+        "PROFESSIONAL EXPERIENCE (CONT.)": "EXPERIENCIA PROFESIONAL (CONT.)",
+        "PROFILE (CONT.)": "PERFIL (CONT.)",
+        LANGUAGES: "IDIOMAS",
+        REFERENCES: "REFERENCIAS",
+        PUBLICATIONS: "PUBLICACIONES",
+        PATENT: "PATENTE",
+        STANDARDS: "NORMAS Y CUMPLIMIENTO",
+        "REGULATORY & STANDARDS": "NORMATIVA Y ESTÁNDARES",
+        ACCESSIBILITY: "ACCESIBILIDAD",
+        VOLUNTEERING: "VOLUNTARIADO",
+        OPENING: "APERTURA",
+        GREETING: "SALUDO",
+        CLOSURE: "CIERRE",
+        SUMMARY: "RESUMEN",
+        Accessibility: "Accesibilidad",
+        Volunteer: "Voluntariado",
+        Hobbies: "Aficiones",
+        Global: "Global",
+        "Goal:": "Objetivo:",
+        "Who I am:": "Quién soy:",
+        "What I bring:": "Qué aporto:",
+        "Why this position:": "Por qué este puesto:",
+        "Intro:": "Introducción:",
+        "(CONT.)": "(CONT.)",
+        "English": "Inglés",
+        "Hebrew": "Hebreo",
+        "Spanish": "Español",
+        "Danish": "Danés",
+        "native / fluent": "nativo / fluido",
+        "professional": "profesional",
+        "intermediate (B1)": "intermedio (B1)",
+        "(Cont.)": "(Cont.)",
+        "Cont.": "Cont.",
+        "EU citizen": "Ciudadano UE",
+      "EU Citizen": "Ciudadano UE",
+        "Copenhagen, Denmark": "Copenhague, Dinamarca",
+        "Dear Hiring Team,": "Estimado equipo de selección,",
+        "References available on request": "Referencias disponibles a petición",
+        "References available upon request": "Referencias disponibles a petición",
       },
       zh: {
         PROFILE: "个人简介",
@@ -4527,6 +5288,8 @@
         "HOW I WOULD CONTRIBUTE": "我将如何贡献",
         FOUNDATION: "基础",
         "Application:": "申请：",
+        "Results: ": "成果：",
+        "AI-assisted document": "AI辅助生成的文档",
         "Focus Area": "重点领域",
         "Strategic Expertise": "核心专长",
         "Hands-on:": "实践经验：",
@@ -4546,6 +5309,74 @@
         Requirements: "要求",
         Analysis: "分析",
         Engineering: "工程",
+        "PROFESSIONAL EXPERIENCE (CONT.)": "工作经历（续）",
+        "PROFILE (CONT.)": "个人简介（续）",
+        LANGUAGES: "语言能力",
+        REFERENCES: "推荐人",
+        PUBLICATIONS: "出版物",
+        PATENT: "专利",
+        STANDARDS: "标准与合规",
+        "REGULATORY & STANDARDS": "法规与标准",
+        ACCESSIBILITY: "无障碍沟通",
+        VOLUNTEERING: "志愿工作",
+        OPENING: "开场白",
+        GREETING: "称呼",
+        CLOSURE: "结尾",
+        SUMMARY: "概要",
+        Accessibility: "无障碍沟通",
+        Volunteer: "志愿工作",
+        Hobbies: "兴趣爱好",
+        Global: "全球",
+        "Project & workflow": "项目与工作流",
+        "Reporting & data": "报告与数据",
+        "Process & quality": "流程与质量",
+        "Data & BI": "数据与商业智能",
+        DevOps: "开发运维",
+        "ALM & PM": "ALM 与项目管理",
+        "Requirements, traceability": "需求与可追溯性",
+        FuSa: "功能安全",
+        "Functional safety": "功能安全",
+        Cybersecurity: "网络安全",
+        Imaging: "成像",
+        Resolution: "分辨率",
+        Noise: "噪声",
+        "Laser safety": "激光安全",
+        "Environmental testing": "环境测试",
+        "Goal:": "目标：",
+        "Who I am:": "个人介绍：",
+        "What I bring:": "我能带来：",
+        "Why this position:": "选择此职位的原因：",
+        "Intro:": "引言：",
+        "M.Sc. Electrical Engineering (EE)": "电子工程硕士（EE）",
+        "M.Sc.": "硕士",
+        "B.Sc.": "学士",
+        "B.Sc. EE": "电子工程学士",
+        "B.Sc. Physics & B.Sc. EE": "物理学学士与电子工程学士",
+        "(CONT.)": "（续）",
+        "English": "英语",
+        "Hebrew": "希伯来语",
+        "Spanish": "西班牙语",
+        "Danish": "丹麦语",
+        "native / fluent": "母语 / 流利",
+        "professional": "专业水平",
+        "intermediate (B1)": "中级（B1）",
+        "(Cont.)": "（续）",
+        "Cont.": "续",
+        "EU citizen": "欧盟公民",
+      "EU Citizen": "欧盟公民",
+        "EU-borger": "欧盟公民",
+        "Ciudadano UE": "欧盟公民",
+        // OWNER-PINNED-ZH-001 (owner 2026-07-11): exact-match guaranteed renderings.
+        "Copenhagen": "哥本哈根",
+        "København": "哥本哈根",
+        "Foundation": "基础",
+        "I connect what I do best with the outcomes this employer is after.": "我将自己最擅长的能力与这家雇主希望实现的成果相结合。",
+        "Direct the CCB, cut the change cycle from ~250 to ~10 days": "主持变更控制委员会，将变更周期从约250天缩短至约10天。",
+        "Copenhagen, Denmark": "丹麦，哥本哈根",
+        "Dear Hiring Team,": "尊敬的招聘团队：",
+        "References available on request": "推荐人信息可应要求提供",
+        "References available upon request": "推荐人信息可应要求提供",
+        "References available on request.": "推荐人信息可应要求提供。",
       },
     },
     he = {};
@@ -4707,7 +5538,15 @@
       return n && o ? `${n} — ${o}` : n || o;
     },
     Re = (e, t) => {
-      if (((e = ve(e)), "da" !== t || !e)) return e;
+      if (((e = ve(e)), !e)) return e;
+      // BABEL-FURNITURE-ES-ZH-001 (owner 2026-07-11): Re used to be a NO-OP for every
+      // language except Danish (`"da" !== t` returned e unchanged), so rich-block lead-in
+      // labels routed through it ("Hands-on:", "Professionally:", "Work style:", "Who I am:",
+      // "Goal:" …) stayed English in Spanish / Chinese even though the es/zh dicts hold the
+      // translations. Route every non-Danish language through the dict translator ye(); the
+      // Danish `we` phrase map below stays Danish-only. (For "en", ye is an identity for
+      // English input, so English output is unchanged.)
+      if ("da" !== t) return ve(ye(e, t));
       const n = ye(e, t);
       return ve(
         n !== e
@@ -4985,10 +5824,13 @@
         /SELECTED OUTCOMES/i.test(String(e.title || "")))
     )
       return null;
-    const h = ["translating", "pending", "debating", "working"].includes(g)
+    const __secBusy = (function () { try { return !!(window.__antcvSectionBusy && window.__antcvSectionBusy[e.id] > Date.now()); } catch (_) { return false; } })(),
+      h = ["translating", "pending", "debating", "working"].includes(g)
         ? g
         : null,
-      y = !!h,
+      // ROWFIT-PINK-LATCH-001: OR-in the module-level section-busy latch (set by the rich_block
+      // editor on click) so the pink shows even when the App-level "working" state was swallowed.
+      y = !!h || __secBusy,
       b =
         "translating" === h
           ? "translating…"
@@ -5067,12 +5909,30 @@
       // the styleConfig value, which is what custom styles paint).
       __sbInk = (() => {
         try {
-          const v = getComputedStyle(document.body)
-            .getPropertyValue("--sidebar-bg")
-            .trim();
-          return readableInk(v || k.sidebarBg);
+          // SIDEBAR-INK-BRAND-BG-001 (owner 2026-07-22, live-verified on 3Shape): a BRAND
+          // paints --sidebar-bg on the PAPER wrapper (from antcv:brandV2.sidebarBg), which
+          // document.body never carries — so keying the ink on document.body's --sidebar-bg
+          // read the LIGHT package default (e.g. #DCE5EA) and returned NAVY ink, rendered on
+          // the actually-dark brand sidebar (#2a2a2a) = unreadable. Same parity gap as the
+          // export-palette bug. Key the ink on the bg that ACTUALLY paints the sidebar: the
+          // active brand's sidebarBg first, then the body var, then the styleConfig value —
+          // the GLOBAL rule (dark bg -> light ink) every real brand uses, incl. 3Shape's own
+          // light-on-dark footer.
+          let bg = "";
+          try {
+            if (window.__antcvBrandFit === true) {
+              const b = JSON.parse(localStorage.getItem("antcv:brandV2") || "null");
+              const slots = b && (b.slots || b);
+              if (slots && slots.sidebarBg) bg = String(slots.sidebarBg).trim();
+            }
+          } catch (_) {}
+          if (!bg)
+            bg = getComputedStyle(document.body)
+              .getPropertyValue("--sidebar-bg")
+              .trim();
+          return readableInk(bg || k.sidebarBg);
         } catch (_) {
-          return __sbInk;
+          return readableInk(k.sidebarBg);
         }
       })(),
       C = S ? k.sidebarHeadColor : k.mainHeadColor,
@@ -5175,6 +6035,36 @@
               "span",
               {
                 "data-antcv-editable-text": "true",
+                ref: (el) => {
+                  // EDIT-FOCUS-STABLE-001 (owner 2026-07-14: "undo broken + editing jumps out
+                  // even in quiet places"). The inline editor commits only on blur, so rendering
+                  // its text as React CHILDREN let ANY re-render overwrite a live edit — the caret
+                  // jumped out and the browser's native undo stack was lost. Manage the text via
+                  // this ref instead and NEVER touch it while the field is focused, so an
+                  // in-progress edit (and undo history) survives re-renders. React owns no text
+                  // children on this node now.
+                  if (!el) return;
+                  const __w = o + l + r;
+                  // EDIT-FOCUS-STABLE-002 (owner 2026-07-14 "selecting a spell
+                  // suggestion no longer applies"): while FOCUSED, skip only when the
+                  // value is UNCHANGED (user typing — the value prop doesn't change
+                  // until blur-commit). If it changed EXTERNALLY while focused (spell
+                  // fix, undo), PAINT it — else the change lands in state but never
+                  // shows. Not focused: always sync. This keeps the no-jump-out
+                  // guarantee (same value = no overwrite) while letting external edits
+                  // through.
+                  if (document.activeElement === el && el.__antcvLastVal === __w) return;
+                  // EDIT-COMMIT-LAG-001 (owner 2026-07-14 "editing results/text regresses when I
+                  // leave the edit area"): after blur the commit is async, so a re-render can fire
+                  // while __w is still the OLD value — the sync below would revert the just-typed
+                  // edit. If the model is UNCHANGED since we last synced AND the DOM diverges, that
+                  // divergence IS the uncommitted edit — preserve it; the next render (model caught
+                  // up, __w changes) syncs the committed value. Compatible with the focused external-
+                  // paint above (there __w has changed, so this guard doesn't fire).
+                  if (document.activeElement !== el && el.__antcvLastVal === __w && el.textContent !== __w) return;
+                  if (el.textContent !== __w) el.textContent = __w;
+                  el.__antcvLastVal = __w;
+                },
                 contentEditable: !0,
                 suppressContentEditableWarning: !0,
                 spellCheck: !0,
@@ -5222,9 +6112,6 @@
                 },
                 "data-edit-path": e.join("."),
               },
-              o,
-              l,
-              r,
             )
           : React.createElement(
               "span",
@@ -5386,17 +6273,44 @@
                   ":",
                 ),
                 " ",
-                React.createElement(B, {
+                (() => { /* PREVIEW-MD-LINK-001 */ const __md = __antcvMdLinkNodes(P(t.v || "")); return __md ? React.createElement("span", null, __md) : React.createElement(B, {
                   path: ["items", n, "v"],
                   value: P(t.v || ""),
                   placeholder: "[Value]",
-                }),
+                }); })(),
               ),
             ),
           ),
         );
       }
     }
+    // ROLES-AS-RICHBLOCK-001 (flag antcv:roles-richblock): render professional
+    // experience through the rich_block machinery (3-segment role-line group
+    // headings + native orphan handling). roles[] stays the stored shape; adapt
+    // to a rich_block VIEW for render, and translate the inline editor's
+    // items-path edits back to the roles[] leaf-paths the handler already uses
+    // (the chimera writes ["roles",ri,"title"] etc., so writeback is unchanged).
+    // Flag-off: this block is inert and behaviour is byte-identical.
+    try {
+      if (window.AntcvRolesRichBlock && window.AntcvRolesRichBlock.isOn() &&
+          e && "experience" === e.type && Array.isArray(e.roles)) {
+        const __rbSec = window.AntcvRolesRichBlock.adapt(e);
+        if (__rbSec && __rbSec.__fromRoles) {
+          const __rbEdit = p;
+          if (__rbEdit)
+            p = (pa, v) => {
+              try {
+                if (Array.isArray(pa) && "items" === pa[0]) {
+                  const __rp = window.AntcvRolesRichBlock.rolesPathFor(__rbSec, Number(pa[1]), pa[2]);
+                  if (__rp) return __rbEdit(__rp, v);
+                }
+              } catch (_) {}
+              return __rbEdit(pa, v);
+            };
+          e = __rbSec;
+        }
+      }
+    } catch (_) {}
     const D = (() => {
       var t, o, i, l;
       switch (e.type) {
@@ -5682,6 +6596,11 @@
             fontWeight: e.leadBold === false ? 400 : 700,
             fontStyle: e.leadItalic ? "italic" : "normal",
             color: __headColor,
+            // LEAD-UNDERLINE-001 (owner 2026-07-16): optional coloured underline on the
+            // lead-in — mirrored in the docx-worker export (w:u w:val=single w:color).
+            // Default underline colour = the lead colour unless leadUnderlineColor is set.
+            textDecoration: e.leadUnderline ? "underline" : "none",
+            textDecorationColor: e.leadUnderline ? (e.leadUnderlineColor || __headColor) : undefined,
           };
           let __al = {};
           try {
@@ -5693,11 +6612,50 @@
           // (TOOLS & METHODS, REGULATORY CONTEXT) defaults its GROUP-NAME rows to CENTER and its
           // CONTENT rows to LEFT. A non-grouped rich_block keeps the JUSTIFY default. Explicit
           // per-row CJLR overrides (__al) always win.
-          const __hasGrp = (e.items || []).some((it) => it && it.grp);
-          const __rowAlign = (i, isGrp) => {
-            const v = __al["items." + i] || __al[String(i)] || __al.__group__;
+          // ALIGN-DANCE-FIX-001 (owner 2026-07-14): a paginated CONT. fragment carries a
+          // SUBSET of items (44865), so a group heading on the previous page made this
+          // fragment's __hasGrp flip false → content align flipped left↔justify (the
+          // "dance" that knocked the caret out mid-edit). Prefer the STABLE full-section
+          // group flag stamped at the split so the default stays put.
+          const __hasGrp = (e && e.__antcvSecHasGrp !== undefined) ? e.__antcvSecHasGrp : (e.items || []).some((it) => it && it.grp);
+          const __rowAlign = (i, isGrp, key, isRole) => {
+            // ROLES-AS-RICHBLOCK-001: honour a roles-path CJLR key (roles.R.bullets.B)
+            // when the adapted experience section stamps row._key — same key the
+            // editor writes and the worker reads, so preview==export.
+            // GROUP-CJLR-SCOPE-001 (owner 2026-07-14): __group__ (the "Groups" control)
+            // aligns GROUP HEADINGS only — NOT content rows. Content rows follow their
+            // own per-row CJLR, else the default. Without this, the group control also
+            // captured every body row (the "section CJLR still controls the rows" bug).
+            const v = (key && __al[key]) || __al["items." + i] || __al[String(i)] || (isGrp ? __al.__group__ : void 0);
             if (["left", "center", "right", "justify"].includes(v)) return v;
-            return isGrp ? "center" : (__hasGrp ? "left" : "justify");
+            // SIDEBAR-RICHBLOCK-NOJUSTIFY-001 (owner 2026-07-20): a FLAT sidebar rich_block
+            // (CERTIFICATES & COURSES, INTERESTS, template TOOLS) defaulted its content rows to
+            // "justify" — but the sidebar column is narrow, so justify over-stretches into ugly
+            // inter-word gaps AND the dejustifyNarrowSidebar sidecar flips it back to "left" on
+            // every pass, producing the left<->justify "jumping" the owner reported (reproduces on
+            // the template CV). Default sidebar content rows to LEFT at the SOURCE so there is
+            // nothing to flip — matches what the de-justify pass wanted. Main-column flat
+            // rich_blocks keep justify; explicit per-row CJLR (v, above) still wins.
+            return isGrp ? (isRole ? "justify" : "center") : ((__hasGrp || S) ? "left" : "justify");
+          };
+          // GROUP-EMPTY-HIDE-001 (owner 2026-07-06): a {grp} sub-heading with NO rendered child
+          // row must be hidden entirely (heading + label), not left as a bare dangling label —
+          // mirrors the worker renderRichBlock. A group runs from its {grp} row to the next {grp}
+          // or end of items; a following row counts as a real child only if it survives the same
+          // drop rules the map below applies (hidden[], "Hidden -" residue, bracket placeholder,
+          // both-sides-blank). Regains its heading the moment it has ≥1 real child.
+          const __grpHasChild = (gi) => {
+            const A = e.items || [];
+            for (let j = gi + 1; j < A.length; j++) {
+              const x = A[j];
+              if (x && "object" == typeof x && x.grp) break;
+              if (e.hidden && e.hidden[j]) continue;
+              const q = x && "object" == typeof x ? x : { t: String(x || "") };
+              if (/^\s*hidden\s*[-–—:]\s*/i.test(String(q.b || q.l || ""))) continue;
+              if (/^\s*\[[\s\S]*\]\s*$/.test(String(q.t || "")) || (!String(q.t || "").trim() && e.headlineOff && q.b)) continue;
+              if ((q.b && !q.bOff) || !q.tOff) return true;
+            }
+            return false;
           };
           const __items = (e.items || [])
             .map((it, i) => {
@@ -5713,6 +6671,41 @@
               if (!row.grp && (/^\s*\[[\s\S]*\]\s*$/.test(String(row.t || "")) || (!String(row.t || "").trim() && e.headlineOff && row.b))) return null;
               // RICH-BLOCK-GROUP-001: a row flagged grp is a bold sub-heading (like labeled_list).
               if (row.grp) {
+                // ROLES-AS-RICHBLOCK-001: a role-line heading (3 styled segments
+                // role/company/years + optional hr) — rendered by the adapter
+                // sidecar so app.js only calls it (minimal minified surface).
+                if (row.roleHead && window.AntcvRolesRichBlock && window.AntcvRolesRichBlock.renderRoleHead) {
+                  return {
+                    key: String(i),
+                    node: window.AntcvRolesRichBlock.renderRoleHead(React, { B: B, P: P, T: T, k: k, s: s, exp: $.exp, C: C, align: __rowAlign(i, true, row._key, true) }, row, i),
+                  };
+                }
+                // ROLES-AS-RICHBLOCK-001 general model (Increment A): a group head
+                // carrying styled segments (row.seg) + optional hr renders through
+                // the sidecar renderGroupHead (each seg editable inline). Additive —
+                // a plain group (no seg) falls through to the legacy single-text
+                // heading below, so existing rich_block sections are byte-identical.
+                if (Array.isArray(row.seg) && row.seg.length && window.AntcvRolesRichBlock && window.AntcvRolesRichBlock.renderGroupHead) {
+                  if (!row.grpKeep && !__grpHasChild(i)) return null;
+                  return {
+                    key: String(i),
+                    node: window.AntcvRolesRichBlock.renderGroupHead(React, { B: B, T: T, k: k, s: s, exp: $.exp, C: C, align: __rowAlign(i, true, row._key) }, row, i),
+                  };
+                }
+                // GROUP-EMPTY-HIDE-001: no rendered child → hide the heading+label entirely.
+                // grpKeep = a group the user explicitly created via "▾ Make group" stays
+                // visible even childless (so it doesn't vanish while they add rows).
+                if (!row.grpKeep && !__grpHasChild(i)) return null;
+                // GROUP-HEAD-CJLR-001 (owner 2026-07-14 "tools CJLR switches after leaving
+                // the subsection panel"): a PLAIN group heading must carry the same CJLR
+                // markers as role/seg heads (data-antcv-group-head + data-antcv-rowkey +
+                // data-antcv-rowalign) so the group control (__group__) PERSISTS across the
+                // re-render that fires when the editor closes — item-align + section-align
+                // key off these; without them the heading reverted. A single-line heading
+                // can't meaningfully justify, so justify→left, otherwise the sidebar
+                // de-justify pass flips it and it flickers left<->justify.
+                let __gAlign = __rowAlign(i, true, row._key);
+                if (__gAlign === "justify") __gAlign = "left";
                 return {
                   key: String(i),
                   node: React.createElement(
@@ -5720,6 +6713,9 @@
                     {
                       key: i,
                       "data-antcv-row-path": "items." + i,
+                      "data-antcv-group-head": "1",
+                      "data-antcv-rowkey": row._key || ("items." + i),
+                      "data-antcv-rowalign": __gAlign,
                       style: {
                         fontSize: S ? 0.96 * $.sb : $.exp,
                         fontFamily: T,
@@ -5727,7 +6723,7 @@
                         fontWeight: 700,
                         marginTop: 0 === i ? 0 : 6,
                         marginBottom: 2,
-                        textAlign: __rowAlign(i, true),
+                        textAlign: __gAlign,
                         letterSpacing: 0.3,
                         overflowWrap: "break-word",
                         wordBreak: "break-word",
@@ -5752,7 +6748,7 @@
                 fontFamily: T,
                 fontSize: __fs,
                 color: __txtColor,
-                textAlign: __rowAlign(i, false),
+                textAlign: __rowAlign(i, false, row._key),
                 lineHeight: I,
               };
               if (mk) {
@@ -5761,6 +6757,17 @@
                   ? k.bulletMarkerGap
                   : (k.bulletIndent || 24) - 3);
               }
+              // ROWFIT-PINK-ROWLEVEL (owner 2026-07-22): pink the ACTING row while its module latch
+              // is live (mirrors the section pink but per-row; group actions latch each child → the
+              // whole group pinks). Read fresh each render so the storm/fast-fail can't swallow it.
+              try {
+                if (window.__antcvRowBusy && window.__antcvRowBusy[e.id + ":item:" + i] > Date.now()) {
+                  __pStyle.background = "rgba(255,182,193,0.20)";
+                  __pStyle.borderLeft = "3px solid #ff8fa3";
+                  __pStyle.borderRadius = 3;
+                  __pStyle.paddingLeft = (__pStyle.paddingLeft || 0) + 6;
+                }
+              } catch (_) {}
               return {
                 key: String(i),
                 node: React.createElement(
@@ -5773,7 +6780,7 @@
                   // break points, so it could never paginate: it crammed page 1 and cascaded
                   // the export to extra pages. Tag every body row so any rich_block (grouped
                   // or flat) paginates.
-                  { key: i, "data-antcv-row-path": "items." + i, style: __pStyle },
+                  { key: i, "data-antcv-row-path": "items." + i, "data-antcv-rowalign": __pStyle.textAlign, "data-antcv-rowkey": row._key || ("items." + i), style: __pStyle },
                   mk
                     ? __mkStr
                       ? React.createElement(
@@ -6012,6 +7019,10 @@
                     tableLayout: "fixed",
                     fontFamily: T,
                     margin: 0,
+                    // COPENHAGEN-TABLE-FRAME-001 (mockup lock 2026-07-22): cyan outer
+                    // frame when the package defines tableFrameColor; collapse model
+                    // lets the thicker table border win over the 0.5px cell gridlines.
+                    border: k.tableFrameColor ? `1.5pt solid ${k.tableFrameColor}` : undefined,
                   },
                 },
                 head,
@@ -6036,7 +7047,7 @@
                       {
                         key: rr,
                         style: {
-                          background: (rr - 1) % 2 == 0 ? "#eaf7f7" : "#fff",
+                          background: (rr - 1) % 2 == 0 ? "#DCE5EA" : "#fff",
                         },
                       },
                       React.createElement(
@@ -6048,6 +7059,11 @@
                             fontSize: $.tbl,
                             fontWeight: 700,
                             color: k.tableFirstColText,
+                            // FOCUS-TABLE-LEFTCOL-JUSTIFY-001 (owner 2026-07-14) SUPERSEDED by
+                            // the Copenhagen mockup lock (owner 2026-07-22): short first-col
+                            // labels stay LEFT — justifying them opens dead space. Rows
+                            // (second column) stay justified; worker mirrors.
+                            textAlign: "left",
                             lineHeight: I,
                             verticalAlign: "middle",
                           },
@@ -6647,7 +7663,7 @@
                                     "#283556",
                                 },
                               },
-                              "Results: ",
+                              L("Results: "),
                             ),
                             (() => {
                               // OUTCOMES-RESULTS-CAP-001: hard char budget so the
@@ -6693,6 +7709,18 @@
                                 {
                                   "data-antcv-editable-text": "true",
                                   "data-antcv-results-edit": __rKey,
+                                  ref: (el) => {
+                                    // EDIT-FOCUS-STABLE-001: manage text via ref; never overwrite a live edit while focused.
+                                    if (!el) return;
+                                    // EDIT-FOCUS-STABLE-002: paint external changes even while focused (unchanged value = skip, so no jump-out).
+                                    if (document.activeElement === el && el.__antcvLastVal === __display) return;
+                                    // EDIT-COMMIT-LAG-001 (results revert on blur): preserve the
+                                    // uncommitted edit while the async commit propagates (see the
+                                    // matching guard in the shared editable-text ref).
+                                    if (document.activeElement !== el && el.__antcvLastVal === __display && el.textContent !== __display) return;
+                                    if (el.textContent !== __display) el.textContent = __display;
+                                    el.__antcvLastVal = __display;
+                                  },
                                   contentEditable: !0,
                                   suppressContentEditableWarning: !0,
                                   spellCheck: !0,
@@ -6746,7 +7774,6 @@
                                     document.execCommand("insertText", !1, t2);
                                   },
                                 },
-                                __display,
                               );
                             })(),
                           );
@@ -6876,11 +7903,11 @@
                 React.createElement(
                   "span",
                   { style: { fontWeight: 400, color: S ? __sbInk : "#333" } },
-                  React.createElement(B, {
+                  (() => { /* PREVIEW-MD-LINK-001 */ const __md = __antcvMdLinkNodes(P(i)); return __md ? React.createElement("span", null, __md) : React.createElement(B, {
                     path: ["items", t, "v"],
                     value: P(i),
                     placeholder: "[Value]",
-                  }),
+                  }); })(),
                 ),
               );
             }
@@ -6964,6 +7991,8 @@
               ? v
               : "justify";
           };
+          // PUBS-RICH-INLINE-EDIT-001 (owner 2026-07-14): escape for the ref-managed innerHTML
+          const __hesc = (x) => String(x == null ? "" : x).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
           return React.createElement(
             React.Fragment,
             null,
@@ -6975,31 +8004,67 @@
                 const __ym = String(__det).match(/(1[89][0-9][0-9]|20[0-9][0-9])/);
                 __det = __ym ? __ym[1] : "";
               }
-              return React.createElement(
-                "div",
-                {
+              const __pubStyle = {
+                fontSize: S ? $.sb : $.text,
+                fontFamily: T,
+                color: S ? __sbInk : "#333",
+                marginBottom: 3,
+                lineHeight: 1.3,
+                textAlign: e.richPub ? __pubRowAlign(n) : "justify",
+                overflowWrap: "break-word",
+                wordBreak: "break-word",
+              };
+              // PUBS-RICH-INLINE-EDIT-001 rev3 (owner 2026-07-14: "still not editable in
+              // preview", 3rd report): pubs is now ALWAYS click-to-edit in the preview,
+              // like contact / slogan / closure — NOT gated on the section edit-mode p&&u,
+              // which the user may not have toggled (that gate is what B-backed sections
+              // like education need, and is why pubs looked read-only). Bold-italic title
+              // stays via ref-managed innerHTML. onBlur writes the plain "title - details"
+              // string DIRECTLY to the sections store (find the section by id in secs.cv/
+              // secs.cl, set items[n]) + mirrors personalInfo.publications, then dispatches
+              // antcv:sections-updated — the store handler (~17491) reloads ro from that
+              // write, so the edit shows without needing edit-mode or the onEdit `p`.
+              // xe() re-splits on " - " next render, recomputing the bold-italic title.
+              {
+                const __h = (o.title ? "<b><i>" + __hesc(o.title) + "</i></b>" : "") + (o.title && __det ? " - " : "") + __hesc(__det);
+                return React.createElement("div", {
                   key: n,
-                  style: {
-                    fontSize: S ? $.sb : $.text,
-                    fontFamily: T,
-                    color: S ? __sbInk : "#333",
-                    marginBottom: 3,
-                    lineHeight: 1.3,
-                    textAlign: e.richPub ? __pubRowAlign(n) : "justify",
-                    overflowWrap: "break-word",
-                    wordBreak: "break-word",
+                  "data-antcv-row-path": "items." + n,
+                  contentEditable: true,
+                  suppressContentEditableWarning: true,
+                  spellCheck: true,
+                  // PUBS-EDIT-STABLE-001 (owner 2026-07-14: "a spelling error blips and I go
+                  // out of the edit and the change is reversed"): only repaint when the MODEL
+                  // (__h) actually changed — never when the DOM merely diverges (that IS the
+                  // user's uncommitted edit). The old guard was document.activeElement===el,
+                  // but a spellcheck context-menu momentarily drops focus, so the ref fired and
+                  // clobbered the in-progress edit with the old value. The model-changed check
+                  // survives that focus flicker; keep the focus guard as defence in depth.
+                  ref: (el) => { if (!el) return; if (el.__antcvPubH === __h) return; if (document.activeElement === el) return; el.__antcvPubH = __h; el.innerHTML = __h; },
+                  onFocus: (ev) => { ((ev.currentTarget.style.outline = "1px dashed " + (S ? __sbInk : "#01B7BB")), (ev.currentTarget.style.outlineOffset = "2px")); },
+                  onBlur: (ev) => {
+                    ev.currentTarget.style.outline = "none";
+                    try {
+                      const v = String(ev.currentTarget.textContent || "").trim();
+                      const secs = JSON.parse(localStorage.getItem("sections") || "{}") || {};
+                      let changed = false;
+                      for (const doc of ["cv", "cl"]) {
+                        const arr = secs[doc];
+                        if (!Array.isArray(arr)) continue;
+                        const ix = arr.findIndex((x) => x && x.id === e.id);
+                        if (ix >= 0) { const items = Array.isArray(arr[ix].items) ? arr[ix].items.slice() : []; if (String(items[n] || "") !== v) { items[n] = v; arr[ix] = { ...arr[ix], items }; changed = true; } break; }
+                      }
+                      if (changed) {
+                        localStorage.setItem("sections", JSON.stringify(secs));
+                        try { const pj = JSON.parse(localStorage.getItem("personalInfo") || "{}"); const prt = pj && pj.personalInfo ? pj.personalInfo : pj; if (prt && Array.isArray(prt.publications) && n < prt.publications.length) { prt.publications[n] = v; localStorage.setItem("personalInfo", JSON.stringify(pj)); } } catch (_) {}
+                        window.dispatchEvent(new CustomEvent("antcv:sections-updated", { detail: { reason: "pubs-inline" } }));
+                      }
+                    } catch (_) {}
                   },
-                },
-                o.title
-                  ? React.createElement(
-                      "b",
-                      null,
-                      React.createElement("i", null, o.title),
-                    )
-                  : null,
-                o.title && __det ? " - " : "",
-                __det,
-              );
+                  title: "Click to edit",
+                  style: { ...__pubStyle, cursor: "text", outline: "none" },
+                });
+              }
             }),
             // PUB-MASTERSITE-001 (owner 2026-06-24): optional link to the
             // publications master site (Google Scholar / Academia / ORCID …),
@@ -7017,9 +8082,34 @@
         case "education": {
           const __sid = e.id;
           const __title = (e.title || "").toUpperCase();
+          // EDU-ROW-CJLR-001 (owner 2026-07-15): per-row CJLR for EDUCATION (and
+          // RECOMMENDATIONS, same "education" editor). Mirror the rich_block content-row
+          // pattern (~6510): stamp data-antcv-rowkey / data-antcv-rowalign and honour
+          // antcvItemAlignment[sid] as textAlign so the RENDER self-holds the alignment
+          // across React re-renders (the DOM appliers antcv-item-align.js only reinforce
+          // it; without this the row snapped back to "left" every re-render — the "dance").
+          // The inline editor cycler writes items.N.deg; read items.N / String(N) too for
+          // parity with the rich-block editor + the docx-worker item_alignment map. Default
+          // stays "left" (education's prior fixed alignment) when nothing is set.
+          let __al = {};
+          try {
+            __al =
+              (JSON.parse(localStorage.getItem("antcvItemAlignment") || "{}") ||
+                {})[__sid] || {};
+          } catch (_) {}
+          const __rowAlign = (i) => {
+            const v =
+              __al["items." + i + ".deg"] ||
+              __al["items." + i] ||
+              __al[String(i)];
+            return ["left", "center", "right", "justify"].includes(v)
+              ? v
+              : "left";
+          };
           const __items = [];
           (e.items || []).forEach((t, n) => {
             if (e.hidden && e.hidden[n]) return;
+            const __ra = __rowAlign(n);
             __items.push({
               key: String(n),
               node: React.createElement(
@@ -7027,12 +8117,14 @@
                 {
                   key: n,
                   "data-antcv-row-path": `items.${n}`,
+                  "data-antcv-rowkey": "items." + n,
+                  "data-antcv-rowalign": __ra,
                   style: {
                     fontSize: S ? $.sb : $.text,
                     fontFamily: T,
                     marginBottom: 4,
                     color: S ? __sbInk : "#333",
-                    textAlign: "left",
+                    textAlign: __ra,
                     lineHeight: I,
                     overflowWrap: "break-word",
                     wordBreak: "break-word",
@@ -7240,7 +8332,21 @@
         e._antcvSplitCont && !1 === d.contHeadlines
           ? null
           : e.headlineOff
-          ? (e.headlineRule
+          ? (e.headlineRule &&
+             // ORPHAN-RULE-GATE-001 (owner 2026-07-23 "extra lines below"): a
+             // headline-off section whose content renders EMPTY (all-placeholder
+             // rich_block items / empty text) used to still draw its standalone
+             // rule — an orphan line floating between sections. Draw the rule
+             // only when the section has real renderable body.
+             (function () { try {
+               if (Array.isArray(e.items)) return e.items.some(function (q) {
+                 if (!q || q.hidden) return false;
+                 if (q.grp) return true;
+                 var t = String(q.t || "").trim();
+                 return !!t && !/^\[[\s\S]*\]$/.test(t);
+               });
+               if (typeof e.content === "string") { var c = e.content.trim(); return !!c && !/^\[[\s\S]*\]$/.test(c); }
+             } catch (_) {} return true; })()
               ? React.createElement("div", {
                   // CL-RULE-BALANCE-001 (owner 2026-07-04): symmetric spacing
                   // around the standalone rule — half above, half below.
@@ -7260,6 +8366,12 @@
           React.createElement(
             "div",
             {
+              // HEADLINE-LOC-CJLR-001 (owner 2026-07-14): mark the section-headline
+              // block so the loc-level "MAIN/SIDEBAR headline alignment" control
+              // (antcv-section-panel-211 store) can align it in the PREVIEW to match
+              // the export. This DIV's textAlign is what actually moves the title
+              // (the inner editable span is display:inline, so its own align is inert).
+              "data-antcv-section-headline": "1",
               style: {
                 fontFamily: A,
                 fontWeight: 700,
@@ -7274,7 +8386,7 @@
             },
             React.createElement(B, {
               path: ["title"],
-              value: (L(F) || F) + (e._antcvSplitCont ? " (CONT.)" : ""),
+              value: (L(F) || F) + (e._antcvSplitCont ? (function () { /* SALMON-CONT-LANG-001 */ try { var Lg = String(localStorage.getItem("language") || "en").replace(/"/g, "").toLowerCase().slice(0, 2); return { da: " (FORTS.)", zh: "（续）", he: " (המשך)", am: " (ቀጣይ)", ar: " (تابع)" }[Lg] || " (CONT.)"; } catch (_) { return " (CONT.)"; } })() : ""),
               placeholder: "[Title]",
             }),
           ),
@@ -8568,6 +9680,46 @@
           ),
         );
       case "experience":
+        // ROLES-AS-RICHBLOCK-001 Stage 2 (flag antcv:roles-richblock): edit
+        // experience through the rich_block editor — each bullet a rich-content
+        // row, each role a 3-segment role-line group head — so it gains the same
+        // row UI + UNDO as rich_block (updates go through `t`, the app's undoable
+        // section setter). items[] edits map back to roles[] via itemsToRoles
+        // (round-trip verified, no data loss). Flag-off falls to the Ae panel,
+        // byte-identical. onEnrich/onCompress omitted (their item:i indices don't
+        // map to roles yet — follow-up).
+        if (typeof window !== "undefined" && window.AntcvRolesRichBlock && window.AntcvRolesRichBlock.isOn() && window.AntcvRichBlockEditor && Array.isArray(e.roles)) {
+          const __sec = window.AntcvRolesRichBlock.adapt(e, { forEditor: true });
+          // map a rich_block row id "item:<i>" -> that row's roleId, so the per-row
+          // ✨/⇥ run the existing per-ROLE enhance/compress on the row's role.
+          const __ridOf = (id) => { const mm = /^item:(\d+)$/.exec(id || ""); if (!mm) return null; const it = __sec.items[+mm[1]]; return it ? it._rid : null; };
+          // ROWFIT-HOURGLASS-001 (owner 2026-07-22): the editor shows ⏳ when its
+          // enrichingId/compressingId === "item:<row>", but a busy enrich/compress on this
+          // surface is keyed by the REAL roleId (a/o = enrichingRoleId/compressingRoleId,
+          // already stripped by Te). Map that role id BACK to its row's "item:<i>" so the
+          // right row shows ⏳ (these props were omitted before → the row was never "busy").
+          const __itemIdForRid = (rid) => { if (rid == null) return null; const k = (__sec.items || []).findIndex((it) => it && it._rid === rid); return k >= 0 ? "item:" + k : null; };
+          return React.createElement(window.AntcvRichBlockEditor, {
+            section: __sec,
+            update: (patch) => {
+              try {
+                if (patch && Array.isArray(patch.items)) {
+                  const __roles = window.AntcvRolesRichBlock.itemsToRoles(patch.items, e.roles);
+                  const __rest = {};
+                  for (const k in patch) if ("items" !== k && "hidden" !== k) __rest[k] = patch[k];
+                  t({ ...e, ...__rest, roles: __roles });
+                } else if (patch) {
+                  t({ ...e, ...patch });
+                }
+              } catch (_) {}
+            },
+            accent: s,
+            onEnrich: (id) => { const rid = __ridOf(id); if (rid != null) r(rid); },
+            onCompress: (id) => { const rid = __ridOf(id); if (rid != null) n(rid); },
+            enrichingId: __itemIdForRid(a),
+            compressingId: __itemIdForRid(o),
+          });
+        }
         return React.createElement(Ae, {
           s: e,
           onChange: t,
@@ -9617,6 +10769,87 @@
                     },
                   },
                   l ? "🙈" : "👁",
+                ),
+                // EDU-ROW-CJLR-001 (owner 2026-07-15): per-row CJLR cycler for the
+                // EDUCATION / RECOMMENDATIONS editor. Writes antcvItemAlignment[sid]
+                // ["items.N.deg"] (+ "items.N" mirror) — the exact key the render's
+                // __rowAlign and the antcv-item-align.js applier both read — cycling
+                // left -> center -> right -> justify. Updates its own glyph and nudges
+                // the applier in place; the render self-holds on the next re-render.
+                React.createElement(
+                  "button",
+                  {
+                    type: "button",
+                    title:
+                      "Row alignment — click to cycle left / center / right / justify",
+                    onClick: (ev) => {
+                      try {
+                        (ev.preventDefault(), ev.stopPropagation());
+                      } catch (_) {}
+                      const __sid = e.id;
+                      const __ord = ["left", "center", "right", "justify"];
+                      let __m = {};
+                      try {
+                        __m =
+                          JSON.parse(
+                            localStorage.getItem("antcvItemAlignment") || "{}",
+                          ) || {};
+                      } catch (_) {}
+                      if (!__m[__sid] || "object" != typeof __m[__sid])
+                        __m[__sid] = {};
+                      const __curEff =
+                        __m[__sid]["items." + i + ".deg"] || "left";
+                      const __nx =
+                        __ord[(__ord.indexOf(__curEff) + 1) % __ord.length];
+                      ((__m[__sid]["items." + i + ".deg"] = __nx),
+                        (__m[__sid]["items." + i] = __nx));
+                      try {
+                        localStorage.setItem(
+                          "antcvItemAlignment",
+                          JSON.stringify(__m),
+                        );
+                      } catch (_) {}
+                      try {
+                        ev.currentTarget.textContent =
+                          { left: "⇤", center: "↔", right: "⇥", justify: "☰" }[
+                            __nx
+                          ] || "⇤";
+                      } catch (_) {}
+                      try {
+                        window.AntcvItemAlign &&
+                          window.AntcvItemAlign._applyAllAlignments &&
+                          window.AntcvItemAlign._applyAllAlignments();
+                      } catch (_) {}
+                    },
+                    style: {
+                      fontSize: 12,
+                      background: "rgba(1,183,187,0.08)",
+                      border: "1px solid #01B7BB",
+                      color: "#00746E",
+                      borderRadius: 3,
+                      cursor: "pointer",
+                      padding: "1px 5px",
+                      flexShrink: 0,
+                      minWidth: 24,
+                      fontWeight: 700,
+                    },
+                  },
+                  (() => {
+                    try {
+                      const __m0 =
+                        JSON.parse(
+                          localStorage.getItem("antcvItemAlignment") || "{}",
+                        ) || {};
+                      const __v = (__m0[e.id] || {})["items." + i + ".deg"];
+                      return (
+                        { left: "⇤", center: "↔", right: "⇥", justify: "☰" }[
+                          __v || "left"
+                        ] || "⇤"
+                      );
+                    } catch (_) {
+                      return "⇤";
+                    }
+                  })(),
                 ),
                 React.createElement("input", {
                   value: t.deg || "",
@@ -10725,7 +11958,16 @@
     React.useEffect(() => {
       var e;
       const o = null == (e = n.current) ? void 0 : e.parentElement;
-      o && t(o.scrollHeight || 0);
+      if (!o) return;
+      const __h = o.scrollHeight || 0;
+      // PAGINATION-STABILIZE-001 (owner 2026-07-19): this effect has NO dependency array,
+      // so it runs on every render and setState-measures scrollHeight. A sub-pixel /
+      // scrollbar flicker across the 1123px page boundary re-triggered it endlessly — the
+      // preview flapped "main split across 2 pages" <-> "all main on page 1 (impossible)"
+      // and pegged the main thread (the freeze). Commit a change only when it exceeds a
+      // page-break line's own thickness so a flicker can't re-enter the render->measure
+      // loop; a genuine content edit (>3px) still updates once and settles.
+      t((__prev) => (Math.abs(__h - __prev) > 3 ? __h : __prev));
     });
     const o = 1123,
       r = [];
@@ -10953,6 +12195,18 @@
         n[l] &&
           !n[l].group &&
           (n[l] = { ...n[l], v: t.v || n[l].v || "" }),
+        { ...e, items: n }
+      );
+    }
+    if ("bullets_item" === t.type && "number" == typeof l) {
+      // ITEM-COMPRESS-RICHBLOCK-001: same shape as labeled_list_item above —
+      // "b" (the lead-in label, e.g. "Goal:") is frozen like "l", only "t"
+      // (the body) is tightened, like "v".
+      const n = [...(e.items || [])];
+      return (
+        n[l] &&
+          !n[l].group &&
+          (n[l] = { ...n[l], t: t.t || n[l].t || "" }),
         { ...e, items: n }
       );
     }
@@ -11579,6 +12833,9 @@
     { code: "da", label: "DA", name: "Dansk" },
     { code: "es", label: "ES", name: "Español" },
     { code: "zh", label: "中文", name: "中文" },
+    { code: "he", label: "עב", name: "עברית" },
+    { code: "am", label: "አማ", name: "አማርኛ" },
+    { code: "ar", label: "ع", name: "العربية" },
   ];
   function We({
     language: e,
@@ -11638,24 +12895,40 @@
           return null;
         }
       })(),
-      _activeDisabled = !!(
-        _enabledLangs && !_enabledLangs.includes(_rawC.code)
-      ),
-      c = _activeDisabled
-        ? Me.find((m) => _enabledLangs.includes(m.code)) || _rawC
-        : _rawC;
+      // LANG-DROPDOWN-CURRENT-ALWAYS-001 (owner 2026-07-10, "adding a language makes the
+      // dropdown not do anything on select"): the CURRENT output language must ALWAYS be
+      // the dropdown's selected item, even when it isn't in the enabled top-bar set. A CV
+      // generated / switched into e.g. zh while enabledLanguages=[en,da] used to mislabel
+      // the button as EN and an auto-switch effect fought the active content — so the
+      // dropdown appeared to do nothing. Never switch away from the active language; the
+      // enabled set only governs which OTHER languages the dropdown offers.
+      c = _rawC;
     React.useEffect(() => {
-      if (
-        _activeDisabled &&
-        c &&
-        c.code !== _rawC.code &&
-        typeof t === "function"
-      ) {
-        try {
-          t(c.code);
-        } catch (_) {}
-      }
-    }, [_activeDisabled, c && c.code]);
+      // LANG-ENABLE-CURRENT-001 (owner 2026-07-10): persist the ACTIVE output language
+      // into the enabled set so the user can always switch BACK to it (leaving e.g. zh
+      // while it was never enabled would otherwise drop it from the dropdown). Same
+      // operation the Settings checkbox performs; add-if-missing, self-limiting.
+      try {
+        if (_enabledLangs && _rawC && !_enabledLangs.includes(_rawC.code)) {
+          const next = _enabledLangs.concat([_rawC.code]),
+            raw = JSON.stringify(next);
+          ["enabledLanguages", "antcv:enabledLanguages", "antcv:visibleLanguages"].forEach(
+            (k) => {
+              try {
+                localStorage.setItem(k, raw);
+              } catch (_) {}
+            },
+          );
+          try {
+            window.dispatchEvent(
+              new CustomEvent("antcv:enabled-languages-changed", {
+                detail: { enabledLanguages: next },
+              }),
+            );
+          } catch (_) {}
+        }
+      } catch (_) {}
+    }, [_rawC && _rawC.code, _enabledLangs && _enabledLangs.length]);
     const d = Me.filter(
         (e) =>
           e.code !== c.code &&
@@ -11838,7 +13111,9 @@
             }, 360);
           },
           onPointerUp: (t) => {
-            const n = x.current.dragging;
+            // CONTACT-CLICK-EXPAND-001: capture onToggleExpand (outer `n`) BEFORE the
+            // dragging-flag shadow below, so the no-move branch can expand the row.
+            const nn = x.current.dragging, _exp = n;
             E();
             const o = t.currentTarget;
             ((o.style.opacity = ""),
@@ -11850,13 +13125,16 @@
             try {
               o.releasePointerCapture(t.pointerId);
             } catch (e) {}
-            if (n) {
+            if (nn) {
               (t.preventDefault(), t.stopPropagation());
-              // HEADER-DRAG-DROP-NOMOVE-001 (owner 2026-07-03 "pressing on contacts
-              // collapses"): an armed long-press with NO movement fell into the drop
-              // inference (nearest drop-loc / screen-thirds) and MOVED the row out of
-              // the top bar. No displacement = no drop.
-              if (Math.abs((x.current.lastX || t.clientX || 0) - x.current.sx) <= 8 && Math.abs((x.current.lastY || t.clientY || 0) - x.current.sy) <= 8) return;
+              // HEADER-DRAG-DROP-NOMOVE-001 (owner 2026-07-03) + CONTACT-CLICK-EXPAND-001
+              // (owner 2026-07-22): an armed long-press (the 360ms timer) with NO movement
+              // is a CLICK, not a drag. The browser suppresses the click after a
+              // pointer-capture drag, so a deliberate press on Contact opened NOTHING —
+              // perceived as the candidate panel "collapsing". Explicitly toggle-expand the
+              // row (what onClick does) instead of just swallowing the event. Only a real
+              // drag (movement > 8px) falls through to the drop inference.
+              if (Math.abs((x.current.lastX || t.clientX || 0) - x.current.sx) <= 8 && Math.abs((x.current.lastY || t.clientY || 0) - x.current.sy) <= 8) { try { _exp && _exp(e.key); } catch (_) {} return; }
               const n = x.current.lastX || t.clientX,
                 o = x.current.lastY || t.clientY;
               requestAnimationFrame(() => {
@@ -11887,6 +13165,15 @@
                   }),
                     t && r < 160 && (d = t.dataset.candidateDropLoc));
                 }
+                // HEADER-DRAG-DROP-SAMELOC-001 (owner 2026-07-22 "pressing on the
+                // contact collapses the entire candidate panel"): a click with
+                // >8px jitter slips past the NOMOVE guard, resolves the nearest
+                // drop-loc to the "Cand." header (topbar) — the SAME location a
+                // topbar row is already in — and re-runs the location move, which
+                // rebuilds and collapses the panel. A drop onto the row's CURRENT
+                // location is a no-op; skip it. Genuine cross-location drags (d !=
+                // e.loc) are unaffected.
+                if (d && String(d) === String(e.loc)) return;
                 if (l)
                   if (c) l(e.key, c);
                   else if (d) l(e.key, null, d);
@@ -12966,6 +14253,7 @@
     sections: r,
     sectionStatus: a,
     language: i,
+    jobLabel: __jobLbl,
   }) {
     const [l, s] = React.useState(0),
       [c, d] = React.useState(!1),
@@ -13028,7 +14316,9 @@
               ? "Drafting cover letter…"
               : l < 150
                 ? "Generating analysis (fit, gaps, tailoring decisions)…"
-                : "Wrapping up — this is taking longer than usual…",
+                : "thorough" === __genSpeed()
+                  ? "Wrapping up — Thorough mode typically takes 3-6 min, this is normal…"
+                  : "Wrapping up — this is taking longer than usual…",
       h =
         l < 30
           ? "~90s remaining"
@@ -13292,14 +14582,26 @@
     return React.createElement(
       "div",
       {
+        // GEN-OVERLAY-SCROLL-001 (owner 2026-07-05, mobile): same class of
+        // bug as MOBILE-PANEL-ZOOM-001 (row 46) — a centered column with no
+        // internal scroll, on a mobile #root/body that is height:100dvh +
+        // overflow:hidden. The section-status list grows as generation
+        // progresses and can exceed one viewport, clipping the top (title /
+        // Cancel) with no way to reach it. height (not minHeight) +
+        // overflowY:auto turns this into its own scroll container; the
+        // inner column gets margin:auto 0 below (auto margins override
+        // justifyContent in flexbox: centered when it fits, scrolls from
+        // the top when it doesn't) — the exact fix already proven there.
         style: {
-          minHeight: "100dvh",
+          height: "100dvh",
+          overflowY: "auto",
           background: `linear-gradient(160deg,${e},#1a2a45)`,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           fontFamily: "Georgia,serif",
           padding: "24px",
+          boxSizing: "border-box",
         },
       },
       React.createElement(
@@ -13310,6 +14612,7 @@
             color: "#fff",
             maxWidth: 520,
             width: "100%",
+            margin: "auto 0",
           },
         },
         React.createElement(
@@ -13331,6 +14634,26 @@
           },
           "Generating…",
         ),
+        // GEN-JOB-LABEL-001 (owner 2026-07-08): show WHICH job is generating during the long
+        // run — sourced from the JD's own source name (reliable for the current JD; meta.company
+        // can still be the prior run's during a fresh gen).
+        __jobLbl &&
+          React.createElement(
+            "div",
+            {
+              style: {
+                fontSize: 13,
+                color: t,
+                fontWeight: 600,
+                margin: "0 auto 8px",
+                maxWidth: 460,
+                textAlign: "center",
+                lineHeight: 1.3,
+                wordBreak: "break-word",
+              },
+            },
+            "🎯 " + __jobLbl,
+          ),
         React.createElement(
           "div",
           {
@@ -13468,7 +14791,12 @@
             React.createElement("b", null, "Tab was backgrounded."),
             " Mobile browsers throttle network streams when the tab isn't visible — generation may have stalled or dropped. If progress doesn't resume in 30 seconds, tap Cancel and retry. Keep this tab in the foreground next time.",
           ),
-        l > 60 &&
+        l >
+          ("thorough" === __genSpeed()
+            ? 200
+            : "fast" === __genSpeed()
+              ? 45
+              : 90) &&
           !c &&
           React.createElement(
             "div",
@@ -13482,7 +14810,9 @@
             },
             ("da" === i
               ? "Long Danish generations can take 3-5 minutes. Keep this tab visible — switching tabs may break the connection on mobile."
-              : "This is taking longer than the usual ~90 seconds. Keep this tab visible — switching away may break the connection on mobile.") +
+              : "thorough" === __genSpeed()
+                ? "Thorough mode cross-checks with multiple models and typically takes 3-6 minutes — this is normal. Keep this tab visible — switching away may break the connection on mobile."
+                : "This is taking longer than the usual ~60-90 seconds. Keep this tab visible — switching away may break the connection on mobile.") +
               ("fast" !== __genSpeed()
                 ? " Tip: the ⚡ Fast speed preset next to Generate trades cross-checking for a much shorter wait."
                 : ""),
@@ -14619,9 +15949,12 @@
       const [Y, J] = e(() => {
           try {
             const e = new URLSearchParams(window.location.search || "");
+            // HARDRESET-LOCAL-ONLY-001: bare ?hardReset=1 is a gentle code refresh and must
+            // NOT clear the session here — only an explicit logout / resetDone does. (The
+            // early index.html handler already reloads to a clean URL for a gentle reset,
+            // so in practice this only fires for logout/resetDone; kept defensive.)
             if (
               "1" === e.get("resetDone") ||
-              "1" === e.get("hardReset") ||
               "1" === e.get("logout")
             )
               return (
@@ -14936,6 +16269,27 @@
         try {
           "generating" !== Nt && u.set("step", Nt);
         } catch (e) {}
+        // BABEL-FISH-VIEW-GATE-001 (owner 2026-07-11): expose the current view so the
+        // relang sidecar only auto-translates in the EDITOR (or right after a generate),
+        // never while the user is in the upload / input menu switching language or
+        // writing style. Passive translation in upload caused the "translate popup every
+        // few seconds" churn and partial gen/translation mixes.
+        try { window.__antcvView = Nt; } catch (e) {}
+      }, [Nt]);
+      // UPLOAD-LANG-DEFER-001 (owner 2026-07-11): opening the EDITOR after picking a different
+      // output language in the upload menu presents the translate modal ONCE for that pending
+      // language (Pr with force — je was already set silently, so e===je). A guard timestamp
+      // tells the babel relang sidecar to stand down briefly so it does not also auto-translate
+      // and race the modal. (Pr is referenced via closure; the effect body runs post-mount, by
+      // which time Pr is defined.)
+      React.useEffect(() => {
+        if ("editor" !== Nt) return;
+        var pend = null;
+        try { pend = sessionStorage.getItem("antcv:pending-editor-translate"); } catch (_) {}
+        if (!pend) return;
+        try { sessionStorage.removeItem("antcv:pending-editor-translate"); } catch (_) {}
+        try { sessionStorage.setItem("antcv:manual-xlate-guard", String(Date.now())); } catch (_) {}
+        try { Pr(pend, !0); } catch (_) {}
       }, [Nt]);
       const [Lt, Pt] = e(() => u.get("doc", "cv"));
       React.useEffect(() => {
@@ -15064,6 +16418,25 @@
                 source: e,
               }),
                 Ft({ text: o.text || "", method: "url-fetch", pages: 1, fileName: (o.title || r).slice(0, 120) }),
+                // JD-SWAP-STALE-RATIONALE-001 (owner 2026-07-08, reproduced live): fetching a NEW
+                // JD must clear the PREVIOUS run's analysis (yo). Otherwise CL-GHOST-COMPANY-001
+                // pushes the stale `yo.supporting_context` into the next generation as "PRIOR RUN
+                // CONTEXT (carry forward)", leaking the old target company into the new letter
+                // (fetched NCC -> letter said "Sigma Connectivity"). Matches the NEW-1 load-clear.
+                // Also clear the applicationQuestions store — a prior JD's questions (NIL's cleanroom
+                // Q&A) otherwise leak a whole "Responses to application questions" page into a JD
+                // (Trackman) that has none.
+                bo(null),
+                // META-STICK-001 (owner 2026-07-13, the "Novo ghost"): fetching a NEW JD must
+                // also reset the React identity (io.company/role/subtitle/greeting/opening).
+                // The clears above drop the stale rationale + Q&A, but the meta identity stuck,
+                // so a mislabelled company kept showing and every auto-sync tick STAMPED it onto
+                // the row (jd_company/jd_role/subtitle). Reset to the neutral meta default - the
+                // (re)generation repopulates it from the new JD; auto-sync sees an empty io.company
+                // and SKIPS the stamp (drift branch) until the real company is generated. Kill
+                // switch: antcv:disable-jd-meta-reset. (lo is in closure scope here - declared
+                // after this handler, same as bo above.)
+                (function(){try{if(localStorage.getItem("antcv:disable-jd-meta-reset")!=="1")lo({company:"",role:"",subtitle:"",greeting:"",opening:""})}catch(e){}})(),
                 qt(""),
                 Zt({ busy: !1, error: null, hint: o.wall_hint || null }),
                 Gr &&
@@ -15412,7 +16785,7 @@
                 return;
               }
               const o = e.meta && "object" == typeof e.meta ? e.meta : io || {},
-                r = n === ks || (o && "Unsolicited" === o.company),
+                r = n === ks || (o && window.__antcvUnsol(o.company)),
                 a = {
                   jd_text: n,
                   jd_company: String(
@@ -15614,7 +16987,7 @@
           return this._call("/api/applications");
         },
         getActive() {
-          return this._call("/api/active");
+          return this._call("/api/active" + ((window.AntcvJdScope && window.AntcvJdScope.devQ) ? window.AntcvJdScope.devQ() : ""));
         },
         get(e) {
           return this._call("/api/applications/" + e);
@@ -15635,7 +17008,7 @@
           return this._call("/api/applications/" + e, { method: "DELETE" });
         },
         setActive(e) {
-          return this._call("/api/active", {
+          try { window.__antcvContentAppId = String(e); } catch (_) {} return this._call("/api/active", {
             method: "PUT",
             body: JSON.stringify({
               application_id: e,
@@ -15754,7 +17127,7 @@
             (Yn.current ||
               (async () => {
                 try {
-                  const t = await fetch(e + "/api/prefs", {
+                  const t = await fetch(e + "/api/prefs" + ((window.AntcvJdScope && window.AntcvJdScope.devQ) ? window.AntcvJdScope.devQ() : ""), {
                     credentials: "include",
                   });
                   if (!t.ok) {
@@ -15893,22 +17266,50 @@
                         }
                       } catch (e) {}
                     }
+                    // NULL-CLEAR-RESTORE-001 (owner 2026-07-05, handoff from mobile
+                    // testing session): GET /api/prefs can legitimately return an
+                    // explicit `null` for any of these fields — the server's
+                    // validateKernelPref treats null as "clear this field" (distinct
+                    // from undefined/"field untouched"). The old `if (o.field && …)`
+                    // checks are falsy-gated, so a server-side null silently left the
+                    // STALE local value in place forever — a cloud-side "reset" could
+                    // never actually clear a device that already had the old value
+                    // cached. Each field below now has an `else if (null === o.field)`
+                    // branch that removes the local key (and, for the color/package
+                    // fields, resets the live React state too, so the clear is visible
+                    // without a reload). __antcvClearOrSet is a tiny shared helper.
                     if (o.styleConfig && "object" == typeof o.styleConfig)
                       try {
                         wa(o.styleConfig);
+                      } catch (e) {}
+                    else if (null === o.styleConfig)
+                      try {
+                        u.remove("styleConfig");
                       } catch (e) {}
                     if (o.stylePackage && "string" == typeof o.stylePackage)
                       try {
                         (ka(__pkgNorm(o.stylePackage)),
                           u.set("stylePackage", __pkgNorm(o.stylePackage)));
                       } catch (e) {}
+                    else if (null === o.stylePackage)
+                      try {
+                        (u.remove("stylePackage"), ka("copenhagen-modern"));
+                      } catch (e) {}
                     if (o.lineTargets && "object" == typeof o.lineTargets)
                       try {
                         Fa(o.lineTargets);
                       } catch (e) {}
+                    else if (null === o.lineTargets)
+                      try {
+                        u.remove("lineTargets");
+                      } catch (e) {}
                     if (o.fontSizes && "object" == typeof o.fontSizes)
                       try {
                         Kr(o.fontSizes);
+                      } catch (e) {}
+                    else if (null === o.fontSizes)
+                      try {
+                        u.remove("fontSizes");
                       } catch (e) {}
                     if ("number" == typeof o.cvTableRatio)
                       try {
@@ -15927,6 +17328,10 @@
                         (fr(o.headerItemLoc),
                           u.set("headerItemLoc", o.headerItemLoc));
                       } catch (e) {}
+                    else if (null === o.headerItemLoc)
+                      try {
+                        u.remove("headerItemLoc");
+                      } catch (e) {}
                     if (
                       o.headerItemAlign &&
                       "object" == typeof o.headerItemAlign
@@ -15935,6 +17340,10 @@
                         (wr(o.headerItemAlign),
                           u.set("headerItemAlign", o.headerItemAlign));
                       } catch (e) {}
+                    else if (null === o.headerItemAlign)
+                      try {
+                        u.remove("headerItemAlign");
+                      } catch (e) {}
                     if (
                       o.routingOverrides &&
                       "object" == typeof o.routingOverrides
@@ -15942,9 +17351,17 @@
                       try {
                         u.set("routingOverrides", o.routingOverrides);
                       } catch (e) {}
+                    else if (null === o.routingOverrides)
+                      try {
+                        u.remove("routingOverrides");
+                      } catch (e) {}
                     if (o.compressPrefs && "object" == typeof o.compressPrefs)
                       try {
                         u.set("compressPrefs", o.compressPrefs);
+                      } catch (e) {}
+                    else if (null === o.compressPrefs)
+                      try {
+                        u.remove("compressPrefs");
                       } catch (e) {}
                     if (
                       o.language &&
@@ -15958,12 +17375,20 @@
                       try {
                         (qe(o.navyColor), u.set("navyColor", o.navyColor));
                       } catch (e) {}
+                    else if (null === o.navyColor)
+                      try {
+                        (u.remove("navyColor"), qe("#283556"));
+                      } catch (e) {}
                     if (
                       o.customStyleConfig &&
                       "object" == typeof o.customStyleConfig
                     )
                       try {
                         u.set("customStyleConfig", o.customStyleConfig);
+                      } catch (e) {}
+                    else if (null === o.customStyleConfig)
+                      try {
+                        u.remove("customStyleConfig");
                       } catch (e) {}
                     if (
                       o.openaiProxyUrl &&
@@ -16065,12 +17490,69 @@
                             }));
                           } catch (_) { return false; }
                         })();
+                        // CROSS-DEVICE-GEN-LEAK-GUARD (owner 2026-07-08): a generation on
+                        // ANOTHER device (desktop) sets the SHARED active_application pointer
+                        // to a DIFFERENT app (e.g. "Sigma"); on THIS device (mobile, reviewing
+                        // the unsolicited app) the restore below clobbered the local
+                        // sections/meta with the foreign app — "the unsolicited application I
+                        // reviewed on mobile changed to Sigma". The drift guard only caught
+                        // local-real -> row-empty/unsolicited; the inverse (local unsolicited,
+                        // row a foreign-device REAL company) fell through. KEEP the local
+                        // active app whenever the pointer was set by a FOREIGN device AND the
+                        // local app DIFFERS from the row — the foreign app stays in the app
+                        // LIST to open explicitly. A fresh device (__curCo2 empty) still
+                        // restores normally; same-company rows still apply.
+                        const __foreignActiveHijack = (() => {
+                          try {
+                            const mine = window.AntcvJdScope && window.AntcvJdScope.deviceId && window.AntcvJdScope.deviceId();
+                            const setter = e && e._pointer_device_id;
+                            const foreign = !!(setter && mine && String(setter) !== String(mine));
+                            return foreign && !!__curCo2 && __curCo2 !== __rowCo2;
+                          } catch (_) { return false; }
+                        })();
+                        // PARALLEL-GEN-ISO-001 (owner 2026-07-10, "run generations in
+                        // parallel"): each tab owns its app-id (AntcvJdScope per-tab
+                        // currentAppId). If the shared active_application pointer names a
+                        // DIFFERENT app than the one THIS tab is working on, a parallel
+                        // tab / device generated it — KEEP this tab's app (the foreign app
+                        // stays in the app LIST to open explicitly). Same-device parallel
+                        // tabs share the device id, so the device guard above can't catch
+                        // this; the app-id can. Keep-local is always safe (no data loss).
+                        const __foreignAppId2 = (() => {
+                          try {
+                            const mine = window.AntcvJdScope && window.AntcvJdScope.getCurrentAppId && window.AntcvJdScope.getCurrentAppId();
+                            const rowId = e && (e.id || e.application_id);
+                            if (!(mine && rowId && String(mine) !== String(rowId))) return false;
+                            // LOAD-EDITOR-UNSOLICITED-001 (kernel-adopt carve-out): a tab with NO
+                            // specific app in progress (currentAppId 'kernel') must ADOPT the cloud
+                            // pointer's app - a job-tracker Open sets the pointer + reloads WITHOUT
+                            // claiming the app id for this tab, so on reload `mine` stays 'kernel' and
+                            // this raw drift check fired, skipping the sections/meta restore (the JD
+                            // block is outside the guard, so "JD loads but the editor shows the
+                            // unsolicited template"). EXCEPT when the pointer was set by a FOREIGN
+                            // device (cross-device-gen leak, already covered by the device guard):
+                            // a same-device / legacy (null-stamp) pointer at kernel = a deliberate
+                            // local open -> adopt. Mirrors the tested AntcvJdScope.shouldAdoptCloudPointer
+                            // helper (kernel -> adopt). Kill switch: antcv:disable-tracker-open-adopt.
+                            try {
+                              if (String(mine) === "kernel" && localStorage.getItem("antcv:disable-tracker-open-adopt") !== "1") {
+                                const myDev = window.AntcvJdScope && window.AntcvJdScope.deviceId && window.AntcvJdScope.deviceId();
+                                const setter = e && e._pointer_device_id;
+                                const foreignDev = !!(setter && myDev && String(setter) !== String(myDev));
+                                if (!foreignDev) return false;
+                              }
+                            } catch (_) {}
+                            return true;
+                          } catch (_) { return false; }
+                        })();
                         const __draftDrift2 =
                           __staleSamePtr2 ||
+                          __foreignActiveHijack ||
+                          __foreignAppId2 ||
                           (__curCo2 && "unsolicited" !== __curCo2 &&
                           ("" === __rowCo2 || "unsolicited" === __rowCo2));
                         if (__draftDrift2) {
-                          try { console.log(__staleSamePtr2 ? "[cloud-restore] PTR-STALE-GUARD-001: keeping local draft (" + __curCo2 + ") over a stale same-device pointer (" + __rowCo2 + ")" : "[cloud-restore] META-DRIFT-GUARD-002: keeping tailored draft (" + __curCo2 + ") over the unsolicited row"); } catch (e) {}
+                          try { console.log(__staleSamePtr2 ? "[cloud-restore] PTR-STALE-GUARD-001: keeping local draft (" + __curCo2 + ") over a stale same-device pointer (" + __rowCo2 + ")" : __foreignActiveHijack ? "[cloud-restore] CROSS-DEVICE-GEN-LEAK-GUARD: keeping local app (" + __curCo2 + ") over a FOREIGN-device pointer (" + __rowCo2 + ")" : "[cloud-restore] META-DRIFT-GUARD-002: keeping tailored draft (" + __curCo2 + ") over the unsolicited row"); } catch (e) {}
                         } else {
                         if (e.jd_company || e.jd_role)
                           try {
@@ -16096,11 +17578,63 @@
                                 : [],
                             });
                           } catch (e) {}
-                        }
-                        if (e.rationale && "object" == typeof e.rationale)
+                        // BRAND-FIT-OPEN-001: apply the tracker-sampled employer brand
+                        // palette stored on the application's meta.styleConfig (same wa()
+                        // patch-setter the post-generation brand-fit uses) so Open actually
+                        // shows the brand colours instead of only describing them in text.
+                        if (
+                          e.meta &&
+                          e.meta.styleConfig &&
+                          "object" == typeof e.meta.styleConfig
+                        )
                           try {
-                            bo(e.rationale);
+                            wa(e.meta.styleConfig);
                           } catch (e) {}
+                        }
+                        // BRAND-FIT-OPEN-002 (owner 2026-07-12): a brand-fitted tracker
+                        // row must arrive with the upload panel's session-only Brand-fit
+                        // CHECKBOX armed, not just the palette applied — otherwise the
+                        // next generation runs without the brand-fit rule. Detect intent
+                        // via meta.styleConfig OR the BRAND-FIT: line the tracker appends
+                        // to supporting_context, arm window.__antcvBrandFit, and tick the
+                        // checkbox once it renders (checked=, not click — no onChange loop).
+                        try {
+                          var __bf1 = (e.meta && e.meta.styleConfig && "object" == typeof e.meta.styleConfig) || (e.meta && e.meta.brandV2 && "object" == typeof e.meta.brandV2) || /\n\nBRAND-FIT:/.test(String(e.supporting_context || ""));
+                          // PALETTE-STICK-CLEAR-001: symmetric clear — an unbranded load must NOT
+                          // inherit the previous app's brand. Reset the runtime flag + the GLOBAL
+                          // antcv:brandV2 first; the branded branch below re-applies for a branded app.
+                          try { window.__antcvBrandFit = !1; localStorage.removeItem("antcv:brandV2"); } catch (_) {}
+                          if (__bf1) {
+                            window.__antcvBrandFit = !0;
+                            // BRANDFIT-CANDIDATE-SIDEBAR-OVERRIDE-001: publish the fitted
+                            // brand palette so the preview paper paints band+sidebar.
+                            // Prefer meta.brandV2 (fitted v2, from re-collection); else map
+                            // the stored styleConfig palette.
+                            try {
+                              var __sc1 = e.meta && e.meta.styleConfig;
+                              var __bv1 = (e.meta && e.meta.brandV2) ? e.meta.brandV2 : (__sc1 && "object" == typeof __sc1 ? { version: 2, slots: { headerBg: __sc1.headerBg, headerInk: __sc1.headerNameColor, sidebarBg: __sc1.sidebarBg, accent: __sc1.accent, aiNoticeColor: __sc1.aiNoticeColor, sloganColor: __sc1.sloganColor, signatureColor: __sc1.signatureColor } } : null);
+                              if (__bv1) localStorage.setItem("antcv:brandV2", JSON.stringify(__bv1));
+                            } catch (_) {}
+                            setTimeout(function () {
+                              try {
+                                var c = document.querySelector("input[data-antcv-brandfit]");
+                                if (c && !c.checked) c.checked = !0;
+                              } catch (e) {}
+                            }, 900);
+                          }
+                        } catch (e) {}
+                        // OPEN-JD-VISIBLE-001 (owner 2026-07-12): a tracker-seeded
+                        // application carries the whole brief (Dream Envelope, ROLE
+                        // INTEL, web research, owner signals) in supporting_context —
+                        // fold it into the rationale so generation's PRIOR RUN
+                        // CONTEXT block sees it. An existing rationale value wins.
+                        try {
+                          var __rt = e.rationale && "object" == typeof e.rationale ? e.rationale : null,
+                            __sc = "string" == typeof e.supporting_context && e.supporting_context.trim() ? e.supporting_context : "";
+                          if (__sc && (!__rt || !String(__rt.supporting_context || "").trim()))
+                            __rt = Object.assign({}, __rt || {}, { supporting_context: __sc });
+                          if (__rt) bo(__rt);
+                        } catch (e) {}
                         if ("string" == typeof e.jd_text && e.jd_text) {
                           // 1.50.253: when the loaded row is the
                           // UNSOLICITED kernel (category or jd_company
@@ -16162,16 +17696,54 @@
                             try {
                               Vt("");
                             } catch (e) {}
-                          else
+                          else if (__foreignDevice)
                             try {
-                              Vt(__foreignDevice ? "" : e.jd_text);
+                              Vt("");
                             } catch (e) {}
+                          else {
+                            // OPEN-JD-VISIBLE-001 (owner 2026-07-12): a targeted row's
+                            // JD used to be dumped into the SIGNALS textarea (Vt) — the
+                            // drop-zone stayed empty and generation ran JD-less in
+                            // unsolicited framing (the sig-stale guard excluded it).
+                            // Seed the real JD-file states instead (same shape as the
+                            // URL-fetch path) so the JD preview renders over the
+                            // drop-zone and Generate uses the cached extraction, keep
+                            // the JD in Un.current as the cloud-write fallback, and
+                            // give the signals textarea the owner-added signals parsed
+                            // out of supporting_context.
+                            // JD-REMOVE-STICKY-001 (owner 2026-07-13): if the user
+                            // pressed "✕ Remove" on THIS jd, do NOT re-seed it on a
+                            // plain refresh. A tracker Open/Reopen writes
+                            // antcv:lastJdText=jd just before its reload — that match
+                            // is a deliberate re-stage: clear the tombstone and seed
+                            // normally. Signals seeding below stays either way.
+                            var __jdTomb = function (jt) {
+                              try {
+                                var t = localStorage.getItem("antcv:jdRemoved") || "";
+                                if (!t || t !== jt.length + ":" + jt.slice(0, 48)) return !1;
+                                if ((localStorage.getItem("antcv:lastJdText") || "") === jt) return localStorage.removeItem("antcv:jdRemoved"), !1;
+                                return !0;
+                              } catch (e) { return !1; }
+                            }(e.jd_text);
+                            if (!__jdTomb) try {
+                              var __jl = String((((e.jd_company || "") + (e.jd_company && e.jd_role ? " — " : "") + (e.jd_role || "")).trim()) || "Job description").slice(0, 120);
+                              Dt({ name: __jl, kind: "restore", size: String(e.jd_text).length, source: "cloud-restore" });
+                              Ft({ text: e.jd_text, method: "restored", pages: 1, fileName: __jl });
+                              Un.current = e.jd_text;
+                            } catch (e) {}
+                            try {
+                              var __sm = String(e.supporting_context || "").match(/ADDITIONAL SIGNALS \(owner-added\):\s*\n?([\s\S]*?)(?=\n\n[A-Z][A-Z -]{2,}[:(]|$)/);
+                              Vt(__sm ? String(__sm[1] || "").trim() : "");
+                            } catch (e) {
+                              try { Vt(""); } catch (e) {}
+                            }
+                          }
                           // JD-CLOUD-VISIBILITY-001 (owner 2026-06-15): mirror the
                           // restored JD into antcv:lastJdText so JD-aware per-role
                           // outcome visibility works cross-machine WITHOUT a regen.
                           // Unsolicited / general-context / manual-save rows carry no
                           // real JD → clear the mirror.
-                          try { localStorage.setItem("antcv:lastJdText", (__isUnsolicited || __foreignDevice || t || n) ? "" : (e.jd_text || "")); } catch (e) {}
+                          try { localStorage.setItem("antcv:lastJdText", (__isUnsolicited || __foreignDevice || t || n || __jdTomb) ? "" : (e.jd_text || "")); } catch (e) {}
                         } else {
                           // No jd_text at all — make sure the textarea
                           // is empty (1.50.253: covers the case where a
@@ -16205,24 +17777,19 @@
                       : (() => {
                           try {
                             const _pi = u.get("personalInfo", {});
-                            const _arr = [
-                              "workHistory",
-                              "experience",
-                              "education",
-                              "publications",
-                              "publicationsStructured",
-                              "certifications",
-                              "skills",
-                              "tools",
-                              "additional",
-                              "regulatory",
-                            ];
+                            // WIZARD-AUTOLOAD-001 twin fix (owner 2026-07-11): use the SAME
+                            // real-content signal Gate 1's __returning uses — only data the user
+                            // actually entered (name/background/email) counts. A kernel-seeded
+                            // skills/tools array is NOT "returning content"; the old _arr.some()
+                            // scan mis-classified a fresh signed-in user as returning and skipped
+                            // the wizard.
                             const _hc =
                               _pi &&
                               typeof _pi === "object" &&
-                              _arr.some(
-                                (k) =>
-                                  Array.isArray(_pi[k]) && _pi[k].length > 0,
+                              !!(
+                                _pi.name ||
+                                _pi.background ||
+                                (_pi.email && _pi.email.length)
                               );
                             if (_hc) {
                               u.set("wizardSkipped", !0);
@@ -16235,8 +17802,15 @@
                               yn(!1);
                             } else {
                               console.log(
-                                "[cloud-restore] no wizard flag, fresh-start user — keeping wizard open",
+                                "[cloud-restore] no wizard flag, fresh-start user — opening wizard",
                               );
+                              // WIZARD-NEW-USER-OPEN-001 (owner 2026-07-11): Gate 1 (mount) skips
+                              // the wizard for any authenticated user (token/session present, to
+                              // avoid WIZARD-LOGIN-FLASH-001), and Gate 2 previously only ever
+                              // CLOSED it — so a signed-in new user never saw onboarding. This
+                              // branch runs post-cloud-restore (no flash risk); with no flag and
+                              // no real personalInfo the user genuinely needs the wizard, so open it.
+                              yn(!0);
                             }
                           } catch (_eh) {
                             console.warn(
@@ -16274,7 +17848,12 @@
                   ? { ...e, items: Se(e.items, 12) }
                   : e,
               );
-            return { cv: t(e.cv), cl: t(e.cl) };
+            // SECTIONS-STORM-2026-07-23: keep unknown ROOT keys (the belts'
+            // STAMP-IN-BLOB fields _roleMergeStamp/_sidebarCutStamp travel at the
+            // blob root). Rebuilding {cv,cl} here dropped them, the auto-save
+            // wrote the stampless blob back, and every one-shot belt re-armed
+            // forever — the continuous sections rewrite storm.
+            return { ...e, cv: t(e.cv), cl: t(e.cl) };
           }
           return me();
         }),
@@ -16419,7 +17998,10 @@
                       ? { ...e, items: Se(e.items, 12) }
                       : e,
                   );
-                const __nextSec = { cv: n(t.cv), cl: n(t.cl) };
+                // SECTIONS-STORM-2026-07-23: spread `t` so unknown ROOT keys (the
+                // belts' STAMP-IN-BLOB fields) survive the re-ingest → auto-save
+                // round-trip. See the matching comment at the state initialiser.
+                const __nextSec = { ...t, cv: n(t.cv), cl: n(t.cl) };
                 // STORM-IDEMPOTENT-002 (owner 2026-06-26 live probe): only push to React state when the
                 // external write ACTUALLY differs from what we last applied. The normalisers re-dispatch
                 // antcv:sections-updated with IDENTICAL content; calling ao() (setState) on every one
@@ -16427,7 +18009,18 @@
                 // normalisers react to again — the sections-updated storm that jumps the editor and the
                 // preview page-transition spacing. Skip the no-op refresh; a real external change applies.
                 const __sig = JSON.stringify(__nextSec);
-                if (__sig === window.__antcvLastSecApplied) return;
+                // SLOGAN-CJLR-RERENDER-001 (owner 2026-07-14 "cjlr does not change in preview"):
+                // the slogan align / sign-off / signature controls change ONLY standalone
+                // localStorage keys, not `sections`, so __sig matches the last-applied signature
+                // and the guard above returns early → the preview never re-renders → the new
+                // textAlign never shows. When the event announces a slogan/standalone change,
+                // force one re-render (ao() with a fresh object ref) so the render re-reads the
+                // align key. Real content changes still take the normal (de-duped) path.
+                const __slogForce = !!(
+                  e && e.detail &&
+                  /slogan|standalone|signoff|signature/i.test(String(e.detail.reason || e.detail.source || ""))
+                );
+                if (__sig === window.__antcvLastSecApplied && !__slogForce) return;
                 window.__antcvLastSecApplied = __sig;
                 (ao(__nextSec),
                   console.info(
@@ -16538,7 +18131,7 @@
         // (the commit site owns the first write).
         React.useEffect(() => {
           try {
-            if (!io || "Unsolicited" !== io.company) return;
+            if (!io || !window.__antcvUnsol(io.company)) return;
             if (u.get("kernelShowcaseInProgress", !1)) return;
             if (Un && Un.current) return;
             // 1.50.272: the kernel_showcase cloud slot was found EMPTY in
@@ -16578,10 +18171,10 @@
               }
               oo.putShowcase({
                 sections: __secs,
-                meta: (function (m) { try { if (!m || "object" != typeof m) return m; var co = String(m.company || "").trim(); if (!co || "Unsolicited" === co) return m; var c = Object.assign({}, m, { company: "Unsolicited", role: "Open Application" }); try { delete c.rationale; } catch (_) {} return c; } catch (_) { return m; } })(u.get("meta", null)), /* UNSOLICITED-IDENTITY-SOURCE-FIX-001: never store a real company in the unsolicited kernel slot */
+                meta: (function (m) { try { if (!m || "object" != typeof m) return m; var co = String(m.company || "").trim(); if (!co || window.__antcvUnsol(co)) return m; var c = Object.assign({}, m, { company: "Unsolicited", role: "Open Application" }); try { delete c.rationale; } catch (_) {} return c; } catch (_) { return m; } })(u.get("meta", null)), /* UNSOLICITED-IDENTITY-SOURCE-FIX-001: never store a real company in the unsolicited kernel slot */
                 rationale: u.get("rationale", null),
                 jd_language: je,
-              }, (() => { try { var p = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; p = p.personalInfo || p; return String((p.stylePrefs || {}).style || "").trim(); } catch (_) { return ""; } })());
+              }, (() => { try { var p = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; p = p.personalInfo || p; var __st = String((p.writingPrefs || {}).style || "").trim().toLowerCase(); var __lg = String(localStorage.getItem("language") || "en").toLowerCase().replace(/[^a-z]/g, "").slice(0,2) || "en"; return __st ? __st + "|" + __lg : ""; } catch (_) { return ""; } })());
               try {
                 console.log(
                   "[v1.50.267 KERNEL-CLOUD-PERSIST] re-saved kernel showcase after edit (subtitle/meta/sections)",
@@ -16638,7 +18231,7 @@
         }, [io]),
         React.useEffect(() => {
           try {
-            if (io && "Unsolicited" === io.company) {
+            if (io && window.__antcvUnsol(io.company)) {
               if (
                 (io.showcase || lo({ ...io, showcase: !0 }),
                 u.get("kernelShowcaseInProgress", !1))
@@ -16663,7 +18256,7 @@
             } else
               io &&
                 io.company &&
-                "Unsolicited" !== io.company &&
+                !window.__antcvUnsol(io.company) &&
                 io.showcase &&
                 lo({ ...io, showcase: !1 });
           } catch (e) {}
@@ -16682,7 +18275,7 @@
             io.company &&
             !u.get("kernelShowcaseInProgress", !1) &&
             !0 !== io.showcase &&
-            "Unsolicited" !== io.company
+            !window.__antcvUnsol(io.company)
           )
             try {
               no({ jd_text: e, meta: io, sections: ro, rationale: yo });
@@ -16721,7 +18314,7 @@
               mm &&
               "object" == typeof mm &&
               mm.company &&
-              "Unsolicited" !== String(mm.company).trim()
+              !window.__antcvUnsol(mm.company)
             )
               return;
           } catch (e) {}
@@ -16750,7 +18343,39 @@
           return (
             (async () => {
               try {
-                const e = await oo.getShowcase((() => { try { var p = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; p = p.personalInfo || p; return String((p.stylePrefs || {}).style || "").trim(); } catch (_) { return ""; } })());
+                // CATEGORY-RECALL-001 (1.51.368): before falling back to the
+                // style|lang kernel showcase, prefer the newest SAVED
+                // application of the active JD's category (meta.category on
+                // the loaded app) as the hydrate source. Sections only —
+                // never its meta, so no cross-company contamination.
+                try {
+                  const __mm2 = u.get("meta", null);
+                  const __cat = (__mm2 && "object" == typeof __mm2 && "string" == typeof __mm2.category && __mm2.category.trim()) ? __mm2.category.trim().toLowerCase() : "";
+                  if (__cat) {
+                    const __cr = await oo._call("/api/applications?category=" + encodeURIComponent(__cat) + "&latest=1");
+                    const __ca = __cr && __cr.ok && __cr.application;
+                    const __cs = __ca ? { cv: Array.isArray(__ca.cv_sections) ? __ca.cv_sections : [], cl: Array.isArray(__ca.cl_sections) ? __ca.cl_sections : [] } : null;
+                    if (!o && __cs && __antcvHasRealSections(__cs)) {
+                      try { sessionStorage.setItem("antcv_showcase_restore_attempted", "1"); } catch (_) {}
+                      try { u.set("sections", __cs); } catch (_) {}
+                      try { ao({ cv: __cs.cv, cl: __cs.cl }); } catch (_) {}
+                      try { console.log("[CATEGORY-RECALL-001] hydrated from latest '" + __cat + "' application " + (__ca.id || "?") + " - kernel showcase fallback skipped"); } catch (_) {}
+                      return;
+                    }
+                  }
+                } catch (_) {}
+                // KERNEL-AUTOGEN-ON-MISS-001 (1.51.369): recall chain step 3.
+                // Category recall (above) missed; if the style|lang kernel slot
+                // is ALSO empty, generate the kernel now via the existing
+                // _antcvGenerateKernelShowcase path (overlay/watchdog/persist
+                // are its own; the direct-PUT commit re-fills the slot so the
+                // next recall hits). Guards: one attempt per style|lang per
+                // session (sessionStorage flag), never during fresh-start,
+                // never while a generation is in flight. Auth is guaranteed
+                // here: the enclosing effect returns early when !Y.email.
+                const __kk9 = (() => { try { var p = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; p = p.personalInfo || p; var __st = String((p.writingPrefs || {}).style || "").trim().toLowerCase(); var __lg = String(localStorage.getItem("language") || "en").toLowerCase().replace(/[^a-z]/g, "").slice(0,2) || "en"; return __st ? __st + "|" + __lg : ""; } catch (_) { return ""; } })();
+                const __autogen9 = () => { try { if (!__kk9) return; if (window.AntcvIsFreshStart && window.AntcvIsFreshStart()) return; if (u.get("kernelShowcaseInProgress", !1)) return; if ("function" != typeof window._antcvGenerateKernelShowcase) return; var __fl9 = "antcv_kernel_autogen_" + __kk9; if (sessionStorage.getItem(__fl9)) return; sessionStorage.setItem(__fl9, "1"); console.log("[KERNEL-AUTOGEN-001] no " + __kk9 + " kernel — generating it first"); setTimeout(function () { try { window._antcvGenerateKernelShowcase({ force: !0 }); } catch (_) {} }, 0); } catch (_) {} };
+                const e = await oo.getShowcase(__kk9);
                 if (o) return;
                 // 1.50.277: mark restore ATTEMPTED on every non-cancelled
                 // outcome (no slot / empty slot / real slot) so the Cs() regen
@@ -16759,7 +18384,7 @@
                 try {
                   sessionStorage.setItem("antcv_showcase_restore_attempted", "1");
                 } catch (_) {}
-                if (!e || !e.showcase) return;
+                if (!e || !e.showcase) return __autogen9();
                 // 1.50.274: ignore an empty/corrupted slot (empty sections +
                 // real meta) — restoring it produced the headline-only husk.
                 // Returning here lets the normal flow regenerate the showcase
@@ -16771,6 +18396,7 @@
                       "[v1.50.274 KERNEL-CLOUD-PERSIST] ignoring showcase slot: empty/corrupted sections — will regenerate from kernel",
                     );
                   } catch (_) {}
+                  __autogen9();
                   return;
                 }
                 const t = e.showcase;
@@ -16797,7 +18423,7 @@
                     try {
                       if (!m || "object" != typeof m) return m;
                       var co = String(m.company || "").trim();
-                      if (!co || "Unsolicited" === co) return m;
+                      if (!co || window.__antcvUnsol(co)) return m;
                       var c = Object.assign({}, m, { company: "Unsolicited", role: "Open Application" });
                       try { delete c.rationale; } catch (_) {}
                       return c;
@@ -16810,7 +18436,7 @@
                     lo(__m);
                   } catch (e) {}
                 }
-                if (t.rationale && !(t.meta && t.meta.company && "Unsolicited" !== String(t.meta.company).trim())) {
+                if (t.rationale && !(t.meta && t.meta.company && !window.__antcvUnsol(t.meta.company))) {
                   try {
                     u.set("rationale", t.rationale);
                   } catch (e) {}
@@ -16834,6 +18460,10 @@
             }
           );
         }, [Y && Y.email]),
+        // APP-HISTORY-STYLE-KERNELS-001 Load hook: window.AntcvApplyStyleKernel(sc)
+        // applies a saved style kernel (sections/meta/rationale) into the editor —
+        // reuses the boot-restore setters (ao/lo/bo) + forces Unsolicited identity.
+        React.useEffect(() => { try { window.AntcvApplyStyleKernel = function (sc) { try { if (!sc || !sc.sections) return false; var t = sc; if (t.sections && "object" == typeof t.sections) { try { u.set("sections", t.sections); } catch (e) {} try { ao({ cv: t.sections.cv || [], cl: t.sections.cl || [] }); } catch (e) {} } if (t.meta && "object" == typeof t.meta) { var __mm = (function (m) { try { if (!m || "object" != typeof m) return m; var co = String(m.company || "").trim(); if (!co || window.__antcvUnsol(co)) return m; var c = Object.assign({}, m, { company: "Unsolicited", role: "Open Application" }); try { delete c.rationale; } catch (_) {} return c; } catch (_) { return m; } })(t.meta); try { u.set("meta", __mm); } catch (e) {} try { lo(__mm); } catch (e) {} } if (t.rationale) { try { u.set("rationale", t.rationale); } catch (e) {} try { bo(t.rationale); } catch (e) {} } try { window.dispatchEvent(new CustomEvent("antcv:sections-updated")); } catch (_) {} return true; } catch (_) { return false; } }; } catch (_) {} }, []),
         React.useEffect(() => {
           Y &&
             Y.email &&
@@ -16998,11 +18628,14 @@
                               u.set("meta", { ...(io || {}), ...mm });
                             } catch (e) {}
                           } catch (e) {}
-                          if (n.rationale) {
-                            try {
-                              bo(n.rationale);
-                            } catch (e) {}
-                          }
+                          // NEW-1 (owner 2026-07-07): overwrite the analysis
+                          // UNCONDITIONALLY (value-or-null) so hydrating an
+                          // application never keeps the PREVIOUS app's rationale
+                          // when the loaded one has none (stale-analysis leak).
+                          try {
+                            bo(n.rationale || null);
+                            u.set("rationale", n.rationale || null);
+                          } catch (e) {}
                           try {
                             // 1.50.252: stamp the loaded row's company so
                             // auto-sync knows whether subsequent edits still
@@ -17152,7 +18785,15 @@
                   try {
                     const __l = await oo.list();
                     const __apps = (__l && __l.applications) || [];
-                    const __ex = __apps.find((a) => a && __norm(a.jd_company) === __ioCo);
+                    // AUTO-COMMIT-FRESHEST-001 (owner 2026-07-19): among rows matching this
+                    // company, pick the MOST-RECENTLY-UPDATED one, not the arbitrary first.
+                    // With a leftover duplicate (e.g. an old junk-JD twin) the first match
+                    // could be the STALE row, so generated sections committed to the wrong row
+                    // while the active row stayed empty ("load from list" showed nothing).
+                    // Freshest-wins routes the save to the row the user is actually on. (Dedup
+                    // now prevents new duplicates; this hardens against any legacy ones.)
+                    const __matches = __apps.filter((a) => a && __norm(a.jd_company) === __ioCo);
+                    const __ex = __matches.sort((a, b) => (b.updated_at || 0) - (a.updated_at || 0))[0];
                     let __id = __ex && __ex.id;
                     if (!__id) {
                       const __c = await oo.create({ save_as_new: !0 });
@@ -17316,10 +18957,17 @@
           // (the default package), so a user who never picks a position gets
           // the bridge. An explicit stored choice always wins. The bridge
           // sidecar mirrors this default so its button highlights correctly.
+          // PHOTO-ZH-PREVIEW-DEFAULT-001 (owner 2026-07-12): zh apps default
+          // the PREVIEW photo to main-right (top-right ID-style, Chinese CV
+          // convention) — mirror of the docx-client 1.51.371 export default
+          // (PHOTO-ZH-ID-STYLE-001). Read-time only, nothing is persisted; an
+          // explicit stored photoPosition still wins via u.get.
           u.get(
             "photoPosition",
             (() => {
               try {
+                if ("zh" === String(localStorage.getItem("language") || "").replace(/"/g, "").slice(0, 2))
+                  return "main-right";
                 return "copenhagen-modern" ===
                   __pkgNorm(u.get("stylePackage", "copenhagen-modern"))
                   ? "band-overlap"
@@ -17365,13 +19013,19 @@
             contact: "center",
           }),
         ),
+        __slogSnap = () => { try { return { s: localStorage.getItem("antcv:clSlogan"), h: localStorage.getItem("antcv:clSloganHidden"), a: localStorage.getItem("antcv:clSloganAlign"), m: localStorage.getItem("antcv:clSloganMode") }; } catch (_) { return null; } },
+        __slogRestore = (snap) => { if (!snap) return; try { const __sset = (k, v) => { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); }; __sset("antcv:clSlogan", snap.s); __sset("antcv:clSloganHidden", snap.h); __sset("antcv:clSloganAlign", snap.a); __sset("antcv:clSloganMode", snap.m); window.dispatchEvent(new CustomEvent("antcv:sections-updated", { detail: { reason: "slogan-undo" } })); } catch (_) {} },
         vr = (e) => {
+          // SLOGAN-UNDO-001: snapshot the standalone slogan localStorage (outside ro/io) so
+          // slogan edits + Enhance/Fit-it undo/redo like anything else.
           const t = {
             label: e || "change",
             sections: JSON.parse(JSON.stringify(ro)),
             meta: { ...io },
+            slogan: __slogSnap(),
           };
           (pr((e) => [...e.slice(-9), t]), mr([]));
+          try { window.__antcvPushUndo = vr; } catch (_) {}
         },
         xr = () => {
           var e;
@@ -17385,10 +19039,12 @@
               label: "redo:" + (t.label || "change"),
               sections: JSON.parse(JSON.stringify(ro)),
               meta: { ...io },
+              slogan: __slogSnap(),
             };
           (mr((e) => [...e.slice(-9), n]),
             ao(t.sections),
             lo(t.meta),
+            __slogRestore(t.slogan),
             pr((e) => e.slice(0, -1)));
         },
         Er = () => {
@@ -17399,10 +19055,12 @@
               label: "undo:" + (e.label || "change"),
               sections: JSON.parse(JSON.stringify(ro)),
               meta: { ...io },
+              slogan: __slogSnap(),
             };
           (pr((e) => [...e.slice(-9), t]),
             ao(e.sections),
             lo(e.meta),
+            __slogRestore(e.slogan),
             mr((e) => e.slice(0, -1)));
         },
         [Rr, Sr] = React.useState(!1),
@@ -17454,8 +19112,15 @@
                 t.textContent = e.label;
                 const n = !!e.primary,
                   o = !!e.danger;
+                // MOB-006 (owner 2026-07-08): on mobile the confirm modal's
+                // buttons did not fire on tap (the language never switched even
+                // though the dialog is up). Harden the touch target: bind
+                // pointerup (fires reliably for touch, before the ~300ms
+                // synthetic click) AS WELL AS onclick, guarded so it runs once;
+                // touch-action:manipulation kills the tap delay/double-tap-zoom;
+                // 44px min-height gives a real finger target.
                 ((t.style.cssText =
-                  "padding:10px 14px;border-radius:6px;border:1px solid " +
+                  "padding:12px 14px;border-radius:6px;border:1px solid " +
                   (n ? "#283556" : o ? "#c33" : "#bbb") +
                   ";background:" +
                   (n ? "#283556" : o ? "#fff" : "#f7f7f7") +
@@ -17463,15 +19128,51 @@
                   (n ? "#fff" : o ? "#c33" : "#333") +
                   ";font-size:14px;font-weight:" +
                   (n ? "600" : "500") +
-                  ";cursor:pointer;width:100%;text-align:left;"),
-                  (t.onclick = () => s(e.value)),
+                  ";cursor:pointer;width:100%;text-align:left;touch-action:manipulation;min-height:44px;margin-bottom:2px;"),
+                  (() => {
+                    let __fired = false;
+                    const __act = (ev) => {
+                      if (__fired) return;
+                      __fired = true;
+                      try { ev && ev.preventDefault && ev.preventDefault(); ev && ev.stopPropagation && ev.stopPropagation(); } catch (_) {}
+                      s(e.value);
+                    };
+                    // LANG-MODAL-GHOST-TAP-001 (owner 2026-07-10): on the PREVIEW
+                    // screen the confirm dialog "flashed" — opened then closed in a
+                    // few ms, and a language was still written. Live trace: the close
+                    // came from a BUTTON handler firing the instant the modal opened
+                    // (s <- g), i.e. a trailing pointerup/click from the SAME gesture
+                    // that opened the dialog (the language-menu option click) auto-
+                    // fired the freshly-inserted primary button. MOB-006 armed the
+                    // BACKDROP after 450ms for exactly this ghost class but left the
+                    // BUTTONS synchronous, so they stayed vulnerable. Fix: attach the
+                    // button handlers after a short delay too — a same-gesture ghost
+                    // fires within a few ms and is missed; a real tap (seconds after
+                    // the user reads the dialog) lands after the arm window, so
+                    // MOB-006's touch-tap fix is preserved. Escape/desktop unchanged.
+                    setTimeout(() => {
+                      ((t.onclick = __act), t.addEventListener("pointerup", __act));
+                    }, 350);
+                  })(),
                   l.appendChild(t));
               }),
               r.appendChild(l),
               o.appendChild(r),
-              (o.onclick = (t) => {
-                t.target === o && s(e.cancelValue || "cancel");
-              }),
+              // MOB-006 (owner 2026-07-07): on mobile, tapping a language option
+              // (top-right) opens this CENTERED confirm modal; the tap's residual
+              // ghost-click can land on the backdrop (which is now under the
+              // finger's original spot) and INSTANTLY dismiss the dialog via this
+              // cancel-on-backdrop-tap, so the language never switches ("pressing
+              // the other language does nothing"). Playwright fires one clean
+              // click so it never reproduces. Arm the backdrop-cancel only AFTER
+              // a short delay so a same-tap residual click can't close it; the
+              // buttons' own onclick handlers are attached synchronously and work
+              // immediately, and Escape/desktop behaviour is unchanged.
+              setTimeout(() => {
+                o.onclick = (t) => {
+                  t.target === o && s(e.cancelValue || "cancel");
+                };
+              }, 450),
               document.body.appendChild(o));
           } catch (n) {
             console.error("_antcvChoice3 error", n);
@@ -17502,9 +19203,18 @@
             return 0;
           }
         },
-        Pr = (e) => {
+        Pr = (e, __force, __nc) => {
           var t, n;
-          if (e === je) return;
+          // BABEL-FISH-RELANG-001 (owner 2026-07-11): __force lets the babel-fish
+          // relang sidecar re-render CURRENT content into the ribbon language even
+          // when e===je (content is stale in another language — e.g. an English
+          // kernel served under a zh ribbon). Existing callers pass one arg, so
+          // __force is undefined and behaviour is unchanged.
+          // BABEL-FISH-HEADLESS-001 (owner 2026-07-11): __nc (no-confirm) runs the
+          // translate pass DIRECTLY with no confirmation modal — the sidecar could
+          // never confirm the modal, so a zh ribbon over English content stayed
+          // mixed/stuck. window.__antcvRelangHeadless(e) uses this path.
+          if (!__force && e === je) return;
           const o = Lr(ro, io),
             r = {
               ...Or,
@@ -17512,16 +19222,23 @@
                 sections: JSON.parse(JSON.stringify(ro)),
                 meta: { ...io },
                 hash: o,
+                standalone: __antcvSnapStandalone(),
               },
             },
             a = Or[e],
             i = () => {
               (vr(
                 "Translate to " +
-                  ({ da: "Danish", es: "Spanish", zh: "中文" }[e] || "English"),
+                  ({ da: "Danish", es: "Spanish", zh: "中文", he: "עברית", am: "አማרኛ", ar: "العربية" }[e] || "English"),
               ),
                 Nr(r),
                 It(e),
+                // LANG-IDENTITY-SWITCH-001: flip the identity render sources with
+                // the ribbon — Latin targets restore the stashed Latin canonical,
+                // wide targets restore the stashed wide renderings (哥本哈根 …).
+                ("zh" === e || "he" === e || "am" === e || "ar" === e
+                  ? __antcvRestoreWideIdentity()
+                  : __antcvRestoreLatinIdentity()),
                 (async (e) => {
                   if (!Rr) {
                     Sr(!0);
@@ -17531,10 +19248,13 @@
                             da: "Danish (Copenhagen, hverdagssprog, no buzzwords, short sentences, du-form)",
                             es: "Spanish (Latin American business register, formal, descriptive, hierarchical, responsibilities + outcomes together — see LATAM tone notes)",
                             zh: "Simplified Chinese (中文 / 简体, formal business register, concise factual phrasing, preserve all Latin proper nouns unchanged)",
+                            he: "Hebrew (עברית, Israeli professional register, formal and concise, written RIGHT-TO-LEFT; preserve all Latin proper nouns, tool/standard names and numbers unchanged)",
+                            am: "Amharic (አማርኛ, Ethiopian formal register, concise factual phrasing in Ge'ez / Fidäl script; preserve all Latin proper nouns, tool/standard names and numbers unchanged)",
+                            ar: "Arabic (العربية, Modern Standard Arabic, formal register, written RIGHT-TO-LEFT; preserve all Latin proper nouns, tool/standard names and numbers unchanged)",
                           }[e] ||
                           "UK English (clear, professional, no Americanisms)",
                         _lng = e,
-                        _isWide = "es" === e || "zh" === e,
+                        _isWide = "es" === e || "zh" === e || "he" === e || "am" === e || "ar" === e,
                         n = (e) => {
                           const t = [],
                             n = (e, n) => {
@@ -17562,9 +19282,37 @@
                                 n(["items", i, "t"], it.t);
                               } else n(["items", i], it);
                             });
+                          // LANG-TRANSLATE-COVERAGE-001 (owner 2026-07-10): rich_block
+                          // sections (HOW I WOULD CONTRIBUTE, and any b/t/bullets block)
+                          // had NO case here, so their prose stayed in the source
+                          // language on a zh/es export. Walk each item's b (lead label),
+                          // t (content) and bullets, plus a group label if present —
+                          // mirrors the labeled_list/bullets shapes already handled.
+                          // TRANSLATE-RICHBLOCK-CONTENT-001 (owner 2026-07-12): a
+                          // rich_block can carry its prose in a BARE content field (the
+                          // generated PROFILE does) — items-only collection left it in
+                          // the source language on every translate pass.
+                          if ("rich_block" === e.type) n(["content"], e.content);
+                          if ("rich_block" === e.type)
+                            (e.items || []).forEach((it, i) => {
+                              if (it && "object" == typeof it) {
+                                if (void 0 !== it.group)
+                                  n(["items", i, "group"], it.group);
+                                n(["items", i, "b"], it.b);
+                                n(["items", i, "t"], it.t);
+                                (it.bullets || []).forEach((b, bi) =>
+                                  n(["items", i, "bullets", bi], b),
+                                );
+                              }
+                            });
                           if ("experience" === e.type)
                             (e.roles || []).forEach((r, ri) => {
-                              if (_isWide) {
+                              // Fix 1b (TRANSLATE-COVERAGE): da role headers + "Present"
+                              // were never collected (_isWide excludes da). Widen the role
+                              // title/company/years collection to da too. `_isWide` itself
+                              // stays unchanged elsewhere, so io.company ("Unsolicited"
+                              // sentinel) and the name block are still NOT translated for da.
+                              if (_isWide || "da" === _lng) {
                                 n(["roles", ri, "title"], r.title);
                                 n(["roles", ri, "company"], r.company);
                                 n(["roles", ri, "years"], r.years);
@@ -17572,6 +19320,36 @@
                               (r.bullets || []).forEach((b, bi) =>
                                 n(["roles", ri, "bullets", bi], b),
                               );
+                              // LANG-TRANSLATE-COVERAGE-001: the role Result line
+                              // (role.results — the "成果:/Result:" content) was never
+                              // sent to the translator, so it stayed in the source
+                              // language. Safe vs the Gabriel-exact-results pin: a
+                              // translated string is neither empty, a known English
+                              // pin, nor a bullet copycat, so it falls through to
+                              // role.results verbatim (numbers preserved by the prompt).
+                              n(["roles", ri, "results"], r.results);
+                              // TRANSLATE-RR-PIN-001 (owner 2026-07-11): when role.results
+                              // is EMPTY the preview/export Results line comes from the
+                              // outcomes/pin machinery (window.__antcvRR, keyed id:<role id>)
+                              // — English pins, never collected, so 成果: content stayed
+                              // English. Collect the RENDERED value at the results path;
+                              // apply-back stores the translation on role.results, which
+                              // wins the results→outcomes→derive precedence.
+                              if (!(r.results && String(r.results).trim())) {
+                                try {
+                                  var __rr = (window.__antcvRR || {})["id:" + r.id];
+                                  // RESULTS-COPYCAT-SKIP-001 (owner 2026-07-11 screenshot):
+                                  // a DERIVED result often copies bullet[0]; materialising
+                                  // its translation shows the same content twice (zh bullet
+                                  // + result). Skip when the normalised 60-char prefix
+                                  // matches any bullet — the distinct-pin results never do.
+                                  if (__rr) {
+                                    var __rrN = String(__rr).toLowerCase().replace(/\s+/g, " ").slice(0, 60);
+                                    var __copy = (r.bullets || []).some(function (b) { return String(b || "").toLowerCase().replace(/\s+/g, " ").slice(0, 60) === __rrN; });
+                                    if (!__copy) n(["roles", ri, "results"], __rr);
+                                  }
+                                } catch (_) {}
+                              }
                             });
                           if ("labeled_list" === e.type)
                             (e.items || []).forEach((it, i) => {
@@ -17652,19 +19430,113 @@
                             });
                           if ("spec_block" === t.id) continue;
                           if ("name_block" === t.id && !_isWide) continue;
-                          for (const r of n(t))
+                          for (const r of n(t)) {
+                            // TRANSLATE-ROLE-ID-APPLY-001 (owner 2026-07-12): tag role
+                            // paths with the role's stable id — the async apply runs
+                            // minutes later and normalize/dedupe reorder or drop roles
+                            // mid-flight, so index-addressed writes landed on the wrong
+                            // role (or were skipped) and experience stayed untranslated.
+                            if (Array.isArray(r.path) && "roles" === r.path[0]) {
+                              const __rr = (t.roles || [])[r.path[1]];
+                              if (__rr && null != __rr.id) r.rid = String(__rr.id);
+                            }
                             o.push({ doc: _d, sid: t.id, ...r });
+                          }
                         }
                       const r = [];
-                      if (io.subtitle && "string" == typeof io.subtitle)
-                        r.push({ key: "subtitle", value: io.subtitle });
+                      // LANG-TRANSLATE-RENDER-SOURCES-001: collect the SUBTITLE and SLOGAN
+                      // from their real render sources (io.subtitle || personalInfo.
+                      // specialization; antcv:clSlogan || io.cl_slogan) and TAG them (__std)
+                      // so the translated value is mirrored back into those sources after
+                      // apply — otherwise the header (which reads specialization + the
+                      // standalone slogan key) never showed the target language.
+                      const __subVal =
+                        io.subtitle &&
+                        "string" == typeof io.subtitle &&
+                        io.subtitle.trim()
+                          ? io.subtitle
+                          : (() => {
+                              try {
+                                const pi =
+                                  JSON.parse(
+                                    localStorage.getItem("personalInfo") || "{}",
+                                  ) || {};
+                                return "string" == typeof pi.specialization
+                                  ? pi.specialization
+                                  : "";
+                              } catch (_) {
+                                return "";
+                              }
+                            })();
+                      if (__subVal && __subVal.trim())
+                        r.push({ key: "subtitle", value: __subVal, __std: "spec" });
+                      const __slogVal = (() => {
+                        try {
+                          const v = localStorage.getItem("antcv:clSlogan");
+                          if (null != v && String(v).trim()) return String(v);
+                        } catch (_) {}
+                        return io.cl_slogan && "string" == typeof io.cl_slogan
+                          ? io.cl_slogan
+                          : "";
+                      })();
+                      if (__slogVal && __slogVal.trim())
+                        r.push({ key: "cl_slogan", value: __slogVal, __std: "slogan" });
                       if (io.role && "string" == typeof io.role)
                         r.push({ key: "role", value: io.role });
                       if (_isWide) {
                         if (io.name && "string" == typeof io.name)
                           r.push({ key: "name", value: io.name });
+                      }
+                      // UNSOL-PILLAR-LANG-001: collect company for da too — the
+                      // "Unsolicited" pillar now matches every language variant
+                      // (window.__antcvUnsol), so a stored "Uopfordret" is safe.
+                      // Name stays _isWide-gated (da keeps Latin names).
+                      if (_isWide || "da" === _lng) {
                         if (io.company && "string" == typeof io.company)
                           r.push({ key: "company", value: io.company });
+                      }
+                      // TRANSLATE-PI-IDENTITY-001: header identity render sources.
+                      // Candidate NAME from personalInfo (meta.name is usually unset —
+                      // live-confirmed) for script targets only; city + citizenship for
+                      // every non-en target. Mirror-back via __antcvWritePi on apply.
+                      const __piT = (() => { try { return JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; } catch (_) { return {}; } })();
+                      if (_isWide && !(io.name && "string" == typeof io.name) && "string" == typeof __piT.name && __piT.name.trim())
+                        r.push({ key: "pi_name", value: __piT.name, __std: "piname" });
+                      if ("string" == typeof __piT.city && __piT.city.trim())
+                        r.push({ key: "pi_city", value: __piT.city, __std: "picity" });
+                      if ("string" == typeof __piT.citizenship && __piT.citizenship.trim())
+                        r.push({ key: "pi_citizen", value: __piT.citizenship, __std: "picitizen" });
+                      // LOCATION-IDENTITY-001 (owner 2026-07-12 "it is in Settings
+                      // too — locked on Chinese"): pi.location is a FIFTH identity
+                      // render source (Settings panel + wizard) that was never
+                      // collected, so it stayed in the last translated language.
+                      if ("string" == typeof __piT.location && __piT.location.trim())
+                        r.push({ key: "pi_location", value: __piT.location, __std: "piloc" });
+                      // TRANSLATE-PI-IDENTITY-001b: the HEADER actually renders
+                      // pi.contactItems[].value (live-confirmed: "2300, København S",
+                      // "EU Citizen" come from here, NOT pi.city/pi.citizenship).
+                      // Collect the text-like values (skip email/url/phone shapes —
+                      // invariants) and write back by index.
+                      (Array.isArray(__piT.contactItems) ? __piT.contactItems : []).forEach((ci, cidx) => {
+                        try {
+                          if (!ci || "string" != typeof ci.value || !ci.value.trim()) return;
+                          var v = ci.value.trim();
+                          if (/@|^https?:|^www\.|linkedin\.|github\.|^\+?[\d\s()-]{6,}$/i.test(v)) return;
+                          // LOCALFORM-DA-ALWAYS-001 (owner 2026-07-12): a Danish postal
+                          // location ("2300, København S") is a proper noun — never
+                          // translated, stays Danish on every ribbon.
+                          if (/^\d{4},?\s/.test(v) || /københavn/i.test(v)) return;
+                          r.push({ key: "pi_ci_" + cidx, value: ci.value, __std: "pici", __ci: cidx });
+                        } catch (_) {}
+                      });
+                      // TRANSLATE-SIGNNAME-001: the CL signature renders the
+                      // antcv:clSignName override ("Gabriel") before pi.name — collect
+                      // it for script targets so the sign-off name follows the ribbon.
+                      if (_isWide) {
+                        try {
+                          var __sn = String(localStorage.getItem("antcv:clSignName") || "").trim();
+                          if (__sn) r.push({ key: "pi_signname", value: __sn, __std: "signname" });
+                        } catch (_) {}
                       }
                       if (!o.length && !r.length) return;
                       const a = {};
@@ -17674,7 +19546,8 @@
                         r.forEach((e, t) => {
                           a["m" + t] = e.value;
                         }));
-                      const i = `You are a professional translator. The input JSON contains text that may be in any language. Translate every value to ${t}, regardless of what language each value is currently in.\n\nRULES:\n- Translate every value to ${t}, even if it appears to already be in another language. Do NOT pass values through unchanged.\n- Proper-noun handling — categorise EACH proper noun, then apply the right rule:\n  KEEP VERBATIM (never translate): company / organisation names (employers, clubs, associations — even small local ones), product names, technology names (tools, platforms, protocols), file-format names, standards codes (ISO 26262, ASPICE, BABOK).\n  TRANSLATE: university and academic-institution names where an established target-language form exists. Examples: Tel Aviv University → Spanish "Universidad de Tel Aviv" / Chinese "特拉维夫大学". Tsinghua University → Spanish "Universidad de Tsinghua" / Chinese "清华大学". Technion → Chinese "以色列理工学院" (keep "Technion" in Spanish, no canonical form). MIT → Chinese "麻省理工学院" (keep "MIT" in Spanish). If no canonical target-language form exists for the institution, keep the original.\n  TRANSLATE: job titles and role names — even when they appear next to an organisation name. Examples: "Operations Manager" → Spanish "Gerente de Operaciones" / Chinese "运营经理". "Senior System Engineer" → Spanish "Ingeniero Senior de Sistemas" / Chinese "高级系统工程师". "Rugby Operations Manager" → Spanish "Gerente de Operaciones de Rugby" / Chinese "橄榄球运营经理".\n  TRANSLATE: city and country names. Copenhagen → København (Danish) / Copenhague (Spanish) / 哥本哈根 (Chinese). Denmark → Danmark (Danish) / Dinamarca (Spanish) / 丹麦 (Chinese). Tel Aviv → 特拉维夫 (Chinese, otherwise unchanged).\n  TRANSLATE: civic / status terms like "EU Citizen". Danish "EU-borger", Spanish "Ciudadano UE", Chinese "欧盟公民".\n  FOR SPANISH TARGET: keep person names in Latin script unchanged (Gabriel Alexander Karp-Gershon stays as written).\n  FOR CHINESE TARGET: TRANSLITERATE the candidate's person name to Chinese characters using standard phonetic conventions (音译). Example: "Gabriel Alexander Karp-Gershon" → "加布里埃尔·亚历山大·卡普-格仰". Apply when a value is clearly a full personal name (first + last); do NOT transliterate company / organisation names.\n- Quoted strings are titles of real published works (papers, books, articles). Keep ALL text inside straight double quotes "..." and curly quotes “...” EXACTLY as written, in the original source language. Translate only the prose surrounding the quotes. Example: in DA, “Suspended Carbon Nanotube Integration in Microfabricated Devices” — Karp et al., 2009 becomes “Suspended Carbon Nanotube Integration in Microfabricated Devices” — Karp m.fl., 2009 (title verbatim, surrounding prose translated).\n- Keep numbers, dates, year ranges (e.g. 2017-2025) unchanged.\n- Preserve formatting: bracketed placeholders like [Role title] / [Rolle titel] stay bracketed; bullet markers stay; punctuation matches target language conventions.\n- Preserve sentinel tokens: any token matching the pattern __ANTCV_KEEP_<digits>__ (for example __ANTCV_KEEP_1__, __ANTCV_KEEP_2__) is a protected reference and MUST be reproduced in the output EXACTLY as written, with the same digits, in the same position relative to the surrounding prose. Do NOT translate, paraphrase, or remove these tokens. They stand in for proper-noun phrases that have been factored out of the input.\n- Match the professional register: calm, factual, direct. No buzzwords. No corporate jargon.\n- For Danish: use "du" not "De". Use everyday Danish, not legalese.\n- For English: UK spelling. Clear, professional, no Americanisms.\n- Banned in any language output: spearhead, leverage, foster, robust, holistic, cutting-edge, world-class, drive (vague), deliver (vague), passionate, committed, comprehensive (without specifics). Danish equivalents (drive frem, fremme, robust, omfattende, banebrydende) also banned.\n\nCRITICAL: Return EVERY input key in your output. Do NOT skip any keys. Do NOT add new keys. The output MUST be a single complete JSON object — finish it before stopping. No explanation, no markdown, no preamble, just the JSON object.`,
+                      const i = `You are a professional translator. The input JSON contains text that may be in any language. Translate every value to ${t}, regardless of what language each value is currently in.\n\nRULES:\n- Translate every value to ${t}, even if it appears to already be in another language. Do NOT pass values through unchanged.\n- Proper-noun handling — categorise EACH proper noun, then apply the right rule:\n  KEEP VERBATIM (never translate): company / organisation names (employers, clubs, associations — even small local ones), product names, technology names (tools, platforms, protocols), file-format names, standards codes (ISO 26262, ASPICE, BABOK).\n  TRANSLATE: university and academic-institution names where an established target-language form exists. Examples: Tel Aviv University → Spanish "Universidad de Tel Aviv" / Chinese "特拉维夫大学". Tsinghua University → Spanish "Universidad de Tsinghua" / Chinese "清华大学". Technion → Chinese "以色列理工学院" (keep "Technion" in Spanish, no canonical form). MIT → Chinese "麻省理工学院" (keep "MIT" in Spanish). If no canonical target-language form exists for the institution, keep the original.\n  TRANSLATE: job titles and role names — even when they appear next to an organisation name. Examples: "Operations Manager" → Spanish "Gerente de Operaciones" / Chinese "运营经理". "Senior System Engineer" → Spanish "Ingeniero Senior de Sistemas" / Chinese "高级系统工程师". "Rugby Operations Manager" → Spanish "Gerente de Operaciones de Rugby" / Chinese "橄榄球运营经理".\n  TRANSLATE: city and country names. Copenhagen → København (Danish) / Copenhague (Spanish) / 哥本哈根 (Chinese). Denmark → Danmark (Danish) / Dinamarca (Spanish) / 丹麦 (Chinese). Tel Aviv → 特拉维夫 (Chinese, otherwise unchanged).\n  TRANSLATE: civic / status terms like "EU citizen". Danish "EU-borger", Spanish "Ciudadano UE", Chinese "欧盟公民".\n  TRANSLATE the application-type label "Unsolicited" (or "Open Application") to EXACTLY: Danish "Uopfordret", Spanish "Candidatura espontánea", Chinese "主动申请", Hebrew "מועמדות יזומה", Amharic "ያልተጠየቀ ማመልከቻ", Arabic "طلب عفوي". Use exactly these forms — no other synonym or spelling.\n  TRANSLATE language names and fluency levels in a LANGUAGES list: English → 英语 / inglés / אנגלית, Hebrew → 希伯来语, Spanish → 西班牙语, Danish → 丹麦语; "native / fluent" → 母语/流利, "professional" → 专业水平, "intermediate (B1)" → 中级（B1）— same principle in every target language. These are NOT proper nouns to keep verbatim.\n  TRANSLATE industry-role acronym phrases with an established target form, keeping the acronym in parentheses: "ODM site" → Chinese "原始设计制造商（ODM）站点", "OEM" → "原始设备制造商（OEM）". Standards codes (ISO 26262, ASPICE) still stay verbatim.\n  FOR SPANISH AND DANISH TARGETS: keep person names in Latin script unchanged (Gabriel Alexander Karp-Gershon stays as written).\n  FOR CHINESE TARGET: render the candidate's person name in Chinese characters. If the name is "Gabriel Alexander Karp-Gershon" (or a shorter variant such as "Gabriel Karp-Gershon"), use EXACTLY "加布里埃尔·亚历山大·卡普·格申" and do not transliterate it any other way. For ANY OTHER full personal name, create a FITTING Chinese name: use the established Chinese form for well-known given names (Gabriel→加布里埃尔, Alexander→亚历山大), pick surname glyphs that are phonetically close AND carry positive or neutral meaning suited to the person's profession and character, place the surname FIRST (Chinese order), and never use glyphs with negative connotations (e.g. 埃 "dust", 卡 "stuck/jammed"). Apply when a value is clearly a full personal name (first + last); do NOT transliterate company / organisation names.\n  FOR HEBREW, AMHARIC AND ARABIC TARGETS: render the candidate's person name in the target script with the same care as the Chinese rule: use the established target-script form for well-known given names (Gabriel → Hebrew "גבריאל" / Arabic "جبريل" / Amharic "ገብርኤል"; Alexander → Hebrew "אלכסנדר" / Arabic "ألكسندر" / Amharic "አሌክሳንደር"), and transliterate surnames phonetically with dignified standard spellings — never spellings with negative or comic readings. Apply when a value is clearly a full personal name (first + last); do NOT transliterate company / organisation names or tool names.\n- If a value contains the SAME title or phrase in two languages joined by "&" or "/" (bilingual duplication, e.g. "变更请求负责人 & Change Request Lead & 系统架构师 & System Architect"), output each distinct title ONCE, in the target language only (→ "变更请求负责人 & 系统架构师"). Never keep both language versions of the same phrase.\n- Quoted strings are titles of real published works (papers, books, articles). Keep ALL text inside straight double quotes "..." and curly quotes “...” EXACTLY as written, in the original source language. Translate only the prose surrounding the quotes. Example: in DA, “Suspended Carbon Nanotube Integration in Microfabricated Devices” — Karp et al., 2009 becomes “Suspended Carbon Nanotube Integration in Microfabricated Devices” — Karp m.fl., 2009 (title verbatim, surrounding prose translated).\n- Keep numbers, dates, year ranges (e.g. 2017-2025) unchanged. The word "Present" in a year range (e.g. "2022 - Present") DOES translate: Danish "nu", Spanish "actualidad", Chinese "至今", Hebrew "היום", Amharic "እስከ አሁን", Arabic "حتى الآن".\n- Preserve formatting: bracketed placeholders like [Role title] / [Rolle titel] stay bracketed; bullet markers stay; punctuation matches target language conventions. Markdown links [text](url): keep the URL EXACTLY as written; keep product/site names in the link text (Google Scholar, LinkedIn) verbatim; translate only surrounding prose.\n- Preserve sentinel tokens: any token matching the pattern __ANTCV_KEEP_<digits>__ (for example __ANTCV_KEEP_1__, __ANTCV_KEEP_2__) is a protected reference and MUST be reproduced in the output EXACTLY as written, with the same digits, in the same position relative to the surrounding prose. Do NOT translate, paraphrase, or remove these tokens. They stand in for proper-noun phrases that have been factored out of the input.\n- TABLE-CELL COMPACTNESS: translated table-cell values (Focus Area / Strategic Expertise rows in CORE COMPETENCIES and WHAT I BRING, tools lists) must stay COMPACT — target the SAME rendered length as the source, hard cap ~60 characters per Strategic Expertise cell. Use the shorter synonym, drop connective filler; NEVER let a translated cell grow onto a 3rd line.
+- Match the professional register: calm, factual, direct. No buzzwords. No corporate jargon.\n- For Danish: use "du" not "De". Use everyday Danish, not legalese.\n- For English: UK spelling. Clear, professional, no Americanisms.\n- Banned in any language output: spearhead, leverage, foster, robust, holistic, cutting-edge, world-class, drive (vague), deliver (vague), passionate, committed, comprehensive (without specifics). Danish equivalents (drive frem, fremme, robust, omfattende, banebrydende) also banned.\n\nCRITICAL: Return EVERY input key in your output. Do NOT skip any keys. Do NOT add new keys. The output MUST be a single complete JSON object — finish it before stopping. No explanation, no markdown, no preamble, just the JSON object.`,
                         l = 30,
                         s = Object.keys(a),
                         c = Math.ceil(s.length / l);
@@ -17712,27 +19585,64 @@
                           for (const e of m) t[e] = "translating";
                           return t;
                         });
-                        try {
-                          const e = await ee(
-                              [{ role: "user", content: u }],
-                              i,
-                              { task: "long_context" },
-                            ),
-                            t = Ki(e);
-                          if (!t || "object" != typeof t)
-                            throw new Error(
-                              "LLM returned no parseable JSON for chunk " +
-                                (n + 1),
+                        // LANG-TRANSLATE-BATCH-RETRY-001 (owner 2026-07-10): a swallowed
+                        // chunk failure left that chunk's content (often the longer profile
+                        // / table rows, which land in later chunks) in the source language.
+                        // Retry each chunk up to 3 attempts with backoff (ee() cascades
+                        // providers) before giving up, so a transient rate-limit / parse
+                        // hiccup no longer drops content silently.
+                        let __ok = !1;
+                        for (let __att = 0; __att < 3 && !__ok; __att++) {
+                          try {
+                            const e = await ee(
+                                [{ role: "user", content: u }],
+                                i,
+                                { task: "long_context" },
+                              ),
+                              t = Ki(e);
+                            if (!t || "object" != typeof t)
+                              throw new Error(
+                                "LLM returned no parseable JSON for chunk " +
+                                  (n + 1),
+                              );
+                            let __got = 0;
+                            for (const e of o)
+                              "string" == typeof t[e] &&
+                                ((d[e] = t[e]), __got++);
+                            // TRANSLATE-CHUNK-ALLKEYS-001 (owner 2026-07-11): __got>0 accepted a
+                            // 1/30-key chunk as success — truncated LLM output silently left
+                            // the rest of the chunk untranslated (the MIXED render root cause;
+                            // live-diagnosed on zh @ 1.51.334: ratio stalled at 0.151, roles
+                            // 1-2 English, zero warnings). Success now = ALL keys; retry
+                            // otherwise; accept a partial only on the FINAL attempt, loudly.
+                            if (__got === o.length) __ok = !0;
+                            else if (2 === __att && __got > 0) {
+                              __ok = !0;
+                              console.warn(
+                                "Translation chunk",
+                                n + 1,
+                                "PARTIAL:",
+                                __got + "/" + o.length,
+                                "keys kept after 3 attempts",
+                              );
+                            } else
+                              throw new Error(
+                                "chunk " + (n + 1) + " returned " + __got + "/" + o.length + " keys",
+                              );
+                          } catch (e) {
+                            console.warn(
+                              "Translation chunk",
+                              n + 1,
+                              "attempt",
+                              __att + 1,
+                              "failed:",
+                              e.message,
                             );
-                          for (const e of o)
-                            "string" == typeof t[e] && (d[e] = t[e]);
-                        } catch (e) {
-                          console.warn(
-                            "Translation chunk",
-                            n + 1,
-                            "failed:",
-                            e.message,
-                          );
+                            if (__att < 2)
+                              await new Promise((r) =>
+                                setTimeout(r, 400 * (__att + 1)),
+                              );
+                          }
                         }
                         (Cr((e) => {
                           const t = { ...e };
@@ -17753,6 +19663,18 @@
                           r = t.slice(1);
                         if (Array.isArray(e)) {
                           const t = [...e];
+                          // SETIN-ARRAY-UNDEF-GUARD-001 (owner 2026-07-09 crash
+                          // "Cannot read properties of undefined (reading 'title')"):
+                          // a translated paragraph's stored path can outlive the
+                          // structure it referenced (roles/items removed or reordered
+                          // between path-collection and this async apply). The array
+                          // branch used to recurse into e[o] unconditionally, so a path
+                          // through a non-existent index (e.g. roles[5].title when roles
+                          // shrank) recursed into undefined and threw. SKIP a missing
+                          // index rather than create it — creating would fill the array
+                          // with undefined holes and risk a fresh crash in any later
+                          // roles.map(r => r.title) render.
+                          if (void 0 === e[o]) return t;
                           return ((t[o] = u(e[o], r, n)), t);
                         }
                         const a = { ...e };
@@ -17784,7 +19706,16 @@
                             }
                             const r = t[e.doc],
                               a = r.findIndex((t) => t.id === e.sid);
-                            a < 0 || (r[a] = u(r[a], e.path, _final));
+                            if (a < 0) return;
+                            // TRANSLATE-ROLE-ID-APPLY-001: re-resolve the role index by
+                            // its stable id; skip (never mis-apply) if the role vanished.
+                            let __p = e.path;
+                            if (null != e.rid && "roles" === __p[0]) {
+                              const __ri = (r[a].roles || []).findIndex((x) => x && String(x.id) === String(e.rid));
+                              if (__ri < 0) return;
+                              if (__ri !== __p[1]) __p = ["roles", __ri, ...__p.slice(2)];
+                            }
+                            r[a] = u(r[a], __p, _final);
                           }),
                           t
                         );
@@ -17794,9 +19725,30 @@
                           return (
                             r.forEach((e, n) => {
                               const o = d["m" + n];
+                              // LANG-TRANSLATE-RENDER-SOURCES-001: apply the translated value
+                              // to the meta key AND mirror the tagged SUBTITLE / SLOGAN into
+                              // the standalone render sources the header actually reads
+                              // (personalInfo.specialization / antcv:clSlogan). ie() + the
+                              // slogan render read these fresh, so this re-render shows the
+                              // target language on the subtitle + slogan.
                               "string" == typeof o &&
                                 o.trim() &&
-                                (t[e.key] = o);
+                                ((t[e.key] = o),
+                                "spec" === e.__std
+                                  ? __antcvWriteSpec(o)
+                                  : "slogan" === e.__std
+                                    ? __antcvWriteSlogan(o)
+                                    : "piname" === e.__std
+                                      ? __antcvWritePi("name", o)
+                                      : "picity" === e.__std
+                                        ? __antcvWritePi("city", o)
+                                        : "picitizen" === e.__std
+                                          ? __antcvWritePi("citizenship", o)
+                                          : "piloc" === e.__std
+                                            ? __antcvWritePi("location", o)
+                                            : "pici" === e.__std
+                                            ? __antcvWriteContactItem(e.__ci, o)
+                                            : "signname" === e.__std && (() => { try { var __c = localStorage.getItem("antcv:clSignName"); if (__c && __c.trim() && !__ANTCV_WIDE_ID_RE.test(__c) && __ANTCV_WIDE_ID_RE.test(o)) localStorage.setItem("antcv:clSignName_latin", __c); localStorage.setItem("antcv:clSignName", o); } catch (_) {} })());
                             }),
                             t
                           );
@@ -17817,6 +19769,7 @@
                             ),
                             meta: { ...(Dr.current || io) },
                             hash: Lr(Br.current || ro, Dr.current || io),
+                            standalone: __antcvSnapStandalone(),
                           },
                         };
                         return (u.set("languageCache", n), n);
@@ -17827,6 +19780,10 @@
                     console.error("translateAllSections error:", e),
                   ));
             };
+          // BABEL-FISH-HEADLESS-001: no-confirm path — run the translate directly,
+          // never show the confirmation modal (the sidecar / batch re-render cannot
+          // click it). Same as choosing "Translate now".
+          if (__nc) { try { i(); } catch (_) {} return; }
           if (a && a.sections && a.meta) {
             const o = (null == (t = a.sections.cv) ? void 0 : t.length) || 0,
               l = (null == (n = a.sections.cl) ? void 0 : n.length) || 0;
@@ -17834,7 +19791,7 @@
               {
                 title:
                   "Switch to " +
-                  ({ da: "Danish", es: "Spanish", zh: "中文" }[e] ||
+                  ({ da: "Danish", es: "Spanish", zh: "中文", he: "עברית", am: "አማרኛ", ar: "العربية" }[e] ||
                     "English") +
                   "?",
                 message:
@@ -17872,13 +19829,14 @@
                 "cache" === t
                   ? (vr(
                       "Switch to " +
-                        ({ da: "Danish", es: "Spanish", zh: "中文" }[e] ||
+                        ({ da: "Danish", es: "Spanish", zh: "中文", he: "עברית", am: "አማרኛ", ar: "العربية" }[e] ||
                           "English") +
                         " (from cache)",
                     ),
                     Nr(r),
                     ao(a.sections),
                     lo(a.meta),
+                    __antcvRestoreStandalone(a.standalone),
                     It(e))
                   : "translate" === t && i();
               },
@@ -17888,7 +19846,7 @@
               {
                 title:
                   "Switch to " +
-                  ({ da: "Danish", es: "Spanish", zh: "中文" }[e] ||
+                  ({ da: "Danish", es: "Spanish", zh: "中文", he: "עברית", am: "አማרኛ", ar: "العربية" }[e] ||
                     "English") +
                   "?",
                 message:
@@ -17897,6 +19855,9 @@
                     da: "Danish",
                     es: "Spanish",
                     zh: "Simplified Chinese (中文)",
+                    he: "Hebrew (עברית)",
+                    am: "Amharic (አማርኛ)",
+                    ar: "Arabic (العربية)",
                   }[e] || "English") +
                   ".\n\nThis makes a few LLM calls. If your primary provider rate-limits, the calls cascade through Claude → GPT → Gemini → Mistral.\n\nA progress bar appears at the top of the editor while translating.",
                 buttons: [
@@ -18269,7 +20230,19 @@
             // by navyColor). This is what makes switching the Visual style update
             // the candidate band + table header, and lets Copenhagen be a navy band
             // + pale sidebar. (Custom keeps navyColor via the [Ke] effect above.)
-            ba(() => ({ ...c, ...ps }));
+            // EXPORT-PALETTE-PARITY (SECTIONS-STORM-2026-07-23 leg 3): PERSIST the
+            // healed palette. The heal used to fix React state only, so the
+            // localStorage styleConfig kept a stale palette — and docx-client
+            // buildStyle exports FROM styleConfig, so exports ignored the preset.
+            // Merge over CURRENT state (not defaults) so non-palette prefs stored
+            // on styleConfig (expTense, indents, sectionFormats…) are never wiped.
+            // Same persist idiom as _antcvSetExpTense (u.set + Qn cloud sync).
+            ba((p) => {
+              const t = { ...p, ...ps };
+              try { u.set("styleConfig", t); } catch (_) {}
+              try { Qn({ styleConfig: t }); } catch (_) {}
+              return t;
+            });
         } catch (e) {}
       }, [Ke, ya]);
       const va = {
@@ -18277,15 +20250,15 @@
             label: "Copenhagen Modern",
             style: {
               headerBg: "#33446F",
-              sidebarBg: "#C9D6EC",
+              sidebarBg: "#DCE5EA",
               headerNameColor: "#FFFFFF",
-              headerSpecColor: "#FFFFFF",
-              headerContactColor: "#FFFFFF",
-              headerLineColor: "#01B7BB",
+              headerSpecColor: "#01B9BD",
+              headerContactColor: "#DBE4F0",
+              headerLineColor: "#01B9BD",
               headerFont: "Trebuchet MS",
               sidebarHeadColor: "#00746E",
               sidebarTextColor: "#283556",
-              sidebarLineColor: "#283556",
+              sidebarLineColor: "#00746E",
               sidebarFont: "Trebuchet MS",
               mainHeadColor: "#00746E",
               mainTextColor: "#333333",
@@ -18293,19 +20266,20 @@
               mainLineColor: "#00746E",
               mainSubHeadColor: "#00746E",
               mainCompanyColor: "#333333",
-              mainYearColor: "#595959",
+              mainYearColor: "#777777",
               mainHeadFont: "Trebuchet MS",
               mainBodyFont: "Calibri",
               tableHeaderBg: "#33446F",
               tableHeaderText: "#FFFFFF",
               tableOddBg: "#FFFFFF",
-              tableEvenBg: "#FAFAFA",
+              tableEvenBg: "#DCE5EA",
               tableBorderColor: "#D9D9D9",
+              tableFrameColor: "#01B9BD",
               tableFirstColText: "#333333",
               tableOtherColText: "#333333",
               tableFirstColBold: !0,
-              photoBorderColor: "#00746E",
-              photoBorderWidth: 1,
+              photoBorderColor: "#01B9BD",
+              photoBorderWidth: 1.5,
             },
           },
           "navy-executive": {
@@ -18733,7 +20707,11 @@
                 r = Ii ? o : Math.max(320, Math.min(o, e) - 16);
               if (!r) return;
               const a = Math.round(1e3 * Math.min(1, r / 794)) / 1e3;
-              a !== t && ((t = a), mi(a));
+              // PAGINATION-STABILIZE-001: hysteresis — a 1px width flicker (e.g. a scrollbar
+              // toggling as content overflows) changed the scale by 0.001 and re-rendered,
+              // which re-observed the width via ResizeObserver: a feedback loop feeding the
+              // page-break flap above. Only re-scale on a meaningful change (>0.003).
+              (null === t || Math.abs(a - t) > 0.003) && ((t = a), mi(a));
             },
             o = () => {
               (r && cancelAnimationFrame(r),
@@ -18841,7 +20819,21 @@
       }, [ei, _i]),
         o(() => {
           _i();
-        }, [Lt, je, Ke, ya, _i]),
+          // PREVIEW-SCROLL-JITTER-001 (owner 2026-07-05, live phone report:
+          // "very strong jitter... you can see it between two pages"). _i()
+          // unconditionally snaps the preview scroll position back to (0,0)
+          // (immediate + 80ms + 240ms staggered) — correct when the DOCUMENT
+          // itself changed (Lt = doc "cv"/"cl", je = language), since the
+          // user just made a deliberate choice and should see the result
+          // from the top. Ke (navyColor) and ya (styleConfig) are PURELY
+          // COSMETIC and were removed from this effect's deps: they change
+          // silently in the background (brand-fit, the STYLE-BG-FOLLOW-PKG-001
+          // self-heal effect, cloud-restore) while the user may be mid-scroll
+          // reading page 2 — live-proven via CDP: scrolled to 500, triggered
+          // a style-package change through the real API, scrollTop dropped to
+          // 209 within ~1s with no user action. A colour/font change has no
+          // reason to move the user's reading position.
+        }, [Lt, je, _i]),
         o(() => {
           so && "preview" === ei && Li(so);
         }, [so, ei, Lt, Li]),
@@ -18904,6 +20896,14 @@
                 (r = 1));
             } else ((n = await e.text()), (o = "plaintext"), (r = 1));
             Ft({ text: n, method: o, pages: r, fileName: e.name, warning: w });
+            // JD-SWAP-STALE-RATIONALE-001: uploading a NEW JD file clears the prior run's analysis
+            // (yo) AND the applicationQuestions store, so neither a stale company (CL-GHOST-COMPANY-001)
+            // nor a prior JD's Q&A page can leak into the new application (see url-fetch).
+            try { bo(null); localStorage.removeItem("antcv:applicationQuestions"); localStorage.removeItem("antcv:applicationQuestionsJd"); } catch (e) {}
+            // META-STICK-001 (owner 2026-07-13): uploading a NEW JD file must also reset the
+            // React identity so a stale/mislabelled company can't stick + get stamped by
+            // auto-sync (see the url-fetch twin above). Kill switch: antcv:disable-jd-meta-reset.
+            try { if (localStorage.getItem("antcv:disable-jd-meta-reset") !== "1") lo({ company: "", role: "", subtitle: "", greeting: "", opening: "" }); } catch (e) {}
           } catch (t) {
             (Ft({
               text: "",
@@ -19493,7 +21493,7 @@
               }));
             try {
               const n = " ",
-                o = (e, t) => {
+                o = (e, t, mw, mf) => {
                   const o = String(e || "");
                   if (!o.trim()) return o;
                   const r = o.split(/(\s+)/),
@@ -19501,16 +21501,53 @@
                   for (let e = 0; e < r.length; e++)
                     /^\s+$/.test(r[e]) && a.push(e);
                   if (a.length < 1) return o;
-                  const i = Math.min(t - 1, a.length);
+                  let i = Math.min(t - 1, a.length);
+                  // FIX-ORPHANS-WIDTH-GUARD-001 (owner 2026-07-09 "pressing fit-it
+                  // → lines ~30 chars too long"): the bind pulls the last i+1 words
+                  // onto the last line as ONE unbreakable NBSP cluster; with no
+                  // width check a wide cluster (worst in a narrow column) overflows
+                  // the column. Shrink i until the trailing cluster fits ONE line at
+                  // the column width (mw px / mf pt); if even the last two words
+                  // don't fit, leave the paragraph UNBOUND rather than overflow.
+                  if (mw && mf) {
+                    while (i >= 1) {
+                      const s = r.slice(a[a.length - i] + 1).join("");
+                      let lc = 1;
+                      try {
+                        lc = Vi(s, mw, mf, { padLeft: 0 });
+                      } catch (_) {
+                        lc = 1;
+                      }
+                      if (lc <= 1) break;
+                      i--;
+                    }
+                    if (i < 1) return o;
+                  }
                   for (let e = a.length - i; e < a.length; e++) r[a[e]] = n;
                   return r.join("");
                 },
                 r = (e) => /\u00A0\S+\s*$/.test(String(e || "")),
                 a = t.map((e) => {
-                  const t = r(e.text) ? 3 : 2;
+                  const t = r(e.text) ? 3 : 2,
+                    // Column width for the width-guard (px @ pt). All items in this
+                    // batch share the fixed column (Qi passes Gi one loc), but the
+                    // measure width differs by field: sidebar 220, table col0 220
+                    // (CL 170) / col1 360, labeled-list value 210, main body ~466
+                    // (CL ~700). Look the section up by sid for its loc so a main
+                    // vs sidebar "labelval"/"item" never collide. Conservative on
+                    // main (466 ≤ the ~490-540 autofit render) so the guard never
+                    // UNDER-shrinks into an overflow.
+                    __sec = Pi.find((s) => s.id === e.sid),
+                    __sb = !!(__sec && "sidebar" === __sec.loc);
+                  let mw, mf;
+                  if (__sb) ((mw = 220), (mf = 10));
+                  else if ("table" === e.field)
+                    ((mw = 1 === e.col ? 360 : "cl" === Lt ? 170 : 220), (mf = 10));
+                  else if ("labelval" === e.field) ((mw = 210), (mf = 10));
+                  else ((mw = "cl" === Lt ? 700 : 466), (mf = 14));
                   return {
                     key: `${e.sid}|${e.field}${null != e.idx ? "|" + e.idx : ""}${null != e.col ? "|c" + e.col : ""}${e.roleId ? "|" + e.roleId : ""}`,
-                    fixed: o(e.text, t),
+                    fixed: o(e.text, t, mw, mf),
                   };
                 });
               (console.log(
@@ -19926,6 +21963,20 @@
           if (!o) return void alert("Section not found.");
           const r = t ? `${e}:${t}` : e;
           let a, i;
+          if (t && t.startsWith("group:")) {
+            // ROWFIT-GROUP-BUTTONS (owner 2026-07-22): enrich EVERY child content row of this group
+            // (the {grp} row at gi through the next {grp} or end), looping the proven per-item path.
+            if ("rich_block" !== o.type) return void alert("Group actions are rich-block only.");
+            const gi = parseInt(t.slice(6), 10), items = o.items || [];
+            let end = gi + 1;
+            while (end < items.length && !(items[end] && items[end].grp)) end++;
+            for (let j = gi + 1; j < end; j++) {
+              const it = items[j];
+              if (!it || it.grp || !String(it.t || "").trim()) continue;
+              await il({ sectionId: e, roleId: "item:" + j });
+            }
+            return;
+          }
           if (t && t.startsWith("row:")) {
             if ("table" !== o.type)
               return void alert("Section is not a table.");
@@ -19960,6 +22011,14 @@
               ((a = { type: "list_item", itemIdx: e, value: n }),
                 (i =
                   'Senior CV editor. Enrich one sidebar list item — more specific, more concrete. Preserve every number, proper noun, certification code, citation, formatting marker (e.g. *italic stars*, year, journal). Do NOT invent facts. Keep similar length (±15%). Return ONLY valid JSON: {"value":"..."}.'));
+            else if ("rich_block" === o.type)
+              ((a = { type: "bullets_item", itemIdx: e, b: n.b || "", t: n.t || "" }),
+                (i =
+                  'Senior CV editor. Enrich the body ("t") of ONE rich-block row — more specific, more concrete, senior-toned. Keep "b" (lead-in label) UNCHANGED exactly. Preserve every number, proper noun, tool name, certification code, standards code. Do NOT invent facts. Keep similar length (±15%). Return ONLY valid JSON: {"b":"...","t":"..."}.' +
+                  // LINE-DISTRIBUTION-001: measured GROW target for a short/runt row
+                  // (from antcv-bullet-targets SHIP5); '' when in-band or sidecar absent.
+                  (("undefined" != typeof window && window.__antcvRowFit &&
+                    window.__antcvRowFit.growPromptFor((n.b ? n.b + " " : "") + (n.t || ""))) || "")));
             else {
               if ("education" !== o.type)
                 return void alert(
@@ -20069,7 +22128,13 @@
             '\n\nVOICE & TONE — SCANDINAVIAN PROFESSIONAL (applies regardless of output language). "Senior-toned" here means calm, factual, direct, and concrete — NOT corporate/hype. Even in English, AVOID American resume-speak: no "transformative", "passionate", "dynamic", "results-driven", "spearheaded", "championed", "drove change", "moved the needle", "thought leader", "cutting-edge", "world-class", "impactful". Aim for the energy of a senior Copenhagen engineer writing a clear memo — facts before flair. Test: would this sound natural said aloud calmly in a meeting in Copenhagen?\nBANNED WORDS: spearhead, ensure, foster, streamline, strengthen, empower, leverage, drive (as \'drive change\'), deliver (vague), enable, robust, comprehensive (without specifics), cutting-edge, state-of-the-art, world-class, leading, impactful, rooted, grounded, committed, passionate, holistic, multi-faceted, cross-functional, collaborative (filler), central (\'played a central role\'), journey, dynamic, proactive, agile (unless software context), seamless, bottomline.\nBANNED PHRASES: key role, pivotal role, proven track record, strong communicator, results-driven, strategic mindset, mission-driven, wore many hats, rolled up sleeves, huge professional pride, "My expertise lies in", "I am passionate about", "I thrive in", "I bring a wealth of experience", "I am committed to", "Passionate about driving".\nBANNED PATTERNS: opener "In my role…"; "Whether in X or Y…"; "My career has been built on…"; "I have demonstrated the ability to…"; "Ensured alignment of…"; exclamation marks; filler transitions (moreover, therefore, furthermore); vague bullets without results.\nBANNED GEOGRAPHY-GROUPING: do NOT use "across <country A> and <country B>" or "across <region>" framing when describing a team. The reader doesn\'t care that the team spanned multiple countries unless it\'s directly relevant. Prefer naming the single primary location, or omit geography entirely.\n  ✗ "Led 7 engineers across Sweden and Israel"\n  ✗ "Supervised a 7-engineer team across Sweden and Israel"\n  ✓ "Supervised 7 engineers in Sweden"\n  ✓ "Directed a 7-engineer optics team in Sweden"\n  ✓ "Supervised a 7-engineer smartphone optics team" (no geography — also fine)\nVerb preference for team leadership: "Supervised" or "Directed" over "Led" (Led is overused American resume-speak).\n'),
             vr(t ? `Enrich ${t} of ${o.title}` : `Enrich ${o.title}`),
             ol(r),
-            Cr((e) => ({ ...e, [r]: "working" })));
+            // ROWFIT-FEEDBACK-001 (owner 2026-07-22): a per-ROW action (item:/row:)
+            // writes only the per-row transition key; the rich_block/table preview
+            // reads the whole-SECTION key, so nothing went pink. Also mark the
+            // section key for item:/row: ids (roles keep their per-role key only —
+            // gated so experience doesn't pink every role). Cleanup already deletes
+            // both via `t && delete o[e]`.
+            Cr((p) => (t && (t.startsWith("item:") || t.startsWith("row:"))) ? ({ ...p, [r]: "working", [e]: "working" }) : ({ ...p, [r]: "working" })));
           try {
             const n =
               '\n\nABSOLUTE: Your response MUST start with "{" and contain ONLY a single valid JSON object. NO prose. NO markdown. First character: "{". Last character: "}".';
@@ -20146,7 +22211,9 @@
                     ? (m.type = "labeled_list_item")
                     : "list" === o.type || "list_italic" === o.type
                       ? (m.type = "list_item")
-                      : "education" === o.type && (m.type = "education_item"))
+                      : "rich_block" === o.type
+                        ? (m.type = "bullets_item")
+                        : "education" === o.type && (m.type = "education_item"))
                 : t
                   ? ((u.roleId = t), (m.type = "experience_role"))
                   : (m.type = o.type),
@@ -20161,6 +22228,11 @@
               }));
           }
         },
+        // SLOGAN-ENHANCE-001 (owner 2026-07-14): the slogan Enhance/Fit-it LOGIC lives in the
+        // isolated slogan control sidecar (antcv-cl-slogan-element.js) to keep app.js edits tiny;
+        // it needs the app-internal LLM dispatcher (ee), provider filter (Q), init (U), JSON-repair
+        // (Ki), undo (vr) and cost ceiling — expose them here (re-set each render so they track).
+        __antcvExposeSloganOps = ((window.__antcvLLM = ee), (window.__antcvLLMProviders = Q), (window.__antcvLLMInit = U), (window.__antcvJsonRepair = Ki), (window.__antcvOverCost = (typeof __overCostCeil === "function" ? __overCostCeil : null)), (window.__antcvPushUndo = vr), null),
         ll = async ({ sectionId: e, roleId: t }) => {
           var n, o;
           Gr("compress_section", {
@@ -20177,6 +22249,22 @@
           const r = Pi.find((t) => t.id === e);
           if (!r) return void alert("Section not found.");
           const a = t ? `${e}:${t}` : e;
+          if (t && t.startsWith("group:")) {
+            // ROWFIT-GROUP-BUTTONS: fit EVERY child content row of this group, skipping rows that
+            // already fit SILENTLY (looping the per-item path would otherwise alert per fitting row).
+            if ("rich_block" !== r.type) return void alert("Group actions are rich-block only.");
+            const gi = parseInt(t.slice(6), 10), items = r.items || [];
+            let end = gi + 1;
+            while (end < items.length && !(items[end] && items[end].grp)) end++;
+            for (let j = gi + 1; j < end; j++) {
+              const it = items[j];
+              if (!it || it.grp || !String(it.t || "").trim()) continue;
+              const __txt = (it.b ? it.b + " " : "") + (it.t || "");
+              if (al(__txt, "list_item", 10)) continue;   // already fits — skip (no per-row alert)
+              await ll({ sectionId: e, roleId: "item:" + j });
+            }
+            return;
+          }
           if (t && t.startsWith("row:")) {
             const e = parseInt(t.slice(4), 10),
               o = null == (n = r.rows) ? void 0 : n[e];
@@ -20191,13 +22279,39 @@
             if (void 0 !== n.group)
               return void alert("Group subheadings cannot be compressed.");
             const o =
+                // ITEM-COMPRESS-RICHBLOCK-001 (owner 2026-07-05: clicked
+                // Compress on a "bullets"-type rich_block item — {b,t} shape,
+                // e.g. {b:"Goal:", t:"My aim is..."} — and got a false
+                // "already fits tightly" with a visible orphan on screen).
+                // Root cause: this branch's fallback was `n || ""`, handing
+                // al() the RAW OBJECT for anything that isn't labeled_list/
+                // education. al()'s very first check is `"string" != typeof e`
+                // — true for an object — so it short-circuits to "fits" WITHOUT
+                // measuring anything. The ELSE branch a few lines below (the
+                // section-wide Fix Orphans scan) already extracts "bullets"
+                // items correctly; mirror that exact extraction here so the
+                // per-item Compress button measures the same text.
                 "labeled_list" === r.type
                   ? n.v || ""
                   : "education" === r.type
                     ? n.sch || ""
-                    : n || "",
+                    : ("bullets" === r.type || "rich_block" === r.type)
+                      ? (n.b ? n.b + " " : "") + (n.t || n || "")
+                      : n || "",
               a = "labeled_list" === r.type ? "labeled_val" : "list_item";
-            if (al(o, a, 10))
+            // LINE-DISTRIBUTION-001 (owner 2026-07-22, row 61): measured BIDIRECTIONAL
+            // routing for {b,t} rows — a SHORT row (single under-filled line) GROWS via
+            // the enrich path; an in-band row skips; a runt proceeds to the measured
+            // compress. Fail-open to the legacy one-line al() check when the sidecar
+            // (antcv-bullet-targets SHIP5) is absent.
+            const __rfm =
+              ("bullets" === r.type || "rich_block" === r.type) &&
+              "undefined" != typeof window && window.__antcvRowFit
+                ? window.__antcvRowFit.measure(o)
+                : null;
+            if (__rfm && "short" === __rfm.band)
+              return void il({ sectionId: e, roleId: t });
+            if (__rfm ? "ok" === __rfm.band : al(o, a, 10))
               return void alert(
                 "This item already fits tightly. Skipping compression.",
               );
@@ -20250,7 +22364,10 @@
           (vr(t ? `Compress role ${t}` : `Compress ${r.title}`),
             tl(a),
             lr(!0),
-            Cr((e) => ({ ...e, [a]: "working" })));
+            // ROWFIT-FEEDBACK-001: mirror il — a per-ROW Fit-it (item:/row:) also
+            // marks the whole-section key so the preview turns pink (roles keep
+            // per-role only). Cleanup deletes both via `t && delete o[e]`.
+            Cr((p) => (t && (t.startsWith("item:") || t.startsWith("row:"))) ? ({ ...p, [a]: "working", [e]: "working" }) : ({ ...p, [a]: "working" })));
           try {
             let n;
             if (t)
@@ -20280,6 +22397,17 @@
                   };
                 else if ("list" === r.type || "list_italic" === r.type)
                   n = { id: e, type: "list_item", itemIdx: o, value: a };
+                else if ("bullets" === r.type || "rich_block" === r.type)
+                  // ITEM-COMPRESS-RICHBLOCK-001: {b,t} rich_block item (e.g.
+                  // {b:"Goal:", t:"My aim is..."}), mirrors labeled_list_item
+                  // (b stays frozen like l, only t is tightened, like v).
+                  n = {
+                    id: e,
+                    type: "bullets_item",
+                    itemIdx: o,
+                    b: a.b || "",
+                    t: a.t || "",
+                  };
                 else {
                   if ("education" !== r.type)
                     return (
@@ -20406,13 +22534,15 @@
                       ? "You may rephrase, reorder words, restructure sentences, or swap synonyms aggressively to achieve the target. Preserve meaning but not wording."
                       : "synonyms" === t
                         ? "WORD-SUBSTITUTION MODE: do NOT rewrite sentences. Keep the same sentence structure, word order, and length. Replace 1-3 specific long words per sentence with shorter synonyms only. Examples: 'utilising' → 'using', 'approximately' → '~', 'demonstrated' → 'showed', 'subsequently' → 'then', 'in order to' → 'to', 'is responsible for' → 'leads', 'manufacturing' → 'production', 'implementation' → 'rollout', 'optimisation' → 'tuning', 'characterisation' → 'profiling'. The goal is to save 5-15 chars per sentence by surgical word swaps, NOT to rewrite. Output text must read the same as input, just with shorter words in place of longer ones."
-                        : "Tighten wording: remove filler, merge redundant phrases, use shorter synonyms. Preserve wording where possible.";
+                        : "Tighten wording using this ORDERED ladder (v5 micro-compression - apply the EARLIEST step that reaches the target, not the most aggressive): (1) remove repeated context already established elsewhere; (2) replace a phrase with an accurate shorter equivalent; (3) remove unnecessary articles; (4) use a shorter active verb; (5) combine duplicated qualifiers; (6) move context already established elsewhere. NEVER sacrifice grammar, factual precision or readability for line fit. Preserve wording where possible.";
                 r =
                   "table_row" === n.type
                     ? `Compress the Strategic Expertise cell of this single CV table row by approximately ${e}% in ${a}. ${i} Rules:\n- Keep "focus" UNCHANGED exactly as input.\n- Tighten ONLY "expertise".\n- Keep every number, proper noun, certification code, tool name, technical term.\n\nDIMENSION-AWARE TARGET (Strategic Expertise column ≈ 3.36" / 40 chars per line at Calibri 10pt). After compression, hit ONE of these targets exactly:\n  - **1-LINE target**: 32-40 chars (~5-7 words). Fills single line.\n  - **2-LINE target**: 75-82 chars (~12-14 words). Fills line 1 AND line 2 to within ~10 chars of end.\nFORBIDDEN AFTER COMPRESSION: 41-74 chars (half-empty 2nd line) or 83+ chars (wraps to 3 lines). The compress is wasted if the result still falls in a forbidden range — pick the bucket that fits the content best.\n\nReturn ONLY valid JSON in the input shape {focus,expertise,rowIdx,type,id}:\n\n${JSON.stringify(n)}`
                     : "labeled_list_item" === n.type
                       ? `Compress the value ("v") of this single CV sidebar item by approximately ${e}% in ${a}. ${i} Rules:\n- Keep "l" (label) UNCHANGED exactly as input.\n- Tighten ONLY "v" field.\n- Keep every proper noun, tool name, technology, certification code.\nReturn ONLY valid JSON in the input shape {l,v}:\n\n${JSON.stringify(n)}`
-                      : "list_item" === n.type
+                      : "bullets_item" === n.type
+                        ? `Compress the body ("t") of this single CV/cover-letter bullet by approximately ${e}% in ${a}. ${i} Rules:\n- Keep "b" (lead-in label) UNCHANGED exactly as input.\n- Tighten ONLY the "t" field.\n- Keep every number, proper noun, company name, certification code, tool name, technical term.${("undefined" != typeof window && window.__antcvRowFit && window.__antcvRowFit.promptFor((n.b ? n.b + " " : "") + (n.t || ""))) || ""}\nReturn ONLY valid JSON in the input shape {b,t}:\n\n${JSON.stringify(n)}`
+                        : "list_item" === n.type
                         ? `Compress this single CV sidebar item by approximately ${e}% in ${a}. ${i} Keep every proper noun, certification code, tool name, citation marker, year, journal name. Return ONLY valid JSON in the input shape {value:"..."}:\n\n${JSON.stringify(n)}`
                         : "education_item" === n.type
                           ? `Compress this single education entry by approximately ${e}% in ${a}. ${i} Keep "deg" UNCHANGED exactly. Tighten ONLY "sch" field. Preserve year, institution, specialization. Return ONLY valid JSON in the input shape {deg,sch}:\n\n${JSON.stringify(n)}`
@@ -20622,7 +22752,20 @@
                   section_type: r.type,
                 });
             } catch (e) {}
-            const E = v.pass;
+            let E = v.pass;
+            // LINE-DISTRIBUTION-001: measured ACCEPTANCE — if the chosen rewrite still
+            // leaves a runt last line, run ONE bounded corrective pass and keep it only
+            // when it re-measures in-band. Fail-open on any error.
+            try {
+              if (n && "bullets_item" === n.type && "undefined" != typeof window && window.__antcvRowFit) {
+                const __co = window.__antcvRowFit.corrective((E.b ? E.b + " " : "") + (E.t || ""));
+                if (__co) {
+                  const __e2 = await i(__co.pct, __co.mode, l("claude", "openai")).catch(() => null);
+                  if (__e2 && __e2.t && window.__antcvRowFit.inBand((__e2.b ? __e2.b + " " : "") + (__e2.t || "")))
+                    E = __e2;
+                }
+              }
+            } catch (_) {}
             Bi((n) =>
               n.map((n) => {
                 if (n.id !== e) return n;
@@ -20645,13 +22788,19 @@
                             { type: "list_item", value: E.value },
                             { itemIdx: e },
                           )
-                        : "education" === n.type
+                        : ("bullets" === n.type || "rich_block" === n.type)
                           ? Pe(
                               n,
-                              { type: "education_item", sch: E.sch },
+                              { type: "bullets_item", t: E.t },
                               { itemIdx: e },
                             )
-                          : n;
+                          : "education" === n.type
+                            ? Pe(
+                                n,
+                                { type: "education_item", sch: E.sch },
+                                { itemIdx: e },
+                              )
+                            : n;
                   }
                   return Pe(
                     n,
@@ -20668,13 +22817,33 @@
                   ? arguments[0]._iterAttempt
                   : 1,
               k = !1;
+            let _curOrphans = {};
             const C = 7;
             if (S < C)
               try {
                 await new Promise((e) => setTimeout(e, 200 + 100 * (S - 1)));
                 const t = (Pi || []).find((t) => t.id === e);
                 if (t) {
-                  const n = Gi([t]);
+                  const n0 = Gi([t]) || [];
+                  // ANTI-OSCILLATION-001 (owner 2026-07-13, "compression
+                  // oscillation might be blocking generations"): a dead-zone
+                  // bullet (67-105 chars: too long for 1 line, too short to
+                  // fill 2) produces the SAME runt every pass, so the 7x LLM
+                  // loop flaps compressed<->extended and stalls. Only re-flag a
+                  // bullet that is NEW or whose runt actually SHRANK vs the last
+                  // attempt; a stuck bullet is accepted. This can only reduce
+                  // futile iterations, never create a worse state, and still
+                  // lets a genuinely-progressing bullet keep going toward 1 line.
+                  const _prevO =
+                    (arguments[0] && arguments[0]._prevOrphans) || {};
+                  const _oKey = (o) =>
+                    o.sid + "|" + o.field + "|" + (null == o.idx ? "" : o.idx);
+                  _curOrphans = {};
+                  n0.forEach((o) => (_curOrphans[_oKey(o)] = o.words));
+                  const n = n0.filter((o) => {
+                    const p = _prevO[_oKey(o)];
+                    return null == p || o.words < p;
+                  });
                   if (n && n.length > 0) {
                     k = !0;
                     const t = n
@@ -20706,7 +22875,7 @@
                   const o = { ...n };
                   return (delete o[a], t && delete o[e], o);
                 }),
-                ll({ sectionId: e, roleId: t, _iterAttempt: S + 1 })
+                ll({ sectionId: e, roleId: t, _iterAttempt: S + 1, _prevOrphans: _curOrphans })
               );
             alert(
               `✓ Compressed ${R} — ${v.tag} pass, ${v.s.pct.toFixed(1)}% reduction${S > 1 ? ` (after ${S} iterations)` : ""}${v.s.missing ? ` ⚠ ${v.s.missing} number(s) may have dropped, review` : ""}.`,
@@ -20790,7 +22959,7 @@
             throw new Error(
               "Set the AntCV Access Relay Worker URL in Settings → API Keys first.",
             );
-          return D(e) + "/api/prefs";
+          return D(e) + "/api/prefs" + ((window.AntcvJdScope && window.AntcvJdScope.devQ) ? window.AntcvJdScope.devQ() : "");
         },
         dl = async () => {
           et("Loading cloud preferences…");
@@ -20838,6 +23007,12 @@
                   void 0 !== e.geminiModel && At(e.geminiModel || ""),
                   e.language && It(e.language),
                   e.navyColor && _t(e.navyColor),
+                  // NULL-CLEAR-RESTORE-001 (owner 2026-07-05): see the matching
+                  // boot-time cloud-restore block above — an explicit server-side
+                  // null (validateKernelPref's "clear this field") must actually
+                  // clear the local value, not be silently skipped by a falsy check.
+                  null === e.navyColor &&
+                    (u.remove("navyColor"), qe("#283556")),
                   e.photo && (Fn(e.photo), u.set("photo", e.photo)),
                   void 0 !== e.profileDoc &&
                     (So(e.profileDoc || ""),
@@ -20859,15 +23034,20 @@
                   e.lineTargets &&
                     "object" == typeof e.lineTargets &&
                     Fa(e.lineTargets),
+                  null === e.lineTargets && u.remove("lineTargets"),
                   e.fontSizes &&
                     "object" == typeof e.fontSizes &&
                     Kr(e.fontSizes),
+                  null === e.fontSizes && u.remove("fontSizes"),
                   e.styleConfig &&
                     "object" == typeof e.styleConfig &&
                     wa(e.styleConfig),
+                  null === e.styleConfig && u.remove("styleConfig"),
                   e.stylePackage &&
                     (ka(__pkgNorm(e.stylePackage)),
                     u.set("stylePackage", __pkgNorm(e.stylePackage))),
+                  null === e.stylePackage &&
+                    (u.remove("stylePackage"), ka("copenhagen-modern")),
                   "number" == typeof e.cvTableRatio && aa(e.cvTableRatio),
                   "number" == typeof e.clTableRatio && ia(e.clTableRatio),
                   "number" == typeof e.cvSidebarRatio &&
@@ -20884,18 +23064,24 @@
                   e.customStyleConfig &&
                     "object" == typeof e.customStyleConfig &&
                     u.set("customStyleConfig", e.customStyleConfig),
+                  null === e.customStyleConfig &&
+                    u.remove("customStyleConfig"),
                   e.headerItemLoc &&
                     "object" == typeof e.headerItemLoc &&
                     u.set("headerItemLoc", e.headerItemLoc),
+                  null === e.headerItemLoc && u.remove("headerItemLoc"),
                   e.headerItemAlign &&
                     "object" == typeof e.headerItemAlign &&
                     u.set("headerItemAlign", e.headerItemAlign),
+                  null === e.headerItemAlign && u.remove("headerItemAlign"),
                   e.routingOverrides &&
                     "object" == typeof e.routingOverrides &&
                     u.set("routingOverrides", e.routingOverrides),
+                  null === e.routingOverrides && u.remove("routingOverrides"),
                   e.compressPrefs &&
                     "object" == typeof e.compressPrefs &&
                     u.set("compressPrefs", e.compressPrefs),
+                  null === e.compressPrefs && u.remove("compressPrefs"),
                   e.personalInfo && !m())
                 ) {
                   try {
@@ -20999,9 +23185,44 @@
                     }));
                   } catch (_) { return false; }
                 })();
-                var __draftDrift = __staleSamePtr || (__curCo && "unsolicited" !== __curCo && ("" === __rowCo || "unsolicited" === __rowCo));
+                // CROSS-DEVICE-GEN-LEAK-GUARD (owner 2026-07-08, read-from-cloud path):
+                // a foreign-device generation (desktop "Sigma") must not clobber THIS
+                // device's active app (mobile unsolicited). Keep local when the pointer
+                // is foreign-device AND the local app differs. See the cold-restore twin.
+                var __foreignActiveHijack = (function () {
+                  try {
+                    var mine = window.AntcvJdScope && window.AntcvJdScope.deviceId && window.AntcvJdScope.deviceId();
+                    var setter = e && e._pointer_device_id;
+                    var foreign = !!(setter && mine && String(setter) !== String(mine));
+                    return foreign && !!__curCo && __curCo !== __rowCo;
+                  } catch (_) { return false; }
+                })();
+                // PARALLEL-GEN-ISO-001 (read-from-cloud twin of the cold-restore guard):
+                // keep THIS tab's app when the shared pointer names a different app-id (a
+                // parallel tab/device generated it). Same-device parallel tabs share the
+                // device id, so only the app-id catches this. Keep-local is always safe.
+                var __foreignAppId = (function () {
+                  try {
+                    var mine = window.AntcvJdScope && window.AntcvJdScope.getCurrentAppId && window.AntcvJdScope.getCurrentAppId();
+                    var rowId = e && (e.id || e.application_id);
+                    if (!(mine && rowId && String(mine) !== String(rowId))) return false;
+                    // LOAD-EDITOR-UNSOLICITED-001 (kernel-adopt carve-out - read-from-cloud twin
+                    // of the cold-restore guard): a kernel tab (no app in progress) must ADOPT the
+                    // cloud pointer's app unless a FOREIGN device set it. Kill: antcv:disable-tracker-open-adopt.
+                    try {
+                      if (String(mine) === "kernel" && localStorage.getItem("antcv:disable-tracker-open-adopt") !== "1") {
+                        var myDev = window.AntcvJdScope && window.AntcvJdScope.deviceId && window.AntcvJdScope.deviceId();
+                        var setter = e && e._pointer_device_id;
+                        var foreignDev = !!(setter && myDev && String(setter) !== String(myDev));
+                        if (!foreignDev) return false;
+                      }
+                    } catch (_) {}
+                    return true;
+                  } catch (_) { return false; }
+                })();
+                var __draftDrift = __staleSamePtr || __foreignActiveHijack || __foreignAppId || (__curCo && "unsolicited" !== __curCo && ("" === __rowCo || "unsolicited" === __rowCo));
                 if (__draftDrift) {
-                  try { console.log(__staleSamePtr ? "[Read from Cloud] PTR-STALE-GUARD-001: keeping local draft (" + __curCo + ") over a stale same-device pointer (" + __rowCo + ")" : "[Read from Cloud] META-DRIFT-GUARD: keeping tailored draft (" + __curCo + ") over the unsolicited row"); } catch (e) {}
+                  try { console.log(__staleSamePtr ? "[Read from Cloud] PTR-STALE-GUARD-001: keeping local draft (" + __curCo + ") over a stale same-device pointer (" + __rowCo + ")" : __foreignActiveHijack ? "[Read from Cloud] CROSS-DEVICE-GEN-LEAK-GUARD: keeping local app (" + __curCo + ") over a FOREIGN-device pointer (" + __rowCo + ")" : "[Read from Cloud] META-DRIFT-GUARD: keeping tailored draft (" + __curCo + ") over the unsolicited row"); } catch (e) {}
                 } else {
                   if (e.jd_company || e.jd_role)
                     try {
@@ -21028,10 +23249,42 @@
                       });
                     } catch (e) {}
                 }
-                if (e.rationale && "object" == typeof e.rationale)
+                // BRAND-FIT-READBUTTON-PALETTE-001 (register row 80): the Read-button
+                // restore also APPLIES the tracker-sampled palette (occ-1 parity —
+                // BRAND-FIT-OPEN-001 only covered the cold-start restore).
+                if (e.meta && e.meta.styleConfig && "object" == typeof e.meta.styleConfig)
                   try {
-                    bo(e.rationale);
+                    wa(e.meta.styleConfig);
                   } catch (e) {}
+                // BRAND-FIT-OPEN-002: same brand-fit checkbox arming as occ-1.
+                try {
+                  var __bf2 = (e.meta && e.meta.styleConfig && "object" == typeof e.meta.styleConfig) || (e.meta && e.meta.brandV2 && "object" == typeof e.meta.brandV2) || /\n\nBRAND-FIT:/.test(String(e.supporting_context || ""));
+                  // PALETTE-STICK-CLEAR-001: symmetric clear (see __bf1 site) — Read-button restore.
+                  try { window.__antcvBrandFit = !1; localStorage.removeItem("antcv:brandV2"); } catch (_) {}
+                  if (__bf2) {
+                    window.__antcvBrandFit = !0;
+                    try {
+                      var __sc2 = e.meta && e.meta.styleConfig;
+                      var __bv2v = (e.meta && e.meta.brandV2) ? e.meta.brandV2 : (__sc2 && "object" == typeof __sc2 ? { version: 2, slots: { headerBg: __sc2.headerBg, headerInk: __sc2.headerNameColor, sidebarBg: __sc2.sidebarBg, accent: __sc2.accent, aiNoticeColor: __sc2.aiNoticeColor, sloganColor: __sc2.sloganColor, signatureColor: __sc2.signatureColor } } : null);
+                      if (__bv2v) localStorage.setItem("antcv:brandV2", JSON.stringify(__bv2v));
+                    } catch (_) {}
+                    setTimeout(function () {
+                      try {
+                        var c = document.querySelector("input[data-antcv-brandfit]");
+                        if (c && !c.checked) c.checked = !0;
+                      } catch (e) {}
+                    }, 900);
+                  }
+                } catch (e) {}
+                // OPEN-JD-VISIBLE-001: same supporting_context → rationale fold
+                // as the cold-start restore (see occ-1 above).
+                try {
+                  var __rt2 = e.rationale && "object" == typeof e.rationale ? e.rationale : null,
+                    __sc2 = "string" == typeof e.supporting_context && e.supporting_context.trim() ? e.supporting_context : "";
+                  if (__sc2 && (!__rt2 || !String(__rt2.supporting_context || "").trim()))
+                    __rt2 = Object.assign({}, __rt2 || {}, { supporting_context: __sc2 });
+                  if (__rt2) bo(__rt2);
+                } catch (e) {}
                 if ("string" == typeof e.jd_text && e.jd_text) {
                   // 1.50.253 (read-from-cloud path): same unsolicited-row
                   // clamp as the cold-start cloud-restore. When the row is
@@ -21117,10 +23370,31 @@
                     console.log(
                       "[cloud-restore] manual-save sentinel suppressed (not written to Xo)",
                     );
-                  } else
+                  } else if (__foreignDevice2)
                     try {
-                      Vt(__foreignDevice2 ? "" : e.jd_text);
+                      Vt("");
                     } catch (e) {}
+                  else {
+                    // OPEN-JD-VISIBLE-001: same JD-file seeding as the cold-start
+                    // restore (see occ-1) — JD preview over the drop-zone, owner
+                    // signals into the signals textarea.
+                    // JD-REMOVE-STICKY-001: an EXPLICIT "Read from Cloud" click is a
+                    // deliberate re-pull — it overrides a prior ✕ Remove and clears
+                    // the tombstone.
+                    try { localStorage.removeItem("antcv:jdRemoved"); } catch (e) {}
+                    try {
+                      var __jl2 = String((((e.jd_company || "") + (e.jd_company && e.jd_role ? " — " : "") + (e.jd_role || "")).trim()) || "Job description").slice(0, 120);
+                      Dt({ name: __jl2, kind: "restore", size: String(e.jd_text).length, source: "read-button" });
+                      Ft({ text: e.jd_text, method: "restored", pages: 1, fileName: __jl2 });
+                      Un.current = e.jd_text;
+                    } catch (e) {}
+                    try {
+                      var __sm2 = String(e.supporting_context || "").match(/ADDITIONAL SIGNALS \(owner-added\):\s*\n?([\s\S]*?)(?=\n\n[A-Z][A-Z -]{2,}[:(]|$)/);
+                      Vt(__sm2 ? String(__sm2[1] || "").trim() : "");
+                    } catch (e) {
+                      try { Vt(""); } catch (e) {}
+                    }
+                  }
                   // JD-CLOUD-VISIBILITY-001 (owner 2026-06-15): mirror the restored
                   // JD into antcv:lastJdText (cross-machine JD-aware visibility).
                   try { localStorage.setItem("antcv:lastJdText", (__isUnsolicited || __foreignDevice2 || t || n) ? "" : (e.jd_text || "")); } catch (e) {}
@@ -23505,56 +25779,9 @@
               (e) => m({ headline: e }),
               "e.g. Senior Project Manager",
             ),
-            React.createElement(
-              "div",
-              { style: { display: "flex", gap: 6 } },
-              React.createElement(
-                "div",
-                { style: { flex: 1 } },
-                f(
-                  "Location",
-                  s.location,
-                  (e) => m({ location: e }),
-                  "Copenhagen, Denmark",
-                ),
-              ),
-              React.createElement(
-                "div",
-                { style: { flex: 1 } },
-                f(
-                  "Citizenship",
-                  s.citizenship,
-                  (e) => m({ citizenship: e }),
-                  "EU Citizen",
-                ),
-              ),
-            ),
-            f(
-              "Email",
-              s.email,
-              (e) => m({ email: e }),
-              "name@example.com",
-              "email",
-            ),
-            React.createElement(
-              "div",
-              { style: { display: "flex", gap: 6 } },
-              React.createElement(
-                "div",
-                { style: { flex: 1 } },
-                f("Phone", s.phone, (e) => m({ phone: e }), "+45 12 34 56 78"),
-              ),
-              React.createElement(
-                "div",
-                { style: { flex: 1 } },
-                f(
-                  "LinkedIn",
-                  s.linkedin,
-                  (e) => m({ linkedin: e }),
-                  "linkedin.com/in/your-name",
-                ),
-              ),
-            ),
+            // SETTINGS-PERSONAL-DEDUP-001: Location, Citizenship, Email, Phone,
+            // LinkedIn are edited in the "Review & Edit my data" dialog
+            // (antcv-data-export-360.js) — the Settings copies were removed.
             React.createElement(
               "details",
               // PERSONAL-ORDER-002 (owner 2026-06-13, figure 1-7): final order is
@@ -24158,6 +26385,8 @@
             );
         }),
         (_wlhook = "undefined" != typeof window && (window.AntcvFusion = wl)),
+        ("undefined" != typeof window && (window.__antcvRelang = (e, f) => Pr(e, f))),  /* BABEL-FISH-RELANG-001: expose the translate pass so the relang sidecar can re-render content into the ribbon language */
+        ("undefined" != typeof window && (window.__antcvRelangHeadless = (e) => Pr(e, true, true))),  /* BABEL-FISH-HEADLESS-001: modal-free full translate into e — the sidecar/batch use this so a zh (or any) ribbon never stays mixed waiting on a confirm click */
         (window.__antcvGenTrigger = vl = async () => {  /* GEN-BACKGROUND-001 row 38a: expose the generate fn so antcv-gen-memo auto-resumes an interrupted run on foreground */
           var e, t, n, o;
           if (!Bt && !Ut && !Un.current && 0 === Yt.length)
@@ -24193,7 +26422,7 @@
             // bo(null) → yo is falsy → the panel falls to its empty state
             // until the new generation lands a fresh rationale.
             (() => { try { bo(null); } catch (e) {} })(),
-            u.get("kernelShowcaseInProgress", !1) || ($t("generating"), (window.__antcvGenRunning = !0)), // GEN-STATUS-ENDS-EARLY-001: mark in-flight so a re-mount keeps the overlay through tightening
+            (window.__antcvShowcaseRun = u.get("kernelShowcaseInProgress", !1)) || ($t("generating"), (window.__antcvGenRunning = !0)), // GEN-STATUS-ENDS-EARLY-001 + TIGHTEN-IN-GEN-WINDOW-001: stash the showcase-run marker so the tightening tail can keep the overlay up
             (() => {
               try {
                 const e =
@@ -24328,9 +26557,7 @@
               closure: "working",
             }));
           const a = "da" === je,
-            i = a
-              ? "Copenhagen Danish (simple everyday words, hverdagssprog, no buzzwords, short sentences)"
-              : "UK English",
+            i = __langPromptName(je),
             l = da[pa] || da["nordic-minimal"],
             s = a
               ? "Skriv som en dansker skriver professionelt: direkte, konkret og præcist. Undgå buzzwords og anglicismer. Kaldt og faktuelt. Undgå salgsord og ros til dig selv. Testspørgsmål: ville dette sætte lyde naturligt sagt roligt på et møde i København?"
@@ -24475,7 +26702,16 @@
             // restore fills the signals textarea from the active row's jd_text,
             // mirrored in antcv:lastJdText) must not enter the prompt — the
             // "unsolicited CL full of NIL content" leak.
-            const __antcvSigTxt = Un.current || Ut;
+            // OPEN-JD-VISIBLE-001: when Un.current is just the restored JD
+            // (mirrored verbatim in antcv:lastJdText), the "Additional signals"
+            // block must carry the REAL signals textarea (Ut), not echo the JD.
+            const __antcvSigTxt = (() => {
+              try {
+                const t = String(localStorage.getItem("antcv:lastJdText") || "").trim();
+                if (Un.current && t.length >= 30 && String(Un.current).trim() === t) return Ut;
+              } catch (e) {}
+              return Un.current || Ut;
+            })();
             const __antcvSigStale = (() => {
               try {
                 if (c && String(c).trim()) return !1;
@@ -24613,9 +26849,22 @@
                 const live = LIVE && "function" == typeof LIVE.get ? LIVE.get() : null;
                 const CD = window.AntcvClusterDemand;
                 const ci = (live && live.clusterId) || (CD && "function" == typeof CD.classifyJD ? CD.classifyJD() : null);
-                const cl = (live && live.cluster) || (ci && CD && CD.clusters && CD.clusters[ci]);
+                // FUSE (owner 2026-07-13, "fuse the deterministic and research list so
+                // nothing is lost"): UNION the live D1 top-20 with the static deterministic
+                // SEED, so a qualification dropped from one still surfaces from the other.
+                // Live order leads (current market signal); SEED-only items append at the
+                // tail; dedup by normalized text. All temp vars are IIFE-scoped so they
+                // can never collide with the minified mirror's outer scope.
+                const cl = (() => {
+                  const nm = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+                  const seen = new Set(), rows = [];
+                  const add = (q, sh) => { const k = nm(q); if (!k || seen.has(k)) return; seen.add(k); rows.push({ q: String(q), shared: sh || [] }); };
+                  ((live && live.cluster && Array.isArray(live.cluster.top20)) ? live.cluster.top20 : []).forEach((r) => add((r && r.q) || "", (r && r.shared) || []));
+                  (((ci && CD && CD.clusters && CD.clusters[ci]) || {}).top20 || []).forEach((r) => Array.isArray(r) ? add(r[1], (r[2] && r[2] !== "none") ? [r[2]] : []) : add((r && r.q) || "", (r && r.shared) || []));
+                  return rows.length ? { label: (live && live.cluster && live.cluster.label) || ci, top20: rows } : null;
+                })();
                 if (!cl || !Array.isArray(cl.top20) || !cl.top20.length) return "";
-                const it = cl.top20.slice(0, 20).map((r) => (Array.isArray(r) ? String(r[1] || "") : String((r && r.q) || ""))).filter(Boolean);
+                const it = cl.top20.slice(0, 24).map((r) => (Array.isArray(r) ? String(r[1] || "") : String((r && r.q) || ""))).filter(Boolean);
                 if (!it.length) return "";
                 const sharedQ = new Set(cl.top20.filter((r) => !Array.isArray(r) && Array.isArray(r.shared) && r.shared.length).map((r) => String(r.q || "")));
                 const sharedNote = sharedQ.size ? " Qualifications flagged SHARED below are demanded across MULTIPLE clusters - foreground these first, they are the strongest transferable signals: " + Array.from(sharedQ).slice(0, 8).join("; ") + "." : "";
@@ -24645,7 +26894,7 @@
               uo("🤖 ChatGPT drafting (2/3)…");
               const e = [
                   c ? `JOB DESCRIPTION:\n${c}` : "",
-                  ...Yt.filter((e) => "docx" === e.type).map(
+                  ...Yt.filter((e) => e.text && e.text.trim()).map(
                     (e) => `FILE "${e.name}":\n${e.text}`,
                   ),
                   Un.current || Ut
@@ -24769,7 +27018,7 @@
                 __neutralCo +
                 __quickCtx +
                 `You are an expert CV and cover letter writer for ${ie().name || "the user"}.\n${GABRIEL_BG}\nINSTRUCTIONS:\n- ANTI-FABRICATION RULE (highest priority). The candidate's actual background, as captured above and in the source documents, is the ONLY truth. NEVER invent industry experience (pharma, automotive, fintech, medical-device, banking, etc.), years of tenure, certifications, languages, tools, role titles, scope of leadership, or specific named systems that aren't supported by the source.\n  When the JD asks for something the candidate has, but the draft does not yet highlight it: REFRAME the existing experience using vocabulary aligned with the JD. Pull forward the relevant project, decision, or method from the candidate's real history. That is the right move.\n  When the JD asks for something the candidate does NOT have: do not write around it in PROFILE / SELECTED OUTCOMES / WHO I AM / WHY THIS POSITION. Leave the signal unaddressed in those sections. Do not approximate ("exposure to", "familiarity with", "interest in") to cover a gap.\n  HOW I WOULD CONTRIBUTE is the legitimate place to name a real gap explicitly and describe a concrete plan to close it (focused study, hands-on use, applying related experience). Naming the gap there is honest; inventing experience anywhere else is not.\n- SECTION FORMAT PREFERENCES: the candidate may have chosen a preferred display format per section. Supported values are: paragraph, bullets, emoji_bullets, hybrid_1 (intro + plain bullets), hybrid_2 (intro + emoji bullets), hybrid_3 (intro + emoji bullets + closing line), or table (two-column key/value). When such preferences are present (passed in via the user data under stylePrefs.sectionFormats), honor them: emit the section in the chosen shape. For emoji formats (emoji_bullets, hybrid_2, hybrid_3), ALSO return an emojis array parallel to items, one short unicode emoji per item, chosen to fit the content of that line (e.g. 📊 for measurement bullets, 🛠️ for tooling bullets, 🎯 for outcomes, 🏗️ for build/foundation, 🚀 for launch/contribute, ⚖️ for compliance, 📜 for certifications, 🎓 for education). Pick at most one emoji per item; never more. Keep emojis short (1 grapheme cluster). If a section preference is absent, fall back to the section's default type.\n- Cover letter total word count: 450-750 words (count carefully).\n- VOICE & TONE — SCANDINAVIAN PROFESSIONAL (applies regardless of output language).\n The candidate writes in a Scandinavian / Danish professional register at all times. This tone is about HOW they write, not WHICH language they write in. Whether the output is English or Danish, the voice stays the same:\n • Calm, factual, direct. Sentences state what was done — they don't perform.\n • Collaborative, not self-aggrandising. "I worked with the team to ship X" rather than "I single-handedly drove transformative change".\n • Understated confidence. The accomplishments speak for themselves; no need to flag them as impressive.\n • Concrete and specific. Numbers, scope, named systems. Not adjectives about the impact.\n • First-person without bombast. "I led the CCB" not "Led groundbreaking change governance initiatives".\n • Even in English, AVOID American resume-speak energy: no "transformative", "passionate", "dynamic", "cutting-edge", "results-driven", "thought leader", "spearheaded", "championed", "drove change", "took ownership of mission-critical initiatives", "rolled up my sleeves", "wore many hats", "moved the needle".\n • Aim for the energy of a senior Scandinavian engineer writing a memo to colleagues — clear, factual, slightly self-effacing, trusts the reader to recognise good work without it being announced.\n • If you find yourself writing a sentence that would feel out of place in a Danish professional context, rewrite it. Test: would this sound natural said aloud in a calm voice in a meeting in Copenhagen? If no, rewrite.${g}\n- After the bullets, write a closing line that names the specific concrete value the team would gain. Do NOT use the phrase "and that's good because" — that wording is banned. State the value directly.\n- COMPANY AND ROLE: Extract "company" and "role" ONLY from the JOB DESCRIPTION document. The additional signals and attached files may contain references to other companies (competitor CVs, recruiter notes, etc.) — ignore those for the meta.company and meta.role fields. The JD is always the authoritative source for who you are applying to. When a JOB DESCRIPTION is present, meta.company and meta.role MUST be filled with the real company name and role title taken from it — never leave them empty and never output "Unsolicited" when the JD names the employer. Leave meta.company empty ONLY when there is genuinely no JD (a true open/unsolicited application).\n- The CV PROFILE must echo 2-3 key signals from the cover letter.\n- If a hiring manager name appears in the job description or signals, tailor accordingly.\n- EDUCATION section: Render items as a sidebar list aligned LEFT (not centered). Use ONLY the candidate's OWN stored education entries (the STORED EDUCATION list above, when present) — never invent, embellish, or add degrees, institutions, or specialization tails that are not in the stored entry text (GEN-EDU-DEHARDCODE-001, owner 2026-07-03: one candidate's exact degree list was baked in this prompt and leaked onto other candidates). When the candidate has NO stored education, return education_items as an empty array — never fabricate a degree. Include the degree label before the colon in bold. CRITICAL: do NOT add subjects, specializations, or research areas that are not in the stored entries, even if the job description mentions them. The candidate's actual coursework is fixed; tailoring happens through which stored details you surface or trim, not by inventing new ones.\n- EXPERIENCE ROLES — INCLUDE ALL, MARK IRRELEVANT ONES on:false. Same rule as the sidebar: do NOT drop any role from the candidate's work history based on JD relevance. Return EVERY role from personalInfo in experience_roles, newest-first. Set on:true for roles relevant to the job description and on:false for roles not relevant (very early-career or off-domain) — but every role MUST still be present with its real title, company, years, and bullets filled. A hidden role (on:false) keeps its content so the user can toggle it back on in the editor in one click; a DROPPED role forces the user to retype it from memory, which is much worse. NEVER emit an on:false role as an empty or placeholder slot — populate it from the candidate's actual history exactly as a visible role. Only the on flag differs.${__tenseRule}${__langRule}${__clusterRule}${__platformRule}${__brandFitRule}\n- SIDEBAR SECTIONS — INCLUDE ALL ITEMS, MARK IRRELEVANT ONES HIDDEN. NEW RULE (CRITICAL): Do NOT drop sidebar items based on JD relevance. Instead include EVERY item from the candidate's personalInfo (tools, certifications, education, publications, regulatory, additional) in the output, but mark each item with a "hidden" flag: hidden:false (or omit hidden) for items relevant to the job description, hidden:true for items not relevant. Order each list by descending JD relevance — most relevant first, less relevant last. SIDEBAR LINE ECONOMY (owner rule): the sidebar drives the page count — pack it tight. Within each group, order items so LONGER and SHORTER values sit adjacent (they share rendered lines and reduce total line count), hide (hidden:true) JD-irrelevant qualifications and niche tools entirely, and prefer the compressed form of every value; every saved sidebar line moves the CV toward the page target. The user will see all items in the editor and can toggle any back on if you marked them hidden. If you accidentally drop an item, the user has to retype it from memory. This is much worse than including it with hidden:true.\n Per-section guidance for hidden:true vs hidden:false:\n • tools_items — MINIMUM 4 categories REQUIRED, target 5-6 categories. Returning fewer than 4 is a failed generation; do NOT return a single-row tools section. Derive categories from the candidate's actual work history, education, and domain — shape example (category labels and tools MUST come from the candidate's OWN stored data, never copied from this pattern): \"<core craft of the candidate>\" (their 3-4 specialist tools), \"<second craft or platform area>\" (their stack or instruments), \"Project & lifecycle\" (their planning and tracking tools), \"Process & methods\" (their named methods and standards), \"Documentation & reporting\" (their reporting and office tools). Keep visible the categories whose tools appear in or are clearly implied by the job description; mark hidden:true the ones that are clearly off-topic for this role (but STILL include them — the user can toggle back on). Keep the same compressed values for visible items as before (2–4 most relevant tools per category). In a no-JD (unsolicited / kernel) showcase context, include 5-6 categories spanning the candidate's full range with hidden:false on all of them.\n • certifications_items — keep visible the certifications relevant to the job description — judge each stored certification by its OWN domain (a business-analysis certificate for BA roles, a quality or process-improvement certificate for process/quality roles, an industry standard for that industry's roles, a language certificate for roles local to that language's country). Mark hidden:true the others.\n • education_items — ALL degrees stay visible (hidden:false). Even for non-academic roles, the candidate's education is required content. Optional specialization tails follow the existing EDUCATION formatting rules.\n • publications_items — visible (hidden:false) for R&D, nanotechnology, sensors, hardware innovation, academic-publishing JDs. Otherwise mark them hidden:true (do NOT drop them — keep them in the array with hidden:true). PATENT NUMBERS ARE NEVER DROPPED: every patent entry keeps its OWN stored patent number verbatim — compressing a patent line trims wording, never the number.\n • regulatory_items — keep visible the standards/frameworks relevant to the job description; mark hidden:true the others. UNSOLICITED-BREADTH-001: in a no-JD (unsolicited) showcase there is nothing to be "irrelevant" to — keep the candidate's regulatory items VISIBLE (hidden:false) across the groups, showing the full breadth. Do NOT shrink regulatory to one or two rows in unsolicited mode. GROUP SUBHEADINGS rule unchanged: items with {"group":"..."} render as teal subheadings followed by regular {"l":"...","v":"..."} rows. Group names come from the candidate's OWN stored regulatory items (the STORED REGULATORY / STANDARDS list above, when present): use the stored group headings verbatim; if the stored items carry no groups, group the stored standards sensibly by domain. NEVER add a standard or a group taxonomy the candidate has not stored (GEN-REG-DEHARDCODE-001, owner 2026-07-03: one candidate's exact group taxonomy was baked in this prompt and leaked onto other candidates). Use only groups with 2+ visible items, otherwise list visible items flat without groups. When the candidate has NO stored regulatory items, return regulatory_items as an empty array — never fabricate standards.\n  Return shape: [{"group":"..."},{"l":"<standard code>","v":"<short scope>","hidden":false},{"l":"<standard code>","v":"...","hidden":true},...]. If JD is pure business/finance/HR with zero regulatory relevance, every item should be hidden:true (still all present in the array).\n • additional_items — keep visible the items relevant (Languages always visible, Accessibility always visible, others judged on relevance). The Accessibility row MUST state the candidate's OWN stored accessibility need explicitly and factually; NEVER invent one (GEN-ACCESS-DEHARDCODE-001, owner 2026-07-03: a hearing-impaired example baked in this prompt was hallucinated onto other candidates) - when the candidate has no stored accessibility note, OMIT the row entirely; never an unspecified accommodation note. ACCESS-NO-COMMENT-001 (owner 2026-06-19): the CV accessibility row is FIRST-PERSON-FACTUAL — state ONLY the candidate's stored accommodation and what helps them, in their own factual terms. Do NOT append a third-person editorial verdict such as "it has not limited his career" — that is a recommender-style comment ABOUT the candidate, not a CV line; it may appear ONLY in a cover letter where the context fits, NEVER in the CV accessibility row. Do NOT list hobbies here — they belong in interests_items.
- • interests_items — move the candidate's stored hobbies into the INTERESTS section as verb-led bullets in the SAME format as SELECTED OUTCOMES: [{"b":"<verb phrase>","t":"<what the interest involves — one short line>"}]. 2-4 items, drawn ONLY from the stored hobbies; never invent interests. INTERESTS-FILL-001: NEVER leave INTERESTS as the "[Verb] / [what the interest involves]" placeholder — if the candidate has ANY stored hobbies or community activity, populate 2-4 real interest bullets; an unfilled placeholder INTERESTS section is a failed generation. In unsolicited mode LANGUAGES and ACCESSIBILITY must also carry the candidate's real, FULL data (every language with its real level; the candidate's OWN stored accessibility note if one exists - NEVER invent one, and omit/hide ACCESSIBILITY entirely when the candidate has none), never a thinned subset. Example: {"b":"Coaching","t":"junior rugby — weekly sessions as assistant coach"}.\n- ROLE MERGE-OR-SPLIT (when the candidate has multiple consecutive roles at the same company with overlapping/contiguous date ranges). Choose ONE structure that best fits the JD: (A) MERGE into a single role with the combined date span and a combined title (e.g. "System Architect & Change Control Lead | <company> | 2017 - 2025") and the merged bullets — use when the JD is broad/cross-functional; or (B) SPLIT into two roles with DISTINCT, NON-OVERLAPPING titles (e.g. "Change Control Lead | <company> | 2020 - 2025" then "System Architect | <company> | 2017 - 2020") — use when the JD values the role transition. HARD RULE: never output BOTH a merged title AND a separate copy of one of its components. Specifically FORBIDDEN: a role titled "System Architect & Change Control Lead" alongside a second role titled "System Architect" at the same company — that repeats "System Architect" twice and is the exact mistake to avoid. If you MERGE, there is ONE role and the earlier-period role is turned OFF (on:false). If you SPLIT, neither title may contain the other's distinguishing component. NEVER show overlapping copies — pick one structure and turn off the other.\n- PATENTS GO ONLY IN PUBLICATIONS & PATENT, never in an EXPERIENCE role's bullets. Do NOT write "Co-invented Patent No. …" or any patent-number line inside experience_roles bullets — the patent already lives in the publications section. A role bullet may describe the underlying work (the design or engineering change the patent covers, described in plain words) but must not carry the patent number.\n- VOLUNTEER EXPERIENCE AS ROLE (optional). If the candidate has documented volunteer/community work AND the job description values leadership, coaching, sports, community organising, or people operations — promote the volunteer activity to a full role slot. Otherwise keep it as a one-liner in additional_items. Title should include " (Volunteer)" in English or " (Frivilligt arbejde)" in Danish.\n- LANGUAGES (additional_items). Use the languages from the candidate\'s personalInfo. Use the ACTUAL stored proficiency for each language VERBATIM - NEVER inflate or escalate a level for geographic context, and NEVER invent a language that is not in personalInfo.${/\bgabriel\b/i.test(String(ie().name||""))?' For Gabriel the canonical set is exactly: English (native), Hebrew (native), Spanish (professional), Danish (B1). Danish is B1, never "professional" or "fluent", and there is NO German.':""}\n- HOBBIES IS ALWAYS RETAINED VERBATIM. The Hobbies entry from personalInfo.additional must ALWAYS appear in additional_items, copied exactly word-for-word. Do NOT paraphrase, tighten, or "improve" the Hobbies text. The user has chosen the exact wording. Hobbies humanizes the candidate and is appropriate for every role. Other items in Additional Information (Accessibility, Global, Volunteer) are JD-aware: include if relevant, drop if not (Volunteer is a special case — see EXPERIENCE rules above for promotion).\n- LENGTH BUDGETS — write tight from the start. These are HARD caps, not suggestions. Writing longer then compressing wastes tokens.\n  TARGET TOTAL LENGTH: aim for ${u.get("pageBudget", 1.5)} pages of CV content. Tune budgets below toward that target — 1pp uses the lower end of every range, 1.5pp mid, 2pp upper end, 2.5-3pp upper end + add a 2nd line where a sentence reads stronger as two.\n  COVER LETTER TARGET LENGTH: aim for ${u.get("pageBudgetCl", 1)} page(s) for the cover letter (range 0.5-2.5; 0.5 = a short note, 1 = tight, 2.5 = maximum). At 0.5-1 page keep who_content toward the lower end (≈60 words), why_content to a single sentence, and contribute/foundation tight — do NOT pad to fill space; a short, dense cover letter beats a padded one. At 1.5+ pages you may run who_content to the upper end, add the fuller foundation paragraphs, and expand contribute_items detail. Scale the content to the target — never pad to reach it.\n • PROFILE (profile_content): THREE short parts per the PERSONALITY KERNEL's PROFILE STRUCTURE (WHO I AM 1-2 sentences + BODY-MIND 1 sentence + ONE behaviour-based special-capability close as the FINAL sentence), 45-62 words total, approximately 320-400 characters (HARD CAP 400 chars). Every word earns its place. No filler, no throat-clearing. WHO I AM hits the signal hard: role + years + 2-3 JD-relevant anchors (JD-driven) or the broad IT-professional identity (unsolicited). PROFILE-NO-FILLER-001: never fill the profile with vague generic claims - e.g. "has worked with people from many backgrounds", "works well with others", "team player", "strong communicator"; show people-orientation through a CONCRETE BEHAVIOUR instead (e.g. aligns engineers, suppliers and management around one clear decision; adapts the message to the listener). PROFILE-NO-DISABILITY-001: NEVER mention a disability, health condition, hearing impairment or any accessibility need in profile_content, and NEVER use "has not limited his/their career" (or similar) framing anywhere in the profile - that belongs ONLY in the dedicated Accessibility row (CV) or, where it genuinely fits, the cover letter.\n • WORK STYLE (work_style_content): 1-2 sentences, 22-32 words total, approximately 145-200 characters (HARD CAP 200 chars; 1.5-2 lines, never 3-4 lines, never dropped). TWO axes maximum: Axis 1 = decision and work method (information, uncertainty, quality, decisions, written outcomes, risk, practical next steps); Axis 2 = the FINAL clause, which MUST be about people - working with colleagues, aligning engineers / suppliers / customers / management, adapting the message to the listener, building trust, representing the company with care, or keeping goals and next steps clear. The final clause must NOT be about tools, data, systems, documentation, processes or metrics. Behaviour, not adjective labels.\n${v}\n   Note: First-page roles (typically r1-r5) use bullets at the upper end of the range. Continuation roles (r6 onward, including any volunteer or earlier-career slot) carry a HARD MAXIMUM of 3 bullets each (never more, even for an interesting volunteer / community / sports role such as Team Operations Manager; pick the 3 strongest and drop the rest). They use bullets at the lower end — page 2 vertical space is usually tight. How to know which roles go to page 2: count active roles — roles 1 through ~3 are page 1, roles 4+ are page 2. Format: "Verb + concrete object + specific outcome with numbers/tools." Retain all numbers, proper nouns, tools, certifications. BULLET ORDER (SECTION-ORDER-001): within EACH role, order that role's OWN bullets STRONGEST-FIRST - lead with the most QUANTIFIED / highest-impact bullet (a big delta like "250 to 10" outranks a high fraction like "3,400 of 3,600"), then the next strongest. The ROLES themselves stay newest-first (reverse-chronological) - never reorder roles by impact. When a JD is present, a bullet more relevant to the JD outranks a less-relevant bullet of similar impact. Apply the same JD-relevance-then-impact ordering to every list (tools, certifications, regulatory, outcomes). RANK KEY (SECTION-ORDER-001b): the order is set by the STRENGTH of each signal - a specific quantified accomplishment, a concrete scope of work, or a named tool - measured AGAINST THE JOB (how directly it matches the JD needs); a stronger job-match outranks a weaker one. When there is NO JD (unsolicited), rank by general professional importance / common sense for a Scandinavian, English-language CV: breadth and the most universally valued, transferable accomplishments and tools first.\n • PROFILE + WORK STYLE together should occupy about 1/4 of the top of the main column — tight, not sprawling.\n- DIFFERENTIATION RULES — each section answers ONE question. Do NOT let two sections cover the same content from slightly different angles. The reader should never feel they are reading the same idea twice.\n • PROFILE answers WHO I AM PROFESSIONALLY (role, years, the kinds of problems I solve). It is positioning, not evidence. NO numbers, NO named systems, NO specific outcomes — those belong in SELECTED OUTCOMES. Two sentences of identity. Test: if you remove the PROFILE and the rest of the CV still reads coherently, the PROFILE was doing its job (positioning, not duplicating).\n • SELECTED OUTCOMES answers WHAT I HAVE DELIVERED. Five proof points, EACH carrying a concrete METRIC — a number, %, count, timeframe, ratio, or named scale (e.g. "cut cycle time from 250 to 10 days", "led a 7-person team", "10x cost reduction"). A proof point with NO number/metric is not an outcome — replace it or drop it. This is where metrics live. NUMERIC-OUTCOMES-001: at LEAST 4 of the outcomes MUST contain a real digit (a number, %, ratio, count, timeframe, team size, or money amount). If the candidate's history does not support a number for a given outcome, DROP it and surface a different role's quantified result instead — never pad the list with a non-numeric line. When a role bullet implies a magnitude (team size, cycle time, budget, volume, number of suppliers/parts), pull that number forward into the outcome. Verb variety required (see VERB RULE below). Do NOT restate the PROFILE in bullet form, and do NOT restate a PROFESSIONAL EXPERIENCE bullet — an outcome is the QUANTIFIED RESULT of the work, NOT the responsibility the bullet already describes; if an outcome would duplicate a role bullet's wording or topic, rewrite it to lead with the measured result. CONCRETE NO-RESTATE EXAMPLE: if a role bullet already reads "Supervise 7-person task force at the ODM partner", that role's SELECTED OUTCOME must NOT re-describe the same 7-person team or the ODM site again - emit ONLY the distinct measured result drawn from the candidate's own history (a patent, a shipped system, a measured delta). The outcome must add a NEW fact (a number, a patent, a delivered system), never echo a bullet headline.\n • CORE COMPETENCIES answers WHAT KIND OF WORK I CAN OWN. 3-4 focus areas (NOT six - keep it to three or four rows) with 1-2 line descriptions. This is a capability taxonomy, not a list of past achievements. The Strategic Expertise column describes the practice ("CCB, risk assessment, audit-ready documentation" - acronym in the table per ACRONYM-TABLE-001), NOT the outcome ("Cut cycle time by 95%"). Outcomes belong in SELECTED OUTCOMES; capabilities belong here.\n- ACRONYMS IN TABLES (ACRONYM-TABLE-001): inside the CORE COMPETENCIES and WHAT I BRING tables (and any narrow column), use the standard ACRONYM of a long multi-word term to save width - write "CCB" for "Change Control Board" (likewise FMEA, DOE, ASPICE, EMC). The FIRST time that SAME term appears in PROSE (a profile sentence, a WHO I AM line, or an experience bullet), write it in FULL with the acronym in parentheses ONCE - "Change Control Board (CCB)" - so the table acronym is explained. Never leave a table-only acronym unexplained: if "CCB" appears in a table, "Change Control Board (CCB)" must appear exactly once in the prose, and plain "CCB" everywhere after.\n • Anti-repetition test for the CV: if the same noun phrase ("change governance", "KPI reporting", "stakeholder alignment") appears in PROFILE, OUTCOMES, AND CORE COMPETENCIES, you have a repetition problem. Each of these three sections should pull from a slightly different vocabulary register. Use synonyms and varied framing across the three sections.\n • WHO I AM (cl who_content) answers WHO I AM AS A PERSON DOING THIS WORK. A paragraph of 3-5 sentences (not 2-3), about 60-100 words. Cover: years of experience and discipline; the kinds of environments you have come from and what was characteristic about them; how you operate (what problems you take on, what you keep at the centre of your work); and the orientation most relevant to this specific role. This is a NARRATIVE — write it the way you would introduce yourself to a hiring manager before showing them artefacts. NO skill list. NO technology list. NO outcome list. Those are What-I-Bring's job. WHO I AM is the human introduction; WHAT I BRING is the capability map. NO-INLINE-LABEL-001: write who_content as ONLY the paragraph prose — do NOT begin it with a "WHO I AM:" / "<b>WHO I AM:</b>" label, and likewise never prefix why_content with a "WHY …:" label. The section heading already shows the title; an inline repeat is a duplicate the owner does not want. A WHO I AM that runs only one short sentence is too thin — Word readers expect at least four lines of body text in this section. End the paragraph so its FINAL rendered line carries at least 4 words; if the closing sentence would leave a 1-2 word orphan on the last line, trim 1-2 words earlier in the paragraph (never a number or proper noun).\n • WHAT I BRING (cl bring_rows) answers WHAT CAPABILITIES THE EMPLOYER GETS. The 5-row Focus Area / Strategic Expertise table mapped to the JD. This is where skills, methods, and frameworks go. Do NOT prose-write what is already in the table inside WHO I AM.\n • Anti-repetition test for the cover letter: WHO I AM should never name a tool, framework, or methodology that also appears in WHAT I BRING. If you catch yourself listing capabilities in WHO I AM, move them to WHAT I BRING and rewrite WHO I AM as identity prose.\n- VERB RULE — SELECTED OUTCOMES.\n • Use varied, specific verbs in every outcomes_items bullet. Avoid generic "led/managed/oversaw" unless the candidate's memory digest indicates this verb is appropriate to their actual responsibility.\n • SELECTED OUTCOMES (outcomes_items) — 5 to 12 BULLETS. Aim for ONE strong QUANTIFIED outcome anchored to EACH major role the candidate has, so the per-role "Results" view covers EVERY role (including page-2 roles) — 5 minimum, 12 maximum. The candidate's full history can decompose to ~11 distinct roles (e.g. system architect, change-control lead, CRM/sys-admin split, research/teaching assistant, electro-optics engineer, team lead, security guard, volunteer/frivilligt arbejde) — emit one outcome per active role so EVERY role, including page-2 and earlier-career ones, carries a Result. RANK by impact (concrete numbers > scope/scale > named systems > generic process) and MERGE adjacent ones ONLY when they share a theme AND belong to the same role; never collapse two different roles into one outcome. The output JSON array MUST have 5–12 elements. Returning more than 12 will be trimmed by signal density — so YOU pick the best 5–12 yourself, one per role where the candidate's history supports it.\n • SELECTED OUTCOMES (outcomes_items) — VERB VARIETY REQUIRED. Each bullet must start with a different leading verb than the one before it. Approved verbs (use a varied mix — never repeat the same verb on consecutive bullets, and never use one verb for more than 2 of the 5 bullets total): Owned, Built, Ran, Designed, Architected, Drove, Delivered, Implemented, Established, Shipped, Reduced, Cut, Scaled, Mapped, Translated, Coordinated, Negotiated, Resolved, Investigated, Validated, Qualified, Authored, Chaired, Guided, Mentored, Restructured, Initiated, Configured, Specified, Directed, Supervised. Pick the verb that most accurately describes the action — DO NOT default to "Directed" or "Supervised" for everything. The 5 bullets together should read with verb variety, not as a list of identical openings.\n${x}\n • If the original draft used "Led", rewrite the bullet to start with the most accurate verb from the approved list above, preserving every number, tool name, certification, and proper noun.\n- ORPHAN RULE: Every paragraph and bullet in the MAIN COLUMN must have >=4 words on its final rendered line (~480px Calibri 11px). Shorten orphans with shorter synonyms or removing filler — never remove numbers, proper nouns, technical terms.\n- DANISH-MARKET ENGLISH WORD CHOICE (DK-ENGLISH-001): when the output language is ENGLISH (Danish / Nordic recruiters read these), several correct English words read as aggressive, self-promotional, inflated, or ambiguous in Denmark. Prefer the softer, concrete alternative; keep all numbers, tools and proper nouns. REMOVE ENTIRELY (empty recruiter filler): "dynamic". AVOID -> PREFER: discussed -> reviewed / clarified / agreed / presented; challenged -> tested assumptions / questioned gaps / identified risks; argued -> made the case for / recommended; defended -> explained / justified / supported with data; pushed -> moved forward / followed up; demanded -> requested / specified / set requirements; enforced -> applied / checked / followed up on; controlled -> monitored / tracked / checked; owned -> was responsible for / handled / coordinated; managed -> coordinated / planned / supervised technically; led -> coordinated / guided / took technical lead on; supervised -> "supervised technical work" / "coordinated engineering activities" (never bare "supervised", which implies formal line management); influenced -> contributed to / shaped / recommended; evangelized -> introduced / explained / promoted internally; sold -> presented the case for / gained agreement; promoted -> introduced / supported adoption of; aggressive -> ambitious / fast / demanding; ambitious -> "tight timeline" / "clear target" / "high technical bar"; passionate -> interested in / motivated by / focused on; impactful -> state the actual result; strategic -> name the decision, roadmap or trade-off; stakeholder -> the concrete party (customer, supplier, QA, production, management, hiring manager); robust -> "stable under X" / "passed Y" / "reduced failure risk"; negotiated -> agreed terms / clarified scope / balanced constraints; compromised -> balanced / traded off / agreed a middle option (NEVER "compromised" - in Danish-English it reads as "damaged"); eventually -> finally / later / in the end (Danes hear "eventuelt" = possibly); actual -> real / current / specific (Danes hear "aktuel" = current). Danish output uses natural Danish and is exempt.\n- PUNCTUATION DASH RULE: use the plain hyphen "-" everywhere — year ranges ("2020 - 2025"), two-part compressions, table separators. NEVER output an em dash ("—") in ANY generated value; it is a banned token and forces a rewrite.\n- Rationale: genuine assessment, real gaps honestly stated.\n- CORE COMPETENCIES table (core_comp_rows) — table is 4.8" wide; Focus Area column ≈ 1.44"; Strategic Expertise column ≈ 3.36".\n • **FOCUS AREA**: 1-3 words, 17 chars max. Examples: "Change governance", "EO system validation", "KPI reporting", "Requirements traceability". Forbidden: generic ("problem solving", "leadership", "communication").\n${E}\n • Forbidden: vague words, repeated buzzwords. Use ChatGPT draft as primary vocabulary source where available.\n- WHAT I BRING table (bring_rows) — CL table is 6.0" wide; Strategic Expertise column ≈ 4.2". Each Strategic Expertise cell is a HARD CAP of ~52 characters (count them - this is the USABLE text AFTER the cell left/right edge padding ~5pt per side; do NOT fill the full column width or it wraps) and MUST fit ONE rendered line. If a cell would exceed ~52 characters, cut a clause or use shorter words; NEVER wrap to a 2nd line. GOOD (49 ch): "Requirements traceability and trade-off analysis." TOO LONG (98 ch, FORBIDDEN): "Requirements traceability, trade-off analysis, and supplier coordination for electro-optical systems." Keep every row to ONE tight line.\n • **FOCUS AREA**: 1-3 words, max 5. Same standard as core_comp. BRING-DISTINCT-001: the WHAT I BRING focus areas MUST NOT reuse the CORE COMPETENCIES focus-area names or cover the same ground — never put a shared label such as "Validation & Compliance" or "Technical-Commercial Evaluation" in BOTH tables. CORE COMPETENCIES is a capability taxonomy (what work I can own); WHAT I BRING is the employer-facing value mapped to the target (what they get). Use different words AND a different angle for every bring row; if a bring row would duplicate a core_comp row, replace it with a distinct capability.\n${S}\n- HOW I WOULD CONTRIBUTE structure (contribute_intro + contribute_items + contribute_closing): MANDATORY STRUCTURE:\n contribute_intro: a SHORT one-line lead-in that ENDS WITH A COLON - HARD CAP ~70 characters so it NEVER wraps to a second line (examples: "My first priorities here would be:" / "If a role fits, I would focus on:"). Do NOT pack the domain gap into it (that belongs in who/why); keep it to ONE rendered line.\n contribute_items: 4 bullets. Each bullet must describe a CONCRETE ACTION with a CLEAR MEASURABLE OUTCOME. CONTRIBUTE-ONE-LINE-001: each bullet is a HARD CAP of ~78 characters and MUST fit ONE rendered line INCLUDING its bullet marker and indent - the marker + indent eat ~12 characters of the line, so do NOT write to the full text width. If a bullet would exceed ~78 characters, cut a clause or use shorter words; NEVER let a contribute bullet wrap to a 2nd line. Forbidden: vague wording, generic verbs (coordinate, support, assist), or bullets without a stated result. The 4 bullets together must follow this embedded approach — weave these principles in naturally, do NOT state them as a list:\n  • Start fast: learn the current setup, tools, and main flows before proposing anything. Real impact starts with understanding how the team and users experience the work today.\n  • Map before changing: identify the 1-2 highest-leverage gaps in the current process (not the most visible ones — the ones where a small fix removes a big drag).\n  • Turn insight into focused action: each bullet should describe a specific action tied to a specific outcome for the team or product, not a general ambition.\n  • Measure the change: where possible, each bullet should imply a metric or a before/after state the team can observe.\n${R}\n contribute_closing: ONE non-bulleted closing line that follows the bullets. Keep it to ONE sentence, ~120 characters max - tight at the sentence level, so trim every spare word. Shape: "My aim is to help [Company] [single concrete scope] - focused on what the team gains." State ONE concrete scope, then stop. Do NOT stack adjectives ("clear, reviewable, and practical"), do NOT chain two value clauses, do NOT use an em dash. This is a SEPARATE field from contribute_items (NOT a bullet).\n- WHY THIS POSITION / WHY YOUR COMPANY (why_content): 1-2 sentences on fit. HEADING BY CONTEXT (WHY-TITLE-CONTEXT-001): when a JOB DESCRIPTION is present (a specific role) the section heading is "WHY THIS POSITION"; for a true unsolicited application (no JD) the heading NAMES THE TARGET'S NATURE per case — "WHY YOUR COMPANY", "WHY YOUR INSTITUTE", or "WHY YOUR ORGANISATION" (a research institute is an institute, an NGO/public body an organisation, a firm a company), defaulting to "WHY YOUR COMPANY" when unsure. The sentence MUST be tailored to the specific target — vary it, never a boilerplate fit line. Match the output language. Do NOT also repeat the heading as an inline bold label at the start of the paragraph (no "<b>WHY …:</b>" prefix) — the heading already shows it. Do NOT pin the candidate to one narrow specialty — NEVER write "the work I do best: <one narrow niche>" or frame the candidate as only a single-niche specialist. Frame the fit around the BREADTH the stored background actually shows (cross-disciplinary product / systems / process strengths from the whole work history), mapped to what the company or role actually needs.\n- FOUNDATION (foundation_hands_on + foundation_professionally): Two paragraphs describing HOW the candidate works — their working style, discipline, and approach — NOT a list of tools, technologies, degrees, or certifications.\n • foundation_hands_on: 1–2 SHORT sentences, MAX ~155 characters / 2 rendered lines (trim 2-3 words rather than spill onto a 3rd line) - their hands-on practice and how they operate day-to-day. Example of good: "I start by framing the decision — writing down the question, the criteria, and what would count as a good-enough answer. Then I build the smallest prototype that exposes the real risk, not the imagined one." Example of BAD (do NOT write this way): "Python, MATLAB, LabVIEW, Jira, Confluence, Six Sigma Black Belt." That's a tool list, which belongs in TOOLS & METHODS, not here.\n • foundation_professionally: 1–2 sentences about how they operate in a professional/team setting — how they make decisions visible, how they bring others along, how they handle trade-offs. Example of good: "I keep decisions and their rationale in the open — in a shared doc or a short meeting note — so anyone joining later can see what was decided and why. When a trade-off needs to be made, I surface it early rather than smuggling it in." Example of BAD: "MBA from [Business School], M.Sc. from [University], 15+ years experience." That's a credential list, which belongs in EDUCATION/PROFILE, not here.\n Both paragraphs must use first-person ("I"), be specific, and describe BEHAVIOUR not CREDENTIALS. If you catch yourself listing nouns (tools, degrees, standards), stop and rewrite as a verb-driven sentence about the candidate's way of working.\n- CLOSURE LINE (closure_content): Write 1–2 confident, specific sentences. Use this structure: "I would welcome the chance to talk through how I could support [exact company name from JD] in [position/department] by contributing to [relevant scope of work — be specific about what that company does]." Avoid all formulaic phrases. BANNED WORD (English output only): never use the word "discuss" in English prose — to Danish / Scandinavian readers it reads as urging or pressuring; use "talk through", "explore", "go through", or "a conversation about" instead. (Danish output may use "drøfte" / "tale om" normally.) In Danish: "Jeg vil meget gerne drøfte, hvordan jeg konkret kan bidrage til [company]s arbejde med [scope] — og jeg modtager gerne en invitation til samtale." MUST match output language exactly. Never mix languages.${a ? "\n\n🇩🇰 FINAL LANGUAGE CHECK BEFORE OUTPUTTING: Reread your draft. Every value that is not a proper noun MUST be in Danish. If you see English sentences, translate them now. The schema below shows English example values for clarity ONLY — your actual values must be Danish." : ""}\n\n⚠️ CRITICAL OUTPUT REQUIREMENT — EVERY cl_overrides FIELD MUST BE FILLED.\nThe schema below shows EXAMPLE shapes. Marker strings like "FILL_who_content_here", "FILL_why_content_here", "FILL_foundation_hands_on_here", "FILL_foundation_professionally_here", "FILL_closure_content_here" are placeholders you MUST REPLACE with real prose content following the instructions above. NEVER return an empty string ""  for any cl_overrides field. NEVER return a marker string verbatim. NEVER omit a field. If you are about to return an empty string or a marker, instead write real grounded content using the candidate's actual experience. An empty CL field is a failed generation. EVERY cv_overrides field MUST ALSO be fully written: profile_content and work_style_content are REQUIRED — NEVER return an empty string or a bracketed placeholder for either. work_style_content MUST be 1-2 real sentences (it renders inline after a bold "Work style:" label, so an empty value drops the label). In an UNSOLICITED draft (no JD) profile_content's FIRST sentence MUST be the candidate's broad professional identity as the STORED profile and history support it, NEVER a narrow specialist opener (GEN-PROFILE-001). An empty PROFILE or WORK STYLE is a failed generation.\n\nReturn ONLY valid JSON (no markdown):\n{"meta":{"company":"<EXACT employer name copied from the JOB DESCRIPTION — REQUIRED when a JD is present; empty string ONLY for a true no-JD unsolicited run>","role":"<EXACT role title copied from the JOB DESCRIPTION — REQUIRED when a JD is present; empty string ONLY for a true no-JD unsolicited run>","subtitle":"Role • Area • Area","cl_slogan":"<COVER-LETTER SLOGAN - a PERSONAL, first-person statement (3-10 words) connecting the candidate's OWN background or interests to THIS role, professional yet personable. Draw on the candidate's real stored interests/experience (e.g. a sports background for a sports-tech company). Pattern: 'As a rugby player and former hockey player, I make hardware platforms work across sports.' NEVER a copy of the subtitle/specialization, NEVER a bullet-separated keyword list, no buzzwords. Empty string ONLY for a true no-JD unsolicited run>","greeting":"Dear X,","opening":"Opening."},"cv_overrides":{"profile_content":"","work_style_content":"","core_comp_rows":[["Focus","Exp"],["Focus","Exp"],["Focus","Exp"],["Focus","Exp"]],"outcomes_items":[{"b":"B","t":"t"},{"b":"B","t":"t"},{"b":"B","t":"t"},{"b":"B","t":"t"},{"b":"B","t":"t"}],"experience_roles":[{"id":"r1","title":"<USE CANDIDATE'S MOST RECENT ROLE TITLE>","company":"<USE CANDIDATE'S MOST RECENT COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet from candidate's history>","<bullet>","<bullet>"]},{"id":"r2","title":"<NEXT ROLE TITLE>","company":"<NEXT COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet>","<bullet>","<bullet>"]},{"id":"r3","title":"<ROLE TITLE>","company":"<COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet>","<bullet>"]},{"id":"r4","title":"<ROLE TITLE>","company":"<COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet>","<bullet>"]},{"id":"r5","title":"<ROLE TITLE>","company":"<COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet>","<bullet>"]},{"id":"r6","title":"<OLDEST ROLE TO INCLUDE>","company":"<COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet>","<bullet>"]},{"id":"r7","on":false,"bullets":["<unused slot>"]},{"id":"r8","on":false,"bullets":["<unused slot>"]},{"id":"r9","on":false,"bullets":["<unused slot>"]},{"id":"r10","on":false,"bullets":["<unused slot>"]}],"tools_items":[{"l":"Cat","v":"tools"},{"l":"Cat","v":"tools"},{"l":"Cat","v":"tools"},{"l":"Cat","v":"tools"},{"l":"Cat","v":"tools"}],"certifications_items":["cert1","cert2"],"education_items":[{"deg":"<HIGHEST DEGREE>","sch":"<INSTITUTION, brief detail>"}],"publications_items":["pub1 or empty array"],"regulatory_items":[{"group":"Group Name"},{"l":"CODE","v":"description"}],"additional_items":[{"l":"Languages","v":"<candidate's languages from memory digest, comma-separated, native/professional/B1 etc>"},{"l":"Accessibility","v":"<must say explicitly the request is as a the candidate's own stored accessibility need, factual and first-person; omit row when no accessibility item is stored - never invent one>"}]},"cl_overrides":{"who_content":"FILL_who_content_here_3_to_5_sentence_narrative_60_to_100_words","bring_rows":[["Need from JD/company","Matching action / evidence / result"],["need","matching action"],["need","matching action"],["need","matching action"]],"why_content":"FILL_why_content_here_1_to_2_sentences_about_role_fit","contribute_intro":"My immediate priority would be to close the gap in [gap], through focused study and hands-on use. Then I would focus on:","contribute_items":["b1","b2","b3","b4"],"contribute_closing":"My aim is to help [Company] [single concrete scope] - focused on what the team gains.","foundation_hands_on":"FILL_foundation_hands_on_here_1_to_2_sentences_about_daily_practice","foundation_professionally":"FILL_foundation_professionally_here_1_to_2_sentences_about_team_setting","closure_content":"FILL_closure_content_here_1_to_2_sentence_closing_per_instructions"},"rationale":{"fit_summary":"1-2 sentence honest overall fit.","top_fit_points":["fit 1","fit 2","fit 3"],"gaps":["gap 1","gap 2"],"tailoring_decisions":"Key tailoring choices made.","cover_letter_strategy":"Why this angle.","red_flags":["A JD-side risk/caveat worth flagging (vague comp, imminent or passed deadline, unrealistic skill mix, no recruiter contact). [] if none."],"questions_in_jd":[{"question":"A question the JD explicitly asks the candidate to answer (empty array if none).","suggested_answer":"A short answer grounded ONLY in the candidate data, else [needs candidate input on X].","grounded":true}],"assumptions":["An assumption made when claiming fit or proposing to close a gap — state it plainly; honest framing."],"confidence_notes":[{"text":"A specific drafted CV/CL sentence.","confidence":0.0,"issue":"Why it is weakly grounded in the candidate data; null when well-grounded."}],"recommendations":["A concrete, honest action to strengthen this application (cite adjacent experience as adjacent, never as held)."],"detected_language":"ISO 639-1 code of the JD (en, da, sv, de, fr, es, ...).","supporting_context":"Role-specific tips or signals from the JD page that apply ONLY to this role (e.g. hiring manager preferences, team migrations). Empty string if none. Not facts about the candidate."}}`;
+ • interests_items — move the candidate's stored hobbies into the INTERESTS section as verb-led bullets in the SAME format as SELECTED OUTCOMES: [{"b":"<verb phrase>","t":"<what the interest involves — one short line>"}]. 2-4 items, drawn ONLY from the stored hobbies; never invent interests. INTERESTS-FILL-001: NEVER leave INTERESTS as the "[Verb] / [what the interest involves]" placeholder — if the candidate has ANY stored hobbies or community activity, populate 2-4 real interest bullets; an unfilled placeholder INTERESTS section is a failed generation. In unsolicited mode LANGUAGES and ACCESSIBILITY must also carry the candidate's real, FULL data (every language with its real level; the candidate's OWN stored accessibility note if one exists - NEVER invent one, and omit/hide ACCESSIBILITY entirely when the candidate has none), never a thinned subset. Example: {"b":"Coaching","t":"junior rugby — weekly sessions as assistant coach"}.\n- ROLE MERGE-OR-SPLIT (when the candidate has multiple consecutive roles at the same company with overlapping/contiguous date ranges). Choose ONE structure that best fits the JD: (A) MERGE into a single role with the combined date span and a combined title (e.g. "System Architect & Change Control Lead | <company> | 2017 - 2025") and the merged bullets — use when the JD is broad/cross-functional; or (B) SPLIT into two roles with DISTINCT, NON-OVERLAPPING titles (e.g. "Change Control Lead | <company> | 2020 - 2025" then "System Architect | <company> | 2017 - 2020") — use when the JD values the role transition. HARD RULE: never output BOTH a merged title AND a separate copy of one of its components. Specifically FORBIDDEN: a role titled "System Architect & Change Control Lead" alongside a second role titled "System Architect" at the same company — that repeats "System Architect" twice and is the exact mistake to avoid. If you MERGE, there is ONE role and the earlier-period role is turned OFF (on:false). If you SPLIT, neither title may contain the other's distinguishing component. NEVER show overlapping copies — pick one structure and turn off the other.\n- PATENTS GO ONLY IN PUBLICATIONS & PATENT, never in an EXPERIENCE role's bullets. Do NOT write "Co-invented Patent No. …" or any patent-number line inside experience_roles bullets — the patent already lives in the publications section. A role bullet may describe the underlying work (the design or engineering change the patent covers, described in plain words) but must not carry the patent number.\n- VOLUNTEER EXPERIENCE AS ROLE (optional). If the candidate has documented volunteer/community work AND the job description values leadership, coaching, sports, community organising, or people operations — promote the volunteer activity to a full role slot. Otherwise keep it as a one-liner in additional_items. Title should include " (Volunteer)" in English or " (Frivilligt arbejde)" in Danish.\n- LANGUAGES (additional_items). Use the languages from the candidate\'s personalInfo. Use the ACTUAL stored proficiency for each language VERBATIM - NEVER inflate or escalate a level for geographic context, and NEVER invent a language that is not in personalInfo.${/\bgabriel\b/i.test(String(ie().name||""))?' For Gabriel the canonical set is exactly: English (native), Hebrew (native), Spanish (professional), Danish (B1). Danish is B1, never "professional" or "fluent", and there is NO German.':""}\n- HOBBIES IS ALWAYS RETAINED VERBATIM. The Hobbies entry from personalInfo.additional must ALWAYS appear in additional_items, copied exactly word-for-word. Do NOT paraphrase, tighten, or "improve" the Hobbies text. The user has chosen the exact wording. Hobbies humanizes the candidate and is appropriate for every role. Other items in Additional Information (Accessibility, Global, Volunteer) are JD-aware: include if relevant, drop if not (Volunteer is a special case — see EXPERIENCE rules above for promotion).\n- LENGTH BUDGETS — write tight from the start. These are HARD caps, not suggestions. Writing longer then compressing wastes tokens.\n  TARGET TOTAL LENGTH: aim for ${u.get("pageBudget", 1.5)} pages of CV content. Tune budgets below toward that target — 1pp uses the lower end of every range, 1.5pp mid, 2pp upper end, 2.5-3pp upper end + add a 2nd line where a sentence reads stronger as two.\n  COVER LETTER TARGET LENGTH: aim for ${u.get("pageBudgetCl", 1)} page(s) for the cover letter (range 0.5-2.5; 0.5 = a short note, 1 = tight, 2.5 = maximum). At 0.5-1 page keep who_content toward the lower end (≈60 words), why_content to a single sentence, and contribute/foundation tight — do NOT pad to fill space; a short, dense cover letter beats a padded one. At 1.5+ pages you may run who_content to the upper end, add the fuller foundation paragraphs, and expand contribute_items detail. Scale the content to the target — never pad to reach it.\n • PROFILE (profile_content): THREE short parts per the PERSONALITY KERNEL's PROFILE STRUCTURE (WHO I AM 1-2 sentences + BODY-MIND 1 sentence + ONE behaviour-based special-capability close as the FINAL sentence), 45-62 words total, approximately 320-400 characters (HARD CAP 400 chars). Every word earns its place. No filler, no throat-clearing. WHO I AM hits the signal hard: role + years + 2-3 JD-relevant anchors (JD-driven) or the broad IT-professional identity (unsolicited). PROFILE-NO-FILLER-001: never fill the profile with vague generic claims - e.g. "has worked with people from many backgrounds", "works well with others", "team player", "strong communicator"; show people-orientation through a CONCRETE BEHAVIOUR instead (e.g. aligns engineers, suppliers and management around one clear decision; adapts the message to the listener). PROFILE-NO-DISABILITY-001: NEVER mention a disability, health condition, hearing impairment or any accessibility need in profile_content, and NEVER use "has not limited his/their career" (or similar) framing anywhere in the profile - that belongs ONLY in the dedicated Accessibility row (CV) or, where it genuinely fits, the cover letter.\n • WORK STYLE (work_style_content): 1-2 sentences, 22-32 words total, approximately 145-200 characters (HARD CAP 200 chars; 1.5-2 lines, never 3-4 lines, never dropped). TWO axes maximum: Axis 1 = decision and work method (information, uncertainty, quality, decisions, written outcomes, risk, practical next steps); Axis 2 = the FINAL clause, which MUST be about people - working with colleagues, aligning engineers / suppliers / customers / management, adapting the message to the listener, building trust, representing the company with care, or keeping goals and next steps clear. The final clause must NOT be about tools, data, systems, documentation, processes or metrics. Behaviour, not adjective labels.\n${v}\n   Note: First-page roles (typically r1-r5) use bullets at the upper end of the range. Continuation roles (r6 onward, including any volunteer or earlier-career slot) carry a HARD MAXIMUM of 3 bullets each (never more, even for an interesting volunteer / community / sports role such as Team Operations Manager; pick the 3 strongest and drop the rest). They use bullets at the lower end — page 2 vertical space is usually tight. How to know which roles go to page 2: count active roles — roles 1 through ~3 are page 1, roles 4+ are page 2. Format: "Verb + concrete object + specific outcome with numbers/tools." Retain all numbers, proper nouns, tools, certifications. BULLET ORDER (SECTION-ORDER-001): within EACH role, order that role's OWN bullets STRONGEST-FIRST - lead with the most QUANTIFIED / highest-impact bullet (a big delta like "250 to 10" outranks a high fraction like "3,400 of 3,600"), then the next strongest. The ROLES themselves stay newest-first (reverse-chronological) - never reorder roles by impact. When a JD is present, a bullet more relevant to the JD outranks a less-relevant bullet of similar impact. Apply the same JD-relevance-then-impact ordering to every list (tools, certifications, regulatory, outcomes). RANK KEY (SECTION-ORDER-001b): the order is set by the STRENGTH of each signal - a specific quantified accomplishment, a concrete scope of work, or a named tool - measured AGAINST THE JOB (how directly it matches the JD needs); a stronger job-match outranks a weaker one. When there is NO JD (unsolicited), rank by general professional importance / common sense for a Scandinavian, English-language CV: breadth and the most universally valued, transferable accomplishments and tools first.\n • PROFILE + WORK STYLE together should occupy about 1/4 of the top of the main column — tight, not sprawling.\n- DIFFERENTIATION RULES — each section answers ONE question. Do NOT let two sections cover the same content from slightly different angles. The reader should never feel they are reading the same idea twice.\n • PROFILE answers WHO I AM PROFESSIONALLY (role, years, the kinds of problems I solve). It is positioning, not evidence. NO numbers, NO named systems, NO specific outcomes — those belong in SELECTED OUTCOMES. Two sentences of identity. Test: if you remove the PROFILE and the rest of the CV still reads coherently, the PROFILE was doing its job (positioning, not duplicating).\n • SELECTED OUTCOMES answers WHAT I HAVE DELIVERED. Five proof points, EACH carrying a concrete METRIC — a number, %, count, timeframe, ratio, or named scale (e.g. "cut cycle time from 250 to 10 days", "led a 7-person team", "10x cost reduction"). A proof point with NO number/metric is not an outcome — replace it or drop it. This is where metrics live. NUMERIC-OUTCOMES-001: at LEAST 4 of the outcomes MUST contain a real digit (a number, %, ratio, count, timeframe, team size, or money amount). If the candidate's history does not support a number for a given outcome, DROP it and surface a different role's quantified result instead — never pad the list with a non-numeric line. When a role bullet implies a magnitude (team size, cycle time, budget, volume, number of suppliers/parts), pull that number forward into the outcome. Verb variety required (see VERB RULE below). Do NOT restate the PROFILE in bullet form, and do NOT restate a PROFESSIONAL EXPERIENCE bullet — an outcome is the QUANTIFIED RESULT of the work, NOT the responsibility the bullet already describes; if an outcome would duplicate a role bullet's wording or topic, rewrite it to lead with the measured result. CONCRETE NO-RESTATE EXAMPLE: if a role bullet already reads "Supervise 7-person task force at the ODM partner", that role's SELECTED OUTCOME must NOT re-describe the same 7-person team or the ODM site again - emit ONLY the distinct measured result drawn from the candidate's own history (a patent, a shipped system, a measured delta). The outcome must add a NEW fact (a number, a patent, a delivered system), never echo a bullet headline.\n • CORE COMPETENCIES answers WHAT KIND OF WORK I CAN OWN. 3-4 focus areas (NOT six - keep it to three or four rows) with 1-2 line descriptions. This is a capability taxonomy, not a list of past achievements. The Strategic Expertise column describes the practice ("CCB, risk assessment, audit-ready documentation" - acronym in the table per ACRONYM-TABLE-001), NOT the outcome ("Cut cycle time by 95%"). Outcomes belong in SELECTED OUTCOMES; capabilities belong here.\n- ACRONYMS IN TABLES (ACRONYM-TABLE-001): inside the CORE COMPETENCIES and WHAT I BRING tables (and any narrow column), use the standard ACRONYM of a long multi-word term to save width - write "CCB" for "Change Control Board" (likewise FMEA, DOE, ASPICE, EMC). The FIRST time that SAME term appears in PROSE (a profile sentence, a WHO I AM line, or an experience bullet), write it in FULL with the acronym in parentheses ONCE - "Change Control Board (CCB)" - so the table acronym is explained. Never leave a table-only acronym unexplained: if "CCB" appears in a table, "Change Control Board (CCB)" must appear exactly once in the prose, and plain "CCB" everywhere after.\n • Anti-repetition test for the CV: if the same noun phrase ("change governance", "KPI reporting", "stakeholder alignment") appears in PROFILE, OUTCOMES, AND CORE COMPETENCIES, you have a repetition problem. Each of these three sections should pull from a slightly different vocabulary register. Use synonyms and varied framing across the three sections.\n • WHO I AM (cl who_content) answers WHO I AM AS A PERSON DOING THIS WORK. A paragraph of 3-5 sentences (not 2-3), about 60-100 words. Cover: years of experience and discipline; the kinds of environments you have come from and what was characteristic about them; how you operate (what problems you take on, what you keep at the centre of your work); and the orientation most relevant to this specific role. This is a NARRATIVE — write it the way you would introduce yourself to a hiring manager before showing them artefacts. NO skill list. NO technology list. NO outcome list. Those are What-I-Bring's job. WHO I AM is the human introduction; WHAT I BRING is the capability map. NO-INLINE-LABEL-001: write who_content as ONLY the paragraph prose — do NOT begin it with a "WHO I AM:" / "<b>WHO I AM:</b>" label, and likewise never prefix why_content with a "WHY …:" label. The section heading already shows the title; an inline repeat is a duplicate the owner does not want. A WHO I AM that runs only one short sentence is too thin — Word readers expect at least four lines of body text in this section. End the paragraph so its FINAL rendered line carries at least 4 words; if the closing sentence would leave a 1-2 word orphan on the last line, trim 1-2 words earlier in the paragraph (never a number or proper noun).\n • WHAT I BRING (cl bring_rows) answers WHAT CAPABILITIES THE EMPLOYER GETS. The 5-row Focus Area / Strategic Expertise table mapped to the JD. This is where skills, methods, and frameworks go. Do NOT prose-write what is already in the table inside WHO I AM.\n • Anti-repetition test for the cover letter: WHO I AM should never name a tool, framework, or methodology that also appears in WHAT I BRING. If you catch yourself listing capabilities in WHO I AM, move them to WHAT I BRING and rewrite WHO I AM as identity prose.\n- VERB RULE — SELECTED OUTCOMES.\n • Use varied, specific verbs in every outcomes_items bullet. Avoid generic "led/managed/oversaw" unless the candidate's memory digest indicates this verb is appropriate to their actual responsibility.\n • SELECTED OUTCOMES (outcomes_items) — 5 to 12 BULLETS. Aim for ONE strong QUANTIFIED outcome anchored to EACH major role the candidate has, so the per-role "Results" view covers EVERY role (including page-2 roles) — 5 minimum, 12 maximum. The candidate's full history can decompose to ~11 distinct roles (e.g. system architect, change-control lead, CRM/sys-admin split, research/teaching assistant, electro-optics engineer, team lead, security guard, volunteer/frivilligt arbejde) — emit one outcome per active role so EVERY role, including page-2 and earlier-career ones, carries a Result. RANK by impact (concrete numbers > scope/scale > named systems > generic process) and MERGE adjacent ones ONLY when they share a theme AND belong to the same role; never collapse two different roles into one outcome. The output JSON array MUST have 5–12 elements. Returning more than 12 will be trimmed by signal density — so YOU pick the best 5–12 yourself, one per role where the candidate's history supports it.\n • SELECTED OUTCOMES (outcomes_items) — VERB VARIETY REQUIRED. Each bullet must start with a different leading verb than the one before it. Approved verbs (use a varied mix — never repeat the same verb on consecutive bullets, and never use one verb for more than 2 of the 5 bullets total): Owned, Built, Ran, Designed, Architected, Drove, Delivered, Implemented, Established, Shipped, Reduced, Cut, Scaled, Mapped, Translated, Coordinated, Negotiated, Resolved, Investigated, Validated, Qualified, Authored, Chaired, Guided, Mentored, Restructured, Initiated, Configured, Specified, Directed, Supervised. Pick the verb that most accurately describes the action — DO NOT default to "Directed" or "Supervised" for everything. The 5 bullets together should read with verb variety, not as a list of identical openings.\n${x}\n • If the original draft used "Led", rewrite the bullet to start with the most accurate verb from the approved list above, preserving every number, tool name, certification, and proper noun.\n- ORPHAN RULE: Every paragraph and bullet in the MAIN COLUMN must have >=4 words on its final rendered line (~480px Calibri 11px). Shorten orphans with shorter synonyms or removing filler — never remove numbers, proper nouns, technical terms.\n- DANISH-MARKET ENGLISH WORD CHOICE (DK-ENGLISH-001): when the output language is ENGLISH (Danish / Nordic recruiters read these), several correct English words read as aggressive, self-promotional, inflated, or ambiguous in Denmark. Prefer the softer, concrete alternative; keep all numbers, tools and proper nouns. REMOVE ENTIRELY (empty recruiter filler): "dynamic". AVOID -> PREFER: discussed -> reviewed / clarified / agreed / presented; challenged -> tested assumptions / questioned gaps / identified risks; argued -> made the case for / recommended; defended -> explained / justified / supported with data; pushed -> moved forward / followed up; demanded -> requested / specified / set requirements; enforced -> applied / checked / followed up on; controlled -> monitored / tracked / checked; owned -> was responsible for / handled / coordinated; managed -> coordinated / planned / supervised technically; led -> coordinated / guided / took technical lead on; supervised -> "supervised technical work" / "coordinated engineering activities" (never bare "supervised", which implies formal line management); influenced -> contributed to / shaped / recommended; evangelized -> introduced / explained / promoted internally; sold -> presented the case for / gained agreement; promoted -> introduced / supported adoption of; aggressive -> ambitious / fast / demanding; ambitious -> "tight timeline" / "clear target" / "high technical bar"; passionate -> interested in / motivated by / focused on; impactful -> state the actual result; strategic -> name the decision, roadmap or trade-off; stakeholder -> the concrete party (customer, supplier, QA, production, management, hiring manager); robust -> "stable under X" / "passed Y" / "reduced failure risk"; negotiated -> agreed terms / clarified scope / balanced constraints; compromised -> balanced / traded off / agreed a middle option (NEVER "compromised" - in Danish-English it reads as "damaged"); eventually -> finally / later / in the end (Danes hear "eventuelt" = possibly); actual -> real / current / specific (Danes hear "aktuel" = current). Danish output uses natural Danish and is exempt.\n- PUNCTUATION DASH RULE: use the plain hyphen "-" everywhere — year ranges ("2020 - 2025"), two-part compressions, table separators. NEVER output an em dash ("—") in ANY generated value; it is a banned token and forces a rewrite.\n- Rationale: genuine assessment, real gaps honestly stated.\n- CORE COMPETENCIES table (core_comp_rows) — table is 4.8" wide; Focus Area column ≈ 1.44"; Strategic Expertise column ≈ 3.36".\n • **FOCUS AREA**: 1-3 words, 17 chars max. Examples: "Change governance", "EO system validation", "KPI reporting", "Requirements traceability". Forbidden: generic ("problem solving", "leadership", "communication").\n${E}\n • Forbidden: vague words, repeated buzzwords. Use ChatGPT draft as primary vocabulary source where available.\n- WHAT I BRING table (bring_rows) — CL table is 6.0" wide; Strategic Expertise column ≈ 4.2". Each Strategic Expertise cell is a HARD CAP of ~52 characters (count them - this is the USABLE text AFTER the cell left/right edge padding ~5pt per side; do NOT fill the full column width or it wraps) and MUST fit ONE rendered line. If a cell would exceed ~52 characters, cut a clause or use shorter words; NEVER wrap to a 2nd line. GOOD (49 ch): "Requirements traceability and trade-off analysis." TOO LONG (98 ch, FORBIDDEN): "Requirements traceability, trade-off analysis, and supplier coordination for electro-optical systems." Keep every row to ONE tight line.\n • **FOCUS AREA**: 1-3 words, max 5. Same standard as core_comp. BRING-DISTINCT-001: the WHAT I BRING focus areas MUST NOT reuse the CORE COMPETENCIES focus-area names or cover the same ground — never put a shared label such as "Validation & Compliance" or "Technical-Commercial Evaluation" in BOTH tables. CORE COMPETENCIES is a capability taxonomy (what work I can own); WHAT I BRING is the employer-facing value mapped to the target (what they get). Use different words AND a different angle for every bring row; if a bring row would duplicate a core_comp row, replace it with a distinct capability.\n${S}\n- HOW I WOULD CONTRIBUTE structure (contribute_intro + contribute_items + contribute_closing): MANDATORY STRUCTURE:\n contribute_intro: a SHORT one-line lead-in that ENDS WITH A COLON - HARD CAP ~70 characters so it NEVER wraps to a second line (examples: "My first priorities here would be:" / "If a role fits, I would focus on:"). Do NOT pack the domain gap into it (that belongs in who/why); keep it to ONE rendered line.\n contribute_items: 4 bullets. Each bullet must describe a CONCRETE ACTION with a CLEAR MEASURABLE OUTCOME. CONTRIBUTE-ONE-LINE-001: each bullet is a HARD CAP of ~78 characters and MUST fit ONE rendered line INCLUDING its bullet marker and indent - the marker + indent eat ~12 characters of the line, so do NOT write to the full text width. If a bullet would exceed ~78 characters, cut a clause or use shorter words; NEVER let a contribute bullet wrap to a 2nd line. Forbidden: vague wording, generic verbs (coordinate, support, assist), or bullets without a stated result. The 4 bullets together must follow this embedded approach — weave these principles in naturally, do NOT state them as a list:\n  • Start fast: learn the current setup, tools, and main flows before proposing anything. Real impact starts with understanding how the team and users experience the work today.\n  • Map before changing: identify the 1-2 highest-leverage gaps in the current process (not the most visible ones — the ones where a small fix removes a big drag).\n  • Turn insight into focused action: each bullet should describe a specific action tied to a specific outcome for the team or product, not a general ambition.\n  • Measure the change: where possible, each bullet should imply a metric or a before/after state the team can observe.\n${R}\n contribute_closing: ONE non-bulleted closing line that follows the bullets. Keep it to ONE sentence, ~120 characters max - tight at the sentence level, so trim every spare word. Shape: "My aim is to help [Company] [single concrete scope] - focused on what the team gains." State ONE concrete scope, then stop. Do NOT stack adjectives ("clear, reviewable, and practical"), do NOT chain two value clauses, do NOT use an em dash. This is a SEPARATE field from contribute_items (NOT a bullet).\n- WHY THIS POSITION / WHY YOUR COMPANY (why_content): 1-2 sentences on fit. HEADING BY CONTEXT (WHY-TITLE-CONTEXT-001): when a JOB DESCRIPTION is present (a specific role) the section heading is "WHY THIS POSITION"; for a true unsolicited application (no JD) the heading NAMES THE TARGET'S NATURE per case — "WHY YOUR COMPANY", "WHY YOUR INSTITUTE", or "WHY YOUR ORGANISATION" (a research institute is an institute, an NGO/public body an organisation, a firm a company), defaulting to "WHY YOUR COMPANY" when unsure. The sentence MUST be tailored to the specific target — vary it, never a boilerplate fit line. Match the output language. Do NOT also repeat the heading as an inline bold label at the start of the paragraph (no "<b>WHY …:</b>" prefix) — the heading already shows it. Do NOT pin the candidate to one narrow specialty — NEVER write "the work I do best: <one narrow niche>" or frame the candidate as only a single-niche specialist. Frame the fit around the BREADTH the stored background actually shows (cross-disciplinary product / systems / process strengths from the whole work history), mapped to what the company or role actually needs.\n- FOUNDATION (foundation_hands_on + foundation_professionally): Two paragraphs describing HOW the candidate works — their working style, discipline, and approach — NOT a list of tools, technologies, degrees, or certifications.\n • foundation_hands_on: 1–2 SHORT sentences, MAX ~155 characters / 2 rendered lines (trim 2-3 words rather than spill onto a 3rd line) - their hands-on practice and how they operate day-to-day. Example of good: "I start by framing the decision — writing down the question, the criteria, and what would count as a good-enough answer. Then I build the smallest prototype that exposes the real risk, not the imagined one." Example of BAD (do NOT write this way): "Python, MATLAB, LabVIEW, Jira, Confluence, Six Sigma Black Belt." That's a tool list, which belongs in TOOLS & METHODS, not here.\n • foundation_professionally: 1–2 sentences about how they operate in a professional/team setting — how they make decisions visible, how they bring others along, how they handle trade-offs. Example of good: "I keep decisions and their rationale in the open — in a shared doc or a short meeting note — so anyone joining later can see what was decided and why. When a trade-off needs to be made, I surface it early rather than smuggling it in." Example of BAD: "MBA from [Business School], M.Sc. from [University], 15+ years experience." That's a credential list, which belongs in EDUCATION/PROFILE, not here.\n Both paragraphs must use first-person ("I"), be specific, and describe BEHAVIOUR not CREDENTIALS. If you catch yourself listing nouns (tools, degrees, standards), stop and rewrite as a verb-driven sentence about the candidate's way of working.\n- CLOSURE LINE (closure_content): Write 1–2 confident, specific sentences. Use this structure: "I would welcome the chance to talk through how I could support [exact company name from JD] in [position/department] by contributing to [relevant scope of work — be specific about what that company does]." Avoid all formulaic phrases. BANNED WORD (English output only): never use the word "discuss" in English prose — to Danish / Scandinavian readers it reads as urging or pressuring; use "talk through", "explore", "go through", or "a conversation about" instead. (Danish output may use "drøfte" / "tale om" normally.) In Danish: "Jeg vil meget gerne drøfte, hvordan jeg konkret kan bidrage til [company]s arbejde med [scope] — og jeg modtager gerne en invitation til samtale." MUST match output language exactly. Never mix languages.${a ? "\n\n🇩🇰 FINAL LANGUAGE CHECK BEFORE OUTPUTTING: Reread your draft. Every value that is not a proper noun MUST be in Danish. If you see English sentences, translate them now. The schema below shows English example values for clarity ONLY — your actual values must be Danish." : __langGenLock(je)}\n\n⚠️ CRITICAL OUTPUT REQUIREMENT — EVERY cl_overrides FIELD MUST BE FILLED.\nThe schema below shows EXAMPLE shapes. Marker strings like "FILL_who_content_here", "FILL_why_content_here", "FILL_foundation_hands_on_here", "FILL_foundation_professionally_here", "FILL_closure_content_here" are placeholders you MUST REPLACE with real prose content following the instructions above. NEVER return an empty string ""  for any cl_overrides field. NEVER return a marker string verbatim. NEVER omit a field. If you are about to return an empty string or a marker, instead write real grounded content using the candidate's actual experience. An empty CL field is a failed generation. EVERY cv_overrides field MUST ALSO be fully written: profile_content and work_style_content are REQUIRED — NEVER return an empty string or a bracketed placeholder for either. work_style_content MUST be 1-2 real sentences (it renders inline after a bold "Work style:" label, so an empty value drops the label). In an UNSOLICITED draft (no JD) profile_content's FIRST sentence MUST be the candidate's broad professional identity as the STORED profile and history support it, NEVER a narrow specialist opener (GEN-PROFILE-001). An empty PROFILE or WORK STYLE is a failed generation.\n\nReturn ONLY valid JSON (no markdown):\n{"meta":{"company":"<EXACT employer name copied from the JOB DESCRIPTION — REQUIRED when a JD is present; empty string ONLY for a true no-JD unsolicited run>","role":"<EXACT role title copied from the JOB DESCRIPTION — REQUIRED when a JD is present; empty string ONLY for a true no-JD unsolicited run>","subtitle":"Role • Area • Area","cl_slogan":"<COVER-LETTER SLOGAN - a SHARP, SPECIFIC OBSERVATION about THIS candidate in THIS role: the one thing they uniquely do that the JD actually needs. A punchy HEADLINE of 4-13 words (HARD CAP 13; aim for 6-11 - shorter and sharper scores higher). PREFERRED SHAPE: 'A [candidate's real role identity] WHO [concrete, role-specific value verb + domain object]' - the GOLD STANDARD is 'A PROJECT MANAGER WHO MOVES OPTICAL HARDWARE FROM LAB TO SCALABLE DELIVERY'. Name the candidate's actual edge/move against THIS JD so it reads as INSIGHT, not filler. It is a HEADLINE, NOT a sentence: no comma-splice, no clause after a comma, no full stop; do NOT open with 'As a' (that truncates to a dangling fragment). Draw ONLY on the candidate's real stored experience/interests, worded EXACTLY as the stored data states it - NEVER invent, inflate, or change a role, title, tenure, or activity (SLOGAN-NO-FABRICATION-001: if the kernel says 'assistant coach of junior rugby', NEVER write 'rugby coach' or 'former rugby coach'; if an activity is current NEVER write 'former'). If there is no clean real hook, use a plain professional observation rather than inventing a personal one. Alt shapes when 'A [role] WHO [x]' does not fit: '[real strength] for [what this role delivers]', '[domain A] to [domain B]', '[real activity] that [outcome]'. NEVER a copy of the subtitle/specialization triad, NEVER a bullet-separated keyword list, no buzzwords. Empty string ONLY for a true no-JD unsolicited run>","greeting":"Dear X,","opening":"Opening."},"cv_overrides":{"profile_content":"","work_style_content":"","core_comp_rows":[["Focus","Exp"],["Focus","Exp"],["Focus","Exp"],["Focus","Exp"]],"outcomes_items":[{"b":"B","t":"t"},{"b":"B","t":"t"},{"b":"B","t":"t"},{"b":"B","t":"t"},{"b":"B","t":"t"}],"experience_roles":[{"id":"r1","title":"<USE CANDIDATE'S MOST RECENT ROLE TITLE>","company":"<USE CANDIDATE'S MOST RECENT COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet from candidate's history>","<bullet>","<bullet>"]},{"id":"r2","title":"<NEXT ROLE TITLE>","company":"<NEXT COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet>","<bullet>","<bullet>"]},{"id":"r3","title":"<ROLE TITLE>","company":"<COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet>","<bullet>"]},{"id":"r4","title":"<ROLE TITLE>","company":"<COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet>","<bullet>"]},{"id":"r5","title":"<ROLE TITLE>","company":"<COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet>","<bullet>"]},{"id":"r6","title":"<OLDEST ROLE TO INCLUDE>","company":"<COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet>","<bullet>"]},{"id":"r7","on":false,"bullets":["<unused slot>"]},{"id":"r8","on":false,"bullets":["<unused slot>"]},{"id":"r9","on":false,"bullets":["<unused slot>"]},{"id":"r10","on":false,"bullets":["<unused slot>"]}],"tools_items":[{"l":"Cat","v":"tools"},{"l":"Cat","v":"tools"},{"l":"Cat","v":"tools"},{"l":"Cat","v":"tools"},{"l":"Cat","v":"tools"}],"certifications_items":["cert1","cert2"],"education_items":[{"deg":"<HIGHEST DEGREE>","sch":"<INSTITUTION, brief detail>"}],"publications_items":["pub1 or empty array"],"regulatory_items":[{"group":"Group Name"},{"l":"CODE","v":"description"}],"additional_items":[{"l":"Languages","v":"<candidate's languages from memory digest, comma-separated, native/professional/B1 etc>"},{"l":"Accessibility","v":"<must say explicitly the request is as a the candidate's own stored accessibility need, factual and first-person; omit row when no accessibility item is stored - never invent one>"}]},"cl_overrides":{"who_content":"FILL_who_content_here_3_to_5_sentence_narrative_60_to_100_words","bring_rows":[["Need from JD/company","Matching action / evidence / result"],["need","matching action"],["need","matching action"],["need","matching action"]],"why_content":"FILL_why_content_here_1_to_2_sentences_about_role_fit","role_view_intro":"FILL_role_view_intro_here_one_lead_line_ending_with_a_colon","role_view_rows":[["<employer priority 1 - short label>","<ONE sentence: the EMPLOYER'S problem only - no candidate evidence, no solution>"],["<employer priority 2 - short label>","<ONE sentence: employer problem only>"],["<employer priority 3 - short label>","<ONE sentence: employer problem only>"]],"contribute_intro":"My immediate priority would be to close the gap in [gap], through focused study and hands-on use. Then I would focus on:","contribute_items":["b1","b2","b3","b4"],"contribute_closing":"My aim is to help [Company] [single concrete scope] - focused on what the team gains.","who_lead":"FILL_who_lead_here_one_sentence_on_the_conditions_you_work_best_in","who_summary":"FILL_who_summary_here_years_disciplines_and_environments","who_operate":"FILL_who_operate_here_one_sentence_work_style","who_eligibility":"","who_goal":"FILL_who_goal_here_the_contribution_you_want_to_make","foundation_hands_on":"FILL_foundation_hands_on_here_1_to_2_sentences_about_daily_practice","foundation_professionally":"FILL_foundation_professionally_here_1_to_2_sentences_about_team_setting","closure_content":"FILL_closure_content_here_1_to_2_sentence_closing_per_instructions"},"rationale":{"fit_summary":"1-2 sentence honest overall fit.","top_fit_points":["fit 1","fit 2","fit 3"],"gaps":["gap 1","gap 2"],"tailoring_decisions":"Key tailoring choices made.","cover_letter_strategy":"Why this angle.","red_flags":["A JD-side risk/caveat worth flagging (vague comp, imminent or passed deadline, unrealistic skill mix, no recruiter contact). [] if none."],"questions_in_jd":[{"question":"A question the JD explicitly asks the candidate to answer (empty array if none).","suggested_answer":"A short answer grounded ONLY in the candidate data, else [needs candidate input on X].","grounded":true}],"assumptions":["An assumption made when claiming fit or proposing to close a gap — state it plainly; honest framing."],"confidence_notes":[{"text":"A specific drafted CV/CL sentence.","confidence":0.0,"issue":"Why it is weakly grounded in the candidate data; null when well-grounded."}],"recommendations":["A concrete, honest action to strengthen this application (cite adjacent experience as adjacent, never as held)."],"detected_language":"ISO 639-1 code of the JD (en, da, sv, de, fr, es, ...).","supporting_context":"Role-specific tips or signals from the JD page that apply ONLY to this role (e.g. hiring manager preferences, team migrations). Empty string if none. Not facts about the candidate."}}`;
             let C, T;
             const O =
               '\n\nABSOLUTE OUTPUT RULE: Your response MUST start with the character "{" and contain ONLY a single valid JSON object. NO prose preamble. NO explanation. NO markdown fences. NO commentary. The very first character of your response must be "{". The very last character must be "}".';
@@ -24805,10 +27054,13 @@
                     },
                     cib = Array.isArray(e.contribute_items) && e.contribute_items.filter((x) => { const s = typeof x === "string" ? x : (x && x.t) || ""; return String(s).trim().length >= 10; }).length >= 2,
                     n =
-                      (t(e.who_content) ? 1 : 0) +
+                      // CL-V5-STRUCT-001: v5 replaces foundation_* with the "How I see the
+                      // role" bullets + the end-block Who-I-am rows. Either shape counts, so
+                      // a v5 response is not falsely scored as partial and cycled away.
+                      ((t(e.who_content) || t(e.who_lead) || t(e.who_summary)) ? 1 : 0) +
                       (t(e.why_content) ? 1 : 0) +
-                      (t(e.foundation_hands_on) ? 1 : 0) +
-                      (t(e.foundation_professionally) ? 1 : 0) +
+                      ((t(e.foundation_hands_on) || (Array.isArray(e.role_view_rows) && e.role_view_rows.length >= 2)) ? 1 : 0) +
+                      ((t(e.foundation_professionally) || t(e.who_operate) || t(e.who_goal)) ? 1 : 0) +
                       (t(e.closure_content) ? 1 : 0) +
                       (cib ? 1 : 0);
                   // CL-EMPTY-BODY-FIELDS-001 (owner 2026-06-09): the WHO I AM / WHY /
@@ -24913,6 +27165,26 @@
               cl_overrides: F = {},
               rationale: M,
             } = T || {};
+            // GEN-KEYS-CAPTURE-001 (1.51.354, diag): record the ACCEPTED parse_jd
+            // response's shape (localStorage antcv:last-gen-keys). A templated
+            // CV/CL is then attributable: cl fields "empty"/"placeholder" -> the
+            // model omitted them (prompt side); "real:<len>" -> the apply path or
+            // a later clobber dropped them. Paired with antcv:last-gen-who-src.
+            try {
+              const __ck = (v) => {
+                if ("string" == typeof v) { const s = v.trim(); return s ? (/^\s*\[/.test(s) || /^FILL_/i.test(s) ? "placeholder" : "real:" + s.length) : "empty"; }
+                return Array.isArray(v) ? "array:" + v.length : v && "object" == typeof v ? "object" : "empty";
+              };
+              localStorage.setItem("antcv:last-gen-keys", JSON.stringify({
+                ts: Date.now(),
+                attempts: N,
+                provider: B || "auto",
+                top: Object.keys(T || {}),
+                cl: Object.fromEntries(Object.entries(F || {}).map(([k, v]) => [k, __ck(v)])),
+                cvProfile: __ck(z.profile_content),
+                roles: Array.isArray(z.experience_roles) ? z.experience_roles.length : 0,
+              }));
+            } catch (e) {}
             // COMPANY-BRAND-FIT-001: apply the returned brand palette — only
             // when the user opted in THIS session (never from a stale or
             // hallucinated field), with strict validation: 6-digit hex only,
@@ -24920,7 +27192,48 @@
             // whitelist. _t persists navyColor (+cloud); wa partial-merges
             // styleConfig (+cloud) and flips the package to "custom".
             try {
-              const bf = (T && T.brand_fit) || ("function" == typeof window.__antcvBrandFitSample ? window.__antcvBrandFitSample() : null); /* BRAND-FIT-PALETTE-001: deterministic JD-hex fallback (antcv-brandfit-sample.js) when the model omitted brand_fit */
+              // BRAND-FIT-REAL-SAMPLE-001 (owner 2026-07-05): COMPANY-BRAND-FIT-001
+              // previously relied ENTIRELY on the model's own knowledge of a
+              // company's branding, with the only fallback being a client-side
+              // regex-scan of the JD's own prose text for hex codes — which
+              // virtually never fires for a real posting (job text doesn't carry
+              // CSS). When brand-fit is on, try a REAL, deterministic sample of
+              // the company's own website FIRST, via /api/fetch-brand-colors:
+              // it fetches the company's homepage (resolved from the JD's own
+              // domain when that isn't a third-party job board, else guessed
+              // from the company name) and extracts its actual theme-color /
+              // stylesheet colours. Scoped to THIS generation only — never
+              // cached, never carried into another application's run — so a
+              // fetched palette can never leak across companies/applications.
+              let __realBrandFit = null;
+              if (__brandFit) {
+                try {
+                  const __rbBase = String(
+                    u.get("proxyUrl", "") ||
+                      ("undefined" != typeof window && window.ANTCV_RELAY_URL) ||
+                      "",
+                  )
+                    .trim()
+                    .replace(/\/+$/, "");
+                  const __jdSrcUrl = Bt && "url" === Bt.kind && Bt.source ? String(Bt.source) : "";
+                  const __coName = String((D && D.company) || "").trim();
+                  if (__rbBase && (__jdSrcUrl || __coName) && !/^unsolicited$/i.test(__coName)) {
+                    const __rbResp = await fetch(__rbBase + "/api/fetch-brand-colors", {
+                      method: "POST",
+                      credentials: "include",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ jdUrl: __jdSrcUrl, companyName: __coName }),
+                    });
+                    const __rbJson = await __rbResp.json().catch(() => null);
+                    if (__rbJson && __rbJson.ok && (__rbJson.navy || __rbJson.accent)) {
+                      __realBrandFit = { navy: __rbJson.navy, accent: __rbJson.accent, source: __rbJson.source };
+                    }
+                  }
+                } catch (_) {
+                  __realBrandFit = null;
+                }
+              }
+              const bf = __realBrandFit || (T && T.brand_fit) || ("function" == typeof window.__antcvBrandFitSample ? window.__antcvBrandFitSample() : null); /* BRAND-FIT-PALETTE-001: real site-sampled colours (BRAND-FIT-REAL-SAMPLE-001) > LLM guess > deterministic JD-hex fallback (antcv-brandfit-sample.js) */
               if (__brandFit && bf && "object" == typeof bf) {
                 const hex = (v) =>
                   "string" == typeof v && /^#[0-9a-fA-F]{6}$/.test(v.trim())
@@ -24932,6 +27245,29 @@
                     b = parseInt(h.slice(5, 7), 16);
                   return (0.299 * r + 0.587 * g + 0.114 * b) / 255 < 0.62;
                 };
+                // BRAND-INK-MATCH-001 + BRAND-WORTHY-GATE-001 (owner 2026-07-22): the old
+                // gate applied a brand whenever the sampled colour's BRIGHTNESS was < 0.62 and
+                // then hardcoded WHITE header ink — so NVIDIA green (#76b900, brightness 0.564)
+                // painted a green band with white text (2.4:1, illegible), while a generic
+                // greyscale theme-color (#919191, brightness 0.57) painted a dull grey "brand".
+                // The owner's rule (from NVIDIA's own site: black text on their green): keep the
+                // company's REAL colour and MATCH the ink to it; and when the sample is not a real
+                // brand (greyscale chrome), apply NOTHING so the user's chosen package default
+                // shows instead of grey.
+                const __wlin = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+                const __rlum = (h) => 0.2126 * __wlin(parseInt(h.slice(1, 3), 16)) + 0.7152 * __wlin(parseInt(h.slice(3, 5), 16)) + 0.0722 * __wlin(parseInt(h.slice(5, 7), 16));
+                const __ctr = (a, b) => { const x = __rlum(a), y = __rlum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+                // Legible ink for a background: black or white, whichever wins WCAG contrast.
+                const __brandInk = (h) => (__ctr(h, "#111111") >= __ctr(h, "#FFFFFF") ? "#111111" : "#FFFFFF");
+                const __hslSat = (h) => {
+                  const r = parseInt(h.slice(1, 3), 16) / 255, g = parseInt(h.slice(3, 5), 16) / 255, b = parseInt(h.slice(5, 7), 16) / 255;
+                  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
+                  return d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+                };
+                // A real brand bg is either CHROMATIC (saturated) or a deliberate near-BLACK
+                // (e.g. Templafy #232323). A greyscale mid-tone (generic mobile theme-color) or a
+                // near-white is NOT a brand -> return false so we leave the package default.
+                const __brandWorthy = (h) => __hslSat(h) >= 0.15 || __rlum(h) <= 0.06;
                 const FONTS = [
                   "Trebuchet MS", "Cabin", "Calibri", "Georgia", "Verdana",
                   "Tahoma", "Cambria", "Palatino Linotype", "Segoe UI", "Arial",
@@ -24941,21 +27277,53 @@
                     ? String(v).trim()
                     : null;
                 const navy = hex(bf.navy), accent = hex(bf.accent);
-                navy && darkEnough(navy) && _t(navy);
                 const scPatch = {};
-                if (accent) {
+                // COMPANY-BRAND-FIT-SCOPE-001 (owner 2026-07-10): brand-fit must
+                // recolor ONLY the CV/CL preview band + sidebar, NOT the app
+                // window/chrome. Route the brand navy through styleConfig
+                // (headerBg/sidebarBg) instead of _t()/navyColor (the global
+                // window color). _t(navy) is intentionally NOT called.
+                const __brandOk = !!(navy && __brandWorthy(navy));
+                const __ink = __brandOk ? __brandInk(navy) : null;
+                if (__brandOk) {
+                  scPatch.headerBg = navy; scPatch.sidebarBg = navy;
+                  // MATCH the ink to the band: a light brand (NVIDIA green) gets BLACK text, a
+                  // dark brand white — header name/spec/contact + sidebar text/head, so the
+                  // preview AND the docx export stay legible.
+                  scPatch.headerNameColor = scPatch.headerSpecColor = scPatch.headerContactColor = __ink;
+                  scPatch.sidebarTextColor = __ink;
+                  scPatch.sidebarHeadColor = __ink;
+                }
+                if (accent && __brandOk) {
                   scPatch.photoBorderColor = accent;
                   scPatch.sidebarLineColor = accent;
-                  scPatch.sidebarHeadColor = accent;
                 }
                 const hf = font(bf.head_font), bdf = font(bf.body_font);
                 hf && ((scPatch.mainHeadFont = hf), (scPatch.headerFont = hf));
                 bdf && ((scPatch.mainBodyFont = bdf), (scPatch.sidebarFont = bdf));
                 Object.keys(scPatch).length && wa(scPatch);
+                // BRAND-PREVIEW-PARITY-001 (owner 2026-07-17): publish antcv:brandV2 on a
+                // FRESH apply too. Previously only the restore/re-collection paths wrote it,
+                // so the preview paper-wrapper (which paints band + sidebar from
+                // antcv:brandV2, gated on __antcvBrandFit) stayed on the package palette
+                // until the app was saved + reloaded, and BRAND-EXPORT-PARITY-001 had to
+                // fall back to styleConfig. Mirror the just-applied brand into the v2 slots
+                // shape both readers expect, so first-generate preview AND export take the
+                // brand immediately.
+                try {
+                  if (__brandOk) {
+                    localStorage.setItem("antcv:brandV2", JSON.stringify({ version: 2, slots: { headerBg: navy, headerInk: __ink, sidebarBg: navy, sidebarInk: __ink, accent: accent || null } }));
+                  } else {
+                    // BRAND-WORTHY-GATE-001: a non-brand sample (greyscale chrome / near-white)
+                    // must not leave a stale brand from a previous app — clear it so the load
+                    // path (A4) falls back to the user's chosen package default, not grey.
+                    try { localStorage.removeItem("antcv:brandV2"); } catch (_) {}
+                  }
+                } catch (_) {}
                 try {
                   console.log("[COMPANY-BRAND-FIT-001] applied brand palette", {
-                    navy: navy && darkEnough(navy) ? navy : "(rejected)",
-                    accent, head: hf, body: bdf, source: bf.source,
+                    navy: __brandOk ? navy : "(rejected — not a real brand, package default kept)",
+                    ink: __ink, accent, head: hf, body: bdf, source: bf.source,
                   });
                 } catch (_) {}
               }
@@ -24995,10 +27363,9 @@
                 // "Unsolicited"/"Open Application"/"n/a" echo from the LLM
                 // is not a company either — scrub it so a SPECIFIC
                 // application can never carry the Unsolicited label.
-                if (
-                  !__noJD &&
-                  /^(unsolicited|open\s+application|n\/?a)$/i.test(v)
-                ) {
+                // UNSOL-PILLAR-GEN-META-001: variant-aware — a zh/da model
+                // echoing 主动申请/Uopfordret is the same sentinel echo.
+                if (!__noJD && window.__antcvUnsol(v)) {
                   try {
                     D.company = "";
                   } catch (_) {}
@@ -25011,8 +27378,7 @@
                 return v;
               })();
               const __jdNamedCompany =
-                __llmCo &&
-                !/^(unsolicited|open\s+application|n\/?a)$/i.test(__llmCo);
+                __llmCo && !window.__antcvUnsol(__llmCo); // UNSOL-PILLAR-GEN-META-001
               // JD-TARGETED-META-STICK-001: a leftover Un.current is only a
               // "showcase in progress" signal when there is NO real JD — with
               // a JD attached it is a stale stub and must not force-unsolicit
@@ -25045,7 +27411,7 @@
                 (!__jdNamedCompany &&
                   __noJD &&
                   io &&
-                  "Unsolicited" === io.company)
+                  window.__antcvUnsol(io.company))
               ) {
                 const e = ie() || {},
                   __wh0 =
@@ -25053,7 +27419,7 @@
                   t = __wh0.title || __wh0.role || "";
                 (D &&
                   D.company &&
-                  "Unsolicited" !== D.company &&
+                  !window.__antcvUnsol(D.company) &&
                   console.warn(
                     `[v1.40.112 showcase] LLM hallucinated company="${D.company}" role="${D.role || ""}" — discarding and forcing Unsolicited. (No JD was provided; the LLM should not invent a company.)`,
                   ));
@@ -25108,10 +27474,7 @@
                 } catch (e) {}
                 try {
                   const e = (D.company || "").trim();
-                  if (
-                    e &&
-                    !/^(unsolicited|open\s+application|n\/?a)$/i.test(e)
-                  ) {
+                  if (e && !window.__antcvUnsol(e)) { // UNSOL-PILLAR-GEN-META-001
                     // 1.50.330: NEUTRALISE in place (was: drop the whole sentence +
                     // replace bare mentions with the literal "[Company]"). Dropping
                     // sentences lost good content, and "[Company]" is itself a
@@ -25249,7 +27612,7 @@
             // value (antcv:clSloganAuto) — the band then falls back to the new
             // io.subtitle at all three render sites.
             try {
-              if (W && W.company && "Unsolicited" !== W.company && W.subtitle) {
+              if (W && W.company && !window.__antcvUnsol(W.company) && W.subtitle) {
                 const __n = (s) =>
                   String(s || "").replace(/\s*[•*|]\s*/g, " • ").trim().toUpperCase();
                 const __cur = __n(localStorage.getItem("antcv:clSlogan"));
@@ -25271,9 +27634,18 @@
                 // schema, sibling of subtitle) but never carried into meta, so
                 // antcv-cl-slogan-fresh.freshSmart() always read '' and the stale
                 // override survived — in EVERY speed mode. Carry it through.
-                cl_slogan: W.cl_slogan || "",
+                // SLOGAN-UNSOL-GENERIC-001: an unsolicited gen keeps the generic
+                // standing default — do NOT carry a tailored slogan into meta.
+                cl_slogan: (W.company && window.__antcvUnsol && window.__antcvUnsol(W.company)) ? "" : (W.cl_slogan || ""),
                 greeting: W.greeting,
                 opening: W.opening,
+                // BRAND-PERSIST-PERAPP-001 (owner 2026-07-17): stamp the fitted brand into
+                // THIS application's meta so it saves per-app and BRAND-FIT-OPEN restores it
+                // on reload (owner: "brand never reaches uploading from saved applications").
+                // Read the v2 slots the apply block just published to antcv:brandV2; spreads
+                // nothing when no brand is active, so a non-branded gen leaves meta.brandV2
+                // undefined and shipping packages are untouched.
+                ...(function () { try { if (window.__antcvBrandFit === true) { var __r = localStorage.getItem("antcv:brandV2"); if (__r) return { brandV2: JSON.parse(__r) }; } } catch (_) {} return {}; })(),
               }),
               ao((e) => {
                 const t = (e) => {
@@ -25496,7 +27868,7 @@
                   d = ie(),
                   p =
                     !!u.get("kernelShowcaseInProgress", !1) ||
-                    !!(io && "Unsolicited" === io.company) ||
+                    !!(io && window.__antcvUnsol(io.company)) ||
                     // 1.50.280: harden kernel detection. Cs() resets io.company
                     // to "" during generation, so p leaned entirely on the
                     // in-progress flag; if that wasn't set on the run, p went
@@ -25504,7 +27876,7 @@
                     // neutral contribute, profile/outcomes seeds) silently went
                     // to blank/placeholder. Also accept the response meta company
                     // and the showcase JD sentinel as kernel signals.
-                    !!(W && "Unsolicited" === W.company) ||
+                    !!(W && window.__antcvUnsol(W.company)) ||
                     Un.current === ks ||
                     // CL-CONTRIBUTE-INTRO-CLOSING-002 (owner 2026-06-24): io.company
                     // drifts off the literal "Unsolicited" on an active unsolicited
@@ -26006,7 +28378,7 @@
                   });
                 return {
                   cv: E,
-                  cl: e.cl.map((e) => {
+                  cl: ((L)=>{try{if(!Array.isArray(L)||!L.length)return L;if(L.some((x)=>x&&x.id==="role_view"))return L;if(!L.some((x)=>x&&(x.id==="bring"||x.id==="contribute")))return L;const at=L.findIndex((x)=>x&&x.id==="why");const O=L.slice();O.splice(at>=0?at+1:0,0,{"id":"role_view","title":"HOW I SEE THE ROLE","loc":"main","on":true,"type":"rich_block","headlineOff":true,"leadColon":true,"items":[]});return O;}catch(_){return L}})(e.cl).map((e) => {
                     const n = p
                       ? {
                           opening: `With ${f || "15"}+ years across the disciplines below, I would welcome a conversation about roles where the work spans architecture, requirements, and cross-discipline coordination.`,
@@ -26064,16 +28436,9 @@
                               n.opening ||
                               "",
                           }
-                        : "who" === e.id
-                          ? {
-                              ...e,
-                              content:
-                                __clReal(F.who_content) ||
-                                __clReal(e.content) ||
-                                n.who ||
-                                `I am a ${String(g || "engineer").toLowerCase()} with ${f || "15"}+ years across the roles listed on my CV. I work at the seams between disciplines, keeping requirements, decisions, and trade-offs visible and traceable.` ||
-                                "",
-                            }
+                        
+                          /* CL-V5-STRUCT-001 */ :"role_view"===e.id?(()=>{const R=(Array.isArray(F.role_view_rows)?F.role_view_rows:[]).map((x)=>Array.isArray(x)?{b:x[0],t:x[1]}:x).filter((x)=>x&&typeof x==="object").map((x)=>({b:String(x.b==null?"":x.b).trim(),t:String(x.t==null?"":x.t).trim()})).filter((x)=>x.t&&!/^\[/.test(x.t)&&!/^\[/.test(x.b)).slice(0,3).map((x)=>({b:x.b,t:x.t,mk:!0}));if(!R.length)return e;const I=__clReal(F.role_view_intro)||"The work appears to centre on three connected priorities:";return{...e,type:"rich_block",headlineOff:!0,leadColon:!0,rows:void 0,items:[{b:"How I see the role",t:I},...R]}})()
+                          :"who"===e.id?(()=>{try{localStorage.setItem("antcv:last-gen-who-src",__clReal(F.who_content)?"gen":__clReal(e.content)?"section":n.who?"neutral":"default")}catch(_){}const D="I am a "+String(g||"engineer").toLowerCase()+" with "+(f||"15")+"+ years across the roles listed on my CV. I work at the seams between disciplines, keeping requirements, decisions, and trade-offs visible and traceable.";const L=__clReal(F.who_lead)||__clReal(F.who_content)||__clReal(e.content)||n.who||D;const row=(b,v)=>{const t=__clReal(v);return t?{b:b,t:t,mk:!0}:null};const W=[row("Professional summary",F.who_summary),row("How I operate",F.who_operate),row("Eligibility",F.who_eligibility),row("My goal",F.who_goal)].filter(Boolean);if(!W.length)return{...e,content:L};return{...e,type:"rich_block",headlineOff:!0,leadColon:!0,content:void 0,items:[{b:"Who I am",t:L},...W]}})()
                           : "bring" === e.id
                             ? {
                                 ...e,
@@ -26351,7 +28716,7 @@
                     try {
                       _isShowcase = !!(
                         io &&
-                        (io.company === "Unsolicited" || io.showcase === true)
+                        (window.__antcvUnsol(io.company) || io.showcase === true)
                       );
                     } catch (_) {}
                     if (_isShowcase) {
@@ -26852,6 +29217,19 @@
                 );
             }
             (ho("done"), uo("🔎 Tightening to length targets…"));
+            // TIGHTEN-IN-GEN-WINDOW-001 (owner 2026-07-11 "tightening needs to be
+            // included in the generation time"): on a showcase run vl()'s promise can
+            // settle BEFORE this tail, so Cs's finally clears kernelShowcaseInProgress
+            // and the purple overlay closes ~2-3 min early while compress still runs.
+            // Keep-alive: re-assert the flag + overlay every 5s for the duration of
+            // this block; the completion path below stays the real closer.
+            let __tightKeep = null;
+            try {
+              if (u.get("kernelShowcaseInProgress", !1) || window.__antcvShowcaseRun) {
+                const __ka = () => { try { (u.set("kernelShowcaseInProgress", !0), Bl(!0)); } catch (_) {} };
+                (__ka(), (__tightKeep = setInterval(__ka, 5e3)));
+              }
+            } catch (_) {}
             try {
               fo({
                 profile: "working",
@@ -26951,6 +29329,11 @@
                   experience: "done",
                 }));
             }
+            // TIGHTEN-IN-GEN-WINDOW-001: stop the keep-alive; the completion block
+            // below (or Cs's finally) now closes the overlay for real. The keep-alive
+            // re-asserted the flag ≤5s ago, so a showcase run always enters the block.
+            try { if (__tightKeep) clearInterval(__tightKeep); } catch (_) {}
+            try { window.__antcvShowcaseRun = !1; } catch (_) {}
             if (u.get("kernelShowcaseInProgress", !1)) {
               try {
                 u.set("kernelShowcaseInProgress", !1);
@@ -26970,18 +29353,21 @@
                 // localStorage; read the canonical values from the store. The store
                 // keys are the same ones the autosave writes. Fire-and-forget,
                 // non-blocking — failure just means the next session regenerates.
-                setTimeout(() => {
+                setTimeout(async () => {
                   try {
                     const __secs = u.get("sections", null);
                     // 1.50.274: only persist a freshly-generated showcase if it
                     // actually has content — never write an empty/template husk.
                     if (!__antcvHasRealSections(__secs)) return;
+                    const __kk = (() => { try { var p = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; p = p.personalInfo || p; var __st = String((p.writingPrefs || {}).style || "").trim().toLowerCase(); var __lg = String(localStorage.getItem("language") || "en").toLowerCase().replace(/[^a-z]/g, "").slice(0,2) || "en"; return __st ? __st + "|" + __lg : ""; } catch (_) { return ""; } })();
+                    try { const __ex = await oo.getShowcase(__kk); if (__ex && __ex.showcase && __ex.style_key === __kk && !window.confirm('A saved style kernel for "' + String(__kk).replace("|", " / ") + '" already exists. Replace it with this new generation?')) return; } catch (_) {}
+                    
                     oo.putShowcase({
                       sections: __secs,
-                      meta: (function (m) { try { if (!m || "object" != typeof m) return m; var co = String(m.company || "").trim(); if (!co || "Unsolicited" === co) return m; var c = Object.assign({}, m, { company: "Unsolicited", role: "Open Application" }); try { delete c.rationale; } catch (_) {} return c; } catch (_) { return m; } })(u.get("meta", null)), /* UNSOLICITED-IDENTITY-SOURCE-FIX-001: never store a real company in the unsolicited kernel slot */
+                      meta: (function (m) { try { if (!m || "object" != typeof m) return m; var co = String(m.company || "").trim(); if (!co || window.__antcvUnsol(co)) return m; var c = Object.assign({}, m, { company: "Unsolicited", role: "Open Application" }); try { delete c.rationale; } catch (_) {} return c; } catch (_) { return m; } })(u.get("meta", null)), /* UNSOLICITED-IDENTITY-SOURCE-FIX-001: never store a real company in the unsolicited kernel slot */
                       rationale: u.get("rationale", null),
                       jd_language: je,
-                    }, (() => { try { var p = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; p = p.personalInfo || p; return String((p.stylePrefs || {}).style || "").trim(); } catch (_) { return ""; } })());
+                    }, __kk);
                   } catch (e) {}
                 }, 1200);
               } catch (e) {}
@@ -27284,12 +29670,15 @@
                             .replace(/(\S+) and (?=(\S+))/gi, (_m, _w, _x) =>
                               _w.includes("&") || _x.includes("&") ? _m : _w + " &amp; ")
                             .replace(/ & /g, " &amp; ");
-                          return `<tr style="background:${(i - 1) % 2 == 0 ? "#eaf7f7" : "#fff"}"><td width="${s}" style="width:${s}pt;padding:3pt 7.5pt;border:0.5pt solid ${t.tableBorderColor};font-family:'Carlito',${d};font-size:${u.mainTblCell}pt;font-weight:700;color:${t.tableFirstColText};line-height:${p};vertical-align:middle"><div style="${h}">${r}</div></td><td width="${c}" style="width:${c}pt;padding:3pt 7.5pt;border:0.5pt solid ${t.tableBorderColor};font-family:'Carlito',${d};font-size:${u.mainTblCell}pt;color:${t.tableOtherColText};text-align:justify;line-height:${p};vertical-align:middle"><div style="${h}">${n[1] || ""}</div></td></tr>`;
+                          return `<tr style="background:${(i - 1) % 2 == 0 ? "#DCE5EA" : "#fff"}"><td width="${s}" style="width:${s}pt;padding:3pt 7.5pt;border:0.5pt solid ${t.tableBorderColor};font-family:'Carlito',${d};font-size:${u.mainTblCell}pt;font-weight:700;color:${t.tableFirstColText};line-height:${p};vertical-align:middle"><div style="${h}">${r}</div></td><td width="${c}" style="width:${c}pt;padding:3pt 7.5pt;border:0.5pt solid ${t.tableBorderColor};font-family:'Carlito',${d};font-size:${u.mainTblCell}pt;color:${t.tableOtherColText};text-align:justify;line-height:${p};vertical-align:middle"><div style="${h}">${n[1] || ""}</div></td></tr>`;
                         })
                         .join("");
+                      // COPENHAGEN-TABLE-FRAME-001: cyan outer frame (only when the
+                      // package defines tableFrameColor) — mirrors preview + worker.
+                      const fr = t.tableFrameColor ? `border:1.5pt solid ${t.tableFrameColor};` : "";
                       return v
-                        ? `<table align="${y ? "center" : "left"}" cellspacing="0" cellpadding="0" border="0" style="width:${r}pt;border-collapse:collapse;table-layout:fixed;${v}mso-table-lspace:0;mso-table-rspace:0"><thead>${f}</thead><tbody>${b}</tbody></table>`
-                        : `<table cellspacing="0" cellpadding="0" border="0" style="width:${r}pt;border-collapse:collapse;table-layout:fixed;mso-table-lspace:0;mso-table-rspace:0"><thead>${f}</thead><tbody>${b}</tbody></table>`;
+                        ? `<table align="${y ? "center" : "left"}" cellspacing="0" cellpadding="0" border="0" style="width:${r}pt;border-collapse:collapse;table-layout:fixed;${fr}${v}mso-table-lspace:0;mso-table-rspace:0"><thead>${f}</thead><tbody>${b}</tbody></table>`
+                        : `<table cellspacing="0" cellpadding="0" border="0" style="width:${r}pt;border-collapse:collapse;table-layout:fixed;${fr}mso-table-lspace:0;mso-table-rspace:0"><thead>${f}</thead><tbody>${b}</tbody></table>`;
                     };
                   let starts = [1];
                   for (let t = 2; t < rows.length; t++) bb[t] && starts.push(t);
@@ -27321,7 +29710,7 @@
                   w = n
                     .map((e, n) => {
                       const i = `<b style="font-family:'Carlito',${d};font-size:${u.mainExp}pt;font-style:italic;color:${t.mainSubHeadColor}">${e.title}</b><span style="font-family:'Carlito',${d};font-size:${u.mainExp}pt;font-style:italic;font-weight:400;color:${t.mainCompanyColor}">, ${e.company}</span>`,
-                        l = `<span style="font-family:'Carlito',${d};font-size:${u.mainExp}pt;font-style:italic;color:${t.mainYearColor || "#595959"}">${e.years}</span>`,
+                        l = `<span style="font-family:'Carlito',${d};font-size:${u.mainExp}pt;font-style:italic;color:${t.mainYearColor || "#595959"}">${__antcvScrubYears(e.years)}</span>`,
                         s = (e.bullets || [])
                           .map(
                             (e) =>
@@ -27456,7 +29845,7 @@
             },
             w = ie(),
             v = [];
-          v.push(...pe(w, e, !0));
+          v.push(...pe(w, e, !0, je));
           const x =
               v.length > 0
                 ? v
@@ -27464,7 +29853,7 @@
                       ([e, t]) =>
                         `<span style="color:#fff">${e}</span>&nbsp;${t}`,
                     )
-                    .join("&nbsp;&nbsp;•&nbsp;&nbsp;")
+                    .join("&#8194;")
                 : e
                   ? "[Kontakt — e-mail | telefon | LinkedIn | lokation]"
                   : "[Contact — email | phone | LinkedIn | location]",
@@ -27494,21 +29883,23 @@
             A = "topbar" === (T.name || "topbar"),
             I = "topbar" === (T.specialisation || "topbar"),
             O = "topbar" === (T.contact || "topbar"),
+            // CL-APP-SUBTITLE-HEADING-SWAP-001 (owner 2026-07-22): the CL heading shows the
+            // SPECIALISATION subtitle like the CV (was "Application: <role>"); the per-app
+            // application line moved UNDER THE SLOGAN (app-line block below). Both doc types
+            // render the same specialisation div now — the CL `y` branch is retired here.
             _ = I
-              ? y
-                ? `<div style="font-family:'Cabin',${s};font-size:${qo}pt;color:#fff;text-align:${E("specialisation")};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2pt;line-height:1.1">${io.role || io.company ? `${o("Application:")} ${io.role || ""}${io.role && io.company ? " - " : ""}${io.company || ""}` : e ? "Ansøgning: [rolle og virksomhed]" : "Application: [role and company]"}</div>`
-                : `<div style="font-family:'Cabin',${s};font-size:${qo}pt;color:#fff;text-align:${E("specialisation")};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2pt;line-height:1.1">${(io.subtitle || (e ? "[Specialisering — 1–3 fokusområder, adskilt med •]" : "[Specialisation — 1–3 focus areas, separated by •]")).replace(/\s*\|\s*/g, " • ")}</div>`
+              ? `<div style="font-family:'Cabin',${s};font-size:${qo}pt;color:#fff;text-align:${E("specialisation")};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2pt;line-height:1.1">${(io.subtitle || (e ? "[Specialisering — 1–3 fokusområder, adskilt med •]" : "[Specialisation — 1–3 focus areas, separated by •]")).replace(/\s*\|\s*/g, " • ")}</div>`
               : "",
             N = A
               ? `<p style="font-family:'Cabin',${s};font-size:${u.nameSize}pt;font-weight:700;color:#fff;text-align:${E("name")};margin:12pt 0 3pt;line-height:1.1;mso-line-height-rule:exactly">${w.name || (e ? "Dit navn" : "Your Name")}</p>${window.__antcvHdrRuleHtml ? window.__antcvHdrRuleHtml("name", "#01B7BB", 2, 0) : ""}`
               : "",
             $ = O
-              ? `${window.__antcvHdrRuleHtml ? window.__antcvHdrRuleHtml("specialisation", "#01B7BB", 3, 1) : f("#01B7BB", 3, 1)}<p style="font-family:'Cabin',${s};font-size:${u.contactSize}pt;color:#fff;text-align:${E("contact")};margin:3pt 0;line-height:1.2;mso-line-height-rule:exactly">${x}</p>${window.__antcvHdrRuleHtml ? window.__antcvHdrRuleHtml("contact", "#01B7BB", 1, 0) : f("#01B7BB", 1, 0)}`
+              ? `${window.__antcvHdrRuleHtml ? window.__antcvHdrRuleHtml("specialisation", "#01B7BB", 3, 1) : f("#01B7BB", 3, 1)}<p style="font-family:'Cabin',${s};font-size:${(Number(u.contactSize) || 10) + 1}pt;color:#fff;text-align:${E("contact")};margin:3pt 0;line-height:1.2;mso-line-height-rule:exactly">${x}</p>${window.__antcvHdrRuleHtml ? window.__antcvHdrRuleHtml("contact", "#01B7BB", 1, 0) : f("#01B7BB", 1, 0)}`
               : "",
             L =
               A || I || O
-                ? `<table width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="${n}" style="width:100%;border-collapse:collapse;background:${n};page-break-after:avoid"><tr><td bgcolor="${n}" style="background:${n};padding:14pt 16pt 8pt;text-align:center">${N}${_}${$}</td></tr></table>`
-                : `<table width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="${n}" style="width:100%;border-collapse:collapse;background:${n};page-break-after:avoid"><tr><td bgcolor="${n}" style="background:${n};height:8pt;line-height:8pt;font-size:1pt">&nbsp;</td></tr></table>`;
+                ? `<table width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="${n}" style="width:100%;border-collapse:collapse;background:${n};page-break-after:avoid"><tr><td bgcolor="${n}" style="background:${n};padding:14pt 16pt 8pt;text-align:center;border-bottom:1pt solid ${S}">${N}${_}${$}</td></tr></table>`
+                : `<table width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="${n}" style="width:100%;border-collapse:collapse;background:${n};page-break-after:avoid"><tr><td bgcolor="${n}" style="background:${n};height:8pt;line-height:8pt;font-size:1pt;border-bottom:1pt solid ${S}">&nbsp;</td></tr></table>`;
           let P = "";
           if ("cv" === Lt) {
             const e = `width:307px;background:${n};padding:8pt;vertical-align:top`,
@@ -27536,7 +29927,7 @@
             // CL-CLOSING-EDIT-001 (owner 2026-06-29): editable sign-off closing; EN default is
             // "At your service," (the Nordic template), override via antcv:clClosing. Parity with
             // the worker closeWord + the React preview.
-            const i = (() => { try { const ov = String(localStorage.getItem("antcv:clClosing") || "").trim(); if (ov) return ov; } catch (_) {} return ({ da: "Med venlig hilsen,", es: "Atentamente,", zh: "此致敬礼，" })[je] || "At your service,"; })(),
+            const i = (() => { try { const ov = String(localStorage.getItem("antcv:clClosing") || "").trim(); if (ov && ov !== "At your service," && !(({ zh: 1, he: 1, am: 1, ar: 1 })[je] && !/[一-鿿㐀-䶿֐-׿؀-ۿሀ-፿]/.test(ov))) return ov; } catch (_) {} return ({ da: "Med venlig hilsen,", es: "Atentamente,", zh: "此致敬礼，", he: "בברכה,", am: "ከሰላምታ ጋር,", ar: "مع خالص التقدير," })[je] || "At your service,"; })(),
               l = a.filter(
                 (e) => e.on && "closure" !== e.id && "jd_questions" !== e.id,
               ),
@@ -27567,7 +29958,7 @@
                     }
                   }
                 } catch (_) {}
-                var sn = (() => { try { var ov = String(localStorage.getItem("antcv:clSignName") || "").trim(); if (ov) return ov; } catch (_) {} var fn = String(w.name || "").trim(); return fn ? fn.split(/\s+/)[0] : (e ? "Dit navn" : "Your Name"); })();
+                var sn = (() => { try { var ov = String(localStorage.getItem("antcv:clSignName") || "").trim(); if (({ zh: 1, he: 1, am: 1, ar: 1 })[je] && (!ov || !/[一-鿿㐀-䶿֐-׿؀-ۿሀ-፿]/.test(ov))) { var lv = String(localStorage.getItem("antcv:clSignName_" + je) || "").trim(); lv && (ov = lv); } if (ov) return ov; } catch (_) {} var fn = String(w.name || "").trim(); return fn ? fn.split(/\s+/)[0] : (e ? "Dit navn" : "Your Name"); })();
                 var na = (() => { try { var a2 = String(localStorage.getItem("antcv:clSignNameAlign") || "center").replace(/["']/g, "").toLowerCase(); return ("left" === a2 || "right" === a2 || "center" === a2) ? a2 : "center"; } catch (_) { return "center"; } })();
                 var ca = (() => { try { var a4 = String(localStorage.getItem("antcv:clClosingAlign") || "center").replace(/["']/g, "").toLowerCase(); return ("left" === a4 || "right" === a4 || "center" === a4) ? a4 : "center"; } catch (_) { return "center"; } })();
                 // CL-SIGNOFF-ALIGN-001 (owner 2026-06-29): order closing -> NAME -> signature; the
@@ -27576,9 +29967,9 @@
               })(),
               g = 5;
             P =
-              `<table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${(() => { try { if (localStorage.getItem("antcv:clSloganHidden") === "1") return ""; var st = String(localStorage.getItem("antcv:clSlogan") || "").trim(); if (!st || /^\[/.test(st)) st = String(io.subtitle || "").trim(); st = st.replace(/\s*\|\s*/g, " • ").trim(); if (!st || /^\[/.test(st)) return ""; var sa = String(localStorage.getItem("antcv:clSloganAlign") || "center").replace(/["']/g, "").toLowerCase(); if (sa !== "left" && sa !== "right" && sa !== "center") sa = "center"; return '<p style="font-family:\'Cabin\',' + d + ';font-size:11pt;font-weight:700;letter-spacing:.08em;text-align:' + sa + ';color:' + (t.mainLineColor || "#01746E") + ';margin:0 0 12pt">' + st.toUpperCase() + '</p>'; } catch (_) { return ""; } })()}${l.map(b).join("")}${u}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table>` +
+              `<table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${(() => { try { if (window.__antcvSloganStandaloneHidden ? window.__antcvSloganStandaloneHidden() : localStorage.getItem("antcv:clSloganHidden") === "1") return ""; var __uns = window.__antcvSloganUnsolActive ? window.__antcvSloganUnsolActive(io) : false; var st = __uns ? "" : String((io && io.cl_slogan) || "").trim(); if (!st || /^\[/.test(st)) { st = String(localStorage.getItem("antcv:clSlogan") || "").trim(); if (st && window.__antcvSloganLangGate && !window.__antcvSloganLangGate(st)) st = ""; if (st && __uns && window.__antcvSloganOverrideIsGen && window.__antcvSloganOverrideIsGen(st, io)) st = ""; } if ((!st || /^\[/.test(st)) && __uns) st = String(io.subtitle || "").trim(); st = st.replace(/\s*\|\s*/g, " • ").trim(); if (window.__antcvSloganCap) st = window.__antcvSloganCap(st); if (!st || /^\[/.test(st)) return ""; var sa = String(localStorage.getItem("antcv:clSloganAlign") || "center").replace(/["']/g, "").toLowerCase(); if (sa !== "left" && sa !== "right" && sa !== "center" && sa !== "justify") sa = "center"; return '<p style="font-family:\'Cabin\',' + d + ';font-size:11pt;font-weight:700;letter-spacing:.08em;text-align:' + sa + ';color:var(--brand-slogan-color,' + (t.mainLineColor || "#01746E") + ');margin:0 0 12pt">' + st.toUpperCase() + '</p>'; } catch (_) { return ""; } })()}${(() => { try { var __al = window.__antcvAppLineText ? window.__antcvAppLineText(io) : ""; if (!__al) return ""; return '<div style="font-family:\'Cabin\',' + d + ';font-size:10.5pt;font-weight:600;letter-spacing:.02em;text-align:center;color:var(--brand-slogan-color,' + (t.mainLineColor || "#01746E") + ');margin:0 0 12pt">' + __al + '</div>'; } catch (_) { return ""; } })()}${l.map(b).join("")}${u}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table>` +
               (c
-                ? `<div style="page-break-before:always;mso-page-break-before:always;break-before:page"><table width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="${n}" style="width:100%;border-collapse:collapse;background:${n};page-break-after:avoid;mso-page-break-after:avoid"><tr><td bgcolor="${n}" style="background:${n};padding:14pt 16pt 8pt;text-align:center">${N}${_}${$}</td></tr></table><table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${b(c)}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table></div>`
+                ? `<div style="page-break-before:always;mso-page-break-before:always;break-before:page"><table width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="${n}" style="width:100%;border-collapse:collapse;background:${n};page-break-after:avoid;mso-page-break-after:avoid"><tr><td bgcolor="${n}" style="background:${n};padding:14pt 16pt 8pt;text-align:center;border-bottom:1pt solid ${S}">${N}${_}${$}</td></tr></table><table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${b(c)}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table></div>`
                 : "");
           }
           return `<!DOCTYPE html><html><head><meta charset="utf-8">\n<link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">\n<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Carlito:ital,wght@0,400;0,700;1,400;1,700&family=Cabin:ital,wght@0,400;0,500;0,600;0,700;1,400&display=block"><title>${"cv" === Lt ? "CV" : "Cover Letter"} — ${w.name || "CV"}</title>\n<meta name="author" content="${(w.name || "").replace(/"/g, "&quot;")}">\n<meta name="generator" content="AntCV v${Ai}">\n<meta name="description" content="Generated by AntCV (cv-generator-det.pages.dev) — author retains all rights to the content.">\n<meta name="created" content="${new Date().toISOString()}">\n<style>\n*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}\nbody{font-family:'Carlito',${d};background:#fff;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}\n@page WordSection1{size:595pt 842pt;margin:0 !important;mso-header-margin:0pt;mso-footer-margin:0pt}\ndiv.WordSection1{page:WordSection1}\n@page{size:A4;margin:0 !important}\n@media print{\n body{margin:0;padding:0}html{margin:0;padding:0}\n .emoji{-webkit-filter:brightness(0) invert(1);filter:brightness(0) invert(1)}\n [style*="page-break-inside:avoid"]{page-break-inside:avoid}\n /* v1.40.95: ATS-readable font override for print.\n    Chrome's print-to-PDF pipeline subsets web fonts (Carlito/Cabin from Google Fonts)\n    using CID-keyed encoding WITHOUT generating a ToUnicode CMap. Visually fine, but\n    every text extractor (PDF.js, pdfminer, ATS systems) gets scrambled output.\n    Forcing the body font to a stack of system / PDF-standard fonts (Arial first —\n    most ATS systems treat Arial as a "core" font with built-in Unicode mappings)\n    means the printed PDF has properly extractable text. Visual fidelity drops a\n    little (Carlito is wider than Arial) but the document remains professional and\n    machine-readable. */\n body, p, div, span, td, th, li, a { font-family: Arial, Helvetica, "Liberation Sans", sans-serif !important; }\n strong, b { font-family: Arial, Helvetica, "Liberation Sans", sans-serif !important; font-weight: 700; }\n em, i { font-family: Arial, Helvetica, "Liberation Sans", sans-serif !important; font-style: italic; }\n}\n</style></head>\n<body style="margin:0;padding:0"><div class="WordSection1">${L}${P}</div><div aria-hidden="true" style="position:fixed;bottom:0;right:0;color:transparent;font-size:1px;line-height:1px;height:1px;overflow:hidden;pointer-events:none">AntCV/v${Ai} · ${(w.name || "").replace(/[<>&"]/g, "")} · ${new Date().toISOString()}</div></body></html>`;
@@ -28119,7 +30510,7 @@
             _ = Gt(r.sidebarTextColor, "FFFFFF"),
             N = h(y.nameSize, 16),
             $ = h(y.specialisation, 11),
-            L = h(y.contactSize, 10),
+            L = String(Math.round(2 * ((Number(y.contactSize) || 10) + 1))),
             P = h(y.mainHead, 11),
             B = h(y.mainBody, 10.5),
             D = h(y.mainTblH, 10.5),
@@ -28612,7 +31003,7 @@
                       ? `<w:r><w:t xml:space="preserve"> | </w:t></w:r>${V(e.company, "CV_LineMiddleItalic")}`
                       : "",
                     s = e.years
-                      ? `<w:r><w:tab/></w:r>${V(e.years, "CV_LineRest")}`
+                      ? `<w:r><w:tab/></w:r>${V(__antcvScrubYears(e.years), "CV_LineRest")}`
                       : "";
                   (n.push(
                     `<w:p><w:pPr><w:pStyle w:val="CV_Body"/><w:tabs><w:tab w:val="right" w:pos="9000"/></w:tabs><w:spacing w:before="120" w:after="20"/></w:pPr>${i}${l}${s}</w:p>`,
@@ -28772,13 +31163,13 @@
           }
           const E = [];
           if (
-            (pe(y, "da" === je, !1).forEach(([e, t]) => E.push(e + " " + t)),
+            (pe(y, "da" === je, !1, je).forEach(([e, t]) => E.push(e + " " + t)),
             E.length)
           ) {
             x.push(
               `<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="4" w:color="01B7BB" w:space="0"/></w:pBdr><w:shd w:val="clear" w:color="auto" w:fill="${b}"/><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/></w:pPr></w:p>`,
             );
-            const e = E.join("  •  ");
+            const e = E.join(" ");
             (x.push(u(e, "CV_Contact")),
               x.push(
                 `<w:p><w:pPr><w:pBdr><w:top w:val="single" w:sz="4" w:color="01B7BB" w:space="0"/></w:pBdr><w:shd w:val="clear" w:color="auto" w:fill="${b}"/><w:spacing w:before="0" w:after="20" w:line="20" w:lineRule="exact"/></w:pPr></w:p>`,
@@ -28806,11 +31197,14 @@
                 u(
                   // CL-CLOSING-EDIT-001 (owner 2026-06-29): EN sign-off default is "At your service,"
                   // (Nordic template). Inline-docx fallback path (worker-down); default only.
-                  {
+                  (() => { try { const ov = String(localStorage.getItem("antcv:clClosing") || "").trim(); if (ov && ov !== "At your service," && !(({ zh: 1, he: 1, am: 1, ar: 1 })[je] && !/[一-鿿㐀-䶿֐-׿؀-ۿሀ-፿]/.test(ov))) return ov; } catch (_) {} return ({
                     da: "Med venlig hilsen,",
-                    es: "Saludos cordiales,",
-                    zh: "此致敬礼,",
-                  }[je] || "At your service,",
+                    es: "Atentamente,",
+                    zh: "此致敬礼，",
+                    he: "בברכה,",
+                    am: "ከሰላምታ ጋር,",
+                    ar: "مع خالص التقدير,",
+                  })[je] || "At your service,"; })(),
                   "CV_Body",
                   { spacingBefore: 240, spacingAfter: 120 },
                 ),
@@ -28818,7 +31212,7 @@
               S.push(
                 u(
                   // CL-SIGNNAME-001: editable sign-off name, default = first word of the full name.
-                  (() => { try { var ov = String(localStorage.getItem("antcv:clSignName") || "").trim(); if (ov) return ov; } catch (_) {} var fn = String(y.name || "").trim(); return fn ? fn.split(/\s+/)[0] : (l ? "Dit navn" : "Your Name"); })(),
+                  (() => { try { var ov = String(localStorage.getItem("antcv:clSignName") || "").trim(); if (({ zh: 1, he: 1, am: 1, ar: 1 })[je] && (!ov || !/[一-鿿㐀-䶿֐-׿؀-ۿሀ-፿]/.test(ov))) { var lv = String(localStorage.getItem("antcv:clSignName_" + je) || "").trim(); lv && (ov = lv); } if (ov) return ov; } catch (_) {} var fn = String(y.name || "").trim(); return fn ? fn.split(/\s+/)[0] : (l ? "Dit navn" : "Your Name"); })(),
                   "CV_SignatureName",
                   { spacingBefore: 0, spacingAfter: 60 },
                 ),
@@ -28885,12 +31279,12 @@
                 ),
               ));
           const $ = [];
-          (N && pe(w, "da" === je, !1).forEach(([e, t]) => $.push(e + " " + t)),
+          (N && pe(w, "da" === je, !1, je).forEach(([e, t]) => $.push(e + " " + t)),
             $.length
               ? (k.push(
                   `<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="6" w:color="${C}" w:space="0"/></w:pBdr><w:shd w:val="clear" w:color="auto" w:fill="${v}"/><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/></w:pPr></w:p>`,
                 ),
-                k.push(m($.join("  •  "), "CV_Contact")),
+                k.push(m($.join(String.fromCharCode(8194)), "CV_Contact")),
                 k.push(
                   `<w:p><w:pPr><w:pBdr><w:top w:val="single" w:sz="6" w:color="${C}" w:space="0"/></w:pBdr><w:shd w:val="clear" w:color="auto" w:fill="${v}"/><w:spacing w:before="0" w:after="20" w:line="20" w:lineRule="exact"/></w:pPr></w:p>`,
                 ))
@@ -29984,7 +32378,7 @@
           );
         })();
       const ks =
-          "GENERAL CV — UNSOLICITED APPLICATION CONTEXT\n\nThis is NOT a tailored application for a specific role. The candidate is preparing a comprehensive CV and cover letter that showcases the FULL breadth of their experience, education, certifications, publications, tools, and skills — to be sent unsolicited to recruiters, contacts, and prospective employers.\n\nSTRICT VERBATIM-PRESERVATION REQUIREMENTS:\n• CERTIFICATIONS: list ALL certifications from personalInfo.certifications, copied VERBATIM, in the same order. Do NOT abbreviate, paraphrase, or drop any. Examples of FORBIDDEN abbreviations: writing 'Six Sigma' when the stored value is 'Six Sigma Black Belt'; writing 'ASPICE' when the stored value is 'Automotive SPICE'. If the candidate has 5 certifications stored, the output MUST contain 5 certifications.\n• TOOLS & METHODS: include EVERY tool/method/library/framework/standard listed in personalInfo.tools (or equivalent). Group by domain (Engineering, Languages, ALM/PM, Lab/Metrology, Hardware/Design, etc.) but do NOT drop any entries. If the candidate lists 15 tools, the output sidebar MUST contain all 15.\n• EDUCATION: include ALL education entries verbatim. Degree name + institution + specialisation copied exactly.\n• PUBLICATIONS & PATENT: include all peer-reviewed work and patents. Do not summarise away titles.\n• LANGUAGES: include all languages with their proficiency level.\n• WORK HISTORY: include ALL roles from personalInfo.work_history, newest first. Each role gets 2–3 bullets reflecting the actual scope and outcomes the candidate has recorded — do not invent, but DO use the full raw_bullets stored. Spread across two pages if needed (page assignments are handled downstream).\n\nGUIDANCE FOR THE LLM (writing style):\n• PROFILE: 2–3 sentences positioning the candidate against their full domain (years of experience, primary disciplines, secondary disciplines, what they're known for). Do not constrain to a single role or specialisation.\n• SELECTED OUTCOMES: pick the 5 most measurable / concrete outcomes across the entire career — favour numeric results and named systems. Spread across multiple roles and decades.\n• CORE COMPETENCIES: MANDATORY — always emit this section. Build a 2-column table covering 5–7 strongest cross-cutting capabilities. Do NOT tailor to a niche. Do NOT skip or merge this section, even if Selected Outcomes is strong; recruiters scan the table first.\n• COVER LETTER: write it as an unsolicited introduction. WHO I AM = comprehensive professional self-description. WHAT I BRING = broad skills table. WHY THIS POSITION → WHY I AM REACHING OUT (a brief, honest paragraph about the candidate looking for opportunities matching their profile). HOW I WOULD CONTRIBUTE = what kinds of work / problems the candidate is best suited to take on. FOUNDATION stays as-is. Use [Company] / [Hiring Manager] as placeholders since this is unsolicited.\n• Do NOT invent details. If a section can't be filled from personalInfo, leave it terse but accurate.\n• Set meta.company=\"Unsolicited\", meta.role=\"General CV\", meta.subtitle from the candidate's primary discipline(s).\n\nOUTPUT LANGUAGE: as configured in the request.",
+          "GENERAL CV — UNSOLICITED APPLICATION CONTEXT\n\nThis is NOT a tailored application for a specific role. The candidate is preparing a comprehensive CV and cover letter that showcases the FULL breadth of their experience, education, certifications, publications, tools, and skills — to be sent unsolicited to recruiters, contacts, and prospective employers.\n\nSTRICT VERBATIM-PRESERVATION REQUIREMENTS:\n• CERTIFICATIONS: list ALL certifications from personalInfo.certifications, copied VERBATIM, in the same order. Do NOT abbreviate, paraphrase, or drop any. Examples of FORBIDDEN abbreviations: writing 'Six Sigma' when the stored value is 'Six Sigma Black Belt'; writing 'ASPICE' when the stored value is 'Automotive SPICE'. If the candidate has 5 certifications stored, the output MUST contain 5 certifications.\n• TOOLS & METHODS: include EVERY tool/method/library/framework/standard listed in personalInfo.tools (or equivalent). Group by domain (Engineering, Languages, ALM/PM, Lab/Metrology, Hardware/Design, etc.) but do NOT drop any entries. If the candidate lists 15 tools, the output sidebar MUST contain all 15.\n• EDUCATION: include ALL education entries verbatim. Degree name + institution + specialisation copied exactly.\n• PUBLICATIONS & PATENT: include all peer-reviewed work and patents. Do not summarise away titles.\n• LANGUAGES: include all languages with their proficiency level.\n• WORK HISTORY: include ALL roles from personalInfo.work_history, newest first. Each role gets 2–3 bullets reflecting the actual scope and outcomes the candidate has recorded — do not invent, but DO use the full raw_bullets stored. Spread across two pages if needed (page assignments are handled downstream).\n\nGUIDANCE FOR THE LLM (writing style):\n• PROFILE: 2–3 sentences positioning the candidate against their full domain (years of experience, primary disciplines, secondary disciplines, what they're known for). Do not constrain to a single role or specialisation.\n• SELECTED OUTCOMES: pick the 5 most measurable / concrete outcomes across the entire career — favour numeric results and named systems. Spread across multiple roles and decades.\n• CORE COMPETENCIES: MANDATORY — always emit this section. Build a 2-column table covering 5–7 strongest cross-cutting capabilities. Do NOT tailor to a niche. Do NOT skip or merge this section, even if Selected Outcomes is strong; recruiters scan the table first.\n• COVER LETTER: write it as an unsolicited introduction. WHO I AM = comprehensive professional self-description. WHAT I BRING = broad skills table. WHY THIS POSITION → WHY I AM REACHING OUT (a brief, honest paragraph about the candidate looking for opportunities matching their profile). HOW I WOULD CONTRIBUTE = what kinds of work / problems the candidate is best suited to take on. FOUNDATION stays as-is. Use [Company] / [Hiring Manager] as placeholders since this is unsolicited.\n• Do NOT invent details. If a section can't be filled from personalInfo, leave it terse but accurate.\n• Set meta.company=\"Unsolicited\", meta.role=\"General CV\", meta.subtitle from the candidate's primary discipline(s).\n\nOUTPUT LANGUAGE: as configured in the request." + __langGenLock(je),
         Cs = (e = {}) => {
           try {
             const t = ie();
@@ -30918,6 +33312,34 @@
                     "With your own keys you’re not a demo user, so PDFs aren’t rendered on AntCV’s shared CloudConvert. Add your own CloudConvert key for crisp server PDF, or leave blank to use the built-in browser-print PDF (still ATS-readable). Get a key at cloudconvert.com → Dashboard → Authorization → API Keys.",
                   ),
                 ),
+              // BYOK-BRAVE-001: optional Brave Search key for the job-tracker's
+              // employer web research (mirrors the CloudConvert key block above).
+              "byok" === En &&
+                React.createElement(
+                  "div",
+                  { style: { marginTop: 14 } },
+                  React.createElement(
+                    "label",
+                    { style: { display: "block", color: "rgba(255,255,255,0.7)", fontSize: 11, fontWeight: 600, marginBottom: 4 } },
+                    "Brave Search API key (optional — for employer web research)",
+                  ),
+                  React.createElement("input", {
+                    type: "password",
+                    placeholder: "Your Brave Search API key",
+                    defaultValue: u.get("braveKey", "") || "",
+                    onChange: (e) => {
+                      try {
+                        u.set("braveKey", String((e.target && e.target.value) || "").trim());
+                      } catch (_) {}
+                    },
+                    style: { width: "100%", padding: "8px 10px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 6, color: "#fff", fontSize: 11, fontFamily: "monospace", boxSizing: "border-box" },
+                  }),
+                  React.createElement(
+                    "div",
+                    { style: { color: "rgba(255,255,255,0.45)", fontSize: 10, lineHeight: 1.45, marginTop: 4 } },
+                    "Powers the job-tracker employer web research (holistic + specific company intel). Leave blank to use AntCV's shared Brave key. Free key at brave.com/search/api.",
+                  ),
+                ),
               React.createElement(
                 "div",
                 {
@@ -31053,14 +33475,14 @@
                               (S && S[t] && S[t].model) ||
                               null ||
                               ("anthropic" === t
-                                ? "claude-opus-4-7"
+                                ? "claude-opus-4-8"
                                 : "openai" === t
                                   ? "gpt-5.5"
                                   : "mistral" === t
                                     ? "mistral-large-latest"
                                     : "gemini" === t
                                       ? "gemini-2.5-flash"
-                                      : "claude-opus-4-7"),
+                                      : "claude-opus-4-8"),
                             max_tokens: 20,
                             messages: [
                               {
@@ -32269,9 +34691,9 @@
                         React.createElement(
                           "b",
                           { style: { color: "#7c3aed" } },
-                          "⇥ Compressed",
+                          "⇥ Fit-it",
                         ),
-                        " — LLM rewrites it 15-25% tighter, keeps numbers and proper nouns",
+                        " — LLM re-fits the text tighter (15-25%), keeps numbers and proper nouns",
                       ),
                       React.createElement(
                         "li",
@@ -32292,6 +34714,16 @@
                           "↶ Undone",
                         ),
                         " — up to 5 levels of undo per session",
+                      ),
+                      React.createElement(
+                        "li",
+                        null,
+                        React.createElement(
+                          "b",
+                          { style: { color: "#01B7BB" } },
+                          "🤖 Ask AI",
+                        ),
+                        " — the assistant in the editor and job list: ask questions, request edits",
                       ),
                     ),
                     g(
@@ -32782,6 +35214,23 @@
                                 "undefined" != typeof window &&
                                   window.__antcvPurgeGhosts &&
                                   window.__antcvPurgeGhosts({ quiet: !0 });
+                              } catch (e) {}
+                              // HARDREFRESH-STICKY-PAGEBREAK-001 (owner 2026-07-05: "tools is
+                              // pushed out again" after a live pagination-constant retune). The
+                              // sidebar/main auto-pagebreak measurer (antcv-auto-pagebreak-
+                              // block-001.js) is DELIBERATELY sticky — once a section has a
+                              // computed break, it is never re-measured (that's what stops the
+                              // page boundary from oscillating on every scroll re-render). That
+                              // stickiness lives in its OWN localStorage keys, independent of the
+                              // service-worker cache Hard Refresh already clears — so a user with
+                              // no devtools console (can't call AntcvAutoPagebreak.clear()
+                              // themselves) had no way to discard a break computed under an old
+                              // tuning constant after a deploy. Hard Refresh now also drops those
+                              // two keys so the next load re-measures from scratch against
+                              // whatever SIDEBAR_PAGE1_BAND/etc. just shipped.
+                              try {
+                                localStorage.removeItem("antcv:autoPages");
+                                localStorage.removeItem("antcv:autoPagesPreview");
                               } catch (e) {}
                             } catch (e) {
                               console.warn("Hard refresh cleanup error:", e);
@@ -33832,7 +36281,7 @@
                                         "x-api-key": t || "sk-ant-test",
                                       },
                                       body: JSON.stringify({
-                                        model: "claude-opus-4-7",
+                                        model: "claude-opus-4-8",
                                         max_tokens: 10,
                                         messages: [
                                           { role: "user", content: "Say hi" },
@@ -34002,7 +36451,7 @@
                           React.createElement(
                             "option",
                             { value: "" },
-                            "Auto (use current default — gpt-5.5)",
+                            "Auto (use current default — gpt-5.4-mini)",
                           ),
                           React.createElement(
                             "option",
@@ -36753,7 +39202,10 @@
                               n =
                                 (u.get("routingOverrides", {}) || {})[e] || "",
                               o = t.filter((e) => Q(e)),
-                              r = n && Q(n) ? n : o[0] || "(none configured)",
+                              // ROUTE-DEBUG-MATCHES-PRODUCTION-001: "Auto → X" must be
+                              // the provider ee() would pick (the __antcvScoreOrder
+                              // cost-quality order), not raw Z[0]. Mirrors dispatch.
+                              r = n && Q(n) ? n : __antcvScoreOrder(e, o.slice())[0] || "(none configured)",
                               a = bt === e,
                               i = null == ht ? void 0 : ht[e];
                             return React.createElement(
@@ -37281,6 +39733,18 @@
                                     try {
                                       Qn({ stylePackage: e });
                                     } catch (e) {}
+                                    // BRAND-STYLE-UNCHECK-001 (owner 2026-07-14): choosing a
+                                    // STANDARD visual style unchecks the upload-menu brand-fit
+                                    // (the style owns the preview + export colours) so the brand
+                                    // override (window.__antcvBrandFit gate) clears. The JD-LIST
+                                    // brand tick is NOT touched.
+                                    try {
+                                      if ("custom" !== e) {
+                                        window.__antcvBrandFit = false;
+                                        var __bc = document.querySelector("input[data-antcv-brandfit]");
+                                        if (__bc && __bc.checked) __bc.checked = false;
+                                      }
+                                    } catch (_) {}
                                     // COPENHAGEN-OVERLAY-001 (owner 2026-06-18): the
                                     // native picker recolours the main column (ya) but
                                     // never told the body-package island, so
@@ -38788,7 +41252,12 @@
                                       meta:
                                         io && "object" == typeof io ? io : {},
                                       jd_language: je,
-                                      category: "unsolicited",
+                                      // MANUAL-SAVE-CATEGORY-001 (owner 2026-07-18): don't hardcode
+                                      // 'unsolicited' when the current app is a real targeted job — that
+                                      // mislabels the saved copy and (on reopen) clears its JD. Prefer the
+                                      // JD-analysis category (yo.category); else, for a real employer, the
+                                      // 'targeted' sentinel the relay keeps non-unsolicited; else unsolicited.
+                                      category: (function () { try { var __c = (yo && "string" == typeof yo.category && yo.category.trim()) || ""; if (__c) return __c; var __co = (io && io.company) || ""; if (__co && !(window.__antcvUnsol && window.__antcvUnsol(__co))) return "targeted"; } catch (e) {} return "unsolicited"; })(),
                                       supporting_context:
                                         (yo && yo.supporting_context) || "",
                                       rationale: yo,
@@ -38798,6 +41267,21 @@
                                       // collapse onto the first list entry.
                                       save_as_new: !0,
                                     });
+                                  /* APP-HISTORY-KERNEL-SAVE-001 (owner 2026-07-10): also persist the manual unsolicited save to the per-(style×lang) kernel */
+                                  try {
+                                    var __mks = u.get("sections", null);
+                                    if (
+                                      __mks &&
+                                      ((__mks.cv && __mks.cv.length) || (__mks.cl && __mks.cl.length))
+                                    ) {
+                                      oo.putShowcase({
+                                        sections: __mks,
+                                        meta: (function (m) { try { if (!m || "object" != typeof m) return m; var co = String(m.company || "").trim(); if (!co || window.__antcvUnsol(co)) return m; var c = Object.assign({}, m, { company: "Unsolicited", role: "Open Application" }); try { delete c.rationale; } catch (_) {} return c; } catch (_) { return m; } })(io),
+                                        rationale: yo,
+                                        jd_language: je,
+                                      }, (() => { try { var p = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; p = p.personalInfo || p; var __st = String((p.writingPrefs || {}).style || "").trim().toLowerCase(); var __lg = String(localStorage.getItem("language") || "en").toLowerCase().replace(/[^a-z]/g, "").slice(0,2) || "en"; return __st ? __st + "|" + __lg : ""; } catch (_) { return ""; } })());
+                                    }
+                                  } catch (_) {}
                                   t &&
                                     t.application &&
                                     t.application.id &&
@@ -38966,10 +41450,10 @@
                                           "●",
                                         )
                                       : null,
-                                    (e.jd_company || "") +
+                                    "#" + e.id + "  " +
+                                      ((e.jd_company || "") +
                                       (e.jd_company && e.jd_role ? " - " : "") +
-                                      (e.jd_role || "") ||
-                                      "Application #" + e.id,
+                                      (e.jd_role || "") || "(untitled)"),
                                   ),
                                   React.createElement(
                                     "div",
@@ -39010,9 +41494,9 @@
                                       "span",
                                       null,
                                       e.updated_at
-                                        ? new Date(
-                                            e.updated_at,
-                                          ).toLocaleDateString()
+                                        ? new Date(e.updated_at).toLocaleDateString() +
+                                          " " +
+                                          new Date(e.updated_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
                                         : "",
                                     ),
                                   ),
@@ -39029,7 +41513,7 @@
                                           if (!Hl) {
                                             (Ul("switch:" + e.id), Gl(""));
                                             try {
-                                              if (Fl && Fl !== e.id)
+                                              if (Fl && Fl !== e.id && (String(window.__antcvContentAppId||"") === String(Fl) || "on" === (function(){try{return localStorage.getItem("antcv:switch-autosave")}catch(_){return null}})()))
                                                 try {
                                                   await oo.update(Fl, {
                                                     cv_sections:
@@ -39071,9 +41555,20 @@
                                                 // loaded app's sections came back empty
                                                 // (old wipe-generated bug) — keep current,
                                                 // notice instead. See the topbar twin.
+                                                // SWITCH-OPEN-JDONLY-001 (owner 2026-07-20): an application saved with a JD
+                                                // but NULL cv/cl_sections (many cloud records are JD-only until generated —
+                                                // e.g. #796 Ibsen Photonics, confirmed cv_sections:null in D1) must still OPEN
+                                                // on an EXPLICIT history switch instead of dead-ending on the "no stored
+                                                // content" toast. Safe: a FAILED fetch returns no t.application (handled above),
+                                                // so we only reach here on a SUCCESSFUL fetch of a genuinely section-less record;
+                                                // the prior app was already saved at the top of this handler; and the me() floor
+                                                // fills the empty sections with the template, so the user lands on the app
+                                                // (identity + JD/meta loaded) ready to Generate. Only a record with NO sections
+                                                // AND no JD/identity at all falls through to the notice.
                                                 const __hasReal =
                                                   (Array.isArray(n.cv_sections) && n.cv_sections.length) ||
-                                                  (Array.isArray(n.cl_sections) && n.cl_sections.length);
+                                                  (Array.isArray(n.cl_sections) && n.cl_sections.length) ||
+                                                  !!(String(n.jd_text || "").trim() || n.jd_company || (n.meta && (n.meta.company || n.meta.role)));
                                                 // APPHISTORY-RELOAD-001: the data
                                                 // loaded into state but the user was
                                                 // left on the Settings/History view,
@@ -39097,6 +41592,18 @@
                                                       ? {
                                                           ...(io || {}),
                                                           ...n.meta,
+                                                          // PER-APP-IDENTITY-RESTORE-001 (owner 2026-07-12: "even clean
+                                                          // apps not loading the correct slogan / application line /
+                                                          // specification"): when a saved app HAS a meta object the old
+                                                          // code spread ONLY meta, so identity fields missing from meta
+                                                          // (the gen-runner writes a minimal meta) inherited the PREVIOUS
+                                                          // app's company/role/subtitle/slogan. Always fall back to the
+                                                          // authoritative per-app columns for these.
+                                                          company: n.meta.company || n.jd_company || "",
+                                                          role: n.meta.role || n.jd_role || "",
+                                                          subtitle: n.subtitle || n.meta.subtitle || "",
+                                                          // SLOGAN-UNSOL-GENERIC-001: unsolicited keeps the generic standing default — never carry a tailored slogan in meta.
+                                                          cl_slogan: (window.__antcvUnsol && window.__antcvUnsol(n.meta.company || n.jd_company || "")) ? "" : (n.meta.cl_slogan || n.meta.slogan || (io && io.cl_slogan) || ""),
                                                         }
                                                       : {
                                                           ...(io || {}),
@@ -39118,6 +41625,30 @@
                                                   // completed for X at Y"
                                                   // text.
                                                   bo(n.rationale || null),
+                                                  (() => { try {
+                                                    // MIRROR-LOAD-001 (owner 2026-07-13): the SETTINGS loader
+                                                    // forces identity + language but never applied the brand
+                                                    // palette or refreshed the slogan — add both so the loaded
+                                                    // app is a mirror copy in preview AND print (topbar twin).
+                                                    if (n.meta && n.meta.styleConfig && "object" == typeof n.meta.styleConfig) wa(n.meta.styleConfig); else if (n.meta && null === n.meta.styleConfig) { try { u.remove("styleConfig"); } catch (_) {} } else { /* A4 STYLECONFIG-PER-APP-001 (owner 2026-07-21): an app carrying NO styleConfig must not inherit the PREVIOUS app's palette — that stale global is the colour-stick root (a kernel showed NVIDIA). Drop it so the package default re-derives on mount. A Custom package keeps its saved palette. */ try { var __pkgC = String(localStorage.getItem("stylePackage") || "").replace(/["']/g, ""); if ("custom" !== __pkgC) u.remove("styleConfig"); } catch (_) {} }
+                                                    // SLOGAN-UNSOL-GENERIC-001: never copy a tailored gen slogan into the override for an unsolicited app — it keeps the generic standing default.
+                                                    var __unsL = (() => { try { var __c = (n.meta && n.meta.company) || n.jd_company || ""; return !!(__c && window.__antcvUnsol && window.__antcvUnsol(__c)); } catch (_) { return false; } })();
+                                                    var __sl = __unsL ? "" : ((n.meta && (n.meta.cl_slogan || n.meta.slogan)) || ""); if (__sl) { try { localStorage.setItem("antcv:clSlogan", __sl); localStorage.setItem("antcv:clSloganCtx", JSON.stringify({ v: __sl, app: e.id })); } catch (_) {} } else { /* SLOGAN-LOAD-SYMMETRIC-001 (owner 2026-07-21, "make sure visible slogan is part of the load/restore"): this app has NO slogan -> CLEAR the standalone override so the PREVIOUS app's visible slogan cannot stick (same class as the colour-stick). */ try { localStorage.removeItem("antcv:clSlogan"); localStorage.removeItem("antcv:clSloganCtx"); } catch (_) {} }
+                                                  } catch (_e) {} })(),
+                                                  // APP-SWITCH-LANGUAGE-001 (owner 2026-07-10): switching to a saved
+                                                  // application also switches the language dropdown to that app's jd_language.
+                                                  (() => { try {
+                                                    // APP-SWITCH-CONTENT-LANG-001 (owner 2026-07-21 "loading apps in chinese
+                                                    // loads them in chinese but does not flip the selector, and next loads
+                                                    // stick chinese"): the UI language was set from jd_language (the JD's
+                                                    // language — "en" for an English/Danish job even when the CV was generated
+                                                    // in zh), so a Chinese-CONTENT app rendered Chinese while the selector said
+                                                    // English, and because the selector never matched the content it read as
+                                                    // "stuck". Prefer the CONTENT's actual script (what the CV/CL is written in)
+                                                    // so the selector always matches; fall back to jd_language when the content
+                                                    // is Latin/empty. Detects only the wide-script langs the bar supports.
+                                                    var __cl = (function(){ /* APP-SWITCH-CONTENT-LANG-DETECT-001 (owner 2026-07-22 "every CV starts in Chinese and switches to English — zh is the only Chinese CV we should have"): the old test returned "zh" on a SINGLE CJK codepoint in JSON.stringify(sections), so any babel RESIDUE flipped the whole app to Chinese (and drove babel-relang to translate + persist it). Use babel-relang's OWN vetted detector — VALUES only (JSON keys never dilute), prose-ratio with acronyms/proper-nouns excluded — so the selector AGREES with what the healer will do. Conservative inline fallback (majority wide-script over lowercase-Latin prose, residue-proof) covers the pre-boot window before the sidecar loads. */ try { if (typeof window.__antcvContentScript === "function") return window.__antcvContentScript((n && n.cv_sections) || [], (n && n.cl_sections) || []); var V = []; (function w(x){ if (x == null) return; if (typeof x === "string") { if (x.trim()) V.push(x); return; } if (typeof x === "object") { for (var k in x) w(x[k]); } })([(n && n.cv_sections) || [], (n && n.cl_sections) || []]); var s = V.join(" "); var lat = (s.match(/[a-z]{3,}/g) || []).join("").length; var SC = [["zh", /[一-鿿㐀-䶿]/g], ["he", /[֐-׿]/g], ["am", /[ሀ-፿]/g]]; for (var i = 0; i < SC.length; i++) { var c = (s.match(SC[i][1]) || []).length; if (c >= 30 && c >= 0.3 * (c + lat)) return SC[i][0]; } return ""; } catch (_) { return ""; } })();
+                                                    var __al = __cl || (function(){ /* APP-LOAD-NO-RETRANSLATE-001 (owner 2026-07-24): positively identify LATIN content (en/da/es) too — the wide-script detector returns "" for Latin, and falling straight to jd_language could set a ribbon the content is NOT in, which drove babel-relang to LLM-re-translate the loaded app. */ try { return (typeof window.__antcvContentLang === "function" ? window.__antcvContentLang((n && n.cv_sections) || [], (n && n.cl_sections) || []) : "") || ""; } catch (_) { return ""; } })() || String((n && n.jd_language) || "").toLowerCase().replace(/[^a-z]/g, "").slice(0, 2); try { localStorage.setItem("antcv:app-load-lang", JSON.stringify({ lang: __al || "", at: Date.now() })); } catch (_) {} /* PAGEMAP-PER-APP-001 (owner 2026-07-25 "aimpoint apps assumed to have nothing from main in 2nd page"): the sticky pagination maps (antcv:autoPages / antcv:autoPagesPreview) are keyed by SECTION ID and SHARED across applications, so switching apps kept the PREVIOUS app's page breaks - a longer app then crammed its main column onto page 1 and page 2 rendered sidebar-only. Stamp the maps with the owning app id; on a different app, drop both so the measurer re-runs for THIS app (same reset Hard Refresh does). */ try { var __pgk = "antcv:autoPagesApp", __pgid = String((n && n.id) || ""); if (__pgid && localStorage.getItem(__pgk) !== __pgid) { localStorage.removeItem("antcv:autoPages"); localStorage.removeItem("antcv:autoPagesPreview"); localStorage.setItem(__pgk, __pgid); } } catch (_) {} if (__al && ["en", "da", "es", "zh", "he", "am"].indexOf(__al) >= 0) { try { u.set("language", __al); } catch (_) {} try { localStorage.setItem("language", __al); localStorage.setItem("uiLang", __al); } catch (_) {} try { window.dispatchEvent(new CustomEvent("antcv:language-changed", { detail: { language: __al, source: "app-load" } })); } catch (_) {} try { window.dispatchEvent(new CustomEvent("antcv:language-prefs-changed", { detail: {} })); } catch (_) {} } } catch (_) {} })(),
                                                   (() => {
                                                     try {
                                                       // 1.50.252: stamp the
@@ -39163,12 +41694,12 @@
                                   "button",
                                   {
                                     onClick: async () => {
-                                      if (
-                                        !Hl &&
-                                        confirm(
-                                          "Delete this application? This is permanent.",
-                                        )
-                                      ) {
+                                      // DELETE-CONFIRM-INAPP-001 (owner 2026-07-22 "press delete, no response"):
+                                      // native confirm() is silently swallowed by embedded / installed-PWA
+                                      // browsers (returns false), so the delete never fired. Two-click in-app
+                                      // confirm instead: first click ARMS (label -> "Delete?"), a second click
+                                      // within 4s deletes; a timer auto-disarms so it can never get stuck.
+                                      if (Hl === "armdel:" + e.id) {
                                         (Ul("delete:" + e.id), Gl(""));
                                         try {
                                           await oo.remove(e.id);
@@ -39182,9 +41713,12 @@
                                         } finally {
                                           Ul("");
                                         }
+                                      } else if (!Hl || Hl.indexOf("armdel:") === 0) {
+                                        (Ul("armdel:" + e.id),
+                                          setTimeout(function () { Ul(function (p) { return p === "armdel:" + e.id ? "" : p; }); }, 4000));
                                       }
                                     },
-                                    disabled: !!Hl,
+                                    disabled: !!Hl && Hl.indexOf("armdel:") !== 0,
                                     style: {
                                       padding: "5px 9px",
                                       background: "rgba(220,80,80,0.08)",
@@ -39197,7 +41731,7 @@
                                       flexShrink: 0,
                                     },
                                   },
-                                  Hl === "delete:" + e.id ? "⏳" : "🗑",
+                                  Hl === "delete:" + e.id ? "⏳" : Hl === "armdel:" + e.id ? "Delete?" : "🗑",
                                 ),
                               ),
                             ),
@@ -39940,22 +42474,39 @@
           "div",
           {
             className: "fade",
+            // UPLOAD-SCREEN-TOP-CLIP-001 (owner 2026-07-05, mobile, live-
+            // verified on device): the EN/gear/Editor header row was cut off
+            // at the top on real content (taller than one viewport) — and,
+            // separately, rendered BEHIND the "Generating kernel showcase…"
+            // fixed banner while a background generation is running.
+            // SUPERSEDES the 2026-07-05 UPLOAD-SCREEN-SCROLLTOP-001 attempt
+            // (forcing scrollTop=0 on mount) — that was chasing the wrong
+            // mechanism. Live measurement on a real phone (via CDP) showed
+            // the header row at a NEGATIVE offset even with scrollTop
+            // already 0 — the clip wasn't a scroll-position artifact, it was
+            // `justifyContent:"center"` on this flex column actively
+            // centering the overflowing content, symmetrically clipping ~20px
+            // off BOTH the top and bottom every time content (or the
+            // banner-active body padding, see index.html's
+            // `.antcv-banner-active` rule) leaves less room than the content
+            // needs. margin:"auto 0" on the inner wrapper below already
+            // resolves to 0 once content overflows (correct top-anchor-and-
+            // scroll per the flexbox spec), but a competing
+            // justifyContent:"center" on THIS container fights it. Dropping
+            // to "flex-start" here and letting the child's margin:"auto 0"
+            // own the "center when it fits" behaviour removes the conflict —
+            // confirmed live: toggling this one property moved the header
+            // row from off-screen (top:-13px) / behind-the-banner (top:38px,
+            // inside the banner's 0-58px span) to a clean top:79px, clear of
+            // both.
             style: {
-              minHeight: "100dvh",
-              // MOBILE-PANEL-ZOOM-001 (row 46): on mobile #root is height:100dvh
-              // + overflow:hidden (viewport lock), so this centered upload screen
-              // clipped its own overflow — the Brand-fit / Speed / Cap row fell
-              // below the fold and was unreachable at 100% zoom. Make this screen
-              // its OWN scroll container. The inner column gets margin:auto 0
-              // (auto margins override justify-content in flexbox) so it stays
-              // centred when it fits and scrolls from the top when it does not.
               height: "100dvh",
               overflowY: "auto",
               background: `linear-gradient(160deg,${__darkNavy(Ke)} 0%,#1a2a45 100%)`,
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              justifyContent: "center",
+              justifyContent: "flex-start",
               padding: 20,
               fontFamily: "Georgia,serif",
             },
@@ -40035,7 +42586,21 @@
                   translating: Rr,
                   size: "landing",
                   resetPreviewToFit: _i,
-                  onSelect: Pr,
+                  onSelect: (l) => {
+                    // UPLOAD-LANG-DEFER-001 (owner 2026-07-11): in the upload / input menu,
+                    // switching the output language must NOT pop the translate modal. Just set
+                    // the language silently (dropdown shows it + Generate uses it natively) and
+                    // remember to offer translation when the user opens the editor. In the
+                    // editor / preview the modal still fires immediately (owner: keep the popup
+                    // when the change is done on the preview).
+                    var v; try { v = ("undefined" != typeof window && window.__antcvView) || Nt; } catch (_) { v = Nt; }
+                    if ("upload" === v || "input" === v) {
+                      try { It(l); } catch (_) {}
+                      try { sessionStorage.setItem("antcv:pending-editor-translate", l); } catch (_) {}
+                      return;
+                    }
+                    Pr(l);
+                  },
                 }),
                 // DEMO-BADGE-SETUP-001 (owner 2026-06-13): the setup/landing
                 // header showed the demo badge nowhere — for an ACTIVE demo
@@ -40171,7 +42736,7 @@
                             mPre &&
                             "object" == typeof mPre &&
                             mPre.company &&
-                            "Unsolicited" !== String(mPre.company).trim()
+                            !window.__antcvUnsol(mPre.company)
                           );
                         if (isTailoredApp) {
                           try {
@@ -40453,21 +43018,15 @@
                                       return void n(
                                         new Error("Canvas not supported."),
                                       );
-                                    const c = i / 2,
-                                      d = i / 2,
-                                      p = i / 2;
-                                    (s.save(),
-                                      s.beginPath(),
-                                      s.arc(c, d, p, 0, 2 * Math.PI),
-                                      s.closePath(),
-                                      s.clip(),
-                                      s.drawImage(a, o, r, e, e, 0, 0, i, i),
-                                      s.restore(),
-                                      s.beginPath(),
-                                      s.arc(c, d, p - 2, 0, 2 * Math.PI),
-                                      (s.strokeStyle = "#01B7BB"),
-                                      (s.lineWidth = 4),
-                                      s.stroke());
+                                    // UPLOAD-CIRCLE-BAKE-001 (owner 2026-07-12): store the
+                                    // UNCROPPED square. The circle look (arc clip + #01B7BB
+                                    // ring) used to be BAKED into the stored PNG here, so a
+                                    // square/hexagon photoShape (and the zh ID-style export)
+                                    // still showed a baked circle-in-square. The shape is a
+                                    // RENDER-time style now: preview clips via CSS
+                                    // border-radius, export via the worker's photoShape
+                                    // geometry (makePhotosCircular).
+                                    s.drawImage(a, o, r, e, e, 0, 0, i, i);
                                     const u = l.toDataURL("image/png");
                                     t(u);
                                   } catch (e) {
@@ -40937,6 +43496,18 @@
                     "button",
                     {
                       onClick: () => {
+                        // JD-REMOVE-STICKY-001 (owner 2026-07-13): remember WHICH jd
+                        // was removed so cloud-restore doesn't re-seed it on the next
+                        // refresh. A tracker Open/Reopen stages antcv:lastJdText=jd
+                        // right before its reload — the cloud-restore guard treats
+                        // that match as a deliberate re-stage and clears this
+                        // tombstone; a DIFFERENT jd never matches it. The cloud row's
+                        // jd_text is NOT touched — the tracker still owns the JD.
+                        try {
+                          var __rj = String((zt && zt.text) || "");
+                          if (__rj) localStorage.setItem("antcv:jdRemoved", __rj.length + ":" + __rj.slice(0, 48));
+                          localStorage.setItem("antcv:lastJdText", "");
+                        } catch (e) {}
                         (Dt(null), Ft(null));
                       },
                       style: {
@@ -41039,7 +43610,7 @@
               React.createElement("input", {
                 ref: li,
                 type: "file",
-                accept: ".pdf,.doc,.docx",
+                accept: ".pdf,.doc,.docx,.txt,.md,.csv,.png,.jpg,.jpeg,.gif,.webp,image/png,image/jpeg,image/gif,image/webp",
                 multiple: !0,
                 style: { display: "none" },
                 onChange: async (e) => {
@@ -41074,6 +43645,66 @@
                                 `Could not extract text from "${e.name}":\n\n${t.message}`,
                               ),
                               console.error("PDF extraction failed:", t));
+                          }
+                        else if (
+                          ["png", "jpg", "jpeg", "gif", "webp"].includes(
+                            e.name.split(".").pop().toLowerCase(),
+                          ) ||
+                          (e.type || "").startsWith("image/")
+                        )
+                          // SIGNAL-IMAGE-OCR-001: a single image / screenshot attached as a
+                          // signal file is OCR'd via the app's vision extractor (same path the
+                          // JobTracker island uses), not dropped into the docx branch.
+                          try {
+                            if ("function" != typeof window.AntcvExtractPDFText)
+                              throw new Error(
+                                "OCR extractor not loaded yet - reload the page and retry",
+                              );
+                            const o = await window.AntcvExtractPDFText(e);
+                            if (jn.current) break;
+                            const r = String((o && o.text) || "").trim();
+                            Jt((t) => [
+                              ...t.filter((t) => t.name !== e.name),
+                              {
+                                name: e.name,
+                                text: r || "(no text found in image)",
+                                type: "image",
+                                extractionMethod: (o && o.method) || "ocr",
+                              },
+                            ]);
+                            console.log(
+                              "[IMG] OCR " + e.name + ": " + r.length + " chars",
+                            );
+                          } catch (t) {
+                            jn.current ||
+                              (alert(
+                                "Could not OCR " + e.name + ": " + ((t && t.message) || t),
+                              ),
+                              console.error("Image OCR failed:", t));
+                          }
+                        else if (
+                          ["txt", "md", "csv", "text"].includes(
+                            e.name.split(".").pop().toLowerCase(),
+                          ) ||
+                          (e.type || "").startsWith("text/")
+                        )
+                          try {
+                            const o = (await e.text()).trim();
+                            if (jn.current) break;
+                            Jt((t) => [
+                              ...t.filter((t) => t.name !== e.name),
+                              { name: e.name, text: o || "(empty file)", type: "text" },
+                            ]);
+                          } catch (t) {
+                            jn.current ||
+                              Jt((t) => [
+                                ...t.filter((t) => t.name !== e.name),
+                                {
+                                  name: e.name,
+                                  text: "(could not read text)",
+                                  type: "text",
+                                },
+                              ]);
                           }
                         else
                           try {
@@ -42552,7 +45183,9 @@
                   },
                   React.createElement("input", {
                     type: "checkbox",
-                    defaultChecked: !1,
+                    // BRAND-FIT-OPEN-002: reflect the restore-armed flag when the
+                    // panel renders after a brand-fitted tracker Open.
+                    defaultChecked: !0 === window.__antcvBrandFit,
                     "data-antcv-brandfit": "1",
                     onChange: (ev) => {
                       window.__antcvBrandFit = !!ev.target.checked;
@@ -42620,6 +45253,7 @@
           sections: ro,
           sectionStatus: mo,
           language: je,
+          jobLabel: (Bt && Bt.name) || (zt && zt.fileName) || "",
           onCancel: () => {
             (Do(!1),
               uo(""),
@@ -42646,7 +45280,7 @@
           // shadow prefs.
           __photoFrame = (sz) => {
             let radius = "50%",
-              border = `0.5pt solid ${l}`,
+              border = `0.5pt solid ${(ya && ya.photoBorderColor) || "#00746E"}`,
               shadow = "none";
             try {
               const sp =
@@ -42659,7 +45293,7 @@
                     ? "12px"
                     : "50%";
               const ct = sp.photoContour || "line";
-              border = "soft" === ct ? "none" : `0.5pt solid ${l}`;
+              border = "soft" === ct ? "none" : `0.5pt solid ${(ya && ya.photoBorderColor) || "#00746E"}`;
               shadow =
                 [
                   "soft" === ct ? `0 0 5px ${l}` : null,
@@ -42720,6 +45354,10 @@
                 regulatory: "regulatory",
                 additional: "additional",
                 publications: "publications",
+                // PUBS-RICH-INLINE-EDIT-001: the LIVE publications section id is "pubs"
+                // (the old "publications" id is retired) — mirror its inline edits to
+                // personalInfo.publications so cloud-/backup-restore can't wipe them.
+                pubs: "publications",
               };
               const piKey = SYNCED[e];
               if (!piKey) return;
@@ -42751,7 +45389,7 @@
           d = "topbar" === (i.specialisation || "topbar"),
           p = "topbar" === (i.contact || "topbar"),
           u = [];
-        p && u.push(...pe(a, "da" === je, !1));
+        p && u.push(...pe(a, "da" === je, !1, je));
         const m =
             u.length > 0
               ? // LINKEDIN-CLICK-001 (owner 2026-06-12): the LinkedIn entry
@@ -42759,25 +45397,52 @@
                 // plain text. Separators unchanged (Bridge round 3: ONE space
                 // around the bullet when the bridge is on).
                 u.flatMap(([e, t], _i) => {
-                  const _sep = _i ? [__bridgeOn ? " • " : " • "] : [];
-                  if (/linkedin\.com/i.test(String(t))) {
-                    const _v = String(t).trim();
+                  // CONTACT-NO-BULLET-001 (owner 2026-07-14): every contact item
+                  // carries its own leading glyph (⌂ ★ @ ☎ 🔗︎ ⌘ ⌁ from pe()), so
+                  // the between-item bullet is redundant — replace with an em-space
+                  // gap. Dropping it frees width, so the font also grows +0.5pt.
+                  const _sep = _i ? [" "] : [];
+                  // CONTACT-INLINE-EDIT-001 (owner 2026-07-14): each contact item is
+                  // click-to-edit in place. Only the RAW fields (email/phone/linkedin/
+                  // github/website — pe() emits them verbatim) are editable; location &
+                  // citizenship are pe()-transformed (localForm / dict-routed) so writing
+                  // the display form back would corrupt them, so they stay plain (edit via
+                  // the review dialog). The leading glyph stays outside the editable span.
+                  // Editable LinkedIn replaces the old clickable <a> (can't be both).
+                  const __ICON_FIELD = { "⌂": "location", "★": "citizenship", "✉︎": "email", "☎": "phone", "🔗︎": "linkedin", "⌘": "github", "⌁": "website" };
+                  const __field = __ICON_FIELD[String(e)] || "";
+                  if (/^(email|phone|linkedin|github|website)$/.test(__field)) {
                     return [
                       ..._sep,
                       React.createElement(
-                        "a",
-                        {
-                          key: "li" + _i,
-                          href: /^https?:/i.test(_v) ? _v : "https://" + _v,
-                          target: "_blank",
-                          rel: "noopener noreferrer",
-                          style: {
-                            color: "#fff",
-                            textDecoration: "underline",
-                            textUnderlineOffset: "2px",
+                        "span",
+                        { key: "cw" + _i },
+                        `${e} `,
+                        React.createElement("span", {
+                          key: "cv" + _i,
+                          // PUBS-EDIT-STABLE-001: model-changed-only repaint (see pubs above) —
+                          // don't let a spellcheck focus-flicker revert an in-progress contact edit.
+                          ref: (el) => { if (!el) return; const __cv = String(t); if (el.__antcvCV === __cv) return; if (document.activeElement === el) return; el.__antcvCV = __cv; el.textContent = __cv; },
+                          contentEditable: true,
+                          suppressContentEditableWarning: true,
+                          spellCheck: false,
+                          title: "Click to edit " + __field,
+                          onFocus: (ev) => { ((ev.currentTarget.style.outline = "1px dashed rgba(255,255,255,0.75)"), (ev.currentTarget.style.outlineOffset = "1px")); },
+                          onBlur: (ev) => {
+                            ev.currentTarget.style.outline = "none";
+                            try {
+                              const v = String(ev.currentTarget.textContent || "").trim();
+                              const pi = ie() || {};
+                              if (v !== String(pi[__field] || "")) {
+                                const nextPi = { ...pi, [__field]: v };
+                                try { le(nextPi); } catch (_) {}
+                                try { "function" == typeof Qn && Qn({ personalInfo: nextPi }); } catch (_) {}
+                                try { window.dispatchEvent(new CustomEvent("antcv:sections-updated", { detail: { reason: "contact-inline-" + __field } })); } catch (_) {}
+                              }
+                            } catch (_) {}
                           },
-                        },
-                        `${e} ${t}`,
+                          style: { cursor: "text", outline: "none", color: "#fff" },
+                        }),
                       ),
                     ];
                   }
@@ -42795,11 +45460,11 @@
               ? "Ansøgning: [rolle og virksomhed]"
               : "Application: [role and company]",
           h = d
-            ? "cl" === Lt
-              ? io.role || io.company
-                ? `${ye("Application:", je)} ${io.role || ""}${io.role && io.company ? " - " : ""}${io.company || ""}`
-                : f
-              : io.subtitle || g
+            // CL-APP-SUBTITLE-HEADING-SWAP-001 (owner 2026-07-22): the CL heading now shows the
+            // SPECIALISATION line like the CV. The per-app "Application for [Role] at [Company]"
+            // line lives UNDER THE SLOGAN (antcv-application-line-001.js); the band used to ALSO
+            // render "Application: <role> - <company>", so it appeared TWICE on the cover letter.
+            ? io.subtitle || g
             : "",
           y = (e) => (br && br[e]) || "center",
           b = c || d || p,
@@ -42834,6 +45499,28 @@
                     "div",
                     {
                       key: "specialisation",
+                      // SPEC-INLINE-EDIT-001 (owner 2026-07-14 "we still do not have spelling
+                      // on the specification line"): make the specialisation click-to-edit with
+                      // spellcheck, like the contact. Ref-managed text with the model-changed-
+                      // only guard (never revert a live/just-committed edit). onBlur writes the
+                      // current-language specialisation (+ subtitle mirror) and dispatches.
+                      contentEditable: true,
+                      suppressContentEditableWarning: true,
+                      spellCheck: true,
+                      title: "Click to edit the specialisation",
+                      ref: (el) => { if (!el) return; const __sv = String(h == null ? "" : h); if (el.__antcvSpecV === __sv) return; if (document.activeElement === el) return; el.__antcvSpecV = __sv; if (el.textContent !== __sv) el.textContent = __sv; },
+                      onBlur: (ev) => {
+                        try {
+                          const v = String(ev.currentTarget.textContent || "").trim();
+                          const pi = ie() || {};
+                          if (v && v !== String(pi.specialization || pi.subtitle || "")) {
+                            const nextPi = { ...pi, specialization: v, subtitle: v };
+                            try { le(nextPi); } catch (_) {}
+                            try { "function" == typeof Qn && Qn({ personalInfo: nextPi }); } catch (_) {}
+                            try { window.dispatchEvent(new CustomEvent("antcv:sections-updated", { detail: { reason: "spec-inline" } })); } catch (_) {}
+                          }
+                        } catch (_) {}
+                      },
                       style: {
                         fontFamily: e,
                         color: "rgba(255,255,255,0.9)",
@@ -42844,9 +45531,10 @@
                         textOverflow: "ellipsis",
                         lineHeight: 1.1,
                         textAlign: y("specialisation"),
+                        cursor: "text",
+                        outline: "none",
                       },
                     },
-                    h,
                   )
                 : "contact" === t && p
                   ? React.createElement(
@@ -42860,25 +45548,12 @@
                           // one line"): at commit, shrink the font until the
                           // whole contact line FITS — exact measurement, no
                           // guessing; ellipsis stays only as a last resort.
-                          ref: __bridgeOn
-                            ? (el) => {
-                                if (!el) return;
-                                try {
-                                  let fs = parseFloat(
-                                    el.style.fontSize || "12",
-                                  );
-                                  let guard = 0;
-                                  while (
-                                    el.scrollWidth > el.clientWidth + 1 &&
-                                    fs > 8.5 &&
-                                    guard++ < 24
-                                  ) {
-                                    fs -= 0.25;
-                                    el.style.fontSize = fs + "px";
-                                  }
-                                } catch (_) {}
-                              }
-                            : void 0,
+                          // CONTACT-CV-CL-PARITY-001 (owner 2026-07-14: "contact size differs
+                          // CV vs CL / jumps 5→13"): the CV-only one-line font-shrink (which
+                          // dropped the contact to ~5pt beside the photo, while the CL stayed
+                          // full ~13pt) is REMOVED — CV now matches CL's full size and WRAPS
+                          // if it does not fit, instead of shrinking to unreadable.
+                          ref: void 0,
                           style: {
                             fontFamily: e,
                             color: "#fff",
@@ -42887,21 +45562,22 @@
                             // band text also gains ~28px from the leftward
                             // flow over the seam).
                             fontSize:
-                              (Yr.contactSize || 10) *
-                              (96 / 72) *
-                              (__bridgeOn ? 0.88 : 1),
+                              // CONTACT-CV-CL-PARITY-001: SAME full size in CV and CL (no
+                              // bridge ×0.94 penalty); +1pt over the pre-822 contact size.
+                              ((Yr.contactSize || 10) + 1) *
+                              (96 / 72),
                             lineHeight: 1.2,
                             margin:
                               __nzPx(ya && ya.candidateGap, 5) + "px 0",
+                            // CONTACT-TIGHTEN-001 (owner 2026-07-14: "less space from the
+                            // profile picture and edge … tight to enter one line"): drop the
+                            // edge inset to 0 (with the photo-gap reduction below, this frees
+                            // enough width for the whole line to fit without wrapping).
+                            padding: "0",
                             textAlign: y("contact"),
-                            whiteSpace: __bridgeOn ? "nowrap" : "normal",
-                            ...(__bridgeOn
-                              ? {
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                  letterSpacing: "-0.1px",
-                                }
-                              : {}),
+                            // CONTACT-CV-CL-PARITY-001: always wrap (was nowrap+ellipsis in
+                            // the CV bridge, which is what forced the tiny one-line shrink).
+                            whiteSpace: "normal",
                           },
                         },
                         m,
@@ -42926,6 +45602,14 @@
                     // band (#283556) that the token sidecar skips; custom falls
                     // back to Ke. See diag-copenhagen-palette.mjs.
                     background: `var(--header-bg, ${Ke})`,
+                    // SEAM-LINE-001b / HEADER-SEAM-#0b (owner 2026-07-14): a full-width
+                    // bottom border on the candidate band, matched to the figure's outer
+                    // contour (photoBorderColor), drawn ONLY when the header band and the
+                    // sidebar share one colour (headerBg === sidebarBg) — then it restores
+                    // the otherwise-invisible header/sidebar seam. When they differ, the
+                    // colour change itself separates the regions, so no line. Contrast-
+                    // guarded so a 1px rule stays visible on the shared background.
+                    ...__antcvSeamStyle(ya),
                     padding: "14px 16px 10px",
                     textAlign: "center",
                     // PHOTO-SIDEBAR-BRIDGE-001: in bridge mode the candidate
@@ -42937,7 +45621,10 @@
                     // the gap below (content vertically centred).
                     ...(__bridgeOn
                       ? {
-                          paddingLeft: `calc(${Math.round(100 * ta)}% - 28px)`,
+                          // CONTACT-TIGHTEN-001: less space from the profile picture — the band
+                          // text flows further left over the seam (was -28px) so the contact has
+                          // more width and fits one line.
+                          paddingLeft: `calc(${Math.round(100 * ta)}% - 48px)`,
                           minHeight:
                             Math.round(__zoEff / 2) + __bridgeGap - 24,
                           display: "flex",
@@ -42963,7 +45650,9 @@
                 w.map(v),
               )
             : React.createElement("div", {
-                style: { background: `var(--header-bg, ${Ke})`, height: 8 },
+                // SEAM-LINE-001b / HEADER-SEAM-#0b: empty-state header strip — same
+                // gated seam as the populated band (only when headerBg === sidebarBg).
+                style: { background: `var(--header-bg, ${Ke})`, height: 8, ...__antcvSeamStyle(ya) },
               }),
           "cv" === Lt
             ? (() => {
@@ -43024,7 +45713,7 @@
                       for (const gp of groups) {
                         const fi = n(gp.items);
                         if (!fi.length) continue;
-                        out.push({ ...sec, items: fi, page: gp.page, _antcvSplitCont: out.length > 0 });
+                        out.push({ ...sec, items: fi, page: gp.page, _antcvSplitCont: out.length > 0, __antcvSecHasGrp: origItems.some((it) => it && it.grp) });
                       }
                       return out.length ? out : [];
                     } catch (_) { return [sec]; }
@@ -43179,7 +45868,8 @@
                   f =
                     ((e && e.title) ||
                       ("da" === je ? "ERFARING" : "EXPERIENCE")) +
-                    ("da" === je ? " (FORTS.)" : " (CONT.)"),
+                    /* SALMON-CONT-LANG-001: continuation suffix in the ribbon language */
+                    ({ da: " (FORTS.)", zh: "（续）", he: " (המשך)", am: " (ቀጣይ)", ar: " (تابع)" }[je] || " (CONT.)"),
                   h = [];
                 for (let e = 1; e <= u; e++)
                   h.push({ pageNum: e, sb: m(e), roles: g(e) });
@@ -43473,10 +46163,20 @@
                                     if (!band) return;
                                     const g = Math.max(
                                       6,
+                                      // PHOTO-NUDGE-UP-001 (owner 2026-07-14, tuned live
+                                      // to −99.5 / 30 on the reference app): the header-CJLR
+                                      // preview bridge (1.51.1184) grew the band, so the
+                                      // seam-centred medallion rode DOWN. Pull the photo up
+                                      // (marginTop below, +13.5) AND drop 11px here so the
+                                      // sidebar text rises with it — equal-ish air above/
+                                      // below + fewer runts jumping page 1↔2. marginBottom
+                                      // stays band-height-aware (only offset by a constant),
+                                      // and the sidebar bg fills far past content so text
+                                      // rising leaves NO bottom white gap.
                                       Math.round(
                                         band.getBoundingClientRect().height -
                                           __zoEff / 2,
-                                      ),
+                                      ) - 11,
                                     );
                                     el.style.marginBottom = g + "px";
                                   } catch (_) {}
@@ -43501,8 +46201,10 @@
                                   // floats with EQUAL air on both sides.
                                   ...(er === "band-overlap"
                                     ? {
+                                        // PHOTO-NUDGE-UP-001: +13.5 extra pull-up (paired
+                                        // with the −11 marginBottom above). Tuned live to −99.5.
                                         marginTop: -(
-                                          Math.round(__zoEff / 2) + 8
+                                          Math.round(__zoEff / 2) + 21.5
                                         ),
                                         marginBottom: __bridgeGap,
                                         position: "relative",
@@ -43548,7 +46250,7 @@
                                         border:
                                           "soft" === t
                                             ? "none"
-                                            : `0.5pt solid ${l}`,
+                                            : `0.5pt solid ${(ya && ya.photoBorderColor) || "#00746E"}`,
                                         boxShadow:
                                           [
                                             "soft" === t
@@ -43562,7 +46264,7 @@
                                             .join(", ") || "none",
                                       };
                                     } catch (e) {
-                                      return { border: `0.5pt solid ${l}` };
+                                      return { border: `0.5pt solid ${(ya && ya.photoBorderColor) || "#00746E"}` };
                                     }
                                   })(),
                                   objectFit: "cover",
@@ -44170,29 +46872,79 @@
                   // CJLR align. Mirrors the export srcdoc IIFE + the worker __slogan block.
                   (() => {
                     try {
-                      if (localStorage.getItem("antcv:clSloganHidden") === "1") return null;
-                      var st = String(localStorage.getItem("antcv:clSlogan") || "").trim();
-                      if (!st || /^\[/.test(st)) st = String((io && io.subtitle) || "").trim();
+                      if (window.__antcvSloganStandaloneHidden ? window.__antcvSloganStandaloneHidden() : localStorage.getItem("antcv:clSloganHidden") === "1") return null;
+                      // SLOGAN-UNSOL-GENERIC-001: unsolicited yields a tailored slogan to the generic.
+                      var __uns = window.__antcvSloganUnsolActive ? window.__antcvSloganUnsolActive(io) : false;
+                      var st = __uns ? "" : String((io && io.cl_slogan) || "").trim();
+                      // SLOGAN-LANG-GATE-001: reject a wrong-language OVERRIDE so preview == export.
+                      if (!st || /^\[/.test(st)) { st = String(localStorage.getItem("antcv:clSlogan") || "").trim(); if (st && window.__antcvSloganLangGate && !window.__antcvSloganLangGate(st)) st = ""; if (st && __uns && window.__antcvSloganOverrideIsGen && window.__antcvSloganOverrideIsGen(st, io)) st = ""; }
+                      if ((!st || /^\[/.test(st)) && __uns) st = String((io && io.subtitle) || "").trim();
                       st = st.replace(/\s*\|\s*/g, " • ").trim();
+                      if (window.__antcvSloganCap) st = window.__antcvSloganCap(st);
                       if (!st || /^\[/.test(st)) return null;
                       var sa = String(localStorage.getItem("antcv:clSloganAlign") || "center").replace(/["']/g, "").toLowerCase();
-                      if (sa !== "left" && sa !== "right" && sa !== "center") sa = "center";
+                      if (sa !== "left" && sa !== "right" && sa !== "center" && sa !== "justify") sa = "center";
                       return React.createElement("div", {
                         key: "__cl_slogan",
-                        contentEditable: true, suppressContentEditableWarning: true, spellCheck: false,
+                        // SLOGAN-SPELLCHECK-001 (owner 2026-07-14, rev2): spellcheck ON, matching
+                        // the specialisation field which DOES spellcheck. Two fixes vs rev1 which
+                        // still showed no underlines: (1) NO explicit lang — an app-language lang
+                        // (e.g. "da"/"zh") forces a dictionary the browser may not have installed,
+                        // silently disabling spellcheck; the default (browser locale) is what the
+                        // working specialisation uses. (2) the DOM text is NATURAL-CASE — browsers
+                        // skip spellcheck on ALL-CAPS *content*, and a legacy slogan uppercased by
+                        // rev1's onBlur stays all-caps in storage, so sentence-case it below; the
+                        // uppercase LOOK stays via textTransform. onBlur then stores natural case.
+                        contentEditable: true, suppressContentEditableWarning: true, spellCheck: true,
+                        // SLOGAN-APPLY-CORRECTION-001 (owner 2026-07-14: slogan must accept the
+                        // suggested spelling correction in preview): the text was a React CHILD, so
+                        // a re-render reset it to the model and reverted an applied correction.
+                        // Manage it via a model-changed-only ref (never clobber a focused/just-
+                        // committed edit) — the correction survives until onBlur commits it.
+                        ref: (el) => { if (!el) return; const __sv = (st === st.toUpperCase() && /[a-zA-Z]/.test(st)) ? (st.charAt(0).toUpperCase() + st.slice(1).toLowerCase()) : st; if (el.__antcvSloganV === __sv) return; if (document.activeElement === el) return; el.__antcvSloganV = __sv; if (el.textContent !== __sv) el.textContent = __sv; },
                         title: "Click to edit the positioning line",
-                        onBlur: (ev) => { try { localStorage.setItem("antcv:clSlogan", String(ev.currentTarget.textContent || "").trim()); window.dispatchEvent(new CustomEvent("antcv:sections-updated", { detail: { reason: "cl-slogan-inline" } })); } catch (_) {} },
+                        onBlur: (ev) => { try { const __nv = String(ev.currentTarget.textContent || "").trim(); if (__nv !== String(localStorage.getItem("antcv:clSlogan") || "")) { try { vr("slogan"); } catch (_) {} localStorage.setItem("antcv:clSlogan", __nv); window.dispatchEvent(new CustomEvent("antcv:sections-updated", { detail: { reason: "cl-slogan-inline" } })); } } catch (_) {} },
                         style: {
                           fontFamily: "'Cabin',sans-serif",
                           fontSize: 15,
                           fontWeight: 700,
                           letterSpacing: "0.08em",
                           textAlign: sa,
-                          color: (ya && ya.mainLineColor) || "#00746E",
+                          color: "var(--brand-slogan-color, " + ((ya && ya.mainLineColor) || "#00746E") + ")",
                           margin: "0 0 12px",
                           cursor: "text",
+                          textTransform: "uppercase",
                         },
-                      }, st.toUpperCase());
+                      });
+                    } catch (_) { return null; }
+                  })(),
+                  // HEADER-APP-LINE-001 (owner 2026-07-22): the per-app APPLICATION LINE
+                  // ("Application for [Role] at [Company]") sits UNDER THE SLOGAN on the
+                  // cover letter — OUT of the heading (the heading shows the specialisation
+                  // subtitle, like the CV). Native render; replaces antcv-application-line-001.js
+                  // so the line never double-renders. CL-only (this is the data-antcv-cl-flow
+                  // branch); __antcvAppLineText returns "" for a CV / unsolicited / no-JD app.
+                  (() => {
+                    try {
+                      var __al = window.__antcvAppLineText ? window.__antcvAppLineText(io) : "";
+                      if (!__al) return null;
+                      return React.createElement("div", {
+                        key: "__cl_appline",
+                        // APPLINE-NATIVE-MARK-001 (2026-07-23): a DEDICATED attribute so the
+                        // appline-rule + header-elem-colors sidecars can target the native
+                        // line. NOT data-antcv-app-line — the retired application-line-001
+                        // sidecar SWEEPS that attribute as a legacy injected node.
+                        "data-antcv-app-line-native": "1",
+                        style: {
+                          fontFamily: "'Cabin',sans-serif",
+                          fontSize: 11,
+                          fontWeight: 600,
+                          letterSpacing: "0.02em",
+                          textAlign: "center",
+                          color: "var(--brand-slogan-color, var(--header-line-color, #01746E))",
+                          margin: "0 0 12px",
+                        },
+                      }, __al);
                     } catch (_) { return null; }
                   })(),
                   Pi.filter(
@@ -44201,7 +46953,9 @@
                   ).map((e) =>
                     React.createElement(Ce, {
                       key: e.id,
-                      s: e,
+                      // SLOGAN-PLACEMENT-001: in 'leadin' mode the slogan becomes the
+                      // opening's first-item lead-in (rich_block renders + exports it).
+                      s: (e.id === "opening" && window.__antcvSloganOpeningLeadIn) ? window.__antcvSloganOpeningLeadIn(e) : e,
                       navyColor: Ke,
                       isCL: !0,
                       language: je,
@@ -44318,12 +47072,12 @@
                     React.createElement(
                       "div",
                       { style: { textAlign: (() => { try { var a4 = String(localStorage.getItem("antcv:clClosingAlign") || "center").replace(/["']/g, "").toLowerCase(); return ("left" === a4 || "right" === a4 || "center" === a4) ? a4 : "center"; } catch (_) { return "center"; } })() } },
-                      n ? "Med venlig hilsen," : (() => { try { const ov = String(localStorage.getItem("antcv:clClosing") || "").trim(); if (ov) return ov; } catch (_) {} return "At your service,"; })(),
+                      (() => { try { const ov = String(localStorage.getItem("antcv:clClosing") || "").trim(); if (ov && ov !== "At your service," && !(({ zh: 1, he: 1, am: 1, ar: 1 })[je] && !/[一-鿿㐀-䶿֐-׿؀-ۿሀ-፿]/.test(ov))) return ov; } catch (_) {} return ({ da: "Med venlig hilsen,", es: "Atentamente,", zh: "此致敬礼，", he: "בברכה,", am: "ከሰላምታ ጋር,", ar: "مع خالص التقدير," })[je] || "At your service,"; })(),
                     ),
                     React.createElement(
                       "div",
                       { style: { fontWeight: 700, marginTop: 14, textAlign: (() => { try { var a3 = String(localStorage.getItem("antcv:clSignNameAlign") || "center").replace(/["']/g, "").toLowerCase(); return ("left" === a3 || "right" === a3 || "center" === a3) ? a3 : "center"; } catch (_) { return "center"; } })() } },
-                      (() => { try { var ov = String(localStorage.getItem("antcv:clSignName") || "").trim(); if (ov) return ov; } catch (_) {} var fn = String(a.name || "").trim(); return fn ? fn.split(/\s+/)[0] : ("da" === je ? "Dit navn" : "Your Name"); })(),
+                      (() => { try { var ov = String(localStorage.getItem("antcv:clSignName") || "").trim(); if (({ zh: 1, he: 1, am: 1, ar: 1 })[je] && (!ov || !/[一-鿿㐀-䶿֐-׿؀-ۿሀ-፿]/.test(ov))) { var lv = String(localStorage.getItem("antcv:clSignName_" + je) || "").trim(); lv && (ov = lv); } if (ov) return ov; } catch (_) {} var fn = String(a.name || "").trim(); return fn ? fn.split(/\s+/)[0] : ("da" === je ? "Dit navn" : "Your Name"); })(),
                     ),
                     window.__antcvClSigEl ? window.__antcvClSigEl() : null,
                   ),
@@ -44391,7 +47145,8 @@
                           { style: { padding: "6px 7px 14px" } },
                           React.createElement(Ce, {
                             key: e.id,
-                            s: e,
+                            // SLOGAN-PLACEMENT-001: 'leadin' mode -> slogan as opening lead-in.
+                            s: (e.id === "opening" && window.__antcvSloganOpeningLeadIn) ? window.__antcvSloganOpeningLeadIn(e) : e,
                             navyColor: Ke,
                             isCL: !0,
                             language: je,
@@ -44419,12 +47174,12 @@
                             React.createElement(
                               "div",
                               { style: { cursor: "text", textAlign: (() => { try { var a4 = String(localStorage.getItem("antcv:clClosingAlign") || "center").replace(/["']/g, "").toLowerCase(); return ("left" === a4 || "right" === a4 || "center" === a4) ? a4 : "center"; } catch (_) { return "center"; } })() }, contentEditable: true, suppressContentEditableWarning: true, spellCheck: false, title: "Click to edit the sign-off line", onBlur: (ev) => { try { localStorage.setItem("antcv:clClosing", String(ev.currentTarget.textContent || "").trim()); window.dispatchEvent(new CustomEvent("antcv:sections-updated", { detail: { reason: "cl-signoff-inline" } })); } catch (_) {} } },
-                              n ? "Med venlig hilsen," : (() => { try { const ov = String(localStorage.getItem("antcv:clClosing") || "").trim(); if (ov) return ov; } catch (_) {} return "At your service,"; })(),
+                              (() => { try { const ov = String(localStorage.getItem("antcv:clClosing") || "").trim(); if (ov && ov !== "At your service," && !(({ zh: 1, he: 1, am: 1, ar: 1 })[je] && !/[一-鿿㐀-䶿֐-׿؀-ۿሀ-፿]/.test(ov))) return ov; } catch (_) {} return ({ da: "Med venlig hilsen,", es: "Atentamente,", zh: "此致敬礼，", he: "בברכה,", am: "ከሰላምታ ጋር,", ar: "مع خالص التقدير," })[je] || "At your service,"; })(),
                             ),
                             React.createElement(
                               "div",
                               { style: { cursor: "text", fontWeight: 700, marginTop: 14, textAlign: (() => { try { var a3 = String(localStorage.getItem("antcv:clSignNameAlign") || "center").replace(/["']/g, "").toLowerCase(); return ("left" === a3 || "right" === a3 || "center" === a3) ? a3 : "center"; } catch (_) { return "center"; } })() }, contentEditable: true, suppressContentEditableWarning: true, spellCheck: false, title: "Click to edit your name", onBlur: (ev) => { try { localStorage.setItem("antcv:clSignName", String(ev.currentTarget.textContent || "").replace(/\s+/g, " ").trim()); window.dispatchEvent(new CustomEvent("antcv:sections-updated", { detail: { reason: "cl-signoff-inline" } })); } catch (_) {} } },
-                              (() => { try { var ov = String(localStorage.getItem("antcv:clSignName") || "").trim(); if (ov) return ov; } catch (_) {} var fn = String(a.name || "").trim(); return fn ? fn.split(/\s+/)[0] : ("da" === je ? "Dit navn" : "Your Name"); })(),
+                              (() => { try { var ov = String(localStorage.getItem("antcv:clSignName") || "").trim(); if (({ zh: 1, he: 1, am: 1, ar: 1 })[je] && (!ov || !/[一-鿿㐀-䶿֐-׿؀-ۿሀ-፿]/.test(ov))) { var lv = String(localStorage.getItem("antcv:clSignName_" + je) || "").trim(); lv && (ov = lv); } if (ov) return ov; } catch (_) {} var fn = String(a.name || "").trim(); return fn ? fn.split(/\s+/)[0] : ("da" === je ? "Dit navn" : "Your Name"); })(),
                             ),
                             window.__antcvClSigEl ? window.__antcvClSigEl() : null,
                           ),
@@ -44602,7 +47357,12 @@
             className: "no-print antcv-topbar",
             style: {
               background: Ke,
-              padding: "8px 12px",
+              // MOBILE-TOPBAR-SAFEAREA-001 (owner 2026-07-05, live phone
+              // report): the topbar sat at the very top of the document, so
+              // on mobile Chrome (viewport-fit=cover) it rendered underneath
+              // the OS status bar / address-bar overlay and was unreachable.
+              // Mirrors the existing bottom-toolbar safe-area pattern below.
+              padding: "max(8px, env(safe-area-inset-top)) 12px 8px 12px",
               display: "flex",
               alignItems: "center",
               gap: 8,
@@ -44950,7 +47710,7 @@
                   (() => {
                     const e = Dl && Fl ? Dl.find((e) => e.id === Fl) : null;
                     return e
-                      ? e.jd_company || e.jd_role || "App #" + e.id
+                      ? "#" + e.id + " " + (e.jd_company || e.jd_role || "")
                       : Dl && Dl.length > 0
                         ? "Application history (" + Dl.length + ")"
                         : "Application history";
@@ -45081,12 +47841,29 @@
                                   subtitle: (io && io.subtitle) || "",
                                   meta: io && "object" == typeof io ? io : {},
                                   jd_language: je,
-                                  category: "unsolicited",
+                                  // MANUAL-SAVE-CATEGORY-001 (owner 2026-07-18): see the twin site — use
+                                  // the real category / 'targeted' sentinel, not a hardcoded 'unsolicited'.
+                                  category: (function () { try { var __c = (yo && "string" == typeof yo.category && yo.category.trim()) || ""; if (__c) return __c; var __co = (io && io.company) || ""; if (__co && !(window.__antcvUnsol && window.__antcvUnsol(__co))) return "targeted"; } catch (e) {} return "unsolicited"; })(),
                                   supporting_context:
                                     (yo && yo.supporting_context) || "",
                                   rationale: yo,
                                   save_as_new: !0,
                                 });
+                              /* APP-HISTORY-KERNEL-SAVE-001 (owner 2026-07-10): also persist the manual unsolicited save to the per-(style×lang) kernel */
+                              try {
+                                var __mks = u.get("sections", null);
+                                if (
+                                  __mks &&
+                                  ((__mks.cv && __mks.cv.length) || (__mks.cl && __mks.cl.length))
+                                ) {
+                                  oo.putShowcase({
+                                    sections: __mks,
+                                    meta: (function (m) { try { if (!m || "object" != typeof m) return m; var co = String(m.company || "").trim(); if (!co || window.__antcvUnsol(co)) return m; var c = Object.assign({}, m, { company: "Unsolicited", role: "Open Application" }); try { delete c.rationale; } catch (_) {} return c; } catch (_) { return m; } })(io),
+                                    rationale: yo,
+                                    jd_language: je,
+                                  }, (() => { try { var p = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {}; p = p.personalInfo || p; var __st = String((p.writingPrefs || {}).style || "").trim().toLowerCase(); var __lg = String(localStorage.getItem("language") || "en").toLowerCase().replace(/[^a-z]/g, "").slice(0,2) || "en"; return __st ? __st + "|" + __lg : ""; } catch (_) { return ""; } })());
+                                }
+                              } catch (_) {}
                               t &&
                                 t.application &&
                                 t.application.id &&
@@ -45219,7 +47996,7 @@
                                 // saving into itself.
                                 (Ul("switch:" + e.id), Gl(""));
                                 try {
-                                  if (Fl && Fl !== e.id)
+                                  if (Fl && Fl !== e.id && (String(window.__antcvContentAppId||"") === String(Fl) || "on" === (function(){try{return localStorage.getItem("antcv:switch-autosave")}catch(_){return null}})()))
                                     try {
                                       await oo.update(Fl, {
                                         cv_sections: (ro && ro.cv) || [],
@@ -45257,9 +48034,14 @@
                                     // NOT blank the populated editor — empty sections trip the client
                                     // minimum-sections floor and show the me() template. Keep the
                                     // current draft and surface a notice instead of destroying it.
+                                    // SWITCH-OPEN-JDONLY-001 (owner 2026-07-20): open a JD-only app (null
+                                    // cv/cl_sections) on an explicit switch instead of dead-ending — see the
+                                    // Settings twin. Failed fetch => no t.application (handled above); prior app
+                                    // already saved; me() floor supplies the template so the user can Generate.
                                     const __hasReal =
                                       (Array.isArray(n.cv_sections) && n.cv_sections.length) ||
-                                      (Array.isArray(n.cl_sections) && n.cl_sections.length);
+                                      (Array.isArray(n.cl_sections) && n.cl_sections.length) ||
+                                      !!(String(n.jd_text || "").trim() || n.jd_company || (n.meta && (n.meta.company || n.meta.role)));
                                     // APPHISTORY-RELOAD-001 / 1.50.235:
                                     // surface the loaded CV — switch to the
                                     // editor view and hydrate sections + meta
@@ -45315,6 +48097,26 @@
                                           );
                                         } catch (e) {}
                                       })(),
+                                      (() => { try {
+                                        // MIRROR-LOAD-001 (owner 2026-07-13): a TOPBAR load must be a
+                                        // MIRROR COPY of the saved app in preview AND print. The minimal
+                                        // gen-runner meta lacks identity, so the {...io,...meta} above
+                                        // inherited the PREVIOUS app's role/company/slogan; and this loader
+                                        // never applied the brand palette, refreshed the slogan, or switched
+                                        // the language. Force all of them from the saved per-app record.
+                                        var __co = (n.meta && n.meta.company) || n.jd_company || "", __ro = (n.meta && n.meta.role) || n.jd_role || "", __su = n.subtitle || (n.meta && n.meta.subtitle) || "", __sl = (n.meta && (n.meta.cl_slogan || n.meta.slogan)) || "";
+                                        // SLOGAN-UNSOL-GENERIC-001: an unsolicited app keeps the generic standing default — do not seed a tailored slogan into meta.cl_slogan or the override.
+                                        var __unsL = !!(__co && window.__antcvUnsol && window.__antcvUnsol(__co)); if (__unsL) __sl = "";
+                                        var __mm = { ...(io || {}), ...(n.meta && "object" == typeof n.meta ? n.meta : {}), company: __co, role: __ro, subtitle: __su, cl_slogan: __sl };
+                                        lo(__mm); try { u.set("meta", __mm); } catch (_) {}
+                                        if (n.meta && n.meta.styleConfig && "object" == typeof n.meta.styleConfig) wa(n.meta.styleConfig); else if (n.meta && null === n.meta.styleConfig) { try { u.remove("styleConfig"); } catch (_) {} } else { /* A4 STYLECONFIG-PER-APP-001 (owner 2026-07-21): an app carrying NO styleConfig must not inherit the PREVIOUS app's palette — that stale global is the colour-stick root (a kernel showed NVIDIA). Drop it so the package default re-derives on mount. A Custom package keeps its saved palette. */ try { var __pkgC = String(localStorage.getItem("stylePackage") || "").replace(/["']/g, ""); if ("custom" !== __pkgC) u.remove("styleConfig"); } catch (_) {} }
+                                        if (__sl) { try { localStorage.setItem("antcv:clSlogan", __sl); localStorage.setItem("antcv:clSloganCtx", JSON.stringify({ v: __sl, app: e.id })); } catch (_) {} } else { /* SLOGAN-LOAD-SYMMETRIC-001 (owner 2026-07-21, "make sure visible slogan is part of the load/restore"): this app has NO slogan -> CLEAR the standalone override so the PREVIOUS app's visible slogan cannot stick (same class as the colour-stick). */ try { localStorage.removeItem("antcv:clSlogan"); localStorage.removeItem("antcv:clSloganCtx"); } catch (_) {} }
+                                        // APP-SWITCH-CONTENT-LANG-001 (topbar twin): set the selector from the CONTENT's
+                                        // script (what the CV is written in) so a zh-content app flips the bar to zh, not
+                                        // from jd_language (the JD's language). Falls back to jd_language for Latin/empty.
+                                        var __cl = (function(){ /* APP-SWITCH-CONTENT-LANG-DETECT-001 (owner 2026-07-22 "every CV starts in Chinese and switches to English — zh is the only Chinese CV we should have"): the old test returned "zh" on a SINGLE CJK codepoint in JSON.stringify(sections), so any babel RESIDUE flipped the whole app to Chinese (and drove babel-relang to translate + persist it). Use babel-relang's OWN vetted detector — VALUES only (JSON keys never dilute), prose-ratio with acronyms/proper-nouns excluded — so the selector AGREES with what the healer will do. Conservative inline fallback (majority wide-script over lowercase-Latin prose, residue-proof) covers the pre-boot window before the sidecar loads. */ try { if (typeof window.__antcvContentScript === "function") return window.__antcvContentScript((n && n.cv_sections) || [], (n && n.cl_sections) || []); var V = []; (function w(x){ if (x == null) return; if (typeof x === "string") { if (x.trim()) V.push(x); return; } if (typeof x === "object") { for (var k in x) w(x[k]); } })([(n && n.cv_sections) || [], (n && n.cl_sections) || []]); var s = V.join(" "); var lat = (s.match(/[a-z]{3,}/g) || []).join("").length; var SC = [["zh", /[一-鿿㐀-䶿]/g], ["he", /[֐-׿]/g], ["am", /[ሀ-፿]/g]]; for (var i = 0; i < SC.length; i++) { var c = (s.match(SC[i][1]) || []).length; if (c >= 30 && c >= 0.3 * (c + lat)) return SC[i][0]; } return ""; } catch (_) { return ""; } })();
+                                        var __al = __cl || (function(){ /* APP-LOAD-NO-RETRANSLATE-001: positive Latin detection before the jd_language fallback (see the switch-path site). */ try { return (typeof window.__antcvContentLang === "function" ? window.__antcvContentLang((n && n.cv_sections) || [], (n && n.cl_sections) || []) : "") || ""; } catch (_) { return ""; } })() || String((n && n.jd_language) || "").toLowerCase().replace(/[^a-z]/g, "").slice(0, 2); try { localStorage.setItem("antcv:app-load-lang", JSON.stringify({ lang: __al || "", at: Date.now() })); } catch (_) {} /* PAGEMAP-PER-APP-001 (owner 2026-07-25 "aimpoint apps assumed to have nothing from main in 2nd page"): the sticky pagination maps (antcv:autoPages / antcv:autoPagesPreview) are keyed by SECTION ID and SHARED across applications, so switching apps kept the PREVIOUS app's page breaks - a longer app then crammed its main column onto page 1 and page 2 rendered sidebar-only. Stamp the maps with the owning app id; on a different app, drop both so the measurer re-runs for THIS app (same reset Hard Refresh does). */ try { var __pgk = "antcv:autoPagesApp", __pgid = String((n && n.id) || ""); if (__pgid && localStorage.getItem(__pgk) !== __pgid) { localStorage.removeItem("antcv:autoPages"); localStorage.removeItem("antcv:autoPagesPreview"); localStorage.setItem(__pgk, __pgid); } } catch (_) {} if (__al && ["en","da","es","zh","he","am"].indexOf(__al) >= 0) { try { u.set("language", __al); localStorage.setItem("language", __al); localStorage.setItem("uiLang", __al); window.dispatchEvent(new CustomEvent("antcv:language-changed", { detail: { language: __al, source: "app-load" } })); window.dispatchEvent(new CustomEvent("antcv:language-prefs-changed", { detail: {} })); } catch (_) {} }
+                                      } catch (_e) {} })(),
                                       // 1.50.243: always overwrite so the
                                       // Analysis panel doesn't keep stale
                                       // rationale from the previous app.
@@ -45392,9 +48194,10 @@
                                   whiteSpace: "nowrap",
                                 },
                               },
-                              (e.jd_company || "") +
+                              "#" + e.id + "  " +
+                                ((e.jd_company || "") +
                                 (e.jd_company && e.jd_role ? " - " : "") +
-                                (e.jd_role || "") || "Application #" + e.id,
+                                (e.jd_role || "") || "(untitled)"),
                             ),
                             React.createElement(
                               "div",
@@ -45422,11 +48225,10 @@
                                 try {
                                   t.stopPropagation();
                                 } catch (e) {}
-                                if (
-                                  confirm(
-                                    `Delete saved application "${(e.jd_company || "") + (e.jd_role ? " - " + e.jd_role : "")}"?\n\nThis only removes the saved entry. Your current CV/CL in the editor is not affected.`,
-                                  )
-                                )
+                                // DELETE-CONFIRM-INAPP-001: two-click in-app confirm (native confirm()
+                                // is swallowed in embedded / installed-PWA browsers). First click arms
+                                // (label -> "Delete?"), a second within 4s deletes; timer auto-disarms.
+                                if (Hl === "armdel:" + e.id)
                                   try {
                                     (Ul("delete:" + e.id),
                                       await oo.remove(e.id));
@@ -45454,6 +48256,9 @@
                                   } finally {
                                     Ul("");
                                   }
+                                else if (!Hl || Hl.indexOf("armdel:") === 0)
+                                  (Ul("armdel:" + e.id),
+                                    setTimeout(function () { Ul(function (p) { return p === "armdel:" + e.id ? "" : p; }); }, 4000));
                               },
                               style: {
                                 color: "rgba(255,180,180,0.55)",
@@ -45479,7 +48284,7 @@
                                 } catch (e) {}
                               },
                             },
-                            Hl === "delete:" + e.id ? "⏳" : "×",
+                            Hl === "delete:" + e.id ? "⏳" : Hl === "armdel:" + e.id ? "Delete?" : "×",
                           ),
                           Hl === "switch:" + e.id
                             ? React.createElement(
@@ -45989,9 +48794,11 @@
                     onTouchStart: (e) => {
                       e.touches &&
                         e.touches[0] &&
-                        (e.currentTarget.dataset.sy = String(
+                        ((e.currentTarget.dataset.sy = String(
                           e.touches[0].clientY,
-                        ));
+                        )),
+                        (e.currentTarget.dataset.ly =
+                          e.currentTarget.dataset.sy));
                     },
                     onTouchMove: (e) => {
                       // GRAB-ZONE-DISMISS-THRESHOLD-001 (owner 2026-07-05: "sliding down with
@@ -46007,12 +48814,26 @@
                       // graze/scroll-start so only a clear, deliberate swipe-down closes the
                       // panel; a real scroll gesture that starts here now has room to bail out
                       // before the dismiss fires.
+                      // GRAB-ZONE-SCROLL-FORWARD-001 (owner 2026-07-05, follow-up: raising the
+                      // threshold above did NOT restore scrolling — touchAction:"none" on this
+                      // handle blocks the browser's OWN native scroll for ANY touch that starts
+                      // here, independent of the JS threshold; the previous fix only delayed the
+                      // dismiss, it never let a non-dismiss drag actually scroll anything. Fix:
+                      // manually forward the incremental delta to the active tab's scrollable
+                      // content (its DOM sibling — exactly one tab's content renders at a time)
+                      // whenever the gesture hasn't crossed the dismiss threshold.
                       const t = Number(e.currentTarget.dataset.sy || 0),
+                        ly = Number(e.currentTarget.dataset.ly || t),
                         n =
                           e.touches && e.touches[0] ? e.touches[0].clientY : t;
-                      t &&
-                        n - t > 80 &&
-                        (e.preventDefault(), co(null), Qa(!1), ti("preview"));
+                      if (t && n - t > 80) {
+                        e.preventDefault();
+                        (co(null), Qa(!1), ti("preview"));
+                        return;
+                      }
+                      const scroller = e.currentTarget.nextElementSibling;
+                      scroller && ly && (scroller.scrollTop -= n - ly);
+                      e.currentTarget.dataset.ly = String(n);
                     },
                     style: {
                       height: 28,
@@ -47688,7 +50509,7 @@
                                 padding: "8px 10px",
                               },
                             },
-                            yo.fit_summary,
+                            __ratStr(yo.fit_summary),
                           ),
                         ),
                         React.createElement(
@@ -48020,7 +50841,7 @@
                                   padding: "8px 10px",
                                 },
                               },
-                              yo.tailoring_decisions,
+                              __ratStr(yo.tailoring_decisions),
                             ),
                           ),
                         yo.cover_letter_strategy &&
@@ -48054,7 +50875,7 @@
                                   padding: "8px 10px",
                                 },
                               },
-                              yo.cover_letter_strategy,
+                              __ratStr(yo.cover_letter_strategy),
                             ),
                           ),
                         React.createElement(
@@ -48499,7 +51320,22 @@
                       flexDirection: "column",
                       alignItems: "stretch",
                       gap: 8,
-                      margin: Ii ? "0 auto" : "0 0 0 0",
+                      // PREVIEW-FRAME-CENTER-MOBILE-001 (owner 2026-07-05:
+                      // "no reason for the preview to be pushed like that").
+                      // Mobile never centred this frame (margin 0 0 0 0,
+                      // pinned left) — invisible before ZOOM-FLOOR-001 (today,
+                      // same session) since at the OLD 35% floor the frame was
+                      // still wider than the viewport, so left-pinned vs.
+                      // centred looked identical. The new 10% floor can make
+                      // the frame much NARROWER than the viewport, and pinned
+                      // left then dumps all the freed space on the right —
+                      // exactly the "pushed" look reported. Auto-margins are
+                      // a no-op when the frame is wider than its container
+                      // (the normal, non-zoomed-out case), so centring on
+                      // mobile too is safe: no visible change until zoomed out
+                      // far enough for it to matter, and the RIGHT time to
+                      // matter, it now centers instead of piling right.
+                      margin: "0 auto",
                       boxSizing: "border-box",
                       overflow: "visible",
                       touchAction: "pan-x pan-y pinch-zoom",
@@ -48528,17 +51364,44 @@
                       {
                         className: "antcv-preview-paper",
                         "data-antcv-preview-paper": "true",
-                        style: {
-                          width: 794,
-                          background: "#fff",
-                          boxShadow: "0 4px 24px rgba(0,0,0,0.25)",
-                          position: "relative",
-                          fontFamily:
-                            "Calibri,Arial,'Noto Sans CJK SC','Microsoft YaHei','PingFang SC','Hiragino Sans GB',SimSun,sans-serif",
-                          touchAction: "pan-x pan-y pinch-zoom",
-                          transform: `scale(${ui})`,
-                          transformOrigin: "top left",
-                        },
+                        // BRANDFIT-CANDIDATE-SIDEBAR-OVERRIDE-001 (owner 2026-07-14):
+                        // when a per-app brand is ACTIVE (antcv:brandActive==='1'),
+                        // set the header/sidebar CSS vars INLINE on the paper wrapper
+                        // from the fitted v2 brand — inline on this closer ancestor
+                        // beats the body[data-package] cascade, so the candidate band
+                        // + sidebar (which read var(--header-bg)/var(--sidebar-bg))
+                        // finally take the brand. Gated: no active brand -> no vars ->
+                        // shipping packages / default untouched; unticking (brandActive
+                        // off) clears them. Contrast pre-fitted by brand_fit.py. Done in
+                        // the body, not a sidecar (owner request).
+                        style: (() => {
+                          var __b = null;
+                          try {
+                            // GATE = the existing upload-panel Brand-fit checkbox flag
+                            // (window.__antcvBrandFit) — set by the checkbox onChange AND
+                            // by the load path (BRAND-FIT-OPEN). COLOURS = antcv:brandV2
+                            // (the fitted v2 palette the load path publishes). So ticking
+                            // off the checkbox removes the brand; loading a brand-fitted app
+                            // applies it — no separate brandActive to keep in sync.
+                            if (!0 === window.__antcvBrandFit) {
+                              var __s = localStorage.getItem("antcv:brandV2");
+                              if (__s) { var __o = JSON.parse(__s); __b = (__o && __o.slots) ? __o.slots : (__o && __o.headerBg ? __o : null); }
+                            }
+                          } catch (_) {}
+                          return {
+                            width: 794,
+                            background: "#fff",
+                            boxShadow: "0 4px 24px rgba(0,0,0,0.25)",
+                            position: "relative",
+                            fontFamily:
+                              "Calibri,Arial,'Noto Sans CJK SC','Microsoft YaHei','PingFang SC','Hiragino Sans GB',SimSun,sans-serif",
+                            touchAction: "pan-x pan-y pinch-zoom",
+                            transform: `scale(${ui})`,
+                            transformOrigin: "top left",
+                            // PALETTE-RESOLVER-A2: unconditional bridge (see prelude helper).
+                            ...window.__antcvResolvePaperVars(__b),
+                          };
+                        })(),
                       },
                       React.createElement(Ts, null),
                       React.createElement(Oe, null),
@@ -48555,7 +51418,9 @@
                             lineHeight: 1.15,
                             letterSpacing: 0.3,
                             fontWeight: 600,
-                            color: "rgba(0,116,110,.7)",
+                            // BRANDFIT: AI notice takes the fitted brand grey when a
+                            // brand is active (var set on the paper wrapper), else teal.
+                            color: "var(--brand-ai-notice-color, rgba(0,116,110,.7))",
                             pointerEvents: "none",
                             userSelect: "none",
                             zIndex: 6,
@@ -48567,7 +51432,7 @@
                             textAlign: "center",
                           },
                         },
-                        "AI-assisted document",
+                        ye("AI-assisted document", je),
                       ),
                     ),
                   ),

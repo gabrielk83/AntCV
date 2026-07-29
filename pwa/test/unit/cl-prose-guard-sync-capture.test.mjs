@@ -60,8 +60,8 @@ test('the sync listener snapshots real prose the instant sections-updated fires'
   ctx.setSections([goodWho()]);
   ctx.fire();                                   // generation writes real prose + fires the event
   const snap = JSON.parse(ctx.store.get('antcv:clProseGuard') || '{}');
-  assert.ok(snap['|'] && snap['|'].who, 'who captured synchronously on the event');
-  assert.match(snap['|'].who.items[0].t, /seams between disciplines/);
+  assert.ok(snap['||en'] && snap['||en'].who, 'who captured synchronously on the event');
+  assert.match(snap['||en'].who.items[0].t, /seams between disciplines/);
 });
 
 test('captured-early prose survives a later clobber to the empty skeleton', () => {
@@ -81,5 +81,5 @@ test('an empty-only who never produces a snapshot (nothing to capture)', () => {
   ctx.setSections([emptyWho()]);
   ctx.fire();
   const snap = JSON.parse(ctx.store.get('antcv:clProseGuard') || '{}');
-  assert.ok(!snap['|'] || !snap['|'].who, 'no snapshot for an empty who');
+  assert.ok(!snap['||en'] || !snap['||en'].who, 'no snapshot for an empty who');
 });

@@ -22,7 +22,7 @@ const PACKAGES = {
     // mainHeadColor on the white main column); `ground` is the new pale panel
     // colour used only for the sidebar/header/table backgrounds, and the
     // on-ground text colours invert to dark via readableInk() below.
-    base: '283556', band: '33446F', ground: 'C9D6EC', primary: '00746E', interactive: '0B74DE',
+    base: '283556', band: '33446F', ground: 'DCE5EA', primary: '00746E', interactive: '0B74DE',
     bullet: '00746E', glyph: '0B74DE', head: '00746E',
     headingFont: 'Segoe UI', bodyFont: 'Calibri',
   },

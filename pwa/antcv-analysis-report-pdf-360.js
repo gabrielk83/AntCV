@@ -36,7 +36,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.51.137-analysis-print-surface';
+  var VERSION = '1.51.2072-analysis-cloudconvert';
   if (window.__antcvAnalysisReportPdf360 === VERSION) return;
   window.__antcvAnalysisReportPdf360 = VERSION;
 
@@ -78,6 +78,54 @@
     var v = readJSON('personalInfo');
     return v && typeof v === 'object' ? v : {};
   }
+  // NEW-2 (owner 2026-07-07): the Analysis panel's expandable gap blocks persist
+  // their AI detail (SPECIFIC DETAILS / WHY IT MATTERS / HOW TO ADDRESS), the
+  // owner's "I cover this" correction, and the covered flag to per-gap
+  // localStorage keys `gapState_<company_role>_<idx>_<gapText>` — NOT into
+  // `rationale.gaps[]`. This export read only `rationale`, so it dropped every
+  // filled gap detail + how-I-cover answer. Recompute the SAME key app.js's gap
+  // component uses (app.src.js Be ~L11124) so the export carries what the owner
+  // sees + fills. Key derivation MUST stay byte-identical to that component.
+  function gapTextSlug(gap) {
+    return (typeof gap === 'string' ? gap : (gap && (gap.text || gap.gap)) || '')
+      .toString().slice(0, 80).replace(/\s+/g, '_');
+  }
+  function gapStateKey(gap, i, meta) {
+    var cr = (((meta && meta.company) || '') + '_' + ((meta && meta.role) || ''))
+      .slice(0, 40).replace(/\s+/g, '_');
+    return 'gapState_' + cr + '_' + i + '_' + gapTextSlug(gap);
+  }
+  function readGapStateRaw(k) {
+    try { var v = JSON.parse(localStorage.getItem(k) || 'null'); return v && typeof v === 'object' ? v : null; }
+    catch (_) { return null; }
+  }
+  function readGapState(gap, i, meta) {
+    // 1) EXACT key (fast path — byte-identical to app.src.js Be ~L11124).
+    var exact = readGapStateRaw(gapStateKey(gap, i, meta));
+    if (exact && (exact.detail || exact.correction || exact.corrected)) return exact;
+    // 2) CONTENT-BASED fallback: the exact key bakes in company_role + the gap
+    //    INDEX, both of which can drift between when the owner filled the gap and
+    //    when they export (a re-gen reorders gaps; meta.company can be rewritten
+    //    e.g. to "Unsolicited"). Match ANY saved gapState_ whose gapText slug
+    //    equals this gap's, newest (highest ts) wins. This is why the owner's
+    //    filled detail + "how I cover" + covered flag were still missing from the
+    //    export under the exact-key-only 1.51.196 attempt.
+    var slug = gapTextSlug(gap);
+    if (!slug || slug.length < 4) return exact || {};
+    var suffix = '_' + slug, best = null, bestTs = -1;
+    try {
+      for (var n = 0; n < localStorage.length; n++) {
+        var key = localStorage.key(n);
+        if (!key || key.indexOf('gapState_') !== 0) continue;
+        if (key.length < suffix.length || key.slice(-suffix.length) !== suffix) continue;
+        var v = readGapStateRaw(key);
+        if (!v) continue;
+        var ts = Number(v.ts) || 0;
+        if (ts >= bestTs) { bestTs = ts; best = v; }
+      }
+    } catch (_) {}
+    return best || exact || {};
+  }
   function isDanish() { return /^da/i.test(readString('language', 'en')); }
 
   function T() {
@@ -93,6 +141,7 @@
       overall: 'Samlet match', strengths: 'Stærkeste matchpunkter',
       gaps: 'Mangler / ærlig vurdering', recruiter: 'Rekrutterer',
       redFlags: 'Røde flag', questions: 'Spørgsmål i opslaget',
+      gapDetail: 'Uddybning', howICover: 'Sådan dækker jeg dette', gapCovered: 'Dækket',
       recruiterEmpty: 'Ingen tydelig rekrutteringskontakt fundet.',
       questionsEmpty: 'Ingen foreslåede spørgsmål.',
       salary: 'Løn', salaryEst: 'Løn (estimat)',
@@ -114,6 +163,7 @@
       overall: 'Overall fit', strengths: 'Strongest fit points',
       gaps: 'Gaps / honest assessment', recruiter: 'Recruiter',
       redFlags: 'Red flags', questions: 'Questions in the job description',
+      gapDetail: 'Detail', howICover: 'How I cover this', gapCovered: 'Covered',
       recruiterEmpty: 'No clear recruiter info found.',
       questionsEmpty: 'No suggested questions.',
       salary: 'Salary', salaryEst: 'Salary (estimate)',
@@ -152,15 +202,27 @@
     }
 
     // Gaps: strings or {missing, jd_mention} or {gap, how_to_close}.
+    // NEW-2: also fold in the owner-filled per-gap state (detail + "I cover
+    // this" correction + covered flag) keyed by the SAME index app.js maps on
+    // (yo.gaps.map((e,t)=>Be({gap:e,idx:t}))) — so index alignment is exact.
     var gaps = [];
     if (Array.isArray(r.gaps)) {
-      gaps = r.gaps.map(function (x) {
+      gaps = r.gaps.map(function (x, i) {
         if (!x) return null;
-        if (typeof x === 'string') return { text: x.trim(), how: '' };
-        var text = x.missing || x.gap || x.text || x.title || '';
-        var how = x.how_to_close || x.suggested_edit || x.jd_mention || x.fix || '';
-        if (!text && !how) return null;
-        return { text: String(text).trim(), how: String(how).trim() };
+        var gs = readGapState(x, i, meta);
+        var base;
+        if (typeof x === 'string') {
+          base = { text: x.trim(), how: '' };
+        } else {
+          var text = x.missing || x.gap || x.text || x.title || '';
+          var how = x.how_to_close || x.suggested_edit || x.jd_mention || x.fix || '';
+          if (!text && !how && !(gs.detail || gs.correction)) return null;
+          base = { text: String(text).trim(), how: String(how).trim() };
+        }
+        base.detail = (typeof gs.detail === 'string') ? gs.detail.trim() : '';
+        base.correction = (typeof gs.correction === 'string') ? gs.correction.trim() : '';
+        base.corrected = !!gs.corrected;
+        return base;
       }).filter(Boolean);
     }
 
@@ -342,11 +404,18 @@
       }), 'rep-ticks')));
     }
 
-    // Gaps
+    // Gaps — NEW-2: carry the owner-filled per-gap detail + "how I cover this"
+    // correction + covered flag (persisted to gapState_* by the panel), which
+    // the rationale-only export used to drop.
     if (m.gaps.length) {
       parts.push(section(t.gaps, '#c0392b', ul(m.gaps.map(function (g) {
-        return '<b>' + esc(g.text) + '</b>' + (g.how ? '<span class="rep-how"> — ' + esc(g.how) + '</span>' : '');
-      }))));
+        var head = (g.corrected ? '<span class="rep-gap-cov">✓ ' + esc(t.gapCovered) + '</span> ' : '') +
+          '<b>' + esc(g.text) + '</b>' + (g.how ? '<span class="rep-how"> — ' + esc(g.how) + '</span>' : '');
+        var extra = '';
+        if (g.detail) extra += '<div class="rep-gap-detail">' + esc(g.detail).replace(/\n+/g, '<br>') + '</div>';
+        if (g.correction) extra += '<div class="rep-gap-cover"><b>' + esc(t.howICover) + ':</b> ' + esc(g.correction) + '</div>';
+        return head + extra;
+      }), 'rep-gaps')));
     }
 
     // Recommendations
@@ -492,6 +561,11 @@
       '.rep-ticks{list-style:none;padding-left:2px;}',
       '.rep-tick{color:#00746E;font-weight:800;margin-right:6px;}',
       '.rep-how{color:#555;}',
+      // NEW-2: filled gap detail + how-I-cover blocks
+      '.rep-gaps li{margin-bottom:7px;}',
+      '.rep-gap-cov{color:#1e824c;font-weight:700;font-size:8.5pt;}',
+      '.rep-gap-detail{margin:3px 0 2px;padding:6px 9px;background:#fbfbfb;border-left:3px solid #d9d9d9;border-radius:0 5px 5px 0;font-size:9.5pt;line-height:1.5;color:#444;white-space:normal;}',
+      '.rep-gap-cover{margin:3px 0 0;padding:6px 9px;background:#f0fdf9;border-left:3px solid #00746E;border-radius:0 5px 5px 0;font-size:9.5pt;line-height:1.5;color:#274;}',
       '.rep-flags{list-style:none;padding-left:2px;}',
       '.rep-flag{color:#c0392b;font-weight:800;margin-right:6px;}',
       '.rep-conf{border-radius:7px;padding:7px 11px;margin:0 0 7px;}',
@@ -531,15 +605,100 @@
     try { return hasAnalysis(model(readRationale(), readMeta(), readPersonalInfo())); }
     catch (_) { return false; }
   };
+  // ANALYSIS-HTML-PDF-001 (2026-07-22): filename for the server PDF, mirroring
+  // the CV/CL export naming — "JD Analysis — <role> — <company>", sanitised.
+  function analysisFilename(m) {
+    var base = 'JD Analysis';
+    try {
+      var extra = (m && m.application) ? (' — ' + m.application) : '';
+      base = (base + extra)
+        .replace(/[—–]/g, '-')
+        .replace(/[^a-zA-Z0-9æøåÆØÅ\- ]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 80) || 'JD Analysis';
+    } catch (_) {}
+    return base;
+  }
+
+  // ANALYSIS-HTML-PDF-001: prefer the CloudConvert docx-worker (Chrome HTML->PDF)
+  // so the analysis report is an ATS-legible, Unicode-embedded PDF — the same
+  // reason the CV/CL export moved off window.print(). Honours the app's own
+  // server-PDF policy (window.__antcvUseServerPdf) and reachability
+  // (window.isPdfWorkerAvailable); on any miss/failure it resolves(false) so the
+  // caller falls back to the existing browser-print path.
+  function exportViaWorker(html, m) {
+    return new Promise(function (resolve) {
+      try {
+        var workerUrl = (window.ANTCV_DOCX_WORKER
+          || (function () { try { return localStorage.getItem('antcv:docxWorker') || ''; } catch (_) { return ''; } })()
+          || '').toString().trim().replace(/\/+$/, '');
+        var useServer = (typeof window.__antcvUseServerPdf === 'function') ? !!window.__antcvUseServerPdf() : true;
+        if (!workerUrl || !useServer || typeof window.isPdfWorkerAvailable !== 'function') { resolve(false); return; }
+        Promise.resolve(window.isPdfWorkerAvailable()).then(function (avail) {
+          if (!avail) { resolve(false); return; }
+          var headers = { 'Content-Type': 'application/json', 'Accept': 'application/pdf' };
+          try { if (window.ANTCV_DOCX_SECRET) headers['X-AntCV-Secret'] = window.ANTCV_DOCX_SECRET; } catch (_) {}
+          try {
+            var cc = (localStorage.getItem('cloudconvertKey') || '');
+            if (cc.charAt(0) === '"' && cc.charAt(cc.length - 1) === '"') cc = cc.slice(1, -1);
+            cc = (cc || '').trim();
+            if (cc) headers['X-CloudConvert-Key'] = cc;
+          } catch (_) {}
+          fetch(workerUrl + '/generate-analysis-pdf', {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify({ html: html, filename: analysisFilename(m) })
+          }).then(function (res) {
+            var ct = (res.headers.get('content-type') || '').toLowerCase();
+            if (!res.ok || ct.indexOf('application/pdf') === -1) {
+              res.text().then(function (b) {
+                try { console.warn('[analysis-report-pdf] server PDF unavailable (' + res.status + '), browser print:', b.slice(0, 200)); } catch (_) {}
+              }).catch(function () {});
+              resolve(false);
+              return;
+            }
+            return res.blob().then(function (blob) {
+              var url = URL.createObjectURL(blob);
+              var a = document.createElement('a');
+              a.href = url;
+              a.download = analysisFilename(m) + '.pdf';
+              document.body.appendChild(a);
+              a.click();
+              setTimeout(function () { try { document.body.removeChild(a); URL.revokeObjectURL(url); } catch (_) {} }, 1500);
+              try { console.debug('[analysis-report-pdf] exported via CloudConvert worker (/generate-analysis-pdf)'); } catch (_) {}
+              resolve(true);
+            });
+          }).catch(function (e) {
+            try { console.warn('[analysis-report-pdf] server PDF fetch failed, browser print:', e && e.message); } catch (_) {}
+            resolve(false);
+          });
+        }).catch(function () { resolve(false); });
+      } catch (e) { resolve(false); }
+    });
+  }
+
   function exportPdf(btn) {
     var t = T();
     var m = model(readRationale(), readMeta(), readPersonalInfo());
     if (!hasAnalysis(m)) { window.alert(t.noData); return; }
     var label = btn ? btn.textContent : '';
     if (btn) { btn.disabled = true; btn.textContent = isDanish() ? 'Forbereder…' : 'Preparing…'; }
+    function restoreBtn() { if (btn) { btn.disabled = false; btn.textContent = label || t.download; } }
 
     loadIconDataUrl().then(function (icon) {
       var html = reportHtml(m, icon);
+      // ANALYSIS-HTML-PDF-001: try the CloudConvert worker first; on success the
+      // PDF downloads directly. Only fall back to the offscreen-iframe browser
+      // print when the server path is unavailable or fails.
+      exportViaWorker(html, m).then(function (ok) {
+        if (ok) { restoreBtn(); return; }
+        printViaIframe(html, t, btn, label);
+      });
+    });
+  }
+
+  function printViaIframe(html, t, btn, label) {
       var iframe = document.createElement('iframe');
       iframe.setAttribute('aria-hidden', 'true');
       // JD-ANALYSIS-PRINT-001 (register row 44): a visibility:hidden / 0x0 iframe
@@ -583,7 +742,6 @@
       // Wait a tick for layout + the (already-inlined) icon to settle.
       if (iframe.contentWindow.document.readyState === 'complete') setTimeout(go, 150);
       else iframe.onload = function () { setTimeout(go, 150); };
-    });
   }
 
   // ---- panel enhancement block (renders the new fields in-app) --------------

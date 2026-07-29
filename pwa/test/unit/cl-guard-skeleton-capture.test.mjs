@@ -113,12 +113,12 @@ test('snapshot stamps bucket._ts; purge preserves it and still drops emptied buc
   const t0 = Date.now();
   G.snapshot();
   const store = JSON.parse(backing.get('antcv:clProseGuard'));
-  const bucket = store['Trackman A/S|Project Manager, Hardware'];
+  const bucket = store['Trackman A/S|Project Manager, Hardware|en'];
   assert.ok(bucket && bucket.opening, 'real prose captured');
   assert.ok(Number(bucket._ts) >= t0, 'capture timestamp stamped');
   G.purgeSkeletonSnapshots();
   const after = JSON.parse(backing.get('antcv:clProseGuard'));
-  const b2 = after['Trackman A/S|Project Manager, Hardware'];
+  const b2 = after['Trackman A/S|Project Manager, Hardware|en'];
   assert.ok(b2 && b2.opening && Number(b2._ts) >= t0, 'purge keeps real sections AND the _ts metadata');
   // a bucket whose only content is metadata counts as EMPTY and is dropped
   backing.set('antcv:clProseGuard', JSON.stringify({ 'Old Co|Role': { opening: SKELETON_OPENING, _ts: 123 } }));

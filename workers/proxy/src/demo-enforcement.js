@@ -58,6 +58,7 @@
 const RATES = {
   // Anthropic — current generation
   'claude-sonnet-5':     [3.00, 15.00],   // 2026-07 (standard $3/$15; intro $2/$10 through 2026-08-31 — use standard so the demo budget is conservatively capped)
+  'claude-opus-4-8':     [5.00, 25.00],   // 2026-07 flagship (AntCV gen pin since 1.51.332). Explicit entry: without it the string "claude-opus-4-8" falls through to the legacy `claude-opus-4` key at [15,75] and over-prices the cap 3x — the exact v1.40.167 bug this comment block documents.
   'claude-opus-4-7':     [5.00, 25.00],   // released 2026-04-16
   'claude-opus-4-6':     [5.00, 25.00],
   'claude-opus-4-5':     [5.00, 25.00],
@@ -74,6 +75,7 @@ const RATES = {
   'claude-opus-4-1':     [15.00, 75.00],
   'claude-opus-4':       [15.00, 75.00],   // legacy Opus 4 base — superseded by 4.5+
   // OpenAI — GPT-5 family (added 2026-05-18 audit; launched 2025)
+  'gpt-5.5':             [30.00, 60.00],  // 2026-07 top flagship, reserved for AntCV's thorough/max gen tier (default openai gen is gpt-5.4-mini — LLM_ROUTER_PROPOSAL_2026-07-11). Explicit entry: without it "gpt-5.5" falls through to the shorter `gpt-5` key at [1.25,10] and under-prices the cap ~24x.
   'gpt-5.4-nano':        [0.20,  1.25],
   'gpt-5.4-mini':        [0.75,  4.50],
   'gpt-5.4':             [2.50, 15.00],   // current flagship as of 2026-04

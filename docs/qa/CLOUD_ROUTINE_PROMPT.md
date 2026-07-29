@@ -8,10 +8,55 @@ Owner: Gabriel. Style: direct, factual, compressed, no corporate filler.
 ---
 
 You are an autonomous AntCV maintenance run on the GitHub repo **gabrielk83/AntCV** (a React PWA in
-`pwa/` + Cloudflare Workers in `workers/`). Current shipped: PWA **1.51.29** (auto-deploys on push
-to `main`), docx-worker **1.14.110**, access-relay **1.3.2**, proxy/demo-proxy **3.6.0**. Work the
-prioritised backlog below, ship VERIFIED fixes only. Hard rule: **an end result, not a brickable
-mid-product** — one solid verified fix beats several half-verified ones.
+`pwa/` + Cloudflare Workers in `workers/`). Ship VERIFIED fixes only. Hard rule: **an end result,
+not a brickable mid-product** — one solid verified fix beats several half-verified ones.
+
+## AUTHORITATIVE PLAN (read first — SUPERSEDES the historical backlog lower in this file)
+Work the SAME live plan the desktop nightly works, not the dated NVIDIA/1.50.x lists below (those
+are HISTORICAL context, mostly shipped):
+1. The newest dated `docs/qa/NIGHTLY_*_PROMPT.md` (its PRIORITY BANDS are the standing plan; if none
+   newer than 2026-07-05 exists, use `docs/qa/NIGHTLY_2026-07-05_PROMPT.md`).
+2. `docs/qa/OPEN_REGISTER.md` — the single source of open work; a run is "full coverage" when every
+   open row is advanced or given a verify-result. Work Band A first; drop to the next only when blocked.
+3. `docs/qa/SCHEDULED_ROUTINES.md` — the standing rules (SYNC FIRST, shift-claim + worktree for any
+   versioned change, END-OF-RUN REGISTER REPORTING). STANDING RULE 0's heartbeat is a LOCAL-desktop
+   mechanism — it does NOT apply in cloud; here "did it run + what happened" is answered by the
+   claude.ai routine's own run history plus your end-of-run report commit (see REPORT).
+
+## WHY CLOUD IS THE RIGHT SUBSTRATE FOR THE NIGHTLIES (2026-07-21)
+The local desktop nightlies kept missing days: they only run while the Claude app is open (03:30 was
+almost never open → always deferred), and a deferred catch-up run collided with the owner's live work
+in the shared clone (dirty tree → its rebase aborts). A cloud run has NEITHER problem — it fires on
+Anthropic's cron regardless of the owner's machine, in a FRESH ISOLATED clone with no shared WIP to
+collide with. Remaining cloud trade-offs are the CLOUD CAVEATS below (no local memory — this prompt
+inlines the facts; worker deploy + signed-in live-verify may be unavailable → flag them owed to a
+desktop run). SYNC FIRST still matters: the desktop also pushes to `main`, so always rebase, never force.
+
+> **VERSION NOTE (the numbers below are stale — check live before quoting).** As of 2026-07-10 PWA
+> is ~**1.51.259**, workers redeployed several times. Do NOT trust the "1.51.29 / 3.6.0" figures in
+> the next paragraph; read `pwa/sw.js` CACHE + `git log` for the real current versions. For the most
+> recent job-tracker + shared-engine work (coherence-repair fix, KV-quota masking fix, brand-on-Open,
+> TARGET FACTS, web COMPANY RESEARCH, signal-image OCR), read `docs/qa/JOBTRACKER_SESSION_2026-07-10.md`
+> and `docs/qa/ACTIVE_BUGS.md` (top block).
+>
+> **SHIFT PROTOCOL — claim a version range before you work (2026-07-10).** Multiple sessions push to
+> `origin/main` and have collided on version numbers + shared-working-tree WIP (e.g. a merge that regressed
+> the cache-bust quintet below the deployed version). Before editing: (1) `git fetch origin && git pull
+> --rebase origin main`; (2) `node scripts/shift.mjs claim --task "<what>"` — reserves a version-number range
+> in `docs/qa/NIGHT_SHIFT.md` (computed from the true high-water mark, robust to a regressed TARGET) and prints
+> a `git worktree add` line; (3) work in that worktree, not the shared clone; (4) use only numbers inside your
+> range; (5) `node scripts/shift.mjs release` when done. `status` lists active claims. Full detail: `docs/qa/NIGHT_SHIFT.md`.
+>
+> **CLOUD SYNC MODEL CHANGED (2026-07-10, PARALLEL-GEN-POINTER-002).** The account active pointer is no
+> longer a single `active_application` row — there is now a **per-device** `active_application_device`
+> table so parallel generations across tabs/browsers/devices never clobber each other. Any relay code that
+> touches the active pointer MUST go through `readActivePointer`/`writeActivePointer` (both tables) and pass
+> `?device_id=` on prefs/active GETs — never re-add a raw `INSERT INTO active_application … ON CONFLICT
+> (user_hash)`. The docx-worker also gained RTL (he/ar) + CJK (zh) + Ethiopic (am) export. Full detail:
+> `docs/qa/SESSION_2026-07-10_PARALLEL_GEN_AND_LANG.md`.
+
+Historical: at authoring time PWA **1.51.29** (auto-deploys on push to `main`), docx-worker
+**1.14.110**, access-relay **1.3.2**, proxy/demo-proxy **3.6.0**.
 
 ## ENVIRONMENT SETUP SCRIPT (claude.ai routine config — NOT the prompt)
 Leave the routine's environment **setup script EMPTY** (or at most `node --version`). It must be
@@ -31,6 +76,14 @@ account — no login step is needed. AntCV needs no install for the core work (z
   clearly flag in your report that the worker deploy / live verify is owed to a desktop run.
 - If a fix can only be verified live/headless and you can't do that here, leave it as a clearly
   labelled WIP commit + report it — never claim unverified success.
+- **POST-DEPLOY LIVE VERIFY is a DESKTOP capability (owner 2026-07-10).** Desktop Claude Code runs
+  have an in-app Browser pane that verifies the live `antcv.pages.dev` deploy (procedure:
+  `docs/qa/LIVE_VERIFY_BROWSER_PANE.md`). The cloud routine does NOT have it — for every PWA change
+  you ship, add a line to your report: **"post-deploy live-verify owed to a desktop run"** (deployed
+  version live? changed `?v` fetched fresh? code marker in the built bundle?). The next desktop run
+  clears the owed verify. This exists because a concurrent merge once reverted a changed sidecar's
+  `?v` below the shipped value — tests were green but the fix never reached browsers (stale-`?v`
+  phantom ship).
 
 ## STEP 0 — Orient (read in the repo)
 1. `docs/qa/EXPORT_REVIEW_2026-07_ISSUE_MAP.md` — the authoritative export-review register. The
@@ -103,7 +156,11 @@ account — no login step is needed. AntCV needs no install for the core work (z
   `git commit -F <file>` (or a bash heredoc). End with:
   `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>`.
 
-## PRIORITY ORDER
+## PRIORITY ORDER — HISTORICAL (context only; work the AUTHORITATIVE PLAN at the top instead)
+
+> Everything below is a 2026-07-01→07-10 snapshot, almost entirely SHIPPED. Do NOT treat it as the
+> live queue — it is kept for code-pointer context (app.js gates, salmon, targeting persistence).
+> The live queue is `docs/qa/OPEN_REGISTER.md` + the newest `NIGHTLY_*_PROMPT.md` bands.
 
 ### **CURRENT BACKLOG (owner re-review 2026-07-01) — FIXED 1.51.29, regen-cycle verify owed**
 
@@ -211,3 +268,10 @@ sections — **CLOSED this run** (item + ID + version + how verified) and **OPEN
 can't do"). Also refresh `docs/qa/NEXT_SESSION_PROMPT.md` so the next run/session starts from the
 current open queue. Commit + push these docs with the code. A run is not "done" until the open/closed
 state is written down — never leave the status only in chat.
+
+**END-OF-RUN REGISTER REPORTING (owner 2026-07-13 — standing rule 5 in
+`docs/qa/SCHEDULED_ROUTINES.md`, applies to this routine too):** in the same end-of-run commit,
+(a) advance/refresh every `docs/qa/OPEN_REGISTER.md` row the run touched and ADD a row for any new
+bug/task discovered; (b) log every code fix in `docs/qa/ACTIVE_BUGS.md` (top block); (c) register
+any feature shipped or advanced in `docs/FEATURES_REGISTRY.md`. The session log above is the
+narrative; these three registers are the canonical state — update BOTH.

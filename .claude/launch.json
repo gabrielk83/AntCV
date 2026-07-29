@@ -1,0 +1,47 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "antcv-pwa",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["wrangler", "pages", "dev", "pwa", "--port", "8080"],
+      "port": 8080
+    },
+    {
+      "name": "proxy",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["wrangler", "dev", "--config", "workers/proxy/wrangler.toml", "--port", "8787"],
+      "port": 8787
+    },
+    {
+      "name": "demo-proxy",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["wrangler", "dev", "--config", "workers/demo-proxy/wrangler.toml", "--port", "8789"],
+      "port": 8789
+    },
+    {
+      "name": "access-relay",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["wrangler", "dev", "--config", "workers/access-relay/wrangler.toml", "--port", "8790"],
+      "port": 8790
+    },
+    {
+      "name": "docx-worker",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["wrangler", "dev", "--config", "workers/docx-worker/wrangler.toml", "--port", "8791"],
+      "port": 8791
+    },
+    {
+      "name": "c2pa-worker",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["wrangler", "dev", "--config", "workers/c2pa-worker/wrangler.toml", "--port", "8792"],
+      "port": 8792
+    },
+    {
+      "name": "antcv-mcp",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["wrangler", "dev", "--config", "workers/antcv-mcp/wrangler.toml", "--port", "8788"],
+      "port": 8788
+    }
+  ]
+}

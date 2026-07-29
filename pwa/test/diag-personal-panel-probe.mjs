@@ -9,7 +9,10 @@ import { chromium } from 'playwright';
 import http from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
-const ROOT = 'C:/Users/karpg/GitHub/AntCV/pwa';
+import { fileURLToPath } from 'node:url';
+// Portable repo-relative root (this file lives in pwa/test) — a hardcoded desktop
+// path 404'd every asset in CI, so the app never booted (DIAG-PROBE-WINPATH-001).
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json' };
 const server = http.createServer(async (req, res) => {
   try { let rel = decodeURIComponent((req.url || '/').split('?')[0]); if (rel === '/') rel = '/index.html'; const fp = path.join(ROOT, rel); const s = await stat(fp).catch(() => null); if (!s || !s.isFile()) { res.writeHead(404); res.end('nf'); return; } res.writeHead(200, { 'content-type': MIME[path.extname(fp)] || 'application/octet-stream' }); res.end(await readFile(fp)); } catch (e) { res.writeHead(500); res.end('e'); }
@@ -27,15 +30,30 @@ await page.addInitScript(() => {
   localStorage.setItem('step', JSON.stringify('editor')); localStorage.setItem('doc', JSON.stringify('cv'));
   localStorage.setItem('sections', JSON.stringify({ cv: [{ id: 'profile', title: 'PROFILE', loc: 'main', on: true, type: 'text', content: 'P.' }], cl: [] }));
   localStorage.setItem('personalInfo', JSON.stringify({ name: 'Diag', wizardCompleted: true }));
+  // The editor no longer mounts (blank body → no settings gear) without a meta
+  // identity — seed it like diag-panel-button-audit does (DIAG-PROBE-NO-META-001).
+  localStorage.setItem('meta', JSON.stringify({ company: 'Diag Co', role: 'Diag Role' }));
   localStorage.setItem('language', JSON.stringify('en')); localStorage.setItem('wizardCompleted', JSON.stringify(true));
 });
 await page.goto(base + '/index.html', { waitUntil: 'load', timeout: 30000 });
 await page.waitForTimeout(5000);
-// open Settings
-try { await page.locator('text=⚙').first().click({ timeout: 2000 }); } catch (e) { console.log('settings open fail', e.message); }
+// open Settings + Personal subtab via a direct DOM click. A Playwright locator
+// click flaked in headless CI two ways: the ⚙ button carries an emoji
+// variation-selector that defeats text= / hasText matching, and a real-mouse
+// click times out on the re-rendering toolbar's actionability wait. A node click
+// is what historically worked and reliably opens the panel (DIAG-PROBE-NO-META-001).
+const opened = await page.evaluate(() => {
+  const gear = Array.from(document.querySelectorAll('button')).find(b => (b.textContent || '').includes('⚙'));
+  if (!gear) return false; gear.click(); return true;
+});
+if (!opened) console.log('settings open fail: no ⚙ button found');
 await page.waitForTimeout(1500);
-// click Personal subtab if present
-try { await page.getByText('Personal', { exact: true }).first().click({ timeout: 1500 }); } catch (_) {}
+// click the Personal subtab (leaf element whose exact text is "Personal")
+await page.evaluate(() => {
+  const el = Array.from(document.querySelectorAll('button,[role="tab"],a,span,div'))
+    .find(e => e.children.length === 0 && (e.textContent || '').trim() === 'Personal');
+  if (el) (el.closest('button,[role="tab"],a') || el).click();
+});
 await page.waitForTimeout(1200);
 // find the panel container that holds "WRITING STYLE"
 const snap = await page.evaluate(() => {
@@ -71,7 +89,8 @@ const snap = await page.evaluate(() => {
   return { found: true, kids, display: getComputedStyle(panel).display };
 });
 console.log(snap.kids ? snap.kids.map(k=>k.i+" order="+k.order+" "+k.tag+" :: "+k.text.slice(0,55)).join(String.fromCharCode(10)) : JSON.stringify(snap));
+if (!snap.found) { console.log('DIAG FAIL — Personal panel never opened (settings gear / subtab not reached)'); process.exitCode = 1; await browser.close(); server.close(); process.exit(1); }
 await page.waitForTimeout(8000);
-const churn = await page.evaluate(() => ({ n: window.__pm, top: Object.entries(window.__samples).sort((a,b)=>b[1]-a[1]).slice(0,14) }));
+const churn = await page.evaluate(() => ({ n: window.__pm || 0, top: Object.entries(window.__samples || {}).sort((a,b)=>b[1]-a[1]).slice(0,14) }));
 console.log('mutations over 8s:', churn.n); churn.top.forEach(([k,v])=>console.log('  ', v, k)); console.log('page errors:', errs.length ? errs.slice(0,3) : 0); const pass = churn.n <= 5 && errs.length === 0; console.log(pass ? 'DIAG PASS — Personal panel is still at rest' : 'DIAG FAIL'); process.exitCode = pass ? 0 : 1;
 await browser.close(); server.close();

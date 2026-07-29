@@ -50,6 +50,51 @@
     if (window.__antcvCurrentAppId === v) return;
     window.__antcvCurrentAppId = v;
     try { sessionStorage.setItem('antcv:currentAppId', v); } catch (_) {}
+    // JD-SCOPE-COLDSTART-001 (owner 2026-07-25 "fix the client-side stuck-JD-scope
+    // root cause"): 'kernel' is the pre-app STAGING scope — a JD pasted before an
+    // application row exists lands there — but it was never emptied once the app
+    // was created. The residue then haunted every later cold start: a new tab
+    // boots on scope 'kernel' (Fl not yet set), the stale staging JD seeds React
+    // state, and the auto-sync POSTs it under the freshly loaded app's
+    // company/role (the 3Shape re-poisoning the relay JD-CROSS-APP-GUARD-001
+    // caught server-side, 8/28 apps). Fix at the root: adopting a REAL app id
+    // CONSUMES the staging slot — migrate it into the app's own slot when that
+    // slot is empty (the legitimate paste→generate→create flow), else clear it
+    // once it is stale. A FRESH staging JD (< 10 min, another tab mid-paste)
+    // with a full app slot is left alone so a parallel upload is never robbed.
+    if (v !== 'kernel') consumeStaging(v);
+  }
+  var STAGING_FRESH_MS = 600000;
+  function consumeStaging(appId) {
+    try {
+      var rg = window.__antcvJdScopeRaw ? window.__antcvJdScopeRaw.getItem : null;
+      var rs2 = window.__antcvJdScopeRaw ? window.__antcvJdScopeRaw.setItem : null;
+      var rr = window.__antcvJdScopeRaw ? window.__antcvJdScopeRaw.removeItem : null;
+      if (!rg || !rs2 || !rr) return;
+      var kjd = rg(nsKey('jdText', 'kernel'));
+      if (kjd == null || !String(kjd).trim()) return;
+      var at = parseInt(rg('antcv:app:kernel:jdTextAt') || '0', 10);
+      var fresh = at > 0 && (Date.now() - at) < STAGING_FRESH_MS;
+      var own = rg(nsKey('jdText', appId));
+      if (own == null || !String(own).trim()) {
+        // paste→create flow: the staged JD belongs to THIS new app — move it.
+        ['jdText', 'questions', 'questionsJd', 'company'].forEach(function (b) {
+          try {
+            var val = rg(nsKey(b, 'kernel'));
+            if (val != null && (rg(nsKey(b, appId)) == null)) rs2(nsKey(b, appId), val);
+            rr(nsKey(b, 'kernel'));
+          } catch (_) {}
+        });
+        rr('antcv:app:kernel:jdTextAt');
+      } else if (!fresh) {
+        // the app has its own JD and the staging is stale residue — purge it so
+        // it can never contaminate another application again.
+        ['jdText', 'questions', 'questionsJd', 'company'].forEach(function (b) {
+          try { rr(nsKey(b, 'kernel')); } catch (_) {}
+        });
+        rr('antcv:app:kernel:jdTextAt');
+      }
+    } catch (_) {}
   }
   function nsKey(base, id) { return 'antcv:app:' + (id || tabAppId()) + ':' + base; }
   // true only for THIS tab's own namespaced JD keys — used by the sidecar storage
@@ -100,7 +145,15 @@
       return rawGet(k);
     };
     LS.setItem = function (k, v) {
-      try { if (Object.prototype.hasOwnProperty.call(SCOPED, k)) return rawSet(nsKey(SCOPED[k]), v); } catch (_) {}
+      try {
+        if (Object.prototype.hasOwnProperty.call(SCOPED, k)) {
+          // JD-SCOPE-COLDSTART-001: stamp writes into the kernel STAGING jdText
+          // slot so consumeStaging can tell a live paste (another tab, < 10 min)
+          // from stale residue when it decides whether the slot may be purged.
+          try { if (k === 'antcv:lastJdText' && tabAppId() === 'kernel') rawSet('antcv:app:kernel:jdTextAt', String(Date.now())); } catch (_) {}
+          return rawSet(nsKey(SCOPED[k]), v);
+        }
+      } catch (_) {}
       return rawSet(k, v);
     };
     LS.removeItem = function (k) {
@@ -122,6 +175,17 @@
     if (!v) v = 'dev-' + Math.abs(((Date.now ? Date.now() : 0) ^ (Math.floor(1e9 * (Math.random ? Math.random() : 0))))).toString(36) + '-' + (tabAppId() || 'k');
     try { rawSet('antcv:deviceId', v); } catch (_) {}
     return v;
+  }
+  // PARALLEL-GEN-POINTER-002: build a `?device_id=…` query suffix for the cloud prefs/
+  // active GETs, so the relay returns THIS device's own active-application pointer (not
+  // whatever another device generated last). Empty string when no device id — relay then
+  // falls back to the legacy global pointer, i.e. today's behavior.
+  function devQ(sep) {
+    try {
+      var d = deviceId();
+      if (!d) return '';
+      return (sep || '?') + 'device_id=' + encodeURIComponent(d);
+    } catch (_) { return ''; }
   }
   // PURE decision: should THIS tab's cold-restore adopt the cloud active_application
   // pointer, or keep the app it is already editing? Adopt when the pointer is mine, or
@@ -147,7 +211,7 @@
   window.AntcvJdScope = {
     setCurrentAppId: setCurrentAppId, getCurrentAppId: tabAppId, isMyJdKey: isMyJdKey, nsKey: nsKey,
     getJd: getJd, setJd: setJd, getQuestions: getQuestions, setQuestions: setQuestions, getCompany: getCompany,
-    deviceId: deviceId, shouldAdoptCloudPointer: shouldAdoptCloudPointer
+    deviceId: deviceId, shouldAdoptCloudPointer: shouldAdoptCloudPointer, devQ: devQ
   };
   window.__antcvJdScopeInstalled = true;
 })();

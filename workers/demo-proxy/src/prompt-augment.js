@@ -531,3 +531,101 @@ export function augmentBodyText(bodyText) {
   applyTaskAugmentation(parsed, task);
   return { bodyText: JSON.stringify(parsed), task };
 }
+
+// ------------------------------------------------------------------
+// PROXY-GOLD-RULES-FETCH-001 (register row 86c).
+// The generation rules live in ONE control site — pwa/gold-rules.json,
+// SERVED at https://antcv.pages.dev/gold-rules.json. The client injects its
+// `prompt_block` into the outgoing prompt (antcv-bullet-targets.js), but a
+// STALE client bundle carries a stale block. So the proxy fetches the SERVED
+// block itself and prepends it too, making the current control site authoritative
+// regardless of client version.
+//
+// Hard rule: this must NEVER block or fail a generation. Any fetch/parse error
+// falls back to whatever block the client already put in the body (i.e. we
+// inject nothing extra). A per-isolate cache with a TTL keeps the hot path from
+// hitting the network on every request; a stale cached block is preferred over a
+// live fetch failure.
+export const GOLD_RULES_URL = 'https://antcv.pages.dev/gold-rules.json';
+const GOLD_RULES_TTL_MS = 5 * 60 * 1000; // 5 min per-isolate
+let _goldCache = { at: 0, block: null }; // block: string | null
+
+// Reset hook for tests (lets a test inject a stub fetch and re-prime).
+export function _resetGoldRulesCache() { _goldCache = { at: 0, block: null }; }
+
+function goldRulesBlockFromJson(j) {
+  if (j && Array.isArray(j.prompt_block) && j.prompt_block.length) {
+    const lines = j.prompt_block.filter((x) => typeof x === 'string');
+    if (lines.length) return 'GOLD STANDARD RULES (control site — apply to all output):\n' + lines.join('\n');
+  }
+  return null;
+}
+
+export async function fetchGoldRulesBlock(fetchImpl) {
+  const now = Date.now();
+  if (_goldCache.block !== null && (now - _goldCache.at) < GOLD_RULES_TTL_MS) {
+    return _goldCache.block; // fresh — includes a cached "" miss (no prompt_block)
+  }
+  const f = fetchImpl || (typeof fetch === 'function' ? fetch : null);
+  if (!f) return _goldCache.block; // no fetch available — keep prior (maybe null)
+  try {
+    const r = await f(GOLD_RULES_URL, { cf: { cacheTtl: 300, cacheEverything: true } });
+    if (!r || !r.ok) return _goldCache.block; // keep prior on non-2xx
+    const j = await r.json();
+    const block = goldRulesBlockFromJson(j);
+    _goldCache = { at: now, block: block == null ? '' : block };
+    return _goldCache.block;
+  } catch {
+    return _goldCache.block; // ANY error → prior cached value (never throw)
+  }
+}
+
+// Prepend an extra system block across the three provider shapes (same logic
+// applyTaskAugmentation uses). No-op when text is empty.
+function prependSystemBlock(parsed, text) {
+  if (!text) return parsed;
+  if ('system' in parsed || Array.isArray(parsed.messages)) {
+    const existing = parsed.system;
+    if (typeof existing === 'string') parsed.system = `${text}\n\n---\n\n${existing}`;
+    else if (Array.isArray(existing)) parsed.system = [{ type: 'text', text }, ...existing];
+    else parsed.system = text;
+    return parsed;
+  }
+  if (parsed.contents !== undefined || parsed.systemInstruction !== undefined) {
+    const existing = parsed.systemInstruction;
+    if (existing && Array.isArray(existing.parts)) {
+      parsed.systemInstruction = { ...existing, parts: [{ text }, ...existing.parts] };
+    } else if (typeof existing === 'string') {
+      parsed.systemInstruction = `${text}\n\n---\n\n${existing}`;
+    } else if (existing && typeof existing.text === 'string') {
+      parsed.systemInstruction = { ...existing, text: `${text}\n\n---\n\n${existing.text}` };
+    } else {
+      parsed.systemInstruction = { parts: [{ text }] };
+    }
+    return parsed;
+  }
+  return parsed;
+}
+
+// Async augment: same task detection + task augmentation as augmentBodyText,
+// PLUS the served gold-rules block prepended on top. Fail-soft — a fetch error
+// degrades to exactly the sync behaviour (client block only).
+export async function augmentBodyTextAsync(bodyText, fetchImpl) {
+  let parsed;
+  try { parsed = JSON.parse(bodyText); }
+  catch { return { bodyText, task: null, gold: false }; }
+  if (!parsed || typeof parsed !== 'object') return { bodyText, task: null, gold: false };
+
+  const task = detectCVTask(parsed);
+  if (!task) return { bodyText, task: null, gold: false };
+
+  applyTaskAugmentation(parsed, task);
+  // PROXY-GOLD-RULES-DOUBLE-INJECT-001 (2026-07-13, core-comp-wipe regression):
+  // the client (antcv-bullet-targets.js) ALREADY injects the gold-rules prompt_block
+  // into the outgoing prompt. Prepending the SAME block again here double-injected a
+  // large rules block onto an already-huge system prompt and degraded field adherence
+  // (live gens dropped CORE COMPETENCIES). Disabled the proxy prepend — the client is
+  // the single injection site. Re-enable only WITH a dedup guard vs the client block.
+  const gold = false;
+  return { bodyText: JSON.stringify(parsed), task, gold };
+}

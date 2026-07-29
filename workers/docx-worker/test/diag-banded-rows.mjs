@@ -1,8 +1,11 @@
 /* DIAGNOSTIC — TABLE-BANDED-ROWS-001 (owner 2026-06-14). The exported PDF/DOCX
  * was "missing the banded-row colours seen in preview": the worker banded the
  * WRONG rows (odd data rows) with a near-invisible FAFAFA, while the React
- * preview (app.src.js ~5149) bands EVEN data rows with a visible pale teal
- * #eaf7f7. Worker now matches: even data rows (idx 0,2,4…) → EAF7F7, odd → none.
+ * preview bands EVEN data rows. Worker matches: even data rows (idx 0,2,4…) get
+ * the band, odd → none. COPENHAGEN mockup lock (owner 2026-07-22): the band
+ * colour follows style.tableEvenBg (default #DCE5EA, the Copenhagen sidebar
+ * light) — the old hardcoded EAF7F7 must NOT come back. A forwarded
+ * tableEvenBg token wins (also asserted below).
  * Renders a CV competency table and asserts the per-row shading.
  * Run: node test/diag-banded-rows.mjs */
 import { writeSync } from 'node:fs';
@@ -66,18 +69,28 @@ const payload = {
 const buf = await gen(payload);
 const xml = unzipEntry(buf, 'word/document.xml').toString('utf8');
 
-const bandHits = (xml.match(/w:fill="EAF7F7"/g) || []).length;
+const bandHits = (xml.match(/w:fill="DCE5EA"/g) || []).length;
 const fafafaHits = (xml.match(/w:fill="FAFAFA"/gi) || []).length;
+const eafHits = (xml.match(/w:fill="EAF7F7"/gi) || []).length;
 
 // Each banded data ROW has 2 cells → 2 fills per banded row. With 4 rows
 // (header + 3 data), even data rows = idx 0 and 2 → 2 banded rows → >=4 fills.
 const okBand = bandHits >= 4;
 const okNoFafafa = fafafaHits === 0;
+const okNoEaf = eafHits === 0;
 
-log('EAF7F7 (visible band) cell fills:', bandHits, '| expected >= 4:', okBand);
+log('DCE5EA (Copenhagen band) cell fills:', bandHits, '| expected >= 4:', okBand);
 log('FAFAFA (old invisible band) fills:', fafafaHits, '| expected 0:', okNoFafafa);
+log('EAF7F7 (old hardcoded band) fills:', eafHits, '| expected 0:', okNoEaf);
 
-if (okBand && okNoFafafa) {
+// Token override wins: a forwarded style.tableEvenBg drives the band colour.
+const buf2 = await gen({ ...payload, style: { ...payload.style, tableEvenBg: '#F1E4D0' } });
+const xml2 = unzipEntry(buf2, 'word/document.xml').toString('utf8');
+const tokHits = (xml2.match(/w:fill="F1E4D0"/g) || []).length;
+const okToken = tokHits >= 4;
+log('tableEvenBg override fills (F1E4D0):', tokHits, '| expected >= 4:', okToken);
+
+if (okBand && okNoFafafa && okNoEaf && okToken) {
   log('BANDED-ROWS OK');
 } else {
   log('BANDED-ROWS FAIL');

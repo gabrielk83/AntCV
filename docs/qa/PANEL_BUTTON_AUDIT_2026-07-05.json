@@ -2,10 +2,10 @@
  "date": "2026-07-05",
  "counts": {
   "skipped-dangerous": 12,
+  "ui-only": 14,
   "active": 118,
-  "ui-only": 10,
-  "not-visible-or-disabled": 55,
-  "unclickable": 2
+  "not-visible-or-disabled": 51,
+  "DEAD": 1
  },
  "results": [
   {
@@ -24,10 +24,8 @@
    "visible": true,
    "inPreview": false,
    "disabled": false,
-   "verdict": "active",
-   "writes": [
-    "antcv:coreCompGuard"
-   ],
+   "verdict": "ui-only",
+   "writes": [],
    "domDelta": 519,
    "errors": []
   },
@@ -50,8 +48,10 @@
    "visible": true,
    "inPreview": false,
    "disabled": false,
-   "verdict": "ui-only",
-   "writes": [],
+   "verdict": "active",
+   "writes": [
+    "antcv:coreCompGuard"
+   ],
    "domDelta": 43,
    "errors": []
   },
@@ -62,11 +62,9 @@
    "visible": true,
    "inPreview": false,
    "disabled": false,
-   "verdict": "active",
-   "writes": [
-    "antcv:coreCompGuard"
-   ],
-   "domDelta": 526,
+   "verdict": "ui-only",
+   "writes": [],
+   "domDelta": 528,
    "errors": []
   },
   {
@@ -78,7 +76,7 @@
    "disabled": false,
    "verdict": "ui-only",
    "writes": [],
-   "domDelta": 1001,
+   "domDelta": 904,
    "errors": []
   },
   {
@@ -92,7 +90,7 @@
    "writes": [
     "antcv:coreCompGuard"
    ],
-   "domDelta": 892,
+   "domDelta": 888,
    "errors": []
   },
   {
@@ -104,7 +102,7 @@
    "disabled": false,
    "verdict": "ui-only",
    "writes": [],
-   "domDelta": 996,
+   "domDelta": 1001,
    "errors": []
   },
   {
@@ -114,11 +112,9 @@
    "visible": true,
    "inPreview": false,
    "disabled": false,
-   "verdict": "active",
-   "writes": [
-    "antcv:coreCompGuard"
-   ],
-   "domDelta": 521,
+   "verdict": "ui-only",
+   "writes": [],
+   "domDelta": 509,
    "errors": []
   },
   {
@@ -137,8 +133,10 @@
    "visible": true,
    "inPreview": false,
    "disabled": true,
-   "verdict": "ui-only",
-   "writes": [],
+   "verdict": "active",
+   "writes": [
+    "antcv:coreCompGuard"
+   ],
    "domDelta": 1,
    "errors": []
   },
@@ -152,16 +150,15 @@
    "verdict": "active",
    "writes": [
     "settingsTab",
-    "settingsSubTab",
-    "antcv:coreCompGuard"
+    "settingsSubTab"
    ],
-   "domDelta": 617,
+   "domDelta": 629,
    "errors": []
   },
   {
-   "sig": "Export — preview and save as PDF or DOCX#1",
+   "sig": "Export — preview and save as PDF or DOCX. Drag to move.#1",
    "tag": "button",
-   "label": "Export — preview and save as PDF or DOCX",
+   "label": "Export — preview and save as PDF or DOCX. Drag to move.",
    "visible": true,
    "inPreview": false,
    "disabled": false,
@@ -179,7 +176,7 @@
     "step",
     "antcv:mainOverflow"
    ],
-   "domDelta": 41,
+   "domDelta": 39,
    "errors": []
   },
   {
@@ -191,9 +188,9 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
-    "antcv:coreCompGuard",
     "settingsTab",
-    "settingsSubTab"
+    "settingsSubTab",
+    "antcv:coreCompGuard"
    ],
    "domDelta": 124,
    "errors": []
@@ -210,7 +207,7 @@
     "step",
     "antcv:mainOverflow"
    ],
-   "domDelta": 670,
+   "domDelta": 675,
    "errors": []
   },
   {
@@ -283,12 +280,9 @@
    "visible": true,
    "inPreview": false,
    "disabled": false,
-   "verdict": "active",
-   "writes": [
-    "antcv:coreCompGuard",
-    "antcv:nameLineAlign"
-   ],
-   "domDelta": 1297,
+   "verdict": "ui-only",
+   "writes": [],
+   "domDelta": 4375,
    "errors": []
   },
   {
@@ -300,9 +294,12 @@
    "disabled": true,
    "verdict": "active",
    "writes": [
-    "antcv:coreCompGuard"
+    "antcv:nameLineAlign",
+    "antcv:coreCompGuard",
+    "sections",
+    "meta"
    ],
-   "domDelta": 1226,
+   "domDelta": 3733,
    "errors": []
   },
   {
@@ -314,9 +311,10 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
-    "antcv:coreCompGuard"
+    "sections",
+    "meta"
    ],
-   "domDelta": 1701,
+   "domDelta": 4303,
    "errors": []
   },
   {
@@ -328,9 +326,10 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
-    "antcv:coreCompGuard"
+    "sections",
+    "meta"
    ],
-   "domDelta": 1324,
+   "domDelta": 4128,
    "errors": []
   },
   {
@@ -342,11 +341,11 @@
    "disabled": true,
    "verdict": "active",
    "writes": [
+    "antcv:coreCompGuard",
     "sections",
-    "meta",
-    "antcv:coreCompGuard"
+    "meta"
    ],
-   "domDelta": 1511,
+   "domDelta": 3847,
    "errors": []
   },
   {
@@ -358,13 +357,12 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
-    "sections",
-    "meta",
     "antcv.sectionHeadlineAlignment.userTouched.v1",
     "antcv.sectionHeadlineAlignment.v1",
-    "antcv:coreCompGuard"
+    "sections",
+    "meta"
    ],
-   "domDelta": 1514,
+   "domDelta": 4349,
    "errors": []
   },
   {
@@ -377,9 +375,12 @@
    "verdict": "active",
    "writes": [
     "antcv.sectionHeadlineAlignment.userTouched.v1",
-    "antcv.sectionHeadlineAlignment.v1"
+    "antcv.sectionHeadlineAlignment.v1",
+    "sections",
+    "meta",
+    "antcv:coreCompGuard"
    ],
-   "domDelta": 1140,
+   "domDelta": 3951,
    "errors": []
   },
   {
@@ -392,9 +393,11 @@
    "verdict": "active",
    "writes": [
     "antcv.sectionHeadlineAlignment.userTouched.v1",
-    "antcv.sectionHeadlineAlignment.v1"
+    "antcv.sectionHeadlineAlignment.v1",
+    "sections",
+    "meta"
    ],
-   "domDelta": 1230,
+   "domDelta": 4058,
    "errors": []
   },
   {
@@ -406,12 +409,12 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
-    "sections",
-    "meta",
     "antcv.sectionHeadlineAlignment.userTouched.v1",
-    "antcv.sectionHeadlineAlignment.v1"
+    "antcv.sectionHeadlineAlignment.v1",
+    "sections",
+    "meta"
    ],
-   "domDelta": 1528,
+   "domDelta": 3467,
    "errors": []
   },
   {
@@ -424,9 +427,10 @@
    "verdict": "active",
    "writes": [
     "sections",
-    "meta"
+    "meta",
+    "antcv:coreCompGuard"
    ],
-   "domDelta": 1521,
+   "domDelta": 1337,
    "errors": []
   },
   {
@@ -436,11 +440,9 @@
    "visible": true,
    "inPreview": false,
    "disabled": false,
-   "verdict": "active",
-   "writes": [
-    "antcv:coreCompGuard"
-   ],
-   "domDelta": 1835,
+   "verdict": "ui-only",
+   "writes": [],
+   "domDelta": 4607,
    "errors": []
   },
   {
@@ -455,7 +457,7 @@
     "sections",
     "meta"
    ],
-   "domDelta": 1906,
+   "domDelta": 3849,
    "errors": []
   },
   {
@@ -467,11 +469,11 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
-    "antcv:coreCompGuard",
     "sections",
-    "meta"
+    "meta",
+    "antcv:coreCompGuard"
    ],
-   "domDelta": 2133,
+   "domDelta": 4290,
    "errors": []
   },
   {
@@ -484,10 +486,9 @@
    "verdict": "active",
    "writes": [
     "sections",
-    "meta",
-    "antcv:coreCompGuard"
+    "meta"
    ],
-   "domDelta": 1808,
+   "domDelta": 4139,
    "errors": []
   },
   {
@@ -503,17 +504,25 @@
     "sections",
     "meta"
    ],
-   "domDelta": 2243,
+   "domDelta": 4182,
    "errors": []
   },
   {
    "sig": "CJLR for Specialisation line#1",
    "tag": "button",
    "label": "CJLR for Specialisation line",
-   "visible": false,
+   "visible": true,
    "inPreview": false,
    "disabled": false,
-   "verdict": "not-visible-or-disabled"
+   "verdict": "active",
+   "writes": [
+    "headerItemAlign",
+    "antcv:coreCompGuard",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 4375,
+   "errors": []
   },
   {
    "sig": "Move out of the top bar (into main column)#1",
@@ -524,23 +533,31 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
-    "antcv:coreCompGuard",
     "headerItemLoc",
     "antcv:mainOverflow",
     "sections",
     "meta"
    ],
-   "domDelta": 2404,
+   "domDelta": 4607,
    "errors": []
   },
   {
    "sig": "CJLR for Name line#1",
    "tag": "button",
    "label": "CJLR for Name line",
-   "visible": false,
+   "visible": true,
    "inPreview": false,
    "disabled": false,
-   "verdict": "not-visible-or-disabled"
+   "verdict": "active",
+   "writes": [
+    "headerItemAlign",
+    "antcv:nameLineAlign",
+    "sections",
+    "meta",
+    "antcv:coreCompGuard"
+   ],
+   "domDelta": 4260,
+   "errors": []
   },
   {
    "sig": "Edit#1",
@@ -552,10 +569,9 @@
    "verdict": "active",
    "writes": [
     "sections",
-    "meta",
-    "antcv:coreCompGuard"
+    "meta"
    ],
-   "domDelta": 1105,
+   "domDelta": 1028,
    "errors": []
   },
   {
@@ -567,7 +583,7 @@
    "disabled": false,
    "verdict": "ui-only",
    "writes": [],
-   "domDelta": 1615,
+   "domDelta": 3894,
    "errors": []
   },
   {
@@ -579,22 +595,29 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
+    "topbarOrder",
     "sections",
     "meta",
-    "topbarOrder",
     "antcv:coreCompGuard"
    ],
-   "domDelta": 2182,
+   "domDelta": 4173,
    "errors": []
   },
   {
    "sig": "CJLR for Contact line#1",
    "tag": "button",
    "label": "CJLR for Contact line",
-   "visible": false,
+   "visible": true,
    "inPreview": false,
    "disabled": false,
-   "verdict": "not-visible-or-disabled"
+   "verdict": "active",
+   "writes": [
+    "headerItemAlign",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 4051,
+   "errors": []
   },
   {
    "sig": "Move out of the top bar (into sidebar)#1",
@@ -609,7 +632,7 @@
     "sections",
     "meta"
    ],
-   "domDelta": 2058,
+   "domDelta": 5026,
    "errors": []
   },
   {
@@ -640,10 +663,11 @@
    "verdict": "active",
    "writes": [
     "antcv:mainOverflow",
+    "antcv:coreCompGuard",
     "meta",
     "sections"
    ],
-   "domDelta": 2047,
+   "domDelta": 4963,
    "errors": []
   },
   {
@@ -656,25 +680,15 @@
    "verdict": "active",
    "writes": [
     "sections",
-    "meta",
-    "antcv:coreCompGuard"
+    "meta"
    ],
-   "domDelta": 1994,
+   "domDelta": 4029,
    "errors": []
   },
   {
    "sig": "Make It Fit (sidebar) — fites every sidebar section, then fixes orphan lines. Us#1",
    "tag": "button",
    "label": "Make It Fit (sidebar) — fites every sidebar section, then fixes orphan lines. Us",
-   "visible": false,
-   "inPreview": false,
-   "disabled": false,
-   "verdict": "not-visible-or-disabled"
-  },
-  {
-   "sig": "⇥ Fit#1",
-   "tag": "button",
-   "label": "⇥ Fit",
    "visible": true,
    "inPreview": false,
    "disabled": false,
@@ -684,7 +698,7 @@
     "meta",
     "antcv:coreCompGuard"
    ],
-   "domDelta": 2022,
+   "domDelta": 3598,
    "errors": []
   },
   {
@@ -699,7 +713,7 @@
     "sections",
     "meta"
    ],
-   "domDelta": 2494,
+   "domDelta": 4136,
    "errors": []
   },
   {
@@ -711,11 +725,10 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
-    "antcv:coreCompGuard",
     "meta",
     "sections"
    ],
-   "domDelta": 2502,
+   "domDelta": 4561,
    "errors": []
   },
   {
@@ -727,10 +740,11 @@
    "disabled": true,
    "verdict": "active",
    "writes": [
+    "antcv:coreCompGuard",
     "sections",
     "meta"
    ],
-   "domDelta": 2477,
+   "domDelta": 3840,
    "errors": []
   },
   {
@@ -743,16 +757,30 @@
    "verdict": "active",
    "writes": [
     "sections",
-    "meta",
-    "antcv:coreCompGuard"
+    "meta"
    ],
-   "domDelta": 1418,
+   "domDelta": 1747,
    "errors": []
   },
   {
    "sig": "SIDEBAR headline alignment: center (click to cycle)#1",
    "tag": "button",
    "label": "SIDEBAR headline alignment: center (click to cycle)",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv.sectionHeadlineAlignment.userTouched.v1",
+    "antcv.sectionHeadlineAlignment.v1"
+   ],
+   "domDelta": 2608,
+   "errors": []
+  },
+  {
+   "sig": "SIDEBAR headline alignment: justify (click to cycle)#1",
+   "tag": "button",
+   "label": "SIDEBAR headline alignment: justify (click to cycle)",
    "visible": false,
    "inPreview": false,
    "disabled": false,
@@ -765,9 +793,13 @@
    "visible": true,
    "inPreview": false,
    "disabled": false,
-   "verdict": "ui-only",
-   "writes": [],
-   "domDelta": 517,
+   "verdict": "active",
+   "writes": [
+    "antcv:coreCompGuard",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1504,
    "errors": []
   },
   {
@@ -777,11 +809,9 @@
    "visible": true,
    "inPreview": false,
    "disabled": false,
-   "verdict": "active",
-   "writes": [
-    "antcv:coreCompGuard"
-   ],
-   "domDelta": 871,
+   "verdict": "ui-only",
+   "writes": [],
+   "domDelta": 2783,
    "errors": []
   },
   {
@@ -796,7 +826,7 @@
     "sections",
     "meta"
    ],
-   "domDelta": 1936,
+   "domDelta": 4686,
    "errors": []
   },
   {
@@ -808,11 +838,11 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
+    "antcv:mainOverflow",
     "sections",
-    "meta",
-    "antcv:mainOverflow"
+    "meta"
    ],
-   "domDelta": 2161,
+   "domDelta": 4441,
    "errors": []
   },
   {
@@ -851,12 +881,11 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
-    "antcv:coreCompGuard",
     "antcv:analytics:counts",
     "sections",
     "meta"
    ],
-   "domDelta": 2013,
+   "domDelta": 4294,
    "errors": []
   },
   {
@@ -869,10 +898,11 @@
    "verdict": "active",
    "writes": [
     "antcv:analytics:counts",
+    "antcv:coreCompGuard",
     "sections",
     "meta"
    ],
-   "domDelta": 1903,
+   "domDelta": 4147,
    "errors": []
   },
   {
@@ -896,7 +926,7 @@
     "sections",
     "meta"
    ],
-   "domDelta": 2120,
+   "domDelta": 4156,
    "errors": []
   },
   {
@@ -908,12 +938,11 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
-    "antcv:coreCompGuard",
     "antcv:analytics:counts",
     "sections",
     "meta"
    ],
-   "domDelta": 1747,
+   "domDelta": 4387,
    "errors": []
   },
   {
@@ -929,7 +958,7 @@
     "sections",
     "meta"
    ],
-   "domDelta": 1879,
+   "domDelta": 4394,
    "errors": []
   },
   {
@@ -941,12 +970,11 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
-    "sections",
-    "meta",
     "antcv:mainOverflow",
-    "antcv:coreCompGuard"
+    "sections",
+    "meta"
    ],
-   "domDelta": 1872,
+   "domDelta": 3981,
    "errors": []
   },
   {
@@ -989,7 +1017,7 @@
     "sections",
     "meta"
    ],
-   "domDelta": 2410,
+   "domDelta": 4315,
    "errors": []
   },
   {
@@ -1001,12 +1029,11 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
-    "sections",
-    "meta",
     "antcv:analytics:counts",
-    "antcv:coreCompGuard"
+    "sections",
+    "meta"
    ],
-   "domDelta": 2253,
+   "domDelta": 3881,
    "errors": []
   },
   {
@@ -1030,7 +1057,7 @@
     "sections",
     "meta"
    ],
-   "domDelta": 1983,
+   "domDelta": 2441,
    "errors": []
   },
   {
@@ -1045,7 +1072,7 @@
     "sections",
     "meta"
    ],
-   "domDelta": 1584,
+   "domDelta": 3678,
    "errors": []
   },
   {
@@ -1058,10 +1085,9 @@
    "verdict": "active",
    "writes": [
     "sections",
-    "meta",
-    "antcv:coreCompGuard"
+    "meta"
    ],
-   "domDelta": 2345,
+   "domDelta": 3958,
    "errors": []
   },
   {
@@ -1073,11 +1099,11 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
-    "sections",
+    "antcv:mainOverflow",
     "meta",
-    "antcv:mainOverflow"
+    "sections"
    ],
-   "domDelta": 2135,
+   "domDelta": 4236,
    "errors": []
   },
   {
@@ -1117,10 +1143,11 @@
    "verdict": "active",
    "writes": [
     "antcv:analytics:counts",
+    "antcv:coreCompGuard",
     "sections",
     "meta"
    ],
-   "domDelta": 2465,
+   "domDelta": 4125,
    "errors": []
   },
   {
@@ -1151,10 +1178,9 @@
    "verdict": "active",
    "writes": [
     "sections",
-    "meta",
-    "antcv:coreCompGuard"
+    "meta"
    ],
-   "domDelta": 2479,
+   "domDelta": 4327,
    "errors": []
   },
   {
@@ -1169,7 +1195,7 @@
     "sections",
     "meta"
    ],
-   "domDelta": 2203,
+   "domDelta": 3738,
    "errors": []
   },
   {
@@ -1182,10 +1208,11 @@
    "verdict": "active",
    "writes": [
     "antcv:mainOverflow",
+    "antcv:coreCompGuard",
     "sections",
     "meta"
    ],
-   "domDelta": 2182,
+   "domDelta": 4494,
    "errors": []
   },
   {
@@ -1267,9 +1294,12 @@
    "visible": true,
    "inPreview": false,
    "disabled": false,
-   "verdict": "ui-only",
-   "writes": [],
-   "domDelta": 1227,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1745,
    "errors": []
   },
   {
@@ -1292,7 +1322,7 @@
    "writes": [
     "antcv:coreCompGuard"
    ],
-   "domDelta": 927,
+   "domDelta": 714,
    "errors": []
   },
   {
@@ -1302,11 +1332,9 @@
    "visible": true,
    "inPreview": false,
    "disabled": false,
-   "verdict": "active",
-   "writes": [
-    "antcv:coreCompGuard"
-   ],
-   "domDelta": 500,
+   "verdict": "ui-only",
+   "writes": [],
+   "domDelta": 2497,
    "errors": []
   },
   {
@@ -1321,7 +1349,7 @@
     "sections",
     "meta"
    ],
-   "domDelta": 1590,
+   "domDelta": 3240,
    "errors": []
   },
   {
@@ -1337,7 +1365,7 @@
     "meta",
     "antcv:coreCompGuard"
    ],
-   "domDelta": 1599,
+   "domDelta": 3908,
    "errors": []
   },
   {
@@ -1350,11 +1378,10 @@
    "verdict": "active",
    "writes": [
     "antcv:mainOverflow",
-    "antcv:coreCompGuard",
     "sections",
     "meta"
    ],
-   "domDelta": 1606,
+   "domDelta": 3636,
    "errors": []
   },
   {
@@ -1366,11 +1393,10 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
-    "antcv:coreCompGuard",
     "sections",
     "meta"
    ],
-   "domDelta": 1911,
+   "domDelta": 3611,
    "errors": []
   },
   {
@@ -1402,10 +1428,11 @@
    "writes": [
     "antcv:analytics:counts",
     "antcv:mainOverflow",
+    "antcv:coreCompGuard",
     "sections",
     "meta"
    ],
-   "domDelta": 1198,
+   "domDelta": 3953,
    "errors": []
   },
   {
@@ -1417,12 +1444,12 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
-    "sections",
-    "meta",
     "antcv:analytics:counts",
-    "antcv:mainOverflow"
+    "antcv:mainOverflow",
+    "sections",
+    "meta"
    ],
-   "domDelta": 1443,
+   "domDelta": 3193,
    "errors": []
   },
   {
@@ -1452,11 +1479,11 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
-    "antcv:coreCompGuard",
     "sections",
-    "meta"
+    "meta",
+    "antcv:coreCompGuard"
    ],
-   "domDelta": 1957,
+   "domDelta": 3596,
    "errors": []
   },
   {
@@ -1471,7 +1498,7 @@
     "sections",
     "meta"
    ],
-   "domDelta": 1476,
+   "domDelta": 3594,
    "errors": []
   },
   {
@@ -1483,11 +1510,11 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
+    "antcv:mainOverflow",
     "sections",
-    "meta",
-    "antcv:mainOverflow"
+    "meta"
    ],
-   "domDelta": 2265,
+   "domDelta": 3520,
    "errors": []
   },
   {
@@ -1532,7 +1559,7 @@
     "sections",
     "meta"
    ],
-   "domDelta": 1856,
+   "domDelta": 4682,
    "errors": []
   },
   {
@@ -1565,7 +1592,7 @@
     "sections",
     "meta"
    ],
-   "domDelta": 1845,
+   "domDelta": 3207,
    "errors": []
   },
   {
@@ -1580,7 +1607,7 @@
     "sections",
     "meta"
    ],
-   "domDelta": 1651,
+   "domDelta": 3840,
    "errors": []
   },
   {
@@ -1628,11 +1655,10 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
-    "antcv:coreCompGuard",
     "sections",
     "meta"
    ],
-   "domDelta": 2329,
+   "domDelta": 4390,
    "errors": []
   },
   {
@@ -1647,7 +1673,7 @@
     "sections",
     "meta"
    ],
-   "domDelta": 2133,
+   "domDelta": 3996,
    "errors": []
   },
   {
@@ -1659,12 +1685,12 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
+    "antcv:mainOverflow",
     "antcv:coreCompGuard",
     "sections",
-    "meta",
-    "antcv:mainOverflow"
+    "meta"
    ],
-   "domDelta": 2190,
+   "domDelta": 4198,
    "errors": []
   },
   {
@@ -1676,11 +1702,11 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
+    "antcv:mainOverflow",
     "sections",
-    "meta",
-    "antcv:mainOverflow"
+    "meta"
    ],
-   "domDelta": 1492,
+   "domDelta": 3597,
    "errors": []
   },
   {
@@ -1702,10 +1728,9 @@
    "verdict": "active",
    "writes": [
     "sections",
-    "meta",
-    "antcv:coreCompGuard"
+    "meta"
    ],
-   "domDelta": 1188,
+   "domDelta": 4050,
    "errors": []
   },
   {
@@ -1717,12 +1742,13 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
-    "sections",
-    "meta",
     "antcv:analytics:counts",
-    "antcv:mainOverflow"
+    "antcv:coreCompGuard",
+    "antcv:mainOverflow",
+    "sections",
+    "meta"
    ],
-   "domDelta": 1353,
+   "domDelta": 4271,
    "errors": []
   },
   {
@@ -1734,12 +1760,12 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
-    "sections",
-    "meta",
     "antcv:analytics:counts",
-    "antcv:mainOverflow"
+    "antcv:mainOverflow",
+    "sections",
+    "meta"
    ],
-   "domDelta": 1448,
+   "domDelta": 3426,
    "errors": []
   },
   {
@@ -1751,13 +1777,12 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
-    "sections",
-    "meta",
-    "antcv:coreCompGuard",
     "antcv:analytics:counts",
-    "antcv:mainOverflow"
+    "antcv:mainOverflow",
+    "sections",
+    "meta"
    ],
-   "domDelta": 1501,
+   "domDelta": 4041,
    "errors": []
   },
   {
@@ -1779,10 +1804,9 @@
    "verdict": "active",
    "writes": [
     "sections",
-    "meta",
-    "antcv:coreCompGuard"
+    "meta"
    ],
-   "domDelta": 1712,
+   "domDelta": 4048,
    "errors": []
   },
   {
@@ -1797,7 +1821,7 @@
     "sections",
     "meta"
    ],
-   "domDelta": 1505,
+   "domDelta": 4372,
    "errors": []
   },
   {
@@ -1809,10 +1833,11 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
+    "antcv:coreCompGuard",
     "sections",
     "meta"
    ],
-   "domDelta": 1518,
+   "domDelta": 3890,
    "errors": []
   },
   {
@@ -1872,7 +1897,7 @@
     "sections",
     "meta"
    ],
-   "domDelta": 1322,
+   "domDelta": 3879,
    "errors": []
   },
   {
@@ -1885,10 +1910,9 @@
    "verdict": "active",
    "writes": [
     "sections",
-    "meta",
-    "antcv:coreCompGuard"
+    "meta"
    ],
-   "domDelta": 1521,
+   "domDelta": 3769,
    "errors": []
   },
   {
@@ -1909,9 +1933,10 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
-    "antcv:coreCompGuard"
+    "sections",
+    "meta"
    ],
-   "domDelta": 1397,
+   "domDelta": 4361,
    "errors": []
   },
   {
@@ -1925,11 +1950,10 @@
    "writes": [
     "antcv:analytics:counts",
     "antcv:mainOverflow",
-    "antcv:coreCompGuard",
     "sections",
     "meta"
    ],
-   "domDelta": 1419,
+   "domDelta": 4033,
    "errors": []
   },
   {
@@ -1941,13 +1965,13 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
-    "sections",
-    "meta",
     "antcv:analytics:counts",
     "antcv:mainOverflow",
+    "sections",
+    "meta",
     "antcv:coreCompGuard"
    ],
-   "domDelta": 1521,
+   "domDelta": 3870,
    "errors": []
   },
   {
@@ -1959,11 +1983,11 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
+    "antcv:analytics:counts",
     "sections",
-    "meta",
-    "antcv:analytics:counts"
+    "meta"
    ],
-   "domDelta": 1505,
+   "domDelta": 3689,
    "errors": []
   },
   {
@@ -1982,9 +2006,12 @@
    "visible": true,
    "inPreview": false,
    "disabled": false,
-   "verdict": "ui-only",
-   "writes": [],
-   "domDelta": 1576,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 3861,
    "errors": []
   },
   {
@@ -1996,11 +2023,11 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
+    "antcv:coreCompGuard",
     "sections",
-    "meta",
-    "antcv:coreCompGuard"
+    "meta"
    ],
-   "domDelta": 1875,
+   "domDelta": 3534,
    "errors": []
   },
   {
@@ -2015,7 +2042,7 @@
     "sections",
     "meta"
    ],
-   "domDelta": 1869,
+   "domDelta": 3760,
    "errors": []
   },
   {
@@ -2028,10 +2055,9 @@
    "verdict": "active",
    "writes": [
     "sections",
-    "meta",
-    "antcv:coreCompGuard"
+    "meta"
    ],
-   "domDelta": 1971,
+   "domDelta": 2360,
    "errors": []
   },
   {
@@ -2043,10 +2069,11 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
+    "antcv:coreCompGuard",
     "sections",
     "meta"
    ],
-   "domDelta": 1969,
+   "domDelta": 3078,
    "errors": []
   },
   {
@@ -2058,11 +2085,10 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
-    "antcv:coreCompGuard",
     "sections",
     "meta"
    ],
-   "domDelta": 1672,
+   "domDelta": 2462,
    "errors": []
   },
   {
@@ -2074,11 +2100,11 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
+    "antcv:coreCompGuard",
     "sections",
-    "meta",
-    "antcv:coreCompGuard"
+    "meta"
    ],
-   "domDelta": 1279,
+   "domDelta": 2980,
    "errors": []
   },
   {
@@ -2093,7 +2119,7 @@
     "sections",
     "meta"
    ],
-   "domDelta": 1477,
+   "domDelta": 4220,
    "errors": []
   },
   {
@@ -2105,11 +2131,11 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
-    "antcv:coreCompGuard",
     "sections",
-    "meta"
+    "meta",
+    "antcv:coreCompGuard"
    ],
-   "domDelta": 1277,
+   "domDelta": 4518,
    "errors": []
   },
   {
@@ -2122,10 +2148,9 @@
    "verdict": "active",
    "writes": [
     "sections",
-    "meta",
-    "antcv:coreCompGuard"
+    "meta"
    ],
-   "domDelta": 1287,
+   "domDelta": 3666,
    "errors": []
   },
   {
@@ -2137,9 +2162,11 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
+    "sections",
+    "meta",
     "antcv:coreCompGuard"
    ],
-   "domDelta": 1482,
+   "domDelta": 4058,
    "errors": []
   },
   {
@@ -2154,7 +2181,7 @@
     "sections",
     "meta"
    ],
-   "domDelta": 1292,
+   "domDelta": 3637,
    "errors": []
   },
   {
@@ -2167,10 +2194,9 @@
    "verdict": "active",
    "writes": [
     "sections",
-    "meta",
-    "antcv:coreCompGuard"
+    "meta"
    ],
-   "domDelta": 1484,
+   "domDelta": 3339,
    "errors": []
   },
   {
@@ -2186,7 +2212,7 @@
     "meta",
     "antcv:coreCompGuard"
    ],
-   "domDelta": 641,
+   "domDelta": 3470,
    "errors": []
   },
   {
@@ -2198,9 +2224,10 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
-    "antcv:coreCompGuard"
+    "sections",
+    "meta"
    ],
-   "domDelta": 1434,
+   "domDelta": 3732,
    "errors": []
   },
   {
@@ -2215,7 +2242,7 @@
     "sections",
     "meta"
    ],
-   "domDelta": 1332,
+   "domDelta": 3732,
    "errors": []
   },
   {
@@ -2231,7 +2258,7 @@
     "meta",
     "antcv:coreCompGuard"
    ],
-   "domDelta": 1341,
+   "domDelta": 4526,
    "errors": []
   },
   {
@@ -2244,10 +2271,9 @@
    "verdict": "active",
    "writes": [
     "sections",
-    "meta",
-    "antcv:coreCompGuard"
+    "meta"
    ],
-   "domDelta": 1117,
+   "domDelta": 3632,
    "errors": []
   },
   {
@@ -2262,7 +2288,7 @@
     "sections",
     "meta"
    ],
-   "domDelta": 1725,
+   "domDelta": 4126,
    "errors": []
   },
   {
@@ -2274,10 +2300,11 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
+    "antcv:coreCompGuard",
     "sections",
     "meta"
    ],
-   "domDelta": 1339,
+   "domDelta": 4160,
    "errors": []
   },
   {
@@ -2290,10 +2317,9 @@
    "verdict": "active",
    "writes": [
     "sections",
-    "meta",
-    "antcv:coreCompGuard"
+    "meta"
    ],
-   "domDelta": 1282,
+   "domDelta": 4059,
    "errors": []
   },
   {
@@ -2309,7 +2335,7 @@
     "meta",
     "antcv:coreCompGuard"
    ],
-   "domDelta": 1473,
+   "domDelta": 3442,
    "errors": []
   },
   {
@@ -2321,9 +2347,10 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
-    "antcv:coreCompGuard"
+    "sections",
+    "meta"
    ],
-   "domDelta": 1279,
+   "domDelta": 4646,
    "errors": []
   },
   {
@@ -2335,9 +2362,10 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
-    "antcv:coreCompGuard"
+    "sections",
+    "meta"
    ],
-   "domDelta": 1381,
+   "domDelta": 3536,
    "errors": []
   },
   {
@@ -2353,7 +2381,7 @@
     "meta",
     "antcv:coreCompGuard"
    ],
-   "domDelta": 1483,
+   "domDelta": 3835,
    "errors": []
   },
   {
@@ -2366,10 +2394,9 @@
    "verdict": "active",
    "writes": [
     "sections",
-    "meta",
-    "antcv:coreCompGuard"
+    "meta"
    ],
-   "domDelta": 1384,
+   "domDelta": 4058,
    "errors": []
   },
   {
@@ -2384,7 +2411,7 @@
     "sections",
     "meta"
    ],
-   "domDelta": 1772,
+   "domDelta": 3271,
    "errors": []
   },
   {
@@ -2400,7 +2427,7 @@
     "sections",
     "meta"
    ],
-   "domDelta": 2457,
+   "domDelta": 3537,
    "errors": []
   },
   {
@@ -2412,9 +2439,10 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
-    "antcv:coreCompGuard"
+    "sections",
+    "meta"
    ],
-   "domDelta": 1385,
+   "domDelta": 3731,
    "errors": []
   },
   {
@@ -2426,9 +2454,10 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
-    "antcv:coreCompGuard"
+    "sections",
+    "meta"
    ],
-   "domDelta": 1184,
+   "domDelta": 3470,
    "errors": []
   },
   {
@@ -2449,9 +2478,11 @@
    "disabled": false,
    "verdict": "active",
    "writes": [
-    "antcv:coreCompGuard"
+    "antcv:coreCompGuard",
+    "sections",
+    "meta"
    ],
-   "domDelta": 954,
+   "domDelta": 345,
    "errors": []
   },
   {
@@ -2491,24 +2522,16 @@
    "verdict": "skipped-dangerous"
   },
   {
-   "sig": "Tint document content by confidence: red = low, yellow = medium. Hover a tinted #1",
-   "tag": "button",
-   "label": "Tint document content by confidence: red = low, yellow = medium. Hover a tinted ",
-   "visible": true,
-   "inPreview": false,
-   "disabled": false,
-   "verdict": "unclickable",
-   "note": "locator.click: Timeout 1500ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-audit-sig=\"Tint"
-  },
-  {
    "sig": "👁 Preview#1",
    "tag": "button",
    "label": "👁 Preview",
    "visible": true,
    "inPreview": false,
    "disabled": false,
-   "verdict": "unclickable",
-   "note": "locator.click: Timeout 1500ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-audit-sig=\"👁 P"
+   "verdict": "ui-only",
+   "writes": [],
+   "domDelta": 188,
+   "errors": []
   },
   {
    "sig": "Privacy Status#2",
@@ -2526,11 +2549,9 @@
    "visible": true,
    "inPreview": false,
    "disabled": false,
-   "verdict": "active",
-   "writes": [
-    "antcv:coreCompGuard"
-   ],
-   "domDelta": 1,
+   "verdict": "DEAD",
+   "writes": [],
+   "domDelta": 0,
    "errors": []
   },
   {
@@ -2543,10 +2564,11 @@
    "verdict": "active",
    "writes": [
     "doc",
-    "antcv:mainOverflow",
-    "antcv:unifiedPaginationProbe"
+    "antcv:unifiedPaginationProbe",
+    "antcv:coreCompGuard",
+    "antcv:mainOverflow"
    ],
-   "domDelta": 70,
+   "domDelta": 69,
    "errors": []
   },
   {
@@ -2556,10 +2578,8 @@
    "visible": true,
    "inPreview": false,
    "disabled": false,
-   "verdict": "active",
-   "writes": [
-    "antcv:coreCompGuard"
-   ],
+   "verdict": "ui-only",
+   "writes": [],
    "domDelta": 19,
    "errors": []
   },

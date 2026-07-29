@@ -39,14 +39,14 @@
   function isUnsolicited() {
     var m = readJson('meta', {}) || {};
     var c = String(m.company || '').trim().toLowerCase();
-    return c === '' || c === 'unsolicited';
+    return c === '' || c === 'unsolicited' || !!(window.__antcvUnsol && window.__antcvUnsol(c)); // UNSOL-PILLAR-LANG-001: any language variant
   }
 
   function priorCompany() {
     var v = '';
     try { v = String(localStorage.getItem('antcv:activeAppCompany') || '').trim(); } catch (_) {}
     if (!v || v.length < 3) return '';
-    if (/^unsolicited$/i.test(v)) return '';
+    if ((window.__ANTCV_UNSOL_RE || /^unsolicited$/i).test(v)) return ''; // UNSOL-PILLAR-LANG-001
     return v;
   }
 
@@ -106,7 +106,7 @@
     function add(v) {
       v = String(v || '').trim();
       if (!v || v.length < 3) return;
-      if (/^unsolicited$/i.test(v)) return;
+      if ((window.__ANTCV_UNSOL_RE || /^unsolicited$/i).test(v)) return; // UNSOL-PILLAR-LANG-001
       var k = v.toLowerCase();
       if (seen[k]) return;
       seen[k] = 1; out.push(v);

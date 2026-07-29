@@ -66,6 +66,24 @@ test('call sites carry the designed roles', async () => {
   assert.match(coh, /role: 'coherence'/);
 });
 
+// RELAY-TUNE-COVERAGE-GAP-001 (2026-07-13): the two proxy-side cascade endpoints
+// now carry a role so MODEL_ROLES can pin their head.
+test('parseModelRoles: accepts the new analysis + kernel cascade roles', () => {
+  assert.deepEqual(
+    parseModelRoles({ MODEL_ROLES: '{"analysis":"mistral","kernel":"anthropic","butler":"gemini"}' }),
+    { analysis: 'mistral', kernel: 'anthropic' },  // butler (unknown) still ignored
+  );
+});
+
+test('jd-analysis + kernel-extraction call sites carry analysis/kernel roles (both proxies)', async () => {
+  for (const base of ['../src', '../../demo-proxy/src']) {
+    const jd = await readFile(new URL(base + '/jd-analysis.js', import.meta.url), 'utf8');
+    const ke = await readFile(new URL(base + '/kernel-extraction.js', import.meta.url), 'utf8');
+    assert.match(jd, /role: 'analysis'/, base + '/jd-analysis.js');
+    assert.match(ke, /role: 'kernel'/, base + '/kernel-extraction.js');
+  }
+});
+
 test('writer-head reorder ABSENT from the raw-passthrough wrappers (404 regression backed out)', async () => {
   // GEN-MODELROLE-001 v1.1: the raw passthrough must NOT reorder providers —
   // it would send anthropic the body's mistral/gemini model id and 404. Role

@@ -53,6 +53,9 @@ const c1 = jcFor('CenterMeExpertise');
 const c2 = jcFor('LeftDefaultExpertise');
 const c3 = jcFor('HardwareLead');
 log('rows.1 expertise jc:', c1, '| rows.2 expertise jc:', c2, '| focus cell jc:', c3);
-const ok = c1 === 'center' && c2 === 'left' && c3 === 'left';
+// FOCUS-TABLE-LEFTCOL-JUSTIFY-001 superseded by the Copenhagen mockup lock (owner 2026-07-22):
+// first-column Focus label stays LEFT (justify opens dead space); the expertise column stays
+// justified ('both') unless a per-row override wins (rows.1 = center).
+const ok = c1 === 'center' && c2 === 'both' && c3 === 'left';
 log(ok ? 'CJLR-TABLE-EXPORT OK' : 'CJLR-TABLE-EXPORT FAIL');
 process.exit(ok ? 0 : 1);

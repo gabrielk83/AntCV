@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.175-babel-fish';
+const CACHE = 'antcv-1.51.3803-word-sheet';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',
@@ -17,12 +17,15 @@ const SHELL = [
   './antcv-analysis-merge-344.js',
   './antcv-analysis-panel-jd-block-356.js',
   './antcv-analysis-report-pdf-360.js',
+  './antcv-analysis-header.js',
+  './antcv-analysis-persist.js',
   './antcv-sections-icon-346.js',
   './antcv-topbar-tools-347.js',
   './antcv-cl-ai-notice-inline.js',
   './antcv-mobile-fab-cleanup-351.js',
   './antcv-pub-injected-reaper-352.js',
   './antcv-cloud-put-shrink-guard-355.js',
+  './antcv-app-rev-guard.js',
   './antcv-jd-watch.js',
   './antcv-spell-annotator-384.js',
   './antcv-orphan-cloud-persist-385.js',
@@ -35,6 +38,7 @@ const SHELL = [
   './antcv-publications-dedup.js',
   './antcv-tables-core-dedup.js',
   './antcv-tools-hidden-residue.js',
+  './antcv-sidebar-compact-001.js',
   './antcv-sidebar-visibility-ux.js',
   './antcv-tables-partition.js',
   './antcv-orphan-measure-bind.js',
@@ -47,6 +51,7 @@ const SHELL = [
   './antcv-lang-fabrication-guard.js',
   './antcv-outcomes-loss-guard.js',
   './antcv-gabriel-results-pin.js',
+  './antcv-gabriel-edu-pin.js',
   './antcv-unsolicited-cv-completeness.js',
   './antcv-profile-disclosure-strip.js',
   './antcv-outcomes-metric-order.js',
@@ -60,6 +65,15 @@ const SHELL = [
   './antcv-bullet-targets.js',
   './antcv-photo-ui-427.js',
   './antcv-preview-header-tokens.js',
+  './antcv-application-line-001.js',
+  './antcv-copenhagen-v2-001.js',
+  './antcv-cl-no-photo-001.js',
+  './antcv-header-elem-colors.js',
+  './antcv-export-header-colors.js',
+  './antcv-sig-brand-tint.js',
+  './antcv-quick-doc-color.js',
+  './antcv-header-color-controls.js',
+  './antcv-appline-rule.js',
   './antcv-pdf-preview-gate.js',
   './antcv-tone-helper.js',
   './antcv-jd-image-ocr.js',
@@ -72,6 +86,8 @@ const SHELL = [
   './antcv-auto-pagebreak-block-001.js',
   './antcv-table-fast-drag.js',
   './antcv-settings-history-guard.js',
+  './antcv-babel-relang.js',
+  './antcv-title-lang-heal.js',
   './antcv-auth.js',
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -139,9 +155,14 @@ self.addEventListener('fetch', e => {
   // cookies/Authorization) and the SW never stores the result.
   if (url.hostname.endsWith('.workers.dev')) return;
 
-  const isVersionedCodeAsset = CODE_ASSET.test(url.pathname) && url.searchParams.has('v');
-  const isNavOrSource = !isVersionedCodeAsset &&
-    (e.request.mode === 'navigate' || NETWORK_FIRST.test(url.pathname) || CODE_ASSET.test(url.pathname));
+  // F5-FRESH-001 (owner 2026-07-11): ALL code assets (js/css/jsx) are NETWORK-FIRST so a
+  // plain browser reload (F5) always pulls the latest build — the SW cache can never pin a
+  // stale version and require a manual hard reset. Immutable ?v=… assets stay fast: the
+  // browser's own HTTP cache serves them with no real round-trip; the SW cache is kept only
+  // as an OFFLINE fallback. (Was cache-first for ?v assets under PERF-SW-CACHE-001; the owner
+  // chose freshness over the saved round-trip.)
+  const isNavOrSource =
+    e.request.mode === 'navigate' || NETWORK_FIRST.test(url.pathname) || CODE_ASSET.test(url.pathname);
 
   if (isNavOrSource) {
     // Network-first: try fresh, fall back to cache only if offline.

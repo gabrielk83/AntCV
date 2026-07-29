@@ -45,7 +45,8 @@
     }
     return o;
   }
-  function clearOverlay() { var o = document.getElementById(OVERLAY_ID); if (o) o.innerHTML = ''; }
+  var __lastSig = '';  // SPELL-BLIP-GUARD-001: signature of the currently-drawn marks
+  function clearOverlay() { var o = document.getElementById(OVERLAY_ID); if (o) o.innerHTML = ''; __lastSig = ''; }
   // GRAMMAR-MARKER-SCROLL-LAG-001 (owner 2026-06-13): the marks are fixed to
   // viewport coords, so during a scroll (esp. mobile) they lag behind the text
   // until the debounced rescan catches up. Hide them the instant a scroll starts
@@ -88,11 +89,16 @@
     } catch (_) { return null; }
   }
 
-  function drawMark(rect, word, sid) {
+  function drawMark(rect, word, sid, node, start, end) {
     if (rect.width < 2 || rect.bottom < 0 || rect.top > window.innerHeight) return;
     var m = document.createElement('span');
     m.setAttribute('data-antcv-pspell-word', word);
     if (sid) m.setAttribute('data-antcv-pspell-sid', sid);
+    // Stash the owning text node + word offsets (JS props, not attributes) so the
+    // popover can commit a fix straight into a standalone contentEditable editable
+    // (slogan / specialisation / contact / publications) that lives OUTSIDE the
+    // sections store — see applyStandaloneFix.
+    m.__pspellNode = node || null; m.__pspellStart = start; m.__pspellEnd = end;
     m.style.cssText = 'position:fixed;left:' + Math.round(rect.left) + 'px;top:' + Math.round(rect.top) + 'px;'
       + 'width:' + Math.round(rect.width) + 'px;height:' + Math.round(rect.height) + 'px;'
       + 'pointer-events:auto;cursor:pointer;'
@@ -119,20 +125,34 @@
       );
     })).then(function (results) {
       if (myToken !== scanToken) return; // superseded by a newer scan
-      clearOverlay();
-      overlay().style.visibility = ''; // re-show after a scroll-hide, now realigned
-      var count = 0;
+      // SPELL-BLIP-GUARD-001 (owner 2026-07-14 "stop the spelling blip"): collect the
+      // marks to draw (word + rounded rect) FIRST; if that set is identical to what is
+      // already on screen, do NOT clear+redraw. The repeated remove/re-add of identical
+      // overlay marks during the reflow storm is exactly the blip.
+      var toDraw = [], count = 0;
       results.forEach(function (res) {
         if (!res || !res.marks.length || !res.node.isConnected) return;
+        var sid = sidOf(res.node);
         res.marks.forEach(function (mk) {
           if (count >= MAX_MARKS) return;
           var r = document.createRange();
           try { r.setStart(res.node, mk.start); r.setEnd(res.node, mk.end); } catch (_) { return; }
           var rects = r.getClientRects();
-          var sid = sidOf(res.node);
-          for (var i = 0; i < rects.length; i++) { drawMark(rects[i], mk.word, sid); count++; }
+          for (var i = 0; i < rects.length; i++) {
+            var rr = rects[i];
+            if (rr.width < 2 || rr.bottom < 0 || rr.top > window.innerHeight) continue;
+            toDraw.push({ word: mk.word, sid: sid, node: res.node, start: mk.start, end: mk.end, left: Math.round(rr.left), top: Math.round(rr.top), width: Math.round(rr.width), height: Math.round(rr.height) });
+            count++;
+          }
         });
       });
+      var sig = toDraw.map(function (d) { return d.word + '|' + (d.sid || '') + '|' + d.left + ',' + d.top + ',' + d.width + ',' + d.height; }).join(';');
+      var o = document.getElementById(OVERLAY_ID);
+      if (sig === __lastSig && o && o.style.visibility !== 'hidden') return; // unchanged → no DOM churn → no blip
+      clearOverlay();
+      overlay().style.visibility = ''; // re-show after a scroll-hide, now realigned
+      toDraw.forEach(function (d) { drawMark({ left: d.left, top: d.top, width: d.width, height: d.height, bottom: d.top + d.height }, d.word, d.sid, d.node, d.start, d.end); });
+      __lastSig = sig;
     });
   }
 
@@ -174,13 +194,51 @@
     } catch (_) { return false; }
   }
 
+  // SPELL-APPLY-STANDALONE-001 (owner 2026-07-14: "apply spelling corrections to slogan,
+  // application and specification"). Those editables are NOT sections — the slogan lives in
+  // antcv:clSlogan, the specialisation in personalInfo.specialization, contact/publications in
+  // their own stores — so applyFix (which only edits the `sections` bundle) silently no-ops on
+  // them. Here we commit the fix straight into the live contentEditable that owns the clicked
+  // word, then fire its own onBlur (focus→blur) so it persists to whatever store it uses. This
+  // works uniformly for every ref-managed standalone editable (slogan / spec / contact / pubs).
+  function applyStandaloneFix(node, start, end, word, repl) {
+    try {
+      if (!node || !node.isConnected || node.nodeType !== 3) return false;
+      var el = node.parentElement;
+      var ed = el && el.closest && el.closest('[contenteditable="true"], [contenteditable=""]');
+      if (!ed || ed.getAttribute('contenteditable') === 'false') return false;
+      // ignore section-owned editables — those persist through applyFix/React, not a raw
+      // text-node poke (data-sid marks a real section container).
+      if (ed.closest && ed.closest('[data-sid]')) return false;
+      var val = node.nodeValue || '';
+      var seg = (typeof start === 'number' && typeof end === 'number') ? val.slice(start, end) : '';
+      if (seg === word) {
+        node.nodeValue = val.slice(0, start) + repl + val.slice(end);
+      } else {
+        var nv = replaceWordInString(val, word, repl); // offsets drifted — scoped word replace
+        if (nv === val) return false;
+        node.nodeValue = nv;
+      }
+      // commit via the element's own onBlur (it reads textContent/innerHTML → writes its store)
+      try { ed.focus(); } catch (_) {}
+      try { ed.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
+      try { ed.blur(); } catch (_) {}
+      return true;
+    } catch (_) { return false; }
+  }
+
   // ─── popover ─────────────────────────────────────────────────────
   var pop = null;
-  function closePop() { if (pop && pop.parentElement) pop.parentElement.removeChild(pop); pop = null; }
+  var popWord = null, popSid = null, popNode = null, popStart = null, popEnd = null;
+  function closePop() { if (pop && pop.parentElement) pop.parentElement.removeChild(pop); pop = null; popWord = null; popSid = null; popNode = null; popStart = null; popEnd = null; }
   function openPop(mark) {
     closePop();
     var word = mark.getAttribute('data-antcv-pspell-word');
     var sid = mark.getAttribute('data-antcv-pspell-sid');
+    // Track by WORD+SID, not the element: scan re-creates the mark node between
+    // clicks, so element identity can't tell "same word clicked twice".
+    popWord = word; popSid = sid;
+    popNode = mark.__pspellNode || null; popStart = mark.__pspellStart; popEnd = mark.__pspellEnd;
     var r = mark.getBoundingClientRect();
     pop = document.createElement('div');
     pop.className = 'no-print';
@@ -209,7 +267,14 @@
         none.style.cssText = 'padding:5px 8px;color:#888;'; pop.appendChild(none);
       }
       (sugg || []).forEach(function (s) {
-        pop.appendChild(btn(s, true, function () { applyFix(sid, word, s); closePop(); setTimeout(scan, 120); }));
+        pop.appendChild(btn(s, true, function () {
+          // Section words (sid present) → sections store; standalone editables
+          // (slogan / spec / contact / pubs, no sid) → the live-editable commit path.
+          var ok = sid ? applyFix(sid, word, s) : false;
+          if (!ok) ok = applyStandaloneFix(popNode, popStart, popEnd, word, s);
+          if (!ok) applyFix(sid, word, s);
+          closePop(); setTimeout(scan, 120);
+        }));
       });
       var hr = document.createElement('div'); hr.style.cssText = 'border-top:1px solid rgba(0,0,0,0.08);margin:4px 0;'; pop.appendChild(hr);
       pop.appendChild(btn('+ Add "' + word + '" to my dictionary', false, function () {
@@ -219,13 +284,21 @@
     });
     setTimeout(function () {
       document.addEventListener('pointerdown', function onDoc(ev) {
-        if (pop && !pop.contains(ev.target) && ev.target !== mark) { closePop(); document.removeEventListener('pointerdown', onDoc); }
+        if (pop && !pop.contains(ev.target) && !(ev.target && ev.target.getAttribute && ev.target.getAttribute('data-antcv-pspell-word'))) { closePop(); document.removeEventListener('pointerdown', onDoc); }
       });
     }, 0);
   }
   document.addEventListener('click', function (ev) {
     var t = ev.target;
-    if (t && t.getAttribute && t.getAttribute('data-antcv-pspell-word')) { ev.preventDefault(); openPop(t); }
+    if (t && t.getAttribute && t.getAttribute('data-antcv-pspell-word')) {
+      // SPELL-MARK-EDIT-001 (owner 2026-07-14): first click shows the suggestion
+      // popup; a SECOND click on the SAME underlined word closes it and lets the
+      // click through so the caret lands and the word becomes editable (previously
+      // preventDefault blocked editing of any spell-underlined word).
+      var w = t.getAttribute('data-antcv-pspell-word'), s = t.getAttribute('data-antcv-pspell-sid');
+      if (pop && popWord === w && popSid === s) { closePop(); return; }
+      ev.preventDefault(); openPop(t);
+    }
   });
 
   // ─── scheduling ──────────────────────────────────────────────────
@@ -244,6 +317,63 @@
     }
     // all mutations were inside the overlay — ignore
   }
+  // SPELL-BLIP-NUDGE-001 (owner 2026-07-14: "a new spelling mistake near a page break makes
+  // the red underline blip; a tiny press on the vertical roller stops it instantly"). Root
+  // cause (investigated): the native spellcheck marker thrashes because forced-reflow readers
+  // re-run getBoundingClientRect on every keystroke at the metastable page fold. Reproduce the
+  // owner's own remedy: after a brief typing pause in a preview editable that sits near a page
+  // boundary, do ONE net-zero 1px scroll nudge on the preview scroller — a single clean
+  // composited repaint lets the marker settle. Isolated here (leaf sidecar), never touches the
+  // hot app.js / CJLR / pagination lanes.
+  var __blipNudgeT = null;
+  function __nearPageBreak(el) {
+    try {
+      var r = el.getBoundingClientRect();
+      var rows = document.querySelectorAll('.antcv-page-row, .antcv-preview-page, [data-antcv-page]');
+      for (var i = 0; i < rows.length; i++) {
+        var pb = rows[i].getBoundingClientRect().bottom;
+        if (r.bottom > pb - 70 && r.top < pb + 24) return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+  function __spellBlipNudge(ev) {
+    var t = ev && ev.target;
+    if (!t || !t.closest) return;
+    var ed = t.closest('.antcv-preview-paper [contenteditable="true"], .antcv-preview-paper [data-antcv-editable-text], .antcv-preview-paper [data-antcv-row-path]');
+    if (!ed) return;
+    clearTimeout(__blipNudgeT);
+    __blipNudgeT = setTimeout(function () {
+      try {
+        if (!__nearPageBreak(ed)) return;
+        var sc = document.querySelector('.antcv-preview-scroll');
+        if (sc) { sc.scrollTop += 1; sc.scrollTop -= 1; }
+      } catch (_) {}
+    }, 140);
+  }
+  // SPELL-APPLY-COMMIT-001 (owner 2026-07-14: "make sure spelling correction can be appended
+  // on preview as well"): picking a suggestion from the browser's native context menu fires
+  // input with inputType==='insertReplacementText'. The React refs keep the correction VISIBLE
+  // while focused, but it only PERSISTS to the store on blur — so if the user never blurs (or
+  // the menu blurred+returned) it can be lost. Commit it immediately: blur (fires the element's
+  // own onBlur write) then restore focus with the caret at the end.
+  function __commitSpellCorrection(ev) {
+    try {
+      if (!ev || ev.inputType !== 'insertReplacementText') return;
+      var t = ev.target;
+      if (!t || !t.closest) return;
+      var ed = t.closest('.antcv-preview-paper [contenteditable="true"], .antcv-preview-paper [data-antcv-editable-text], .antcv-preview-paper [data-antcv-row-path]');
+      if (!ed || document.activeElement !== ed) return;
+      ed.blur();
+      requestAnimationFrame(function () {
+        try {
+          ed.focus();
+          var r = document.createRange(); r.selectNodeContents(ed); r.collapse(false);
+          var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        } catch (_) {}
+      });
+    } catch (_) {}
+  }
   function boot() {
     schedule();
     [800, 1800, 3500].forEach(function (ms) { setTimeout(scan, ms); });
@@ -252,6 +382,8 @@
     window.addEventListener('resize', scrollSchedule);
     window.addEventListener('antcv:sections-updated', schedule);
     try { window.addEventListener('antcv:language-changed', function () { setTimeout(scan, 300); }); } catch (_) {}
+    try { document.addEventListener('input', __spellBlipNudge, true); } catch (_) {}
+    try { document.addEventListener('input', __commitSpellCorrection, true); } catch (_) {}
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
   else boot();

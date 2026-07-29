@@ -1,0 +1,38 @@
+# Job-Tracker session — 2026-07-10 (work log + per-nightly handoff)
+
+Desktop session. All work committed + pushed to `main` (PWA auto-deployed; workers deployed via deploy.yml). This is the single source of what changed — each nightly section below says what that nightly should now know / do differently.
+
+## BUGS CLOSED / RESOLVED
+
+- **JOB-TRACKER-PERSIST blocker #1 — skeleton fidelity (RESOLVED).** `gen-runner.py persist_application` used to PUT only the 8 generated sections as flat `{type:text}` blocks → a saved app rendered with NO sidebar / experience / furniture. Now it **overlays** the 8 generated sections onto a captured full `me()` skeleton and converts each to the app's NATIVE shape (profile rich_block, outcomes `{b,t}` bullets, core_comp table rows, CL rich_block labelled bullets, foundation Hands-on/Professionally). Skeleton fixture = **`~/.antcv/cv_skeleton.json`** (captured once from a live browser `localStorage.sections`; carries real candidate data → OUTSIDE the repo; re-capture if the profile materially changes). Missing fixture → logs a warning + falls back to flat blocks (never crashes). Verified: persisted demant_pm as real application_id=666 with 15 CV + 8 CL structured sections.
+- **JOB-TRACKER-PERSIST blocker #2 — coherence-repair defect (RESOLVED).** The gen-job coherence REPAIR (shared `workers/{proxy,demo-proxy}/src/gen-job.js`) mangled sections (meta-commentary leak, section-type cross-writes, CL homogenised to duplicate tables). Fixed by a format-lock in the repair prompt + `stripRepairMeta()` deterministic strip. Verified on a live opus-4-8 run: ANY META-LEAK=False, cv_outcomes stays outcomes, CL differentiated.
+- **KV-quota-masked-as-503 (RESOLVED + root-caused).** `/job/create` (and in-app background gen) 503 `all_providers_unavailable` was actually the **Cloudflare KV FREE tier daily-write cap** (err 10048) — `writeJob`'s KV.put threw (1101) and the provider cascade relabelled it. Owner **upgraded to Workers Paid $5/mo** (cap gone). Also fixed the masking: cascade now skips `/job/*`, and `writeJob`/`createJob` surface a clean `kv_quota_exceeded` / `kv_write_failed`. See memory `kv-free-quota-masks-as-503`.
+- **📎 signal-files upload dropped images/txt (RESOLVED, 1.51.251).** The app.js signal-files input only handled pdf/docx; single images + `.txt` fell through. Now OCRs images via `window.AntcvExtractPDFText` + reads txt directly.
+- **ChatGPT-draft attachment filter (RESOLVED, 1.51.254).** Draft sub-call filtered attachments to `docx` only; widened to any `e.text` (matches main gen) — pdf/image-OCR/txt now feed the draft too.
+- **Runner hijacked the active-application pointer (RESOLVED).** `--persist` POST sets the new app active; the runner now captures + restores the account's active pointer around a batch.
+- **Token weekly-expiry (RESOLVED earlier this session).** `SESSION_REFRESH_WINDOW` widened 1d→6d + both CLIs capture `X-Auth-Refresh` → `~/.antcv/token` self-renews. No more weekly re-copy.
+
+## FEATURES SHIPPED
+
+- **Brand applies on Open (BRAND-FIT-OPEN-001, 1.51.254).** brandfit rows build a styleConfig patch (headerBg/sidebarBg from dark navy, accent → photoBorder/sidebarLine/sidebarHead) → `SeedPayload.style_config` → application `meta.styleConfig` → app per-app restore applies via `wa()`. (Was: brand only described in text.)
+- **TARGET FACTS calibration block (TARGET-FACTS-001, 1.51.255).** prepareAndOpen folds a per-row calibration snapshot into `supporting_context` (tier, fit angle, location/mobility, risk-flag, comp/seniority altitude) framed "calibration only — never copy verbatim, never state salary/tier".
+- **Net-sourced COMPANY RESEARCH into generation (WEB-COMPANY-INTEL-001, 1.51.257-258).** `research()` (Brave) → askAI distils a HOLISTIC/SPECIFIC employer brief → cached `doc.webintel[uk]`. Runs at **ADD-time** (addFromUrl + addFromFile), Open reads the cache. **Shown + editable in the Top-5 FocusCard** ("🌐 Company research (web)" + ↻ Refresh). Fed as its own labelled block beside "ROLE INTEL (from the JD)". `addFromFile` also runs analyzeJd now (previously stored no intel).
+
+## GENERATION INPUT — what now reaches the CV/CL (all ISOLATED labelled blocks, never merged into the JD)
+
+`supporting_context` (PRIOR-RUN block) = Dream Envelope · **TARGET FACTS** · **ROLE INTEL (from the JD** — incl. editable Top-5 "I bring") · **COMPANY RESEARCH (from the web)** · ADDITIONAL SIGNALS · BRAND-FIT. Plus the JD box, 📎 attachments (any `e.text`), and the Additional-signals textarea as their own blocks. Input isolation guards intact (GEN-UNSOL-STALE-JD-001, JD-TARGETED-META-STICK-001, CL-GHOST-COMPANY-001, JD-SCOPE-ISOLATION-001).
+
+## OPEN ACTIVES / NEXT
+
+- **Flip `gen-runner --persist` ON for the batch** — both blockers cleared + sample owner-approved + Workers Paid live. Recommend the owner eyeballs the FIRST persisted app (open Demant/666 or the first batch item) before the full 10-15 run. Note: the skeleton fixture must exist on the run host (`~/.antcv/cv_skeleton.json`); the cloud routine host won't have it → falls back to flat (re-capture or run persist on the desktop).
+- **CL greeting/opening/closure** are clean-filled by the overlay, not generated — a runner follow-up to generate them.
+- **Brand-on-Open durability caveat:** a later in-app auto-save may null `meta` (dropping styleConfig); re-Open re-applies. Harden later if it bites.
+- **New capture fields (owner decision, deferred):** hiring-manager/contact name (greeting), application deadline, per-row "why me" — would enrich TARGET FACTS; not yet captured.
+- **Danish-address normalise test (238/239)** was red (spawned as a task chip); the concurrent nightly landed a fix (`42f8c39`). Verify green.
+
+## PER-NIGHTLY HANDOFF
+
+- **job tracker nightly** (antcv-job-tracker-nightly): persist blockers are CLOSED — this run can flip `--persist` on (owner-eyeball the first app first). Research is **Brave** (`/api/research`), NOT Google CSE (dead — 403s). Token self-renews. doc schema gained `webintel{uk}`. Skeleton fixture required on the run host for full-fidelity persist.
+- **antcv nightly** (antcv-nightly): the shared generation engine changed — `gen-job.js` coherence-repair hardened + KV-masking fixed (deployed to proxy + demo-proxy). app.js gained the signal-files OCR branch + the per-app `meta.styleConfig` restore. Register these in ACTIVE_BUGS.
+- **job list weekly** (CLOUD_ROUTINE_PROMPT): when the weekly list is opened for generation, the Open flow now auto-applies brand, TARGET FACTS, and web COMPANY RESEARCH — the routine no longer needs to hand-assemble that context.
+- **weekly demand seeding** (CLUSTER-QUAL-001, still UNBUILT): unaffected by this session. Note: per-COMPANY web research now exists (webintel, Brave) — distinct from the cluster-demand top-20 refresh, but the same Brave `/api/research` backend could seed it when that job is built.

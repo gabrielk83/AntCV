@@ -30,7 +30,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.51.169';
+  var VERSION = '1.51.188';
   if (window.__antcvFitPanelInstalled === VERSION) return;
   window.__antcvFitPanelInstalled = VERSION;
 
@@ -56,12 +56,12 @@
     return isDanish() ? {
       title: 'Markedstilpasning', basedOn: function (n) { return 'Baseret på ' + n + ' job' + (n === 1 ? '' : 's') + ' i denne kategori'; },
       matched: 'Matchede kvalifikationer', gaps: 'Mangler (ikke dokumenteret endnu)',
-      none: 'Ingen markedstilpasningsdata endnu — gemmes automatisk, når en JD er tilknyttet.',
+      none: 'Markedstilpasning scores mod reel efterspørgsel for åbne stillinger — vises, når der findes efterspørgselsdata for dette fagområde. Scores ikke for målrettede eller uopfordrede ansøgninger.',
       tiers: { T1: 'Stærk', T2: 'God', T3: 'Udviklende', T4: 'Begrænset' },
     } : {
       title: 'Market fit', basedOn: function (n) { return 'Based on ' + n + ' job' + (n === 1 ? '' : 's') + ' in this category'; },
       matched: 'Matched qualifications', gaps: 'Gaps (not yet evidenced)',
-      none: 'No market-fit data yet — this fills in automatically once a JD is attached and saved.',
+      none: 'Market fit is scored against real market demand for open-market roles — it appears once demand data exists for this job’s field. Not scored for targeted or unsolicited applications.',
       tiers: { T1: 'Strong', T2: 'Good', T3: 'Developing', T4: 'Limited' },
     };
   }
@@ -171,8 +171,20 @@
     return html;
   }
 
+  // MARKET-FIT-UPPER-001 (owner 2026-07-05: "the market analysis you do
+  // should also be in the upper analysis, not in the lower one"). This card
+  // used to anchor after #antcv-analysis-report — the BOTTOM sidecar block,
+  // landing it after Tailoring Decisions / Cover Letter Strategy, effectively
+  // the last thing in the whole panel. #antcv-analysis-report-top is the
+  // established "upper zone" anchor from ANALYSIS-PANEL-ORDER-001 (rendered
+  // by antcv-analysis-report-pdf-360.js right after the native "Overall Fit"
+  // section) — anchoring there instead puts Market Fit in the upper zone,
+  // right where the owner wants it. Falls back to the bottom anchor so the
+  // card still renders (rather than silently vanishing) on any older/partial
+  // DOM state where the top block hasn't mounted yet.
   function findAnchor() {
-    return document.getElementById('antcv-analysis-report');
+    return document.getElementById('antcv-analysis-report-top') ||
+      document.getElementById('antcv-analysis-report');
   }
 
   function render() {

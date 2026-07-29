@@ -83,7 +83,7 @@
     try {
       if (guardDisabled()) return false;
       var localCo = norm(opts.localCompany);
-      if (!localCo || localCo === 'unsolicited') return false; // nothing local to protect
+      if (!localCo || localCo === 'unsolicited' || !!(window.__antcvUnsol && window.__antcvUnsol(localCo))) return false; // nothing local to protect (UNSOL-PILLAR-LANG-001: any language variant)
       var rowCo = norm(opts.rowCompany);
       var localRole = norm(opts.localRole);
       var rowRole = norm(opts.rowRole);

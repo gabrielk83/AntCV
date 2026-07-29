@@ -23798,8 +23798,12 @@ function makePhotosCircular(documentXml, shape) {
   return { xml: next, count: count3 };
 }
 __name(makePhotosCircular, "makePhotosCircular");
-function aiNoticeVmlRun(side, __idx) {
+function aiNoticeVmlRun(side, __idx, noticeText, noticeFont, bodyLevel, underColor) {
   __idx = Number.isFinite(__idx) ? __idx : 0;
+  // FURNITURE-ZH-001: caller (postProcessDocx) forwards the localized notice +
+  // font; Chinese needs a CJK eastAsia face or the glyphs box out in the VML.
+  const _txt = (typeof noticeText === "string" && noticeText) ? noticeText : "AI-assisted - author retains responsibility for content.";
+  const _font = (typeof noticeFont === "string" && noticeFont) ? noticeFont : "Calibri";
   // AI-WATERMARK-EXPORT-LOCATION-001: a bottom-corner-anchored VML text frame
   // (v:rect + textbox, no fill/stroke = WM-003). mso-position-vertical:bottom +
   // -relative:page pins it to the page-edge bottom; horizontal:left|right
@@ -23822,15 +23826,38 @@ function aiNoticeVmlRun(side, __idx) {
   // frame dropped at the anchor's y (mid-page). Same class as the horizontal
   // AI-NOTICE-LEFT-CLOUDCONVERT-001 fix: use an EXPLICIT page-relative
   // margin-top offset instead of the keyword.
-  const __mt = 824; // A4 page height 842pt (PAGE_H 16838/20) - 18pt box height; literal because PAGE_H declares later in this bundle and test replicas eval this function standalone
+  // AI-NOTICE-ANCHOR-FIX-001 (owner 2026-07-08: "the watermark slided a bit out of page").
+  // A4 = 842pt; box 18pt. margin-top 824 put the box bottom EXACTLY on the page edge (824+18=842),
+  // so Word ExportAsFixedFormat clipped/dropped its last pixels — the notice looked "lost". Lift it
+  // to 806pt (box bottom 824pt -> ~18pt bottom clearance) so it lands fully visible at the sidebar bottom.
+  // AI-NOTICE-CORNER-1PAGE-001 (owner 2026-07-13, app 723 markup: the notice "floats
+  // above content space" on the 1-page zh CV). The BODY-LEVEL carrier (single-slot
+  // docs, AI-NOTICE-1PAGE-BODY-001) is not clamped by any cell, so it can sit lower —
+  // 822pt puts the text at ~823-831pt (~11pt bottom clearance, box bottom 840pt,
+  // still 2pt clear of the 842pt edge that clipped at 824 in AI-NOTICE-ANCHOR-FIX-001).
+  // The owner-verified in-cell/overflow routes keep 806 untouched.
+  const __mt = bodyLevel ? 822 : 806;
+  // AI-NOTICE-INK-001 (owner 2026-07-13, CONTRAST-GUARD standing rule): the
+  // fixed 9A9A9A gray became unreadable once SIDEBAR-SPINE-VML-001 painted the
+  // page bottom in the brand color. When the notice's corner sits over a
+  // colored ground (underColor = the spine fill on the spine's side), pick the
+  // higher-contrast ink; plain white ground keeps the subtle gray.
+  let __inkC = "9A9A9A";
+  const __uc = (underColor || "").replace(/[^0-9A-Fa-f]/g, "").slice(0, 6);
+  if (__uc.length === 6) {
+    const lin = (i) => { let v = parseInt(__uc.slice(i, i + 2), 16) / 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    const L = 0.2126 * lin(0) + 0.7152 * lin(2) + 0.0722 * lin(4);
+    const cr = (l2) => (Math.max(L, l2) + 0.05) / (Math.min(L, l2) + 0.05);
+    if (cr(0.318) < 3) __inkC = cr(0.05) >= cr(0.95) ? "262626" : "F5F5F5"; // 9A9A9A fails -> strongest ink
+  }
   return '<w:r><w:rPr><w:noProof/></w:rPr><w:pict>' +
     '<v:rect id="AntCVAiNotice' + __idx + '" o:spid="_x0000_s' + (4097 + __idx) + '" style="position:absolute;margin-left:' + __ml + 'pt;margin-top:' + __mt + 'pt;width:320pt;height:18pt;' +
     'mso-position-horizontal-relative:page;' +
     'mso-position-vertical-relative:page;z-index:251658240;mso-wrap-style:square" filled="f" stroked="f">' +
     '<v:textbox inset="14pt,1pt,14pt,11pt"><w:txbxContent>' +
     '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="220" w:lineRule="auto"/><w:jc w:val="' + horiz + '"/></w:pPr>' +
-    '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:i/><w:color w:val="4D7976"/><w:sz w:val="13"/></w:rPr>' +
-    '<w:t xml:space="preserve">AI-assisted — author retains responsibility for content.</w:t></w:r>' +
+    '<w:r><w:rPr><w:rFonts w:ascii="' + _font + '" w:hAnsi="' + _font + '" w:eastAsia="' + _font + '"/><w:i/><w:color w:val="' + __inkC + '"/><w:sz w:val="13"/></w:rPr>' +
+    '<w:t xml:space="preserve">' + _txt + '</w:t></w:r>' +
     '</w:p></w:txbxContent></v:textbox></v:rect></w:pict></w:r>';
 }
 __name(aiNoticeVmlRun, "aiNoticeVmlRun");
@@ -23881,19 +23908,58 @@ function postProcessDocx(input, opts = {}) {
     // closing WM-001/002/004/005. Side ('left'|'right') is encoded in the sentinel
     // (CV: measured larger-gap corner; CL: right). The document root already
     // declares the v/o/w10 namespaces, so the body VML is valid as-is.
-    const AIWM_RE = /<w:r\b[^>]*>(?:(?!<\/w:r>)[\s\S])*?__ANTCV_AIWM_(left|right|center)__(?:(?!<\/w:r>)[\s\S])*?<\/w:r>/;
+    // AI-NOTICE-CORNER-1PAGE-001: an optional trailing "B" marks the BODY-LEVEL
+    // (single-slot) sentinel so its VML frame anchors lower, at the page corner.
+    const AIWM_RE = /<w:r\b[^>]*>(?:(?!<\/w:r>)[\s\S])*?__ANTCV_AIWM_(left|right|center)(B?)__(?:(?!<\/w:r>)[\s\S])*?<\/w:r>/;
     // CL-AI-NOTICE-BOTH-PAGES-001: swap EVERY sentinel (one per page), each
     // with a unique VML shape id so multiple frames coexist.
     let __aiWmIdx = 0;
     let aiWmMatch;
     while ((aiWmMatch = xml2.match(AIWM_RE))) {
-      xml2 = xml2.replace(AIWM_RE, aiNoticeVmlRun(aiWmMatch[1], __aiWmIdx++));
+      // AI-NOTICE-INK-001: when the notice corner sits on the spine side, the
+      // spine fill is its ground; readable ink is computed inside aiNoticeVmlRun.
+      const __noticeUnder = (opts && opts.spineColor && opts.spineSide &&
+        (aiWmMatch[1] === opts.spineSide)) ? opts.spineColor : "";
+      xml2 = xml2.replace(AIWM_RE, aiNoticeVmlRun(aiWmMatch[1], __aiWmIdx++, opts && opts.aiNotice, opts && opts.aiFont, aiWmMatch[2] === "B", __noticeUnder));
       aiNoticeInjected = true;
       if (__aiWmIdx > 8) break;
     }
+    // SIDEBAR-SPINE-VML-001 (owner 2026-07-13, "sidebar color is many times not
+    // reaching end of page"): a PAGE-ANCHORED full-height colored rect behind
+    // the sidebar column, hosted in the HEADER part — the layer the DEMO
+    // watermark proves renders behind content on EVERY page in Word AND
+    // LibreOffice/CloudConvert. (A body-cell-anchored negative-z rect was
+    // tried first and the converter dropped it — pixel-verified white.) The
+    // header hosts ONE shape that repeats per page; the anti-blank-page
+    // atLeast row minimums stay untouched, zero pagination impact.
+    const __spineColor = (opts && opts.spineColor ? String(opts.spineColor).trim().replace(/[^0-9A-Fa-f]/g, "") : "").slice(0, 6);
+    const __spineW = opts && Number.isFinite(opts.spineWidthPt) ? Math.max(40, Math.min(400, Math.round(opts.spineWidthPt))) : 0;
+    const __spineMl = opts && opts.spineSide === "right" ? Math.round(PAGE_W / 20) - __spineW : 0;
+    const spineRun = (__spineColor && __spineW)
+      ? ('<w:r><w:rPr><w:noProof/></w:rPr><w:pict>' +
+         '<v:rect id="AntCVSpine" o:spid="_x0000_s6097" style="position:absolute;margin-left:' + __spineMl + 'pt;margin-top:0;width:' + __spineW + 'pt;height:842pt;' +
+         'mso-position-horizontal-relative:page;mso-position-vertical-relative:page;z-index:-251656000;mso-wrap-style:square" fillcolor="#' + __spineColor + '" stroked="f">' +
+         '<w10:wrap anchorx="page" anchory="page"/></v:rect></w:pict></w:r>')
+      : "";
     const hasWm = !!(opts && opts.watermark && String(opts.watermark).trim());
     const headerBgHex = (opts && opts.headerBg ? String(opts.headerBg).trim().replace(/[^0-9A-Fa-f]/g, "") : "").slice(0, 6);
-    if (hasWm || headerBgHex) {
+    // COPENHAGEN-STAGE4 (spec "Stage 4" item 1): the rounded navy header box.
+    // A page-anchored VML roundrect (fill = band navy, 1.5pt cyan stroke,
+    // arcsize ≈ the preview's 22px radius) hosted in a FIRST-PAGE header part
+    // — the SIDEBAR-SPINE-VML-001 layer proven to render behind content in
+    // Word AND LibreOffice/CloudConvert (a body-anchored negative-z rect gets
+    // dropped by the converter). <w:titlePg/> keeps it on page 1 only. The
+    // geometry mirrors the band rows generateDocx pins: A4 595.3pt wide, box
+    // inset 6pt L/R + 4pt top, height 144pt inside the 152pt band rows.
+    const __hbox = opts && opts.headerBox && opts.headerBox.fill ? opts.headerBox : null;
+    const headerBoxRun = __hbox
+      ? ('<w:r><w:rPr><w:noProof/></w:rPr><w:pict>' +
+         '<v:roundrect id="AntCVHeadBox" o:spid="_x0000_s6098" style="position:absolute;margin-left:6pt;margin-top:4pt;width:583.3pt;height:144pt;' +
+         'mso-position-horizontal-relative:page;mso-position-vertical-relative:page;z-index:-251655000;mso-wrap-style:square" arcsize="15000f" ' +
+         'fillcolor="#' + String(__hbox.fill).replace(/[^0-9A-Fa-f]/g, "").slice(0, 6) + '" strokecolor="#' + String(__hbox.stroke || "01B9BD").replace(/[^0-9A-Fa-f]/g, "").slice(0, 6) + '" strokeweight="1.5pt">' +
+         '<w10:wrap anchorx="page" anchory="page"/></v:roundrect></w:pict></w:r>')
+      : "";
+    if (hasWm || headerBgHex || spineRun || headerBoxRun) {
       const wm = hasWm ? String(opts.watermark).trim().replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" })[c]) : "";
       const watermarkRun = hasWm ? '<w:r><w:rPr><w:noProof/></w:rPr><w:pict><v:shapetype id="_x0000_t136" coordsize="21600,21600" o:spt="136" adj="10800" path="m@7,l@8,m@5,21600l@6,21600e"><v:formulas><v:f eqn="sum #0 0 10800"/><v:f eqn="prod #0 2 1"/><v:f eqn="sum 21600 0 @1"/><v:f eqn="sum 0 0 @2"/><v:f eqn="sum 21600 0 @3"/><v:f eqn="if @0 @3 0"/><v:f eqn="if @0 21600 @1"/><v:f eqn="if @0 0 @2"/><v:f eqn="if @0 @4 21600"/><v:f eqn="mid @5 @6"/><v:f eqn="mid @8 @5"/><v:f eqn="mid @7 @8"/><v:f eqn="mid @6 @7"/><v:f eqn="sum @6 0 @5"/></v:formulas><v:path o:extrusionok="f" gradientshapeok="t" o:connecttype="custom" o:connectlocs="@9,0;@10,10800;@11,21600;@12,10800" o:connectangles="270,180,90,0" textpathok="t"/><v:textpath on="t" fitshape="t"/><v:handles><v:h position="#0,bottomRight" xrange="6629,14971"/></v:handles><o:lock v:ext="edit" text="t" shapetype="t"/></v:shapetype><v:shape id="AntCVWatermark" type="#_x0000_t136" style="position:absolute;margin-left:0;margin-top:0;width:468pt;height:117pt;rotation:-30;z-index:-251654144;mso-position-horizontal:center;mso-position-horizontal-relative:margin;mso-position-vertical:center;mso-position-vertical-relative:margin" fillcolor="#D0D0D0" stroked="f"><v:fill opacity=".4"/><v:textpath style="font-family:&quot;Arial&quot;;font-size:1pt" string="' + wm + '"/><w10:wrap anchorx="margin" anchory="margin"/></v:shape></w:pict></w:r>' : "";
       // 1.14.20: HEADER-based Word watermark (the standard, robust approach). The
@@ -23910,7 +23976,36 @@ function postProcessDocx(input, opts = {}) {
       const headerXml =
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
         '<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w10="urn:schemas-microsoft-com:office:word">' +
-        '<w:p><w:pPr>' + (headerBgHex ? '<w:shd w:val="clear" w:color="auto" w:fill="' + headerBgHex + '"/>' : '') + '<w:spacing w:before="0" w:after="0" w:line="40" w:lineRule="exact"/></w:pPr>' + watermarkRun + '</w:p></w:hdr>';
+        // HEADER-NAVY-STRIP-001 (owner 2026-07-07): the running header paragraph
+        // used to be shaded with headerBgHex ("page-break continuity" strip). On
+        // page 1 that renders as a colour strip ABOVE the name banner, and when the
+        // header colour lags the active brand (e.g. a Copenhagen-navy 33446F header
+        // on a red-branded CV) it shows as a mismatched navy glitch at the very top.
+        // Owner-validated fix: make the header INVISIBLE - drop the shd fill and set
+        // the paragraph mark to 1pt (sz=2) so it collapses in Word AND LibreOffice/
+        // CloudConvert (which otherwise renders the empty para at the default font as
+        // a strip). line stays 40 (2pt, a multiple of 0.5pt). The demo watermark run
+        // is absolutely-positioned VML, independent of the 1pt para font, so it is
+        // unaffected and still floats over every page.
+        // TOP-STRIP-MATCH-BAND-001 (owner 2026-07-13 round 3: "when you have a
+        // colored candidate section, paint the upper part of page 1 the SAME
+        // colour, 1pt font, so it does not look strange"). The header sits in the
+        // top margin ABOVE the candidate band; leaving it white left a strange
+        // white gap over a dark/brand band. Now, ONLY when a real headerBg is
+        // forwarded (a branded/coloured candidate section), shade the header
+        // paragraph with that exact colour so the top strip reads as one piece
+        // with the band. sz stays 1pt (sz=2); the line grows so the shaded strip
+        // is tall enough to cover the margin. No headerBg (neutral) -> unchanged
+        // invisible 1pt header (avoids the HEADER-NAVY-STRIP mismatch glitch).
+        // CRITICAL (owner 2026-07-13): the strip stays 1 PIXEL with MINIMUM
+        // paragraph spacing (a fat header strip pushes every page's content down
+        // and reads as a band on continuation pages). Shade it the band colour
+        // when branded so the 1px sliver at the very top matches the candidate
+        // band instead of a white glitch; never grow the line.
+        '<w:p><w:pPr>' +
+        (headerBgHex ? '<w:shd w:val="clear" w:color="auto" w:fill="' + headerBgHex + '"/>' : '') +
+        '<w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/>' +
+        '<w:rPr><w:sz w:val="2"/><w:szCs w:val="2"/></w:rPr></w:pPr>' + spineRun + watermarkRun + '</w:p></w:hdr>';
       files["word/header1.xml"] = strToU8(headerXml);
       // Relationship (choose a non-colliding rId).
       const relsName = "word/_rels/document.xml.rels";
@@ -23936,6 +24031,58 @@ function postProcessDocx(input, opts = {}) {
       if (xml2.indexOf("w:headerReference") < 0) {
         xml2 = xml2.replace(/<w:sectPr(\s[^>]*)?>/g, (m0) => m0 + '<w:headerReference w:type="default" r:id="' + rid + '"/>');
       }
+      // COPENHAGEN-STAGE4: a FIRST-PAGE header part carries the rounded band
+      // box; it repeats the spine + watermark runs because <w:titlePg/> makes
+      // it REPLACE the default header on page 1. Its 1pt paragraph is NOT
+      // shaded — the box is inset from the page top, so the sliver above it
+      // stays white (no TOP-STRIP band on the rounded look).
+      if (headerBoxRun) {
+        // Page-1 spine starts BELOW the band box (preview: the sidebar panel
+        // opens ~7px under the header) — the full-height default-header spine
+        // would otherwise peek out pale around the rounded navy box now that
+        // the band cells carry no shading. Pages 2+ keep the full spine.
+        const spineRun1 = spineRun
+          ? spineRun.replace("margin-top:0;", "margin-top:158pt;").replace("height:842pt", "height:684pt")
+          : "";
+        const header2Xml =
+          '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+          '<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w10="urn:schemas-microsoft-com:office:word">' +
+          '<w:p><w:pPr>' +
+          '<w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/>' +
+          '<w:rPr><w:sz w:val="2"/><w:szCs w:val="2"/></w:rPr></w:pPr>' + spineRun1 + watermarkRun + headerBoxRun + (opts && opts.docType === "cl" ? aiNoticeVmlRun("right", 90, opts && opts.aiNotice, opts && opts.aiFont, true, "") : "") + '</w:p></w:hdr>';
+        files["word/headerCph.xml"] = strToU8(header2Xml);
+        let rels2 = files[relsName] ? strFromU8(files[relsName]) : '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
+        let maxRid2 = 0;
+        rels2.replace(/Id="rId(\d+)"/g, (m0, n) => { const k = parseInt(n, 10); if (k > maxRid2) maxRid2 = k; return m0; });
+        const rid2 = "rId" + (maxRid2 + 1);
+        if (rels2.indexOf('Target="headerCph.xml"') < 0) {
+          rels2 = rels2.replace("</Relationships>", '<Relationship Id="' + rid2 + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="headerCph.xml"/></Relationships>');
+          files[relsName] = strToU8(rels2);
+        }
+        if (files["[Content_Types].xml"]) {
+          let ct2 = strFromU8(files["[Content_Types].xml"]);
+          if (ct2.indexOf("/word/headerCph.xml") < 0) {
+            ct2 = ct2.replace("</Types>", '<Override PartName="/word/headerCph.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/></Types>');
+            files["[Content_Types].xml"] = strToU8(ct2);
+          }
+        }
+        if (xml2.indexOf('w:headerReference w:type="first"') < 0) {
+          xml2 = xml2.replace(/<w:sectPr(\s[^>]*)?>/g, (m0) => m0 + '<w:headerReference w:type="first" r:id="' + rid2 + '"/>');
+        }
+        // CL-NOTICE-FIRSTPAGE-001 (2026-07-24): <w:titlePg/> starves page 1 of
+        // the default AI-notice footer (STAGE4 regression since 1.14.165). A
+        // type="first" footerReference — shared OR cloned part — is IGNORED by
+        // LibreOffice/CloudConvert here, so the page-1 notice rides the injected
+        // first-page header itself instead (aiNoticeVmlRun above, CL only);
+        // pages 2+ keep the CL-AI-NOTICE-FOOTER-001 default footer.
+        // titlePg activates the first-page header. sectPr child order: it must
+        // sit AFTER pgSz/pgMar/cols etc. — insert just before docGrid when
+        // present, else right before the close tag.
+        if (xml2.indexOf("<w:titlePg") < 0) {
+          if (xml2.indexOf("<w:docGrid") >= 0) xml2 = xml2.replace(/<w:docGrid/g, "<w:titlePg/><w:docGrid");
+          else xml2 = xml2.replace(/<\/w:sectPr>/g, "<w:titlePg/></w:sectPr>");
+        }
+      }
       watermarked = true;
     }
     if (placeholderResult.count > 0 || photoResult.count > 0 || watermarked || aiNoticeInjected) {
@@ -23952,7 +24099,7 @@ var PACKAGES = {
   "copenhagen-modern": {
     base: "283556",
     band: "33446F",
-    ground: "C9D6EC",
+    ground: "DCE5EA",
     primary: "00746E",
     interactive: "0B74DE",
     bullet: "00746E",
@@ -24048,6 +24195,37 @@ function readableInk(hex) {
   }
 }
 __name(readableInk, "readableInk");
+function sloganColorOnWhite(hex, fallback) {
+  // SLOGAN-BRAND-COLOR-001 (owner 2026-07-14): the CL slogan is coloured text on
+  // the WHITE page. A brand slogan colour forwarded by the client (meta.slogan_color)
+  // is rendered as-is when it clears ~3:1 luminance contrast against white; a too-light
+  // colour is DARKENED (hue kept) until it passes. Defence-in-depth: the client already
+  // guards, but the worker never ships an unreadable slogan even if a caller forwards a
+  // raw colour. STANDING accessibility rule — a colour token never ships unguarded.
+  try {
+    let h = String(hex || "").replace(/[^0-9a-fA-F]/g, "");
+    if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+    if (h.length !== 6) return fallback;
+    const lum = (x) => {
+      const c = (i) => {
+        let v = parseInt(x.slice(i, i + 2), 16) / 255;
+        return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+      };
+      return 0.2126 * c(0) + 0.7152 * c(2) + 0.0722 * c(4);
+    };
+    const contrastVsWhite = (x) => 1.05 / (lum(x) + 0.05);
+    let guard = 0;
+    while (contrastVsWhite(h) < 3 && guard++ < 24) {
+      const dark = [0, 2, 4].map((i) => Math.round(parseInt(h.slice(i, i + 2), 16) * 0.82).toString(16).padStart(2, "0")).join("");
+      if (dark === h) break;
+      h = dark;
+    }
+    return h.toUpperCase();
+  } catch (_) {
+    return fallback;
+  }
+}
+__name(sloganColorOnWhite, "sloganColorOnWhite");
 function normalisePackageId(raw) {
   if (typeof raw !== "string") return DEFAULT_PACKAGE;
   const lower = raw.trim().toLowerCase();
@@ -24343,7 +24521,20 @@ function styledRuns(s, baseRun) {
 __name(styledRuns, "styledRuns");
 function inlineRuns(text, baseRun) {
   if (text === null || text === void 0) return [];
-  const s = decodeBasicEntities(text);
+  let s = decodeBasicEntities(text);
+  // NEWLINE-JUSTIFY-001 (owner 2026-07-05, "roles and results has both many
+  // orphans and justification issues"): a stray literal newline in generated
+  // bullet/prose text (LLM output, compression pipeline) becomes a REAL Word
+  // line break once it reaches a TextRun (the docx library auto-splits text
+  // containing \n into separate runs joined by <w:br/>) — and Word's
+  // paragraph-justify NEVER stretches a manually-broken line to the margin,
+  // only a natural word-wrap does. That produced the short, ragged line
+  // stranded mid-bullet ("...Sigma-Connectivity ODM / site in Sweden for a
+  // high-security smartphone / product; own...") instead of one continuously
+  // justified paragraph. Collapse any whitespace run containing a newline/CR
+  // to a single space so the whole bullet reflows and wraps+justifies
+  // naturally, like every other line in the document.
+  s = s.replace(/\s*[\r\n]+\s*/g, " ");
   // RICH-BLOCK-HYPERLINK-001 (owner 2026-06-26): markdown links [text](url) become REAL docx
   // ExternalHyperlinks (underlined, link-blue) so the exported CV/CL has clickable links. Restricted to
   // http(s)/mailto URLs so bracketed placeholders ("[Role title]", "[Lead]") and "[x](note)" are never
@@ -24370,9 +24561,68 @@ function inlineRuns(text, baseRun) {
 __name(inlineRuns, "inlineRuns");
 async function generateDocx(payload) {
   const style = mergeStyle(payload.style || {}, payload.package, payload.legacy_ats_tier === true);
+  // COPENHAGEN-STAGE4-DOCX-PARITY (owner 2026-07-23, spec
+  // docs/design/COPENHAGEN_MODERN_NORDIC_PALETTE_SPEC.md "Stage 4"): the tuned
+  // Copenhagen preview (rounded navy band, cyan ring/border, tracked name,
+  // condensed one-line contact, white band links, grey app line + teal rule,
+  // teal sign-off with cyan underline) applies ONLY when the payload names the
+  // copenhagen-modern package — legacy payloads without a package keep the old
+  // look. Cyan follows the forwarded photoBorderColor (a branded export sends
+  // its own accent), else the locked #01B9BD.
+  style._cph = typeof payload.package === "string" && !!payload.package.trim() && normalisePackageId(payload.package) === "copenhagen-modern";
+  style._cphCyan = (payload.style && hex(payload.style.photoBorderColor)) || "01B9BD";
+  if (style._cph && !(payload.style && payload.style.headerSpecColor)) style.headerSpecColor = style._cphCyan;
   const fontSizes = { ...FONT_DEFAULTS, ...payload.font_sizes || {} };
   const lang = payload.language || "en";
-  const CONT_SUFFIX = { en: "(CONT.)", da: "(FORTS.)", es: "(CONT.)", zh: "\uFF08\u7EED\uFF09" };
+  // CJK-FONT-ZH-001 (owner 2026-07-09): the package fonts are Latin faces
+  // (Calibri / Segoe UI) \u2014 Chinese glyphs in headings, the name band, and body
+  // box out under them. When the document language is Chinese, force a
+  // CJK-capable face for every font slot. Latin text still renders correctly in
+  // this face; Word / LibreOffice substitute an available CJK font if the exact
+  // face is absent. mergeStyle can't carry a font from the payload (it
+  // hex-coerces unknown string tokens), so this must live worker-side.
+  // SCRIPT-FONT-001 (owner 2026-07-10, "handle hebrew amharic arab + all font-issue
+  // languages"): the package fonts are Latin faces (Calibri / Carlito) with no CJK /
+  // Hebrew / Arabic / Ge'ez glyphs, so non-Latin text boxes out (tofu). For any language
+  // whose script the Latin face can't render, force a script-capable face on EVERY font
+  // slot; Word / LibreOffice (CloudConvert) substitute an available face for that script.
+  // he/ar are also RIGHT-TO-LEFT (see __rtlDoc below). Latin languages (en/da/es/fr/de)
+  // keep the package font.
+  const SCRIPT_FONT = {
+    zh: "Microsoft YaHei",   // CJK -> Noto Sans CJK
+    he: "Noto Sans Hebrew",  // Hebrew
+    ar: "Noto Sans Arabic",  // Arabic
+    am: "Noto Sans Ethiopic" // Amharic / Ge'ez
+  };
+  if (SCRIPT_FONT[lang]) {
+    const sf = SCRIPT_FONT[lang];
+    style.mainHeadFont = sf;
+    style.mainBodyFont = sf;
+    style.sidebarFont = sf;
+    style.sidebarBodyFont = sf;
+    style.headerFont = sf;
+  }
+  // RTL-DOC-001: Hebrew + Arabic read right-to-left. Threaded to the builders so
+  // paragraphs get w:bidi and runs get w:rtl.
+  const __rtlDoc = lang === "he" || lang === "ar";
+  style._rtl = __rtlDoc;
+  // FURNITURE-LANG-001 (extends FURNITURE-ZH-001): localize the two worker-injected
+  // labels (per-role "Results:" lead + AI-assisted footer) and give the AI notice a
+  // script-capable face so its non-Latin text doesn't box out. Falls back to English.
+  const __RESULTS = { da: "Resultater: ", es: "Resultados: ", zh: "\u6210\u679C\uFF1A", he: "\u05EA\u05D5\u05E6\u05D0\u05D5\u05EA: ", ar: "\u0627\u0644\u0646\u062A\u0627\u0626\u062C: ", am: "\u12CD\u1324\u1276\u127D: " };
+  const __AINOTICE = {
+    da: "AI-assisteret - forfatteren bevarer ansvaret for indholdet.",
+    es: "Asistido por IA - el autor conserva la responsabilidad del contenido.",
+    zh: "\u672C\u6587\u6863\u7531 AI \u8F85\u52A9\u751F\u6210\uFF0C\u5185\u5BB9\u7531\u4F5C\u8005\u8D1F\u8D23\u3002",
+    he: "\u05DE\u05E1\u05DE\u05DA \u05D6\u05D4 \u05E0\u05D5\u05E6\u05E8 \u05D1\u05E1\u05D9\u05D5\u05E2 \u05D1\u05D9\u05E0\u05D4 \u05DE\u05DC\u05D0\u05DB\u05D5\u05EA\u05D9\u05EA - \u05D4\u05DE\u05D7\u05D1\u05E8 \u05D0\u05D7\u05E8\u05D0\u05D9 \u05DC\u05EA\u05D5\u05DB\u05DF.",
+    ar: "\u062A\u0645 \u0625\u0646\u0634\u0627\u0621 \u0647\u0630\u0627 \u0627\u0644\u0645\u0633\u062A\u0646\u062F \u0628\u0645\u0633\u0627\u0639\u062F\u0629 \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A - \u0627\u0644\u0645\u0624\u0644\u0641 \u0645\u0633\u0624\u0648\u0644 \u0639\u0646 \u0627\u0644\u0645\u062D\u062A\u0648\u0649.",
+    am: "\u12A8\u12DA\u1205 \u1230\u1290\u12F5 \u1260 AI \u12A5\u122D\u12F3\u1273 \u1270\u1348\u1325\u122F\u120D - \u12F0\u122B\u1232\u12CD \u1208\u12ED\u12D8\u1271 \u1270\u1320\u12EB\u1242 \u1290\u12CD\u1362"
+  };
+  const __zhDoc = lang === "zh";
+  style._resultsLabel = __RESULTS[lang] || "Results: ";
+  style._aiNotice = __AINOTICE[lang] || "AI-assisted - author retains responsibility for content.";
+  style._aiFont = SCRIPT_FONT[lang] || "Calibri";
+  const CONT_SUFFIX = { en: "(CONT.)", da: "(fortsat)", es: "(continuaci\u00F3n)", zh: "\uFF08\u7EED\uFF09", he: "(\u05D4\u05DE\u05E9\u05DA)", ar: "(\u062A\u0627\u0628\u0639)", am: "(\u1240\u1323\u12ED)" };
   const contSuffix = CONT_SUFFIX[lang] || CONT_SUFFIX.en;
   const layout = payload.layout || (payload.doc === "cl" ? "linear" : "two_column");
   const headerAlign = {
@@ -24403,6 +24653,11 @@ async function generateDocx(payload) {
     sidebarW: __sidebarW,
     mainW: __mainW,
     fs: fontSizes,
+    // CPH-NAME-WIDTH-001: the RAW payload font_sizes (sparse — the PWA sends
+    // only user-set keys). Presence of a key here = an explicit owner choice
+    // that must win over the copenhagen auto-fit; fs above is defaults-merged
+    // and cannot carry that signal.
+    fsRaw: payload.font_sizes && typeof payload.font_sizes === "object" ? payload.font_sizes : {},
     lang,
     contSuffix,
     pi: payload.personal_info || {},
@@ -24449,6 +24704,16 @@ async function generateDocx(payload) {
     // AI-NOTICE-POSITION-CONTROL-001: owner's manual notice corner ('left'|'center'|'right') from the
     // Layout control; 'auto'/absent -> null -> the measured larger-gap logic in buildTwoColumnDocument.
     aiNoticePos: (payload.ai_notice_pos === "left" || payload.ai_notice_pos === "center" || payload.ai_notice_pos === "right") ? payload.ai_notice_pos : null,
+    // SIDEBAR-SPINE-VML-001 (owner 2026-07-13: "sidebar color is many times not
+    // reaching end of page"). The body-row atLeast minimums stop the colored
+    // cell ~2cm short of the page bottom DELIBERATELY (anti-blank-page slack —
+    // PDF-BLANK-PAGE-001/002; do NOT raise them). Instead each page's sidebar
+    // cell carries a zero-footprint sentinel that postProcessDocx swaps for a
+    // PAGE-ANCHORED full-height VML rect in sidebarBg behind the text — the
+    // same explicit-offset raw-VML layer the AI notice and DEMO mark prove
+    // survives CloudConvert/LibreOffice. Never participates in row pagination
+    // -> zero blank-page risk. Kill: style_config sidebarSpine:false.
+    sidebarSpine: !(payload.style && payload.style.sidebarSpine === false),
     // contCounter is incremented inside `headingParagraph` to allocate
     // a unique placeholder + bookmark id per section heading. The
     // post-processor pairs each placeholder with its bookmark by this
@@ -24463,7 +24728,17 @@ async function generateDocx(payload) {
   let postProcessError = null;
   let markersRemaining = 0;
   try {
-    const result = postProcessDocx(raw, { watermark: payload.watermark || "", photoShape: resolvePhotoShape(payload), headerBg: (style && style.headerBg) || "" });
+    const result = postProcessDocx(raw, { watermark: payload.watermark || "", photoShape: resolvePhotoShape(payload), headerBg: (style && style.headerBg) || "", aiNotice: style && style._aiNotice, aiFont: style && style._aiFont, docType: payload.doc,
+      // COPENHAGEN-STAGE4: rounded navy header box + cyan 1.5pt border as a
+      // page-anchored VML roundrect in a FIRST-PAGE header part (titlePg) —
+      // the band cells above dropped their shading for it. Page 1 only; the
+      // default header (spine/watermark) keeps serving pages 2+.
+      headerBox: style && style._cph ? { fill: style.headerBg, stroke: style._cphCyan } : null,
+      // SIDEBAR-SPINE-VML-001: full-height header-hosted rect behind the
+      // sidebar (two-column CVs only; kill: style_config sidebarSpine:false)
+      spineColor: (layout === "two_column" && ctx.sidebarSpine && style && style.sidebarBg) || "",
+      spineSide: (style && (style._rtl || style.sidebarPosition === "right")) ? "right" : "left",
+      spineWidthPt: Math.round(PAGE_W * (Number(payload.sidebar_ratio) > 0.1 && Number(payload.sidebar_ratio) < 0.7 ? Number(payload.sidebar_ratio) : 0.36) / 20) });
     buffer2 = result.buffer;
     replacements = result.replacements || 0;
     if (replacements > 0) {
@@ -24625,10 +24900,19 @@ function buildAiDisclosureHangingTextbox(ctx, opts) {
   // side; CL: right) and is ENCODED in the sentinel so postProcessDocx needs no
   // extra plumbing. The carrier paragraph is placed at the end of the last page's
   // content by the callers, so the injected frame renders once, on the last page.
+  // AI-NOTICE-ANCHOR-FIX-001 (owner 2026-07-08: the inline paragraph "regressed to the initial
+  // problem" — it sat immediately after the last sidebar line with dead space below. The REAL
+  // bug was that the page-anchored VML box slid a hair OFF the page bottom. So keep the
+  // page-anchored sentinel/VML approach and just lift the box up the page (see aiNoticeVmlRun
+  // __mt) so it lands fully visible at the sidebar bottom.) Zero-footprint sentinel paragraph
+  // whose run postProcessDocx swaps for the page-bottom VML frame.
   const side = opts && (opts.side === "left" ? "left" : opts.side === "center" ? "center" : "right");
+  // AI-NOTICE-CORNER-1PAGE-001: body-level (single-slot) sentinels carry a "B"
+  // suffix so postProcessDocx anchors their frame lower (true page corner).
+  const __bl = opts && opts.bodyLevel ? "B" : "";
   return new Paragraph({
     spacing: { before: 0, after: 0, line: 1, lineRule: "exact" },
-    children: [new TextRun({ text: "__ANTCV_AIWM_" + (side || "right") + "__", size: 2, color: "FFFFFF" })]
+    children: [new TextRun({ text: "__ANTCV_AIWM_" + (side || "right") + __bl + "__", size: 2, color: "FFFFFF" })]
   });
 }
 __name(buildAiDisclosureHangingTextbox, "buildAiDisclosureHangingTextbox");
@@ -24716,6 +25000,36 @@ function buildTwoColumnDocument(ctx) {
     mainChildren = assembleColumn(mainSecs, /*isSidebar*/ false);
   }
   if (photoMainBottom) mainChildren.push(buildPhotoParagraph(ctx, photoMainBottom));
+  // LO-NESTED-TABLE-DROP-001 (1.14.150): grow each __antcvSecSep separator whose
+  // NEXT sibling is another nested table from 1 to 10 twips, so LibreOffice's
+  // forced row-split can no longer collapse it (a collapsed separator makes the
+  // adjacent wrappers behave like ONE merged table and LO silently DROPS every
+  // wrapper after the first in that run — see renderSection). Trailing
+  // separators (next sibling is a paragraph, a page-break marker, or nothing)
+  // stay at 1 twip. The added height is refunded from the SIDEBAR cell's TOP
+  // margin (LO normalizes the row content top to the LARGEST cell margin, so
+  // this refunds BOTH columns at once) — this exact recipe (sep 10 pre-table
+  // only + sidebar-top refund) was verified lossless on all repro payloads via
+  // POST /diag/convert-docx, INCLUDING the knife-edge true-one-pager (v13 stays
+  // 1 page). Two rejected variants for the record: a heading-before refund sits
+  // INSIDE the inter-table gap and re-triggered the drop; a cell-BOTTOM refund
+  // shifted the split position and re-triggered it on v12/v14. The drop is
+  // split-position-sensitive — do not "simplify" this geometry without
+  // re-running the /diag/convert-docx matrix.
+  const __growSeps = (children) => {
+    let n = 0;
+    for (let i = 0; i < children.length - 1; i++) {
+      const el = children[i];
+      const next = children[i + 1];
+      if (el && el.__antcvSecSep && next instanceof Table) {
+        children[i] = new Paragraph({ spacing: { before: 0, after: 0, line: 10, lineRule: "exact" }, children: [] });
+        n++;
+      }
+    }
+    return n;
+  };
+  const __sbSepGrown = __growSeps(sidebarChildren);
+  __growSeps(mainChildren);
   if (photoInHeader) {
     const headerInnerW = PAGE_W - 720;
     const wrappedHeader = buildPhotoRowTable(ctx, photoInHeader, headerCell.slice(), headerInnerW);
@@ -24816,10 +25130,26 @@ function buildTwoColumnDocument(ctx) {
   const __sbEdge = __pxTok("sidebarEdgePad");
   const sbLR = __sbEdge != null ? Math.round(__sbEdge * 15) : 120;
   const seamDxa = Math.round((__pxTok("seamGap") || 0) * 15);
-  const makeSidebarCell = (els) => new TableCell({
+  // SEAM-LINE-001b / HEADER-SEAM-#0b (owner 2026-07-14): the banner->body divider
+  // (Track C rule 5) becomes the header<->sidebar SEAM. Drawn ONLY when the header
+  // band and the sidebar share ONE background (headerBg === sidebarBg) — then the
+  // two same-coloured regions need a rule to read as distinct — in the photo-
+  // contour colour (photoBorderColor), contrast-guarded against the shared bg so a
+  // thin 1.5pt rule stays visible (accessibility). When they differ, the colour
+  // change itself separates the regions, so NO line — mirrors the PWA preview
+  // (__antcvSeamStyle) for preview==export parity.
+  const __seamSame = (() => {
+    const a = String((style && style.headerBg) || "").trim().toLowerCase().replace(/^#/, "");
+    const b = String((style && style.sidebarBg) || "").trim().toLowerCase().replace(/^#/, "");
+    return !!a && a === b;
+  })();
+  const __seamBorders = __seamSame
+    ? bodyTopBorder(seamContourColor(style.photoBorderColor || "00746E", style.headerBg))
+    : noBorders();
+  const makeSidebarCell = (els, withHeader) => new TableCell({
     width: { size: ctx.sidebarW, type: WidthType.DXA },
     shading: { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" },
-    borders: noBorders(),
+    borders: withHeader ? __seamBorders : noBorders(),
     // PREVIEW-PDF-SIDEBAR-GEOM-001 (owner 2026-06-10): the preview sidebar uses
     // 8px (=120 DXA) L/R padding; the worker used 144 (9.6px), so the export
     // text column was ~3px narrower each side and wrapped more (e.g. a
@@ -24831,7 +25161,8 @@ function buildTwoColumnDocument(ctx) {
     // 1.14.121 +100 here pushed BOTH columns down and kept the 5pt gap (owner's
     // 16:17Z export). The alignment spacer now lives in the sidebar PARAGRAPH
     // stream (makePageTable, continuation pages only).
-    margins: { top: Math.max(0, 240 + __vDelta), bottom: Math.max(0, 240 + __vDelta), left: sbLR, right: sbLR },
+    // LO-NESTED-TABLE-DROP-001: top refunds the separator growth (see __growSeps).
+    margins: { top: Math.max(0, 240 + __vDelta - 9 * __sbSepGrown), bottom: Math.max(0, 240 + __vDelta), left: sbLR, right: sbLR },
     children: els && els.length ? els : [emptyParagraph()]
   });
   // 1.14.47 — indent-controls export parity: the main column's edge padding
@@ -24840,9 +25171,13 @@ function buildTwoColumnDocument(ctx) {
   // constant 144 was 9.6px, a 0.4px parity drift now removed).
   const mePx = Number(style && style.mainEdgeIndent);
   const mainEdge = Number.isFinite(mePx) && mePx >= 0 && mePx <= 60 ? Math.round(mePx * 15) : 150;
-  const makeMainCell = (els) => new TableCell({
+  const makeMainCell = (els, withHeader) => new TableCell({
     width: { size: ctx.mainW, type: WidthType.DXA },
-    borders: noBorders(),
+    // MAIN-TINT-001 (owner 2026-07-08 "add (a)"): optional light brand tint on the
+    // main column so it balances a dark sidebar (rule 12: not both pure). Opt-in via
+    // style.mainTint (a light hex, e.g. FDF1E9); absent -> white as before.
+    shading: style.mainTint ? { type: ShadingType.CLEAR, fill: style.mainTint, color: "auto" } : void 0,
+    borders: withHeader ? __seamBorders : noBorders(),
     // ADV-SPACING-CONTROLS-001: seamGap widens the seam side only.
     margins: {
       top: Math.max(0, 120 + __vDelta),
@@ -24886,7 +25221,7 @@ function buildTwoColumnDocument(ctx) {
     // 1.14.55: a repeated slim header strip on pages 2+ costs ~900 DXA;
     // shrink those pages' body min so the total stays inside the sheet.
     height: { value: withHeader ? PAGE1_BODY_MIN : style && style.repeatHeader === true ? CONT_BODY_MIN - 900 : CONT_BODY_MIN, rule: "atLeast" },
-    children: sidebarOnRight ? [makeMainCell(mnEls), makeSidebarCell(sbEls)] : [makeSidebarCell(sbEls), makeMainCell(mnEls)]
+    children: sidebarOnRight ? [makeMainCell(mnEls, withHeader), makeSidebarCell(sbEls, withHeader)] : [makeSidebarCell(sbEls, withHeader), makeMainCell(mnEls, withHeader)]
   });
   // PHOTO-SIDEBAR-BRIDGE-001 (1.14.51): in bridge mode the candidate header
   // is SPLIT on the page grid — the left cell (sidebar width) is the photo
@@ -24915,33 +25250,42 @@ function buildTwoColumnDocument(ctx) {
   const __contactParas = bridgeOn ? headerCell.filter(function (p) { return p && p.__antcvContactPara; }) : [];
   const __topParas = __contactParas.length ? headerCell.filter(function (p) { return !(p && p.__antcvContactPara); }) : headerCell;
   const headerRows = bridgeOn ? [
+    // HEADER-BANNER rule 2 (KOMBIT gold, owner 2026-07-07 "1 go"): name +
+    // specialisation are a FULL-WIDTH centered row (gridSpan=2), so they centre
+    // on the PAGE axis — the SAME axis as the full-width contact line below — not
+    // on the narrow right split-cell's centre (which pushed the name right of the
+    // contact). The bridge medallion is a PAGE-anchored FLOAT (layoutInCell:false)
+    // so it still rises over the sidebar column; the centred name/spec begin well
+    // to the right of the photo's right edge, so no reserved photo cell is needed
+    // and a long name keeps the full page width (no wrap).
+    // COPENHAGEN-STAGE4: on a copenhagen payload the band CELLS drop their
+    // navy shading — the rounded navy box + cyan border is a page-anchored
+    // VML roundrect in the FIRST-PAGE header part (postProcessDocx), the
+    // SIDEBAR-SPINE-VML-001 layer that survives CloudConvert. The rows pin
+    // to the box height (3040 tw ≈ 152pt ≈ the tuned preview's 200px box)
+    // with content vertically centered, so text sits inside the rect.
     new TableRow({
+      ...(style._cph ? { height: { value: 2e3, rule: "atLeast" } } : {}),
       children: [
         new TableCell({
-          // Empty photo zone — the page-anchored floating bridge medallion rises into this cell.
-          width: { size: __bridgeLeftW, type: WidthType.DXA },
-          shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+          columnSpan: 2,
+          width: { size: PAGE_W, type: WidthType.DXA },
+          shading: style._cph ? void 0 : { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+          ...(style._cph ? { verticalAlign: VerticalAlign.CENTER } : {}),
           borders: noBorders(),
-          margins: { top: 240, bottom: 80, left: 80, right: 80 },
-          children: [emptyParagraph()]
-        }),
-        new TableCell({
-          width: { size: PAGE_W - __bridgeLeftW, type: WidthType.DXA },
-          shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
-          borders: noBorders(),
-          margins: { top: 240, bottom: 80, left: 120, right: 360 },
-          verticalAlign: VerticalAlign.CENTER,
+          margins: { top: 240, bottom: 80, left: 360, right: 360 },
           children: __topParas
         })
       ]
     })
   ].concat(__contactParas.length ? [
     new TableRow({
+      ...(style._cph ? { height: { value: 1040, rule: "atLeast" } } : {}),
       children: [
         new TableCell({
           columnSpan: 2,
           width: { size: PAGE_W, type: WidthType.DXA },
-          shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+          shading: style._cph ? void 0 : { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
           borders: noBorders(),
           margins: { top: 0, bottom: 80, left: 360, right: 360 },
           children: __contactParas
@@ -24950,11 +25294,13 @@ function buildTwoColumnDocument(ctx) {
     })
   ] : []) : [
     new TableRow({
+      ...(style._cph ? { height: { value: 3040, rule: "atLeast" } } : {}),
       children: [
         new TableCell({
           columnSpan: 2,
           width: { size: PAGE_W, type: WidthType.DXA },
-          shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+          shading: style._cph ? void 0 : { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+          ...(style._cph ? { verticalAlign: VerticalAlign.CENTER } : {}),
           borders: noBorders(),
           // Candidate header pad: 0.25" L/R (360 DXA), matches preview band.
           margins: { top: 240, bottom: 80, left: 360, right: 360 },
@@ -25016,6 +25362,11 @@ function buildTwoColumnDocument(ctx) {
     return new Table({
       width: { size: PAGE_W, type: WidthType.DXA },
       columnWidths: colWidths,
+      // RTL-LAYOUT-MIRROR-001 (owner 2026-07-10, "full layout mirroring now"): for
+      // Hebrew / Arabic flip the two-column body table with w:bidiVisual so the FIRST
+      // cell (sidebar) lays out on the RIGHT and the main column on the LEFT — the whole
+      // CV mirrors. Cell widths stay in logical order; only the visual order reverses.
+      ...(ctx.style._rtl ? { visuallyRightToLeft: true } : {}),
       borders: noBorders(),
       // FLOAT-SPINE-001 (owner hand-edited "_3page proper" reference, FLAG-GATED
       // default OFF): continuation tables (NOT page 1) become floating
@@ -25092,7 +25443,19 @@ function buildTwoColumnDocument(ctx) {
   // AI-WATERMARK-EXPORT-LOCATION-001 (1.14.79): the floating sentinel (zero layout
   // footprint, page-anchored) ships in the LAST rendered content — the last main slot
   // normally, or the full-width overflow block when balance-overflow re-flows it.
-  if (!__overflowActive) {
+  // AI-NOTICE-1PAGE-BODY-001 (owner 2026-07-12, family AI-NOTICE-BOTTOM-CLOUDCONVERT-001:
+  // the visible AI-notice frame VANISHED on the 1-page zh CV). The in-cell sentinel relies
+  // on LibreOffice CLAMPING the float into its containing CELL fragment. On a multi-page
+  // doc the split row's page fragment extends to the page bottom, so the 806pt box lands
+  // inside it. On a SINGLE-slot doc the body row ends at its atLeast minimum (~630pt body
+  // -> cell bottom ~790pt): the 806pt target falls OUTSIDE the cell and LibreOffice DROPS
+  // the frame entirely (repro: app 723 zh 1-page, notice text absent from the PDF). For
+  // single-slot docs carry the sentinel at BODY level after the table instead — page
+  // margins are 0, so the body frame IS the page frame and the explicit margin-left/
+  // margin-top page offsets resolve exactly (no cell to clamp to). Multi-slot docs keep
+  // the owner-verified in-cell routing (AI-NOTICE-SIDEBAR-ANCHOR-001) untouched.
+  const __aiWmBodyLevel = !__overflowActive && __renderSlots.length <= 1;
+  if (!__overflowActive && !__aiWmBodyLevel) {
     const __lastRendered = __renderSlots.length ? __renderSlots[__renderSlots.length - 1] : 0;
     // AI-NOTICE-SIDEBAR-ANCHOR-001 (owner 2026-07-01): CloudConvert/LibreOffice anchor the
     // floating VML notice to its CONTAINING COLUMN frame and IGNORE
@@ -25108,7 +25471,7 @@ function buildTwoColumnDocument(ctx) {
     const __toSidebar = (__side === "left" || __side === "right") && __side === __sbPhys;
     const __col = __toSidebar ? sidebarPages : mainPages;
     if (!__col[__lastRendered]) __col[__lastRendered] = [];
-    __col[__lastRendered].push(buildAiDisclosureHangingTextbox(ctx, { side: __side }));
+    __col[__lastRendered].push(buildAiDisclosureHangingTextbox(ctx, { side: __side, onDark: __toSidebar }));
   }
   if (__overflowActive) {
     const __twoCol = __renderSlots.filter((p) => p <= __lastMainSlot);
@@ -25118,7 +25481,7 @@ function buildTwoColumnDocument(ctx) {
     });
     const __overflowEls = [];
     for (let op = __lastMainSlot + 1; op < numPages; op++) { (sidebarPages[op] || []).forEach((e) => __overflowEls.push(e)); }
-    __overflowEls.push(buildAiDisclosureHangingTextbox(ctx, { side: ctx.__aiWmCorner || "right" }));
+    __overflowEls.push(buildAiDisclosureHangingTextbox(ctx, { side: ctx.__aiWmCorner || "right", onDark: true }));
     if (__twoCol.length) docChildren.push(__pageBreakPara());
     docChildren.push(makeFullWidthSidebarTable(__overflowEls));
   } else {
@@ -25126,6 +25489,13 @@ function buildTwoColumnDocument(ctx) {
       if (__i > 0) docChildren.push(__contBreakPara(__i));
       docChildren.push(makePageTable(sidebarPages[p] || [], mainPages[p] || [], p === 0));
     });
+  }
+  // AI-NOTICE-1PAGE-BODY-001: the single-slot body-level carrier (see above). The
+  // sentinel paragraph is 1-twip exact-height, so it adds no visible flow; if the
+  // conversion still overflows past the worker's 1-slot estimate the carrier trails
+  // the content onto the TRUE last page - better than the old page-0 in-cell drop.
+  if (__aiWmBodyLevel) {
+    docChildren.push(buildAiDisclosureHangingTextbox(ctx, { side: ctx.__aiWmCorner || "right", onDark: false, bodyLevel: true }));
   }
   // AI-WATERMARK-EXPORT-LOCATION-001 fix (1.14.78): body-level sentinel carrier,
   // appended AFTER the final page table (not inside a cell). postProcessDocx swaps its
@@ -25154,10 +25524,10 @@ function buildTwoColumnDocument(ctx) {
   return new File({
     creator: ctx.pi.name || "AntCV user",
     lastModifiedBy: ctx.pi.name || "AntCV user",
-    title: ctx.meta.role ? `${ctx.pi.name || "CV"} \u2014 ${ctx.meta.role}` : ctx.pi.name || "CV",
+    title: ctx.meta.role ? `${ctx.pi.name || "CV"} - ${ctx.meta.role}` : ctx.pi.name || "CV",
     subject: "Curriculum Vitae",
     keywords: "AntCV, AI-assisted",
-    description: `Generated by AntCV docx-worker ${ctx.workerVersion || ""} \u2014 AI-assisted document. Author retains all rights to the content. https://cv-generator-det.pages.dev`.trim(),
+    description: `Generated by AntCV docx-worker ${ctx.workerVersion || ""} - AI-assisted document. Author retains all rights to the content. https://cv-generator-det.pages.dev`.trim(),
     revision: 1,
     styles: buildStyles(ctx),
     numbering: numberingConfig(style),
@@ -25200,25 +25570,66 @@ function buildLinearDocument(ctx) {
   // slogan_align. An empty override falls back to meta.subtitle (the old default; Gabriel
   // unsolicited = "PROCESSES • PRODUCTS • PEOPLE"). Skipped when hidden or empty/placeholder.
   // Mirrors the preview srcdoc builder (app.src.js CL branch) for preview/export parity.
+  // COPENHAGEN-STAGE4: the app line is computed BEFORE the slogan renders so
+  // the slogan's after-spacing can tighten when an app line follows (preview
+  // APPLINE-SPACING-001 pulls the line up toward the slogan).
+  let __alText = "";
+  {
+    const __m2 = ctx.meta || {};
+    const __role = String(__m2.role || "").trim();
+    const __company = String(__m2.company || "").trim();
+    if (__role || __company) {
+      const __unsol = /^(unsolicited|open application|uopfordret|åben ansøgning|speculative|主动申请)$/i;
+      if (!(__company && __unsol.test(__company))) {
+        const __lang = String(ctx.lang || "en").toLowerCase().slice(0, 2) || "en";
+        const __forW = { en: "Application for", da: "Ansøgning til", es: "Candidatura para", zh: "申请职位", he: "מועמדות לתפקיד", am: "ማመልከቻ ለ", ar: "التقدم لوظيفة" }[__lang] || "Application for";
+        const __atW = { en: "at", da: "hos", es: "en", zh: "·", he: "ב", am: "በ", ar: "في" }[__lang] || "at";
+        __alText = __role ? __forW + " " + __role : "";
+        if (__company) __alText = __alText ? (__alText + " " + __atW + " " + __company) : (__forW + " " + __company);
+        __alText = __alText.trim();
+      }
+    }
+  }
   {
     const __m = ctx.meta || {};
     let __slogan = "";
     if (!__m.slogan_hidden) {
-      let __ov = String(__m.slogan || "").trim();
+      // CL-SLOGAN-META-FIELD-001 (owner 2026-07-08, app-gen CL had NO slogan): the app forwards
+      // the LLM's fresh slogan as meta.cl_slogan (via {...io}), but the worker only read
+      // meta.slogan (the standalone-override key) — so a tailored gen, which clears the override,
+      // rendered no slogan. Prefer the override, then the LLM cl_slogan, then the subtitle.
+      let __ov = String(__m.slogan || __m.cl_slogan || "").trim();
       if (!__ov || __ov.startsWith("[")) __ov = String(__m.subtitle || "").trim();
       __slogan = __ov.replace(/\s*\|\s*/g, " • ").trim();
     }
     if (__slogan && !__slogan.startsWith("[")) {
       const __sa = String(__m.slogan_align || "center").toLowerCase();
       const __sAlign = __sa === "left" ? AlignmentType.LEFT : __sa === "right" ? AlignmentType.RIGHT : AlignmentType.CENTER;
+      // HEADER-ITEM-RULE slogan leg (owner 2026-07-23): optional rule line below the
+      // slogan (meta.slogan_rule {on,color,pt}), mirroring app_line_rule. Default OFF.
+      const __sr = __m.slogan_rule;
+      const __srB = (__sr && __sr.on) ? (function () {
+        const _pt = Number(__sr.pt); const pt = (_pt >= 0.25 && _pt <= 4) ? _pt : 0.75;
+        const _c = (typeof __sr.color === "string" && /^[0-9a-f]{6}$/i.test(__sr.color)) ? __sr.color.toUpperCase()
+          : (__m.slogan_color ? sloganColorOnWhite(__m.slogan_color, style.mainHeadColor) : style.mainHeadColor);
+        return { border: { bottom: { color: _c, space: 4, style: BorderStyle.SINGLE, size: Math.max(2, Math.min(32, Math.round(pt * 8))) } } };
+      })() : {};
       bodyChildren.push(new Paragraph({
         alignment: __sAlign,
-        spacing: { before: 0, after: 160, line: 240, lineRule: "auto" },
+        // COPENHAGEN-STAGE4 / APPLINE-SPACING-001 parity: when the app line
+        // follows, pull it up toward the slogan (preview margin-top -7px →
+        // after 160-105=55 twips); no app line keeps the legacy 160.
+        spacing: { before: 0, after: style._cph && __alText ? 55 : 160, line: 240, lineRule: "auto" },
         keepNext: true,
+        ...__srB,
         children: [new TextRun({
           text: __slogan.toUpperCase(),
           bold: true,
-          color: style.mainHeadColor,
+          // SLOGAN-BRAND-COLOR-001 (owner 2026-07-14): follow the brand slogan colour
+          // (meta.slogan_color, forwarded from antcv:brandV2 slots.sloganColor — the SAME
+          // source the preview's var(--brand-slogan-color) reads) when present, else keep
+          // the package head colour (teal on Copenhagen). Contrast-guarded on white.
+          color: __m.slogan_color ? sloganColorOnWhite(__m.slogan_color, style.mainHeadColor) : style.mainHeadColor,
           size: pt2hp(11),
           font: style.mainBodyFont,
           characterSpacing: 20
@@ -25226,8 +25637,60 @@ function buildLinearDocument(ctx) {
       }));
     }
   }
-  const photoInHeaderCL = maybeBuildPhotoFor(ctx, "header");
-  const photoInMainCL = maybeBuildPhotoFor(ctx, "main");
+  // HEADER-APP-LINE-001 (owner 2026-07-22): the per-app APPLICATION LINE — "Application for
+  // [Role] at [Company]" — sits UNDER THE SLOGAN on the cover letter (OUT of the heading; the
+  // heading shows the specialisation subtitle, like the CV). Mirrors the app preview + HTML
+  // export, and replaces the retired antcv-application-line-001.js sidecar so the line never
+  // double-renders. CL-only (buildLinearDocument is CL-only); empty for an unsolicited app or
+  // one with no targeted role/company.
+  {
+    const __m2 = ctx.meta || {};
+    const __al = __alText;
+    if (__al) {
+      // EXPORT-HEADER-COLORS-001 (owner 2026-07-22): 1:1 parity with the preview —
+      // the application line takes its OWN colour (app_line_color; muted gray by
+      // default) rather than the slogan colour, and an optional rule under it
+      // (app_line_rule {on,color,pt}) matching the #6 preview control.
+      // COPENHAGEN-STAGE4 defaults (tuned preview): app-line text GREY (the
+      // elem-colors default) + a TEAL 1.5pt rule under it. An explicit
+      // app_line_color / app_line_rule from the export sidecar always wins
+      // (including an explicit rule off).
+      const __alColor = (typeof __m2.app_line_color === "string" && /^[0-9a-f]{6}$/i.test(__m2.app_line_color))
+        ? __m2.app_line_color.toUpperCase()
+        : style._cph ? "808080"
+        : (__m2.slogan_color ? sloganColorOnWhite(__m2.slogan_color, style.mainHeadColor) : style.mainHeadColor);
+      const __alRule = (__m2.app_line_rule && typeof __m2.app_line_rule === "object")
+        ? __m2.app_line_rule
+        : style._cph ? { on: true, color: "00746E", pt: 1.5 } : null;
+      const __alBorder = (__alRule && __alRule.on) ? (function () {
+        const _pt = Number(__alRule.pt); const pt = (_pt >= 0.25 && _pt <= 4) ? _pt : 0.75;
+        const _c = (typeof __alRule.color === "string" && /^[0-9a-f]{6}$/i.test(__alRule.color)) ? __alRule.color.toUpperCase() : (style._cph ? "00746E" : __alColor);
+        // COPENHAGEN-STAGE4: 7px air between the text and its rule (preview
+        // padding-bottom 7px ≈ space 5pt); legacy keeps space 4.
+        return { border: { bottom: { color: _c, space: style._cph ? 5 : 4, style: BorderStyle.SINGLE, size: Math.max(2, Math.min(32, Math.round(pt * 8))) } } };
+      })() : {};
+      bodyChildren.push(new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 0, after: 200, line: 240, lineRule: "auto" },
+        keepNext: true,
+        ...__alBorder,
+        children: [new TextRun({
+          text: __al,
+          bold: false,
+          color: __alColor,
+          size: pt2hp(10.5),
+          font: style.mainBodyFont,
+          characterSpacing: 4
+        })]
+      }));
+    }
+  }
+  // CL-NO-PHOTO-001 (owner 2026-07-22): the cover letter must NOT show the
+  // candidate headshot — the Ibsen CL_FIX reference carries only the signature
+  // (a separate image), no photo. buildLinearDocument is CL-only, so suppress
+  // both photo placements here; the signature is unaffected.
+  const photoInHeaderCL = null;
+  const photoInMainCL = null;
   if (photoInHeaderCL) {
     const headerInnerW = PAGE_W - 720;
     const wrappedHeader = buildPhotoRowTable(ctx, photoInHeaderCL, headerCell.slice(), headerInnerW);
@@ -25298,9 +25761,13 @@ function buildLinearDocument(ctx) {
     alignment: ({ left: AlignmentType.LEFT, center: AlignmentType.CENTER, right: AlignmentType.RIGHT })[String((ctx.meta && ctx.meta.cl_closing_align) || "center").toLowerCase()] || AlignmentType.CENTER,
     children: [new TextRun({
       text: closeWord,
-      color: style.mainTextColor,
+      // COPENHAGEN-STAGE4 / SIGNOFF-UNDERLINE-001 parity: sign-off teal,
+      // non-bold, with a CYAN single underline (w:u color) — the tuned
+      // preview's "At your service," treatment.
+      color: style._cph ? "00746E" : style.mainTextColor,
       size: pt2hp(fs.mainBody),
-      font: style.mainBodyFont
+      font: style.mainBodyFont,
+      ...(style._cph ? { underline: { type: "single", color: "01B9BD" } } : {})
     })]
   }));
   // CL sign-off order: "Kind regards," -> optional signature image -> typed name.
@@ -25402,11 +25869,15 @@ function buildLinearDocument(ctx) {
           })]
         })]
       }));
-      // CL-SIGNATURE-CLIP-003 (owner 2026-07: lower part STILL cut). The borderless cell sizes
-      // to the image, but when the sign-off lands on the page-bottom margin LibreOffice/
-      // CloudConvert crops the descenders. A fixed-height spacer paragraph after the signature
-      // keeps a guaranteed gap below it so the glyph tails never sit flush against the margin.
-      bodyChildren.push(new Paragraph({ spacing: { before: 120, after: 120 }, children: [new TextRun({ text: "" })] }));
+      // CL-SIGNATURE-CLIP-003 -> CL-BLANK-TRAIL-001 (2026-07-24): the fixed-height
+      // spacer paragraph that used to follow the signature ("guaranteed gap below
+      // it") was the LAST block of the document — whenever the sign-off landed in
+      // the bottom ~26pt band it spilled ALONE onto a blank trailing page (every
+      // v5 CL in the 2026-07-23 full-list regen rendered 2 pages this way). The
+      // descender protection it duplicated already exists TWICE inside the sig
+      // table itself — the line box (CLIP-005 w:line atLeast = imageH + 120) and
+      // the cell's bottom margin (260 twips) — both un-splittable from the image,
+      // so the spacer is dropped rather than shrunk.
     } catch (__sigErr) { /* bad signature image -> skip; never break the CL */ }
   }
   // 1.14.32 CL-PAGINATE-001: the candidate band stays a full-bleed table, but the
@@ -25427,10 +25898,14 @@ function buildLinearDocument(ctx) {
     indent: fullBleedIndent,
     borders: noBorders(),
     rows: [
+      // COPENHAGEN-STAGE4: CL band = CV band — shading moves to the rounded
+      // first-page-header VML box, row pins to the same 152pt, centered.
       new TableRow({
+        ...(style._cph ? { height: { value: 3040, rule: "atLeast" } } : {}),
         children: [new TableCell({
           width: { size: PAGE_W, type: WidthType.DXA },
-          shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+          shading: style._cph ? void 0 : { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+          ...(style._cph ? { verticalAlign: VerticalAlign.CENTER } : {}),
           borders: noBorders(),
           margins: { top: 240, bottom: 200, left: 360, right: 360 },
           children: headerCell
@@ -25449,9 +25924,11 @@ function buildLinearDocument(ctx) {
     borders: noBorders(),
     rows: [
       new TableRow({
+        ...(style._cph ? { height: { value: 3040, rule: "atLeast" } } : {}),
         children: [new TableCell({
           width: { size: PAGE_W, type: WidthType.DXA },
-          shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+          shading: style._cph ? void 0 : { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+          ...(style._cph ? { verticalAlign: VerticalAlign.CENTER } : {}),
           borders: noBorders(),
           // Candidate header pad: 0.25" L/R (360 DXA), matches CV header.
           margins: { top: 240, bottom: 200, left: 360, right: 360 },
@@ -25482,11 +25959,11 @@ function buildLinearDocument(ctx) {
     spacing: { before: 0, after: 0, line: 200, lineRule: "exact" },
     indent: { right: 120 },
     children: [new TextRun({
-      text: "AI-assisted — author retains responsibility for content.",
+      text: (style && style._aiNotice) || "AI-assisted - author retains responsibility for content.",
       italics: true,
       size: 13,
       color: "4D7976",
-      font: "Calibri"
+      font: (style && style._aiFont) || "Calibri"
     })]
   });
   const __clPgNumPara = style && (style.pageNumbers === "top-right" || style.pageNumbers === "bottom-right") ? new Paragraph({
@@ -25506,10 +25983,10 @@ function buildLinearDocument(ctx) {
   return new File({
     creator: pi.name || "AntCV user",
     lastModifiedBy: pi.name || "AntCV user",
-    title: ctx.meta.role ? `${pi.name || "Cover Letter"} \u2014 ${ctx.meta.role}` : pi.name || "Cover Letter",
+    title: ctx.meta.role ? `${pi.name || "Cover Letter"} - ${ctx.meta.role}` : pi.name || "Cover Letter",
     subject: "Cover Letter",
     keywords: "AntCV, AI-assisted",
-    description: `Generated by AntCV docx-worker ${ctx.workerVersion || ""} \u2014 AI-assisted document. Author retains all rights to the content. https://cv-generator-det.pages.dev`.trim(),
+    description: `Generated by AntCV docx-worker ${ctx.workerVersion || ""} - AI-assisted document. Author retains all rights to the content. https://cv-generator-det.pages.dev`.trim(),
     revision: 1,
     styles: buildStyles(ctx),
     numbering: numberingConfig(style),
@@ -25607,6 +26084,60 @@ function buildLinearDocument(ctx) {
   });
 }
 __name(buildLinearDocument, "buildLinearDocument");
+// CPH-NAME-WIDTH-001 (owner 2026-07-24 "increase the name so its width equals
+// the contact line width"): approximate rendered width of a string at 1pt of
+// the band face (Carlito/Calibri-class metrics). Only the name/contact RATIO
+// matters, so a coarse per-class table is enough; the same rule runs in the
+// preview sidecar (antcv-copenhagen-v2-001.js) for parity-by-rule.
+function __estWidthPt1(text) {
+  let w = 0;
+  for (const ch of String(text || "")) {
+    if (ch === " " || ch === " ") w += 0.28;
+    else if (/[iIljt.,:;'|!()[\]]/.test(ch)) w += 0.24;
+    else if (/[mwMW@]/.test(ch)) w += 0.85;
+    else if (/[A-Z0-9ÆØÅ]/.test(ch)) w += 0.6;
+    else if (/[a-zæøå\-]/.test(ch)) w += 0.5;
+    else w += 0.85;
+  }
+  return w;
+}
+__name(__estWidthPt1, "__estWidthPt1");
+// Fitted copenhagen name size: grow (or shrink) the name so its tracked width
+// matches the contact line's condensed width. An explicit font_sizes.nameSize
+// from the Font sizes (pt) panel wins outright.
+function __cphNameFit(ctx, contactPt, bridgePhotoOn) {
+  const { pi, fsRaw } = ctx;
+  const TRACK_EM = 0.14;
+  if (fsRaw && typeof fsRaw.nameSize === "number" && fsRaw.nameSize > 0) {
+    return { pt: fsRaw.nameSize, track: Math.round(TRACK_EM * fsRaw.nameSize * 20) };
+  }
+  const name = String(pi.name || "");
+  const bits = [];
+  if (pi.location) bits.push("⌂ " + pi.location);
+  if (pi.citizenship) bits.push("★ " + pi.citizenship);
+  if (pi.email) bits.push("✉ " + pi.email);
+  if (pi.phone) bits.push("☎ " + pi.phone);
+  if (pi.linkedin) bits.push("\u{1F517} " + pi.linkedin);
+  if (pi.website) bits.push("\u{1F517} " + pi.website);
+  if (Array.isArray(pi.contact_extra)) for (const it of pi.contact_extra) if (it && it.value) bits.push("• " + it.value);
+  const contact = bits.join(" ");
+  if (!name || name.length < 4 || contact.length < 12) return { pt: 17.5, track: 49 };
+  // contact width: est * pt, minus the -0.1pt/char tracking, all condensed w:w=73.
+  // 0.885 = ground-truth calibration against the real CloudConvert render
+  // (2026-07-24, app 2729: uncalibrated fit gave 19.5pt / width ratio 1.13;
+  // measured equality sits at 17.3pt — the est model overstates the contact
+  // line, mostly the icon glyphs + LO's condensed-run metrics).
+  let target = (__estWidthPt1(contact) * contactPt - 0.1 * (contact.length - 1)) * 0.73 * 0.885;
+  // CV band-overlap medallion floats into the band from the left — a centered
+  // name must clear it on BOTH sides (mirror of the preview's __clear math):
+  // band ≈ 575pt, photo right edge ≈ 0.433" + 1.29" = 124pt, 10pt air (CPH-PHOTO-124).
+  if (bridgePhotoOn) target = Math.min(target, 2 * (575 / 2 - 124 - 10));
+  const units = __estWidthPt1(name) + TRACK_EM * Math.max(1, name.length - 1);
+  let pt = target / units;
+  pt = Math.max(15, Math.min(30, Math.round(pt * 2) / 2));
+  return { pt, track: Math.round(TRACK_EM * pt * 20) };
+}
+__name(__cphNameFit, "__cphNameFit");
 function buildHeaderCell(ctx, bridgePhoto) {
   const { style, fs, pi, meta, headerAlign } = ctx;
   const out = [];
@@ -25616,9 +26147,27 @@ function buildHeaderCell(ctx, bridgePhoto) {
   const __cgPx = Number(style && style.candidateGap);
   const __cgDelta = Number.isFinite(__cgPx) && __cgPx >= 0 && __cgPx <= 60 ? Math.round((__cgPx - 3) * 15) : 0;
   const __cgAfter = (base) => Math.max(0, base + __cgDelta);
+  // HEADER-CONTACT-AXIS-001 (owner 2026-07-08: "name and specification need to be centred TO the
+  // contact, not to the document centre - why did you not universalise that"): with a bridge photo
+  // the contact line is indented left:2592 to clear the medallion, so it centres on a right-shifted
+  // axis; the name/subtitle had NO indent and centred on the PAGE centre -> misaligned. Give the
+  // name + subtitle the SAME indent so all three share the contact's axis. Universal (every
+  // bridge-photo CV). CL (no bridge) is unaffected.
+  const __bridgeHdr = bridgePhoto === true && normalisePhotoPosition(pi.photoPosition) === "band-overlap" && !!pi.photo_b64 && ctx.doc !== "cl";
+  // CPH-NAME-WIDTH-001 + FONT-SIZES-HONORED-001 (owner 2026-07-24): the
+  // copenhagen band sizes were pinned (name 17.5 / spec 13.5 / contact 9.5)
+  // and IGNORED the Font sizes (pt) panel. Explicit panel values (sparse
+  // fsRaw) now win on every line; absent a nameSize, the name auto-scales so
+  // its tracked width matches the contact line's condensed width.
+  const __fsRaw = ctx.fsRaw || {};
+  const __cphContactPt = typeof __fsRaw.contactSize === "number" && __fsRaw.contactSize > 0 ? __fsRaw.contactSize : 9.5;
+  const __cphSpecPt = typeof __fsRaw.specialisation === "number" && __fsRaw.specialisation > 0 ? __fsRaw.specialisation : 13.5;
+  const __cphFit = style._cph ? __cphNameFit(ctx, __cphContactPt, __bridgeHdr) : null;
+  const __hdrIndent = __bridgeHdr ? { indent: { left: 2592, right: -216 } } : {};
   if (pi.name) {
     out.push(new Paragraph({
       alignment: alignType(headerAlign.name),
+      ...__hdrIndent,
       // HEADER-ITEM-RULE-001: optional rule BELOW the name (default OFF).
       ...((() => {
         try {
@@ -25633,31 +26182,66 @@ function buildHeaderCell(ctx, bridgePhoto) {
       // 1.14.27: the running-header strip is now a thin 2pt line, so give the
       // name back 3pt (before:60) of top space inside the band so it isn't
       // clipped at the top edge of the candidate section.
-      spacing: { before: 60, after: __cgAfter(40), line: 240, lineRule: "exact" },
-      shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+      // COPENHAGEN-STAGE4: tuned band type — name ~17.5pt (preview 23px) with
+      // expanded tracking (.14em of 17.5pt = 2.45pt = 49 twentieths) so it
+      // frames the photo like a 2nd ring; line grows with the size (auto, was
+      // 240 exact for the 16pt legacy name — exact would clip the taller face).
+      spacing: style._cph
+        ? { before: 60, after: __cgAfter(40), line: 240, lineRule: "auto" }
+        : { before: 60, after: __cgAfter(40), line: 240, lineRule: "exact" },
+      shading: style._cph ? void 0 : { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
       children: [
         new TextRun({
           text: pi.name,
           bold: true,
           color: style.headerNameColor,
-          size: pt2hp(fs.nameSize),
-          font: style.headerFont
+          size: pt2hp(style._cph ? __cphFit.pt : fs.nameSize),
+          font: style.headerFont,
+          ...(style._cph ? { characterSpacing: __cphFit.track } : {})
         })
       ]
     }));
   }
-  const subtitle = (meta.subtitle || "").replace(/\s*\|\s*/g, "  \u2022  ");
+  // SUBTITLE-EMDASH-BELT-001 (owner 2026-07-08, app-gen CL header had "Hardware \u2014 Trackman A/S"):
+  // the banned em/en dash reached the "Application: role \u2014 company" line; sanitise to a hyphen here
+  // so it never renders regardless of how the app built the subtitle.
+  const subtitle = (meta.subtitle || "").replace(/\s*[\u2014\u2013]\s*/g, " - ").replace(/\s*\|\s*/g, "  \u2022  ");
+  // SPEC-SHORTER-001 (owner 2026-07-24 "decrease the specialization line to
+  // always be shorter"): the spec line must render NARROWER than the fitted
+  // name (<= 0.92x its tracked width; floor 10pt). An explicit Font sizes (pt)
+  // panel value wins \u2014 same convention as the preview leg. Uses the SAME width
+  // model as __cphNameFit so the rule agrees across surfaces.
+  const __cphSpecPtFit = (() => {
+    if (!style._cph || !subtitle) return __cphSpecPt;
+    if (typeof __fsRaw.specialisation === "number" && __fsRaw.specialisation > 0) return __cphSpecPt;
+    let sp = __cphSpecPt;
+    try {
+      const nm = String(pi.name || "");
+      const nameW = __cphFit ? __cphFit.pt * (__estWidthPt1(nm) + 0.14 * Math.max(1, nm.length - 1)) : 0;
+      if (nameW > 40) {
+        const est = (p) => __estWidthPt1(subtitle) * p + 0.55 * Math.max(0, subtitle.length - 1);
+        let guard = 0;
+        while (est(sp) > 0.92 * nameW && sp > 10 && guard++ < 16) sp -= 0.5;
+      }
+    } catch (_) {}
+    return sp;
+  })();
   if (subtitle) {
     out.push(new Paragraph({
       alignment: alignType(headerAlign.specialisation),
+      ...__hdrIndent,
       spacing: { before: 0, after: __cgAfter(60) },
-      shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+      shading: style._cph ? void 0 : { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
       children: [
         new TextRun({
           text: subtitle,
+          // COPENHAGEN-STAGE4: spec line cyan (headerSpecColor defaulted to
+          // _cphCyan in generateDocx when the payload sends no override),
+          // 13.5pt = the tuned preview's 18px, bold like the preview band.
           color: style.headerSpecColor,
-          size: pt2hp(fs.specialisation),
-          font: style.headerFont
+          size: pt2hp(style._cph ? __cphSpecPtFit : fs.specialisation),
+          font: style.headerFont,
+          ...(style._cph ? { bold: true, characterSpacing: 11 } : {})
         })
       ]
     }));
@@ -25668,7 +26252,7 @@ function buildHeaderCell(ctx, bridgePhoto) {
   const contactBits = [];
   if (pi.location) contactBits.push({ text: `\u2302\xA0${pi.location}` });
   if (pi.citizenship) contactBits.push({ text: `\u2605\xA0${pi.citizenship}` });
-  if (pi.email) contactBits.push({ text: `@\xA0${pi.email}` });
+  if (pi.email) contactBits.push({ text: `✉\xA0${pi.email}` }); // HEADER-BANNER rule 2: email icon = ✉ (U+2709), never @ (KOMBIT gold)
   if (pi.phone) contactBits.push({ text: `\u260E\xA0${pi.phone}` });
   if (pi.linkedin) {
     const v = String(pi.linkedin).trim();
@@ -25700,8 +26284,13 @@ function buildHeaderCell(ctx, bridgePhoto) {
     // paragraph's TOP border; rule below Contact = its BOTTOM border; none
     // below Name). DOCX border size is EIGHTHS of a point (6 = 0.75pt).
     const __hr = (ctx && ctx.headerRules) || {};
-    const __ruleFor = (k, defOn) => {
+    // COPENHAGEN-STAGE4 / HEADER-RULE-DEFAULTS-002 parity: the tuned preview
+    // draws NO rules inside the header box by default — on a copenhagen
+    // payload an ABSENT header_rules config means none (an explicit on:true
+    // still wins). Non-copenhagen packages keep the legacy default-on look.
+    const __ruleFor = (k, defOnLegacy) => {
       const v = __hr[k] || {};
+      const defOn = style._cph ? false : defOnLegacy;
       const on = typeof v.on === "boolean" ? v.on : defOn;
       if (!on) return null;
       const pt = Number(v.pt);
@@ -25720,14 +26309,14 @@ function buildHeaderCell(ctx, bridgePhoto) {
     const __bridgePhotoOn = bridgePhoto === true && normalisePhotoPosition(pi.photoPosition) === "band-overlap" && !!pi.photo_b64 && ctx.doc !== "cl";
     if (__bridgePhotoOn) ctx.__bridgePhotoInContact = true;
     out.push(new Paragraph({
-      shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+      shading: style._cph ? void 0 : { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
       spacing: { before: 0, after: 60, line: 40, lineRule: "exact" },
       children: []
     }));
     out.push(new Paragraph({
       alignment: __bridgePhotoOn ? AlignmentType.JUSTIFIED : alignType(headerAlign.contact),
       ...(__bridgePhotoOn ? { indent: { left: 2592, right: -216 } } : {}),
-      shading: { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
+      shading: style._cph ? void 0 : { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
       border: { ...(__ruleSpec ? { top: { ...__ruleSpec } } : {}), ...(__ruleContact ? { bottom: { ...__ruleContact } } : {}) },
       spacing: { before: 0, after: __cgAfter(60) },
       children: (() => {
@@ -25742,7 +26331,15 @@ function buildHeaderCell(ctx, bridgePhoto) {
         // header colours kept). Font sizing unchanged: estimated from the
         // FULL joined text exactly as before.
         const bridge = normalisePhotoPosition(pi.photoPosition) === "band-overlap" && pi.photo_b64 && ctx.doc !== "cl";
-        const sep = bridge ? " \u2022 " : " \u2022 ";
+        // HEADER-BANNER rule 2 (KOMBIT gold): the icon glyphs (\u2302 \u2605 \u2709 \u260e \ud83d\udd17) ARE
+        // the separators \u2014 drop the " \u2022 " bullets, use ~3 spaces between items.
+        // CONTACT-CONVERGE-001 (owner 2026-07-14: manually made the export converge with
+        // "only '  ' not '   '" between contact elements + 8.5pt): two nbsp, not three \u2014
+        // the third space was overflowing the one-line contact and forcing a wrap/shrink.
+        // COPENHAGEN-STAGE4 (mockup lock): copenhagen contact joins with ONE
+        // space between items \u2014 the w:w=73 char compression below holds the
+        // single line; legacy packages keep the CONTACT-CONVERGE-001 two-nbsp.
+        const sep = style._cph ? "\u00a0" : "\u00a0\u00a0";
         // CONTACT-BRIDGE-NOSHRINK-001 (owner 2026-06-30): do NOT shrink the
         // contact line in bridge mode. The split header now widens the text
         // cell leftward to the figure's right edge (see buildCandidateHeader
@@ -25750,11 +26347,16 @@ function buildHeaderCell(ctx, bridgePhoto) {
         // second line if long, instead of being crammed unreadably small.
         // FIGURE-CONTACT-REF-001: bridge contact is pinned to 8pt per the
         // owner reference (w:sz 16); non-bridge keeps fs.contactSize.
-        const pt = __bridgePhotoOn ? 8 : fs.contactSize;
+        // COPENHAGEN-STAGE4: contact pinned 9.5pt (mockup lock; preview 13px
+        // scaled) in EVERY copenhagen mode, bridge included.
+        const pt = style._cph ? __cphContactPt : __bridgePhotoOn ? 8.5 : fs.contactSize;
         // CONTACT-TRACK-TIGHT-001 (owner 2026-07-03, on the 1.14.120 PDF:
         // "same size but letter separation a bit smaller"): condense the
         // bridge contact runs by 0.5pt (w:spacing -10 twentieths). Size stays 8pt.
-        const base = { color: style.headerContactColor, size: pt2hp(pt), font: style.headerFont, ...(__bridgePhotoOn ? { characterSpacing: -10 } : {}) };
+        // COPENHAGEN-STAGE4: char-scale w:w=73 = the preview's scaleX(.73)
+        // condense, plus the mockup's -.01em tracking — the whole contact
+        // stays ONE line at ~name width without shrinking the glyph height.
+        const base = { color: style.headerContactColor, size: pt2hp(pt), font: style.headerFont, ...(style._cph ? { scale: 73, characterSpacing: -2 } : __bridgePhotoOn ? { characterSpacing: -10 } : {}) };
         const kids = [];
         if (__bridgePhotoOn) {
           // The 1.50" page-anchored medallion, first run of this paragraph —
@@ -25762,8 +26364,11 @@ function buildHeaderCell(ctx, bridgePhoto) {
           kids.push(new ImageRun({
             data: base64ToUint8Array(pi.photo_b64),
             type: detectImageType(pi.photo_b64),
-            transformation: { width: 144, height: 144 },
-            outline: { width: 12700, solidFillType: "rgb", value: (style && style.photoBorderColor || style && style.sidebarHeadColor || style && style.accent || "01B7BB").replace(/^#/, "") },
+            // COPENHAGEN-STAGE4 + CPH-PHOTO-124 (owner 2026-07-24 "decrease the figure
+            // by 0.05in"): 1.29in circle (124px @96dpi, matches the tuned preview) +
+            // 1.5pt cyan ring (19050 EMU); legacy keeps the 1.5in / 1pt medallion.
+            transformation: style._cph ? { width: 124, height: 124 } : { width: 144, height: 144 },
+            outline: { width: style._cph ? 19050 : 12700, solidFillType: "rgb", value: style._cph ? style._cphCyan : (style && style.photoBorderColor || style && style.sidebarHeadColor || style && style.accent || "01B7BB").replace(/^#/, "") },
             floating: {
               horizontalPosition: { relative: HorizontalPositionRelativeFrom.PAGE, offset: 396240 },
               verticalPosition: { relative: VerticalPositionRelativeFrom.PARAGRAPH, offset: -365760 },
@@ -25786,7 +26391,9 @@ function buildHeaderCell(ctx, bridgePhoto) {
             if (prefix) kids.push(new TextRun({ text: prefix, ...base }));
             kids.push(new ExternalHyperlink({
               link: b.link,
-              children: [new TextRun({ text: b.text, ...base, underline: {} })]
+              // COPENHAGEN-STAGE4: band links render WHITE underlined on the
+              // dark box (blue/cyan "break the aesthetics" — mockup lock).
+              children: [new TextRun({ text: b.text, ...base, ...(style._cph ? { color: "FFFFFF" } : {}), underline: {} })]
             }));
           } else {
             kids.push(new TextRun({ text: prefix + b.text, ...base }));
@@ -25850,11 +26457,14 @@ function buildPhotoParagraph(ctx, position) {
   const fwdPx = Number(pi.photoSizePx);
   const fwdOk = Number.isFinite(fwdPx) && fwdPx >= 40 && fwdPx <= 260 ? Math.round(fwdPx) : null;
   let inches = 1.25;
-  if (pos === "header-left" || pos === "header-right") inches = 0.85;
+  // COPENHAGEN-STAGE4: header (in-band) photo is the mockup's 1.4in circle.
+  if (pos === "header-left" || pos === "header-right") inches = style && style._cph ? 1.29 : 0.85;
   if (pos === "main-left" || pos === "main-right" || pos === "main-left-bottom" || pos === "main-right-bottom") inches = 1.2;
   let sizePx = Math.round(inches * EMU_PER_INCH / 9525);
   if ((pos === "sidebar-top" || pos === "sidebar-bottom") && fwdOk) sizePx = fwdOk;
-  const outlineColor = (style && style.photoBorderColor || style && style.sidebarHeadColor || style && style.accent || "01B7BB").replace(/^#/, "");
+  const outlineColor = (style && style._cph && style._cphCyan) || (style && style.photoBorderColor || style && style.sidebarHeadColor || style && style.accent || "01B7BB").replace(/^#/, "");
+  // COPENHAGEN-STAGE4: 1.5pt ring (19050 EMU) on every copenhagen medallion.
+  const outlineW = style && style._cph ? 19050 : 12700;
   if (pos === "bridge-middle" || pos === "bridge-bottom") {
     // PHOTO-POSITIONS-EXPORT-001 (1.14.53): the medallion STRADDLES the
     // VERTICAL sidebar/main seam — a floating image anchored on the first
@@ -25877,7 +26487,7 @@ function buildPhotoParagraph(ctx, position) {
           data,
           type: detectImageType(pi.photo_b64),
           transformation: { width: px, height: px },
-          outline: { width: 12700, solidFillType: "rgb", value: outlineColor },
+          outline: { width: outlineW, solidFillType: "rgb", value: outlineColor },
           floating: {
             horizontalPosition: { relative: HorizontalPositionRelativeFrom.PAGE, offset: seamOffsetEmu },
             verticalPosition: vert,
@@ -25907,7 +26517,7 @@ function buildPhotoParagraph(ctx, position) {
           data,
           type: detectImageType(pi.photo_b64),
           transformation: { width: sizePx, height: sizePx },
-          outline: { width: 12700, solidFillType: "rgb", value: outlineColor },
+          outline: { width: outlineW, solidFillType: "rgb", value: outlineColor },
           altText: {
             title: "Profile photo",
             description: pi.name ? "Profile photo of " + pi.name : "Profile photo",
@@ -25949,7 +26559,7 @@ function buildPhotoParagraph(ctx, position) {
           data,
           type: detectImageType(pi.photo_b64),
           transformation: { width: Math.min(px, 144), height: Math.min(px, 144) },
-          outline: { width: 12700, solidFillType: "rgb", value: outlineColor },
+          outline: { width: outlineW, solidFillType: "rgb", value: outlineColor },
           floating: {
             // PHOTO-BRIDGE-EXPORT-001 (owner 2026-06-14): the band-overlap
             // medallion must RISE OUT of the sidebar cell to straddle the band
@@ -26005,7 +26615,7 @@ function buildPhotoParagraph(ctx, position) {
           data,
           type: detectImageType(pi.photo_b64),
           transformation: { width: sizePx, height: sizePx },
-          outline: { width: 12700, solidFillType: "rgb", value: outlineColor },
+          outline: { width: outlineW, solidFillType: "rgb", value: outlineColor },
           altText: {
             title: "Profile photo",
             description: pi.name ? "Profile photo of " + pi.name : "Profile photo",
@@ -26023,7 +26633,7 @@ function buildPhotoParagraph(ctx, position) {
         data,
         type: detectImageType(pi.photo_b64),
         transformation: { width: sizePx, height: sizePx },
-        outline: { width: 12700, solidFillType: "rgb", value: outlineColor },
+        outline: { width: outlineW, solidFillType: "rgb", value: outlineColor },
         altText: {
           title: "Profile photo",
           description: pi.name ? "Profile photo of " + pi.name : "Profile photo",
@@ -26089,7 +26699,11 @@ function buildMainFloatPhotoParagraph(ctx, position) {
         outline: { width: 12700, solidFillType: "rgb", value: outlineColor },
         floating: {
           horizontalPosition: { relative: HorizontalPositionRelativeFrom.COLUMN, align: isLeft ? "left" : "right" },
-          verticalPosition: { relative: VerticalPositionRelativeFrom.PARAGRAPH, offset: 19050 },
+          // PHOTO-FLOAT-TOP-OFFSET-001 (owner 2026-07-13, app 723 markup: the
+          // main-right photo sat "stuck against the upper blue header line").
+          // 19050 EMU (1.5pt) -> +10pt = 146050 EMU so the float clears the
+          // header rule; free space below the photo absorbs the shift.
+          verticalPosition: { relative: VerticalPositionRelativeFrom.PARAGRAPH, offset: 146050 },
           wrap: { type: TextWrappingType.SQUARE, side: TextWrappingSide.BOTH_SIDES },
           // PHOTO-AIR-EQUAL-001 (owner 2026-06-12): equal blank space above
           // and below the figure — 4px each (matches the preview).
@@ -26265,6 +26879,62 @@ function renderSection(s, ctx, isSidebar) {
       return out2;
     }
   }
+  // 1.14.153 ROLE-SPLIT-CONT-001 (owner 2026-07-13, OPEN_REGISTER row 87d): a SINGLE
+  // experience role with more bullets than fit one page overflows NATURALLY in the
+  // CloudConvert/LibreOffice render, stranding its tail bullets on the continuation
+  // page with NO "(CONT.)" section header — renderExperience only stamps CONT on
+  // WHOLE-role page increments (role.page), never mid-role, and the two-column
+  // splitter only ever sees TOP-LEVEL __antcvPB markers, so an in-cell overflow is
+  // invisible to it (verified against the real converter: a 22-bullet role put 13
+  // bullets on page 1 and 9 headerless bullets on page 2). Fix (worker half,
+  // safe-by-construction): honour a per-BULLET page map `role.bullet_pages`
+  // { bulletIndex: page } — mirroring the proven table row_pages / list _page split
+  // — by EXPANDING an over-long role into a head role + one continuation role per
+  // page boundary. The continuation roles carry an ABSOLUTE role.page and have their
+  // title/company/years CLEARED, so the existing experience chunker below turns each
+  // into a top-level "(CONT.)" segment under which only the remaining bullets render.
+  // INERT unless the client forwards bullet_pages: no current payload has this field,
+  // so every existing document renders byte-identically. The break POINT is chosen by
+  // the client measurer (the only component that knows page-1 fill) and forwarded
+  // here — the worker deliberately does NOT guess a split index (it has no height
+  // model; a guessed break risks a stranded head-overflow or an extra/blank page in
+  // this PDF-BLANK-PAGE-history area).
+  if (!s._antcvSegment && s.type === "experience" && Array.isArray(s.roles) &&
+      s.roles.some((r) => r && r.bullet_pages && typeof r.bullet_pages === "object")) {
+    const expanded = [];
+    for (const role of s.roles) {
+      const bp = role && role.bullet_pages && typeof role.bullet_pages === "object" ? role.bullet_pages : null;
+      const bl = Array.isArray(role && role.bullets) ? role.bullets.filter(Boolean) : null;
+      if (!bp || !bl || bl.length < 2) { expanded.push(role); continue; }
+      const basePage = (Number.isFinite(Number(role.page)) && Number(role.page) >= 2) ? Math.round(Number(role.page)) : 1;
+      const pageOf = (bi) => {
+        const n = Number(bp[String(bi)]);
+        return Number.isFinite(n) && n >= 2 && n <= 6 ? Math.round(n) : 1;
+      };
+      // Group bullets by MONOTONIC effective page (a later bullet can never sit on an
+      // earlier page than one above it), then emit one role per page group.
+      let run = 1; const groups = []; let cur = [];
+      for (let bi = 0; bi < bl.length; bi++) {
+        let p = pageOf(bi); if (p > run) run = p; else p = run;
+        if (cur.length && cur[0].p !== p) { groups.push(cur); cur = []; }
+        cur.push({ b: bl[bi], p });
+      }
+      if (cur.length) groups.push(cur);
+      if (groups.length < 2) { expanded.push(role); continue; }   // no real break -> untouched
+      groups.forEach((g, gi) => {
+        const nr = Object.assign({}, role, { bullets: g.map((x) => x.b) });
+        delete nr.bullet_pages;
+        if (gi === 0) {
+          // head keeps the role identity (+ any client whole-role break)
+        } else {
+          nr.title = ""; nr.company = ""; nr.years = "";
+          nr.page = Math.max(basePage + gi, g[0].p);   // strictly-increasing -> own CONT segment
+        }
+        expanded.push(nr);
+      });
+    }
+    s = Object.assign({}, s, { roles: expanded });
+  }
   // 1.14.39 PB-WORKER-TWOCOL-PAGED-001: an EXPERIENCE section that spans pages must
   // split into top-level segments too. Its role breaks otherwise live INSIDE the
   // section-wrapper body cell, invisible to the per-page column splitter (so the
@@ -26416,7 +27086,20 @@ function renderSection(s, ctx, isSidebar) {
   if (skipHeading || s.headlineOff || !s.title) {
     // RULE-INDEPENDENT-001 (owner 2026-07): a headline-OFF section can still opt IN to a
     // standalone rule line (headlineRule) — render just the accent rule, no title text.
-    if (s.headlineOff && s.headlineRule && body.length && !skipHeading) {
+    // ORPHAN-RULE-GATE-001 parity (owner 2026-07-23 "extra lines below", preview
+    // app.src.js ~8328): all-placeholder / empty content still yields body
+    // paragraphs here, so body.length alone let an orphan rule float between
+    // sections. Require REAL renderable content, same test as the preview.
+    const __hasRealBody = (function () { try {
+      if (Array.isArray(s.items)) return s.items.some(function (q) {
+        if (!q || q.hidden) return false;
+        if (q.grp) return true;
+        const t = String(q.t || "").trim();
+        return !!t && !/^\[[\s\S]*\]$/.test(t);
+      });
+      if (typeof s.content === "string") { const c = s.content.trim(); return !!c && !/^\[[\s\S]*\]$/.test(c); }
+    } catch (_) {} return true; })();
+    if (s.headlineOff && s.headlineRule && body.length && __hasRealBody && !skipHeading) {
       const __rule = new Paragraph({
         // CL-RULE-BALANCE-001 (owner 2026-07-04): the empty rule paragraph
         // carried a FULL line box, so the gap above the line was ~3x the gap
@@ -26512,7 +27195,23 @@ function renderSection(s, ctx, isSidebar) {
     // EXPERIENCE) repeat on page 2 above the experience continuation. A
     // near-zero-height separator keeps the tables distinct, so each section's
     // OWN heading repeats (EXPERIENCE shows its own title when it spans).
-    new Paragraph({ spacing: { before: 0, after: 0, line: 1, lineRule: "exact" }, children: [] })
+    // LO-NESTED-TABLE-DROP-001 (owner 2026-07-13, app 723 zh 1-page CV; worker
+    // 1.14.150): line:1 is TOO SHORT for LibreOffice/CloudConvert when this
+    // separator sits BETWEEN two nested wrapper tables. If the page's content
+    // runs a hair past the sheet and LO force-splits the outer body row, LO
+    // collapses the ≤5-twip separator — adjacent section wrappers behave like
+    // ONE merged table and every wrapper after the first in that run is
+    // silently DROPPED from the render (repro: v10 payload lost core_comp + the
+    // whole sidebar tail after TOOLS; v12/v14 lost core_comp; Word renders the
+    // same docx losslessly). The paragraph is emitted at line:1 here and grown
+    // to line:10 by buildTwoColumnDocument ONLY where the next element is
+    // another table (the __antcvSecSep tag marks it) — the measured safe recipe;
+    // see the LO-NESTED-TABLE-DROP-001 block there for the geometry refund.
+    (() => {
+      const __sep = new Paragraph({ spacing: { before: 0, after: 0, line: 1, lineRule: "exact" }, children: [] });
+      __sep.__antcvSecSep = true;
+      return __sep;
+    })()
   ];
 }
 __name(renderSection, "renderSection");
@@ -26548,7 +27247,13 @@ function headingParagraph(title2, ctx, isSidebar, noRule, sec) {
     // underline gap read much looser in the PDF than the preview. Tighten the
     // sidebar heading: smaller before-space and a smaller text-to-rule border
     // gap (space 2 vs 4 pt). Main headings keep the original spacing.
-    spacing: { before: __beforeDxa, after: isSidebar ? 30 : 40 },
+    // HEADING-TABLE-GAP-001 (owner 2026-07-08: "you still keep spacing of 2 after the headline
+    // and this fucks the distance when there is a table"): a `table` section renders its own
+    // header row right under the heading, so the heading's after-space (2pt) + the table pushed
+    // the grid too far down. BUT after:0 collapsed the heading's own underline INTO the table
+    // top border (owner 2026-07-08 "you lost the horizontal line"). Keep a small after (24 =
+    // 1.2pt) so the underline stays visible + distinct while the grid still sits close.
+    spacing: { before: __beforeDxa, after: isSidebar ? 30 : (sec && sec.type === "table" ? 24 : 40) },
     // keepNext: heading must stay glued to whatever follows it, so a
     // heading never appears alone at the bottom of a page with its
     // content pushed to the next page. keepLines: never split the
@@ -26696,8 +27401,8 @@ __name(renderTextBullets, "renderTextBullets");
 function renderFoundation(s, ctx, isSidebar) {
   const out = [];
   const { style, fs, lang } = ctx;
-  const handsOnLabel = lang === "da" ? "Praktisk: " : "Hands-on: ";
-  const professionallyLabel = lang === "da" ? "Professionelt: " : "Professionally: ";
+  const handsOnLabel = ({da:"Praktisk: ",es:"En la práctica: ",zh:"实践经验："}[lang] || "Hands-on: ");
+  const professionallyLabel = ({da:"Professionelt: ",es:"Profesionalmente: ",zh:"专业层面："}[lang] || "Professionally: ");
   const make = /* @__PURE__ */ __name((label, body, align) => new Paragraph({
     spacing: { before: 60, after: 60, line: 276, lineRule: "auto" },
     alignment: align,
@@ -26751,6 +27456,11 @@ function renderRichBlock(s, ctx, isSidebar) {
   const leadBold = s.leadBold !== false;
   const leadItalic = !!s.leadItalic;
   const leadHex = s.leadColor ? String(s.leadColor).replace(/^#/, "") : (isSidebar ? style.sidebarHeadColor : style.mainHeadColor);
+  // LEAD-UNDERLINE-001 (owner 2026-07-16): optional coloured underline on the lead-in,
+  // mirroring the preview (__leadStyle textDecoration). Default underline colour = leadHex
+  // unless s.leadUnderlineColor is set. Applies to non-marker rows (the `make` lead run).
+  const leadUnderline = !!s.leadUnderline;
+  const leadUlHex = s.leadUnderlineColor ? String(s.leadUnderlineColor).replace(/^#/, "") : leadHex;
   const rp = s.row_pages && typeof s.row_pages === "object" ? s.row_pages : null;
   const rowPage = /* @__PURE__ */ __name((i) => {
     if (!rp) return 1;
@@ -26773,6 +27483,7 @@ function renderRichBlock(s, ctx, isSidebar) {
         bold: leadBold,
         italics: leadItalic,
         color: leadHex,
+        underline: leadUnderline ? { type: UnderlineType.SINGLE, color: leadUlHex } : undefined,
         size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
         font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont
       })] : [],
@@ -26790,30 +27501,106 @@ function renderRichBlock(s, ctx, isSidebar) {
   let __wholeMoveSkip = !!s._antcvFirstItemPageMoved;
   // RICH-BLOCK-GROUP-ALIGN-DEFAULT-001 (owner 2026-06-25): a GROUPED rich_block (TOOLS & METHODS,
   // REGULATORY CONTEXT) defaults its GROUP-NAME rows to CENTER and its CONTENT rows to LEFT; a
-  // non-grouped rich_block keeps JUSTIFY. Explicit per-row / __group__ CJLR overrides still win.
+  // non-grouped rich_block keeps JUSTIFY. Explicit per-row CJLR wins; __group__ (the "Groups"
+  // control) aligns GROUP HEADS ONLY, NOT content rows — GROUP-CJLR-SCOPE-001, mirroring the preview
+  // __rowAlign (app.src.js: `isGrp ? __al.__group__ : void 0`). groupCjlr feeds the group-head galign below.
   // Mirrors the preview's __rowAlign (app.src.js RICH-BLOCK-GROUP-ALIGN-DEFAULT-001).
   const __hasGrp = items.some((it) => it && typeof it === "object" && it.grp);
+  // GROUP-EMPTY-HIDE-001 (owner 2026-07-06): mirror the preview (app.src.js) — a {grp} sub-heading
+  // with NO rendered child row is hidden entirely (no bare dangling label). A group runs from its
+  // {grp} row to the next {grp} or end; a following row counts as a real child only if it survives
+  // the same drops applied below (bracket placeholder, headlineOff lead-only, both-sides-blank).
+  const __grpHasChild = (gi) => {
+    for (let j = gi + 1; j < items.length; j++) {
+      const x = items[j];
+      if (x && typeof x === "object" && x.grp) break;
+      const q = x && typeof x === "object" ? x : { t: String(x || "") };
+      if (/^\s*hidden\s*[-–—:]\s*/i.test(String(q.b || q.l || ""))) continue;
+      const bTrim = String(q.b || "").trim();
+      const colon = (q.colon != null) ? !!q.colon : (!q.mk && s.leadColon !== false && !/[:.;,!?…–—-]$/.test(bTrim));
+      const lead = q.b ? q.b + (colon ? ": " : " ") : "";
+      const body = q.t || "";
+      if (/^\s*\[[\s\S]*\]\s*$/.test(body)) continue;
+      if (!String(body).trim() && s.headlineOff && q.b) continue;
+      if (!lead && !body) continue;
+      return true;
+    }
+    return false;
+  };
   items.forEach((it, i) => {
     const row = it && typeof it === "object" ? it : { t: String(it || "") };
-    const align = paraAlignPath(s, "items." + i + ".t") ?? paraAlignPath(s, "items." + i) ?? groupCjlr ?? (__hasGrp ? AlignmentType.LEFT : AlignmentType.JUSTIFIED);
+    const align = paraAlignPath(s, "items." + i + ".t") ?? paraAlignPath(s, "items." + i) ?? (__hasGrp ? AlignmentType.LEFT : AlignmentType.JUSTIFIED);
     // RICH-BLOCK-GROUP-001: a grp row is a bold sub-heading (like labeled_list).
     if (row.grp) {
+      // ROLES-AS-RICHBLOCK-001 general model (Increment A): a group heading may
+      // carry up to 3 STYLED segments (row.seg) + an under-group rule (row.hr).
+      // ABSENT => the legacy single bold heading, byte-identical (no current
+      // rich_block group has seg/hr, so production output is unchanged). Each
+      // seg = { t, color, size, bold, italic, sep } — sep is an optional literal
+      // prefix (e.g. ", "). Layout here is inline under the group align; the
+      // justify space-between (role-line) + RTL variants land in a later increment.
+      const __segs = Array.isArray(row.seg) ? row.seg.filter((x) => x && String(x.t || "").trim()) : null;
       const txt = String(row.t || "").trim();
-      if (!txt) return;
+      if ((!__segs || !__segs.length) && !txt) return;
+      if (!row.grpKeep && !__grpHasChild(i)) return;   // GROUP-EMPTY-HIDE-001: no rendered child → hide heading (grpKeep = user-made group stays)
       const galign = paraAlignPath(s, "items." + i + ".t") ?? paraAlignPath(s, "items." + i) ?? groupCjlr ?? AlignmentType.CENTER;
       if (rowPage(i) >= 2) { if (__wholeMoveSkip) { __wholeMoveSkip = false; } else out.push(pbBreakPara()); }
+      const __gHeadColor = isSidebar ? style.sidebarHeadColor : style.mainHeadColor;
+      const __gHeadFont = isSidebar ? style.sidebarFont : style.mainHeadFont;
+      const __gSize = pt2hp(isSidebar ? fs.sbBody : fs.mainBody);
+      const __ghex = (c) => (c ? String(c).replace(/^#/, "").trim() : null);
+      const __gBorder = row.hr ? { border: { bottom: { style: BorderStyle.SINGLE, size: 4, space: 1, color: __ghex(__segs && __segs[0] && __segs[0].color) || __gHeadColor } } } : {};
+      if (__segs && __segs.length) {
+        const __mkSegRun = (sg, lead) => new TextRun({
+          text: (lead || "") + (sg.sep || "") + String(sg.t || ""),
+          bold: sg.bold != null ? !!sg.bold : true,
+          italics: sg.italic != null ? !!sg.italic : false,
+          color: __ghex(sg.color) || __gHeadColor,
+          size: sg.size ? pt2hp(sg.size) : __gSize,
+          font: __gHeadFont
+        });
+        // Increment B: JUSTIFY = role-line layout in the MAIN column — first n-1
+        // segments left, last segment tab-right (space-between), mirroring the
+        // preview renderGroupHead + renderExperience. Sidebar / L / C / R stay
+        // inline. RTL flips via the paragraph bidi like the rest of the doc.
+        const __gJustify = galign === AlignmentType.JUSTIFIED && __segs.length >= 2 && !isSidebar;
+        const __gRightTab = (ctx.mainW || 9000) - 640 - 40;
+        const __gChildren = __gJustify
+          ? [...__segs.slice(0, -1).map((sg) => __mkSegRun(sg, "")), __mkSegRun(__segs[__segs.length - 1], "\t")]
+          : __segs.map((sg) => __mkSegRun(sg, ""));
+        out.push(new Paragraph({
+          spacing: { before: 120, after: 40 },
+          keepNext: true,
+          keepLines: true,
+          alignment: __gJustify ? AlignmentType.LEFT : galign,
+          ...(__gJustify ? { tabStops: [{ type: TabStopType.RIGHT, position: __gRightTab }] } : {}),
+          ...__gBorder,
+          shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
+          children: __gChildren
+        }));
+        return;
+      }
+      // GROUP-HEAD-JUSTIFY-001 (owner 2026-07-14): a PLAIN single-line group heading
+      // (TOOLS & METHODS "Methods" etc., no seg[]) can't meaningfully justify — a
+      // one-line paragraph has nothing to spread. The preview resolves justify→left
+      // (render + antcv-item-align.js) so it stops oscillating with dejustifyNarrowSidebar.
+      // Mirror: resolve galign justify→left for the plain heading only (the seg branch
+      // above keeps justify = role-line space-between). Absent align → galign default
+      // CENTER, so untouched group heads are byte-identical.
+      const __plainAlign = galign === AlignmentType.JUSTIFIED ? AlignmentType.LEFT : galign;
       out.push(new Paragraph({
         spacing: { before: 120, after: 40 },
         keepNext: true,
         keepLines: true,
-        alignment: galign,
+        alignment: __plainAlign,
+        ...__gBorder,
         shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
         children: [new TextRun({
           text: txt,
           bold: true,
-          color: isSidebar ? style.sidebarHeadColor : style.mainHeadColor,
-          size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
-          font: isSidebar ? style.sidebarFont : style.mainHeadFont
+          color: __gHeadColor,
+          size: __gSize,
+          font: __gHeadFont
         })]
       }));
       return;
@@ -26845,7 +27632,7 @@ function renderRichBlock(s, ctx, isSidebar) {
         if (!s.headlineOff && s.title && !(ctx.style && ctx.style.contHeadlines === false)) out.push(headingParagraph(String(s.title || "").toUpperCase() + " " + (ctx.contSuffix || "(CONT.)"), ctx, isSidebar, s.ruleOff));
       }
     }
-    if (row.mk === true) out.push(bulletParagraphRich(lead, body, ctx, isSidebar, align));
+    if (row.mk === true) out.push(bulletParagraphRich(lead, body, ctx, isSidebar, align, void 0, void 0, leadUnderline, leadUlHex));
     else if (typeof row.mk === "string" && row.mk) out.push(make(lead, body, align, row.mk));
     else out.push(make(lead, body, align));
   });
@@ -26862,7 +27649,7 @@ function renderBullets(s, ctx, isSidebar) {
   });
 }
 __name(renderBullets, "renderBullets");
-function bulletParagraphRich(lead, body, ctx, isSidebar, align, keepWithNext, lineTwips) {
+function bulletParagraphRich(lead, body, ctx, isSidebar, align, keepWithNext, lineTwips, leadUnderline, leadUlHex) {
   const { style, fs } = ctx;
   const baseRun = {
     color: isSidebar ? style.sidebarTextColor : style.mainTextColor,
@@ -26890,6 +27677,9 @@ function bulletParagraphRich(lead, body, ctx, isSidebar, align, keepWithNext, li
         // than as a continuous bold run with the result text. In the
         // sidebar we keep the head colour for visibility against navy.
         color: isSidebar ? style.sidebarHeadColor : style.mainTextColor,
+        // LEAD-UNDERLINE-001: marker-row (mk) verb-leads honour the section's
+        // leadUnderline too (threaded from renderRichBlock); default colour = leadUlHex.
+        underline: leadUnderline ? { type: UnderlineType.SINGLE, color: leadUlHex || (isSidebar ? style.sidebarHeadColor : style.mainTextColor) } : undefined,
         size: baseRun.size,
         font: baseRun.font
       })] : [],
@@ -26940,8 +27730,35 @@ function renderCompetencyTable(s, ctx) {
   const col1 = Math.round(tableW * (explicitRatio !== null ? explicitRatio : 0.25));
   const col2 = tableW - col1;
   const tableHeaderBg = style && style.tableHeaderBg || style.mainHeadColor;
+  // TABLE-HEADER-INK-WORKER-001 (owner 2026-07-13, CONTRAST-GUARD standing
+  // rule): the header text color was HARDCODED WHITE below — invisible on a
+  // pale tableHeaderBg (#DDE6F2) regardless of any client token, and a
+  // vision-impaired accessibility failure. Honour the forwarded
+  // style.tableHeaderText; fall back to the contrast-correct ink.
+  const tableHeaderInk = (style && style.tableHeaderText) || readableInk(tableHeaderBg);
   const border = { style: BorderStyle.SINGLE, size: 4, color: tableHeaderBg };
   const cellBorders = { top: border, bottom: border, left: border, right: border };
+  // COPENHAGEN-TABLE-FRAME-001 (mockup lock 2026-07-22): a 1.5pt outer frame in
+  // style.tableFrameColor (cyan #01B9BD for Copenhagen Modern), only when the
+  // package defines it. Cell borders beat table-level borders in OOXML, so the
+  // frame is drawn per-cell on the perimeter (header top, col edges, last row
+  // bottom of each page chunk — every chunk restates the header, so each page's
+  // table piece gets a complete frame). Inner gridlines keep `border`.
+  const frameHex = style && style.tableFrameColor ? String(style.tableFrameColor).replace("#", "").toUpperCase() : null;
+  const frameB = frameHex ? { style: BorderStyle.SINGLE, size: 12, color: frameHex } : null;
+  function bordersFor(colIdx, isTop, isBottom) {
+    if (!frameB) return cellBorders;
+    return {
+      top: isTop ? frameB : border,
+      bottom: isBottom ? frameB : border,
+      left: colIdx === 0 ? frameB : border,
+      right: colIdx === 1 ? frameB : border,
+    };
+  }
+  __name(bordersFor, "bordersFor");
+  // TABLE-BANDED-ROWS token (mockup lock 2026-07-22): follow style.tableEvenBg
+  // (Copenhagen #DCE5EA, the sidebar light) instead of the old hardcoded EAF7F7.
+  const evenBandHex = String(style && style.tableEvenBg || "#DCE5EA").replace("#", "").toUpperCase();
   const headerAlignT = rowAlignAt(s, 0) ?? alignType(s.headerAlign || "center");
   function makeHeaderRow() {
     return new TableRow({
@@ -26949,17 +27766,17 @@ function renderCompetencyTable(s, ctx) {
       children: (header || ["", ""]).map((cell, i) => new TableCell({
         width: { size: i === 0 ? col1 : col2, type: WidthType.DXA },
         shading: { type: ShadingType.CLEAR, fill: tableHeaderBg, color: "auto" },
-        borders: cellBorders,
+        borders: bordersFor(i, true, false),
         // CORECOMP-TABLE-CELL-PAD-001 (owner 2026-07-03): text sat on the cell
         // borders in the PDF; L/R 90 (6px) -> 150 (10px). Preview padding is
         // bumped to match (TABLE-WRAP-PARITY-001 kept).
-        margins: { top: 130, bottom: 130, left: 150, right: 150 },
+        margins: { top: 130, bottom: 130, left: 150, right: 300 },
         verticalAlign: VerticalAlign.CENTER,
         children: [new Paragraph({
           alignment: headerAlignT,
           children: inlineRuns(cell, {
             bold: true,
-            color: "FFFFFF",
+            color: tableHeaderInk,
             size: pt2hp(fs.mainTblH),
             font: style.mainHeadFont
           })
@@ -26968,22 +27785,20 @@ function renderCompetencyTable(s, ctx) {
     });
   }
   __name(makeHeaderRow, "makeHeaderRow");
-  function makeDataRow(r, idx) {
+  function makeDataRow(r, idx, isLastInChunk) {
     return new TableRow({
       children: (r || []).slice(0, 2).map((cell, i) => new TableCell({
         width: { size: i === 0 ? col1 : col2, type: WidthType.DXA },
-        // TABLE-BANDED-ROWS-001 (owner 2026-06-14): the export zebra was both
-        // INVERTED and effectively invisible vs the preview. The React preview
-        // (app.src.js ~5149) bands EVEN data rows (full-row index rr where
-        // (rr-1)%2===0, i.e. data idx 0,2,4…) with a VISIBLE pale teal #eaf7f7.
-        // The worker banded the ODD rows with near-white FAFAFA. Match the
-        // preview: even data rows → EAF7F7, odd → none.
-        shading: idx % 2 === 0 ? { type: ShadingType.CLEAR, fill: "EAF7F7", color: "auto" } : void 0,
-        borders: cellBorders,
+        // TABLE-BANDED-ROWS-001 (owner 2026-06-14): the React preview bands EVEN
+        // data rows ((rr-1)%2===0, i.e. data idx 0,2,4…); the worker matches.
+        // Band colour now follows style.tableEvenBg (Copenhagen #DCE5EA) — see
+        // evenBandHex above (mockup lock 2026-07-22; was hardcoded EAF7F7).
+        shading: idx % 2 === 0 ? { type: ShadingType.CLEAR, fill: evenBandHex, color: "auto" } : void 0,
+        borders: bordersFor(i, false, !!isLastInChunk),
         // CORECOMP-TABLE-CELL-PAD-001 (owner 2026-07-03): text sat on the cell
         // borders in the PDF; L/R 90 (6px) -> 150 (10px). Preview padding is
         // bumped to match (TABLE-WRAP-PARITY-001 kept).
-        margins: { top: 130, bottom: 130, left: 150, right: 150 },
+        margins: { top: 130, bottom: 130, left: 150, right: 300 },
         children: [new Paragraph({
           // TABLE-WRAP-PARITY-001: the preview renders the expertise cell
           // LEFT-aligned; the export's JUSTIFIED stretched word gaps into
@@ -26995,6 +27810,10 @@ function renderCompetencyTable(s, ctx) {
           // CJLR-EXPORT-PARITY-001 / body-justify default (owner 2026-06-19): native
           // rowAlign wins, then the item-align cycler path, else the body default is
           // JUSTIFIED (header stays center) — matching the preview (234 getAlign).
+          // FOCUS-TABLE-LEFTCOL-JUSTIFY-001 (owner 2026-07-14) SUPERSEDED by the
+          // Copenhagen mockup lock (owner 2026-07-22): short first-col labels stay
+          // LEFT (justify opens dead space); rows (second column) stay justified.
+          // Mirrors the preview left td textAlign:"left".
           alignment: i === 1 ? (rowAlignAt(s, idx + 1) ?? paraAlignPath(s, "rows." + (idx + 1)) ?? AlignmentType.JUSTIFIED) : AlignmentType.LEFT,
           children: inlineRuns(cell, {
             bold: i === 0,
@@ -27015,7 +27834,7 @@ function renderCompetencyTable(s, ctx) {
       // PREVIEW-PDF-GEOMETRY-001: CV table is LEFT-aligned (flush with body
       // text, like the preview); CL stays CENTERED (its 0.8-width inset look).
       alignment: isCl ? AlignmentType.CENTER : AlignmentType.LEFT,
-      rows: [makeHeaderRow(), ...dataRows.map((r, i) => makeDataRow(r, offset + i))]
+      rows: [makeHeaderRow(), ...dataRows.map((r, i) => makeDataRow(r, offset + i, i === dataRows.length - 1))]
     });
   }
   __name(makeTable, "makeTable");
@@ -27045,6 +27864,13 @@ function renderCompetencyTable(s, ctx) {
     if (chunkIdx > 0) {
       out.push(pbBreakPara());
       if (s.title && !(ctx.style && ctx.style.contHeadlines === false)) out.push(headingParagraph(String(s.title || "").toUpperCase() + " " + (ctx.contSuffix || "(CONT.)"), ctx, false));
+    } else {
+      // TABLE-TITLE-PRESPACE-001 (owner 2026-07-13 round 3: "6pt spacing for
+      // the table title — separation of the horizontal line BEFORE the table").
+      // A dedicated PRESPACE paragraph pushes the grid 6pt below the heading's
+      // underline; the heading keeps its own tight after-space so the line
+      // stays attached to the title (not floated down into the gap).
+      out.push(new Paragraph({ spacing: { before: 0, after: 0, line: 120, lineRule: "exact" }, children: [] }));
     }
     out.push(makeTable(chunk.rows, chunk.start));
     out.push(new Paragraph({ spacing: { before: 0, after: 40, line: 20, lineRule: "exact" }, children: [] }));
@@ -27079,12 +27905,22 @@ function renderExperience(s, ctx) {
       if (s.title && !(ctx.style && ctx.style.contHeadlines === false)) out.push(headingParagraph(String(s.title || "").toUpperCase() + " " + (ctx.contSuffix || "(CONT.)"), ctx, false));
     }
     const left = [];
+    // ROLES-AS-RICHBLOCK-001 Stage 3: honour per-segment role-line style overrides
+    // (role.roleLineStyle, written by the flag-on 3-segment rich_block editor).
+    // ABSENT => byte-identical to the pre-Stage-3 export: every current role has
+    // no roleLineStyle, so production output is unchanged. color arrives as
+    // "#rrggbb" from the client picker; docx wants bare hex.
+    const __rls = role && role.roleLineStyle && typeof role.roleLineStyle === "object" ? role.roleLineStyle : null;
+    const __hex = (c) => (c ? String(c).replace(/^#/, "").trim() : null);
+    const __seg = (kind) => (__rls && __rls[kind] && typeof __rls[kind] === "object" ? __rls[kind] : null);
+    const __tSeg = __seg("role"), __cSeg = __seg("company"), __ySeg = __seg("years");
     if (role.title) {
       left.push(new TextRun({
         text: role.title,
-        bold: true,
-        italics: true,
-        color: style.mainHeadColor,
+        bold: __tSeg && __tSeg.bold != null ? !!__tSeg.bold : true,
+        // Owner 2026-07-14: role title (seg0) = BOLD, NOT italic (was bold+italic).
+        italics: __tSeg && __tSeg.italic != null ? !!__tSeg.italic : false,
+        color: (__tSeg && __hex(__tSeg.color)) || style.mainHeadColor,
         size: pt2hp(fs.expSubHead),
         font: style.mainBodyFont
       }));
@@ -27092,24 +27928,68 @@ function renderExperience(s, ctx) {
     if (role.company) {
       left.push(new TextRun({
         text: (left.length ? " | " : "") + role.company,
-        italics: true,
+        italics: __cSeg && __cSeg.italic != null ? !!__cSeg.italic : true,
+        bold: __cSeg && __cSeg.bold != null ? !!__cSeg.bold : false,
         // Spec: role title in main head colour, COMPANY in BLACK, year in gray.
-        color: style.mainTextColor,
+        color: (__cSeg && __hex(__cSeg.color)) || style.mainTextColor,
         size: pt2hp(fs.expSubHead),
         font: style.mainBodyFont
       }));
     }
-    const yearsRun = role.years ? new TextRun({
-      text: "	" + role.years,
-      color: "595959",
+    // DATE-NO-PRESENT-001 (owner 2026-07-09, "not present instead of 2+26"):
+    // a role date must NEVER read "present" (or a localized/parenthetical
+    // equivalent) — the end reads as the CURRENT YEAR ("20XX-2026"). Deterministic
+    // export-side belt (the LLM leaks "present" past the prompt rule): strip a
+    // "(present)"-style parenthetical, then replace a standalone present-token with
+    // the current year. Scoped to the date field only, so body prose ("represent",
+    // "presentation") is untouched.
+    const __scrubYears = (y) => {
+      if (!y) return y;
+      const Y = String(new Date().getFullYear());
+      return String(y)
+        .replace(/\s*\(\s*(?:present|nuv[æa]rende|nutid|ongoing|current(?:ly)?|now|p[åa]g[åa]ende|actual)\s*\)/gi, "")
+        .replace(/\b(?:present|nuv[æa]rende|nutid|ongoing|currently|current|now|p[åa]g[åa]ende)\b/gi, Y)
+        .replace(/\s{2,}/g, " ").trim();
+    };
+    const __yrs = __scrubYears(role.years);
+    // GROUP-CJLR-ROLES-001 (owner 2026-07-14): the role line honours the group/per-role
+    // align (roles.R.title / roles.R / __group__), mirroring the preview renderRoleHead
+    // (antcv-roles-richblock-adapter.js) + antcv-item-align.js. The preview role line is
+    // a flex row whose justifyContent follows the align:
+    //   justify (= default / absent)  → space-between (role+company left, years tab-right)
+    //   left / center / right         → the WHOLE line grouped to that side (year travels
+    //                                    inline WITH the line, not pinned to the edge)
+    // Absent align → roleAlign undefined → __roleLCR false → leading TAB + no paragraph
+    // alignment, i.e. byte-identical to the pre-CJLR export. RTL segment reversal is
+    // deferred in BOTH preview and worker (kept at parity).
+    const roleAlign = paraAlignPath(s, "roles." + ri + ".title") ?? paraAlignPath(s, "roles." + ri) ?? paraAlign(s, null, void 0);
+    const __roleLCR = roleAlign === AlignmentType.LEFT || roleAlign === AlignmentType.CENTER || roleAlign === AlignmentType.RIGHT;
+    const yearsRun = __yrs ? new TextRun({
+      // justify/default → leading TAB drives years to the right tab-stop (space-between);
+      // L/C/R → a small inline gap so the year stays WITH the grouped line.
+      text: (__roleLCR ? "  " : "	") + __yrs,
+      italics: __ySeg && __ySeg.italic != null ? !!__ySeg.italic : false,
+      bold: __ySeg && __ySeg.bold != null ? !!__ySeg.bold : false,
+      color: (__ySeg && __hex(__ySeg.color)) || "595959",
       size: pt2hp(fs.expSubHead),
       font: style.mainBodyFont
     }) : null;
     if (left.length || yearsRun) {
-      const roleAlign = paraAlignPath(s, "roles." + ri + ".title") ?? paraAlignPath(s, "roles." + ri) ?? paraAlign(s, null, void 0);
       out.push(new Paragraph({
         spacing: { before: __roleGapDxa, after: 40 },
-        alignment: roleAlign,
+        // justify/default → undefined (natural left; the right-tab yields the space-
+        // between look — do NOT emit JUSTIFIED, which would stretch the single line);
+        // L/C/R → group the whole role line to that side. The tabStops below stay put
+        // but are inert in the L/C/R case (no tab char in the years run then).
+        alignment: __roleLCR ? roleAlign : void 0,
+        // UNDER-ROLE-RULE-ALL-001 (owner 2026-07-15): draw the under-role rule under
+        // EVERY role, mirroring the preview (chimera app.src.js + adapter renderRoleHead
+        // draw it under every role). The export historically drew it only for editor-
+        // restyled roles (__rls) — a preview/export parity GAP the owner has now closed.
+        // A role opts OUT with roleLineHr:false; a restyled role uses its seg-0 colour,
+        // every other role uses the teal mainHeadColor. This changes untouched exports
+        // by design (adds the rule) — the whole point is preview==export.
+        ...(role.roleLineHr !== false ? { border: { bottom: { style: BorderStyle.SINGLE, size: 4, space: 1, color: (__tSeg && __hex(__tSeg.color)) || style.mainHeadColor } } } : {}),
         // keepNext: the role title (e.g. "Customer Change Requests Specialist
         // | Innoviz Technologies | 2020 — 2025") must stay glued to its
         // first bullet. Otherwise Word can leave the title alone at the
@@ -27120,13 +28000,30 @@ function renderExperience(s, ctx) {
         children: [...left, ...yearsRun ? [yearsRun] : []]
       }));
     }
+    // ROLE-KEEP-WHOLE-001 (owner 2026-07-13 round 3, "that role+result should
+    // have flowed to the next page WITH a proper (cont.) heading — a critical
+    // core function you lost; just a random cut now"). Root cause: headless
+    // exports carry NO role.page, so the page-driven (CONT.) header never fires
+    // and LibreOffice split a role mid-way, stranding bullets/Results with no
+    // header. The keepNext chain stopped at the LAST bullet, so the Results line
+    // (and, under LO, a trailing bullet) could orphan. Glue the ENTIRE role —
+    // title -> every bullet -> Results — into ONE keepNext chain so a role that
+    // fits moves wholesale to the next page (no mid-role split, header travels
+    // with its content); a role genuinely taller than a page still splits, but
+    // Gabriel's 3-bullet roles never are.
+    const _hasResults = typeof role.results === "string" && role.results.trim().length > 0;
     if (Array.isArray(role.bullets)) {
       const _bl = role.bullets.filter(Boolean);
       _bl.forEach((b, bi) => {
-        const bAlign = paraAlignPath(s, "roles." + ri + ".bullets." + bi) ?? paraAlign(s, null, void 0);
-        // 1.50.270: keep a role's bullets chained (all but the last) so a
-        // role moves wholesale to the next page instead of splitting.
-        const _keepWithNext = bi < _bl.length - 1;
+        // GROUP-CJLR-SCOPE-001 + PREVIEW-BULLET-PARITY-001 (owner 2026-07-15): a role bullet
+        // follows its own per-bullet CJLR; else it defaults to LEFT — matching the preview, where
+        // experience is a grouped rich_block so content rows resolve __rowAlign(isGrp=false,
+        // __hasGrp=true) -> "left" (was JUSTIFIED in the export). __group__ never touches bullets
+        // (it aligns the role LINE/head only).
+        const bAlign = paraAlignPath(s, "roles." + ri + ".bullets." + bi) ?? AlignmentType.LEFT;
+        // keep every bullet chained to what follows; the LAST bullet glues to
+        // the Results paragraph when one follows (was: dropped the chain here).
+        const _keepWithNext = bi < _bl.length - 1 || _hasResults;
         out.push(bulletParagraphRich(
           "",
           String(b),
@@ -27147,13 +28044,14 @@ function renderExperience(s, ctx) {
     if (typeof role.results === "string" && role.results.trim()) {
       out.push(new Paragraph({
         spacing: { before: 140, after: 60, line: 252, lineRule: "auto" },
+        keepLines: true,
         children: [
           new TextRun({
             // RESULTS-PDF-INK-BLACK-001 (owner 2026-06-15): the per-role "Results:"
             // LABEL is a main inline label, so it follows MAIN-HEADINGS-GREEN-001
             // → mainHeadColor (teal #00746E), not the black body ink. The outcome
             // text after it stays neutral body ink (content, like company/year).
-            text: "Results: ",
+            text: style._resultsLabel || "Results: ",
             bold: true,
             italics: true,
             color: style.mainHeadColor,
@@ -27193,7 +28091,7 @@ function normalizeItem(item) {
     const v = item[k];
     if (typeof v === "string" && v.trim().length > 0) {
       const more = k !== "citation" && typeof item.citation === "string" && item.citation.trim() ? item.citation.trim() : k !== "value" && typeof item.value === "string" && item.value.trim() ? item.value.trim() : null;
-      return more ? `${v.trim()} \u2014 ${more}` : v.trim();
+      return more ? `${v.trim()} - ${more}` : v.trim();
     }
   }
   if (typeof item.label === "string" && typeof item.value === "string" && (item.label.trim() || item.value.trim())) {
@@ -27351,7 +28249,7 @@ function renderSimpleList(s, ctx, isSidebar, italic) {
       alignment: a,
       shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
       children: [
-        new TextRun({ text: "All publications: ", ...__msBase }),
+        new TextRun({ text: ({da:"Alle publikationer: ",es:"Todas las publicaciones: ",zh:"所有出版物："}[ctx.lang] || "All publications: "), ...__msBase }),
         new ExternalHyperlink({ link: String(s.masterSite.url), children: [new TextRun({ text: String(s.masterSite.label || s.masterSite.url), ...__msBase, underline: {} })] })
       ]
     }));
@@ -27645,10 +28543,19 @@ function renderEducation(s, ctx, isSidebar) {
         font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont
       }));
     }
+    // EDU-ROW-CJLR-EXPORT-001 (owner 2026-07-15): per-row EDUCATION / RECOMMENDATIONS
+    // CJLR export parity. The preview + editor write antcvItemAlignment[sid]["items.N.deg"]
+    // (+ "items.N"), N = the ORIGINAL s.items index; honour it so DOCX/PDF matches the
+    // preview. NO __group__ (groupCjlr) fallback: the preview's education render (__eRA)
+    // ignores __group__, and item-align never applies it to non-group-head rows, so
+    // __group__ must not move education rows on export either (GROUP-CJLR-SCOPE-001,
+    // 1.14.158). Default void 0 = docx LEFT = the preview default. Byte-identical when no
+    // per-row override AND no __group__ are set (both resolve to void 0 / left).
+    const __eduIdx = s.items.indexOf(it);
     out.push(new Paragraph({
       spacing: { before: 40, after: 40 },
       // NO-JUSTIFY-GAPS-001 (owner 2026-06-12): sidebar default LEFT.
-      alignment: groupCjlr != null ? groupCjlr : void 0,
+      alignment: paraAlignPath(s, "items." + __eduIdx + ".deg") ?? paraAlignPath(s, "items." + __eduIdx) ?? void 0,
       shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
       children: runs
     }));
@@ -27657,10 +28564,21 @@ function renderEducation(s, ctx, isSidebar) {
 }
 __name(renderEducation, "renderEducation");
 function buildStyles(ctx) {
+  // RTL-DOC-001 (owner 2026-07-10): for Hebrew / Arabic set the document DEFAULTS so
+  // every run is right-to-left (w:rtl) and every paragraph is bidi (w:bidi) — a global
+  // RTL without threading a flag through every builder. The Unicode bidi algorithm keeps
+  // embedded Latin tokens (numbers, company / tool names) left-to-right within the RTL
+  // flow. LTR languages are unaffected.
+  const rtl = !!(ctx.style && ctx.style._rtl);
   return {
     default: {
       document: {
-        run: { font: ctx.style.mainBodyFont, size: pt2hp(ctx.fs.mainBody) }
+        run: {
+          font: ctx.style.mainBodyFont,
+          size: pt2hp(ctx.fs.mainBody),
+          ...(rtl ? { rightToLeft: true } : {})
+        },
+        ...(rtl ? { paragraph: { bidirectional: true } } : {})
       }
     },
     paragraphStyles: []
@@ -27678,6 +28596,52 @@ function noBorders() {
   const n = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
   return { top: n, bottom: n, left: n, right: n, insideHorizontal: n, insideVertical: n };
 }
+// HEADER-BANNER rule 5/6 (KOMBIT gold, owner 2026-07-07 "add it"): the
+// banner→body divider is owned by the FIRST body row's cell TOPS (both cells,
+// single sz=12 ≈ 1.4pt), in the band colour, so it reads as one uniform line
+// under the banner. Body-cell TOPS (not the banner gridSpan-cell bottom, which
+// renders a sub-pixel seam at the internal grid line). `color` = band/brand.
+function bodyTopBorder(color) {
+  const n = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
+  return { top: { style: BorderStyle.SINGLE, size: 12, color: color || "auto" }, bottom: n, left: n, right: n, insideHorizontal: n, insideVertical: n };
+}
+__name(bodyTopBorder, "bodyTopBorder");
+// SEAM-LINE-001b / HEADER-SEAM-#0b (owner 2026-07-14): WCAG relative luminance,
+// mirrored 1:1 from the PWA preview helper (__antcvSeamLum in pwa/app.src.js) so
+// the header↔sidebar seam colour decision is identical in preview and export.
+function seamLum(hex) {
+  try {
+    let h = String(hex || "").replace(/^#/, "").trim();
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    if (h.length < 6) return null;
+    const f = (i) => {
+      const c = parseInt(h.slice(i, i + 2), 16) / 255;
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * f(0) + 0.7152 * f(2) + 0.0722 * f(4);
+  } catch (_) {
+    return null;
+  }
+}
+__name(seamLum, "seamLum");
+// Contrast-guard the photo-contour colour against the shared header/sidebar bg:
+// a thin 1px/1.5pt rule needs a visible ratio. If the accent is too close to the
+// shared background, fall back to a high-contrast neutral (readableInk -> white on
+// dark, 283556 on light) so the seam never disappears. Returns a docx hex (no #).
+// Mirror of __antcvSeamContour in the PWA.
+function seamContourColor(contour, bg) {
+  const cc = String(contour || "").replace(/^#/, "").trim() || "00746E";
+  try {
+    const lc = seamLum(cc), lb = seamLum(bg);
+    if (lc == null || lb == null) return cc;
+    const ratio = (Math.max(lc, lb) + 0.05) / (Math.min(lc, lb) + 0.05);
+    if (ratio >= 1.8) return cc; // visible enough as a thin rule
+    return readableInk(bg); // UNIVERSAL_WHITE / UNIVERSAL_DARK_INK
+  } catch (_) {
+    return cc;
+  }
+}
+__name(seamContourColor, "seamContourColor");
 __name(noBorders, "noBorders");
 
 // src/schema.js
@@ -27942,6 +28906,124 @@ async function convertDocxToPdf(docxBytes, apiKey, opts = {}) {
   };
 }
 __name(convertDocxToPdf, "convertDocxToPdf");
+async function convertHtmlToPdf(html, apiKey, opts = {}) {
+  // HTML-TO-PDF-001 (2026-07-22): the JD-analysis report is a self-contained,
+  // branded HTML document (not a CV/CL docx). Render it to PDF through the SAME
+  // CloudConvert pipeline the CV/CL export uses, but via the Chrome engine
+  // (faithful HTML/CSS + backgrounds) instead of LibreOffice's docx path. Same
+  // import/base64 -> convert -> export/url shape as convertDocxToPdf.
+  if (!apiKey) {
+    throw new Error("CLOUDCONVERT_API_KEY not configured on the worker");
+  }
+  const filename = (opts.filename || "report") + ".html";
+  const startMs = Date.now();
+  // The report can contain non-ASCII (Danish text, candidate names, emoji), so
+  // encode UTF-8 bytes before base64 — btoa on the raw string would throw on any
+  // code point > 0xFF.
+  const bytes = new TextEncoder().encode(String(html == null ? "" : html));
+  let binStr = "";
+  const CHUNK = 8192;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binStr += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  const b64 = btoa(binStr);
+  console.log(`[cloudconvert] html-to-pdf: creating job, input=${bytes.length}B base64=${b64.length}ch`);
+  const createResp = await fetch(`${API_BASE}/jobs`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      tasks: {
+        "import-html": {
+          operation: "import/base64",
+          file: b64,
+          filename
+        },
+        "convert-to-pdf": {
+          operation: "convert",
+          input: "import-html",
+          input_format: "html",
+          output_format: "pdf",
+          // Chrome renders the report's CSS + colour blocks faithfully;
+          // print_background keeps the branded bands, and A4 zero-margin lets
+          // the report's own page padding own the layout (matches the print CSS).
+          engine: "chrome",
+          print_background: true,
+          page_size: "A4",
+          margin_top: "0",
+          margin_bottom: "0",
+          margin_left: "0",
+          margin_right: "0"
+        },
+        "export-pdf": {
+          operation: "export/url",
+          input: "convert-to-pdf",
+          inline: false,
+          archive_multiple_files: false
+        }
+      },
+      tag: "antcv-html-to-pdf"
+    })
+  });
+  if (!createResp.ok) {
+    const errBody = await createResp.text().catch(() => "");
+    throw new Error(`CloudConvert html-to-pdf job creation failed: ${createResp.status} ${errBody.slice(0, 500)}`);
+  }
+  const createJson = await createResp.json();
+  const jobId = createJson?.data?.id;
+  if (!jobId) {
+    throw new Error("CloudConvert html-to-pdf job created but no id returned");
+  }
+  console.log(`[cloudconvert] html-to-pdf job ${jobId} created`);
+  let exportFileUrl = null;
+  let pollCount = 0;
+  while (Date.now() - startMs < TIMEOUT_MS) {
+    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+    pollCount++;
+    const statusResp = await fetch(`${API_BASE}/jobs/${jobId}`, {
+      headers: { "Authorization": `Bearer ${apiKey}` }
+    });
+    if (!statusResp.ok) {
+      const errBody = await statusResp.text().catch(() => "");
+      throw new Error(`CloudConvert html-to-pdf status check failed: ${statusResp.status} ${errBody.slice(0, 500)}`);
+    }
+    const statusJson = await statusResp.json();
+    const jobStatus = statusJson?.data?.status;
+    if (jobStatus === "error") {
+      const tasks = statusJson?.data?.tasks || [];
+      const failed = tasks.find((t) => t.status === "error");
+      throw new Error(`CloudConvert html-to-pdf job ${jobId} errored: ${failed?.code || "unknown"} — ${failed?.message || ""}`);
+    }
+    if (jobStatus === "finished") {
+      const tasks = statusJson?.data?.tasks || [];
+      const exportTask = tasks.find((t) => t.name === "export-pdf");
+      const files = exportTask?.result?.files || [];
+      if (!files.length || !files[0].url) {
+        throw new Error(`CloudConvert html-to-pdf finished but export-pdf produced no file URL`);
+      }
+      exportFileUrl = files[0].url;
+      console.log(`[cloudconvert] html-to-pdf job ${jobId} finished after ${pollCount} polls (${Date.now() - startMs}ms)`);
+      break;
+    }
+  }
+  if (!exportFileUrl) {
+    throw new Error(`CloudConvert html-to-pdf job ${jobId} did not complete within ${TIMEOUT_MS}ms (polled ${pollCount} times)`);
+  }
+  const pdfResp = await fetch(exportFileUrl);
+  if (!pdfResp.ok) {
+    throw new Error(`CloudConvert html-to-pdf download failed: ${pdfResp.status}`);
+  }
+  const pdfBuffer = new Uint8Array(await pdfResp.arrayBuffer());
+  console.log(`[cloudconvert] html-to-pdf downloaded PDF: ${pdfBuffer.length}B`);
+  return {
+    buffer: pdfBuffer,
+    jobId,
+    durationMs: Date.now() - startMs
+  };
+}
+__name(convertHtmlToPdf, "convertHtmlToPdf");
 function pdfProvider(env2) {
   if (env2 && env2.CLOUDCONVERT_API_KEY && String(env2.CLOUDCONVERT_API_KEY).trim()) {
     return "cloudconvert";
@@ -28140,7 +29222,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.132-cl-rule-balance-2";
+var VERSION = "1.14.171-spec-photo";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);
@@ -28188,8 +29270,14 @@ var index_default = {
       if (url.pathname === "/generate-pdf" && request.method === "POST") {
         return await handleGeneratePdf(request, origin, env2);
       }
+      if (url.pathname === "/generate-analysis-pdf" && request.method === "POST") {
+        return await handleGenerateAnalysisPdf(request, origin, env2);
+      }
       if (url.pathname === "/api/jd/pdf-to-docx" && request.method === "POST") {
         return await handlePdfToDocx(request, origin, env2);
+      }
+      if (url.pathname === "/diag/convert-docx" && request.method === "POST") {
+        return await handleDiagConvertDocx(request, origin, env2);
       }
       return json({ error: "not found", path: url.pathname }, 404, origin, env2);
     } catch (err2) {
@@ -28424,6 +29512,145 @@ async function handleGeneratePdf(request, origin, env2) {
   return new Response(pdfResult.buffer, { status: 200, headers });
 }
 __name(handleGeneratePdf, "handleGeneratePdf");
+async function handleGenerateAnalysisPdf(request, origin, env2) {
+  // HTML-TO-PDF-001 (2026-07-22): server-side PDF for the JD-analysis report.
+  // The PWA (antcv-analysis-report-pdf-360.js) previously printed the report via
+  // an offscreen iframe window.print() — Chrome's print pipeline gives an
+  // ATS-illegible PDF (no ToUnicode CMap), same reason the CV/CL export moved to
+  // CloudConvert. This renders the SAME report HTML through CloudConvert's Chrome
+  // engine. Same gates as /generate-pdf: optional WORKER_SECRET, allowed-origin
+  // CORS, pdfProvider check, BYOK X-CloudConvert-Key precedence. The PWA falls
+  // back to its existing browser-print path when this is unavailable or fails.
+  if (env2.WORKER_SECRET) {
+    const presented = request.headers.get("X-AntCV-Secret") || "";
+    if (presented !== env2.WORKER_SECRET) {
+      return json({ error: "unauthorized" }, 401, origin, env2);
+    }
+  }
+  const provider = pdfProvider(env2);
+  if (!provider) {
+    return json(
+      {
+        error: "pdf_not_configured",
+        message: "Server-side PDF generation is not configured on this worker. Set the CLOUDCONVERT_API_KEY secret to enable. The PWA falls back to client-side PDF print until configured.",
+        provider: null
+      },
+      503,
+      origin,
+      env2
+    );
+  }
+  const MAX_BYTES = 4 * 1024 * 1024;
+  const raw = await request.text();
+  if (raw.length > MAX_BYTES) {
+    return json(
+      { error: "payload too large", max_bytes: MAX_BYTES, received_bytes: raw.length },
+      413,
+      origin,
+      env2
+    );
+  }
+  let payload;
+  try {
+    payload = JSON.parse(raw);
+  } catch (e) {
+    return json({ error: "invalid JSON", detail: String(e.message || e) }, 400, origin, env2);
+  }
+  const html = payload && typeof payload.html === "string" ? payload.html : "";
+  if (!html.trim()) {
+    return json({ error: "missing_html", message: "Body must be JSON { html: string, filename?: string }." }, 400, origin, env2);
+  }
+  const t0 = Date.now();
+  let pdfResult;
+  try {
+    const ccKey =
+      (request.headers.get("X-CloudConvert-Key") || "").trim() ||
+      env2.CLOUDCONVERT_API_KEY;
+    pdfResult = await convertHtmlToPdf(html, ccKey, {
+      filename: payload.filename || "analysis"
+    });
+  } catch (e) {
+    console.error("[docx-worker] CloudConvert HTML->PDF conversion failed", e);
+    return json(
+      {
+        error: "pdf_conversion_failed",
+        message: String(e.message || e),
+        provider,
+        suggestion: "The PWA can fall back to client-side print (browser PDF). Check the worker logs for the upstream error."
+      },
+      502,
+      origin,
+      env2
+    );
+  }
+  const filename = sanitizeFilename(payload.filename || "analysis") + ".pdf";
+  console.log(
+    `[docx-worker] /generate-analysis-pdf ok: pdf ${pdfResult.durationMs}ms, total ${Date.now() - t0}ms, jobId=${pdfResult.jobId}`
+  );
+  const headers = {
+    ...corsHeaders(origin, env2),
+    "Content-Type": "application/pdf",
+    "Content-Disposition": `attachment; filename="${filename}"`,
+    "Content-Length": String(pdfResult.buffer.length),
+    "X-AntCV-Pdf-Provider": provider,
+    "X-AntCV-Pdf-JobId": pdfResult.jobId,
+    "X-AntCV-Pdf-Ms": String(pdfResult.durationMs),
+    "Access-Control-Expose-Headers": [
+      "X-AntCV-Pdf-Provider",
+      "X-AntCV-Pdf-JobId",
+      "X-AntCV-Pdf-Ms",
+      "Content-Disposition"
+    ].join(", ")
+  };
+  return new Response(pdfResult.buffer, { status: 200, headers });
+}
+__name(handleGenerateAnalysisPdf, "handleGenerateAnalysisPdf");
+async function handleDiagConvertDocx(request, origin, env2) {
+  // DIAG-CONVERT-DOCX-001 (2026-07-13, SINGLE-SLOT-LO-DROP-001 investigation): raw
+  // DOCX body -> PDF through the SAME CloudConvert pipeline /generate-pdf uses, so
+  // structural pagination fixes can be A/B-tested against the REAL converter. Local
+  // LibreOffice builds (version + font set differ) render the same docx losslessly
+  // and CANNOT reproduce converter-specific drops, which is why every "can't check
+  // the LibreOffice render headlessly" note in this file existed. Same gates as
+  // /generate-pdf: optional WORKER_SECRET, allowed-origin, BYOK key precedence.
+  if (env2.WORKER_SECRET) {
+    const presented = request.headers.get("X-AntCV-Secret") || "";
+    if (presented !== env2.WORKER_SECRET) {
+      return json({ error: "unauthorized" }, 401, origin, env2);
+    }
+  }
+  const provider = pdfProvider(env2);
+  if (!provider) {
+    return json({ error: "pdf_not_configured", provider: null }, 503, origin, env2);
+  }
+  const buf = new Uint8Array(await request.arrayBuffer());
+  const MAX_DOCX = 2 * 1024 * 1024;
+  if (!buf.length) return json({ error: "empty body" }, 400, origin, env2);
+  if (buf.length > MAX_DOCX) {
+    return json({ error: "docx too large", max_bytes: MAX_DOCX, received_bytes: buf.length }, 413, origin, env2);
+  }
+  if (!(buf[0] === 80 && buf[1] === 75)) {
+    return json({ error: "not a docx (zip) body" }, 400, origin, env2);
+  }
+  const ccKey = (request.headers.get("X-CloudConvert-Key") || "").trim() || env2.CLOUDCONVERT_API_KEY;
+  let pdfResult;
+  try {
+    pdfResult = await convertDocxToPdf(buf, ccKey, { filename: "diag" });
+  } catch (e) {
+    console.error("[docx-worker] diag convert failed", e);
+    return json({ error: "pdf_conversion_failed", message: String(e.message || e) }, 502, origin, env2);
+  }
+  return new Response(pdfResult.buffer, {
+    status: 200,
+    headers: {
+      ...corsHeaders(origin, env2),
+      "Content-Type": "application/pdf",
+      "Content-Disposition": 'attachment; filename="diag.pdf"',
+      "X-AntCV-Pdf-JobId": pdfResult.jobId
+    }
+  });
+}
+__name(handleDiagConvertDocx, "handleDiagConvertDocx");
 function isAnalyticsExportPath(pathname) {
   return [
     "/analytics/export",
@@ -28593,7 +29820,7 @@ function corsHeaders(origin, env2) {
   return {
     "Access-Control-Allow-Origin": allowed || "*",
     "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, X-AntCV-Secret",
+    "Access-Control-Allow-Headers": "Content-Type, X-AntCV-Secret, X-CloudConvert-Key",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin"
   };

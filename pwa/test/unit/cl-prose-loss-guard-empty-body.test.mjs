@@ -45,8 +45,8 @@ test('A — good prose is snapshotted', () => {
   setSections(store, [goodWho()]);
   api.snapshot();
   const snap = JSON.parse(store.get('antcv:clProseGuard'));
-  assert.ok(snap['Acme|PdM'] && snap['Acme|PdM'].who, 'who snapshot taken');
-  assert.match(snap['Acme|PdM'].who.items[0].t, /systems engineer/);
+  assert.ok(snap['Acme|PdM|en'] && snap['Acme|PdM|en'].who, 'who snapshot taken');
+  assert.match(snap['Acme|PdM|en'].who.items[0].t, /systems engineer/);
 });
 
 test('B — empty-body rich_block (label survives) is restored from snapshot', () => {

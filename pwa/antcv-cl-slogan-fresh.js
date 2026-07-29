@@ -38,7 +38,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.150-unsol-clear';
+  var VERSION = '1.51.1504-slogan-unsol-generic';
   if (window.__antcvClSloganFresh) return;
   window.__antcvClSloganFresh = VERSION;
 
@@ -67,7 +67,7 @@
 
   function isTargeted(m) {
     var c = String(m.company || '').trim();
-    return !!c && !/^unsolicited$/i.test(c) && !/^open application$/i.test(c);
+    return !!c && !(window.__ANTCV_UNSOL_RE || /^unsolicited$/i).test(c) && !/^open application$/i.test(c); // UNSOL-PILLAR-LANG-001: any language variant
   }
   function appKeyOf(m) { return String(m.company || '').trim() + '|' + String(m.role || m.position || '').trim(); }
   // A REAL fresh slogan: non-empty, not a bracketed template placeholder.
@@ -119,6 +119,87 @@
     return (s && sloganQualityOk(s, m)) ? s : '';
   }
 
+  // SLOGAN-LANG-GATE-001 (owner 2026-07-14): a sticky slogan OVERRIDE
+  // (antcv:clSlogan) in the WRONG LANGUAGE for the current ribbon must not win
+  // over the app's OWN current-language slogan — the BRANDED and NON-BRANDED
+  // exports (and both previews) must all ship the SAME, correct-language line.
+  // The gate returns FALSE for an override that carries strong markers of a
+  // language OTHER than the ribbon:
+  //   - SCRIPT mismatch: a Latin override on a zh/ja/ko/ar/he/ru/el/th/am ribbon,
+  //     or a dominantly non-Latin override on a Latin ribbon (generalises the
+  //     ad-hoc CL-SLOGAN-ZH-001 check to every non-Latin script).
+  //   - LATIN-vs-LATIN: the classic case the owner hit — a Danish standing line
+  //     ("JEG FORBINDER TEKNIK MED FORRETNING") on a Swedish/English app. Detected
+  //     via language-exclusive letters (æ/ø vs ä/ö) and first-person / function-word
+  //     markers, since Danish/Swedish/English share the Latin script.
+  // POSITIVE-EVIDENCE-ONLY: an override with no clear foreign markers ALWAYS passes,
+  // so a genuine user slogan is never blanked on a hunch — a keyword triad like
+  // "Processes • Products • People" has no function words -> ambiguous -> kept.
+  // Rejected -> the render/export fall through to the fresh generated slogan /
+  // specialization line, which babel-fish keeps in the ribbon language. Shared by
+  // both previews + docx-client export (preview == export). Kill:
+  // localStorage['antcv:disable-slogan-lang-gate']='1'.
+  var GATE_SCRIPTS = {
+    zh: /[一-鿿]/, ja: /[぀-ヿ一-鿿]/, ko: /[가-힯]/,
+    ar: /[؀-ۿ]/, fa: /[؀-ۿ]/, he: /[֐-׿]/,
+    ru: /[Ѐ-ӿ]/, el: /[Ͱ-Ͽ]/, th: /[฀-๿]/, am: /[ሀ-፿]/
+  };
+  var GATE_NONLATIN = /[一-鿿぀-ヿ가-힯؀-ۿ֐-׿Ѐ-ӿͰ-Ͽ฀-๿ሀ-፿]/g;
+  // family map so da/nb/no do not reject each other, and 2-letter ribbon codes fold.
+  var GATE_FAM = { da: 'dano', nb: 'dano', no: 'dano', is: 'dano', sv: 'sv', de: 'de', fi: 'fi', en: 'en', es: 'es', fr: 'fr', it: 'it', nl: 'nl', pt: 'pt' };
+  // first-person pronoun / unmistakable marker — a SINGLE hit from a different
+  // family rejects (these do not double as other-language words or common names).
+  var GATE_STRONG = { dano: ['jeg'], sv: ['jag'], de: ['ich'], fr: ['je'], it: ['io'], nl: ['ik'], es: ['soy', 'hago'], pt: ['sou', 'eu'] };
+  // ascii-only function words (diacritics are stripped before scan, so the
+  // special-letter detector carries the æ/ø/ä/ö cases separately).
+  var GATE_SIG = {
+    dano: ['jeg', 'og', 'med', 'til', 'af', 'som', 'ved', 'ikke', 'mine', 'vores', 'begge', 'eller', 'hvor', 'din', 'dit', 'forbinder'],
+    sv: ['jag', 'och', 'med', 'till', 'av', 'som', 'inte', 'mina', 'eller', 'din', 'ditt', 'jobbar'],
+    en: ['the', 'and', 'with', 'to', 'of', 'as', 'i', 'is', 'are', 'my', 'our', 'both', 'or', 'where', 'when', 'make', 'makes', 'build', 'connect', 'that', 'for', 'from', 'into', 'across', 'we'],
+    de: ['und', 'mit', 'ich', 'die', 'der', 'das', 'ist', 'nicht', 'auch', 'oder', 'wir', 'kann'],
+    es: ['y', 'con', 'para', 'que', 'el', 'la', 'los', 'las', 'soy', 'hago', 'como', 'donde', 'cuando', 'mi'],
+    fr: ['et', 'avec', 'pour', 'je', 'le', 'la', 'les', 'des', 'ne', 'pas', 'ou', 'que', 'mon', 'dans'],
+    it: ['con', 'per', 'io', 'il', 'la', 'che', 'non', 'sono', 'dove', 'quando'],
+    nl: ['met', 'voor', 'ik', 'de', 'het', 'niet', 'ook', 'dat', 'mijn'],
+    pt: ['com', 'para', 'que', 'sou', 'eu', 'meu', 'onde', 'quando', 'faco']
+  };
+  function sloganLangGateOk(text) {
+    var s = String(text == null ? '' : text);
+    if (!s.trim()) return true;
+    try { if (localStorage.getItem('antcv:disable-slogan-lang-gate') === '1') return true; } catch (_) {}
+    var L;
+    try { L = String(localStorage.getItem('language') || 'en').toLowerCase().replace(/[^a-z]/g, '').slice(0, 2) || 'en'; } catch (_) { L = 'en'; }
+    // --- script gate ---
+    if (GATE_SCRIPTS[L]) return GATE_SCRIPTS[L].test(s);              // ribbon needs its own script; missing -> reject
+    var nlat = (s.match(GATE_NONLATIN) || []).length;
+    if (nlat) { var lat = (s.match(/[A-Za-zÀ-ɏ]/g) || []).length; if (nlat > lat) return false; }  // dominantly non-Latin on a Latin ribbon
+    var famL = GATE_FAM[L] || L;
+    // --- language-exclusive letters ---
+    var hasDaNo = /[æøÆØ]/.test(s);              // æ ø -> Danish / Norwegian (/ Icelandic)
+    var hasSvDe = !hasDaNo && /[äöÄÖ]/.test(s);  // ä ö -> Swedish / German / Finnish / Estonian
+    if (hasDaNo && famL !== 'dano') return false;
+    if (hasSvDe && (famL === 'en' || famL === 'es' || famL === 'fr' || famL === 'it' || famL === 'dano' || famL === 'nl' || famL === 'pt')) return false;
+    // --- function-word scoring (ascii) ---
+    var lower = ' ' + s.toLowerCase().replace(/[^a-z\s]/g, ' ').replace(/\s+/g, ' ').trim() + ' ';
+    function has(w) { return lower.indexOf(' ' + w + ' ') !== -1; }
+    function score(list) { var n = 0; for (var i = 0; i < list.length; i++) { if (has(list[i])) n++; } return n; }
+    // strong pronoun markers from a DIFFERENT family -> reject on a single hit
+    for (var g in GATE_STRONG) {
+      if (!GATE_STRONG.hasOwnProperty(g) || g === famL) continue;
+      var arr = GATE_STRONG[g];
+      for (var i = 0; i < arr.length; i++) { if (has(arr[i])) return false; }
+    }
+    var ribbonScore = score(GATE_SIG[famL] || GATE_SIG.en || []);
+    var best = '', bestScore = 0;
+    for (var k in GATE_SIG) {
+      if (!GATE_SIG.hasOwnProperty(k)) continue;
+      var sc = score(GATE_SIG[k]);
+      if (sc > bestScore) { bestScore = sc; best = k; }
+    }
+    if (best && best !== famL && bestScore >= 2 && bestScore > ribbonScore) return false;
+    return true;
+  }
+
   function tick() {
     if (disabled()) return;
     try {
@@ -128,6 +209,26 @@
       var m = readMeta();
       var cur = appKeyOf(m);
       if (!isTargeted(m)) {
+        // SLOGAN-UNSOL-GENERIC-001 (owner 2026-07-15): an unsolicited application
+        // uses the GENERIC standing default, never a role-tailored slogan. An
+        // ALREADY-generated unsolicited app copied its gen cl_slogan into this
+        // override with ctx.app === cur, so the leak-from-another-app rule below
+        // does NOT catch it. Drop an override that merely equals the app's own
+        // generated slogan (meta.cl_slogan / meta.slogan) so ALREADY-generated
+        // apps yield to the generic without a regen; a genuinely USER-EDITED
+        // override (differs from the gen slogan) is kept. Kill:
+        // antcv:disable-slogan-unsol-generic.
+        try {
+          if (S && localStorage.getItem('antcv:disable-slogan-unsol-generic') !== '1') {
+            var __gen = normPhrase(m.cl_slogan || m.slogan || '');
+            if (__gen && normPhrase(S) === __gen) {
+              dropOverride(); dropCtx();
+              try { console.log('[slogan-fresh] unsolicited app yields its generated slogan to the generic standing default (SLOGAN-UNSOL-GENERIC-001)'); } catch (_) {}
+              try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: 'slogan-fresh' } })); } catch (_) {}
+              return;
+            }
+          }
+        } catch (_) {}
         // SLOGAN-UNSOL-CLEAR-001 (owner 2026-07-05: "a slogan has stuck over an
         // unsolicited application"): an unsolicited CL carries NO JD-specific slogan.
         // If the current slogan was adopted by slogan-fresh for a DIFFERENT (targeted)
@@ -192,5 +293,9 @@
   // Shared quality check — the preview fallbacks and the export chain consult
   // the SAME gate so a low-quality cl_slogan renders NOWHERE.
   window.__antcvSloganQualityOk = sloganQualityOk;
-  window.AntcvClSloganFresh = { version: VERSION, _tick: tick, _isTargeted: isTargeted, _realSubtitle: realSubtitle, _appKeyOf: appKeyOf, _qualityOk: sloganQualityOk };
+  // SLOGAN-LANG-GATE-001: shared wrong-language gate — both previews + the
+  // docx-client export reject a stale other-language OVERRIDE through this ONE
+  // function so branded == non-branded and the app's own current-language slogan wins.
+  window.__antcvSloganLangGate = sloganLangGateOk;
+  window.AntcvClSloganFresh = { version: VERSION, _tick: tick, _isTargeted: isTargeted, _realSubtitle: realSubtitle, _appKeyOf: appKeyOf, _qualityOk: sloganQualityOk, _langGateOk: sloganLangGateOk };
 })();

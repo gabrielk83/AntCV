@@ -52,7 +52,7 @@ test('snapshot() DOES capture for a real targeted company', () => {
   const G = load(backing);
   G.snapshot();
   const store = JSON.parse(backing.get('antcv:clProseGuard') || '{}');
-  assert.ok(store['Terma A/S|Senior Engineer'], 'targeted bucket captured');
+  assert.ok(store['Terma A/S|Senior Engineer|en'], 'targeted bucket captured (language-keyed: LANG-GUARD-KEY-001)');
 });
 
 test('reapply() does NOT inject a poisoned bucket into an unsolicited app', () => {
@@ -73,7 +73,7 @@ test('reapply() still heals a placeholder for a real targeted app', () => {
   const backing = new Map();
   backing.set('meta', JSON.stringify({ company: 'Terma A/S', role: 'Senior Engineer' }));
   backing.set('antcv:clProseGuard', JSON.stringify({
-    'Terma A/S|Senior Engineer': { opening: realSection },
+    'Terma A/S|Senior Engineer|en': { opening: realSection },  // language-keyed: LANG-GUARD-KEY-001
   }));
   backing.set('sections', JSON.stringify({ cv: [], cl: [placeholderSection] }));
   const G = load(backing);

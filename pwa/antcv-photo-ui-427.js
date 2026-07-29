@@ -22,7 +22,7 @@
 (function () {
   'use strict';
 
-  var SUITE_VERSION = '1.50.647';
+  var SUITE_VERSION = '1.51.942-photo-flip-vision';
   if (window.__antcvPhotoUI427 === SUITE_VERSION) return;
   window.__antcvPhotoUI427 = SUITE_VERSION;
 
@@ -869,15 +869,593 @@
   })();
 
   /* ========================================================================
+   * MODULE D — photo horizontal flip (off / on / auto).  PHOTO-FLIP-001
+   * (owner 2026-07-14). Adds a 3-state Flip control INSIDE the collapsible
+   * PROFILE PHOTO panel, mirrors the preview photo via CSS scaleX(-1), and
+   * for AUTO faces the subject INTO the content using an orientation detected
+   * ONCE at photo upload and stored in personalInfo.stylePrefs (travels with
+   * the photo via the normal personalInfo cloud sync; self-heals by re-
+   * detecting when the stored signature no longer matches the current photo).
+   *   - off  : no flip
+   *   - on   : mirror the photo horizontally
+   *   - auto : flip only when the detected facing points AWAY from the content
+   *            (toward the near page edge). The content side is derived from
+   *            photoPosition + sidebarPosition, so it self-corrects when the
+   *            sidebar swaps sides or the position button is left at default.
+   * Export parity lives in antcv-docx-client.js, which mirrors the exported
+   * PNG when the SAME resolveFlipH() rule is true (exposed on window below).
+   * Follows the MODULE B (Pentagon) pattern: settings-row injection +
+   * preview-<img> restyle + personalInfo.stylePrefs persistence + a
+   * sections-updated nudge, all write-on-change to respect
+   * SETTINGS-SWEEP-STABILIZE.
+   * ===================================================================== */
+  var Flip = (function () {
+    var MODES = ['off', 'on', 'auto'];
+    var DEFAULT_MODE = 'off';
+    var UI_ATTR = 'data-antcv-photo-flip-ctrl';
+    var FLIP_TX = 'scaleX(-1)';
+
+    // STANDALONE keys — NOT personalInfo.stylePrefs. The Layout "Reset all"
+    // button and cloud-restore-on-export both wipe stylePrefs
+    // ([[sidecar-prefs-clobber-hazard]]), which was erasing the user's Flip
+    // pick and detected orientation the moment they pressed Reset. Standalone
+    // keys survive both, exactly like the CL slogan/signature keys.
+    var K_FLIP = 'antcv:photoFlip', K_FACE = 'antcv:photoFacing', K_SIG = 'antcv:photoFacingSig';
+    var K_VER = 'antcv:photoFacingVer';
+    // Bump when the DETECTOR changes. maybeDetect re-runs whenever the stored
+    // result was produced by an older detector — so shipping a better model /
+    // heuristic auto-heals every stale (esp. 'unknown') result WITHOUT the user
+    // having to re-upload. Without this, a photo whose signature was cached as
+    // 'unknown' by an older build is never re-analysed by the new one.
+    var DET_VER = 'm4';
+    function readPI() {
+      try { return JSON.parse(localStorage.getItem('personalInfo') || '{}') || {}; }
+      catch (_) { return {}; }
+    }
+    function lsGet(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
+    function lsSet(k, v) { try { localStorage.setItem(k, String(v)); } catch (_) {} }
+    function readMode() {
+      var v = String(lsGet(K_FLIP) || '').trim().toLowerCase();
+      return MODES.indexOf(v) >= 0 ? v : DEFAULT_MODE;
+    }
+    function writeMode(mode) {
+      lsSet(K_FLIP, mode);
+      // Nudge the app to re-read sections so the preview repaints (the native
+      // photo render doesn't observe this key). Content sidecars fast-bail.
+      try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: 'photo-flip' } })); } catch (_) {}
+    }
+    function readFacing() {
+      var v = String(lsGet(K_FACE) || '').trim().toLowerCase();
+      return (v === 'left' || v === 'right' || v === 'center') ? v : 'unknown';
+    }
+    function writeFacing(facing, sig) {
+      lsSet(K_FACE, facing);
+      lsSet(K_SIG, sig);
+      lsSet(K_VER, DET_VER);
+    }
+
+    // ── content-side (which way the subject should look) ───────────────────
+    function readLS(key, dflt) {
+      try {
+        var raw = localStorage.getItem(key);
+        if (raw == null || raw === '') return dflt;
+        var v = raw; try { var p = JSON.parse(raw); if (typeof p === 'string') v = p; } catch (_) {}
+        return String(v).trim().toLowerCase();
+      } catch (_) { return dflt; }
+    }
+    function desiredFacing() {
+      var pos = readLS('photoPosition', '');
+      if (pos.indexOf('right') >= 0) return 'left';   // header/main-right → content is left
+      if (pos.indexOf('left') >= 0) return 'right';   // header/main-left  → content is right
+      // sidebar-top/bottom, band-overlap, bridge-*, hidden, unset → photo in sidebar.
+      return readLS('sidebarPosition', 'left') === 'right' ? 'left' : 'right';
+    }
+    function resolveFlipH() {
+      var mode = readMode();
+      if (mode === 'on') return true;
+      if (mode !== 'auto') return false;
+      var f = readFacing();
+      if (f !== 'left' && f !== 'right') return false; // center / unknown → leave as-is
+      return f !== desiredFacing();
+    }
+    // Single source of truth shared with the export sidecar (docx-client).
+    try { window.__antcvResolvePhotoFlipH = resolveFlipH; } catch (_) {}
+
+    // ── facing detection (runs once per photo, at/after upload) ─────────────
+    function photoSig(dataUrl) {
+      if (!dataUrl) return '';
+      return dataUrl.length + ':' + dataUrl.slice(-24);
+    }
+    function classify(bbox, pt) {
+      // When the head turns toward image-left the nose/eye-midpoint sits well
+      // LEFT of the face-box centre (the far cheek widens the box rightward).
+      var cx = bbox.x + bbox.width / 2;
+      var d = (pt.x - cx) / (bbox.width || 1);
+      if (d < -0.12) return 'left';
+      if (d > 0.12) return 'right';
+      return 'center';
+    }
+    function heuristicFacing(img) {
+      // Fallback when the Shape Detection API is absent (usual case on desktop).
+      // Locate the FACE (skin-tone region), then find where the dark facial
+      // features (eyes/brows/nose/mouth) sit relative to the head centre: a
+      // turned head shifts them toward the side it faces, while the far cheek
+      // shows more bare skin. Background is excluded by only sampling inside the
+      // skin bounding box, so a dark studio backdrop doesn't fool it.
+      try {
+        var W = 96, H = 96;
+        var c = document.createElement('canvas'); c.width = W; c.height = H;
+        var ctx = c.getContext('2d'); if (!ctx) return 'unknown';
+        ctx.drawImage(img, 0, 0, W, H);
+        var d;
+        try { d = ctx.getImageData(0, 0, W, H).data; } catch (_) { return 'unknown'; }
+        function skin(i) {
+          var r = d[i], g = d[i + 1], b = d[i + 2];
+          // Loosened so cooler / studio-lit skin tones still register (the strict
+          // r>=g>=b ordering missed some faces -> 'unknown').
+          return r > 50 && g > 30 && b > 15 && r > b && (r - g) > -8 &&
+            (r - b) > 8 && (Math.max(r, g, b) - Math.min(r, g, b)) > 8;
+        }
+        function lum(i) { return 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; }
+        // 1) skin mask -> head bounding box (5th..95th pct = robust to strays).
+        var xs = [], ys = [], sumX = 0, n = 0;
+        for (var y = 0; y < H; y++) {
+          for (var x = 0; x < W; x++) {
+            var i = (y * W + x) * 4;
+            if (skin(i)) { xs.push(x); ys.push(y); sumX += x; n++; }
+          }
+        }
+        if (n < 40) return 'unknown';
+        xs.sort(function (a, b) { return a - b; });
+        ys.sort(function (a, b) { return a - b; });
+        var bx0 = xs[Math.floor(n * 0.05)], bx1 = xs[Math.floor(n * 0.95)];
+        var by0 = ys[Math.floor(n * 0.05)], by1 = ys[Math.floor(n * 0.95)];
+        var bw = Math.max(1, bx1 - bx0), bh = Math.max(1, by1 - by0);
+        var headCx = sumX / n; // skin centroid ~ head centre
+        // 2) dark-feature centroid INSIDE the head box (upper 3/4, skip chin).
+        var fy0 = Math.round(by0 + bh * 0.10), fy1 = Math.round(by0 + bh * 0.75);
+        var lums = [];
+        for (var y = fy0; y < fy1; y++) {
+          for (var x = bx0; x <= bx1; x++) lums.push(lum((y * W + x) * 4));
+        }
+        if (!lums.length) return 'unknown';
+        lums.sort(function (a, b) { return a - b; });
+        var dk = lums[Math.floor(lums.length * 0.22)]; // darkest ~quartile = features
+        var fSumX = 0, fW = 0;
+        for (var y = fy0; y < fy1; y++) {
+          for (var x = bx0; x <= bx1; x++) {
+            var L = lum((y * W + x) * 4);
+            if (L < dk) { var w = dk - L; fSumX += x * w; fW += w; }
+          }
+        }
+        if (fW > 0) {
+          var off = (fSumX / fW - headCx) / bw; // normalised feature offset
+          if (off < -0.02) return 'left';
+          if (off > 0.02) return 'right';
+        }
+        // 3) near-frontal tie-break: the FAR cheek shows more skin, so heavier
+        //    skin mass sits OPPOSITE the facing direction (split at box centre).
+        var gmid = (bx0 + bx1) / 2, lSkin = 0, rSkin = 0;
+        for (var k = 0; k < xs.length; k++) { if (xs[k] < gmid) lSkin++; else rSkin++; }
+        var soff = (rSkin - lSkin) / n;
+        if (soff > 0.04) return 'left';   // more skin on the right -> faces left
+        if (soff < -0.04) return 'right';
+        return 'center';
+      } catch (_) { return 'unknown'; }
+    }
+    // ── real face model (BlazeFace via TensorFlow.js) ──────────────────────
+    // Lazy-loaded from a CDN the SAME way the app already loads PDF.js / Mammoth
+    // / JSZip (no CSP here), then runtime-cached by the service worker so a
+    // second detection is offline-capable. Loaded ONLY when a photo needs
+    // detection (owner's "detect once at upload"), never at boot. Weights come
+    // from the package's default host; if any step fails we fall back to the
+    // canvas heuristic, so AUTO never breaks.
+    var _blazeP = null;
+    function loadScript(url) {
+      return new Promise(function (res, rej) {
+        var s = document.createElement('script');
+        s.src = url; s.async = true;
+        s.onload = function () { res(); };
+        s.onerror = function () { rej(new Error('load ' + url)); };
+        (document.head || document.documentElement).appendChild(s);
+      });
+    }
+    function loadBlaze() {
+      if (_blazeP) return _blazeP;
+      var TF = ['https://unpkg.com/@tensorflow/tfjs@4.11.0/dist/tf.min.js',
+                'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0/dist/tf.min.js'];
+      // NB: the package's unpkg/jsdelivr field points at a non-existent
+      // dist/blazeface.min.js; the real UMD bundle is dist/blazeface.min.umd.js.
+      var BF = ['https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@0.1.0/dist/blazeface.min.umd.js',
+                'https://unpkg.com/@tensorflow-models/blazeface@0.1.0/dist/blazeface.min.umd.js'];
+      _blazeP = (window.tf ? Promise.resolve() : loadScript(TF[0]).catch(function () { return loadScript(TF[1]); }))
+        .then(function () { return window.blazeface ? null : loadScript(BF[0]).catch(function () { return loadScript(BF[1]); }); })
+        .then(function () { if (!window.blazeface) throw new Error('blazeface missing'); return window.blazeface.load(); })
+        .catch(function (e) { _blazeP = null; throw e; }); // allow a later retry
+      return _blazeP;
+    }
+    // Facing from BlazeFace's 6 landmarks: [rightEye,leftEye,noseTip,mouth,
+    // rightEar,leftEar] (subject's own left/right). A yawed head shifts the nose
+    // tip toward the side it faces, measured against the eye-midpoint and, as a
+    // tie-break, the ear-midpoint — normalised so it's scale-independent.
+    function facingFromLandmarks(lm) {
+      if (!lm || lm.length < 6) return 'unknown';
+      var rEye = lm[0], lEye = lm[1], nose = lm[2], rEar = lm[4], lEar = lm[5];
+      var eyeMid = (rEye[0] + lEye[0]) / 2;
+      var interEye = Math.abs(lEye[0] - rEye[0]) || 1;
+      var noseOff = (nose[0] - eyeMid) / interEye; // <0: nose left of eyes -> faces image-left
+      // Decisive thresholds: the owner prefers a call over "unclear", and a
+      // slight head turn should register (a wrong call is harmless — Off/On
+      // override). ~6% of inter-eye distance ≈ a small yaw.
+      if (noseOff < -0.06) return 'left';
+      if (noseOff > 0.06) return 'right';
+      var earMid = (rEar[0] + lEar[0]) / 2;
+      var earSpan = Math.abs(lEar[0] - rEar[0]) || 1;
+      var earOff = (nose[0] - earMid) / earSpan;
+      if (earOff < -0.03) return 'left';
+      if (earOff > 0.03) return 'right';
+      return 'center';
+    }
+    function detectViaModel(img) {
+      return loadBlaze().then(function (model) {
+        return model.estimateFaces(img, false).then(function (faces) {
+          if (!faces || !faces.length) return 'unknown';
+          var f = faces[0], bestA = -1;
+          for (var i = 0; i < faces.length; i++) {
+            var tl = faces[i].topLeft, br = faces[i].bottomRight;
+            var a = (br[0] - tl[0]) * (br[1] - tl[1]);
+            if (a > bestA) { bestA = a; f = faces[i]; }
+          }
+          return facingFromLandmarks(f.landmarks);
+        });
+      });
+    }
+
+    // ── gated vision fallback (Mistral Pixtral via the proxy) ──────────────
+    // BlazeFace reads HEAD yaw only; for a near-frontal head with an angled
+    // torso it returns center/unknown. ONLY THEN do we spend a vision call:
+    // POST the photo to /api/photo-orientation (proxy + demo-proxy) which asks
+    // Mistral which way the person is oriented (head + shoulders). Runs once per
+    // photo at detection time — never per render/export. Any failure → null.
+    function readProxyUrl() {
+      try {
+        var v = JSON.parse(localStorage.getItem('proxyUrl') || '""') || '';
+        v = String(v || '').replace(/\/+$/, '');
+        if (!v && typeof window.ANTCV_RELAY_URL === 'string') v = String(window.ANTCV_RELAY_URL).replace(/\/+$/, '');
+        return v;
+      } catch (_) { return ''; }
+    }
+    function orientationViaProxy(dataUrl) {
+      return new Promise(function (resolve) {
+        try {
+          var proxy = readProxyUrl();
+          var m = /^data:(image\/[a-z.+-]+);base64,(.*)$/i.exec(dataUrl || '');
+          if (!proxy || !m) return resolve(null);
+          var ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
+          var to = setTimeout(function () { try { ctrl && ctrl.abort(); } catch (_) {} resolve(null); }, 12000);
+          fetch(proxy + '/api/photo-orientation', {
+            method: 'POST', credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image_base64: m[2], media_type: m[1] }),
+            signal: ctrl ? ctrl.signal : undefined,
+          }).then(function (r) { return r.json().catch(function () { return null; }); })
+            .then(function (j) {
+              clearTimeout(to);
+              var f = j && j.ok && String(j.facing || '').toLowerCase();
+              resolve((f === 'left' || f === 'right' || f === 'center') ? f : null);
+            }).catch(function () { clearTimeout(to); resolve(null); });
+        } catch (_) { resolve(null); }
+      });
+    }
+    function detectFacing(dataUrl) {
+      return new Promise(function (resolve) {
+        var done = false, theImg = null;
+        function finish(v) { if (!done) { done = true; resolve(v); } }
+        // Hard cap: model load + the vision round-trip can hit the network; if
+        // it stalls, fall back to the heuristic rather than block AUTO forever.
+        setTimeout(function () { finish(theImg ? heuristicFacing(theImg) : 'unknown'); }, 16000);
+        // local → (if unclear) vision fallback → center/unknown.
+        function localUnclear(m, h) {
+          orientationViaProxy(dataUrl).then(function (v) {
+            if (v === 'left' || v === 'right' || v === 'center') { finish(v); return; }
+            finish(m === 'center' || h === 'center' ? 'center' : 'unknown');
+          });
+        }
+        try {
+          var img = new Image();
+          theImg = img;
+          img.onload = function () {
+            detectViaModel(img).then(function (m) {
+              // Model head-yaw wins when clear; else the heuristic's body /
+              // shoulder cue; else the gated vision fallback; else center/unknown.
+              if (m === 'left' || m === 'right') { finish(m); return; }
+              var h = heuristicFacing(img);
+              if (h === 'left' || h === 'right') { finish(h); return; }
+              localUnclear(m, h);
+            }).catch(function () {
+              var h = heuristicFacing(img);
+              if (h === 'left' || h === 'right') { finish(h); return; }
+              localUnclear('unknown', h);
+            });
+          };
+          img.onerror = function () { finish('unknown'); };
+          img.src = dataUrl;
+        } catch (_) { finish('unknown'); }
+      });
+    }
+    var detecting = false;
+    // Detection runs when the stored result is for a DIFFERENT photo (sig) OR
+    // was produced by an OLDER detector (ver) — the latter auto-heals stale
+    // 'unknown' results from earlier builds. `force` (Auto click) re-runs even
+    // when the current detector already attempted this photo.
+    function runDetect(force) {
+      var pi = readPI();
+      var photo = (pi && typeof pi.photo === 'string') ? pi.photo : '';
+      if (!photo || detecting) return;
+      var sig = photoSig(photo);
+      if (!force && lsGet(K_SIG) === sig && lsGet(K_VER) === DET_VER) return; // already attempted with this detector
+      detecting = true;
+      var ui0 = document.querySelector('[' + UI_ATTR + '="1"]');
+      if (ui0) refreshUI(ui0); // show "detecting…" while it runs
+      detectFacing(photo).then(function (facing) {
+        detecting = false;
+        writeFacing(facing, sig);
+        applyPreview();
+        try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: 'photo-facing' } })); } catch (_) {}
+        var ui = document.querySelector('[' + UI_ATTR + '="1"]');
+        if (ui) refreshUI(ui);
+      });
+    }
+    function maybeDetect() { runDetect(false); }
+    function forceDetect() { runDetect(true); }
+
+    // ── preview apply (mirror the rendered <img>) ──────────────────────────
+    function previewPhotos() {
+      var out = [], seen = [];
+      function add(img) { if (img && seen.indexOf(img) < 0) { seen.push(img); out.push(img); } }
+      var papers = document.querySelectorAll('.antcv-preview-paper');
+      for (var i = 0; i < papers.length; i++) {
+        var imgs = papers[i].querySelectorAll('img');
+        for (var j = 0; j < imgs.length; j++) {
+          var img = imgs[j], st = img.getAttribute('style') || '';
+          if (st.indexOf('border-radius') >= 0
+            || img.getAttribute('data-antcv-photo-clone') === '1'
+            || img.getAttribute('data-antcv-repeat-photo') === '1') add(img);
+        }
+      }
+      // The upload-menu / Layout control avatar ("the facepic in the blue
+      // screen") is the photo-library carousel <img> — flip it by CLASS. Its
+      // src is the library's own copy (not necessarily byte-identical to
+      // personalInfo.photo), which is why an src match alone missed it. This is
+      // what lets the user SEE what On does while they're in the upload menu.
+      var carousels = document.querySelectorAll('.antcv-carousel-pic');
+      for (var c = 0; c < carousels.length; c++) add(carousels[c]);
+      // Belt-and-braces: any other on-screen copy of the profile photo by src.
+      try {
+        var pi = readPI();
+        var photo = (pi && typeof pi.photo === 'string') ? pi.photo : '';
+        if (photo && photo.length > 32) {
+          var all = document.querySelectorAll('img');
+          for (var k = 0; k < all.length; k++) {
+            if (all[k].getAttribute('src') === photo || all[k].src === photo) add(all[k]);
+          }
+        }
+      } catch (_) {}
+      return out;
+    }
+    function applyPreview() {
+      var want = resolveFlipH();
+      var imgs = previewPhotos();
+      for (var i = 0; i < imgs.length; i++) {
+        var img = imgs[i], on = img.getAttribute('data-antcv-photo-flip') === '1';
+        if (want && !on) {
+          // Pentagon uses filter/clip-path (not transform), so this composes.
+          img.style.setProperty('transform', FLIP_TX, 'important');
+          img.style.setProperty('transform-origin', 'center', 'important');
+          img.setAttribute('data-antcv-photo-flip', '1');
+        } else if (!want && on) {
+          img.style.removeProperty('transform');
+          img.style.removeProperty('transform-origin');
+          img.removeAttribute('data-antcv-photo-flip');
+        }
+      }
+    }
+
+    // ── settings UI (segmented Off / On / Auto) ────────────────────────────
+    function styleSeg(btn, active) {
+      btn.style.cssText = [
+        'padding:4px 12px',
+        'background:' + (active ? 'rgba(1,183,187,.1)' : 'rgba(255,255,255,.04)'),
+        'color:' + (active ? '#01B7BB' : '#d7e6ee'),
+        'border:1px solid ' + (active ? '#01B7BB' : 'rgba(255,255,255,.18)'),
+        'border-radius:6px', 'cursor:pointer', 'font-family:inherit',
+        'font-size:11px', 'font-weight:600', 'white-space:nowrap',
+      ].join(';');
+    }
+    function refreshUI(wrap) {
+      var mode = readMode();
+      var btns = wrap.querySelectorAll('button[data-mode]');
+      for (var i = 0; i < btns.length; i++) {
+        var active = btns[i].getAttribute('data-mode') === mode;
+        // write-on-change (SETTINGS-SWEEP-STABILIZE): only restyle on transition.
+        if ((btns[i].getAttribute('data-active') === '1') !== active || !btns[i].getAttribute('data-styled')) {
+          styleSeg(btns[i], active);
+          btns[i].setAttribute('data-active', active ? '1' : '0');
+          btns[i].setAttribute('data-styled', '1');
+        }
+      }
+      var hint = wrap.querySelector('[data-antcv-flip-hint]');
+      if (hint) {
+        var text = '', disp = 'none';
+        if (mode === 'auto') {
+          if (detecting) {
+            text = 'Auto: detecting orientation…';
+          } else {
+            var f = readFacing();
+            if (f === 'left' || f === 'right') {
+              text = 'Auto: subject faces ' + f + ' — ' + (resolveFlipH() ? 'flipped to face the content.' : 'already faces the content.');
+            } else if (f === 'center') {
+              text = 'Auto: subject looks front-facing — no flip needed.';
+            } else {
+              text = 'Auto: orientation unclear — no flip. Use On to mirror.';
+            }
+          }
+          disp = '';
+        }
+        if (hint.textContent !== text) hint.textContent = text;
+        if (hint.style.display !== disp) hint.style.display = disp;
+      }
+    }
+    function buildControl() {
+      var wrap = document.createElement('div');
+      wrap.setAttribute(UI_ATTR, '1');
+      wrap.style.marginTop = '10px';
+      var lbl = document.createElement('div');
+      lbl.textContent = 'Flip photo';
+      lbl.style.cssText = 'font-size:10px;letter-spacing:.4px;text-transform:uppercase;opacity:.7;color:#d7e6ee;margin-bottom:5px;';
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
+      var LABELS = { off: 'Off', on: 'On', auto: 'Auto' };
+      var TITLES = {
+        off: 'No flip — the photo is used as uploaded.',
+        on: 'Mirror the photo horizontally.',
+        auto: 'Face the subject into the content, using the orientation detected at upload. Adapts when the sidebar swaps sides or the photo position changes.',
+      };
+      MODES.forEach(function (m) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.setAttribute('data-mode', m);
+        b.textContent = LABELS[m];
+        b.title = TITLES[m];
+        b.addEventListener('click', function (e) {
+          e.preventDefault(); e.stopPropagation();
+          writeMode(m);
+          applyPreview();
+          refreshUI(wrap);
+          // Picking Auto forces a fresh detection now (don't wait for a re-
+          // upload) — and if orientation is still unclear, re-runs the model.
+          if (m === 'auto') forceDetect();
+        });
+        row.appendChild(b);
+      });
+      var hint = document.createElement('div');
+      hint.setAttribute('data-antcv-flip-hint', '1');
+      hint.style.cssText = 'font-size:10px;line-height:1.35;opacity:.6;color:#d7e6ee;margin-top:5px;display:none;';
+      wrap.appendChild(lbl); wrap.appendChild(row); wrap.appendChild(hint);
+      return wrap;
+    }
+    var POS_FRAGMENTS = ['sidebar top', 'sidebar btm', 'sidebar bottom', 'header left',
+      'header right', 'main left', 'main right', 'hidden', 'band', 'bridge'];
+    function looksLikePosBtn(txt) {
+      var t = String(txt || '').toLowerCase();
+      for (var i = 0; i < POS_FRAGMENTS.length; i++) if (t.indexOf(POS_FRAGMENTS[i]) >= 0) return true;
+      return false;
+    }
+    function findPhotoSection() {
+      // Anchor to the control body via its POSITION button ROW (the
+      // Sidebar-top / Hidden / Header-left … buttons that always exist in the
+      // PROFILE PHOTO control). Its PARENT is the control body = the collapse
+      // sidecar's ctrl. CRITICAL: this never touches the label. The old anchors
+      // keyed off the label's text; when our control's text (or the bridge
+      // button) landed in/near the label, the label exceeded the collapse
+      // sidecar's 40-char cap, so it stopped recognising the control and the
+      // whole panel — flip control included — vanished (owner's report).
+      try {
+        var btns = document.querySelectorAll('button');
+        var rows = [];
+        for (var i = 0; i < btns.length; i++) {
+          if (!looksLikePosBtn(btns[i].textContent)) continue;
+          var p = btns[i].parentElement;
+          if (!p) continue;
+          var hit = null;
+          for (var j = 0; j < rows.length; j++) if (rows[j].el === p) { hit = rows[j]; break; }
+          if (hit) hit.n++; else rows.push({ el: p, n: 1 });
+        }
+        var best = null;
+        for (var k = 0; k < rows.length; k++) if (!best || rows[k].n > best.n) best = rows[k];
+        if (best && best.n >= 2 && best.el.parentElement) return best.el.parentElement;
+      } catch (_) {}
+      // Fallbacks: the collapse sidecar's stamp, then the labelled control.
+      try { var c = document.querySelector('[data-antcv-photo-collapse="1"]'); if (c) return c; } catch (_) {}
+      try {
+        var els = document.querySelectorAll('div, section, aside');
+        for (var m = 0; m < els.length; m++) {
+          var fc = els[m].firstElementChild;
+          if (!fc) continue;
+          var t = (fc.textContent || '').trim();
+          // Case-SENSITIVE 'PROFILE PHOTO' — the Layout position control uses
+          // all-caps; the separate upload block is title-case 'Profile Photo'
+          // and must NOT match (that's where the control wrongly attached).
+          if (t.length < 40 && /^[▸▾\s]*PROFILE PHOTO\s*$/.test(t)) return els[m];
+        }
+      } catch (_) {}
+      return null;
+    }
+    function ensureUI() {
+      var section = findPhotoSection();
+      if (!section) return; // control area not present yet; heal on a later tick
+      // Dedup any leaked copies, keep one, and RELOCATE it into the correct
+      // control (self-heals a copy that drifted into the wrong container).
+      var all = document.querySelectorAll('[' + UI_ATTR + '="1"]');
+      var keep = null;
+      for (var i = 0; i < all.length; i++) {
+        if (!keep) keep = all[i];
+        else { try { all[i].parentElement && all[i].parentElement.removeChild(all[i]); } catch (_) {} }
+      }
+      if (keep) {
+        if (keep.parentElement !== section) { try { section.appendChild(keep); } catch (_) {} }
+        refreshUI(keep);
+        return;
+      }
+      var ctrl = buildControl();
+      section.appendChild(ctrl);
+      refreshUI(ctrl);
+    }
+
+    function boot() {
+      window.addEventListener('storage', function (ev) {
+        if (!ev || ev.key === 'personalInfo' || ev.key === 'photoPosition' || ev.key === 'sidebarPosition' || ev.key === null) applyPreview();
+      });
+      // photoPosition / sidebar swaps change the AUTO target; re-apply post-click.
+      document.addEventListener('click', function () { setTimeout(applyPreview, 60); }, true);
+    }
+
+    window.AntcvPhotoFlip = {
+      version: '1.51.942',
+      MODES: MODES.slice(),
+      _readMode: readMode,
+      _readFacing: readFacing,
+      _desiredFacing: desiredFacing,
+      _resolveFlipH: resolveFlipH,
+      _detectFacing: detectFacing,
+      _detectViaModel: detectViaModel,
+      _facingFromLandmarks: facingFromLandmarks,
+      _loadBlaze: loadBlaze,
+      _heuristicFacing: heuristicFacing,
+      _applyPreview: applyPreview,
+    };
+
+    return {
+      boot: boot,
+      tick: function () {
+        try { ensureUI(); } catch (_) {}
+        try { maybeDetect(); } catch (_) {}
+        try { applyPreview(); } catch (_) {}
+      },
+    };
+  })();
+
+  /* ========================================================================
    * Shared boot: register ticks, install the ONE MutationObserver, run each
    * module's non-observer wiring + initial pass.
    * ===================================================================== */
-  ticks.push(PhotoPosition.tick, Pentagon.tick, Bridge.tick);
+  ticks.push(PhotoPosition.tick, Pentagon.tick, Bridge.tick, Flip.tick);
 
   function boot() {
     try { PhotoPosition.boot(); } catch (_) {}
     try { Pentagon.boot(); } catch (_) {}
     try { Bridge.boot(); } catch (_) {}
+    try { Flip.boot(); } catch (_) {}
     try {
       new MutationObserver(scheduleAll).observe(document.body || document.documentElement,
         { childList: true, subtree: true });
@@ -891,5 +1469,5 @@
     boot();
   }
 
-  try { console.debug('[photo-ui-427] installed v' + SUITE_VERSION + ' (position+pentagon+bridge)'); } catch (_) {}
+  try { console.debug('[photo-ui-427] installed v' + SUITE_VERSION + ' (position+pentagon+bridge+flip)'); } catch (_) {}
 })();

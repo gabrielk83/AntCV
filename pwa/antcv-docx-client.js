@@ -229,6 +229,71 @@ function packageDefaultPhotoPosition() {
   } catch (_) { return 'sidebar-top'; }
 }
 
+// PHOTO-FLIP-001 (owner 2026-07-14): mirror the exported photo horizontally
+// when the Flip control (off / on / auto) calls for it, so the DOCX/PDF matches
+// the live preview's scaleX(-1). The effective decision is OWNED by the preview
+// sidecar (antcv-photo-ui-427 MODULE D) and exposed as window.__antcvResolvePhotoFlipH;
+// we use it when present and replicate the same pure rule as a fallback so the
+// export is correct even if that sidecar hasn't booted yet.
+export function resolveExportFlipH() {
+  try {
+    if (typeof window !== 'undefined' && typeof window.__antcvResolvePhotoFlipH === 'function') {
+      return !!window.__antcvResolvePhotoFlipH();
+    }
+  } catch (_) { /* fall through to the local rule */ }
+  try {
+    if (typeof localStorage === 'undefined') return false;
+    const readLS = (key, dflt) => {
+      try {
+        const raw = localStorage.getItem(key);
+        if (raw == null || raw === '') return dflt;
+        let v = raw; try { const p = JSON.parse(raw); if (typeof p === 'string') v = p; } catch (_) {}
+        return String(v).trim().toLowerCase();
+      } catch (_) { return dflt; }
+    };
+    // PHOTO-FLIP-001 stores mode + detected facing in STANDALONE keys (they
+    // survive Reset-all / cloud-restore), not personalInfo.stylePrefs.
+    const mode = readLS('antcv:photoFlip', 'off');
+    if (mode === 'on') return true;
+    if (mode !== 'auto') return false;
+    const facing = readLS('antcv:photoFacing', 'unknown');
+    if (facing !== 'left' && facing !== 'right') return false;
+    const pos = readLS('photoPosition', '');
+    let desired;
+    if (pos.indexOf('right') >= 0) desired = 'left';
+    else if (pos.indexOf('left') >= 0) desired = 'right';
+    else desired = readLS('sidebarPosition', 'left') === 'right' ? 'left' : 'right';
+    return facing !== desired;
+  } catch (_) { return false; }
+}
+
+// Mirror a photo data URL horizontally via canvas. Resolves to a NEW data URL,
+// or the ORIGINAL on any failure — an export must never break over a flip.
+export function flipPhotoDataUrlH(dataUrl) {
+  return new Promise((resolve) => {
+    try {
+      if (!dataUrl || typeof document === 'undefined' || typeof Image === 'undefined') return resolve(dataUrl);
+      const img = new Image();
+      img.onload = function () {
+        try {
+          const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+          if (!w || !h) return resolve(dataUrl);
+          const c = document.createElement('canvas');
+          c.width = w; c.height = h;
+          const ctx = c.getContext('2d');
+          if (!ctx) return resolve(dataUrl);
+          ctx.translate(w, 0);
+          ctx.scale(-1, 1);
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(c.toDataURL('image/png'));
+        } catch (_) { resolve(dataUrl); }
+      };
+      img.onerror = function () { resolve(dataUrl); };
+      img.src = dataUrl;
+    } catch (_) { resolve(dataUrl); }
+  });
+}
+
 export function computeTableWidthDxa(docSections, docType) {
   if (!Array.isArray(docSections) || !docSections.length) return null;
   const pctMap = readTableWidthPctMap();
@@ -389,7 +454,16 @@ export async function exportDocxViaWorker({
     );
   }
 
-  const photoDataUrl = await ensurePhotoDataUrl(photo);
+  let photoDataUrl = await ensurePhotoDataUrl(photo);
+
+  // PHOTO-FLIP-001 (owner 2026-07-14): mirror the exported photo when the Flip
+  // control (or its AUTO orientation) calls for it, matching the preview's
+  // scaleX(-1). Failure-safe: flipPhotoDataUrlH returns the original on any error.
+  try {
+    if (photoDataUrl && resolveExportFlipH()) {
+      photoDataUrl = await flipPhotoDataUrlH(photoDataUrl);
+    }
+  } catch (_) { /* keep the original photo on any failure */ }
 
   // v1.40.140 — derive tableWidth from the section-align sidecar's
   // per-section drag widths. The section-align sidecar writes
@@ -569,6 +643,23 @@ export async function exportDocxViaWorker({
   };
 }
 
+// CHINA-LAYOUT-ZH-001 (owner 2026-07-09): a Chinese (zh) CV follows the 简历
+// convention — the PROFILE pitch becomes 自我评价 at the END (not the top), and
+// References/Recommendations are dropped. Guarded to zh + cv so every other
+// language/doc is byte-unchanged. Sections keep their loc; the worker groups by
+// loc, so moving PROFILE to the end of the array lands it at the bottom of the
+// main column. Header subtitle already carries the 求职意向 line.
+function applyChinaLayoutZh(sections, doc, language) {
+  if (language !== 'zh' || doc !== 'cv' || !Array.isArray(sections) || !sections.length) return sections;
+  const label = (s) => String((s && (s.title || s.id)) || '');
+  const isProfile = (s) => s && (s.id === 'profile' || /^PROFILE$|^PROFIL$|个人简介|自我评价/i.test(label(s)));
+  const isRefs = (s) => s && (s.id === 'references' || s.id === 'recommendations' || /REFERENCE|RECOMMENDATION|推荐人|REFERENCER|ANBEFALINGER/i.test(label(s).toUpperCase()));
+  const kept = sections.filter((s) => !isRefs(s));
+  const profiles = kept.filter(isProfile).map((s) => ({ ...s, title: '自我评价' }));
+  const rest = kept.filter((s) => !isProfile(s));
+  return [...rest, ...profiles];
+}
+
 /**
  * Pure function — builds the worker payload from the PWA state.
  * Exported separately so it can be tested in isolation and so a future
@@ -652,6 +743,17 @@ export function buildPayload({
       .trim();
   };
 
+  // CL-APP-SUBTITLE-NO-DOUBLE-COMPANY-001 (owner 2026-07-22): strip a trailing
+  // "- <company>" from the role so the "Application: <role> — <company>" band never
+  // doubles the employer (the scraped jd_role often bakes it into the position name).
+  // Mirrors app.src.js __antcvSubtitleRoleCo so preview == export.
+  const __stripRoleCo = (role, company) => {
+    const c = String(company == null ? '' : company).trim();
+    let r = String(role == null ? '' : role).trim();
+    if (c) { const esc = c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); r = r.replace(new RegExp('\\s*[-–—]\\s*' + esc + '\\s*$', 'i'), '').trim(); }
+    return r;
+  };
+
   // Cover letters use a synthesised "Application: <role> — <company>"
   // line in the candidate header band — it's the slot the CV uses for
   // its specialisation. The PWA preview generates this dynamically; the
@@ -669,21 +771,32 @@ export function buildPayload({
       // already reads "Application:/Ansøgning:" is kept verbatim.
       const stored = stripFounder(meta.subtitle || '');
       const cvRole = stripFounder((meta.role || '').trim());
-      if (!cvRole || /^(application|ansøgning)\s*:/i.test(stored)) return stored;
+      // CV-SPEC-OVER-APPLICATION-001 (owner 2026-07-13: "the specialization is
+      // supposed to show in CVs, not the Application line"): a PRESENT stored
+      // subtitle (the positioning/specialization triad) is kept verbatim; the
+      // "Application: <role> — <company>" synthesis fires ONLY when the band
+      // would otherwise be blank (CV-APPLICATION-LINE-001's real case — Anita's
+      // fresh session had no stored subtitle). The CL band is unchanged.
+      if (stored || !cvRole) return stored;
       const cvCo = (meta.company || '').trim();
       const isDA2 = (language === 'da');
-      const coLabel = cvCo && !/^(unsolicited|open application|n\/a)$/i.test(cvCo) ? cvCo : (isDA2 ? 'Uopfordret' : 'Unsolicited');
-      return (isDA2 ? 'Ansøgning: ' : 'Application: ') + cvRole + ' \u2014 ' + coLabel;
+      // SUBTITLE-ZH-001 (owner 2026-07-12): zh header furniture: 申请: prefix +
+      // 主动申请 as the unsolicited label (UNSOL-PILLAR-LANG-001's zh variant),
+      // so a Chinese CV band carries no English furniture.
+      const isZH2 = (language === 'zh');
+      const coLabel = cvCo && !/^(unsolicited|open application|n\/a)$/i.test(cvCo) ? cvCo : (isDA2 ? 'Uopfordret' : (isZH2 ? '主动申请' : 'Unsolicited'));
+      return (isDA2 ? 'Ansøgning: ' : (isZH2 ? '申请: ' : 'Application: ')) + __stripRoleCo(cvRole, cvCo) + ' \u2014 ' + coLabel;
     }
-    const role = stripFounder((meta.role || '').trim());
-    const company = (meta.company || '').trim();
-    const isDA = (language === 'da');
-    const prefix = isDA ? 'Ansøgning: ' : 'Application: ';
-    if (!role && !company) {
-      return prefix + (isDA ? '[rolle og virksomhed]' : '[role and company]');
-    }
-    const sep = (role && company) ? ' \u2014 ' : '';
-    return `${prefix}${role}${sep}${company}`;
+    // CL-APP-SUBTITLE-HEADING-SWAP-001 (owner 2026-07-22): the CL header band now shows the
+    // SPECIALISATION (like the CV), NOT the "Application: <role>" label. The per-app application
+    // line moved UNDER THE SLOGAN — forwarded as meta.role/company and rendered by the worker
+    // below the slogan. Mirrors the app preview (io.subtitle = personalInfo.specialization) so
+    // preview == export. A stored subtitle that is itself an Application:/Ansøgning:/申请 label
+    // is ignored in favour of the real specialisation.
+    let spec = stripFounder(meta.subtitle || '');
+    if (/^(application:|ans[øo]gning:|申请\s*[:：])/i.test(spec)) spec = '';
+    if (!spec) { try { const pi = JSON.parse(localStorage.getItem('personalInfo') || '{}') || {}; spec = String((pi.personalInfo || pi).specialization || '').trim(); } catch (_) {} }
+    return spec.replace(/\s*\|\s*/g, ' • ');
   })();
 
   // CONTACT-LINE-DENMARK-001 (owner 2026-06-14): mirror the PWA preview's
@@ -693,6 +806,17 @@ export function buildPayload({
   // "2300 København S, Denmark". Non-Copenhagen locations pass through.
   const localForm = (v) => {
     let s = String(v || '').trim();
+    // LOCALFORM-DA-ONLY-001 (owner 2026-07-10): the Danish local form is only right
+    // for a Danish-language application. For en/zh/etc. leave the city as written
+    // (Copenhagen) so the language layer localizes it (zh -> 哥本哈根).
+    // LOCALFORM-DA-CONDITIONAL-EXPORT-001 (owner 2026-07-13: "you removed
+    // København from the contact for an application in Denmark"): 1.51.367's
+    // conditional — Danish forms stay when the app is Danish OR the JD is
+    // DENMARK-BASED — never reached this export path. meta.jd_dk carries the
+    // Denmark-based signal (the headless harness derives it from the JD text;
+    // in-app callers may set it the same way).
+    const __dkJd = !!(meta && meta.jd_dk) && language !== 'zh';
+    if (language !== 'da' && !__dkJd) return s.replace(/københavn/gi, 'Copenhagen');
     if (!/copenhagen|københavn/i.test(s)) return s;
     s = s
       .replace(/copenhagen/gi, 'København')
@@ -711,6 +835,24 @@ export function buildPayload({
     return s;
   };
 
+  // NAME-ZH-LOCALIZE-001 (owner 2026-07-09): in a Chinese (zh) export the
+  // candidate name must render in Chinese, not Latin. Name-GUARDED to Gabriel's
+  // exact stored name (and close variants) so it can NEVER rewrite another
+  // candidate's name (same no-fabrication discipline as LOCALFORM-* above —
+  // Anita's export must be untouched). Owner-picked form (2026-07-12), given
+  // names first: 加布里埃尔 (Gabriel) · 亚历山大 (Alexander) · 卡普 (Karp) · 格申 (Gershon).
+  const localizeName = (n, lang) => {
+    if (lang !== 'zh') return n;
+    const key = String(n || '').trim().replace(/\s+/g, ' ');
+    const ZH = {
+      'Gabriel Alexander Karp-Gershon': '加布里埃尔·亚历山大·卡普·格申',
+      'Gabriel Alexander Karp Gershon': '加布里埃尔·亚历山大·卡普·格申',
+      'Gabriel Karp-Gershon':           '加布里埃尔·亚历山大·卡普·格申',
+      'Gabriel Karp Gershon':           '加布里埃尔·亚历山大·卡普·格申',
+    };
+    return ZH[key] || n;
+  };
+
   const payload = {
     schema_version: '1.0',
     doc,
@@ -718,7 +860,7 @@ export function buildPayload({
     layout: layout || (doc === 'cl' ? 'linear' : 'two_column'),
     filename: filename || buildFilename({ personalInfo, meta, doc, language }),
     personal_info: {
-      name:        personalInfo.name        || '',
+      name:        localizeName(personalInfo.name || '', language),
       email:       personalInfo.email       || '',
       phone:       personalInfo.phone       || '',
       location:    localForm(personalInfo.location || ''),
@@ -730,15 +872,45 @@ export function buildPayload({
       // v1.40.142 — pass through photoPosition so worker v1.14.0+ can
       // place the photo correctly. Read from localStorage with
       // tolerant unwrapping (some app.js versions JSON-wrap the value).
+      // PHOTO-ZH-ID-STYLE-001 (owner 2026-07-12): China-market (zh) exports
+      // default to a SMALL ID-style photo at the TOP-RIGHT (Chinese CV
+      // convention), not the Nordic sidebar/bridge medallion. 'main-right' is
+      // the top-right placement the worker renders >=105px (a 115px float,
+      // square text-wrap, tight 4px/7.5px air) — 'header-right' is a fixed
+      // 82px, below the owner's 105px floor. DEFAULT only — an explicitly
+      // stored localStorage photoPosition still wins.
       ...(typeof readPhotoPosition === 'function'
-        ? { photoPosition: readPhotoPosition() }
+        ? { photoPosition: (function () {
+            var v = readPhotoPosition();
+            if (language === 'zh') {
+              try { if (!localStorage.getItem('photoPosition')) v = 'main-right'; } catch (_) {}
+            }
+            return v;
+          })() }
         : {}),
       // v1.50.56 — photo shape for worker-side picture geometry. Worker
       // v1.15+ maps this to a:prstGeom prst (ellipse/roundRect/rect/
       // hexagon/pentagon). Older workers ignore the field and keep the
       // legacy circle behaviour.
+      // PHOTO-ZH-ID-STYLE-001 (owner 2026-07-12): zh exports default the
+      // geometry to SQUARE (rect prstGeom — the pipeline's photo box is
+      // square, so a true 一寸 portrait ratio is not renderable worker-side).
+      // An explicit personalInfo.photoShape still wins; the package default
+      // (usually circle) no longer decides a zh export.
       ...(typeof readPhotoShape === 'function'
-        ? { photoShape: readPhotoShape() }
+        ? { photoShape: (function () {
+            var v = readPhotoShape();
+            if (language === 'zh') {
+              try {
+                var piRaw = localStorage.getItem('personalInfo');
+                var piObj = piRaw ? JSON.parse(piRaw) : {};
+                var ex = piObj && typeof piObj.photoShape === 'string' ? piObj.photoShape.trim().toLowerCase() : '';
+                var OK = ['circle', 'rounded', 'rounded-square', 'square', 'hexagon', 'pentagon'];
+                if (OK.indexOf(ex) === -1) v = 'square';
+              } catch (_) { v = 'square'; }
+            }
+            return v;
+          })() }
         : {}),
       // 1.50.368 / worker 1.14.51 — bridge mode forwards the EFFECTIVE
       // medallion diameter (slider px × the native 1.3 bridge scale, same
@@ -753,6 +925,13 @@ export function buildPayload({
           let raw = localStorage.getItem('photoSize');
           let n = Number(typeof raw === 'string' ? raw.replace(/["']/g, '') : raw);
           if (!Number.isFinite(n) || n < 60 || n > 220) n = 120;
+          // PHOTO-ZH-ID-STYLE-001: zh default diameter 105px (owner floor —
+          // "105 is the smallest reasonable"). Default only: an explicitly
+          // stored photoSize still wins. (The worker currently renders the
+          // main-left/right float at a fixed 115px and header-left/right at
+          // 82px regardless; this forward matters for sidebar/bridge and any
+          // future worker that honours photoSizePx everywhere.)
+          if (language === 'zh' && !raw) n = 105;
           if (pos === 'band-overlap') n = Math.min(220, Math.round(1.3 * n));
           return { photoSizePx: n };
         } catch (_) { return {}; }
@@ -796,14 +975,47 @@ export function buildPayload({
         try {
           if (doc !== 'cl') return {};
           const out = {};
-          if (localStorage.getItem('antcv:clSloganHidden') === '1') { out.slogan_hidden = true; return out; }
+          // SLOGAN-PLACEMENT-001: in 'leadin' mode the standalone tagline is hidden
+          // (it becomes the opening's lead-in instead — injected into the sections below).
+          if (localStorage.getItem('antcv:clSloganHidden') === '1' || (typeof window !== 'undefined' && window.__antcvSloganMode && window.__antcvSloganMode() === 'leadin')) { out.slogan_hidden = true; return out; }
           // SLOGAN-SUBTITLE-SOURCE-001 (owner 2026-06-30): for a CL the local `subtitle` var (and
           // hence meta.subtitle sent below) is OVERRIDDEN to the "Application: <role>" header label,
           // so the worker's slogan fallback (meta.subtitle) showed the APP LABEL instead of the
           // standing line. Forward the slogan = the override OR the INCOMING meta.subtitle (the real
           // standing / role-smart line, e.g. "Processes • Products • People"), so it never falls back
           // to the app label.
-          const ov = String(localStorage.getItem('antcv:clSlogan') || '').trim();
+          let ov = String(localStorage.getItem('antcv:clSlogan') || '').trim();
+          // CL-SLOGAN-ZH-001 (owner 2026-07-12): on a zh export a stored
+          // Latin-only slogan (e.g. the Danish standing line) must not beat
+          // the app's own Chinese meta.cl_slogan. CJK-carrying overrides win.
+          if (language === 'zh' && ov && !/[一-鿿]/.test(ov)) ov = '';
+          // SLOGAN-LANG-GATE-001 (owner 2026-07-14): the general wrong-language
+          // gate — a sticky override in a language other than the current ribbon
+          // (the classic Latin-vs-Latin Danish standing line on a Swedish/English
+          // app, and every non-Latin script mismatch) is dropped so the chain
+          // falls to the app's own current-language generated / specialization
+          // slogan. Same helper the two previews use -> preview == export, and it
+          // reads no brand state -> BRANDED and NON-BRANDED exports stay identical.
+          try { if (ov && typeof window !== 'undefined' && typeof window.__antcvSloganLangGate === 'function' && !window.__antcvSloganLangGate(ov)) ov = ''; } catch (_) {}
+          // CL-SLOGAN-STALE-OWNER-001 (owner 2026-07-13: the Danish standing
+          // line "JEG FORBINDER TEKNIK..." shipped on an ENGLISH NVIDIA CL).
+          // antcv-cl-slogan-fresh.js stamps OWNERSHIP (antcv:clSloganCtx =
+          // {v, app: "Company|Role"}); an override whose stamp belongs to a
+          // DIFFERENT app — or whose stamp doesn't match the value (unowned
+          // residue) — is STALE for a TARGETED app that carries its own
+          // generated meta.cl_slogan, and must not beat it. Unsolicited apps
+          // keep the standing motto (the sidecar's own rule).
+          try {
+            const smart0 = String((meta && meta.cl_slogan) || '').trim();
+            const co0 = String((meta && meta.company) || '').trim();
+            const targeted0 = !!co0 && !(window.__ANTCV_UNSOL_RE || /^unsolicited$/i).test(co0);
+            if (ov && smart0 && targeted0) {
+              const ctx = JSON.parse(localStorage.getItem('antcv:clSloganCtx') || 'null');
+              const cur = co0 + '|' + String((meta && meta.role) || '').trim();
+              const owned = ctx && ctx.v === ov && (!ctx.app || ctx.app === cur);
+              if (!owned) ov = '';
+            }
+          } catch (_) {}
           // SLOGAN-SMART-STATEMENT-001 (owner 2026-07-04): on a TARGETED app the
           // chain is override -> the gen's meta.cl_slogan (the smart statement) ->
           // NOTHING (slogan_hidden, so the WORKER's own subtitle fallback never
@@ -812,16 +1024,85 @@ export function buildPayload({
           // SLOGAN-QUALITY-GATE-001: the export consults the SAME gate the
           // preview uses — a low-quality generated slogan ships NOWHERE.
           try { if (smart && typeof window !== 'undefined' && typeof window.__antcvSloganQualityOk === 'function' && !window.__antcvSloganQualityOk(smart, meta)) smart = ''; } catch (_) {}
+          // SLOGAN-OV-QUALITY-GATE-001 (owner 2026-07-13): the export gated `smart`
+          // but NOT the stored override `ov`, so a STALE / over-long standing motto
+          // pinned in antcv:clSlogan (e.g. an 11-word Danish standing line that fails
+          // the same quality gate the preview applies) shipped in the PDF even though
+          // the preview showed the app's real generated slogan. Gate `ov` identically;
+          // a failing override is dropped so the chain falls to the generated slogan
+          // (or hides). A genuine short user-edit passes the gate and is kept.
+          // Kill-switch antcv:disable-slogan-ov-gate.
+          try {
+            if (ov && !/^\[/.test(ov) && localStorage.getItem('antcv:disable-slogan-ov-gate') !== '1'
+                && typeof window !== 'undefined' && typeof window.__antcvSloganQualityOk === 'function'
+                && !window.__antcvSloganQualityOk(ov, meta)) ov = '';
+          } catch (_) {}
           const co = String((meta && meta.company) || '').trim();
-          const targeted = !!co && !/^unsolicited$/i.test(co) && !/^open application$/i.test(co);
+          const targeted = !!co && !(window.__ANTCV_UNSOL_RE || /^unsolicited$/i).test(co) && !/^open application$/i.test(co); // UNSOL-PILLAR-LANG-001: any language variant
+          // SLOGAN-UNSOL-GENERIC-001 (owner 2026-07-15): an UNSOLICITED application
+          // uses the GENERIC standing default (meta.subtitle), never a role-tailored
+          // slogan. Drop the tailored meta.cl_slogan and an override that merely
+          // equals the auto-copied gen slogan; a genuinely USER-EDITED override is
+          // kept. Preview == export across every load path. Kill:
+          // antcv:disable-slogan-unsol-generic.
+          try {
+            if (!targeted && localStorage.getItem('antcv:disable-slogan-unsol-generic') !== '1') {
+              smart = '';
+              if (ov && typeof window !== 'undefined' && typeof window.__antcvSloganOverrideIsGen === 'function'
+                  && window.__antcvSloganOverrideIsGen(ov, meta)) ov = '';
+            }
+          } catch (_) {}
           const standing = String((meta && meta.subtitle) || '').trim();
-          const sl = (ov && !/^\[/.test(ov)) ? ov
+          let sl = (ov && !/^\[/.test(ov)) ? ov
             : (smart && !/^\[/.test(smart)) ? smart
               : (targeted ? '' : standing);
+          // SLOGAN-EMDASH-001 (owner 2026-07-13): banned em/en dash in the exported
+          // slogan -> plain hyphen (matches the repo-wide em-dash policy).
+          if (sl) sl = sl.replace(/\s*[—–]\s*/g, ' - ');
+          // SLOGAN-WORDCAP-001 (owner 2026-07-14): cap the EXPORTED slogan to 4-8
+          // words, same as the two preview renders, so a legacy long slogan does
+          // not ship overlong to the PDF/DOCX. Preview == export.
+          try { if (sl && typeof window !== 'undefined' && typeof window.__antcvSloganCap === 'function') sl = window.__antcvSloganCap(sl); } catch (_) {}
           if (sl && !/^\[/.test(sl)) out.slogan = sl;
           else if (targeted) { out.slogan_hidden = true; return out; }
           const al = String(localStorage.getItem('antcv:clSloganAlign') || 'center').replace(/["']/g, '').toLowerCase();
           out.slogan_align = (al === 'left' || al === 'right' || al === 'center') ? al : 'center';
+          // SLOGAN-BRAND-COLOR-001 (owner 2026-07-14): the EXPORTED slogan follows the
+          // SAME brand slogan colour the PREVIEW paints — antcv:brandV2 slots.sloganColor,
+          // gated by the same window.__antcvBrandFit flag the paper-wrapper IIFE reads
+          // (app.src.js ~50673). When no brand is active the field is OMITTED and the worker
+          // keeps its hardcoded teal (style.mainHeadColor). CONTRAST-GUARD (STANDING
+          // accessibility rule [[brand-colors-contrast-accessibility]]): the slogan is
+          // coloured text on the WHITE cover-letter page, so a too-light brand colour is
+          // DARKENED (hue kept) until it clears ~3:1 luminance contrast against white — a
+          // colour token never ships without a contrast guard (TABLE-HEADER-INK-001 pattern).
+          try {
+            if (typeof window !== 'undefined' && window.__antcvBrandFit === true) {
+              let sc = '';
+              const raw = localStorage.getItem('antcv:brandV2');
+              if (raw) {
+                const o = JSON.parse(raw);
+                const sl2 = (o && o.slots) ? o.slots : (o && o.headerBg ? o : null);
+                if (sl2 && sl2.sloganColor) sc = String(sl2.sloganColor);
+              }
+              sc = sc.replace(/[^0-9a-fA-F]/g, '');
+              if (sc.length === 3) sc = sc.split('').map(function (c) { return c + c; }).join('');
+              if (sc.length === 6) {
+                const __lum6 = function (hex) {
+                  const c = function (i) { let v = parseInt(hex.slice(i, i + 2), 16) / 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+                  return 0.2126 * c(0) + 0.7152 * c(2) + 0.0722 * c(4);
+                };
+                const __cvw = function (hex) { return 1.05 / (__lum6(hex) + 0.05); }; // contrast vs white page
+                let guard = 0;
+                while (__cvw(sc) < 3 && guard++ < 24) {
+                  const dark = [0, 2, 4].map(function (i) { return Math.round(parseInt(sc.slice(i, i + 2), 16) * 0.82).toString(16).padStart(2, '0'); }).join('');
+                  if (dark === sc) break;
+                  sc = dark;
+                }
+                out.slogan_color = sc.toUpperCase();
+              }
+            }
+          } catch (_) {}
           return out;
         } catch (_) { return {}; }
       })()),
@@ -831,7 +1112,12 @@ export function buildPayload({
         try {
           if (doc !== 'cl') return {};
           const out = {};
-          const ov = String(localStorage.getItem('antcv:clClosing') || '').trim();
+          let ov = String(localStorage.getItem('antcv:clClosing') || '').trim();
+          // CL-CLOSING-ZH-001 (owner 2026-07-12): a zh CL must end 此致敬礼
+          // style. A stored Latin-only closing (the EN/Nordic default "At your
+          // service,") would override the worker's zh default; on a zh export
+          // only a CJK-carrying closing is forwarded.
+          if (language === 'zh' && ov && !/[一-鿿]/.test(ov)) ov = '';
           if (ov) out.cl_closing = ov;
           const al = String(localStorage.getItem('antcv:clClosingAlign') || 'center').replace(/["']/g, '').toLowerCase();
           out.cl_closing_align = (al === 'left' || al === 'right' || al === 'center') ? al : 'center';
@@ -844,7 +1130,13 @@ export function buildPayload({
         try {
           if (doc !== 'cl') return {};
           const out = {};
-          const ov = String(localStorage.getItem('antcv:clSignName') || '').trim();
+          let ov = String(localStorage.getItem('antcv:clSignName') || '').trim();
+          // CL-SIGNNAME-ZH-001 (owner 2026-07-12): the babel layer maintains a
+          // per-language sign name (antcv:clSignName_zh = 加布里埃尔). On a zh
+          // export it beats the Latin default so the sign-off is Chinese.
+          if (language === 'zh') {
+            try { const zv = String(localStorage.getItem('antcv:clSignName_zh') || '').trim(); if (zv) ov = zv; } catch (_) {}
+          }
           if (ov) out.cl_sign_name = ov;
           const al = String(localStorage.getItem('antcv:clSignNameAlign') || 'center').replace(/["']/g, '').toLowerCase();
           out.cl_sign_name_align = (al === 'left' || al === 'right' || al === 'center') ? al : 'center';
@@ -874,7 +1166,10 @@ export function buildPayload({
     // Contact, none below Name. Store: localStorage 'headerItemRule' =
     // { name|specialisation|contact: { on, pt, color } }.
     header_rules: (() => {
-      const D = { name: { on: false, pt: 0.75, color: '' }, specialisation: { on: true, pt: 0.75, color: '' }, contact: { on: true, pt: 0.75, color: '' } };
+      // HEADER-RULE-DEFAULTS-002 (owner 2026-07-23): specialisation + contact rules
+      // are now DEFAULT-HIDDEN (were the copenhagen default-ON). Explicit store
+      // values still win; the worker receives explicit on/off either way (1:1).
+      const D = { name: { on: false, pt: 0.75, color: '' }, specialisation: { on: false, pt: 0.75, color: '' }, contact: { on: false, pt: 0.75, color: '' } };
       try {
         const raw = JSON.parse(localStorage.getItem('headerItemRule') || 'null');
         if (!raw || typeof raw !== 'object') return D;
@@ -908,7 +1203,7 @@ export function buildPayload({
       : {}),
     style: buildStyle(styleConfig, navyColor),
     font_sizes: buildFontSizes(fontSizes),
-    sections: bindOrphansInSections(normalizeSections(docSections)),
+    sections: bindOrphansInSections(normalizeSections(applyChinaLayoutZh(docSections, doc, language))),
     meta_signature: {
       generator: 'AntCV',
       generator_version: (typeof window !== 'undefined' && window.ANTCV_VERSION) || '',
@@ -1400,7 +1695,7 @@ function _isTargetedExport() {
     // guard / Copenhagen Wolves / student council + Publications dropped). Owner rule:
     // "Unsolicited keeps the full breadth." So 'unsolicited' ⇒ FALSE; any OTHER explicit
     // company ⇒ targeted; only when meta.company is EMPTY do we consult the drift fallbacks.
-    if (co === 'unsolicited') return false;
+    if (co === 'unsolicited' || !!(window.__antcvUnsol && window.__antcvUnsol(co))) return false; // UNSOL-PILLAR-LANG-001: any language variant
     if (co) return true;
     // STABLE fallback (PUBLICATIONS-HIDE-STABLE-001): the volatile meta.company /
     // activeAppCompany can drift to EMPTY mid-session, which would silently switch the
@@ -1409,7 +1704,7 @@ function _isTargetedExport() {
     // active company still wins (return false) even when meta.company drifted empty.
     try {
       const ac = String(localStorage.getItem('antcv:activeAppCompany') || '').replace(/"/g, '').trim().toLowerCase();
-      if (ac === 'unsolicited') return false;
+      if (ac === 'unsolicited' || !!(window.__antcvUnsol && window.__antcvUnsol(ac))) return false; // UNSOL-PILLAR-LANG-001: any language variant
       if (ac) return true;
     } catch (_) {}
     const s = JSON.parse(localStorage.getItem('sections') || '{}');
@@ -1471,7 +1766,15 @@ function mergeSameCompanyRoles(roles) {
       const years = ys.length ? (Math.min(...ys) + ' - ' + Math.max(...ys)) : (grp[0].years || '');
       // MERGED-TITLE-JOIN-001 (owner 2026-07-04, spec rule 17a): merged roles
       // join with " & ", never "/" — "Change Request Lead & System Architect".
-      out.push({ ...grp[0], title: titles.join(' & '), bullets, years });
+      // MERGED-RESULTS-UNION (spec rule 17 ">1 Result", SECTIONS-STORM-2026-07-23):
+      // a merged role carries BOTH constituents' Results. {...grp[0]} alone kept
+      // only the first role's line (the "Results on one role only" report); union
+      // the distinct non-empty results in constituent order.
+      const rs = [];
+      grp.forEach((g) => { const t = String(g.results == null ? '' : g.results).trim(); if (t && rs.indexOf(t) < 0) rs.push(t); });
+      const mergedRole = { ...grp[0], title: titles.join(' & '), bullets, years };
+      if (rs.length) mergedRole.results = rs.join(' ');
+      out.push(mergedRole);
     });
     return out;
   } catch (_) { return null; }
@@ -1510,7 +1813,17 @@ function sanitizeForExport(docSections, doc) {
       // applyOutcomesMode) and section-mode payloads carry one clean line. Runs on
       // every experience section; KEEP_MIN=2 respected; stored sections untouched.
       if (s.type === 'experience' && Array.isArray(s.roles)) {
-        let roles = s.roles.map(_collapseRoleBullets);
+        // ROLES-AS-RICHBLOCK-001: drop bullets the rich_block editor hid
+        // (role.bulletMeta[bi].hidden) BEFORE collapse so indices line up.
+        // Payload-only — stored roles keep them so the editor can unhide.
+        let roles = s.roles.map((r) => {
+          if (r && Array.isArray(r.bullets) && Array.isArray(r.bulletMeta)) {
+            const meta = r.bulletMeta;
+            const kept = r.bullets.filter((b, bi) => !(meta[bi] && meta[bi].hidden));
+            if (kept.length !== r.bullets.length) return { ...r, bullets: kept, bulletMeta: undefined };
+          }
+          return r;
+        }).map(_collapseRoleBullets);
         if (targeted) {
           // ROLE-CLASS-HIDE-001 (spec rule 18, owner 2026-07-04 "fix in code"):
           // in a TARGETED export the hide-for-this-role-class set never ships,
@@ -1605,6 +1918,24 @@ function sanitizeForExport(docSections, doc) {
       if ((s.id === 'languages' || /^languages?$/i.test(String(s.title || s.id || ''))) && Array.isArray(s.items)) {
         const items = _stripUruguayan(s.items);
         if (items !== s.items) return { ...s, items };
+      }
+      // SLOGAN-PLACEMENT-001 export parity: in 'leadin' mode inject the slogan as
+      // the opening's first-item lead-in so the DOCX/PDF matches the preview (the
+      // standalone tagline is hidden via slogan_hidden above).
+      if (s.id === 'opening' && typeof window !== 'undefined' && window.__antcvSloganOpeningLeadIn && window.__antcvSloganMode && window.__antcvSloganMode() === 'leadin') {
+        let __sl = '';
+        try {
+          __sl = String((typeof meta !== 'undefined' && meta && meta.cl_slogan) || '').trim();
+          if (!__sl || /^\[/.test(__sl)) {
+            let __ov = String(localStorage.getItem('antcv:clSlogan') || '').trim();
+            // SLOGAN-LANG-GATE-001: a wrong-language override never becomes the lead-in either.
+            try { if (__ov && typeof window.__antcvSloganLangGate === 'function' && !window.__antcvSloganLangGate(__ov)) __ov = ''; } catch (_) {}
+            __sl = __ov;
+          }
+          if (window.__antcvSloganCap) __sl = window.__antcvSloganCap(__sl);
+        } catch (_) {}
+        const __os = window.__antcvSloganOpeningLeadIn(s, __sl);
+        if (__os !== s) return __os;
       }
       // (1) strip fabricated tools from any tools comma-list (Nordea analytics -> Snowflake/
       // DBT, which the candidate does not use). Always, regardless of targeted/unsolicited.
@@ -1731,10 +2062,55 @@ export function buildStyle(styleConfig, navyColor) {
     // candidate band), while `mainHeadColor` is teal. Worker
     // v1.14.2 reads `style.tableHeaderBg` when present.
     'tableHeaderBg',
+    // TABLE-HEADER-INK-001 (owner 2026-07-13, "table header is hardly
+    // visible on the background"): tableHeaderBg passed through WITHOUT its
+    // ink token, so a pale stored bg (#DDE6F2) met the worker's package
+    // default ink (white on the brand band) — near-invisible and a
+    // color-blind accessibility failure. Pass the stored ink through, and
+    // (below) compute a contrast-correct ink whenever the bg travels alone.
+    'tableHeaderText',
+    // COPENHAGEN-TABLE-FRAME-001 (mockup lock 2026-07-22): banded rows follow
+    // the package token (worker falls back to #DCE5EA, the Copenhagen band),
+    // and the cyan outer frame renders only when the package defines it.
+    'tableEvenBg',
+    'tableFrameColor',
   ];
   for (const k of passthrough) {
     if (styleConfig[k] != null) out[k] = styleConfig[k];
   }
+  // CONTRAST-GUARD-001 (owner 2026-07-13, STANDING accessibility rule: "even
+  // when you get company brand colors always fit visibility for vision
+  // impaired users"). Every text ink is validated against its fill; a pair
+  // below ~3:1 contrast is replaced by the luminance-correct ink. This caught
+  // live: white table-header ink on pale #DDE6F2, gray #666666 sidebar
+  // headings on brand green #76B900.
+  const __lum = (hex) => {
+    const h = String(hex || '').replace('#', '');
+    if (h.length < 6) return null;
+    const c = (i) => {
+      let v = parseInt(h.slice(i, i + 2), 16) / 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * c(0) + 0.7152 * c(2) + 0.0722 * c(4);
+  };
+  const __contrast = (a, b) => {
+    const la = __lum(a), lb = __lum(b);
+    if (la == null || lb == null) return 21;
+    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+  };
+  const __ensureInk = (bgKey, inkKeys) => {
+    const bg = out[bgKey];
+    if (!bg) return;
+    // pick whichever candidate actually contrasts more (a mid-luminance
+    // saturated brand green fails WHITE at ~2.4:1 while near-black passes ~9:1)
+    const good = __contrast(bg, '333333') >= __contrast(bg, 'FFFFFF') ? '333333' : 'FFFFFF';
+    for (const k of inkKeys) {
+      if (!out[k] || __contrast(bg, out[k]) < 3) out[k] = good;
+    }
+  };
+  __ensureInk('tableHeaderBg', ['tableHeaderText']);
+  __ensureInk('sidebarBg', ['sidebarTextColor', 'sidebarLabelColor', 'sidebarHeadColor']);
+  __ensureInk('headerBg', ['headerNameColor', 'headerSpecColor', 'headerContactColor']);
   if (navyColor) {
     // navyColor in the PWA drives the header/sidebar background.
     if (!out.headerBg)  out.headerBg  = navyColor;
@@ -1777,6 +2153,40 @@ export function buildStyle(styleConfig, navyColor) {
         // resolution, so it kept styleConfig.tableHeaderBg (#DDE6F2) and rendered
         // pale. Resolve it from the same token + readable (white) ink.
         out.tableHeaderBg = hb; out.tableHeaderText = ink(hb); }
+    }
+  } catch (_) {}
+  // BRAND-EXPORT-PARITY-001 (owner 2026-07-17): the EXPORT-PALETTE-PARITY-001 block
+  // above resolves --header-bg/--sidebar-bg from getComputedStyle(document.body) — the
+  // PACKAGE token. But a per-app BRAND applies its colours as an INLINE var on the
+  // paper-WRAPPER (a descendant, app.js BRANDFIT-CANDIDATE-SIDEBAR-OVERRIDE-001), which
+  // document.body never sees, and :root defines a default --header-bg (#33446F), so the
+  // block above silently reverted the export to the package band even for a brand-fitted
+  // (custom-package) app — the raw teal/navy export the owner reported. When a brand is
+  // ACTIVE (upload-panel Brand-fit flag), re-assert the brand from the SAME source the
+  // apply wrote — brandV2 slots if published (restore/re-collection), else the live
+  // styleConfig the brand-fit apply sets on a fresh generate (headerBg/sidebarBg/
+  // photoBorderColor). Gated on __antcvBrandFit so non-branded package exports are
+  // untouched. Contrast (readable ink) recomputed here so a light brand can't go
+  // white-on-white in the band.
+  try {
+    if (typeof window !== 'undefined' && window.__antcvBrandFit === true) {
+      const inkB = (hex) => {
+        const h = String(hex || '').replace('#', '');
+        if (h.length < 6) return '#FFFFFF';
+        const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+        return (0.2126 * r + 0.7152 * g + 0.0722 * b > 140) ? '#283556' : '#FFFFFF';
+      };
+      let bH = null, bS = null, bA = null;
+      try {
+        const raw = (typeof localStorage !== 'undefined') ? localStorage.getItem('antcv:brandV2') : null;
+        if (raw) { const bv = JSON.parse(raw); const sl = (bv && bv.slots) ? bv.slots : ((bv && bv.headerBg) ? bv : null);
+          if (sl) { bH = sl.headerBg || null; bS = sl.sidebarBg || null; bA = sl.accent || null; } }
+      } catch (_) {}
+      if (!bH && styleConfig && typeof styleConfig === 'object') { bH = styleConfig.headerBg || null; bS = styleConfig.sidebarBg || null; bA = styleConfig.photoBorderColor || null; }
+      const isHex = (v) => typeof v === 'string' && /^#?[0-9a-fA-F]{6}$/.test(v.trim());
+      if (isHex(bH)) { out.headerBg = bH; out.headerNameColor = inkB(bH); out.headerSpecColor = inkB(bH); out.headerContactColor = inkB(bH); out.tableHeaderBg = bH; out.tableHeaderText = inkB(bH); }
+      if (isHex(bS)) { out.sidebarBg = bS; out.sidebarTextColor = inkB(bS); out.sidebarLabelColor = inkB(bS); }
+      if (isHex(bA)) { out.photoBorderColor = bA; out.sidebarHeadColor = bA; }
     }
   } catch (_) {}
   // v1.40.146 — sidebarPosition pass-through. Worker (≥ v1.14.2)
@@ -2431,7 +2841,19 @@ function normalizeSections(raw) {
         // EFFECTIVE role page = max(manual role.page, auto autoPages[origIdx]) with
         // a monotonic cascade; auto key is the ORIGINAL index in the unfiltered roles.
         const allRoles = Array.isArray(s.roles) ? s.roles : [];
-        const autoR = (s.id && autoPagesRaw && typeof autoPagesRaw[s.id] === 'object') ? autoPagesRaw[s.id] : null;
+        let autoR = (s.id && autoPagesRaw && typeof autoPagesRaw[s.id] === 'object') ? autoPagesRaw[s.id] : null;
+        // AUTOPAGES-ITEM-TO-ROLE-001 (owner 2026-07-14, cutover regression): when the
+        // roles-as-rich_block cutover is on, the experience PREVIEW is a FLATTENED items[]
+        // (role heads + bullets), so the autoPages measurer keys page-breaks by ITEM index
+        // (e.g. 13/36/66) — but the loop below reads autoR by ROLE index (0..N). Translate
+        // item→role via the adapter's item._key ('roles.R') mapping, else no role.page is
+        // set and the export loses every role split + "(Cont.)" heading and collapses the
+        // two columns into a sequential multi-page PDF. No-op (returns autoR) when off.
+        if (autoR && window.AntcvRolesRichBlock && typeof window.AntcvRolesRichBlock.isOn === 'function'
+            && window.AntcvRolesRichBlock.isOn()
+            && typeof window.AntcvRolesRichBlock.itemAutoPagesToRoleAutoPages === 'function') {
+          autoR = window.AntcvRolesRichBlock.itemAutoPagesToRoleAutoPages(s, autoR);
+        }
         let runPage = 1;
         const roles = allRoles.filter(r => r && r.on !== false).map(r => {
           const oi = allRoles.indexOf(r);
@@ -3088,10 +3510,18 @@ export function applyOutcomesMode(docSections, doc) {
       return t;
     };
     visRoles.forEach((r) => {
+      // BABEL-PINS-LANG-GATE-001 (owner 2026-07-11 "generation in the target language"):
+      // a role whose title is in a wide script (zh/he/ar/am) is a NATIVE-language
+      // rendering — the ENGLISH pin/kernel-outcome tiers must never laminate onto it
+      // (that is how the CSA result leaked under 学生会代表 and English Results appeared
+      // on zh pages). Its own role.results (tier 1, native) still wins; an empty
+      // Results stays empty rather than becoming English.
+      const _wideT = /[一-鿿㐀-䶿֐-׿؀-ۿሀ-፿]/.test(String(r.title || ''));
       // GABRIEL-EXACT-RESULTS-001: owner-pinned verbatim Results win above ALL tiers (no cap, no cut).
-      const _gx = _gabrielExactResult(r); if (_gx) { _lam.set(r, _gx); return; }
+      const _gx = _wideT ? null : _gabrielExactResult(r); if (_gx) { _lam.set(r, _gx); return; }
       // 1) explicit role.results string wins verbatim.
       if (typeof r.results === 'string' && r.results.trim()) { _lam.set(r, r.results.trim()); return; }
+      if (_wideT) return;
       // 2) self-contained role.outcomes[] (owner's 'outcome_edits' lists): use the
       //    DEFAULT-VISIBLE items only — JD-gated hidden ones (defaultVisible:false)
       //    stay hidden in a non-JD export.

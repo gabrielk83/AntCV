@@ -31,7 +31,9 @@ assert.ok(start !== -1 && gpsEnd !== -1 && gpsEnd > start, 'palette block not lo
 const block = bundle.slice(start, gpsEnd);
 
 test('bundle copenhagen-modern carries the pale `ground`', () => {
-  assert.match(block, /"copenhagen-modern":\s*{[^}]*ground:\s*"C9D6EC"/s);
+  // MOCKUP LOCK 2026-07-22: ground = #DCE5EA (matches the PWA preset sidebarBg,
+  // the table banding and the packages-registry --package-base — all copies sync).
+  assert.match(block, /"copenhagen-modern":\s*{[^}]*ground:\s*"DCE5EA"/s);
 });
 
 test('bundle defines readableInk + UNIVERSAL_DARK_INK', () => {
@@ -74,7 +76,7 @@ test('candidate band uses the brighter `band` blue with luminance-picked ink (CO
 test('bundle palette ≡ src/palette.js for copenhagen-modern', async () => {
   const { getPackageStyle } = await import('../src/palette.js');
   const s = getPackageStyle('copenhagen-modern', false);
-  assert.equal(s.sidebarBg, 'C9D6EC', 'source ground drifted');
+  assert.equal(s.sidebarBg, 'DCE5EA', 'source ground drifted');
   assert.equal(s.sidebarTextColor, '283556', 'pale ground must yield dark ink');
   assert.equal(s.sidebarLabelColor, '283556', 'pale ground label must be dark');
   assert.equal(s.headerBg, '33446F', 'candidate band must be the brighter blue');

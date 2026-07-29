@@ -154,11 +154,11 @@
     try {
       var m = JSON.parse(localStorage.getItem('meta') || 'null');
       if (m && typeof m === 'object' &&
-          /^(unsolicited|open\s+application)$/i.test(String(m.company || '').trim())) return true;
+          (window.__ANTCV_UNSOL_RE || /^(unsolicited|open\s+application)$/i).test(String(m.company || '').trim())) return true; // UNSOL-PILLAR-LANG-001: any language variant
     } catch (_) {}
     try {
       var ac = String(localStorage.getItem('antcv:activeAppCompany') || '').replace(/"/g, '').trim();
-      if (/^unsolicited$/i.test(ac)) return true;
+      if ((window.__ANTCV_UNSOL_RE || /^unsolicited$/i).test(ac)) return true; // UNSOL-PILLAR-LANG-001
     } catch (_) {}
     return false;
   }

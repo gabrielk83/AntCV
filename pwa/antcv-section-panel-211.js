@@ -257,6 +257,7 @@
       writeAlign(loc, nxt);
       refreshCjlr(btn, loc);
       applyTitleAlignment(loc);
+      applyPreviewHeadlines();
     }, true);
   }
 
@@ -290,14 +291,20 @@
     style.textContent = `
       [data-antcv-panel-211] {
         display: flex !important;
+        /* PANEL-WRAP-001 (owner 2026-07-14: "the dimensions of this panel do not
+           fit. better place most of the buttons of row below the lead-in"). The
+           lead-in owns the first row (flex-basis 100%); the action buttons wrap
+           onto the row below instead of squeezing one button to width 0. */
+        flex-wrap: wrap !important;
         align-items: center !important;
         width: 100% !important;
         box-sizing: border-box !important;
         gap: 5px !important;
+        row-gap: 4px !important;
       }
       [data-antcv-section-title-211] {
-        margin-right: auto !important;
-        flex: 1 1 auto !important;
+        flex: 0 0 100% !important;
+        margin: 0 0 1px 0 !important;
         color: ${TITLE_COLOR} !important;
         font-size: 15px !important;
         font-weight: 800 !important;
@@ -383,7 +390,7 @@
       @media (max-width: 900px), (pointer: coarse) {
         [data-antcv-section-title-211],
         [data-antcv-cand-title-211="1"]::before { font-size: 15px !important; }
-        [data-antcv-panel-211] { flex-wrap: nowrap !important; gap: 5px !important; }
+        [data-antcv-panel-211] { flex-wrap: wrap !important; gap: 5px !important; row-gap: 4px !important; }
         [data-antcv-panel-211] button[data-antcv-panel-label-211] {
           height: 24px !important;
           min-height: 24px !important;
@@ -410,11 +417,37 @@
   // never re-trigger a sweep.
   let mo = null;
   let applying = false;
+  // HEADLINE-LOC-PREVIEW-001 (owner 2026-07-14: "you have a cjlr for the main head but
+  // it does not seem working"). The loc headline control drove EXPORT (docx-client
+  // loc-map) but never the PREVIEW. Apply the loc alignment to the marked preview
+  // section-headline DIVs so preview == export. The heading DIV's textAlign is what
+  // positions the title (its inner editable span is display:inline, so aligning the
+  // span is inert). Only for a loc the user explicitly touched, so an untouched install
+  // keeps its default headline look. 211 owns this because its sweep (rAF + 2500ms
+  // interval + MutationObserver on 'style') re-applies after every React commit.
+  function applyPreviewHeadlines() {
+    var heads = document.querySelectorAll('[data-antcv-section-headline]');
+    for (var i = 0; i < heads.length; i++) {
+      var el = heads[i];
+      var loc = el.closest('[data-antcv-document-sidebar], .antcv-document-sidebar') ? 'sidebar' : 'main';
+      if (!hasUserTouched(loc)) continue;
+      var v = readAlign(loc);
+      if (ALIGNMENTS.indexOf(v) < 0) continue;
+      var use = v;
+      if (v === 'justify') {
+        // a narrow sidebar heading justifies into ugly gaps — fall to left.
+        try { var w = el.getBoundingClientRect().width; if (loc === 'sidebar' || (w > 0 && w < 300)) use = 'left'; } catch (_) {}
+      }
+      if (el.style.textAlign !== use) el.style.textAlign = use;
+    }
+  }
+
   function applyAll() {
     seedDefaults();
     LOCS.forEach(applyPanel);
     removePublicationsMiniButtons();
     ensureRoleContentCjlr();
+    applyPreviewHeadlines();
   }
   function schedule() {
     if (pending) return;

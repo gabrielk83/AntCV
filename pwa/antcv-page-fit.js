@@ -52,8 +52,33 @@
   const PAGE_ROW_SEL = '.antcv-page-row';
   const APPLIED_FLAG = 'antcvPageFitApplied';
   const PAGE_WIDTH_PX = 794;
-  const PAGE_HEIGHT_PX = Math.round(PAGE_WIDTH_PX * 297 / 210);
+  const PAGE_HEIGHT_PX = Math.round(PAGE_WIDTH_PX * 297 / 210);   // 1123 = TRUE A4 at 96dpi
   const POLL_MS = 750;
+  // PREVIEW-SHEET-WORD-HEIGHT-001 (owner 2026-07-26, follow-up to
+  // SALMON-BREAK-SITE-001: "shrinking the preview page-box height to the
+  // Word-equivalent line"). The salmon now breaks BOTH CV columns where the
+  // real DOCX breaks - the Word line, which is ~1.14x tighter than the preview
+  // because the export renders the same content taller (PREVIEW-PDF-PARITY-001).
+  // A sheet pinned to TRUE A4 (1123px) therefore ends ~200px BELOW the last
+  // item the export can fit, showing dead white space under the content. Pin
+  // the visible sheet to the WORD-EQUIVALENT height instead, so what fills a
+  // preview page is exactly what fills a Word page. Uses the SAME inflate the
+  // measurer uses (antcv-auto-pagebreak-block-001 WORD_INFLATE / _WIDE +
+  // the antcv:wide-word-inflate live override) so sheet and break agree by
+  // construction. Kill: localStorage['antcv:disable-word-sheet']='1'.
+  function sheetHeightPx() {
+    try { if (localStorage.getItem('antcv:disable-word-sheet') === '1') return PAGE_HEIGHT_PX; } catch (_) {}
+    var infl = 1.14;
+    try {
+      var L = String(localStorage.getItem('language') || 'en').replace(/["']/g, '').slice(0, 2);
+      if (L === 'zh' || L === 'he' || L === 'am' || L === 'ar') {
+        var ov = parseFloat(localStorage.getItem('antcv:wide-word-inflate') || '');
+        infl = (ov > 1 && ov < 2) ? ov : 1.24;
+      }
+    } catch (_) {}
+    return Math.round(PAGE_HEIGHT_PX / infl);
+  }
+  try { window.__antcvSheetHeightPx = sheetHeightPx; } catch (_) {}
 
   if (window.__antcvPageFitInstalled) return;
   window.__antcvPageFitInstalled = SCRIPT_VERSION;
@@ -100,7 +125,8 @@
       // padded — there's no next salmon to keep flush against, so it can
       // collapse to content exactly like every other row. Only the trivial
       // single-row document keeps the full A4 minimum now.
-      var wantMin = (rows.length === 1) ? (PAGE_HEIGHT_PX + 'px') : '0px';
+      // PREVIEW-SHEET-WORD-HEIGHT-001: the single/last sheet pins to the WORD-equivalent height, not true A4.
+      var wantMin = (rows.length === 1) ? (sheetHeightPx() + 'px') : '0px';
       if (row.style.minHeight !== wantMin ||
           row.style.getPropertyPriority('min-height') !== 'important') {
         row.style.setProperty('min-height', wantMin, 'important');

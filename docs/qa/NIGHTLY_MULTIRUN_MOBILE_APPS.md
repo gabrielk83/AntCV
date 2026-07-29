@@ -9,6 +9,16 @@ app feel unfinished.
 MULTI-RUN order. Each run: SYNC FIRST, read STATUS, do the next phase, verify,
 update STATUS + run log, push.
 
+## SHIFT PROTOCOL — claim before you work (parallel-session safety)
+
+Multiple sessions push to `origin/main`. Before editing, reserve your lane (full detail:
+`docs/qa/NIGHT_SHIFT.md`): (1) `git fetch origin && git pull --rebase origin main`;
+(2) `node scripts/shift.mjs claim --task "<what>"` — reserves a version-number range + records
+it in the ledger, prints your range + a `git worktree add` line; (3) run that
+`git worktree add ../AntCV-<name> -b <name>` and work THERE, not the shared clone; (4) use only
+numbers **inside your range**, `node scripts/shift.mjs beat` to heartbeat; (5)
+`node scripts/shift.mjs release` when done (`status` lists claims, `reap` clears dead ones).
+
 ## STATUS (update every run)
 
 - [ ] R1 Install polish: manifest screenshots, maskable icon set, iOS touch icons +
@@ -20,7 +30,12 @@ update STATUS + run log, push.
       (owner decision gate)
 
 Run log:
-- (none yet)
+- 2026-07-10 (desktop, parallel-gen track — see SESSION_2026-07-10_PARALLEL_GEN_AND_LANG.md): no R1-R4
+  phase closed, but shipped the cross-device parallel-generation isolation this mobile story depends on —
+  per-device cloud pointer (relay PARALLEL-GEN-POINTER-002 / new `active_application_device` table, 1.51.259)
+  + client keep-local guard (1.51.256) + same-device tab-doc-isolation sidecar (1.51.253). Net effect for
+  mobile: a desktop generation no longer yanks the phone's in-progress draft (and vice-versa). When testing
+  the installed PWA on the owner's phone (R2/R5), desktop⇄mobile parallel gens are now safe to run.
 
 ## Hard rules
 
@@ -36,6 +51,13 @@ Run log:
    final eyeball).
 5. The share-target flow (manifest share_target + antcv-share-target-jd-375.js) is
    LIVE - do not regress it when touching manifest.json.
+6. **POST-DEPLOY LIVE VERIFY (desktop runs, owner 2026-07-10):** after push + the
+   Pages auto-deploy, open the in-app Browser pane on `https://antcv.pages.dev/` and
+   run `docs/qa/LIVE_VERIFY_BROWSER_PANE.md` — confirm the deployed version is live,
+   each changed asset loaded at its NEW `?v=`, and each edit's marker is in the built
+   bundle. Catches the stale-`?v` phantom-ship regression. NEVER navigate `?hardReset=1`.
+   Use `resize_window({preset:'mobile'})` for the mobile-viewport structural checks
+   (read_page/console/js; screenshots time out on this PWA). Cloud runs flag it "owed".
 
 ## Ground truth (verified 2026-07-02 by code audit)
 

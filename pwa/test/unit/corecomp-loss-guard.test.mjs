@@ -73,8 +73,8 @@ test('snapshot: a sections blob with REAL core_comp rows is captured to the loca
   const ctx = makeSandbox({ meta: { company: 'Acme', role: 'PM' }, sections: cv(REAL_ROWS) });
   ctx.api.snapshot();
   const snap = ctx.snapStore();
-  assert.ok(snap['Acme|PM'], 'a bucket exists for the active application');
-  assert.deepEqual(snap['Acme|PM'].rows, REAL_ROWS, 'the real rows are stored verbatim');
+  assert.ok(snap['Acme|PM|en'], 'a bucket exists for the active application (language-keyed: LANG-GUARD-KEY-001)');
+  assert.deepEqual(snap['Acme|PM|en'].rows, REAL_ROWS, 'the real rows are stored verbatim');
 });
 
 test('restore: placeholder-only rows are healed back to the real snapshot', () => {
@@ -125,7 +125,7 @@ test('snapshot: a partial table is snapshotted CLEAN (no placeholder rows stored
   ctx.setSections(cv(PARTIAL));
   ctx.api.snapshot();
   const snap = ctx.snapStore();
-  assert.deepEqual(snap['Acme|PM'].rows, [HEADER, ['Imaging', 'Camera architecture']], 'snapshot holds only header + real rows');
+  assert.deepEqual(snap['Acme|PM|en'].rows, [HEADER, ['Imaging', 'Camera architecture']], 'snapshot holds only header + real rows');
 });
 
 test('restore: a header-only table (lamination emptied the data rows) is also healed', () => {

@@ -5,7 +5,7 @@
  */
 (function(){
   'use strict';
-  const VERSION = '1.51.56-foreign-section-boundary';
+  const VERSION = '1.51.391-photo-panel-guard';
   // v1.40.238-preview-guard: Preview is button-free. Profile/Work-style
   // CJLR controls must not attach to rows inside .antcv-preview-paper.
   const isInPreviewPaper = el => { if(!el) return false; const p=document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]'); return !!(p && p.contains(el)); };
@@ -77,7 +77,11 @@
     // profile TEXT section and the cycler leaked between the SHADOW Off/On
     // buttons. The sister guard in sectionFromElement had this; the panel-row
     // path (which uses THIS fn) did not.
-    if(/^profile\s*photo\b/.test(t)) return null;
+    // PW-CJLR-PHOTO-LEAK-002 (owner 2026-07-13): no \b — textContent of sibling
+    // divs concatenates WITHOUT spaces ("Profile PhotoDefault photo active…"),
+    // so "photodefault" has no word boundary and the \b guard let the upload
+    // panel through once the photo-library strip pushed it to >=3 buttons.
+    if(/^profile\s*photo/.test(t)) return null;
     return SECTIONS.find(s => s.names.some(n => t === n || t.startsWith(n+' ')));
   }
 
@@ -112,6 +116,9 @@
       // workstyle section (PW-CJLR-PHOTO-LEAK-001).
       if(btn.closest && btn.closest('.antcv-fp-shape-row')) return;
       if(btn.classList && btn.classList.contains('antcv-fp-shape-btn')) return;
+      // PW-CJLR-PHOTO-LEAK-002: the photo-library strip's own buttons are never
+      // section-row anchors.
+      if(btn.closest && btn.closest('[data-antcv-photo-library]')) return;
       let p=btn.parentElement;
       for(let d=0; p && d<7; d++,p=p.parentElement){
         if(isInPreviewPaper(p)) break;
@@ -126,7 +133,10 @@
         // Shape/Contour/Shadow rows carry the shadow Off/On buttons, and the
         // cycler was landing before that "On". Reject any ancestor that holds a
         // shape button / shadow toggle.
-        if(p.querySelector && p.querySelector('.antcv-fp-shape-btn, .antcv-fp-shape-row, [data-shadow]')) continue;
+        // PW-CJLR-PHOTO-LEAK-002: same for any ancestor holding the photo-library
+        // strip or an upload file input — that's the photo/upload card, not a
+        // profile/work_style text row.
+        if(p.querySelector && p.querySelector('.antcv-fp-shape-btn, .antcv-fp-shape-row, [data-shadow], [data-antcv-photo-library], input[type="file"]')) continue;
         const sec = sectionFromText(text);
         if(sec && p.querySelectorAll && p.querySelectorAll('button').length>=3){
           if(!out.some(x=>x.row===p)) out.push({row:p, sec});
@@ -274,7 +284,7 @@
         document.querySelectorAll('button[data-antcv-profile-workstyle-cjlr="1"]').forEach(b=>{
           if(b.closest && (b.closest('.antcv-fp-shape-row') || b.closest('.antcv-fp-shape-btn'))){ b.remove(); return; }
           const sib = b.parentElement;
-          if(sib && sib.querySelector && sib.querySelector('.antcv-fp-shape-btn, [data-shadow]')) b.remove();
+          if(sib && sib.querySelector && sib.querySelector('.antcv-fp-shape-btn, [data-shadow], [data-antcv-photo-library], input[type="file"]')) b.remove();
         });
         panelRows().forEach(({row,sec})=>ensurePanelButton(row,sec));
         applyEditors();

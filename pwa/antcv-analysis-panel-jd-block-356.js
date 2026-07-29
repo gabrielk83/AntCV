@@ -76,13 +76,26 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.51.54-upper-reorg';
+  var VERSION = '1.51.361-analysis-on-open';
   if (window.__antcvAnalysisPanelJdBlock356 === VERSION) return;
   window.__antcvAnalysisPanelJdBlock356 = VERSION;
 
   var BLOCK_ID = 'antcv-analysis-panel-jd-block';
   var STYLE_ID = 'antcv-analysis-panel-jd-block-css';
   var RATIONALE_KEY = 'rationale';
+  // OPEN-ANALYSIS-AUTORUN-001: fingerprint of the last auto-analysed JD, so
+  // each JD gets AT MOST one automatic run (reopens and panel re-injections
+  // never re-spend the LLM calls).
+  var AUTORUN_KEY = 'antcv:apjbAutoAnalysed';
+  function jdFingerprint(s) {
+    s = String(s || '');
+    var h = 0;
+    for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+    return s.length + ':' + h;
+  }
+  function rationaleHasAnalysis(r) {
+    return !!(r && (r.summary || r.strengths || r.gaps || r.fit_score !== undefined || r.recruiter !== undefined));
+  }
 
   // Empty-state message fragments (EN + DA), lowercase for compare.
   var EMPTY_MARKERS = [
@@ -126,6 +139,39 @@
       var p = JSON.parse(raw);
       return Array.isArray(p) ? p : null;
     } catch (_) { return null; }
+  }
+  // OPEN-ANALYSIS-AUTORUN-001: the app's live section store ({cv,cl}) — the
+  // ACTIVE application's own content, unlike the legacy cv_pwa_sections
+  // mirror which can lag behind an application switch.
+  function readLiveSections() {
+    try {
+      var raw = localStorage.getItem('sections');
+      if (!raw) return null;
+      var p = JSON.parse(raw);
+      return p && typeof p === 'object' && (Array.isArray(p.cv) || Array.isArray(p.cl)) ? p : null;
+    } catch (_) { return null; }
+  }
+  // Template skeletons carry "[placeholder]" strings — a section list only
+  // counts as a real CV/CL when some content string is NOT a placeholder.
+  function sectionsHaveContent(list) {
+    if (!Array.isArray(list) || !list.length) return false;
+    var KEYS = ['content', 'text', 't', 'items', 'rows', 'left', 'right', 'intro', 'closing'];
+    var found = false;
+    function walk(v) {
+      if (found || v == null) return;
+      if (typeof v === 'string') {
+        var q = v.trim();
+        if (q && q.charAt(0) !== '[') found = true;
+        return;
+      }
+      if (Array.isArray(v)) { for (var i = 0; i < v.length; i++) walk(v[i]); return; }
+      if (typeof v === 'object') { for (var k = 0; k < KEYS.length; k++) { if (KEYS[k] in v) walk(v[KEYS[k]]); } }
+    }
+    for (var i = 0; i < list.length; i++) {
+      var s = list[i];
+      if (s && s.on !== false) walk(s);
+    }
+    return found;
   }
   function readLanguage() {
     try {
@@ -173,8 +219,11 @@
   }
 
   function T() {
-    var da = readLanguage() === 'da';
-    return da ? {
+    // ANALYSIS-PANEL-I18N-001 (owner 2026-07-12): labels in EVERY app language
+    // (was en/da only). The panel language follows the opened application; a
+    // language without a dict here falls back to English — when a new language
+    // is added in Settings, add its block to LABELS below.
+    var DA = {
       heading: 'Analysér mod et jobopslag',
       jdLabel: 'Jobopslag (indsæt teksten)',
       upload: 'Eller upload:', uploadJd: '⬆ Upload jobopslag',
@@ -182,6 +231,9 @@
       run: 'Analysér JD', running: 'Analyserer…',
       reading: 'Læser {file}…',
       fileErr: 'Filfejl: {err}',
+      urlPh: '🔗 Indsæt JD-URL (HR-on, Workday, Greenhouse, Lever, LinkedIn…)',
+      fetching: 'Henter JD…',
+      urlErr: 'Kunne ikke hente jobopslaget fra URL’en.',
       noProxy: 'Proxy-URL er ikke konfigureret. Åbn Indstillinger.',
       jdShort: 'Indsæt et jobopslag på mindst 50 tegn.',
       compareHint: 'Sammenlign det genererede CV med et eksisterende jobopslag.',
@@ -190,7 +242,8 @@
       recruiter: 'Rekrutterer', redFlags: 'Røde flag', questions: 'Spørgsmål at stille',
       noRecruiter: 'Ingen tydelig rekrutterer fundet.', noRedFlags: 'Ingen røde flag fundet.',
       noQuestions: 'Ingen forslag til spørgsmål.', done: 'Analyse opdateret.',
-    } : {
+    };
+    var EN = {
       heading: 'Analyse against a job description',
       jdLabel: 'Job description (paste here)',
       upload: 'Or upload:', uploadJd: '⬆ Upload JD',
@@ -198,6 +251,9 @@
       run: 'Analyse JD', running: 'Analysing…',
       reading: 'Reading {file}…',
       fileErr: 'File error: {err}',
+      urlPh: '🔗 Paste JD URL (HR-on, Workday, Greenhouse, Lever, LinkedIn…)',
+      fetching: 'Fetching JD…',
+      urlErr: 'Could not fetch the job description from that URL.',
       noProxy: 'Proxy URL is not configured. Open Settings.',
       jdShort: 'Paste a job description of at least 50 characters.',
       compareHint: 'Compare the generated CV against an existing job description.',
@@ -207,6 +263,89 @@
       noRecruiter: 'No clear recruiter info found.', noRedFlags: 'No red flags found.',
       noQuestions: 'No suggested questions.', done: 'Analysis updated.',
     };
+    var ES = {
+      heading: 'Analizar contra una oferta de empleo',
+      jdLabel: 'Oferta de empleo (pegar aquí)',
+      upload: 'O subir:', uploadJd: '⬆ Subir oferta',
+      pdf: 'PDF', word: 'Word', image: 'Imagen',
+      run: 'Analizar oferta', running: 'Analizando…',
+      reading: 'Leyendo {file}…',
+      fileErr: 'Error de archivo: {err}',
+      urlPh: '🔗 Pegar URL de la oferta (HR-on, Workday, Greenhouse, Lever, LinkedIn…)',
+      fetching: 'Obteniendo la oferta…',
+      urlErr: 'No se pudo obtener la oferta desde esa URL.',
+      noProxy: 'La URL del proxy no está configurada. Abre Configuración.',
+      jdShort: 'Pega una oferta de al menos 50 caracteres.',
+      compareHint: 'Compara el CV generado con una oferta de empleo existente.',
+      emptyHint: 'Pega o sube una oferta de empleo para ejecutar el análisis.',
+      fitScore: 'Puntuación de ajuste', strengths: 'Fortalezas', gaps: 'Carencias',
+      recruiter: 'Reclutador', redFlags: 'Señales de alerta', questions: 'Preguntas para hacer',
+      noRecruiter: 'No se encontró información clara del reclutador.', noRedFlags: 'Sin señales de alerta.',
+      noQuestions: 'Sin preguntas sugeridas.', done: 'Análisis actualizado.',
+    };
+    var ZH = {
+      heading: '对照职位描述进行分析',
+      jdLabel: '职位描述（粘贴到此处）',
+      upload: '或上传：', uploadJd: '⬆ 上传职位描述',
+      pdf: 'PDF', word: 'Word', image: '图片',
+      run: '分析职位描述', running: '分析中…',
+      reading: '正在读取 {file}…',
+      fileErr: '文件错误：{err}',
+      urlPh: '🔗 粘贴职位链接（HR-on、Workday、Greenhouse、Lever、LinkedIn…）',
+      fetching: '正在获取职位描述…',
+      urlErr: '无法从该链接获取职位描述。',
+      noProxy: '未配置代理地址。请打开设置。',
+      jdShort: '请粘贴至少 50 个字符的职位描述。',
+      compareHint: '将生成的简历与现有职位描述进行对比。',
+      emptyHint: '粘贴或上传职位描述以运行分析。',
+      fitScore: '匹配度', strengths: '优势', gaps: '差距',
+      recruiter: '招聘负责人', redFlags: '风险提示', questions: '建议提问',
+      noRecruiter: '未找到明确的招聘负责人信息。', noRedFlags: '未发现风险提示。',
+      noQuestions: '暂无建议提问。', done: '分析已更新。',
+    };
+    var HE = {
+      heading: 'ניתוח מול תיאור משרה',
+      jdLabel: 'תיאור המשרה (הדביקו כאן)',
+      upload: 'או העלאה:', uploadJd: '⬆ העלאת תיאור משרה',
+      pdf: 'PDF', word: 'Word', image: 'תמונה',
+      run: 'ניתוח משרה', running: 'מנתח…',
+      reading: 'קורא את {file}…',
+      fileErr: 'שגיאת קובץ: {err}',
+      urlPh: '🔗 הדביקו קישור למשרה (HR-on, Workday, Greenhouse, Lever, LinkedIn…)',
+      fetching: 'מוריד את תיאור המשרה…',
+      urlErr: 'לא ניתן להוריד את תיאור המשרה מהקישור.',
+      noProxy: 'כתובת הפרוקסי אינה מוגדרת. פתחו הגדרות.',
+      jdShort: 'הדביקו תיאור משרה של 50 תווים לפחות.',
+      compareHint: 'השוו את קורות החיים שנוצרו מול תיאור משרה קיים.',
+      emptyHint: 'הדביקו או העלו תיאור משרה כדי להריץ את הניתוח.',
+      fitScore: 'ציון התאמה', strengths: 'חוזקות', gaps: 'פערים',
+      recruiter: 'מגייס/ת', redFlags: 'דגלים אדומים', questions: 'שאלות לשאול',
+      noRecruiter: 'לא נמצא מידע ברור על המגייס.', noRedFlags: 'לא נמצאו דגלים אדומים.',
+      noQuestions: 'אין שאלות מוצעות.', done: 'הניתוח עודכן.',
+    };
+    var AM = {
+      heading: 'ከሥራ ማስታወቂያ ጋር ማነጻጸር',
+      jdLabel: 'የሥራ ማስታወቂያ (እዚህ ይለጥፉ)',
+      upload: 'ወይም ይጫኑ:', uploadJd: '⬆ የሥራ ማስታወቂያ ይጫኑ',
+      pdf: 'PDF', word: 'Word', image: 'ምስል',
+      run: 'ማስታወቂያ ተንትን', running: 'በመተንተን ላይ…',
+      reading: '{file} በማንበብ ላይ…',
+      fileErr: 'የፋይል ስህተት: {err}',
+      urlPh: '🔗 የማስታወቂያ አገናኝ ይለጥፉ (HR-on, Workday, Greenhouse, Lever, LinkedIn…)',
+      fetching: 'ማስታወቂያውን በማምጣት ላይ…',
+      urlErr: 'ከዚያ አገናኝ ማስታወቂያውን ማምጣት አልተቻለም።',
+      noProxy: 'የፕሮክሲ አድራሻ አልተዋቀረም። ቅንብሮችን ይክፈቱ።',
+      jdShort: 'ቢያንስ 50 ቁምፊ ያለው ማስታወቂያ ይለጥፉ።',
+      compareHint: 'የተፈጠረውን CV ካለ የሥራ ማስታወቂያ ጋር ያነጻጽሩ።',
+      emptyHint: 'ትንተናውን ለማካሄድ ማስታወቂያ ይለጥፉ ወይም ይጫኑ።',
+      fitScore: 'የመመጣጠን ውጤት', strengths: 'ጥንካሬዎች', gaps: 'ክፍተቶች',
+      recruiter: 'ቀጣሪ', redFlags: 'ማስጠንቀቂያዎች', questions: 'መጠየቅ ያለባቸው ጥያቄዎች',
+      noRecruiter: 'ግልጽ የቀጣሪ መረጃ አልተገኘም።', noRedFlags: 'ማስጠንቀቂያ አልተገኘም።',
+      noQuestions: 'የተጠቆሙ ጥያቄዎች የሉም።', done: 'ትንተናው ተዘምኗል።',
+    };
+    var LABELS = { da: DA, es: ES, zh: ZH, he: HE, am: AM };
+    var L = String(readLanguage() || 'en').slice(0, 2);
+    return LABELS[L] ? Object.assign({}, EN, LABELS[L]) : EN;
   }
 
   function injectStyles() {
@@ -225,6 +364,8 @@
       + '#' + BLOCK_ID + ' .apjb-uplabel{font-size:11px;color:#6b7280;font-weight:600;}'
       + '#' + BLOCK_ID + ' .apjb-upbtn{font-size:11px;font-weight:600;padding:4px 10px;background:#fff;color:#283556;border:1px solid #283556;border-radius:4px;cursor:pointer;}'
       + '#' + BLOCK_ID + ' .apjb-upbtn:hover{background:#f5f5f5;}'
+      + '#' + BLOCK_ID + ' .apjb-url{flex:1 1 160px;min-width:0;padding:5px 8px;font-family:Georgia,serif;font-size:11px;color:#333;border:1px solid #d0d2d6;border-radius:4px;box-sizing:border-box;}'
+      + '#' + BLOCK_ID + ' .apjb-url:focus{outline:none;border-color:#01B7BB;box-shadow:0 0 0 3px rgba(1,183,187,.18);}'
       + '#' + BLOCK_ID + ' .apjb-status{font-size:11px;color:#6b7280;margin-top:4px;min-height:14px;}'
       + '#' + BLOCK_ID + ' .apjb-run{margin-top:10px;padding:9px 16px;font-size:12.5px;font-weight:700;color:#fff;background:#00746E;border:none;border-radius:6px;cursor:pointer;}'
       + '#' + BLOCK_ID + ' .apjb-run:hover{background:#01B7BB;}'
@@ -368,13 +509,20 @@
   function buildBlock() {
     var t = T();
     var rationale = readRationale();
-    var hasAnalysis = !!(rationale && (rationale.summary || rationale.strengths || rationale.gaps || rationale.fit_score !== undefined || rationale.recruiter !== undefined));
+    var hasAnalysis = rationaleHasAnalysis(rationale);
 
     var wrap = el('div', { id: BLOCK_ID });
     wrap.appendChild(el('div', { className: 'apjb-heading' }, t.heading));
     wrap.appendChild(el('div', { className: 'apjb-hint' }, hasAnalysis ? t.compareHint : t.emptyHint));
 
     var ta = el('textarea', { className: 'apjb-textarea', placeholder: t.jdLabel + '…' });
+    // OPEN-JD-VISIBLE-001 (owner 2026-07-12): an application opened from the
+    // Job Tracker (or any cloud restore) mirrors its JD in antcv:lastJdText —
+    // prefill it here so the analysis eats the SAME JD without a re-paste.
+    try {
+      var lastJd = String(localStorage.getItem('antcv:lastJdText') || '').trim();
+      if (lastJd.length >= 50) ta.value = lastJd;
+    } catch (_) {}
     wrap.appendChild(ta);
 
     var status = el('div', { className: 'apjb-status' });
@@ -417,8 +565,12 @@
     }
     // v1.50.153 — single "Upload JD" button (replaces the PDF/Word/Image trio).
     // Accepts every supported format incl. JSON; the OS picker filters by it.
+    // OPEN-JD-VISIBLE-001: a JD-URL input sits next to it — same placeholder
+    // and same /api/fetch-jd-url pipeline as the main upload-step URL field.
+    // "Analyse JD" fetches the URL first when the textarea is empty.
+    var urlInput = el('input', { className: 'apjb-url', type: 'url', placeholder: t.urlPh });
     var uprow = el('div', { className: 'apjb-uprow' },
-      upBtn(t.uploadJd, '.pdf,.doc,.docx,.txt,.json,image/*'), fileInput);
+      upBtn(t.uploadJd, '.pdf,.doc,.docx,.txt,.json,image/*'), urlInput, fileInput);
     wrap.appendChild(uprow);
     wrap.appendChild(status);
 
@@ -432,9 +584,53 @@
       var proxyUrl = readProxyUrl();
       if (!proxyUrl) { errBox.textContent = t.noProxy; errBox.style.display = 'block'; return; }
       var jd = (ta.value || '').trim();
+      // OPEN-JD-VISIBLE-001: URL given + no pasted text → fetch the JD from the
+      // URL first (same proxy endpoint as the main "Fetch JD" flow), fill the
+      // textarea, then continue straight into the analysis.
+      var jdUrl = (urlInput.value || '').trim();
+      if (jdUrl && jd.length < 50) {
+        runBtn.disabled = true; runBtn.textContent = t.fetching;
+        try {
+          var fres = await fetch(proxyUrl + '/api/fetch-jd-url', {
+            method: 'POST', credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: jdUrl }),
+          });
+          var fjson = null;
+          try { fjson = await fres.json(); } catch (_) {}
+          if (fres.ok && fjson && fjson.ok !== false && fjson.text && String(fjson.text).trim().length >= 50) {
+            ta.value = String(fjson.text);
+            jd = ta.value.trim();
+            status.textContent = '';
+          } else {
+            errBox.textContent = t.urlErr + ((fjson && (fjson.error || fjson.wall_hint)) ? ' ' + (fjson.error || fjson.wall_hint) : '');
+            errBox.style.display = 'block';
+            return;
+          }
+        } catch (e) {
+          errBox.textContent = t.urlErr + ' ' + String((e && e.message) || e);
+          errBox.style.display = 'block';
+          return;
+        } finally {
+          runBtn.disabled = false; runBtn.textContent = t.run;
+        }
+      }
       if (jd.length < 50) { errBox.textContent = t.jdShort; errBox.style.display = 'block'; return; }
-      var cvSections = readSections('cv_pwa_sections');
-      var clSections = readSections('cl_pwa_sections');
+      // OPEN-ANALYSIS-AUTORUN-001: the ACTIVE application's live sections win;
+      // the legacy cv_pwa_sections mirror is only consulted when no live store
+      // exists at all. A live store WITHOUT real content (fresh template after
+      // a Job-Tracker Open) means this application has no CV yet — the fit
+      // half is skipped instead of scoring the JD against a template or a
+      // PREVIOUS application's leftovers; the JD-analysis half still runs.
+      var live = readLiveSections();
+      var cvSections = null, clSections = null;
+      if (live) {
+        if (sectionsHaveContent(live.cv)) cvSections = live.cv;
+        if (sectionsHaveContent(live.cl)) clSections = live.cl;
+      } else {
+        cvSections = readSections('cv_pwa_sections');
+        clSections = readSections('cl_pwa_sections');
+      }
 
       runBtn.disabled = true; runBtn.textContent = t.running;
       try {
@@ -443,7 +639,9 @@
         if (clSections) rfBody.cl_sections = clSections;
 
         var rf = window.AntcvRecheckFit;
-        var pFit = postRecheckFit(proxyUrl, rfBody).catch(function () { return null; });
+        var pFit = cvSections
+          ? postRecheckFit(proxyUrl, rfBody).catch(function () { return null; })
+          : Promise.resolve(null);
         var pJd = (rf && typeof rf._postJdAnalysis === 'function')
           ? rf._postJdAnalysis(proxyUrl, { jd_text: jd, candidate_summary: summaryStr, search_recruiter: true }).catch(function () { return null; })
           : Promise.resolve(null);
@@ -491,6 +689,21 @@
           errBox.style.display = 'block';
         } else {
           okBox.textContent = t.done; okBox.style.display = 'block';
+          // OPEN-ANALYSIS-AUTORUN-001: persist the analysis on the application
+          // ROW (partial PUT — the relay whitelists rationale). The restore
+          // applies the row's rationale LAST, so a local-only merge would be
+          // clobbered on the next Open; landing it on the row makes the
+          // analysis reappear in the panel every time the app is reopened.
+          try {
+            var appId = window.AntcvJdScope && window.AntcvJdScope.getCurrentAppId && window.AntcvJdScope.getCurrentAppId();
+            if (appId && /^\d+$/.test(String(appId))) {
+              fetch(proxyUrl + '/api/applications/' + appId, {
+                method: 'PUT', credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rationale: merged }),
+              }).catch(function () {});
+            }
+          } catch (_) {}
         }
       } catch (e) {
         errBox.textContent = String((e && e.message) || e); errBox.style.display = 'block';
@@ -499,10 +712,36 @@
       }
     });
 
+    // Enter in the URL field = fetch + analyse (one keystroke, same handler).
+    urlInput.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter') { ev.preventDefault(); runBtn.click(); }
+    });
+
     wrap.appendChild(runBtn);
     wrap.appendChild(errBox);
     wrap.appendChild(okBox);
     wrap.appendChild(results);
+
+    // OPEN-ANALYSIS-AUTORUN-001 (owner 2026-07-12: "if we already have a JD
+    // analysis I expect ... I would see the JD analysis content in the
+    // analysis panel"). An application opened with a JD but no analysis
+    // fields in its rationale gets ONE automatic Analyse JD run, so the
+    // panel fills itself instead of showing the empty state. Decision is
+    // deferred + re-read so a cloud restore that lands a real rationale a
+    // beat later wins (then nothing runs); the fingerprint key caps it at
+    // one run per JD ever.
+    setTimeout(function () {
+      try {
+        if (rationaleHasAnalysis(readRationale())) return;
+        var jdNow = (ta.value || '').trim();
+        if (jdNow.length < 50) return;
+        var fp = jdFingerprint(jdNow);
+        if (localStorage.getItem(AUTORUN_KEY) === fp) return;
+        localStorage.setItem(AUTORUN_KEY, fp);
+        runBtn.click();
+      } catch (_) {}
+    }, 2500);
+
     return wrap;
   }
 
@@ -544,6 +783,75 @@
     syncWithReportBlock(panel);
   }
 
+  // AUTO-ANALYSE-ON-JD-LOAD-001 (owner 2026-07-19): OPEN-ANALYSIS-AUTORUN-001 above only
+  // fires from inside buildBlock() — i.e. once the user has OPENED the Analysis panel.
+  // The owner wants the analysis to run automatically WHEN A JD IS LOADED, without
+  // opening the panel first ("execute the jd analysis ... not wait for pressing analyse
+  // JD, even in fresh generations"). This headless runner does the same network +
+  // rationale-merge the in-panel Run button does, minus the UI, and the scheduler fires
+  // it once per JD. The shared AUTORUN_KEY fingerprint caps it at ONE LLM run per JD, so
+  // it never double-spends with the in-panel autorun or a later generation.
+  var __headlessRunning = false;
+  async function runHeadlessJdAnalysis(jd, proxyUrl) {
+    var live = readLiveSections();
+    var cvSections = null, clSections = null;
+    if (live) {
+      if (sectionsHaveContent(live.cv)) cvSections = live.cv;
+      if (sectionsHaveContent(live.cl)) clSections = live.cl;
+    } else {
+      cvSections = readSections('cv_pwa_sections');
+      clSections = readSections('cl_pwa_sections');
+    }
+    var summaryStr = cvSections ? JSON.stringify(cvSections).slice(0, 8000) : '';
+    var rfBody = { jd_text: jd, cv_sections: cvSections || [], doc_target: clSections ? 'both' : 'cv' };
+    if (clSections) rfBody.cl_sections = clSections;
+    var rf = window.AntcvRecheckFit;
+    var pFit = cvSections ? postRecheckFit(proxyUrl, rfBody).catch(function () { return null; }) : Promise.resolve(null);
+    var pJd = (rf && typeof rf._postJdAnalysis === 'function')
+      ? rf._postJdAnalysis(proxyUrl, { jd_text: jd, candidate_summary: summaryStr, search_recruiter: true }).catch(function () { return null; })
+      : Promise.resolve(null);
+    var resFit = await pFit, resJd = await pJd;
+    var fit = (resFit && resFit.status === 200 && resFit.body && resFit.body.ok) ? resFit.body.analysis : null;
+    var jdA = (resJd && resJd.status === 200 && resJd.body && resJd.body.ok) ? (resJd.body.analysis || resJd.body) : null;
+    if (!fit && !jdA) return false;
+    var merged = readRationale() || {};
+    if (fit) {
+      if (fit.summary !== undefined) merged.summary = fit.summary;
+      if (fit.fit_score !== undefined) merged.fit_score = fit.fit_score;
+      if (fit.strengths !== undefined) merged.strengths = fit.strengths;
+      if (fit.gaps !== undefined) merged.gaps = fit.gaps;
+      if (fit.suggested_edits !== undefined) merged.suggested_edits = fit.suggested_edits;
+    }
+    if (jdA) {
+      if (jdA.recruiter !== undefined) merged.recruiter = jdA.recruiter;
+      merged.red_flags = (jdA.red_flags !== undefined) ? jdA.red_flags : (merged.red_flags || []);
+      if (jdA.questions !== undefined) merged.questions_in_jd = jdA.questions;
+      else if (jdA.questions_in_jd !== undefined) merged.questions_in_jd = jdA.questions_in_jd;
+      if (jdA.assumptions !== undefined) merged.assumptions = jdA.assumptions;
+      if (jdA.recommendations !== undefined) merged.recommendations = jdA.recommendations;
+      if (jdA.confidence_notes !== undefined) merged.confidence_notes = jdA.confidence_notes;
+    }
+    merged._jdAnalysisMergedAt = Date.now();
+    if (writeRationale(merged)) fireMerge();
+    return true;
+  }
+  function maybeAutoRunOnJdLoad() {
+    try {
+      if (__headlessRunning) return;
+      if (rationaleHasAnalysis(readRationale())) return;         // already analysed → nothing to do
+      var jd = '';
+      try { jd = String(localStorage.getItem('antcv:lastJdText') || '').trim(); } catch (_) {}
+      if (jd.length < 50) return;                                 // no real JD loaded yet
+      var fp = jdFingerprint(jd);
+      if (localStorage.getItem(AUTORUN_KEY) === fp) return;       // this JD already auto-run once
+      var proxyUrl = readProxyUrl();
+      if (!proxyUrl) return;
+      localStorage.setItem(AUTORUN_KEY, fp);                      // claim BEFORE the async call so it can't double-fire
+      __headlessRunning = true;
+      runHeadlessJdAnalysis(jd, proxyUrl).catch(function () {}).then(function () { __headlessRunning = false; });
+    } catch (_) { __headlessRunning = false; }
+  }
+
   var pending = false;
   function schedule() {
     if (pending) return;
@@ -551,11 +859,19 @@
     requestAnimationFrame(function () {
       pending = false;
       try { ensureBlock(); } catch (_) {}
+      try { maybeAutoRunOnJdLoad(); } catch (_) {}
     });
   }
 
   schedule();
   [300, 800, 1800, 3500, 6000].forEach(function (d) { setTimeout(schedule, d); });
+  // AUTO-ANALYSE-ON-JD-LOAD-001: a slow poll catches a JD attached AFTER boot (URL fetch /
+  // file upload / tracker Open mirror it to antcv:lastJdText) even when no DOM mutation
+  // reaches the observer; self-limits — stops once an analysis exists for the loaded JD.
+  var __aaPoll = setInterval(function () {
+    try { maybeAutoRunOnJdLoad(); } catch (_) {}
+  }, 3000);
+  window.addEventListener('antcv:jd-loaded', maybeAutoRunOnJdLoad);
   try {
     new MutationObserver(function (records) {
       var meaningful = false;

@@ -1,5 +1,7 @@
 # Nightly prompt — unsolicited CV/CL backlog, to completion
 
+> **NIGHT SHIFT (parallel-session safety):** before editing, `git pull --rebase origin main` then `node scripts/shift.mjs claim --task "<what>"` and work in the printed `git worktree`; use version numbers only inside your claimed range; `node scripts/shift.mjs release` when done. See `docs/qa/NIGHT_SHIFT.md`.
+
 Dispatch this whole block to the cloud Routine / nightly. It is self-contained and covers the FULL open
 backlog from the 2026-06-23/24 owner QA on the unsolicited Product/Project Expert application. Work the
 items in priority order, verify EACH before moving on, and update `docs/qa/ACTIVE_BUGS.md` as you close them.

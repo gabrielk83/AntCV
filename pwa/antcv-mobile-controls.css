@@ -1006,7 +1006,22 @@ body.antcv-editor-ready {
     max-height: 33dvh !important;
     min-height: 0 !important;
     width: auto !important;
-    overflow: hidden !important;
+    /* MOB-008 (owner 2026-07-07): "Analysis panel stops scrolling once an
+       application is detected." The mobile bottom panel is a fixed 33dvh flex
+       column; the analysis report + JD block are sidecar-injected (360/356) as
+       flex:0 0 auto blocks, NOT a bounded flex:1 scroller, so a tall detected
+       report (~1760px) overflows the 33dvh panel. This rule (and its twin on
+       .antcv-mobile-bottom-panel below) USED to pin `overflow: hidden !important`;
+       its high specificity beat both the inline style AND the sidecars'
+       `.arx-mob-scroll` overflow-y:auto override, so the panel clipped its
+       content and could not scroll. Clip horizontally only; scroll vertically.
+       The grab-zone (position:sticky) stays pinned while content scrolls.
+       Sections/Edit tabs are unaffected: their inner {flex:1;overflow-y:auto}
+       tab div bounds itself so the panel's scrollHeight stays == clientHeight.
+       Verified: pwa/test/diag-analysis-mobile-scroll.mjs. */
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
     z-index: 1250 !important;
     border-radius: 16px !important;
     box-shadow: 0 8px 26px rgba(0,0,0,.22) !important;
@@ -1053,7 +1068,12 @@ body.antcv-editor-ready {
     max-height: 33dvh !important;
     min-height: 0 !important;
     width: auto !important;
-    overflow: hidden !important;
+    /* MOB-008 (owner 2026-07-07): twin of the .antcv-mobile-panel-fixed rule
+       above — must also let the panel scroll vertically or the detected-analysis
+       report is clipped. See the full note above. */
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
     z-index: 1250 !important;
     border-radius: 16px !important;
     box-shadow: 0 8px 26px rgba(0,0,0,.22) !important;
@@ -1335,3 +1355,14 @@ body.antcv-editor-ready {
   .antcv-top-tools { flex-shrink: 0 !important; }
   button[data-antcv-privacy-led-fab="1"] { display: inline-flex !important; }
 }
+
+/* MOBILE-TOPBAR-EXPORT-FAB-001 (owner 2026-07-05, live phone report): the
+ * topbar (EN/Unsolicited dropdowns, title, icon row) doesn't fit at 100%
+ * zoom on a real phone, forcing the owner to zoom the browser out to ~60%.
+ * VERIFY-FIRST correction: the actual crowding element is the relocated
+ * #antcv-pdf-preview-fab ("Export" pill antcv-topbar-tools-347.js moves into
+ * .antcv-top-tools) — real fix lives there (skip the relocation on mobile,
+ * it falls back to its own natural floating position). .antcv-export-buttons
+ * (⬇ PDF / 📄 DOCX) lives in .antcv-preview-actions, a SEPARATE row, not the
+ * topbar at all — no CSS change needed here for it.
+ */

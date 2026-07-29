@@ -59,7 +59,7 @@
   };
 
   var EU_CITIZEN = {
-    en: 'EU Citizen',
+    en: 'EU citizen', // EU-CITIZEN-CANON-SWEEP-001: gold identity.citizenship_canonical
     da: 'EU-borger',
     es: 'Ciudadano UE',
     zh: '\u6b27\u76df\u516c\u6c11'
@@ -86,6 +86,7 @@
   }
   var LANG_NAMES_REV = buildReverse(LANG_NAMES);
   var EU_CITIZEN_REV = buildReverse(EU_CITIZEN);
+  EU_CITIZEN_REV['EU Citizen'] = true; // legacy capital form in stored data stays recognized
   var KIND_REGARDS_REV = buildReverse(KIND_REGARDS);
 
   function getCurrentLanguage() {

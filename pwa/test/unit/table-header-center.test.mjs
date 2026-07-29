@@ -26,9 +26,13 @@ test('applyAlignmentToSection skips <th> editables (header decoupled from body c
   // the guard must sit INSIDE applyAlignmentToSection, before the textAlign write
   const fnStart = sidecar.indexOf('function applyAlignmentToSection');
   assert.ok(fnStart !== -1, 'applyAlignmentToSection not found');
-  const fnBody = sidecar.slice(fnStart, fnStart + 2600);
+  // window + write-pattern widened 2026-07-14: the per-row-cjlr work (1.51.1005) grew
+  // applyAlignmentToSection and renamed the write var (alignment -> __use), pushing the
+  // textAlign write past the old 2600 window. The GUARD-before-WRITE invariant is what
+  // matters, so match the write generically and use a window that spans the whole function.
+  const fnBody = sidecar.slice(fnStart, fnStart + 4000);
   const guardIdx = fnBody.indexOf("if (t.closest('th')) continue;");
-  const writeIdx = fnBody.indexOf('t.style.textAlign = alignment');
+  const writeIdx = fnBody.search(/t\.style\.textAlign\s*=/);
   assert.ok(guardIdx !== -1, 'th guard not inside applyAlignmentToSection');
   assert.ok(writeIdx !== -1, 'textAlign write not found');
   assert.ok(guardIdx < writeIdx, 'th guard must precede the textAlign write');

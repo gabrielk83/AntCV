@@ -32,19 +32,34 @@
   // (bring is persisted by antcv-nordic-cl-order-971; closure by the editor; both
   //  are included as belt-and-suspenders — re-applying a real value is harmless.)
   var GUARDED = ['opening', 'why', 'who', 'foundation', 'contribute', 'closure', 'bring'];
-  // Canonical CL section order (Nordic) — used to re-insert a guarded section that a
-  // stale restore DELETED outright at its correct position. See CL-PROSE-LOSS-GUARD-002.
-  var ORDER = ['greeting', 'opening', 'why', 'who', 'foundation', 'bring', 'contribute', 'closure'];
+  // Canonical CL section order — used to re-insert a guarded section that a stale restore
+  // DELETED outright at its correct position. See CL-PROSE-LOSS-GUARD-002.
+  // CL-V5-STRUCT-001 (2026-07-21): kept in step with antcv-nordic-cl-order-971's ORDER. A
+  // stale copy here would re-insert `who` in its OLD mid-letter slot and fight 971's v5
+  // order on every restore.
+  var ORDER = ['greeting', 'opening', 'why', 'role_view', 'bring', 'contribute', 'who', 'foundation', 'closure'];
   var lastApplyAt = 0;
 
   function disabled() { try { var v = localStorage.getItem('antcv:disable-cl-prose-guard'); return v === '1' || v === 'true'; } catch (_) { return false; } }
   function erasing() { try { return !!(localStorage.getItem('antcv:full-erase-in-progress') || localStorage.getItem('antcv:just-erased')); } catch (_) { return false; } }
 
+  // LANG-GUARD-KEY-001 (owner 2026-07-22 "every generation starts in Chinese"): the
+  // loss-guard cache is keyed by application (company|role) but was LANGUAGE-BLIND, so a
+  // Chinese generation's cached prose was re-injected into a later ENGLISH generation
+  // during the skeleton window (empty section -> reapply) — the doc "started in Chinese,
+  // then switched to English". Include the current output language in the key so a
+  // generation only ever restores from a SAME-LANGUAGE snapshot; a stale zh cache (keyed
+  // without a lang suffix) can never poison an en gen — it simply no longer matches.
+  function curLang() {
+    try { return String(localStorage.getItem('language') || 'en').replace(/["']/g, '').toLowerCase().slice(0, 2) || 'en'; }
+    catch (_) { return 'en'; }
+  }
   function appKey() {
+    var lang = curLang();
     try {
       var m = JSON.parse(localStorage.getItem('meta') || '{}') || {};
-      return String((m.company || '') + '|' + (m.role || '')).slice(0, 200);
-    } catch (_) { return '|'; }
+      return String((m.company || '') + '|' + (m.role || '') + '|' + lang).slice(0, 200);
+    } catch (_) { return '||' + lang; }
   }
   // CL-PROSE-UNSOL-POISON-001 (owner 2026-07-03): an UNSOLICITED application's CL prose
   // must never be snapshotted or re-applied by this guard. Root cause of "an unsolicited
@@ -62,7 +77,7 @@
       // window (before meta is stamped) that CL-BLANK-CAPTURE-001 relies on to snapshot
       // prose early; gating it would drop real prose. The poison was the explicit
       // "Unsolicited|<role>" bucket, which this catches.
-      return c === 'unsolicited';
+      return c === 'unsolicited' || !!(window.__antcvUnsol && window.__antcvUnsol(c)); // UNSOL-PILLAR-LANG-001: any language variant
     } catch (_) { return false; }
   }
   function readSections() {

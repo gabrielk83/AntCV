@@ -55,7 +55,7 @@
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.40.172';
+  const SCRIPT_VERSION = '1.51.1604-align-storm-001';
   const STORAGE_KEY = 'antcvItemAlignment';
   const SECTIONS_KEY = 'sections';
   const DOC_KEY = 'doc';
@@ -292,18 +292,60 @@
           // marker itself, then the row's ROLE path (roles.N — written by
           // the experience role cycler), then the section default.
           const rolePath = rowEl.getAttribute('data-antcv-role-path');
-          const perItem = isValidAlign(perRow[marker]) ? perRow[marker]
+          // PER-ROW-CJLR-ROWKEY-001 (owner 2026-07-14, verified live): the row stamps
+          // its canonical per-row key as data-antcv-rowkey (e.g. "roles.0.bullets.0"
+          // for a role bullet). Match THAT first — the editor writes the per-row CJLR
+          // under exactly this key, but the DOM row-path is "items.N", so without this
+          // a role bullet's per-row CJLR never matched and this sidecar reset it to the
+          // render default.
+          const rowKey = rowEl.getAttribute('data-antcv-rowkey');
+          const perItem = (rowKey && isValidAlign(bucket[rowKey])) ? bucket[rowKey]
+            : isValidAlign(perRow[marker]) ? perRow[marker]
             : isValidAlign(bucket[marker]) ? bucket[marker]
             : (rolePath && isValidAlign(bucket[rolePath])) ? bucket[rolePath]
             : null;
-          const align = perItem || groupAlign;
+          // GROUP-CJLR-SCOPE-001 (owner 2026-07-14): __group__ (the "Groups" control)
+          // aligns GROUP HEADINGS only — NOT content rows. This sidecar previously
+          // applied groupAlign to EVERY [data-antcv-row-path] row, which is why the
+          // group/section control still dragged all the body rows even after the
+          // render + section-align were scoped. Content rows follow their own per-item
+          // CJLR (perItem) or the render default (applyOne(null) restores it).
+          const isGroupHead = rowEl.hasAttribute('data-antcv-group-head') || rowEl.hasAttribute('data-antcv-role-head');
+          let align = perItem || (isGroupHead ? groupAlign : null);
+          // GROUP-HEAD-JUSTIFY-001 (owner 2026-07-14): a PLAIN group heading (not a role
+          // line) can't meaningfully justify — a single heading line justified renders as
+          // left anyway, and leaving it 'justify' makes the sidebar de-justify pass flip it
+          // (the tools "left<->justify fight"). Map justify→left so this applier agrees with
+          // the render (GROUP-HEAD-CJLR-001). Role heads keep justify (= space-between).
+          if (align === 'justify' && isGroupHead && !rowEl.hasAttribute('data-antcv-role-head')) align = 'left';
           applyOne(rowEl, align);
         });
       });
     });
   }
 
+  // GROUP-CJLR-ROLES-001 (owner 2026-07-14): a role head renders an inner flex row
+  // (data-antcv-role-line) — textAlign is INERT on a flex row, which is why the Groups
+  // control "did nothing" on roles. Map the align to the row's justifyContent instead,
+  // so it moves live (no React re-render needed). Restores space-between on clear.
+  var ROLE_JC = { left: 'flex-start', center: 'center', right: 'flex-end', justify: 'space-between' };
   function applyOne(el, align) {
+    var roleLine = (el.getAttribute('data-antcv-role-head') != null) ? el.querySelector('[data-antcv-role-line]') : null;
+    if (roleLine) {
+      var jc = align ? ROLE_JC[align] : null;
+      if (jc) {
+        if (!roleLine.dataset.antcvJcSet) {
+          roleLine.dataset.antcvJcOrig = roleLine.style.justifyContent || '';
+          roleLine.dataset.antcvJcSet = '1';
+        }
+        if (roleLine.style.justifyContent !== jc) roleLine.style.justifyContent = jc;
+      } else if (roleLine.dataset.antcvJcSet === '1') {
+        roleLine.style.justifyContent = roleLine.dataset.antcvJcOrig || '';
+        delete roleLine.dataset.antcvJcSet;
+        delete roleLine.dataset.antcvJcOrig;
+      }
+      return;
+    }
     if (align) {
       if (!el.dataset.antcvAlignSet) {
         el.dataset.antcvAlignOrig = el.style.textAlign || '';
@@ -448,6 +490,11 @@
       if (!parentSectionRow) return;
       const sid = findSidForEditorRow(parentSectionRow);
       const rowType = itemRow.getAttribute('data-antcv-item-row') || 'list';
+      // EDU-ROW-CJLR-001 (owner 2026-07-15): EDUCATION / RECOMMENDATIONS rows now carry
+      // their OWN inline CJLR cycler (rendered inside app.js's education editor, writing
+      // antcvItemAlignment[sid]["items.N.deg"]). Skip them here so the row does not get a
+      // second, duplicate cycler if these editor rows ever sit under a section-row wrapper.
+      if (rowType === 'education') return;
       const idx = itemRow.getAttribute('data-antcv-item-idx');
       const path = itemPathFor(rowType, idx);
       const wasInjected = itemRow.dataset[ITEM_INJECTED_FLAG] === '1';
@@ -538,13 +585,36 @@
     } catch (_) {}
   }
 
+  // ALIGN-STORM-001 (owner 2026-07-20, live-diagnosed): this MutationObserver was
+  // UNTHROTTLED — it ran the full inject + applyAllAlignments sweep (querySelectorAll over
+  // every preview row + style read/writes = forced reflow) on EVERY DOM mutation, so any
+  // re-render churn multiplied into a ~200 text-align-writes/sec storm (the "preview freeze"
+  // + certs/interests "jumpiness"). section-align already learned this (its schedule() floors
+  // to >=300ms between passes); mirror that here. A debounced+throttled tick keeps alignment
+  // correct (it is not real-time critical) without amplifying the storm. A short self-write
+  // window also stops applyAllAlignments's own style writes from immediately re-scheduling.
+  var __pending = false;
+  var __lastRunAt = 0;
+  function __nowMs() { return (window.performance && performance.now) ? performance.now() : Date.now(); }
+  function scheduleTick() {
+    if (__pending) return;
+    __pending = true;
+    var wait = Math.max(0, 300 - (__nowMs() - __lastRunAt));
+    var runPass = function () {
+      __pending = false;
+      __lastRunAt = __nowMs();
+      tick();
+    };
+    if (wait > 0) setTimeout(runPass, wait); else requestAnimationFrame(runPass);
+  }
+
   [0, 200, 600, 1500, 3000].forEach(function (d) {
     if (d === 0) tick();
     else setTimeout(tick, d);
   });
 
   try {
-    const mo = new MutationObserver(function () { tick(); });
+    const mo = new MutationObserver(function () { scheduleTick(); });
     mo.observe(document.body, { childList: true, subtree: true });
   } catch (_) {}
 

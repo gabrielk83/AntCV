@@ -69,7 +69,7 @@
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.40.136';
+  const SCRIPT_VERSION = '1.51.2980-rowfit-measure';
   const STORAGE_KEY = 'antcv:bullet-targets';
   const STYLE_ID = 'antcv-bullet-targets-styles';
   const STRIP_MARKER = 'data-antcv-bullet-target-strip';
@@ -711,7 +711,12 @@
           const opts = args[1] || (args[0] && args[0].method ? args[0] : null);
           const bodyText = readStringBody(opts);
           if (bodyText) {
-            const modified = maybeInjectIntoBody(bodyText);
+            // SHIP 3 first (width calibration), SHIP 4 second (measured
+            // per-bullet windows), SHIP 2 last (manual per-bullet locks) —
+            // all append-only to the same system prompt.
+            const widthMod = maybeInjectWidthHint(bodyText);
+            const winMod = maybeInjectBulletWindows(widthMod || bodyText) || widthMod;
+            const modified = maybeInjectIntoBody(winMod || bodyText) || winMod;
             if (modified) {
               // Build a fresh opts object so we don't mutate the
               // caller's reference. Preserve everything else.
@@ -744,9 +749,371 @@
     window.fetch = wrapped;
   }
 
+  // ════════════════════════════════════════════════════════════════
+  // SHIP 3 — WIDTH-TARGET-HINTS-001 (GOLD-TARGET-LAYOUT-DENSITY-001,
+  // v1.51.375)
+  // ════════════════════════════════════════════════════════════════
+  //
+  // The DIMENSION-AWARE BULLET LENGTH blocks in app.js's enrich prompts
+  // hardcode "Calibri 10.5pt ≈ 64-68 chars per line" — blind to the
+  // CURRENT sidebar ratio, indents, and body font, so bullets tuned to
+  // those numbers land as 2-3-word runt lines whenever the layout
+  // differs. This ship measures the real chars-per-line for the live
+  // main column (same DXA model as antcv-orphan-export-preflight
+  // mirrors from the docx-worker) and appends a WIDTH CALIBRATION
+  // block that overrides the hardcoded figures. It also fires on the
+  // Fit-it/compress prompts, which carry no width guidance at all.
+  //
+  // No app.js change: the same fetch wrapper as SHIP 2.
+
+  const WIDTH_MARKERS = [
+    'DIMENSION-AWARE BULLET LENGTH',
+    'Compress this CV/cover letter section',
+    // GEN-WIDTH-CALIBRATION-001 (owner 2026-07-13: "integration also to the
+    // app's generations in all levels"): the unconditional COMPRESSION-TIGHT
+    // push rides EVERY generation prompt (fast/balanced/thorough, targeted +
+    // unsolicited), so matching it puts the live chars-per-line calibration
+    // into all of them. Calibration is prompt-only and cheap — it stays on at
+    // every speed level; only SHIP 4's measured windows are speed-gated.
+    'COMPRESSION — WRITE TIGHT',
+  ];
+  const WIDTH_BLOCK_TAG = 'WIDTH CALIBRATION';
+  const PAGE_W_DXA = 11906;      // A4, zero page margins (worker model)
+  const PX_PER_DXA = 1 / 15;
+  const DEFAULT_BODY_PT = 10.5;  // worker main-body default
+
+  let cplCache = { sig: null, cpl: 0 };
+
+  function readJsonLs(key, fallback) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) return fallback;
+      const v = JSON.parse(raw);
+      return v == null ? fallback : v;
+    } catch (_) { return fallback; }
+  }
+
+  function currentGeometry() {
+    const sc = readJsonLs('styleConfig', {}) || {};
+    let ratio = parseFloat(localStorage.getItem('cvSidebarRatio'));
+    if (!(ratio > 0.1 && ratio < 0.7)) ratio = 0.36;
+    const num = (v, d) => (typeof v === 'number' && isFinite(v) ? v : d);
+    return {
+      ratio: ratio,
+      mainEdgeIndent: num(sc.mainEdgeIndent, 14),   // px
+      bulletIndent: num(sc.bulletIndent, 20),       // px
+      seamGap: num(sc.seamGap, 6),                  // px
+      font: (typeof sc.mainBodyFont === 'string' && sc.mainBodyFont) || 'Calibri',
+      pt: DEFAULT_BODY_PT,
+    };
+  }
+
+  // chars-per-line for a main-column bullet at the live geometry.
+  // Width mirrors the worker: cellW = PAGE_W − sidebar − 2·edgeIndent −
+  // seam; bullet text width = cellW − bulletIndent. Char width comes
+  // from a canvas measurement of CV-like prose at the export font size
+  // (pt → px at 4/3, the same conversion the export preflight uses).
+  function measureCharsPerLine() {
+    const g = currentGeometry();
+    const sig = [g.ratio, g.mainEdgeIndent, g.bulletIndent, g.seamGap, g.font, g.pt].join('|');
+    if (cplCache.sig === sig && cplCache.cpl > 0) return cplCache.cpl;
+    let avg = 0;
+    try {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return 0;
+      ctx.font = (g.pt * 4 / 3) + 'px "' + g.font + '", Calibri, sans-serif';
+      const sample = 'Design and characterise low-light optical systems, supplier ' +
+                     'qualification plans and measured validation procedures for production.';
+      avg = ctx.measureText(sample).width / sample.length;
+    } catch (_) { return 0; }
+    if (!(avg > 0)) return 0;
+    const cellWpx = (PAGE_W_DXA - Math.round(PAGE_W_DXA * g.ratio)
+                     - 2 * g.mainEdgeIndent * 15 - g.seamGap * 15) * PX_PER_DXA;
+    const bulletWpx = cellWpx - g.bulletIndent;
+    const cpl = Math.round(bulletWpx / avg);
+    if (!(cpl > 20 && cpl < 200)) return 0;
+    cplCache = { sig: sig, cpl: cpl };
+    return cpl;
+  }
+
+  function buildWidthBlock(cpl) {
+    const g = currentGeometry();
+    const gd = goldDensity();
+    const b = (linesMinusOne, frac) => Math.round((linesMinusOne + frac) * cpl);
+    const r = {
+      l1: [b(0, gd.lo), b(0, gd.hi)],
+      l2: [b(1, gd.lo), b(1, gd.hi)],
+      l3: [b(2, gd.lo), b(2, gd.hi)],
+    };
+    return '\n\n' + WIDTH_BLOCK_TAG + ' (measured from the CURRENT column width and body font — ' +
+      'these numbers OVERRIDE any chars-per-line figures above): one full rendered line here = ' +
+      cpl + ' chars (' + g.font + ' ' + g.pt + 'pt, main column at the live sidebar ratio ' + g.ratio + '). ' +
+      'Every bullet/paragraph must END ON A FULL LINE: its last line must reach at least ' +
+      Math.round(gd.runt * 100) + '% of ' +
+      'the column width. Valid total lengths: 1-LINE = ' + r.l1[0] + '-' + r.l1[1] + ' chars; ' +
+      '2-LINE = ' + r.l2[0] + '-' + r.l2[1] + ' chars; 3-LINE = ' + r.l3[0] + '-' + r.l3[1] + ' chars. ' +
+      'FORBIDDEN dead zones: ' + (r.l1[1] + 3) + '-' + (r.l2[0] - 3) + ' and ' +
+      (r.l2[1] + 3) + '-' + (r.l3[0] - 3) + ' chars — those wrap into a short dangling last line.' +
+      // GEN-QUALITY-RULES-001 + GOLD-RULES-SITE-001 (owner 2026-07-13: "we
+      // need one site that controls every antcv generation"): the block text
+      // comes from /gold-rules.json — the single machine-readable control
+      // site — with this inline copy only as the fetch-failure fallback.
+      '\n' + goldPromptBlock();
+  }
+
+  // ── GOLD-RULES-SITE-001: the single control site (/gold-rules.json) ──────
+  var goldRules = null;
+  var GOLD_FALLBACK_BLOCK = "GOLD CONTENT RULES (hard requirements):\n - Every Results line states a CHANGE metric (a percentage, multiplier, from->to, time/volume/money delta) with its mechanism. A team size or site description is a bullet, never a Result.\n - Core-competency tables: 3-4 TABLE ROWS, the highest-impact ones; every cell a complete clause that RENDERS in at most two lines of its column - never a third line.\n - Professional-experience roles: at most 3 bullets per role (generation cap) - pick the strongest; never pad.\n - Table first-column labels stay SHORT (about 28 chars max): a label that wraps to three lines or one-word rows in its cell is invalid; compress the label instead.\n - Every bullet and sentence ends COMPLETE with terminal punctuation - never a dangling connector or preposition (\"...traceable from\"), never a cut enumeration (\"...optics, electronics, mechanical.\").\n - Name partner/client companies only when the job description itself signals them; otherwise describe the relationship (\"an ODM partner\").\n - Certificates carry no years; order them by relevance to this job.\n - Interests and sidebar one-liners stay compact (drop filler words); keep personality lines intact but never pad them.";
+  // LINE-DISTRIBUTION-001 (owner 2026-07-22, OPEN_REGISTER row 61): the fill-band numbers come
+  // from gold-rules.json `density` — the SAME source the Python density loop reads
+  // (measure_density.py RUNT_FRAC/FILL_LO/FILL_HI) — instead of hand-duplicated literals that
+  // had already drifted (JS 0.70 vs gold 0.65 lower bound). Fallbacks mirror gold-rules.json.
+  function goldDensity() {
+    var d = (goldRules && goldRules.density) || {};
+    var band = (Array.isArray(d.fill_band) && d.fill_band.length >= 2) ? d.fill_band : [0.65, 0.97];
+    var runt = (typeof d.runt_fraction === 'number') ? d.runt_fraction : 0.60;
+    return { lo: band[0], hi: band[1], runt: runt };
+  }
+  function goldPromptBlock() {
+    if (goldRules && Array.isArray(goldRules.prompt_block) && goldRules.prompt_block.length) {
+      return goldRules.prompt_block.join('\n');
+    }
+    return GOLD_FALLBACK_BLOCK;
+  }
+  function loadGoldRules() {
+    try {
+      fetch('gold-rules.json?v=' + SCRIPT_VERSION, { cache: 'no-cache' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (j) { if (j && j.prompt_block) goldRules = j; })
+        .catch(function () {});
+    } catch (_) {}
+  }
+
+  // ── SHIP 4 — per-bullet MEASURED windows (GOLD-TARGET-LAYOUT-DENSITY-001,
+  // v1.51.378). The generic calibration (SHIP 3) tells the model the line
+  // width; this measures EACH bullet's current wrap on the live geometry
+  // (greedy word-wrap with real canvas metrics) and appends absolute
+  // character windows per bullet — the same measure->target step the
+  // headless density loop runs, now inside Fit-it/Enhance. Scaled by the
+  // generation speed level (owner 2026-07-13: fast = lower quality, faster):
+  // fast keeps calibration only; balanced/thorough add the measured windows.
+
+  function genSpeed() {
+    try {
+      const v = String(localStorage.getItem('antcv:genSpeed') || '').replace(/"/g, '');
+      return v || 'balanced';
+    } catch (_) { return 'balanced'; }
+  }
+
+  function measureCtx() {
+    const g = currentGeometry();
+    try {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+      ctx.font = (g.pt * 4 / 3) + 'px "' + g.font + '", Calibri, sans-serif';
+      return ctx;
+    } catch (_) { return null; }
+  }
+
+  // Greedy word-wrap of one bullet at the live bullet width. Returns the
+  // grow/shrink windows in ABSOLUTE chars, or null when the bullet already
+  // ends on a >=60%-full last line.
+  function bulletWindow(text, ctx, widthPx) {
+    const words = String(text || '').trim().split(/\s+/).filter(Boolean);
+    if (words.length < 3) return null;
+    const spaceW = ctx.measureText(' ').width;
+    let lineW = 0, lines = 1, lastChars = 0, totalW = 0, totalChars = 0;
+    for (const w of words) {
+      const ww = ctx.measureText(w).width;
+      totalW += ww; totalChars += w.length;
+      const cand = lineW === 0 ? ww : lineW + spaceW + ww;
+      if (cand > widthPx && lineW > 0) { lines += 1; lineW = ww; lastChars = w.length; }
+      else { lineW = cand; lastChars = lineW === ww ? w.length : lastChars + 1 + w.length; }
+    }
+    const gd = goldDensity();
+    const fill = lineW / widthPx;
+    if (fill >= gd.runt) return null;
+    const acw = totalChars ? totalW / totalChars : 5;
+    const n = String(text).length;
+    const addMin = Math.max(1, Math.ceil((gd.runt * widthPx - lineW) / acw) + 1);
+    const addHi = Math.floor((gd.hi * widthPx - lineW) / acw);
+    const grow = addHi >= addMin ? [n + addMin, n + addHi] : null;
+    const shrink = lines >= 2 ? [n - (lastChars + Math.floor(0.35 * widthPx / acw)), n - lastChars] : null;
+    return { n: n, fillPct: Math.round(fill * 100), grow: grow, shrink: shrink };
+  }
+
+  // ── SHIP 5 — LINE-DISTRIBUTION-001 (owner 2026-07-22, OPEN_REGISTER row 61):
+  // measure-based BIDIRECTIONAL row fit. Exposes window.__antcvRowFit so the app's
+  // per-row Fit-it (ll) / Enhance (il) handlers can (a) classify the acting row
+  // against the gold fill band on LIVE geometry (canvas greedy-wrap — zoom/transform
+  // independent), (b) inject a MEASURED char window into the LLM prompt, and
+  // (c) correct the rewrite by re-measuring. Fail-open: every entry returns
+  // null/'' on any error so the handlers keep the legacy percentage-only behavior.
+  function rowFitMeasure(text) {
+    try {
+      const s = String(text || '').trim();
+      if (!s || s.split(/\s+/).length < 3) return null;
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+      const g = currentGeometry();
+      ctx.font = (g.pt * 4 / 3) + 'px "' + g.font + '", Calibri, sans-serif';
+      const cellWpx = (PAGE_W_DXA - Math.round(PAGE_W_DXA * g.ratio)
+                       - 2 * g.mainEdgeIndent * 15 - g.seamGap * 15) * PX_PER_DXA;
+      const widthPx = cellWpx - g.bulletIndent;
+      if (!(widthPx > 50)) return null;
+      const gd = goldDensity();
+      const words = s.split(/\s+/);
+      const spaceW = ctx.measureText(' ').width;
+      let lineW = 0, lines = 1, totalW = 0, totalChars = 0, lastChars = 0;
+      for (const w of words) {
+        const ww = ctx.measureText(w).width;
+        totalW += ww; totalChars += w.length;
+        const cand = lineW === 0 ? ww : lineW + spaceW + ww;
+        if (cand > widthPx && lineW > 0) { lines += 1; lineW = ww; lastChars = w.length; }
+        else { lineW = cand; lastChars = lineW === ww ? w.length : lastChars + 1 + w.length; }
+      }
+      const fill = lineW / widthPx;
+      const acw = totalChars ? totalW / totalChars : 5;
+      const n = s.length;
+      // Band per row 61: SHORT = a single line ending well before the margin (grow);
+      // RUNT = a wrapped block whose last line under-fills (shrink OR grow); else OK.
+      const band = lines === 1 ? (fill < gd.lo ? 'short' : 'ok')
+                               : (fill < gd.runt ? 'runt' : 'ok');
+      const gLo = Math.max(1, Math.ceil((Math.max(gd.lo, gd.runt) * widthPx - lineW) / acw));
+      const gHi = Math.floor((gd.hi * widthPx - lineW) / acw);
+      const grow = band !== 'ok' && gHi >= gLo ? [n + gLo, n + gHi] : null;
+      const shrink = band === 'runt' && lines >= 2
+        ? [Math.max(8, n - lastChars - Math.ceil(0.35 * widthPx / acw)), n - lastChars] : null;
+      return { n: n, lines: lines, fillPct: Math.round(fill * 100), band: band,
+               grow: grow, shrink: shrink, cpl: Math.round(widthPx / acw),
+               bandPct: Math.round(gd.lo * 100) + '-' + Math.round(gd.hi * 100) };
+    } catch (_) { return null; }
+  }
+  window.__antcvRowFit = {
+    measure: rowFitMeasure,
+    inBand: function (text) { const m = rowFitMeasure(text); return !m || m.band === 'ok'; },
+    promptFor: function (text) {
+      const m = rowFitMeasure(text); if (!m || m.band === 'ok') return '';
+      let t = '\nMEASURED ROW TARGET (live geometry - overrides the percentage above): the current text is ' +
+        m.n + ' chars and renders ' + m.lines + ' line(s); the LAST line fills only ' + m.fillPct +
+        '% of the column (~' + m.cpl + ' chars per line). Rewrite so the TOTAL length lands in one of these windows:';
+      if (m.shrink) t += ' SHRINK to ' + m.shrink[0] + '-' + m.shrink[1] + ' chars (drops the dangling last line)';
+      if (m.shrink && m.grow) t += ' OR';
+      if (m.grow) t += ' GROW to ' + m.grow[0] + '-' + m.grow[1] + ' chars (fills the last line)';
+      t += '. The rewritten last line must fill ' + m.bandPct + '% of the column. Prefer the SHRINK window.';
+      return t;
+    },
+    growPromptFor: function (text) {
+      const m = rowFitMeasure(text); if (!m || m.band === 'ok' || !m.grow) return '';
+      return '\nMEASURED ROW TARGET (live geometry - overrides "similar length"): the current text is ' + m.n +
+        ' chars; its last rendered line fills only ' + m.fillPct + '% of the column. GROW the body so the TOTAL lands ' +
+        m.grow[0] + '-' + m.grow[1] + ' chars - the last line must fill ' + m.bandPct + '% of the column.';
+    },
+    corrective: function (text) {
+      const m = rowFitMeasure(text); if (!m || m.band !== 'runt' || !m.shrink) return null;
+      const pct = Math.max(5, Math.min(35, Math.round(100 * (m.n - m.shrink[1]) / m.n)));
+      return { pct: pct, mode: 'reduce' };
+    },
+  };
+
+  function buildWindowsBlock(bullets, cellWpx) {
+    const ctx = measureCtx();
+    if (!ctx) return '';
+    const g = currentGeometry();
+    const widthPx = cellWpx - g.bulletIndent;
+    const rows = [];
+    bullets.forEach(function (b, i) {
+      const w = bulletWindow(b, ctx, widthPx);
+      if (!w) return;
+      const opts = [];
+      if (w.grow) opts.push(w.grow[0] + '-' + w.grow[1] + ' chars (fill the last line)');
+      if (w.shrink && w.shrink[0] > 20) opts.push(w.shrink[0] + '-' + w.shrink[1] + ' chars (pull the last line back)');
+      if (opts.length) {
+        rows.push(' - Bullet ' + (i + 1) + ' (now ' + w.n + ' chars, last line ' + w.fillPct +
+                  '% full): rewrite to a TOTAL length of ' + opts.join(' OR '));
+      }
+    });
+    if (!rows.length) return '';
+    return '\nPER-BULLET MEASURED WINDOWS (live wrap measurement; count characters INCLUDING ' +
+      'spaces): bullets listed below end on a short dangling line — land each rewritten ' +
+      'bullet inside one stated total-length window. Bullets NOT listed are already ' +
+      'well-fitted: keep their length within ±3 chars.\n' + rows.join('\n');
+  }
+
+  function maybeInjectBulletWindows(bodyText) {
+    if (typeof bodyText !== 'string') return null;
+    if (genSpeed() === 'fast') return null;   // fast tier: calibration only
+    if (bodyText.indexOf('DIMENSION-AWARE BULLET LENGTH') < 0) return null;
+    if (bodyText.indexOf('PER-BULLET MEASURED WINDOWS') >= 0) return null;
+    let body;
+    try { body = JSON.parse(bodyText); } catch (_) { return null; }
+    if (!body || !Array.isArray(body.messages)) return null;
+    const sysIdx = body.messages.findIndex(m => m && m.role === 'system' && typeof m.content === 'string');
+    if (sysIdx < 0) return null;
+    const cls = classifySystemPrompt(body.messages[sysIdx].content);
+    if (!cls) return null;
+    const home = findRoleHome(cls.roleId);
+    if (!home || !home.bulletCount) return null;
+    const all = readDocSections();
+    const sec = all && (all[home.doc] || []).find(s => s && s.id === home.sectionId);
+    const role = sec && Array.isArray(sec.roles) ? sec.roles[home.roleIdx] : null;
+    const bullets = role && Array.isArray(role.bullets) ? role.bullets : null;
+    if (!bullets || !bullets.length) return null;
+    const g = currentGeometry();
+    const cellWpx = (PAGE_W_DXA - Math.round(PAGE_W_DXA * g.ratio)
+                     - 2 * g.mainEdgeIndent * 15 - g.seamGap * 15) * PX_PER_DXA;
+    const block = buildWindowsBlock(bullets, cellWpx);
+    if (!block) return null;
+    body.messages[sysIdx] = { ...body.messages[sysIdx], content: body.messages[sysIdx].content + block };
+    return JSON.stringify(body);
+  }
+
+  // Append the calibration block to the request's system prompt. Handles
+  // both prompt carriers: an OpenAI-style {role:"system"} message and an
+  // Anthropic-style top-level `system` string (the compress cascade uses
+  // provider-specific bodies). Returns the modified body string or null.
+  function maybeInjectWidthHint(bodyText) {
+    if (typeof bodyText !== 'string') return null;
+    let marked = false;
+    for (const m of WIDTH_MARKERS) {
+      if (bodyText.indexOf(m) >= 0) { marked = true; break; }
+    }
+    if (!marked || bodyText.indexOf(WIDTH_BLOCK_TAG) >= 0) return null;
+    const cpl = measureCharsPerLine();
+    if (!cpl) return null;
+    let body;
+    try { body = JSON.parse(bodyText); } catch (_) { return null; }
+    if (!body || typeof body !== 'object') return null;
+    const block = buildWidthBlock(cpl);
+    if (typeof body.system === 'string' && body.system) {
+      body.system += block;
+      return JSON.stringify(body);
+    }
+    if (Array.isArray(body.messages)) {
+      const si = body.messages.findIndex(m => m && m.role === 'system' && typeof m.content === 'string');
+      if (si >= 0) {
+        body.messages[si] = { ...body.messages[si], content: body.messages[si].content + block };
+        return JSON.stringify(body);
+      }
+      // no system carrier: the marker lives in a user turn (compress) —
+      // append there so the calibration still reaches the model.
+      const ui = body.messages.findIndex(m => m && m.role === 'user' &&
+        typeof m.content === 'string' && WIDTH_MARKERS.some(t => m.content.indexOf(t) >= 0));
+      if (ui >= 0) {
+        body.messages[ui] = { ...body.messages[ui], content: body.messages[ui].content + block };
+        return JSON.stringify(body);
+      }
+    }
+    return null;
+  }
+
   function bootSidecar() {
     init();                  // styles + panel strip injection (SHIP 1)
-    instrumentFetchOnce();   // fetch interceptor (SHIP 2)
+    instrumentFetchOnce();   // fetch interceptor (SHIP 2 + SHIP 3 + SHIP 4)
+    loadGoldRules();         // GOLD-RULES-SITE-001: the single control site
   }
 
   if (document.readyState === 'loading') {
@@ -775,5 +1142,14 @@
     _maybeInjectIntoBody: maybeInjectIntoBody,
     _isLlmProxyUrl: isLlmProxyUrl,
     _instrumentFetchOnce: instrumentFetchOnce,
+    // SHIP 3 internals exposed for tests
+    _currentGeometry: currentGeometry,
+    _measureCharsPerLine: measureCharsPerLine,
+    _buildWidthBlock: buildWidthBlock,
+    _maybeInjectWidthHint: maybeInjectWidthHint,
+    // SHIP 4 internals exposed for tests
+    _bulletWindow: bulletWindow,
+    _buildWindowsBlock: buildWindowsBlock,
+    _maybeInjectBulletWindows: maybeInjectBulletWindows,
   };
 })();

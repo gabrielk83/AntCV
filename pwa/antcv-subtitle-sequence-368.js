@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.368';
+  var VERSION = '1.51.1556';
   if (window.__antcvSubtitleSequence368 === VERSION) return;
   window.__antcvSubtitleSequence368 = VERSION;
 
@@ -275,6 +275,28 @@
     });
   }
 
+  // SUBTITLE-UNSOL-KERNEL-GATE-001 (owner 2026-07-19: "the targeted subtitle
+  // should be role-tailored", NVIDIA app showed the unsolicited pillar): the
+  // kernel-showcase is the UNSOLICITED template — its subtitle is the standing
+  // three-pillar line. A TARGETED application (a named, non-unsolicited company)
+  // must NEVER inherit that pillar as its subtitle; only its OWN row's subtitle
+  // is authoritative. So for a targeted app we skip BOTH kernel-showcase sources
+  // (local + relay) — if the row has no subtitle we leave the placeholder rather
+  // than stamp the unsolicited pillar. Unsolicited apps keep the kernel fallback
+  // (the pillar is their correct standing default). Company read from live meta.
+  function appIsTargeted() {
+    try {
+      var co = '';
+      try { co = String((JSON.parse(localStorage.getItem(META_KEY) || '{}') || {}).company || '').trim(); } catch (_) {}
+      if (!co) return false; // no company yet → not yet known to be targeted
+      var re = window.__ANTCV_UNSOL_RE || /^unsolicited$/i;
+      var isUnsol = (typeof window.__antcvUnsol === 'function') ? window.__antcvUnsol(co) : re.test(co);
+      if (isUnsol) return false;
+      if (/^open application$/i.test(co)) return false;
+      return true;
+    } catch (_) { return false; }
+  }
+
   // ── Resolve in priority order, committing the first hit ──────────
   function resolveAndCommit() {
     if (disabled()) return;
@@ -282,15 +304,20 @@
     // 1. Live meta already resolved → nothing to do (and stop fetching).
     if (fromLiveMeta()) return;
 
+    var targeted = appIsTargeted();
+
     // 2a / 3a — synchronous local sources first (no network, instant).
-    var local = fromLocalAppCache() || fromLocalKernel();
+    // Targeted apps: OWN row cache only — never the unsolicited kernel showcase.
+    var local = fromLocalAppCache() || (targeted ? '' : fromLocalKernel());
     if (local && commitSubtitle(local)) return;
 
     // 2b — active application row via relay (the row that the late
     // `[Read from Cloud]` carries). One-shot.
     fromRelayApplications().then(function (sub) {
       if (sub && commitSubtitle(sub)) return null;
-      // 3b — kernel showcase via relay, last resort. One-shot.
+      // 3b — kernel showcase via relay, last resort. UNSOLICITED apps only —
+      // a targeted app must not adopt the unsolicited pillar (SUBTITLE-UNSOL-KERNEL-GATE-001).
+      if (targeted) return null;
       return fromRelayKernel().then(function (k) {
         if (k) commitSubtitle(k);
       });

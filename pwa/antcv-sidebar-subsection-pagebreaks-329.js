@@ -33,11 +33,20 @@
     if (document.getElementById('antcv-sidebar-subsection-pagebreaks-329-css')) return;
     var st=document.createElement('style');
     st.id='antcv-sidebar-subsection-pagebreaks-329-css';
+    // PREVIEW-SHEET-WORD-HEIGHT-001 (owner 2026-07-26): the forced sheet/sidebar
+    // fill height follows the WORD-equivalent line (same source as page-fit) so a
+    // preview page holds exactly what a Word page holds - a true-A4 pin left dead
+    // space under content once the salmon moved to the export break site.
+    var SHEET = (function () {
+      try { if (typeof window.__antcvSheetHeightPx === 'function') return window.__antcvSheetHeightPx(); } catch (_) {}
+      try { if (localStorage.getItem('antcv:disable-word-sheet') === '1') return 1123; } catch (_) {}
+      return 985;   // 1123 / 1.14, the Latin Word-equivalent sheet
+    })();
     st.textContent = [
       // 1.50.216: force every page-box row to a full A4 height and stretch its
       // columns, so the navy sidebar fills to the page bottom even when the
       // sidebar's own content is shorter than the main column / the page.
-      '.antcv-preview-paper .antcv-page-row{align-items:stretch!important;min-height:1123px!important;}',
+      '.antcv-preview-paper .antcv-page-row{align-items:stretch!important;min-height:' + SHEET + 'px!important;}',
       // PALETTE-REGION-TOKENS-001 (owner 2026-06-13): do NOT hard-code the sidebar
       // navy here. app.js paints the column background:var(--sidebar-bg, navyColor)
       // so named packages get their PALE ground (Copenhagen #DCE5EA) and custom
@@ -45,7 +54,7 @@
       // sidebar dark and, by leaving the real navy unmatched, caused the
       // sidebar-bg-token sidecar to pale the candidate BAND instead. Keep only the
       // page-fill geometry; the element's own background fills its full A4 height.
-      '.antcv-preview-paper .antcv-document-sidebar,.antcv-preview-paper [data-antcv-document-sidebar="true"]{min-height:1123px!important;align-self:stretch!important;height:auto!important;}',
+      '.antcv-preview-paper .antcv-document-sidebar,.antcv-preview-paper [data-antcv-document-sidebar="true"]{min-height:' + SHEET + 'px!important;align-self:stretch!important;height:auto!important;}',
       '.antcv-sidebar-pagebreak-329{break-before:page;page-break-before:always;height:0;margin:0;padding:0;line-height:0;}',
       '.antcv-sidebar-pagebar-329{display:block;margin:8pt 0 6pt 0;padding:4pt 6pt;border:0;border-radius:2px;color:#fff;background:rgba(217,140,0,0.92);font-weight:700;font-size:8.5pt;letter-spacing:.02em;text-transform:uppercase;text-align:center;}',
       '.antcv-sidebar-cont-329{display:block;margin:4pt 0 8pt 0;padding:0 0 3pt 0;border-bottom:1pt solid #01B7BB;color:#01B7BB;font-weight:700;font-size:10pt;text-align:center;}',

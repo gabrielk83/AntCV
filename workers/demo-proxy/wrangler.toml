@@ -32,7 +32,7 @@ invocation_logs = true
 # relay's origin (since the relay forwards requests with the original Origin
 # header).
 DEMO_MODE = "true"
-ALLOWED_ORIGINS = "https://antcv.pages.dev,https://antcv-access-relay.karp-gabriel-a.workers.dev"
+ALLOWED_ORIGINS = "https://antcv.pages.dev,https://antcv-access-relay.karp-gabriel-a.workers.dev,https://antcv.net,https://www.antcv.net"
 
 # Self-reported URL returned by /config.
 proxy_url = "https://antcv-demo-proxy.karp-gabriel-a.workers.dev"
@@ -42,7 +42,12 @@ proxy_url = "https://antcv-demo-proxy.karp-gabriel-a.workers.dev"
 # blind spots), coherence = large-context model. Revisit from llm_calls /
 # writing-engine telemetry. Absent or invalid -> pre-feature behaviour.
 # SCE retries stay on the writer (owner decision 2).
-MODEL_ROLES = '{"writer":"anthropic","supervisor":"mistral","coherence":"anthropic"}'
+# RELAY-COST-QUALITY-TUNE 2026-07-15: coherence head anthropic->openai. Last-7-day
+# apply_correction (the coherence role's telemetry label) ran 100% on openai (n=1759,
+# 100% ok, health 1.0) with ZERO anthropic traffic — the anthropic head produced nothing,
+# so the pin now matches the empirically-working provider. anthropic stays in the cascade
+# tail as fallback. ROLLBACK: coherence->anthropic.
+MODEL_ROLES = '{"writer":"anthropic","supervisor":"mistral","coherence":"openai"}'
 
 # ---------- KV namespaces ----------
 # The code reads two binding names: ANALYTICS (for /analytics events and the

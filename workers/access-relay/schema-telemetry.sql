@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS llm_calls (
   placeholder_leak_count INTEGER DEFAULT 0,
   fabrication_flag INTEGER DEFAULT 0,
   banned_word_count INTEGER DEFAULT 0,
+  malformed_output_count INTEGER DEFAULT 0,  -- RELAY-DETECTION-GAP-001: format-broken output (SSE-leak / empty-despite-tokens / control-garbage / off-language)
   was_retry INTEGER DEFAULT 0,
   retry_attempt INTEGER DEFAULT 1,
   estimated_cost_usd REAL,
@@ -77,6 +78,7 @@ CREATE TABLE IF NOT EXISTS llm_provider_health (
   placeholder_leak_rate REAL,
   fabrication_rate REAL,
   banned_word_rate REAL,
+  malformed_output_rate REAL,  -- RELAY-DETECTION-GAP-001
   retry_rate REAL,
   health_score REAL NOT NULL,
   status TEXT NOT NULL,

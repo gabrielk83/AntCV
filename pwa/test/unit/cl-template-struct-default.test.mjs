@@ -28,16 +28,36 @@ test('app.js (deployed): same flip present', () => {
   assert.equal(app.includes('cl:!0?[{"id":"greeting"'), true, 'proper skeleton is the unconditional branch');
 });
 
+// CL-V5-STRUCT-001 (owner 2026-07-21): the skeleton is now the v5 sequence
+// greeting -> opening -> why -> role_view -> bring -> contribute -> who -> closure.
+// The markers below track v5; the parity assertion (src == app.js) is the point.
 test('the proper skeleton strings exist byte-identically in BOTH files', () => {
   for (const marker of [
     '"Dear [Hiring Team / Name],"',
-    '[Need from JD/company (example: a third named requirement)]',
-    'I would start by learning where [Company/team] loses time, clarity, trust, or traceability. From there:',
-    '{"b":"Goal","t":"[Outcome based on the role/company needs',
-    'I am applying for [Role title] at [Company], where I can contribute to',
+    '{"id":"role_view","title":"HOW I SEE THE ROLE"',
+    '"b":"How I see the role"',
+    '"b":"Professional summary"',
+    '"b":"My goal"',
+    'OPENING & APPLICATION CONTEXT - name the role and the company',
   ]) {
     assert.equal(src.includes(marker), true, 'src has: ' + marker.slice(0, 50));
     assert.equal(app.includes(marker), true, 'app.js has: ' + marker.slice(0, 50));
+  }
+});
+
+test('v5 order: role_view sits between why and bring, who sits after contribute', () => {
+  for (const [name, s] of [['app.src.js', src], ['app.js', app]]) {
+    const a = s.indexOf('[{"id":"greeting","title":"Greeting"');
+    assert.notEqual(a, -1, name + ': skeleton found');
+    const body = s.slice(a, a + 12000);
+    const at = (id) => body.indexOf('{"id":"' + id + '"');
+    for (const id of ['greeting', 'opening', 'why', 'role_view', 'bring', 'contribute', 'who', 'closure']) {
+      assert.notEqual(at(id), -1, name + ': has ' + id);
+    }
+    assert.ok(at('why') < at('role_view'), name + ': why before role_view');
+    assert.ok(at('role_view') < at('bring'), name + ': role_view before bring');
+    assert.ok(at('contribute') < at('who'), name + ': contribute before who (identity block last)');
+    assert.ok(at('who') < at('closure'), name + ': who before closure');
   }
 });
 

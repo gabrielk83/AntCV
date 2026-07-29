@@ -18,7 +18,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.779';
+  var VERSION = '1.51.242-lang-guard';
   if (window.__antcvLanguagesConcise === VERSION) return;
   window.__antcvLanguagesConcise = VERSION;
 
@@ -76,8 +76,15 @@
     return changed;
   }
 
+  // LANG-GUARD-PINS-001 (owner 2026-07-10): the CEFR/proficiency rewrite is in
+  // English (sourced from personalInfo.languages). Under a non-English output
+  // language the translation pass has localized the LANGUAGES section — re-running
+  // this would put English proficiency words back (the "languages stayed English
+  // under zh" report). Only run in English.
+  function nonEnglish() { try { var v = localStorage.getItem('language') || ''; if (v && v.charAt(0) === '"') v = JSON.parse(v); v = String(v || 'en').toLowerCase().replace(/[^a-z]/g, '').slice(0, 2); return !!v && v !== 'en'; } catch (_) { return false; } }
   function run() {
     try {
+      if (nonEnglish()) return;
       var secs = readSections();
       if (!Array.isArray(secs.cv)) return;
       var changed = false;

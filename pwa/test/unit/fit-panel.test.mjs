@@ -124,14 +124,14 @@ test('cardHtml shows the "no data yet" message when fit is null', () => {
   const { api } = load({});
   const html = api._cardHtml(null);
   assert.match(html, /Market fit/);
-  assert.match(html, /No market-fit data yet/);
+  assert.match(html, /Not scored for targeted or unsolicited/);
 });
 
 test('cardHtml (Danish) shows the localized empty message', () => {
   const { api } = load({ language: 'da' });
   const html = api._cardHtml(null);
   assert.match(html, /Markedstilpasning/);
-  assert.match(html, /Ingen markedstilpasningsdata endnu/);
+  assert.match(html, /Scores ikke for/);
 });
 
 test('cardHtml renders score, tier label, "based on N jobs", matched and gaps', () => {
@@ -169,12 +169,61 @@ test('render() inserts the card as a sibling right after #antcv-analysis-report,
   api.render();
   const firstCard = document.getElementById('antcv-fit-panel');
   assert.ok(firstCard, 'an anchor exists -> the card renders even with no cached fit yet (empty-state message)');
-  assert.match(firstCard.innerHTML, /No market-fit data yet/);
+  assert.match(firstCard.innerHTML, /Not scored for targeted or unsolicited/);
 
   api.render();
   const cards = document.body.children.filter((c) => c.id === 'antcv-fit-panel');
   assert.equal(cards.length, 1, 'repeated render() calls must not duplicate the card');
   assert.equal(document.body.children.indexOf(cards[0]), document.body.children.indexOf(anchor) + 1, 'card must sit immediately after the anchor');
+});
+
+test('MARKET-FIT-UPPER-001: _findAnchor prefers #antcv-analysis-report-top over #antcv-analysis-report when both exist', () => {
+  const { api, document } = load({});
+  const bottom = document.createElement('div');
+  bottom.id = 'antcv-analysis-report';
+  document.body.appendChild(bottom);
+  const top = document.createElement('div');
+  top.id = 'antcv-analysis-report-top';
+  document.body.appendChild(top);
+
+  assert.equal(api._findAnchor(), top, 'the upper-zone anchor must win when both blocks are mounted');
+});
+
+test('MARKET-FIT-UPPER-001: render() inserts the card right after #antcv-analysis-report-top (the upper zone), not the bottom block', () => {
+  const { api, document } = load({});
+  const overallFit = document.createElement('div');
+  document.body.appendChild(overallFit);
+  const top = document.createElement('div');
+  top.id = 'antcv-analysis-report-top';
+  document.body.appendChild(top);
+  const middle = document.createElement('div'); // Strongest Fit Points / Gaps / etc.
+  document.body.appendChild(middle);
+  const bottom = document.createElement('div');
+  bottom.id = 'antcv-analysis-report';
+  document.body.appendChild(bottom);
+
+  api.render();
+  const card = document.getElementById('antcv-fit-panel');
+  assert.ok(card, 'card renders when the top anchor is present');
+  assert.equal(
+    document.body.children.indexOf(card),
+    document.body.children.indexOf(top) + 1,
+    'card must sit immediately after the TOP block, i.e. in the upper zone — not after the bottom block',
+  );
+});
+
+test('MARKET-FIT-UPPER-001: falls back to #antcv-analysis-report when the top block has not mounted yet', () => {
+  const { api, document } = load({});
+  const bottom = document.createElement('div');
+  bottom.id = 'antcv-analysis-report';
+  document.body.appendChild(bottom);
+  const after = document.createElement('div');
+  document.body.appendChild(after);
+
+  api.render();
+  const card = document.getElementById('antcv-fit-panel');
+  assert.ok(card, 'card still renders via the fallback anchor — never silently vanishes');
+  assert.equal(document.body.children.indexOf(card), document.body.children.indexOf(bottom) + 1);
 });
 
 test('render() is a no-op when the Analysis Report panel is absent', () => {
@@ -227,7 +276,7 @@ test('an active_application with no fit (e.g. unsolicited) renders the empty-sta
   await api.refresh();
   const card = document.getElementById('antcv-fit-panel');
   assert.ok(card);
-  assert.match(card.innerHTML, /No market-fit data yet/);
+  assert.match(card.innerHTML, /Not scored for targeted or unsolicited/);
 });
 
 test('kill switch: render() removes an existing card and refresh() never calls fetch', async () => {

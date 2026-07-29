@@ -238,14 +238,31 @@
   }
 
   var lastSec = null;
+  // TOOLS-RESIDUE-CONVERGE-001 (owner 2026-07-22): decide-once on the TOOLS SUBSTRUCTURE, not the
+  // whole `sections` blob — unrelated section churn (experience/babel/roles) must not re-arm this
+  // reconciler (the whole-blob `raw === lastSec` guard was defeated every cycle). Plus an OSC ring:
+  // if a competing tools writer keeps reverting our residue rows, we still PERSIST the fixpoint but
+  // stop re-dispatching antcv:sections-updated / logging, so the event firehose damps out.
+  var lastToolsKey = null;
+  var recentToolsWrites = [];   // [{ key, ts }] written within the last ~4s
+  function toolsKeyOf(b) {
+    try {
+      var list = b && b.cv; if (!Array.isArray(list)) return '';
+      for (var i = 0; i < list.length; i++) { var s = list[i]; if (s && s.id === 'tools') return JSON.stringify({ items: s.items || null, hidden: s.hidden || null }); }
+      return '';
+    } catch (_) { return ''; }
+  }
   function apply() {
     if (disabled()) return;
     try {
       var raw = localStorage.getItem('sections');
       if (!raw || raw === lastSec) return;
-      var cats = kernelCategories();
-      if (!cats.length) { lastSec = raw; return; }
       var b = JSON.parse(raw), changed = false;
+      // decide-once on the tools substructure: whole blob changed but TOOLS didn't -> nothing to do.
+      var curKey = toolsKeyOf(b);
+      if (curKey === lastToolsKey) { lastSec = raw; return; }
+      var cats = kernelCategories();
+      if (!cats.length) { lastToolsKey = curKey; lastSec = raw; return; }
       var list = b && b.cv;
       if (Array.isArray(list)) list.forEach(function (sec) {
         if (!sec || sec.id !== 'tools' || !Array.isArray(sec.items)) return;
@@ -266,10 +283,16 @@
         }
       });
       if (changed) {
-        var os = JSON.stringify(b); localStorage.setItem('sections', os); lastSec = os;
-        try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: SRC } })); } catch (_) {}
-        try { console.info('[tools-hidden-residue] reconciled TOOLS & METHODS vs kernel (residue rows updated)'); } catch (_) {}
-      } else lastSec = raw;
+        var resKey = toolsKeyOf(b), now = Date.now();
+        recentToolsWrites = recentToolsWrites.filter(function (r) { return now - r.ts < 4000; });
+        var osc = recentToolsWrites.some(function (r) { return r.key === resKey; });   // a partner keeps reverting us
+        var os = JSON.stringify(b); localStorage.setItem('sections', os); lastSec = os; lastToolsKey = resKey;
+        recentToolsWrites.push({ key: resKey, ts: now });
+        if (!osc) {
+          try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { source: SRC } })); } catch (_) {}
+          try { console.info('[tools-hidden-residue] reconciled TOOLS & METHODS vs kernel (residue rows updated)'); } catch (_) {}
+        }
+      } else { lastToolsKey = curKey; lastSec = raw; }
     } catch (_) {}
   }
 

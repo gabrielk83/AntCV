@@ -76,6 +76,29 @@ function uuid() {
 
 function kvKey(jobId) { return JOB_PREFIX + jobId; }
 
+// COHERENCE-META-STRIP-001: the coherence-repair re-run occasionally prepends a
+// narration line describing what it is doing ("This is cv_outcomes — the
+// authoritative source...", "Here is the corrected section", "Per the review,
+// ..."). The augmented repair prompt asks it not to, but the model still leaks
+// one now and then, so a deterministic strip is the reliable belt. Drop only
+// LEADING lines that are clearly repair-narration (real CV/CL content never
+// opens this way), stopping at the first genuine content line. Never blanks.
+function stripRepairMeta(text) {
+  if (typeof text !== 'string' || !text) return text;
+  const META = /^\s*(this is (cv_|cl_|the )|this section\b|here('?s| is) the (corrected|revised)|the (corrected|revised) (version|section)|per the (review|coherence)|as (requested|instructed|per)|following the (review|coherence)|i('| wi)ll (produce|provide|rewrite)|below is\b|note:|to (fix|address|reduce) (the|this))/i;
+  const AUTH = /(authoritative source|other sections generalise|other sections generalize|the issues (above|found)|coherence review)/i;
+  const lines = text.split('\n');
+  let i = 0;
+  while (i < lines.length) {
+    const ln = lines[i];
+    if (ln.trim() === '') { i++; continue; }               // skip leading blanks
+    if (META.test(ln) || AUTH.test(ln)) { i++; continue; } // drop a narration line
+    break;                                                  // first real content line
+  }
+  const out = lines.slice(i).join('\n').replace(/^\s+/, '');
+  return out.trim() ? out : text;                          // never blank the section
+}
+
 // PARITY (owner 2026-07-03): this file is byte-identical in workers/proxy and
 // workers/demo-proxy; each worker binds its own KV namespace name.
 function jobsKV(env) { return (env && (env.CV_PROXY_DATA || env.CV_DEMO_PROXY_DATA)) || null; }
@@ -90,9 +113,22 @@ async function readJob(env, jobId) {
 
 async function writeJob(env, job) {
   job.updated_at = nowMs();
-  await jobsKV(env).put(kvKey(job.job_id), JSON.stringify(job), {
-    expirationTtl: JOB_TTL_SECONDS,
-  });
+  try {
+    await jobsKV(env).put(kvKey(job.job_id), JSON.stringify(job), {
+      expirationTtl: JOB_TTL_SECONDS,
+    });
+  } catch (e) {
+    // KV-WRITE-GUARD-001: surface KV.put failures as a tagged error instead of a
+    // bare throw. The Cloudflare free-tier daily write cap surfaces here as
+    // "error 10048 / free usage limit"; without this the throw became an
+    // unhandled worker exception (1101) that the provider cascade mislabelled
+    // as "all_providers_unavailable". Callers translate this into a clean 503.
+    const msg = (e && e.message) ? e.message : String(e);
+    const err = new Error('kv_write_failed: ' + msg);
+    err.kv_write_failed = true;
+    err.quota = /10048|free usage limit|usage limit for this operation|limit exceeded for the day|put\(\) limit/i.test(msg);
+    throw err;
+  }
   return job;
 }
 
@@ -164,7 +200,19 @@ export async function createJob(request, env, CORS, identityFn) {
     source_cv: typeof body.source_cv === 'string' ? body.source_cv.slice(0, 40000) : null,
     jd_text: typeof body.jd_text === 'string' ? body.jd_text.slice(0, 20000) : null,
   };
-  await writeJob(env, job);
+  try {
+    await writeJob(env, job);
+  } catch (e) {
+    if (e && e.kv_write_failed) {
+      return jsonResponse({
+        error: e.quota ? 'kv_quota_exceeded' : 'kv_write_failed',
+        message: e.quota
+          ? 'Job storage write hit the Cloudflare KV free-tier daily write cap (error 10048). Resets 00:00 UTC, or upgrade to Workers Paid.'
+          : ('Job storage write failed: ' + (e.message || 'unknown')),
+      }, 503, CORS);
+    }
+    throw e;
+  }
   return jsonResponse({ job_id: job.job_id, status: job.status, sections: job.sections.length }, 200, CORS);
 }
 
@@ -451,7 +499,7 @@ async function runCoherencePhase(request, env, CORS, job, runSection, selfOrigin
   if (rewrites) {
     for (const s of job.sections) {
       if (Object.prototype.hasOwnProperty.call(rewrites, s.id)) {
-        const nt = rewrites[s.id];
+        const nt = stripRepairMeta(rewrites[s.id]);
         if (typeof nt === 'string' && nt.trim() && nt.trim() !== (s.result || '').trim()) {
           s.result = nt;
           s.coherence_revised = true;
@@ -481,7 +529,10 @@ async function runCoherencePhase(request, env, CORS, job, runSection, selfOrigin
           { role: 'user', content:
             'A cross-section coherence review of the full CV/cover letter found these issues with THIS section relative to the others:\n\n' +
             issuesForSection +
-            '\n\nProduce a corrected version of THIS section only that fixes the issues above (remove repetition with other sections, resolve contradictions, drop redundancy). Keep all facts; do not introduce new claims. Do not use banned words/phrases. Return only the corrected section text.' },
+            '\n\nProduce a corrected version of THIS section only that fixes the issues above (remove repetition with other sections, resolve contradictions, drop redundancy). ' +
+            'CRITICAL — keep THIS section in the EXACT SAME FORMAT and structure as your previous version shown above: if it was a table, return a table with the same columns; if it was prose, return prose; if it was bullets, return bullets. Do NOT adopt the format, wording, columns, or structure of any OTHER section named in the review — only reduce the overlap by generalising or trimming THIS section\'s own content. ' +
+            'Keep all facts; do not introduce new claims. Do not use banned words/phrases. ' +
+            'Output ONLY the corrected section content itself — no preamble, no commentary, no explanation, and no reference to "the review", "the issues", "the fix", or these instructions. Return only the corrected section text.' },
         ]),
         max_tokens: (s.prompt && s.prompt.max_tokens) || 1500,
         stream: true,
@@ -505,7 +556,7 @@ async function runCoherencePhase(request, env, CORS, job, runSection, selfOrigin
         if (resp && resp.status < 400) {
           const drained = await drainSectionResponse(resp, job.provider);
           if (drained.text && drained.text.trim()) {
-            s.result = drained.text;
+            s.result = stripRepairMeta(drained.text);
             s.coherence_revised = true;
             addUsage(job.totals, drained.usage);
             repaired.push(s.id);

@@ -27,16 +27,15 @@ function load(store0) {
   return { w: sandbox.window, R, store };
 }
 
-test('defaults = today\'s look: spec+contact rules on (0.75pt theme), name off', () => {
+test('defaults = mockup lock 2026-07-23: NO rules inside the header box (all fields off)', () => {
   const { w, R } = load();
-  const spec = w.__antcvHdrRuleDiv(R, 'specialisation', '#01B7BB', '4px 0 5px');
-  assert.equal(spec.props.style.borderBottom, '1px solid #01B7BB');   // 0.75pt -> 1px
-  assert.equal(spec.props.style.margin, '4px 0 5px');
-  assert.ok(w.__antcvHdrRuleDiv(R, 'contact', '#01B7BB', '3px 0 0'));
-  assert.equal(w.__antcvHdrRuleDiv(R, 'name', '#01B7BB', '2px 0 0'), null, 'name rule default OFF');
-  assert.equal(Object.keys(w.__antcvHdrRuleStyle('name', '#01B7BB')).length, 0);
-  assert.match(w.__antcvHdrRuleHtml('specialisation', '#01B7BB', 3, 1), /border-bottom:0\.75pt solid #01B7BB/);
-  assert.equal(w.__antcvHdrRuleHtml('name', '#01B7BB', 2, 0), '');
+  assert.equal(w.__antcvHdrRuleDiv(R, 'specialisation', '#01B9BD', '4px 0 5px'), null, 'spec rule default OFF');
+  assert.equal(w.__antcvHdrRuleDiv(R, 'contact', '#01B9BD', '3px 0 0'), null, 'contact rule default OFF');
+  assert.equal(w.__antcvHdrRuleDiv(R, 'name', '#01B9BD', '2px 0 0'), null, 'name rule default OFF');
+  assert.equal(Object.keys(w.__antcvHdrRuleStyle('specialisation', '#01B9BD')).length, 0);
+  assert.equal(Object.keys(w.__antcvHdrRuleStyle('name', '#01B9BD')).length, 0);
+  assert.equal(w.__antcvHdrRuleHtml('specialisation', '#01B9BD', 3, 1), '');
+  assert.equal(w.__antcvHdrRuleHtml('name', '#01B9BD', 2, 0), '');
 });
 
 test('store overrides: hide spec, thick red contact, name on', () => {
@@ -53,8 +52,8 @@ test('store overrides: hide spec, thick red contact, name on', () => {
   assert.match(n.borderBottom, /solid #01B7BB$/, 'name on with theme colour');
 });
 
-test('garbage store falls back to defaults; helpers never throw', () => {
+test('garbage store falls back to defaults (all off); helpers never throw', () => {
   const { w, R } = load({ headerItemRule: '{not json' });
-  assert.ok(w.__antcvHdrRuleDiv(R, 'contact', '#01B7BB', 'x'), 'default contact rule survives bad store');
-  assert.equal(w.__antcvHdrRuleHtml('name', '#01B7BB', 2, 0), '');
+  assert.equal(w.__antcvHdrRuleDiv(R, 'contact', '#01B9BD', 'x'), null, 'bad store -> default OFF, no throw');
+  assert.equal(w.__antcvHdrRuleHtml('name', '#01B9BD', 2, 0), '');
 });

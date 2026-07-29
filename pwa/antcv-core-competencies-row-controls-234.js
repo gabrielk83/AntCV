@@ -6,7 +6,7 @@
  */
 (function(){
   'use strict';
-  const VERSION = '1.50.692-cjlr-native';
+  const VERSION = '1.51.1604-align-storm-001';
   // v1.40.242-preview-guard: Preview is button-free. Reject seeds and
   // hosts inside .antcv-preview-paper.
   const isInPreviewPaper = el => { if(!el) return false; const p=document.querySelector('.antcv-preview-paper, [data-antcv-preview-paper]'); return !!(p && p.contains(el)); };
@@ -268,7 +268,16 @@
   // CORE-COMP-INPUTS-SMALLER-001 (owner 2026-06-19: "make text[areas] for focus area
   // and strategic expertise smaller"): shrink the row inputs so the controls have room.
   function injectCss(){ if(document.getElementById('antcv-core-comp-inputs-css')) return; var s=document.createElement('style'); s.id='antcv-core-comp-inputs-css'; s.textContent='[data-antcv-core-row="1"] input,[data-antcv-core-row="1"] textarea{font-size:11px !important;padding:3px 4px !important;line-height:1.25 !important;}'; (document.head||document.documentElement).appendChild(s); }
-  function start(){ injectCss(); run(); [100,300,800,1600,3000].forEach(ms=>setTimeout(run,ms)); try{ new MutationObserver(runSoon).observe(document.body||document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style','value']}); }catch(_){} window.addEventListener('input',runSoon,true); window.addEventListener('click',()=>setTimeout(run,0),true); window.addEventListener('antcv:sections-updated',()=>setTimeout(run,0)); setInterval(run,2000); }
+  function start(){ injectCss(); run(); [100,300,800,1600,3000].forEach(ms=>setTimeout(run,ms));
+    // ALIGN-STORM-001 (owner 2026-07-20, live-diagnosed): this observer used to include
+    // 'style' in attributeFilter WHILE applyPreview() writes style.textAlign on every cell
+    // (applyAlign, above) — a direct observe-what-you-mutate self-feedback loop. Combined with
+    // section-align re-writing core_comp cells to a DIFFERENT value, it produced ~200 text-align
+    // writes/sec (measured: core_comp 1638 flips in 25s, 68 long-tasks) — the "preview freeze"
+    // + header "dancing". Drop 'style' from the filter so our own (and any) style writes no
+    // longer wake this sweep; genuine React re-renders still wake it via childList, and the 2s
+    // interval + input/click/sections-updated listeners catch in-place attribute updates.
+    try{ new MutationObserver(runSoon).observe(document.body||document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','value']}); }catch(_){} window.addEventListener('input',runSoon,true); window.addEventListener('click',()=>setTimeout(run,0),true); window.addEventListener('antcv:sections-updated',()=>setTimeout(run,0)); setInterval(run,2000); }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', start); else start();
   window.AntcvCoreCompetenciesRowControls242 = { version:VERSION, run, _findRows:findRows, _applyPreview:applyPreview };
 })();

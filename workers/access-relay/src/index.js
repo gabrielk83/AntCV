@@ -1,6 +1,6 @@
 import { insertLlmCall, aggregateHealth, getLatestHealth, pruneOld, insertQualitySignal } from './telemetry.js';
 
-const VERSION='1.3.6';
+const VERSION='1.3.12';
 // antcv-access-relay — auth + hardening
 // =====================================
 // Public-facing relay with built-in user authentication.
@@ -35,9 +35,14 @@ const VERSION='1.3.6';
 // Required binding (declare in wrangler.toml):
 //   KV_BINDING        KV namespace (stores OTPs, rate counters, prefs, signals)
 
-const RELAY_VERSION = 'auth-26-per-style-kernels';
+const RELAY_VERSION = 'auth-36-jd-cross-app-guard';
 const SESSION_TTL_SECONDS    = 7 * 24 * 60 * 60;       // 7 days
-const SESSION_REFRESH_WINDOW = 1 * 24 * 60 * 60;       // refresh in last day
+// Refresh whenever the token has < 6 days left (i.e. it's more than 1 day old),
+// so ANY request past the first day rotates it to a fresh 7-day token via the
+// X-Auth-Refresh header. The PWA and the CLI/nightly both capture it — so an
+// actively-used token (the daily nightly, the sync CLI) renews itself forever
+// while no single token ever outlives its 7-day expiry (no security downgrade).
+const SESSION_REFRESH_WINDOW = 6 * 24 * 60 * 60;       // refresh once >1 day old
 const OTP_TTL_SECONDS        = 10 * 60;                // 10 min
 const OTP_COOLDOWN_SECONDS   = 60;                     // 1 OTP per email per minute
 const OTP_IP_LIMIT_PER_HOUR  = 5;
@@ -767,6 +772,11 @@ const KERNEL_PREFS_STR_FIELDS = new Set([
   'clClosing', 'clClosingAlign',
   // CL-SIGNNAME-001 (owner 2026-06-29): editable sign-off name + its own CJLR align (default center).
   'clSignName', 'clSignNameAlign',
+  // PHOTO-LIBRARY-001 (owner 2026-07-13: "allow uploading more than one
+  // profile picture"): a small JSON-stringified array of saved photos
+  // [{id, ts, dataUrl}] pushed by antcv-photo-library.js. Rides as a plain
+  // string like clSloganCtx; the client caps entries (4) and size.
+  'photoLibrary',
 ]);
 const KERNEL_PREFS_BOOL_FIELDS = new Set([
   'consensusEnabled', 'kernelShowcaseGenerated', 'useChatGPT', 'wizardCompleted',
@@ -817,6 +827,13 @@ const KERNEL_PREFS_OBJ_FIELDS = new Set([
   'enabledProviders',
   'customTopbarPalette',
   'topbarOrder',
+  // BABEL-FISH-CLOUD-CACHE-001 (owner 2026-07-11): langRenders — the babel-fish
+  // per-language rendering cache { <lang>: { sections, meta, hash, at } } so a
+  // rendering you produced on one device is available on another ("the user data
+  // on the cloud for all languages"). Object -> passes the OBJ validator. The
+  // client (antcv-babel-relang.js) hard-caps its size before writing, so this can
+  // never bloat the prefs blob.
+  'langRenders',
 ]);
 
 function isInKernelAllowlist(field) {
@@ -889,6 +906,139 @@ async function d1RunWithRetry(stmt, tries = 4, baseMs = 50) {
   throw lastErr;
 }
 
+// =====================================================================
+//  LANG-EXPAND-001 (kernel v2 §3, register row 8c) — lazy per-language
+//  KERNEL projection. Pure, testable helpers live here; the HTTP handler
+//  + route are below. NON-DESTRUCTIVE: a NEW table (kernel_language_view),
+//  a NEW route; nothing existing is touched. English is passthrough (no
+//  model call). Other languages build a single cross-lingual prompt that
+//  mirrors the §3 LANG-CROSS-001 policy shipped in app.src.js and cache
+//  the result keyed by user × language (invalidated by a kernel edit via
+//  source_sig).
+// =====================================================================
+
+// Target languages the projection tier accepts. English is the canonical
+// kernel language → passthrough (identity projection, no model call).
+const KERNEL_LANG_VIEW_LANGS = ['en', 'da', 'es', 'zh', 'de', 'fr', 'sv', 'nb', 'nl', 'it', 'pt'];
+
+// Normalize a requested language code to a bare ISO-639-1 lowercase tag, or
+// null if unsupported. Accepts 'es', 'ES', 'es-ES', 'zh-Hans' etc.
+function normalizeKernelLangCode(lang) {
+  if (!lang || typeof lang !== 'string') return null;
+  const base = lang.trim().toLowerCase().split(/[-_]/)[0];
+  return KERNEL_LANG_VIEW_LANGS.includes(base) ? base : null;
+}
+
+// Stable per-role key = "company|title" lowercased — the SAME keying the
+// STORED WORK HISTORY builder (KERNEL-V2-READER-001, app.src.js) uses to
+// attach langInvariantTokens, so a projection round-trips onto the roles.
+function kernelRoleKey(role) {
+  if (!role || typeof role !== 'object') return '';
+  const company = String(role.company || '').trim();
+  const title = String(role.role || role.title || '').trim();
+  const key = (company + '|' + title).toLowerCase();
+  return key === '|' ? '' : key;
+}
+
+// Build the single cross-lingual projection prompt for a kernel + target
+// language. Returns { system, user } (provider-neutral; the handler wraps
+// them into the proxy's chat shape). Encodes the §3 invariant classes
+// verbatim rule, per-role langInvariantTokens DO-NOT-TRANSLATE lists, and
+// the roleTitlePolicy (default cross; da keeps idiomatic English). Pure —
+// no I/O, unit-tested directly.
+function buildKernelLanguageProjectionPrompt(kernel, lang) {
+  const roles = (kernel && Array.isArray(kernel.experience)) ? kernel.experience : [];
+  const compact = roles.map((r) => {
+    const key = kernelRoleKey(r);
+    if (!key) return null;
+    const toks = Array.isArray(r.langInvariantTokens)
+      ? r.langInvariantTokens.filter((t) => t && typeof t === 'string' && t.trim()).slice(0, 12)
+      : [];
+    const scope = Array.isArray(r.scope) ? r.scope.filter((s) => s && typeof s === 'string' && s.trim()) : [];
+    const outcomes = Array.isArray(r.outcomes)
+      ? r.outcomes.map((o) => (o && typeof o === 'object')
+          ? { title: String(o.title || ''), result: String(o.result || '') }
+          : null).filter(Boolean)
+      : [];
+    return {
+      key,
+      roleTitle: String(r.role || r.title || '').trim(),
+      company: String(r.company || '').trim(),
+      scope,
+      outcomes,
+      doNotTranslate: toks,
+    };
+  }).filter(Boolean);
+
+  const daNote = lang === 'da'
+    ? ' Because the target is DANISH, keep the SOURCE English role title wherever the English term is the idiomatic professional usage (e.g. "Change Control Lead" stays English on a Danish CV).'
+    : '';
+
+  const system =
+    'You translate a CV kernel into a target language for later reuse. ' +
+    'Follow the AntCV LANG-CROSS-001 policy EXACTLY and return STRICT JSON only — no prose, no markdown fences.\n' +
+    'TARGET LANGUAGE: ' + lang + '.\n' +
+    'TRANSLATE naturally and directly into the target language: role scope / responsibilities, and outcome RESULTS. Write directly in the target language, never English-then-translated.\n' +
+    'KEEP INVARIANT — reproduce VERBATIM, never translate or transliterate: company names; patent numbers; ALL metrics and numerals (30%, 10x, $2M, 5-person, ~25); tool / framework / standard / protocol names (Jira, SQL, Power BI, ASPICE, ISO 26262, FMEA, MBSE); and quoted publication / patent TITLES.\n' +
+    'ROLE TITLES cross by default (use the natural target-language equivalent).' + daNote + '\n' +
+    'For any role with a "doNotTranslate" list, reproduce every listed token verbatim in the translated output.\n' +
+    'Preserve the "key" of every role unchanged. Preserve array lengths and order. Do NOT invent, add, drop, or reorder roles, scope lines, or outcomes.';
+
+  const user =
+    'Return JSON of the form {"language":"' + lang + '","experience":[{"key":"...","roleTitle":"...","scope":["..."],"outcomes":[{"title":"...","result":"..."}]}]}. ' +
+    'Translate ONLY roleTitle (per policy), scope[] and outcomes[].result; keep outcomes[].title, company and key as anchors. ' +
+    'Source kernel roles:\n' + JSON.stringify({ experience: compact });
+
+  return { system, user };
+}
+
+// English (or an empty kernel) → identity projection, no model needed.
+function identityKernelProjection(kernel, lang) {
+  const roles = (kernel && Array.isArray(kernel.experience)) ? kernel.experience : [];
+  return {
+    language: lang,
+    experience: roles.map((r) => ({
+      key: kernelRoleKey(r),
+      roleTitle: String(r.role || r.title || '').trim(),
+      scope: Array.isArray(r.scope) ? r.scope.filter((s) => s && typeof s === 'string') : [],
+      outcomes: Array.isArray(r.outcomes)
+        ? r.outcomes.map((o) => (o && typeof o === 'object')
+            ? { title: String(o.title || ''), result: String(o.result || '') }
+            : null).filter(Boolean)
+        : [],
+    })).filter((r) => r.key),
+  };
+}
+
+// Extract the projection JSON object from a raw model response body
+// ({choices:[{message:{content}}]} OpenAI/Mistral, or {content:[{text}]}
+// Anthropic). Tolerates a leading/trailing fence. Returns null on failure.
+function parseKernelLangModelResponse(rawJson) {
+  if (!rawJson || typeof rawJson !== 'object') return null;
+  let text = '';
+  if (Array.isArray(rawJson.choices) && rawJson.choices[0] && rawJson.choices[0].message) {
+    text = String(rawJson.choices[0].message.content || '');
+  } else if (Array.isArray(rawJson.content) && rawJson.content[0]) {
+    text = String(rawJson.content[0].text || '');
+  } else if (typeof rawJson.text === 'string') {
+    text = rawJson.text;
+  }
+  if (!text) return null;
+  const m = text.match(/\{[\s\S]*\}/);
+  if (!m) return null;
+  try {
+    const obj = JSON.parse(m[0]);
+    if (obj && Array.isArray(obj.experience)) return obj;
+  } catch (_) {}
+  return null;
+}
+
+// SHA-256 hex of a string — the cache invalidation signature for a kernel.
+async function sha256Hex(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(str || '')));
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 // kernel v2 §4: POST/PUT /api/profile/kernel-v2 — persist the ingested v2 kernel
 // into the STAGING column user_kernel.kernel_v2. NON-DESTRUCTIVE: the v1
 // identity/history/preferences are left untouched (the live generation path keeps
@@ -930,6 +1080,131 @@ async function handleApiKernelV2(request, env) {
     'ON CONFLICT(user_hash) DO UPDATE SET kernel_v2 = excluded.kernel_v2, updated_at = excluded.updated_at'
   ).bind(userHash, json, now, now)); // D1-WRITE-RETRY-001
   return jsonResponse({ ok: true, roles: kernel.experience.length, bytes: json.length }, 200, request, env);
+}
+
+// LANG-EXPAND-001 (kernel v2 §3, register row 8c): GET/POST
+// /api/profile/kernel-language-view — the lazy per-language KERNEL
+// projection tier. Auth = same session identity as /api/profile/kernel-v2.
+//
+//   GET  ?lang=xx           → the cached projection for the user's current
+//                             kernel_v2 (or {projection:null} if none / stale).
+//   POST { language, force? } → cache-check (by user × lang, invalidated when
+//                             the kernel_v2 SHA-256 changes); on miss, load
+//                             kernel_v2, build the LANG-CROSS-001 projection
+//                             prompt, call the LLM via the SAME proxy-forward
+//                             path extract-kernel uses, cache + return it.
+//                             English (or empty kernel) short-circuits to the
+//                             identity projection — no model call.
+//
+// The table (kernel_language_view) is created lazily so the route self-
+// provisions on a DB that predates the schema bump. KERNEL-LANG-VIEW-TABLE.
+async function ensureKernelLangViewTable(env) {
+  await env.DB.prepare(
+    'CREATE TABLE IF NOT EXISTS kernel_language_view (' +
+    'user_hash TEXT NOT NULL, language TEXT NOT NULL, projection TEXT NOT NULL, ' +
+    'source_sig TEXT NOT NULL, generated_at INTEGER NOT NULL, ' +
+    'PRIMARY KEY (user_hash, language))'
+  ).run();
+}
+
+async function handleApiKernelLanguageView(request, env) {
+  const id = await identityFromRequest(request, env);
+  if (!id) {
+    return jsonResponse({ error: 'unauthenticated', hint: 'Sign in first.' }, 401, request, env);
+  }
+  if (!hasD1(env)) {
+    return jsonResponse({ error: 'no-d1' }, 503, request, env);
+  }
+  const userHash = await userHashFromEmail(id.email);
+  const url = new URL(request.url);
+
+  // Resolve the requested language (query for GET, body for POST).
+  let wantLang = url.searchParams.get('lang');
+  let force = url.searchParams.get('force') === '1';
+  let body = null;
+  if (request.method === 'POST' || request.method === 'PUT') {
+    try { body = await request.json(); } catch (_) {
+      return jsonResponse({ error: 'bad-json' }, 400, request, env);
+    }
+    if (body && typeof body === 'object') {
+      if (body.language) wantLang = body.language;
+      if (body.force === true) force = true;
+    }
+  } else if (request.method !== 'GET') {
+    return jsonResponse({ error: 'method-not-allowed' }, 405, request, env);
+  }
+  const lang = normalizeKernelLangCode(wantLang);
+  if (!lang) {
+    return jsonResponse({ error: 'bad-language', hint: 'expects an ISO 639-1 code in ' + KERNEL_LANG_VIEW_LANGS.join('/') }, 422, request, env);
+  }
+
+  await ensureKernelLangViewTable(env);
+
+  // Load the current kernel_v2 + compute its signature (drives cache freshness).
+  const krow = await env.DB.prepare('SELECT kernel_v2 FROM user_kernel WHERE user_hash = ? LIMIT 1').bind(userHash).first();
+  let kernel = null; try { kernel = (krow && krow.kernel_v2) ? JSON.parse(krow.kernel_v2) : null; } catch (_) { kernel = null; }
+  if (!kernel || !Array.isArray(kernel.experience) || !kernel.experience.length) {
+    return jsonResponse({ error: 'no-kernel', hint: 'Upload / build a kernel first (POST /api/profile/kernel-v2).' }, 404, request, env);
+  }
+  const sig = await sha256Hex(JSON.stringify(kernel));
+
+  // Cache lookup — a hit for the SAME signature is authoritative.
+  const cached = await env.DB.prepare(
+    'SELECT projection, source_sig, generated_at FROM kernel_language_view WHERE user_hash = ? AND language = ? LIMIT 1'
+  ).bind(userHash, lang).first();
+  if (cached && cached.source_sig === sig && !force) {
+    let projection = null; try { projection = JSON.parse(cached.projection); } catch (_) {}
+    return jsonResponse({ ok: true, cached: true, language: lang, projection, generated_at: cached.generated_at }, 200, request, env);
+  }
+
+  // GET never triggers generation — it only reports a fresh cache (or null).
+  if (request.method === 'GET') {
+    return jsonResponse({ ok: true, cached: false, language: lang, projection: null, stale: !!cached }, 200, request, env);
+  }
+
+  // English (or an all-empty kernel) → identity projection, no model call.
+  let projection;
+  if (lang === 'en') {
+    projection = identityKernelProjection(kernel, lang);
+  } else {
+    // Build the cross-lingual prompt and run it through the proxy chat
+    // endpoint, mirroring handleApiProfileExtractKernel's forward path.
+    const { system, user } = buildKernelLanguageProjectionPrompt(kernel, lang);
+    let modelJson = null;
+    try {
+      const ctx = await getUpstreamContext(request, env);
+      const upstreamUrl = buildUpstreamUrl(env, url, '/v1/chat/completions', ctx.mode);
+      const payload = JSON.stringify({
+        model: 'claude-haiku-4-5',
+        max_tokens: 4000,
+        temperature: 0,
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: user },
+        ],
+      });
+      const upstreamResp = await rawForward(
+        new Request(url.toString(), { method: 'POST', headers: request.headers, body: payload }),
+        env, upstreamUrl, 'POST', new TextEncoder().encode(payload), ctx.mode
+      );
+      if (upstreamResp && upstreamResp.ok) {
+        const raw = await upstreamResp.json().catch(() => null);
+        modelJson = parseKernelLangModelResponse(raw);
+      }
+    } catch (_) { modelJson = null; }
+    if (!modelJson) {
+      return jsonResponse({ error: 'projection-failed', hint: 'The language model did not return a usable projection; try again.' }, 502, request, env);
+    }
+    projection = { language: lang, experience: Array.isArray(modelJson.experience) ? modelJson.experience : [] };
+  }
+
+  const now = Date.now();
+  await d1RunWithRetry(env.DB.prepare(
+    'INSERT INTO kernel_language_view (user_hash, language, projection, source_sig, generated_at) ' +
+    'VALUES (?, ?, ?, ?, ?) ' +
+    'ON CONFLICT(user_hash, language) DO UPDATE SET projection = excluded.projection, source_sig = excluded.source_sig, generated_at = excluded.generated_at'
+  ).bind(userHash, lang, JSON.stringify(projection), sig, now)); // D1-WRITE-RETRY-001
+  return jsonResponse({ ok: true, cached: false, language: lang, projection, generated_at: now }, 200, request, env);
 }
 
 // v2.5: GET/PUT /api/prefs — user prefs (proxyUrl/photo/apiKeys) + adminDemo
@@ -1048,10 +1323,10 @@ async function handleApiPrefs(request, env) {
     let activeApplication = null;
     if (d1Available) {
       try {
-        await ensureActiveAppColumns(env);
-        const ptr = await env.DB.prepare(
-          'SELECT application_id, device_id, updated_at FROM active_application WHERE user_hash = ?'
-        ).bind(userHash).first();
+        // PARALLEL-GEN-POINTER-002: restore THIS device's own active application (falls
+        // back to the legacy global pointer when this device has never set one), so a
+        // parallel generation on another device/tab can't yank this device's cold-restore.
+        const ptr = await readActivePointer(env, userHash, deviceIdFromRequest(request));
         if (ptr && ptr.application_id) {
           const appRow = await env.DB.prepare(
             'SELECT * FROM application WHERE id = ? AND user_hash = ?'
@@ -1512,14 +1787,16 @@ async function handleApiPrefs(request, env) {
           ).bind(userHash),
           env.DB.prepare('DELETE FROM application WHERE user_hash = ?').bind(userHash),
           env.DB.prepare('DELETE FROM active_application WHERE user_hash = ?').bind(userHash),
+          env.DB.prepare('DELETE FROM active_application_device WHERE user_hash = ?').bind(userHash), // PARALLEL-GEN-POINTER-002
           env.DB.prepare('DELETE FROM user_kernel WHERE user_hash = ?').bind(userHash),
         ]);
         const ch = (i) => (coreBatch[i] && coreBatch[i].meta && coreBatch[i].meta.changes) || 0;
         result.details.d1_core = {
-          language_view:      ch(0),
-          application:        ch(1),
-          active_application: ch(2),
-          user_kernel:        ch(3),
+          language_view:             ch(0),
+          application:               ch(1),
+          active_application:        ch(2),
+          active_application_device: ch(3),
+          user_kernel:               ch(4),
         };
       } catch (e) {
         result.details.d1_core = { error: String(e && e.message || e) };
@@ -1699,6 +1976,23 @@ async function handleApiPrefsWipeGenerated(request, env) {
   try {
     // The active application = the row the active_application pointer references.
     const ACTIVE_SUBQUERY = 'IN (SELECT application_id FROM active_application WHERE user_hash = ?)';
+    // WIPE-NONDESTRUCTIVE-RESTORE-001 (owner 2026-07-20): SNAPSHOT the active app's LIVE
+    // sections into cv_sections_bak/cl_sections_bak BEFORE the null below, so an abandoned/
+    // failed/mis-routed regen no longer loses the CV permanently — the explicit reopen path
+    // (handleApiApplicationById GET) restores from the backup. Best-effort + OUTSIDE the batch
+    // so if the _bak columns aren't migrated yet this throws harmlessly and the wipe still
+    // nulls exactly as before (no behaviour change until the ALTER runs). Only snapshots when
+    // the current sections are LIVE (non-empty), so a re-wipe of an already-null row can't
+    // clobber a good backup with null. Contamination behaviour is UNCHANGED — sections are
+    // still nulled during regen; the backup is only ever surfaced on a DELIBERATE reopen.
+    try {
+      await env.DB.prepare(
+        'UPDATE application SET ' +
+        "cv_sections_bak = CASE WHEN (cv_sections IS NOT NULL AND cv_sections <> '' AND cv_sections <> '[]' AND cv_sections <> 'null') THEN cv_sections ELSE cv_sections_bak END, " +
+        "cl_sections_bak = CASE WHEN (cl_sections IS NOT NULL AND cl_sections <> '' AND cl_sections <> '[]' AND cl_sections <> 'null') THEN cl_sections ELSE cl_sections_bak END " +
+        'WHERE user_hash = ? AND id ' + ACTIVE_SUBQUERY
+      ).bind(userHash, userHash).run();
+    } catch (_) { /* _bak columns not migrated yet — skip snapshot, wipe still nulls (unchanged) */ }
     const batch = await env.DB.batch([
       env.DB.prepare(
         'DELETE FROM language_view WHERE application_id ' + ACTIVE_SUBQUERY
@@ -2017,23 +2311,112 @@ function shapeApplicationRow(row) {
     rationale:          parseJsonField(row.rationale, null),
     cv_sections:        parseJsonField(row.cv_sections, null),
     cl_sections:        parseJsonField(row.cl_sections, null),
+    // BRAND-FIT-PER-APP-001 (owner 2026-07-05): brand-fit-derived colors
+    // (navy/accent/fonts) previously only had an account-wide home
+    // (navyColor/styleConfig in KV prefs), so generating one CV with brand
+    // fit on recolored every future application on every device. This
+    // column lets a style live on the application it was generated for.
+    style_config:       parseJsonField(row.style_config, null),
+    // ANALYSIS-EXTRA-PERSIST-001 (owner 2026-07-22): the Analysis panel's
+    // per-gap detail + "I cover this" answers (gapState_*) and the employer Q&A
+    // (applicationQuestions) used to live ONLY in the generating device's
+    // localStorage, so a load on another device (or a fresh restore) showed them
+    // blank. This JSON column carries them on the application row so they round-
+    // trip. Shape: { gap_state: {<key>:<value>...}, application_questions: <any> }.
+    analysis_extra:     parseJsonField(row.analysis_extra, null),
     created_at:         row.created_at,
     updated_at:         row.updated_at,
   };
 }
 
-// The 12 fixed categories. Anything else gets coerced to 'unsolicited'.
+// The 12 fixed categories, plus 'targeted' — anything else gets coerced to 'unsolicited'.
+// TARGETED-SENTINEL-001 (owner 2026-07-18): the PWA sends category:'targeted' for a
+// real, targeted job whose JD-analysis hasn't produced one of the 12 domain categories
+// yet (app.src.js ~16658: `ra.category || "targeted"`). Coercing that to 'unsolicited'
+// was a bug: it flips generation into unsolicited breadth mode AND makes the reopen
+// CLEAR the JD instead of seeding it (unsolicited rows carry no JD context) — a targeted
+// job born as an unsolicited row. Recognise 'targeted' as a valid, NON-unsolicited
+// placeholder. It has no cluster (CATEGORY_TO_CLUSTER below → clusterForCategory returns
+// null, handled exactly like 'unsolicited' in the qual/fit pipeline), and it upgrades to
+// a real domain category automatically on the next classified regen (resolveTargeted-
+// Category returns the incoming real category over an existing 'targeted').
 const CATEGORIES = new Set([
   'engineering_hardware', 'engineering_software', 'product_management',
   'research_phd', 'program_management', 'operations',
   'data_analytics', 'consulting', 'executive',
   'finance', 'people_soft', 'unsolicited',
+  'targeted',
 ]);
 
 function normalizeCategory(cat) {
   if (typeof cat !== 'string') return 'unsolicited';
   const c = cat.trim().toLowerCase();
   return CATEGORIES.has(c) ? c : 'unsolicited';
+}
+
+// HYGIENE-CATEGORY-DOWNGRADE-001 (owner 2026-07-18): a real, TARGETED job (a named
+// employer + a substantive JD) must never be DOWNGRADED to 'unsolicited' just because
+// a save arrived with a blank/invalid category (e.g. a JD-less-framed regen, where
+// normalizeCategory coerces the empty category to 'unsolicited'). That downgrade is
+// what left the owner's live Ibsen "Project Manager for SBC" application stored as
+// category='unsolicited': it flips the whole generation into unsolicited BREADTH mode
+// (6 bullets, no Results pin, the unsolicited specialization line) AND makes the
+// reopen path CLEAR the JD instead of seeding it (unsolicited rows carry no JD
+// context), so the analysis then reads "no JD attached". Guard the upsert: when the
+// INCOMING category coerces to 'unsolicited' but there is a real employer + a
+// substantive JD, and the EXISTING row already holds a valid targeted (non-
+// unsolicited) category, keep the existing one. This ONLY prevents a downgrade — it
+// never overrides a genuine unsolicited application (no real employer) and never
+// upgrades a row the client legitimately kept unsolicited on its first save.
+function resolveTargetedCategory(incoming, existing, jdCompany, jdText) {
+  const co = typeof jdCompany === 'string' ? jdCompany.trim() : '';
+  const jd = typeof jdText === 'string' ? jdText.trim() : '';
+  const realTargeted = !!co && !/^unsolicited$/i.test(co) && jd.length > 200;
+  if (
+    incoming === 'unsolicited' &&
+    realTargeted &&
+    typeof existing === 'string' &&
+    existing !== 'unsolicited' &&
+    CATEGORIES.has(existing)
+  ) {
+    return existing;
+  }
+  return incoming;
+}
+
+// DEDUP-BY-EMPLOYER-ROLE-001 (owner 2026-07-18): whether a /job/create save should
+// UPDATE the existing (user_hash, jd_company, jd_role) row instead of running the
+// jd_hash upsert. The ON CONFLICT key hashes the JD *text*, so re-generating the same
+// job after a re-scrape (JD text drifts on dynamic careers pages) spawns a NEW row —
+// the owner's three Ibsen "Project Manager for SBC" duplicates. Dedup by employer+role
+// only for a REAL targeted job (named employer + role + substantive JD), and NEVER for
+// an explicit "save as new" (that button intentionally forces a distinct row).
+function shouldDedupeByJob(saveAsNew, jdCompany, jdRole, jdText) {
+  if (saveAsNew) return false;
+  const co = typeof jdCompany === 'string' ? jdCompany.trim() : '';
+  const role = typeof jdRole === 'string' ? jdRole.trim() : '';
+  const jd = typeof jdText === 'string' ? jdText.trim() : '';
+  return !!co && !/^unsolicited$/i.test(co) && !!role && jd.length > 200;
+}
+
+// DEDUP-ROLE-NORMALIZE-001 (owner 2026-07-21 "at least two copies of each application"): the
+// exact jd_role match spawned a second row for the SAME job whenever the role string varied —
+// en-dash vs hyphen (– / -), a trailing "- <company>" suffix the JD scraper sometimes appends,
+// or case/whitespace (e.g. 3Shape "Senior Project Manager – R&D…" vs "…- R&D… - 3Shape"). This
+// returns a STABLE key for "same role at same employer" so the dedup matches the variants:
+// lowercase, unify dash variants, strip a trailing "- <company>"/"at <company>", punctuation→space.
+function dedupeRoleKey(role, company) {
+  let r = String(role || '').toLowerCase();
+  if (!r.trim()) return '';
+  r = r.replace(/[‐-―−]/g, '-');   // ‐‑‒–—― and − → hyphen
+  const co = String(company || '').toLowerCase().trim();
+  if (co) {
+    const esc = co.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    r = r.replace(new RegExp('\\s*[-@]\\s*' + esc + '\\s*$'), '');   // "… - 3shape"
+    r = r.replace(new RegExp('\\s+at\\s+' + esc + '\\s*$'), '');     // "… at 3shape"
+  }
+  r = r.replace(/[^a-z0-9]+/g, ' ').trim();       // collapse punctuation/whitespace
+  return r;
 }
 
 // ---- CLUSTER-QUAL-001 stage 1: qualification extraction + top-20 recompute --
@@ -2193,6 +2576,92 @@ async function persistQualifications(env, { userHash, applicationId, category, q
     // Best-effort — qualification extraction is a secondary signal; a
     // failure here must never surface as a save failure to the user.
   }
+}
+
+// ---- CLUSTER-QUAL-001 §7.6: weekly-research WRITER (register row 9) --------
+// Closes the last-open leg of the pipeline: the production 'source=research'
+// writer. The weekly demand-seed tuning routine (a SCHEDULED CLAUDE CODE
+// SESSION — docs/deployment/google-cse-setup.md, NOT this Worker) re-researches
+// each cluster's most-demanded qualifications and pushes them here via POST
+// /api/cluster-demand-research. Before this, research rows were written by hand
+// (the 2026-07-10 manual run) — the gap OPEN_REGISTER row 9 tracked.
+//
+// Rows go in under GLOBAL_USER_HASH with source='research' and application_id
+// NULL (they are not a real JD, so they never inflate the "based on N jobs"
+// jd_count, which counts source='jd' only). Weight is RANK-SCALED —
+// RESEARCH_WEIGHT * (21 - rank) / 20 — NOT flat: recomputeClusterTop20 ranks
+// purely by SUM(weight), so a flat weight would tie every research qual and
+// lose the researched ORDER (which the generation prompt reads back as
+// "most-demanded first", __clusterRule in app.js). Rank-scaling keeps the
+// research order deterministic while EVERY value stays <= RESEARCH_WEIGHT (0.4)
+// < a single real 'required' JD qual (1.0), so real user-JD signal still
+// overtakes research as it accumulates (spec §4 / CLUSTER-DEMAND-GLOBAL-001).
+//
+// UNION per cluster ("fuse ... so nothing is lost", owner 2026-07-13): a naive
+// delete+insert would silently DROP a qualification the weekly research curated
+// out of the new top-20 (e.g. pm_process 'Obsolescence management', swapped for
+// the AI item). Instead: read this cluster's CURRENT research quals first, then
+// after inserting the fresh rank-scaled set, RE-INSERT any prior research qual
+// NOT in the fresh set at a FLOOR weight (RETAINED_RESEARCH_WEIGHT, strictly
+// below rank-20's 0.02). So a dropped qual is never lost from
+// application_qualification — it persists in the data and can RESURFACE if a
+// later week re-includes it — but its floor weight keeps it below every fresh
+// item, so recomputeClusterTop20's top-20 still surfaces the current 20. Real
+// 'jd' rows are untouched throughout. The caller inserts ALL clusters FIRST,
+// then recomputes each, so cross-cluster shared_clusters sees the fresh set.
+const KNOWN_CLUSTERS = new Set(Object.values(CATEGORY_TO_CLUSTER));
+const RETAINED_RESEARCH_WEIGHT = RESEARCH_WEIGHT / 40; // 0.01 < rank-20 weight (0.02)
+async function insertResearchQualifications(env, clusterId, top20, dateMs) {
+  if (!hasD1(env)) return 0;
+  if (!KNOWN_CLUSTERS.has(clusterId)) return 0;
+  if (!Array.isArray(top20) || !top20.length) return 0;
+
+  // Snapshot the cluster's current research quals BEFORE the delete, so any
+  // dropped from the new list can be retained (union) rather than lost.
+  const priorByCanon = new Map();
+  const prior = await env.DB.prepare(
+    "SELECT qual_canonical, MAX(qual_text) AS qual_text FROM application_qualification " +
+    "WHERE user_hash = ? AND cluster_id = ? AND source = 'research' GROUP BY qual_canonical"
+  ).bind(GLOBAL_USER_HASH, clusterId).all();
+  for (const r of (prior && prior.results) || []) priorByCanon.set(r.qual_canonical, r.qual_text);
+
+  await d1RunWithRetry(env.DB.prepare(
+    "DELETE FROM application_qualification WHERE user_hash = ? AND cluster_id = ? AND source = 'research'"
+  ).bind(GLOBAL_USER_HASH, clusterId));
+
+  const freshCanon = new Set();
+  let inserted = 0;
+  for (let i = 0; i < top20.length; i++) {
+    const item = top20[i] || {};
+    const text = String(item.q != null ? item.q : (item.text != null ? item.text : '')).trim();
+    if (!text) continue;
+    const canonical = qualCanonical(text);
+    if (!canonical || freshCanon.has(canonical)) continue;
+    freshCanon.add(canonical);
+    // rank: prefer the item's own r (1..N), else its array position; clamp 1..20.
+    let rank = parseInt(item.r, 10);
+    if (!Number.isFinite(rank) || rank < 1) rank = i + 1;
+    if (rank > 20) rank = 20;
+    const weight = RESEARCH_WEIGHT * (21 - rank) / 20;
+    await d1RunWithRetry(env.DB.prepare(
+      'INSERT INTO application_qualification (application_id, user_hash, cluster_id, qual_text, qual_canonical, weight, source, created_at) ' +
+      'VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+    ).bind(null, GLOBAL_USER_HASH, clusterId, text.slice(0, 200), canonical, weight, 'research', dateMs));
+    inserted++;
+  }
+
+  // Retain prior research quals dropped from the new list at the floor weight —
+  // the union that makes this writer lossless across a weekly curation.
+  let retained = 0;
+  for (const [canon, text] of priorByCanon) {
+    if (freshCanon.has(canon)) continue;
+    await d1RunWithRetry(env.DB.prepare(
+      'INSERT INTO application_qualification (application_id, user_hash, cluster_id, qual_text, qual_canonical, weight, source, created_at) ' +
+      'VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+    ).bind(null, GLOBAL_USER_HASH, clusterId, String(text || '').slice(0, 200), canon, RETAINED_RESEARCH_WEIGHT, 'research', dateMs));
+    retained++;
+  }
+  return inserted + retained;
 }
 
 // ---- CLUSTER-QUAL-001 stage 2: fit scoring (spec section 3.3) --------------
@@ -2379,6 +2848,67 @@ async function handleApiClusterTop20(request, env) {
   } catch (e) {
     return jsonResponse({ error: 'd1_read_failed', message: String(e && e.message || e) }, 500, request, env);
   }
+}
+
+// ---- CLUSTER-QUAL-001 §7.6: POST /api/cluster-demand-research --------------
+// The weekly demand-seed tuning routine (a scheduled Claude Code session, NOT
+// this Worker — same machine-to-machine model as /api/cse-search) pushes its
+// freshly-researched per-cluster top-20 here. Token-gated with a dedicated,
+// narrow-scope CLUSTER_RESEARCH_TOKEN — least privilege: this WRITES the global
+// demand model, so it is deliberately NOT the read-only CSE search token, and
+// deliberately NOT a signed-in user JWT (the routine is not an AntCV user).
+// Body (the `clusters` map is exactly the shape of the routine's own
+// docs/analysis/cluster_top20_research_<date>.json, so the push script forwards
+// it near-verbatim):
+//   { date?: <ISO string | epoch-ms>, clusters: { <clusterId>: { top20: [ {q, r?}, ... ] } } }
+// Two passes — insert all clusters, THEN recompute all — so each cluster's
+// shared_clusters reflects the whole fresh set, not a half-updated one.
+async function handleApiClusterDemandResearch(request, env) {
+  const tok = request.headers.get('x-antcv-cluster-research-token') || '';
+  if (!env.CLUSTER_RESEARCH_TOKEN || tok !== env.CLUSTER_RESEARCH_TOKEN) {
+    return jsonResponse({ error: 'unauthorized' }, 401, request, env);
+  }
+  if (!hasD1(env)) return jsonResponse({ error: 'd1_unavailable' }, 503, request, env);
+
+  let body;
+  try { body = await request.json(); }
+  catch (_) { return jsonResponse({ error: 'invalid_json' }, 400, request, env); }
+
+  const clusters = body && body.clusters;
+  if (!clusters || typeof clusters !== 'object') {
+    return jsonResponse({ error: 'missing clusters' }, 400, request, env);
+  }
+  let dateMs = Date.parse(body && body.date);
+  if (!Number.isFinite(dateMs)) dateMs = Date.now();
+
+  const ids = Object.keys(clusters).filter((cid) => KNOWN_CLUSTERS.has(cid));
+  const unknown = Object.keys(clusters).filter((cid) => !KNOWN_CLUSTERS.has(cid));
+  if (!ids.length) {
+    return jsonResponse({ error: 'no_known_clusters', unknown }, 400, request, env);
+  }
+
+  const summary = {};
+  try {
+    // Pass 1: insert all clusters' research rows.
+    for (const cid of ids) {
+      const top20 = clusters[cid] && clusters[cid].top20;
+      summary[cid] = { inserted: await insertResearchQualifications(env, cid, top20, dateMs) };
+    }
+    // Pass 2: recompute each cluster's top-20 (shared_clusters now sees the
+    // fresh cross-cluster set, and rank-scaled weights make order deterministic).
+    for (const cid of ids) {
+      await recomputeClusterTop20(env, cid);
+      summary[cid].recomputed = true;
+    }
+  } catch (e) {
+    return jsonResponse({ error: 'd1_write_failed', message: String(e && e.message || e), summary }, 500, request, env);
+  }
+
+  const totalInserted = ids.reduce((n, cid) => n + (summary[cid].inserted || 0), 0);
+  return jsonResponse({
+    ok: true, date_ms: dateMs, clusters_updated: ids.length,
+    total_inserted: totalInserted, unknown, summary,
+  }, 200, request, env);
 }
 
 // ---- One-time KV → D1 migration --------------------------------------
@@ -2656,6 +3186,7 @@ async function handleApiProfileKernel(request, env) {
         ).bind(userHash),
         env.DB.prepare('DELETE FROM application WHERE user_hash = ?').bind(userHash),
         env.DB.prepare('DELETE FROM active_application WHERE user_hash = ?').bind(userHash),
+        env.DB.prepare('DELETE FROM active_application_device WHERE user_hash = ?').bind(userHash), // PARALLEL-GEN-POINTER-002
         env.DB.prepare('DELETE FROM user_kernel WHERE user_hash = ?').bind(userHash),
       ]);
       const ch = (i) => (batchResult[i] && batchResult[i].meta && batchResult[i].meta.changes) || 0;
@@ -2665,10 +3196,11 @@ async function handleApiProfileKernel(request, env) {
           deleted: true,
           user_hash: userHash,
           details: {
-            language_view:      ch(0),
-            application:        ch(1),
-            active_application: ch(2),
-            user_kernel:        ch(3),
+            language_view:             ch(0),
+            application:               ch(1),
+            active_application:        ch(2),
+            active_application_device: ch(3),
+            user_kernel:               ch(4),
           },
         },
         200, request, env, refresh
@@ -2695,6 +3227,39 @@ async function handleApiApplications(request, env) {
   const m = request.method;
 
   if (m === 'GET') {
+    // CATEGORY-RECALL-001: ?category=<id>&latest=1 returns the single
+    // newest application in that category WITH its generated sections
+    // (cv_sections/cl_sections), so generation recall can prefer a real
+    // same-category application over the style|lang kernel showcase.
+    // Rows that were saved but never generated (cv_sections IS NULL)
+    // are skipped — an empty shell is worse than the kernel fallback.
+    const url = new URL(request.url);
+    if (url.searchParams.get('latest') === '1') {
+      const rawCat = url.searchParams.get('category');
+      const category = normalizeCategory(rawCat);
+      if (rawCat && !CATEGORIES.has(String(rawCat).trim().toLowerCase())) {
+        return jsonResponse(
+          { error: 'unknown_category', category: rawCat },
+          400, request, env, refresh
+        );
+      }
+      try {
+        const row = await env.DB.prepare(
+          'SELECT * FROM application ' +
+          'WHERE user_hash = ? AND category = ? AND cv_sections IS NOT NULL ' +
+          'ORDER BY updated_at DESC LIMIT 1'
+        ).bind(userHash, category).first();
+        return jsonResponse(
+          { ok: true, category, application: shapeApplicationRow(row) },
+          200, request, env, refresh
+        );
+      } catch (e) {
+        return jsonResponse(
+          { error: 'd1_read_failed', message: String(e && e.message || e) },
+          500, request, env, refresh
+        );
+      }
+    }
     try {
       const res = await env.DB.prepare(
         'SELECT id, jd_company, jd_role, category, jd_language, updated_at ' +
@@ -2769,45 +3334,128 @@ async function handleApiApplications(request, env) {
     const jdRole           = typeof body.jd_role    === 'string' ? body.jd_role.trim()    : '';
     const subtitle         = typeof body.subtitle   === 'string' ? body.subtitle.trim()   : '';
     const jdLanguage       = typeof body.jd_language === 'string' && body.jd_language.trim() ? body.jd_language.trim().slice(0, 5) : 'en';
-    const category         = normalizeCategory(body.category);
+    const incomingCategory = normalizeCategory(body.category);
+    // DEDUP-BY-EMPLOYER-ROLE-001: for a real targeted job (not "save as new"), find the
+    // existing (user_hash, jd_company, jd_role) row so we UPDATE it in place instead of
+    // spawning a jd_hash duplicate. Most-recently-updated match wins (converges on the
+    // active row). Fail-safe: any miss/error leaves dedupeId null -> the jd_hash upsert.
+    let dedupeId = null;
+    try {
+      if (shouldDedupeByJob(body.save_as_new, jdCompany, jdRole, jdText)) {
+        // DEDUP-ROLE-NORMALIZE-001: match on the NORMALIZED role within this employer, not the
+        // raw string, so dash/suffix/case variants of the same job UPDATE the existing row
+        // instead of spawning a duplicate. Company stays exact (employers are stable); role is
+        // normalized in JS (can't express in SQL). Freshest match wins (converges on the active
+        // row). Any miss/error leaves dedupeId null -> the jd_hash upsert, exactly as before.
+        const want = dedupeRoleKey(jdRole, jdCompany);
+        if (want) {
+          const cands = await env.DB.prepare(
+            'SELECT id, jd_role FROM application WHERE user_hash = ? AND jd_company = ? ORDER BY updated_at DESC'
+          ).bind(userHash, jdCompany).all();
+          const rows = (cands && cands.results) || [];
+          const hit = rows.find((r) => dedupeRoleKey(r.jd_role, jdCompany) === want);
+          dedupeId = hit && hit.id;
+        }
+      }
+    } catch (_) { dedupeId = null; }
+    // HYGIENE-CATEGORY-DOWNGRADE-001: read the EXISTING row's category (the dedupe row
+    // when matched, else the jd_hash row) so an unsolicited-coerced save cannot downgrade
+    // an application that already holds a valid targeted category.
+    let existingCategory = null;
+    try {
+      const prevRow = dedupeId
+        ? await env.DB.prepare('SELECT category FROM application WHERE id = ?').bind(dedupeId).first()
+        : await env.DB.prepare('SELECT category FROM application WHERE user_hash = ? AND jd_hash = ?').bind(userHash, jdHash).first();
+      existingCategory = prevRow && prevRow.category;
+    } catch (_) { /* best-effort; fall through to the incoming category */ }
+    const category         = resolveTargetedCategory(incomingCategory, existingCategory, jdCompany, jdText);
     const supportingCtx    = typeof body.supporting_context === 'string' ? body.supporting_context : '';
     const rationale        = (body.rationale && typeof body.rationale === 'object') ? JSON.stringify(body.rationale) : null;
     const meta             = (body.meta && typeof body.meta === 'object') ? JSON.stringify(body.meta) : null;
     const now = Date.now();
 
     try {
-      // Idempotent upsert on (user_hash, jd_hash).
-      await d1RunWithRetry(env.DB.prepare(
-        'INSERT INTO application ' +
-        '(user_hash, jd_hash, jd_text, supporting_context, jd_language, jd_company, jd_role, subtitle, meta, category, rationale, cv_sections, cl_sections, created_at, updated_at) ' +
-        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?) ' +
-        'ON CONFLICT(user_hash, jd_hash) DO UPDATE SET ' +
-        '  jd_company = excluded.jd_company, ' +
-        '  jd_role = excluded.jd_role, ' +
-        '  subtitle = excluded.subtitle, ' +
-        '  meta = excluded.meta, ' +
-        '  jd_language = excluded.jd_language, ' +
-        '  supporting_context = excluded.supporting_context, ' +
-        '  category = excluded.category, ' +
-        '  rationale = COALESCE(excluded.rationale, application.rationale), ' +
-        '  updated_at = excluded.updated_at'
-      ).bind(
-        userHash, jdHash, jdText, supportingCtx, jdLanguage,
-        jdCompany, jdRole, subtitle, meta, category, rationale, now, now
-      )); // D1-WRITE-RETRY-001
-      const row = await env.DB.prepare(
-        'SELECT * FROM application WHERE user_hash = ? AND jd_hash = ?'
-      ).bind(userHash, jdHash).first();
+      let row;
+      if (dedupeId) {
+        // JD-CROSS-APP-GUARD-001 (owner 2026-07-24; JD-SCOPE-KERNEL-CONTAMINATION
+        // family): a tab whose per-tab JD scope is STUCK on another application's
+        // JD auto-POSTs that foreign jd_text with THIS row's company/role — the
+        // dedupe UPDATE below then overwrote the healthy row's jd_text (and its
+        // meta, killing the stored slogan) on every app open. Live census
+        // 2026-07-24: 8 of 28 apps re-poisoned with one JD this way. Detection is
+        // exact: the incoming jd_text REPLACES a different non-empty jd_text AND
+        // verbatim-equals ANOTHER of this user's applications' jd_text — a real
+        // JD revision for the same job matches no other row. On detection the
+        // WHOLE update is refused (nothing in that POST is trustworthy) and the
+        // existing row returns unchanged (ok:true + guarded, so no client retry
+        // storm). A user's ~30 rows make the equality scan cheap.
+        let __foreignJd = null;
+        try {
+          const cur = await env.DB.prepare('SELECT jd_text FROM application WHERE id = ?').bind(dedupeId).first();
+          const curJd = String(cur && cur.jd_text || '').trim();
+          if (curJd && curJd !== jdText) {
+            __foreignJd = await env.DB.prepare(
+              'SELECT id FROM application WHERE user_hash = ? AND id != ? AND jd_text = ? LIMIT 1'
+            ).bind(userHash, dedupeId, jdText).first();
+          }
+        } catch (_) { __foreignJd = null; /* guard is best-effort — never block a save on a read error */ }
+        if (__foreignJd) {
+          try { console.log('[apps] JD-CROSS-APP-GUARD-001: refused dedupe update of app', dedupeId, '— incoming jd_text belongs to app', __foreignJd.id); } catch (_) {}
+          row = await env.DB.prepare('SELECT * FROM application WHERE id = ?').bind(dedupeId).first();
+          return jsonResponse(
+            { ok: true, guarded: 'jd_cross_app', application: shapeApplicationRow(row) },
+            200, request, env, refresh
+          );
+        }
+        // DEDUP-BY-EMPLOYER-ROLE-001: update the existing job row in place. jd_hash is
+        // LEFT UNCHANGED — the row is keyed by employer+role now, and rewriting the hash
+        // could collide with the UNIQUE(user_hash, jd_hash) index; dedup no longer
+        // depends on the hash matching jd_text.
+        // JD-CROSS-APP-GUARD-001(b): meta is COALESCE'd — a POST without meta
+        // (auto-save) must never null out a stored slogan/brand record.
+        await d1RunWithRetry(env.DB.prepare(
+          'UPDATE application SET ' +
+          '  jd_text = ?, supporting_context = ?, jd_language = ?, jd_company = ?, ' +
+          '  jd_role = ?, subtitle = ?, meta = COALESCE(?, meta), category = ?, ' +
+          '  rationale = COALESCE(?, rationale), updated_at = ? ' +
+          'WHERE id = ?'
+        ).bind(
+          jdText, supportingCtx, jdLanguage, jdCompany,
+          jdRole, subtitle, meta, category,
+          rationale, now, dedupeId
+        )); // D1-WRITE-RETRY-001
+        row = await env.DB.prepare('SELECT * FROM application WHERE id = ?').bind(dedupeId).first();
+      } else {
+        // Idempotent upsert on (user_hash, jd_hash).
+        await d1RunWithRetry(env.DB.prepare(
+          'INSERT INTO application ' +
+          '(user_hash, jd_hash, jd_text, supporting_context, jd_language, jd_company, jd_role, subtitle, meta, category, rationale, cv_sections, cl_sections, created_at, updated_at) ' +
+          'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?) ' +
+          'ON CONFLICT(user_hash, jd_hash) DO UPDATE SET ' +
+          '  jd_company = excluded.jd_company, ' +
+          '  jd_role = excluded.jd_role, ' +
+          '  subtitle = excluded.subtitle, ' +
+          '  meta = COALESCE(excluded.meta, application.meta), ' + // JD-CROSS-APP-GUARD-001(b)
+
+          '  jd_language = excluded.jd_language, ' +
+          '  supporting_context = excluded.supporting_context, ' +
+          '  category = excluded.category, ' +
+          '  rationale = COALESCE(excluded.rationale, application.rationale), ' +
+          '  updated_at = excluded.updated_at'
+        ).bind(
+          userHash, jdHash, jdText, supportingCtx, jdLanguage,
+          jdCompany, jdRole, subtitle, meta, category, rationale, now, now
+        )); // D1-WRITE-RETRY-001
+        row = await env.DB.prepare(
+          'SELECT * FROM application WHERE user_hash = ? AND jd_hash = ?'
+        ).bind(userHash, jdHash).first();
+      }
       // Set as active on creation. This matches the PWA's "you just
       // pasted a JD — work on it" expectation.
       if (row && row.id) {
         try {
-          await ensureActiveAppColumns(env);
           const deviceId = typeof body.device_id === 'string' ? body.device_id.slice(0, 64) : null;
-          await env.DB.prepare(
-            'INSERT INTO active_application (user_hash, application_id, device_id, updated_at) VALUES (?, ?, ?, ?) ' +
-            'ON CONFLICT(user_hash) DO UPDATE SET application_id = excluded.application_id, device_id = excluded.device_id, updated_at = excluded.updated_at'
-          ).bind(userHash, row.id, deviceId, now).run();
+          await writeActivePointer(env, userHash, row.id, deviceId, now); // PARALLEL-GEN-POINTER-002
         } catch (_) { /* best-effort */ }
       }
       // CLUSTER-QUAL-001 stage 1: extract qualifications from the rationale
@@ -2866,7 +3514,7 @@ async function handleApiApplicationById(request, env, idStr) {
   let owned;
   try {
     owned = await env.DB.prepare(
-      'SELECT user_hash, cv_sections, cl_sections, jd_company FROM application WHERE id = ?'
+      'SELECT user_hash, cv_sections, cl_sections, jd_company, updated_at FROM application WHERE id = ?'
     ).bind(appId).first();
   } catch (e) {
     return jsonResponse(
@@ -2883,6 +3531,37 @@ async function handleApiApplicationById(request, env, idStr) {
       const row = await env.DB.prepare(
         'SELECT * FROM application WHERE id = ?'
       ).bind(appId).first();
+      // WIPE-NONDESTRUCTIVE-RESTORE-001 (owner 2026-07-20): a full regen NULLs the
+      // ACTIVE app's sections (handleApiPrefsWipeGenerated) to avoid seeding the fresh
+      // generation from the prior CV. If that regen was abandoned / failed / mis-routed,
+      // the row was left permanently null ("no stored content" / JD-only — many apps).
+      // The wipe now SNAPSHOTS the live sections into cv_sections_bak/cl_sections_bak
+      // before nulling; here, on an EXPLICIT single-app open whose live sections are
+      // empty but a backup exists, RESTORE the backup into the row (self-heal) and return
+      // it — the user gets their CV back instead of a null/template. SCOPED to this
+      // deliberate GET ONLY, never the /api/prefs active_application seed (line ~1332),
+      // so a mid-regen sync can never re-apply the backup and re-seed the contamination
+      // the wipe prevents. Best-effort + degrades to current behaviour if the _bak
+      // columns aren't migrated yet.
+      if (row) {
+        try {
+          const __empty = (v) => !(typeof v === 'string' && v.trim() && v.trim() !== 'null' && v.trim() !== '[]');
+          const __needCv = __empty(row.cv_sections) && !__empty(row.cv_sections_bak);
+          const __needCl = __empty(row.cl_sections) && !__empty(row.cl_sections_bak);
+          if (__needCv || __needCl) {
+            await env.DB.prepare(
+              'UPDATE application SET ' +
+              "cv_sections = CASE WHEN (cv_sections IS NULL OR cv_sections = '' OR cv_sections = '[]' OR cv_sections = 'null') THEN cv_sections_bak ELSE cv_sections END, " +
+              "cl_sections = CASE WHEN (cl_sections IS NULL OR cl_sections = '' OR cl_sections = '[]' OR cl_sections = 'null') THEN cl_sections_bak ELSE cl_sections END, " +
+              'cv_sections_bak = NULL, cl_sections_bak = NULL, updated_at = ? ' +
+              'WHERE id = ? AND user_hash = ?'
+            ).bind(Math.floor(Date.now() / 1000), appId, userHash).run();
+            if (__needCv) row.cv_sections = row.cv_sections_bak;
+            if (__needCl) row.cl_sections = row.cl_sections_bak;
+            try { console.log('[apps] WIPE-NONDESTRUCTIVE-RESTORE-001: restored backed-up sections for app', appId, '(a regen had left it empty)'); } catch (_) {}
+          }
+        } catch (_) { /* _bak columns not migrated / restore failed — return the row as-is (current behaviour) */ }
+      }
       return jsonResponse(
         { ok: true, application: shapeApplicationRow(row) },
         200, request, env, refresh
@@ -2901,6 +3580,23 @@ async function handleApiApplicationById(request, env, idStr) {
     catch (_) { return jsonResponse({ error: 'invalid_json' }, 400, request, env, refresh); }
     if (!body || typeof body !== 'object') {
       return jsonResponse({ error: 'invalid_body' }, 400, request, env, refresh);
+    }
+    // AUTOSAVE-STALE-CLOBBER-001 (owner 2026-07-22): optimistic concurrency for the
+    // client auto-save. A PUT MAY carry base_rev = the row's updated_at the client
+    // last loaded/saved. If present and it mismatches the stored row, the writer is
+    // STALE (e.g. an open tab's 3s auto-sync replaying old localStorage over a
+    // fresher nightly-regen PUT) — reject 409 with the current rev instead of a
+    // silent clobber. base_rev absent/null keeps today's unconditional write
+    // (backward compatible: the Python nightly, the analysis partial-PUT and the
+    // row-switch save are unchanged). Same pattern as handleApiJobTracker's rev.
+    if (body.base_rev !== undefined && body.base_rev !== null) {
+      const curRev = Number(owned.updated_at || 0);
+      if (Number(body.base_rev) !== curRev) {
+        return jsonResponse(
+          { error: 'conflict', updated_at: curRev },
+          409, request, env, refresh
+        );
+      }
     }
     // AUTOSAVE-NO-DOWNGRADE-001 (register row 29/31 leg C, owner 2026-07-04 "the fuck?"
     // Trackman revert): the client auto-saves the active app on every row switch /
@@ -2951,6 +3647,22 @@ async function handleApiApplicationById(request, env, idStr) {
       sets.push('cl_sections = ?');
       vals.push(body.cl_sections === null ? null : JSON.stringify(body.cl_sections));
     }
+    // BRAND-FIT-PER-APP-001: style_config is this application's OWN saved
+    // colors/fonts (from brand-fit or manual "Save as custom" scoped to this
+    // app) — same undefined-skip / explicit-null-clears convention as every
+    // other field here.
+    if (body.style_config !== undefined) {
+      sets.push('style_config = ?');
+      vals.push(body.style_config === null ? null : JSON.stringify(body.style_config));
+    }
+    // ANALYSIS-EXTRA-PERSIST-001: per-app gap-state + application-questions JSON.
+    // Same undefined-skip / explicit-null-clears convention as every field here,
+    // so a partial write (the client's dedicated analysis_extra PUT) never wipes
+    // sections/meta/etc., and vice-versa.
+    if (body.analysis_extra !== undefined) {
+      sets.push('analysis_extra = ?');
+      vals.push(body.analysis_extra === null ? null : JSON.stringify(body.analysis_extra));
+    }
     if (!sets.length) {
       return jsonResponse({ error: 'no_fields_to_update' }, 400, request, env, refresh);
     }
@@ -2960,7 +3672,12 @@ async function handleApiApplicationById(request, env, idStr) {
       await env.DB.prepare(
         'UPDATE application SET ' + sets.join(', ') + ' WHERE id = ?'
       ).bind(...vals).run();
-      // Sweep: keep the user's newest 5 REAL (company-named) applications.
+      // Sweep: keep the user's newest 50 REAL (company-named) applications.
+      // APP-HISTORY-CAP-50 (owner 2026-07-10): raised from 5 to 50 so a full
+      // job-search history (>=1 per role/company) survives — the nightly top-10
+      // weekly generator needs a broad saved set, and the 5-cap was actively
+      // deleting the owner's applications down to 5. The editor PREVIEW still
+      // shows only the last 5 (client-side); the Settings history tab shows all.
       // KERNEL-HISTORY-KEEP-001 (owner 2026-06-10): the unsolicited / kernel
       // showcase row (jd_company empty or "Unsolicited") is PINNED — never
       // swept — so it always stays in the history unless the user renews it
@@ -2973,7 +3690,7 @@ async function handleApiApplicationById(request, env, idStr) {
           "AND LOWER(TRIM(COALESCE(jd_company, ''))) NOT IN ('', 'unsolicited') " +
           'AND id NOT IN (SELECT id FROM application WHERE user_hash = ? ' +
           "AND LOWER(TRIM(COALESCE(jd_company, ''))) NOT IN ('', 'unsolicited') " +
-          'ORDER BY updated_at DESC LIMIT 5)'
+          'ORDER BY updated_at DESC LIMIT 50)'
         ).bind(userHash, userHash).run();
       } catch (_) { /* sweep is best-effort */ }
       const row = await env.DB.prepare(
@@ -3021,6 +3738,116 @@ async function handleApiApplicationById(request, env, idStr) {
 //
 // GET  -> { ok, showcase: {sections,meta,rationale,jd_language,updated_at} | null }
 // PUT  -> upsert on user_hash; body {sections,meta,rationale,jd_language}
+// =================================================================
+// JOB TRACKER — per-user job-search workbook (JOB-TRACKER-001)
+// -----------------------------------------------------------------
+// Stores the whole job-search "workbook" (dream-envelope, weekly-tracker
+// rows, top-5, history, contacts, application-log) as ONE JSON document per
+// user, keyed by user_hash. It is the SOURCE OF TRUTH; the local Excel file
+// and (later) the AntCV web UI are both clients that render/edit this doc.
+//
+// Concurrency: optimistic, via a monotonically-increasing `rev`. A PUT sends
+// { doc, base_rev }. If base_rev is provided and doesn't match the stored
+// rev, the write is rejected 409 with the current { doc, rev } so the caller
+// (sync CLI or UI) can 3-way merge and retry — never a silent clobber.
+// Passing base_rev = null/absent forces the write (first-writer / reset).
+//
+// Single-blob (not per-row tables) because the whole workbook is small,
+// always read/written together, and this keeps sync trivial. Per-row
+// generation (Phase 2) addresses rows by their `id` INSIDE the doc.
+async function handleApiJobTracker(request, env) {
+  const id = await identityFromRequest(request, env);
+  if (!id) return jsonResponse({ error: 'unauthenticated' }, 401, request, env);
+  if (!hasD1(env)) return jsonResponse({ error: 'd1_not_bound' }, 503, request, env);
+  const refresh = await maybeRefreshHeader(env, id);
+  const userHash = await userHashFromEmail(id.email);
+  const m = request.method;
+
+  try {
+    await env.DB.prepare(
+      'CREATE TABLE IF NOT EXISTS job_tracker (' +
+      'user_hash TEXT PRIMARY KEY, doc TEXT, rev INTEGER NOT NULL DEFAULT 0, ' +
+      'updated_at INTEGER, ' +
+      'FOREIGN KEY (user_hash) REFERENCES user_kernel(user_hash) ON DELETE CASCADE)'
+    ).run();
+  } catch (_) {}
+
+  if (m === 'GET') {
+    try {
+      const row = await env.DB.prepare(
+        'SELECT doc, rev, updated_at FROM job_tracker WHERE user_hash = ?'
+      ).bind(userHash).first();
+      return jsonResponse({
+        ok: true,
+        doc: row ? parseJsonField(row.doc, null) : null,
+        rev: row ? (row.rev || 0) : 0,
+        updated_at: row ? row.updated_at : null,
+      }, 200, request, env, refresh);
+    } catch (e) {
+      return jsonResponse({ ok: true, doc: null, rev: 0 }, 200, request, env, refresh);
+    }
+  }
+
+  if (m === 'DELETE') {
+    try {
+      await env.DB.prepare('DELETE FROM job_tracker WHERE user_hash = ?').bind(userHash).run();
+      return jsonResponse({ ok: true, deleted: true }, 200, request, env, refresh);
+    } catch (e) {
+      return jsonResponse({ error: 'd1_delete_failed', message: String(e && e.message || e) }, 500, request, env, refresh);
+    }
+  }
+
+  if (m === 'PUT') {
+    let body;
+    try { body = await request.json(); }
+    catch (_) { return jsonResponse({ error: 'invalid_json' }, 400, request, env, refresh); }
+    if (!body || typeof body !== 'object' || !body.doc || typeof body.doc !== 'object') {
+      return jsonResponse({ error: 'invalid_body', message: 'expected { doc: {...}, base_rev? }' }, 400, request, env, refresh);
+    }
+    // Ensure the FK parent row exists (mirrors kernel_showcase PUT).
+    try {
+      const k = await env.DB.prepare('SELECT user_hash FROM user_kernel WHERE user_hash = ?').bind(userHash).first();
+      if (!k) {
+        const mig = await migrateKvPrefsToD1IfEmpty(env, id);
+        if (!mig.migrated) {
+          const now0 = Date.now();
+          await env.DB.prepare('INSERT INTO user_kernel (user_hash, identity, history, preferences, photo_b64, created_at, updated_at) VALUES (?, ?, ?, ?, NULL, ?, ?) ON CONFLICT(user_hash) DO NOTHING')
+            .bind(userHash, JSON.stringify({ email: id.email }), JSON.stringify({}), JSON.stringify({}), now0, now0).run();
+        }
+      }
+    } catch (_) {}
+
+    const cur = await env.DB.prepare('SELECT rev FROM job_tracker WHERE user_hash = ?').bind(userHash).first();
+    const curRev = cur ? (cur.rev || 0) : 0;
+    const baseRev = (body.base_rev === null || body.base_rev === undefined) ? null : Number(body.base_rev);
+    if (baseRev !== null && baseRev !== curRev) {
+      // Someone advanced the doc since the caller last read it — hand back the
+      // current state so the caller can merge and retry, don't overwrite.
+      let curDoc = null;
+      try {
+        const r = await env.DB.prepare('SELECT doc FROM job_tracker WHERE user_hash = ?').bind(userHash).first();
+        curDoc = r ? parseJsonField(r.doc, null) : null;
+      } catch (_) {}
+      return jsonResponse({ error: 'conflict', rev: curRev, doc: curDoc }, 409, request, env, refresh);
+    }
+
+    const nextRev = curRev + 1;
+    const now = Date.now();
+    const docStr = JSON.stringify(body.doc);
+    try {
+      await env.DB.prepare(
+        'INSERT INTO job_tracker (user_hash, doc, rev, updated_at) VALUES (?, ?, ?, ?) ' +
+        'ON CONFLICT(user_hash) DO UPDATE SET doc = excluded.doc, rev = excluded.rev, updated_at = excluded.updated_at'
+      ).bind(userHash, docStr, nextRev, now).run();
+      return jsonResponse({ ok: true, rev: nextRev, updated_at: now }, 200, request, env, refresh);
+    } catch (e) {
+      return jsonResponse({ error: 'd1_write_failed', message: String(e && e.message || e) }, 500, request, env, refresh);
+    }
+  }
+
+  return jsonResponse({ error: 'method_not_allowed' }, 405, request, env, refresh);
+}
+
 async function handleApiKernelShowcase(request, env) {
   const id = await identityFromRequest(request, env);
   if (!id) return jsonResponse({ error: 'unauthenticated' }, 401, request, env);
@@ -3062,15 +3889,33 @@ async function handleApiKernelShowcase(request, env) {
     }
     if (m === 'GET') {
       try {
-        const srow = await env.DB.prepare(
-          'SELECT sections, meta, rationale, jd_language, updated_at FROM kernel_showcase_styled WHERE user_hash = ? AND style_key = ?'
-        ).bind(userHash, __style).first();
+        // KERNEL-KEY-LANG-001 (owner 2026-07-10): style_key is now "<style>|<lang>".
+        // Fall back to a pre-existing legacy row (style-only, then the single ''
+        // slot) so kernels saved before the language-keying still restore. The
+        // app's next edit-resave re-writes under the new key (natural migration).
+        const __li = __style ? __style.lastIndexOf('|') : -1;
+        const __reqLang = __li > 0 ? __style.slice(__li + 1) : '';
+        const __cands = [__style];
+        if (__li > 0) __cands.push(__style.slice(0, __li));
+        if (__style) __cands.push('');
+        let srow = null, __hitKey = __style;
+        for (const __k of __cands) {
+          const __r = await env.DB.prepare(
+            'SELECT sections, meta, rationale, jd_language, updated_at FROM kernel_showcase_styled WHERE user_hash = ? AND style_key = ?'
+          ).bind(userHash, __k).first();
+          if (!__r) continue;
+          // KERNEL-KEY-LANG-001: exact key always accepted; a LEGACY fallback row
+          // is accepted only if its language matches the request — otherwise we'd
+          // serve an English kernel under Chinese labels (owner 2026-07-10 report).
+          // A language mismatch -> null -> the app regenerates fresh in style+lang.
+          if (__k === __style || !__reqLang || String(__r.jd_language || '') === __reqLang) { srow = __r; __hitKey = __k; break; }
+        }
         const showcase = srow ? {
           sections: parseJsonField(srow.sections, null), meta: parseJsonField(srow.meta, null),
           rationale: parseJsonField(srow.rationale, null), jd_language: srow.jd_language || 'en',
           updated_at: srow.updated_at,
         } : null;
-        return jsonResponse({ ok: true, showcase, style_key: __style }, 200, request, env, refresh);
+        return jsonResponse({ ok: true, showcase, style_key: __hitKey }, 200, request, env, refresh);
       } catch (e) {
         return jsonResponse({ ok: true, showcase: null }, 200, request, env, refresh);
       }
@@ -3218,6 +4063,66 @@ async function ensureActiveAppColumns(env) {
     try { await env.DB.prepare('ALTER TABLE active_application ADD COLUMN ' + col).run(); }
     catch (_) { /* duplicate column — already migrated */ }
   }
+  // PARALLEL-GEN-POINTER-002: idempotent runtime migration so prod gets the per-device
+  // pointer table without a manual `wrangler d1 execute schema.sql`. IF NOT EXISTS →
+  // safe to run every cold isolate.
+  try {
+    await env.DB.prepare(
+      'CREATE TABLE IF NOT EXISTS active_application_device (' +
+      'user_hash TEXT NOT NULL, device_id TEXT NOT NULL, application_id INTEGER, updated_at INTEGER, ' +
+      'PRIMARY KEY (user_hash, device_id))'
+    ).run();
+  } catch (_) { /* best-effort — falls back to the legacy global pointer */ }
+}
+
+// PARALLEL-GEN-POINTER-002: write the active pointer to BOTH the per-device table
+// (keyed user_hash+device_id — each device/tab keeps its own active app) AND the legacy
+// global active_application row (kept as the cross-device "latest" fallback a fresh
+// device restores from). Additive: with no device_id only the legacy row is written,
+// exactly today's behavior. The per-device write is best-effort — the legacy row is the
+// durable authority so a per-device failure never loses the pointer.
+async function writeActivePointer(env, userHash, appId, deviceId, nowMs) {
+  await ensureActiveAppColumns(env);
+  await env.DB.prepare(
+    'INSERT INTO active_application (user_hash, application_id, device_id, updated_at) VALUES (?, ?, ?, ?) ' +
+    'ON CONFLICT(user_hash) DO UPDATE SET application_id = excluded.application_id, device_id = excluded.device_id, updated_at = excluded.updated_at'
+  ).bind(userHash, appId, deviceId, nowMs).run();
+  if (deviceId) {
+    try {
+      await env.DB.prepare(
+        'INSERT INTO active_application_device (user_hash, device_id, application_id, updated_at) VALUES (?, ?, ?, ?) ' +
+        'ON CONFLICT(user_hash, device_id) DO UPDATE SET application_id = excluded.application_id, updated_at = excluded.updated_at'
+      ).bind(userHash, deviceId, appId, nowMs).run();
+    } catch (_) { /* per-device best-effort; legacy row already persisted */ }
+  }
+}
+
+// PARALLEL-GEN-POINTER-002: read the active pointer for a SPECIFIC device. Returns the
+// device's own pointer when it has one (so a parallel gen on another device can't yank
+// it out from under this device); otherwise falls back to the legacy global pointer
+// (fresh device → latest app anywhere). Shape matches the legacy row plus a _source tag.
+async function readActivePointer(env, userHash, deviceId) {
+  await ensureActiveAppColumns(env);
+  if (deviceId) {
+    try {
+      const dev = await env.DB.prepare(
+        'SELECT application_id, updated_at FROM active_application_device WHERE user_hash = ? AND device_id = ?'
+      ).bind(userHash, deviceId).first();
+      if (dev && dev.application_id) {
+        return { application_id: dev.application_id, device_id: deviceId, updated_at: dev.updated_at || null, _source: 'device' };
+      }
+    } catch (_) { /* fall through to global */ }
+  }
+  const g = await env.DB.prepare(
+    'SELECT application_id, device_id, updated_at FROM active_application WHERE user_hash = ?'
+  ).bind(userHash).first();
+  if (!g) return null;
+  return { application_id: g.application_id, device_id: g.device_id || null, updated_at: g.updated_at || null, _source: 'global' };
+}
+
+// PARALLEL-GEN-POINTER-002: read device_id off a request's query string (?device_id=…).
+function deviceIdFromRequest(request) {
+  try { return new URL(request.url).searchParams.get('device_id') || null; } catch (_) { return null; }
 }
 
 // ---- /api/active  (pointer to current application) ------------------
@@ -3232,14 +4137,13 @@ async function handleApiActive(request, env) {
 
   if (m === 'GET') {
     try {
-      await ensureActiveAppColumns(env);
-      const row = await env.DB.prepare(
-        'SELECT application_id, device_id, updated_at FROM active_application WHERE user_hash = ?'
-      ).bind(userHash).first();
+      // PARALLEL-GEN-POINTER-002: this device's own pointer (fallback: legacy global).
+      const row = await readActivePointer(env, userHash, deviceIdFromRequest(request));
       return jsonResponse(
         { ok: true, application_id: row ? row.application_id : null,
           device_id: row ? (row.device_id || null) : null,
-          updated_at: row ? (row.updated_at || null) : null },
+          updated_at: row ? (row.updated_at || null) : null,
+          source: row ? (row._source || null) : null },
         200, request, env, refresh
       );
     } catch (e) {
@@ -3272,13 +4176,9 @@ async function handleApiActive(request, env) {
       }
     }
     try {
-      await ensureActiveAppColumns(env);
       const deviceId = body && typeof body.device_id === 'string' ? body.device_id.slice(0, 64) : null;
       const nowMs = Date.now();
-      await env.DB.prepare(
-        'INSERT INTO active_application (user_hash, application_id, device_id, updated_at) VALUES (?, ?, ?, ?) ' +
-        'ON CONFLICT(user_hash) DO UPDATE SET application_id = excluded.application_id, device_id = excluded.device_id, updated_at = excluded.updated_at'
-      ).bind(userHash, newId, deviceId, nowMs).run();
+      await writeActivePointer(env, userHash, newId, deviceId, nowMs); // PARALLEL-GEN-POINTER-002
       return jsonResponse(
         { ok: true, application_id: newId, device_id: deviceId, updated_at: nowMs },
         200, request, env, refresh
@@ -3858,6 +4758,10 @@ async function handleKvScoped(request, env, prefix, payloadField, maxStringLen) 
 //  Main router
 // =====================================================================
 
+// PARALLEL-GEN-POINTER-002: test-only export so the per-device pointer read/write logic
+// can be exercised in node against a mock env.DB. Unused by the worker runtime.
+export const __test = { writeActivePointer, readActivePointer, deviceIdFromRequest };
+
 export default {
   async fetch(request, env, ctx) {
     return handleRequest(request, env || {}, ctx || null);
@@ -3977,7 +4881,8 @@ const method = request.method;
 
   // CSE-PROXY-001 (owner 2026-07-05): the weekly demand-tuning job
   // (CLUSTER-QUAL-001 §7.6 — a SCHEDULED CLAUDE CODE SESSION, not this Worker)
-  // needs Google Custom Search results scoped to job-market sites
+  // needs web-search results (Brave preferred, Google CSE fallback — see
+  // CSE-PROXY-GOOGLE-ENTITLEMENT-001) scoped to job-market sites
   // (Jobindex.dk, Glassdoor, LinkedIn jobs, etc. — see
   // docs/deployment/google-cse-setup.md) without ever holding the real,
   // billable Google API key. SAME pattern as /api/security-alert above: the
@@ -3992,18 +4897,43 @@ const method = request.method;
     if (!env.CSE_PROXY_TOKEN || tok !== env.CSE_PROXY_TOKEN) {
       return jsonResponse({ error: 'unauthorized' }, 401, request, env);
     }
-    if (!env.GOOGLE_CSE_KEY) {
-      return jsonResponse({ error: 'GOOGLE_CSE_KEY not set on relay' }, 503, request, env);
-    }
     const url = new URL(request.url);
     const q = String(url.searchParams.get('q') || '').trim().slice(0, 300);
     if (!q) return jsonResponse({ error: 'missing q' }, 400, request, env);
     const siteSearch = String(url.searchParams.get('siteSearch') || '').trim().slice(0, 100);
     const dateRestrict = String(url.searchParams.get('dateRestrict') || 'm3').trim().slice(0, 10);
     const num = Math.min(10, Math.max(1, parseInt(url.searchParams.get('num'), 10) || 10));
+
+    // CSE-PROXY-GOOGLE-ENTITLEMENT-001: Google CSE 403s on a Google-side
+    // entitlement hold (Support case open since 2026-07-10). PREFERRED backend
+    // is now Brave Search, same as /api/research below — try it first whenever
+    // BRAVE_API_KEY is set; fall through to Google CSE only without it.
+    if (env.BRAVE_API_KEY) {
+      const bUrl = new URL('https://api.search.brave.com/res/v1/web/search');
+      bUrl.searchParams.set('q', siteSearch ? ('site:' + siteSearch + ' ' + q) : q);
+      bUrl.searchParams.set('count', String(num));
+      const fr = /y/.test(dateRestrict) ? 'py' : (/m/.test(dateRestrict) ? 'pm' : (/w/.test(dateRestrict) ? 'pw' : ''));
+      if (fr) bUrl.searchParams.set('freshness', fr);
+      try {
+        const res = await fetch(bUrl.toString(), { headers: { 'Accept': 'application/json', 'Accept-Encoding': 'gzip', 'X-Subscription-Token': env.BRAVE_API_KEY } });
+        if (!res.ok) { const b = await res.text().catch(() => ''); return jsonResponse({ error: `Brave ${res.status}: ${b.slice(0, 300)}` }, 502, request, env); }
+        const data = await res.json();
+        const results = (data && data.web && Array.isArray(data.web.results)) ? data.web.results : [];
+        const items = results.slice(0, num).map((it) => ({ title: it.title, link: it.url, snippet: it.description || '' }));
+        return jsonResponse({ ok: true, source: 'brave', items, total_results: null }, 200, request, env);
+      } catch (e) { return jsonResponse({ error: 'Brave: ' + String(e && e.message || e) }, 502, request, env); }
+    }
+
+    // Fallback backend: Google CSE (blocked by the entitlement hold above
+    // until Google resolves the Support case).
+    if (!env.GOOGLE_CSE_KEY) {
+      return jsonResponse({ error: 'no search backend: set BRAVE_API_KEY (preferred) or GOOGLE_CSE_KEY on the relay' }, 503, request, env);
+    }
     // CSE ID is not sensitive (it's embedded in the public cse.js widget
-    // snippet Google itself generates) — safe as a plain constant.
-    const CSE_ID = '67ce5387bc18f4028';
+    // snippet Google itself generates). CSE-PROXY-CX-DEAD-VAR-001: the
+    // GOOGLE_CSE_ID secret takes precedence so a rotated engine is a secret
+    // update, not a deploy; the literal stays as the fallback.
+    const CSE_ID = env.GOOGLE_CSE_ID || '67ce5387bc18f4028';
     const gUrl = new URL('https://www.googleapis.com/customsearch/v1');
     gUrl.searchParams.set('key', env.GOOGLE_CSE_KEY);
     gUrl.searchParams.set('cx', CSE_ID);
@@ -4029,6 +4959,72 @@ const method = request.method;
     } catch (e) {
       return jsonResponse({ error: String(e && e.message || e) }, 502, request, env);
     }
+  }
+
+  // RESEARCH-001: authenticated web research (Google CSE) gated on the user's
+  // session JWT — so the job-tracker runner (owner token) and the in-app Ask-AI
+  // assistant can research a company/role WITHOUT the narrow CSE_PROXY_TOKEN.
+  // Same backend as /api/cse-search above.
+  if (path === '/api/research' && (method === 'GET' || method === 'POST')) {
+    const id = await identityFromRequest(request, env);
+    if (!id) return jsonResponse({ error: 'unauthenticated' }, 401, request, env);
+    const refresh = await maybeRefreshHeader(env, id);
+    let q = '', siteSearch = '', dateRestrict = 'm6', num = 6, braveKeyClient = '';
+    if (method === 'POST') {
+      let body; try { body = await request.json(); } catch { body = {}; }
+      q = String((body && body.q) || '').trim().slice(0, 300);
+      braveKeyClient = String((body && body.braveKey) || '').trim();
+      siteSearch = String((body && body.siteSearch) || '').trim().slice(0, 100);
+      dateRestrict = String((body && body.dateRestrict) || 'm6').trim().slice(0, 10);
+      num = Math.min(10, Math.max(1, parseInt(body && body.num, 10) || 6));
+    } else {
+      const u = new URL(request.url);
+      q = String(u.searchParams.get('q') || '').trim().slice(0, 300);
+      siteSearch = String(u.searchParams.get('siteSearch') || '').trim().slice(0, 100);
+      dateRestrict = String(u.searchParams.get('dateRestrict') || 'm6').trim().slice(0, 10);
+      num = Math.min(10, Math.max(1, parseInt(u.searchParams.get('num'), 10) || 6));
+    }
+    if (!q) return jsonResponse({ error: 'missing q' }, 400, request, env, refresh);
+
+    // BYOK-BRAVE-001: a caller may supply its OWN Brave key (Settings → API Keys
+    // → BYOK) via the x-brave-key header or body.braveKey; prefer it over the relay
+    // secret so a BYOK user searches on their own quota. Else the relay secret.
+    const braveKey = String(request.headers.get('x-brave-key') || '').trim() || braveKeyClient || env.BRAVE_API_KEY || '';
+    // PREFERRED backend: Brave Search — no Google project/org/DNS friction.
+    // Falls through to Google CSE only if no Brave key at all.
+    if (braveKey) {
+      const bUrl = new URL('https://api.search.brave.com/res/v1/web/search');
+      bUrl.searchParams.set('q', siteSearch ? ('site:' + siteSearch + ' ' + q) : q);
+      bUrl.searchParams.set('count', String(num));
+      const fr = /y/.test(dateRestrict) ? 'py' : (/m/.test(dateRestrict) ? 'pm' : (/w/.test(dateRestrict) ? 'pw' : ''));
+      if (fr) bUrl.searchParams.set('freshness', fr);
+      try {
+        const res = await fetch(bUrl.toString(), { headers: { 'Accept': 'application/json', 'Accept-Encoding': 'gzip', 'X-Subscription-Token': braveKey } });
+        if (!res.ok) { const b = await res.text().catch(() => ''); return jsonResponse({ error: `Brave ${res.status}: ${b.slice(0, 300)}` }, 502, request, env, refresh); }
+        const data = await res.json();
+        const results = (data && data.web && Array.isArray(data.web.results)) ? data.web.results : [];
+        const items = results.slice(0, num).map((it) => ({ title: it.title, link: it.url, snippet: it.description || '' }));
+        return jsonResponse({ ok: true, query: q, source: 'brave', items }, 200, request, env, refresh);
+      } catch (e) { return jsonResponse({ error: 'Brave: ' + String(e && e.message || e) }, 502, request, env, refresh); }
+    }
+
+    // Fallback backend: Google CSE (needs GOOGLE_CSE_KEY + a provisioned project).
+    if (!env.GOOGLE_CSE_KEY) return jsonResponse({ error: 'no search backend: set BRAVE_API_KEY (preferred) or GOOGLE_CSE_KEY on the relay' }, 503, request, env, refresh);
+    const CSE_ID = env.GOOGLE_CSE_ID || '67ce5387bc18f4028'; // CSE-PROXY-CX-DEAD-VAR-001: secret wins, literal is fallback
+    const gUrl = new URL('https://www.googleapis.com/customsearch/v1');
+    gUrl.searchParams.set('key', env.GOOGLE_CSE_KEY);
+    gUrl.searchParams.set('cx', CSE_ID);
+    gUrl.searchParams.set('q', q);
+    gUrl.searchParams.set('num', String(num));
+    if (siteSearch) { gUrl.searchParams.set('siteSearch', siteSearch); gUrl.searchParams.set('siteSearchFilter', 'i'); }
+    if (dateRestrict) gUrl.searchParams.set('dateRestrict', dateRestrict);
+    try {
+      const res = await fetch(gUrl.toString());
+      if (!res.ok) { const b = await res.text().catch(() => ''); return jsonResponse({ error: `Google CSE ${res.status}: ${b.slice(0, 300)}` }, 502, request, env, refresh); }
+      const data = await res.json();
+      const items = Array.isArray(data.items) ? data.items.slice(0, num).map((it) => ({ title: it.title, link: it.link, snippet: it.snippet })) : [];
+      return jsonResponse({ ok: true, query: q, items }, 200, request, env, refresh);
+    } catch (e) { return jsonResponse({ error: String(e && e.message || e) }, 502, request, env, refresh); }
   }
 
   if (path === '/__diag' && method === 'GET') {
@@ -4259,6 +5255,9 @@ const method = request.method;
   if (path === '/api/profile/kernel-v2') {
     return handleApiKernelV2(request, env);
   }
+  if (path === '/api/profile/kernel-language-view') {
+    return handleApiKernelLanguageView(request, env);
+  }
   if (path === '/api/profile/extract-kernel') {
     return handleApiProfileExtractKernel(request, env);
   }
@@ -4275,11 +5274,17 @@ const method = request.method;
   if (path === '/api/cluster-top20') {
     return handleApiClusterTop20(request, env);
   }
+  if (path === '/api/cluster-demand-research' && method === 'POST') {
+    return handleApiClusterDemandResearch(request, env);
+  }
   if (path === '/api/active') {
     return handleApiActive(request, env);
   }
   if (path === '/api/kernel-showcase') {
     return handleApiKernelShowcase(request, env);
+  }
+  if (path === '/api/job-tracker') {
+    return handleApiJobTracker(request, env);
   }
 
   // --- /analytics : public, fire-and-forget, never blocking ---

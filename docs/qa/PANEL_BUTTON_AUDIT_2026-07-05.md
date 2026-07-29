@@ -1,18 +1,19 @@
 # Panel/preview button audit — 2026-07-05 (NIGHTLY-PREVIEW-BUTTON-AUDIT-001, register row 23)
 
 Harness: pwa/test/diag-panel-button-audit.mjs (real browser boot, network blocked, dialogs dismissed).
-Bundle: ?-era app.js; buttons enumerated: 197.
+Bundle: ?-era app.js; buttons enumerated: 196.
 
 ## Verdict counts
 - skipped-dangerous: 12
+- ui-only: 14
 - active: 118
-- ui-only: 10
-- not-visible-or-disabled: 55
-- unclickable: 2
+- not-visible-or-disabled: 51
+- DEAD: 1
 
 ## THROWS (page errors on click) — fix first
 
 ## DEAD candidates (no store write, no DOM delta) — verify each before filing
+- [undefined] "100%" (button, panel)
 
 ## Preview-only suspects (keys written by controls, never read by the export builder)
 - antcv:coreCompGuard
@@ -26,7 +27,7 @@ Bundle: ?-era app.js; buttons enumerated: 197.
 
 ## Skipped (dangerous labels — audited manually only)
 - "Unregister the service worker, delete all caches, and reload. Use this if you de"
-- "Export — preview and save as PDF or DOCX"
+- "Export — preview and save as PDF or DOCX. Drag to move."
 - "↩ Restore"
 - "↩ Restore"
 - "Enrich this section — make content more specific, senior-toned, and concrete. Sa"

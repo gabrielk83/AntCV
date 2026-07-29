@@ -32,6 +32,7 @@
     text: 'antcv:clSlogan',
     hidden: 'antcv:clSloganHidden',
     align: 'antcv:clSloganAlign',
+    mode: 'antcv:clSloganMode',   // SLOGAN-PLACEMENT-001: 'heading' (visible tagline) | 'leadin' (opening lead-in)
     closing: 'antcv:clClosing',   // CL-CLOSING-EDIT-001: editable sign-off closing (default "At your service,")
     closingAlign: 'antcv:clClosingAlign', // CL-SIGNOFF-ALIGN-001: sign-off closing CJLR (default center)
     signName: 'antcv:clSignName',       // CL-SIGNNAME-001: editable sign-off name (default = first word of full name)
@@ -52,9 +53,29 @@
   function isOpen() { return get(K.open, '0') === '1'; }
   function setOpen(v) { set(K.open, v ? '1' : '0'); }
 
+  // SPEC-SLOGAN-LANG-001 (owner 2026-07-13, "should not be danish if I am set to
+  // english spanish chinese etc"): reject a specialization candidate that is in
+  // the WRONG SCRIPT for the current ribbon (a Latin/Danish triad on a zh/ar/he/
+  // ru app) so the generic hint shows instead. Self-contained; Latin ribbons pass
+  // through (Danish vs English is not script-distinguishable — the source-order
+  // flip in subtitleFallback handles those).
+  var SPEC_SCRIPTS = {
+    zh: /[一-鿿]/, ja: /[぀-ヿ一-鿿]/, ko: /[가-힯]/,
+    ar: /[؀-ۿ]/, fa: /[؀-ۿ]/, he: /[֐-׿]/,
+    ru: /[Ѐ-ӿ]/, el: /[Ͱ-Ͽ]/, th: /[฀-๿]/, am: /[ሀ-፿]/
+  };
+  function spellsCurrentScript(txt) {
+    try {
+      var L = String(localStorage.getItem('language') || 'en').toLowerCase().replace(/[^a-z]/g, '').slice(0, 2) || 'en';
+      var re = SPEC_SCRIPTS[L];
+      return re ? re.test(String(txt || '')) : true;
+    } catch (_) { return true; }
+  }
+
   // The default (placeholder) the slogan falls back to = the candidate subtitle, uppercased,
-  // with "|" turned into " • ". Read from the stored kernel showcase / personalInfo so the
-  // control can SHOW the user what the empty field will render.
+  // with "|" turned into " • ". Read from personalInfo (the current-language store the header
+  // renders + the babel-fish pass keeps current) so the control SHOWS what the empty field
+  // will render in THIS app language.
   function subtitleFallback() {
     // SLOGAN-SMART-STATEMENT-001 (owner 2026-07-04: "the slogan and the
     // specialization are definitely NOT the same for a specified job"): on a
@@ -64,7 +85,7 @@
     try {
       var m = JSON.parse(localStorage.getItem('meta') || '{}') || {};
       var co = String(m.company || '').trim();
-      if (co && !/^unsolicited$/i.test(co) && !/^open application$/i.test(co)) {
+      if (co && !(window.__ANTCV_UNSOL_RE || /^unsolicited$/i).test(co) && !/^open application$/i.test(co)) { // UNSOL-PILLAR-LANG-001: any language variant
         var sm = String(m.cl_slogan || '').trim();
         // SLOGAN-QUALITY-GATE-001: a low-quality generated slogan renders NOWHERE.
         if (sm && typeof window.__antcvSloganQualityOk === 'function' && !window.__antcvSloganQualityOk(sm, m)) sm = '';
@@ -78,11 +99,17 @@
         return String(s || '');
       } catch (_) { return ''; }
     }
+    // SPEC-SLOGAN-LANG-001: personalInfo.specialization FIRST (current-ribbon
+    // language, kept current by the babel-fish translate pass + what the header
+    // renders); kernelShowcase (raw generation-language, never re-langed) is the
+    // last resort only — reading it first was what forced the stale Danish triad
+    // onto an English/Spanish/Chinese app.
     var s = '';
-    try { s = fromObj(JSON.parse(localStorage.getItem('kernelShowcase') || '{}')); } catch (_) {}
-    if (!s) { try { s = fromObj(JSON.parse(localStorage.getItem('personalInfo') || '{}')); } catch (_) {} }
+    try { s = fromObj(JSON.parse(localStorage.getItem('personalInfo') || '{}')); } catch (_) {}
+    if (!s) { try { s = fromObj(JSON.parse(localStorage.getItem('kernelShowcase') || '{}')); } catch (_) {} }
     s = String(s || '').replace(/\s*\|\s*/g, ' • ').trim();
     if (!s || /^\[/.test(s)) return '';
+    if (!spellsCurrentScript(s)) return '';   // wrong-script stale value -> generic hint
     return s.toUpperCase();
   }
 
@@ -183,6 +210,29 @@
     body.appendChild(textRow);
     body.appendChild(hiddenRow);
     body.appendChild(alignRow);
+
+    // SLOGAN-PLACEMENT-001: tagline (visible between heading + body) vs opening
+    // lead-in (standalone hidden; the slogan becomes the opening's first-sentence
+    // lead-in). The brand helps you decide which reads better.
+    var placeRow = document.createElement('div');
+    placeRow.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:10px;color:#cdd;flex-wrap:wrap;';
+    placeRow.appendChild(document.createTextNode('Placement:'));
+    var placeBtns = {};
+    var setModeActive = function () {
+      var m = String(get(K.mode, 'heading')).toLowerCase() === 'leadin' ? 'leadin' : 'heading';
+      for (var mk in placeBtns) {
+        var active = (mk === m);
+        placeBtns[mk].style.background = active ? ACCENT : 'rgba(1,183,187,0.10)';
+        placeBtns[mk].style.color = active ? '#04231f' : ACCENT;
+      }
+    };
+    [['heading', 'Tagline'], ['leadin', 'Opening lead-in']].forEach(function (p) {
+      var pb = btn(p[1], function () { set(K.mode, p[0]); setModeActive(); bump(); });
+      placeBtns[p[0]] = pb;
+      placeRow.appendChild(pb);
+    });
+    setModeActive();
+    body.appendChild(placeRow);
 
     // CL-CLOSING-EDIT-001: sign-off closing (the line above the name). Default "At your service,".
     var closingRow = document.createElement('div');

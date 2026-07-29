@@ -1,78 +1,36 @@
 # Next session — AntCV (start here)
 
-**Authoritative current state + closed/open lists: `docs/qa/SESSION_LOG_2026-07-01.md`.** Read it
-first. PWA `1.51.29`, docx-worker `1.14.110` (unchanged this run), access-relay `1.3.2`, suite
-551/551. Two independent sessions worked the same backlog concurrently 2026-07-01 and both landed
-complementary fixes — see the session log for how the merge was reconciled.
+> **NIGHT SHIFT (parallel-session safety):** before editing, `git fetch origin && git pull --rebase origin main`, then for any change that consumes a version number (a `pwa/` asset needing a cache-bust) run `node scripts/shift.mjs claim --task "<what>"` and work in the printed `git worktree`; use version numbers only inside your claimed range; `node scripts/shift.mjs release` when done. Docs-only edits skip the claim but still SYNC FIRST. See `docs/qa/NIGHT_SHIFT.md`.
 
-**SYNC FIRST** (`git fetch origin && git pull --rebase origin main`) — the cloud routine + desktop
-sessions both push to `main`. `app.js` is the minified mirror of `app.src.js` (surgical edits, must
-start `(()=>{`, zero `"use strict"`, count-guarded replace via a node script when the file is too
-large for the Read tool — see `CLAUDE.md` patch protocol). Cache-bust quintet on every loaded-file
-change (file `?v` + the `window.ANTCV_VERSION` seed + `app.js?v` + `vo.src` in index.html + `sw.js`
-CACHE + version-override TARGET_VERSION, add the PREVIOUS target to STALE_VERSIONS never the new
-one). `node scripts/check-cache-bust.mjs --range HEAD` gates uncommitted changes.
+**Authoritative open backlog: `docs/qa/OPEN_REGISTER.md`** (renumbered rows, staleness-swept). The living changelog is `docs/qa/ACTIVE_BUGS.md` (top block = newest). This file is a pointer, not a second source of truth.
 
-> **Cloud env constraints (reconfirmed 2026-07-01):** `unpkg.com` (React/ReactDOM CDN) is blocked
-> in the cloud sandbox (`CONNECT tunnel failed, response 403`), so `pwa/test/boot-smoke.mjs`
-> CANNOT pass here for any change — this is environmental, not a regression signal. Verify app.js
-> edits via `node --check`, the `(()=>{...}` / no-`"use strict"` invariant, and targeted `node:vm`
-> unit tests that load the real source and exercise the changed logic. Full boot-smoke + any
-> Playwright diag + worker deploys + signed-in live verification are owed to a desktop run.
+**Current live baseline (verified 2026-07-13):** PWA `1.51.580-detection-gap`, cv-proxy `3.8.3-gemini-flash-ramble`, demo-proxy `3.8.3`, access-relay `auth-33-cse-brave`. Suite ~1257/1257. Shift high-water `1.51.598`.
 
-## Open queue (priority order)
+**SYNC FIRST** (`git fetch origin && git pull --rebase origin main`) — the cloud routine, scheduled routines, and desktop sessions all push to `main`. `app.js` is the minified mirror of `app.src.js` (surgical edits, must start `(()=>{`, zero `"use strict"`, count-guarded replace via a node script when the file is too large for the Read tool — see `CLAUDE.md` patch protocol). Cache-bust quintet on every loaded-file change (file `?v` + `window.ANTCV_VERSION` seed + `app.js?v` in index.html + `sw.js` CACHE + version-override `TARGET_VERSION`, append the PREVIOUS target to `STALE_VERSIONS` never the new one). `node scripts/check-cache-bust.mjs --range HEAD` gates uncommitted changes.
 
-1. **Live regen-cycle verification of the 1.51.29 convergence fixes [OPEN — needs desktop/owner].**
-   `docs/qa/SESSION_LOG_2026-07-01.md` fixed CV-CORECOMP-BLANK-001 / CL-BLANK-001 /
-   CV-ACCESS-DROP-001 with TWO complementary layers each (a guard/repair layer from one session, a
-   root-cause apply-path layer from another — see the session log). 22 new/updated `node:vm` unit
-   tests, suite now 551/551, but NONE verified against a real LLM generation. Next step: run a
-   generate → regenerate cycle (ideally 2nd generation on the same application, signed in) and
-   confirm CORE COMPETENCIES / CL prose (especially closure/foundation) / Accessibility all survive.
-2. **Deferred feature batch (owner list, still not started):** editable CL slogan section; 3-state
-   What-I-Bring lead show/hide/monochrome toggle; sign-off pinned to page bottom (except a
-   recruiter-Q&A last page); refresh the exportable DOCX + JSON templates to match current me();
-   CV orphan tails (20-40 char) in bullets/sidebar lists/table cells; Strategic-Expertise cell
-   overflow (worker table width); zoom 5% step + export-preview default 75%.
-3. **SIDEBAR-PAGE23-DANCE-001 [OPEN, carried from 2026-06-25]** — regulatory (Environmental) +
-   Languages still jump in/out of page 3 in the preview. File: `pwa/antcv-auto-pagebreak-block-001.js`.
-   Needs Playwright + live verify — desktop only (see cloud env constraints above).
-4. **TOOLS-GAP-JUMP-001 [OPEN, carried]** — TOOLS & METHODS stays whole on page 1, but the white gap
-   underneath still flickers. Needs live browser.
-5. **HWIC-EDITOR-JUMPINESS-001 [PARTIAL, carried]** — entering the HOW I WOULD CONTRIBUTE editor
-   flips WHAT I BRING header text / resizes columns / hides the closure button. Marker-reset facet
-   fixed 1.50.919; the rest needs reproduction with a working live preview tab.
-6. **BOOT-FREEZE [OPEN — systemic, carried]** — `antcv-splitter-flip.js` + `antcv-sidebar-position.js`
-   coalesced 1.50.818; the core `app.src.js` pagination storm is still the highest systemic perf
-   issue. Needs profiling on a real browser, not diagnosable from static code review alone.
-7. **Regen-gated content items (older backlog, still open, unchanged):**
-   - #5 Certs trim to JD context — spec: `docs/qa/JD-SPECIFIC-CV-COMPRESSION-SPEC.md`.
-   - #6 Laser safety standard — kernel/data gap + prompt.
-   - #8 Accessibility −30-40% length — target: "Hearing impaired: Cochlear implant user. Captions
-     & written follow-up work well."
-   - #12 CL Strategic-Expertise cells — terser cells (less detail, not shorter).
-   - UNSOLICITED gen quality (CV-UNSOLICITED-ALL-ROLES-001, CV-MERGE-TITLE-ORDER-001,
-     CV-MERGE-BULLET-RESULT-UNION-001, CV-UNSOLICITED-PUBS-FULL-001).
+> **Env constraints:** the SHELL sandbox is 403-gated to the CF workers in the cloud/nightly env — a Python→relay/proxy pipeline that mutates live app data runs only from a networked desktop/cloud-Routine session. The Browser pane reaches live antcv.pages.dev either way. `unpkg.com` (React/ReactDOM CDN) may be blocked in the cloud sandbox, so `pwa/test/boot-smoke.mjs` cannot pass there — verify app.js via `node --check`, the `(()=>{...}`/no-`"use strict"` invariant, and `node:vm` unit tests. Local Word render (`WINWORD.EXE` COM) + PyMuPDF + Pillow are available on the desktop box for byte-exact export verification; `POST /diag/convert-docx` (docx-worker 1.14.149+) runs a raw docx through the REAL CloudConvert pipeline.
 
-## Closed 2026-07-01 (this session — see SESSION_LOG_2026-07-01.md for full detail)
+## Done 2026-07-13 (desktop Opus/Fable session — Group 1 + owner Group-C batch)
 
-- CV-CORECOMP-BLANK-001 (#2): `[FIXED 1.51.29]` `antcv-corecomp-loss-guard.js` snapshot/restore + apply-path `e.rows` fallback.
-- CL-BLANK-001 (#4): `[FIXED 1.51.29]` `proseOf` body-only fix + foundation/closure/opening switched to `__clReal()`.
-- CV-ACCESS-DROP-001 (#7): `[FIXED 1.51.29]` `repairAccessibilityFromPI` section-creation + personalInfo GET-replace → local-preferring merge.
+- **Deployed cv-proxy + demo-proxy** — MODEL-TABLE-FRESHNESS-001 price-table fix (opus-4-8/gpt-5.5) went live (was committed-but-undeployed). Register row 89 CLOSE.
+- **CLUSTER_RESEARCH_TOKEN provisioned** on access-relay + set as a Windows User env var for `antcv-demand-seed-weekly`; ran `cluster-demand-research-push.mjs` → D1 `application_qualification __global_market__` now holds 181 `source='research'` rows (weight ≤0.4). Register row 9 writer leg CLOSE.
+- **Signature** processed to transparent background (white keyed to alpha, ink solid); the parallel general-coding session landed a transparent version in cloud `user_kernel.preferences.signatureB64` (verified RGBA, clean corners). Backup assets in `~/Downloads/Signature_GKG_transparent*`.
+- **App 792 (KK Group, Danish)** — 5 English kernel Results translated to Danish in place (numbers/acronyms verbatim, freshness-gated PUT, byte-exact verified). Register row 86b CLOSE.
+- **Density sweep** — `density_fit.py --apply` across the 20 saved tracker apps (CV+CL), excluding 723/670/794/796. Results table in `docs/qa/DENSITY_SWEEP_REPORT_2026-07-13.md`.
+- **Pre-existing test failures** (DANISH-POSTCODE-EXPORT-001, CSE-PROXY-AUTH-TEST-001) — verified already GREEN on current main (fixed since the 2026-07-10 flag). Register rows CLOSE.
+- **Backlog reconcile** — 31 June-era items re-verified against current code: 18 FIXED-with-evidence, 13 still OPEN. See `docs/qa/BACKLOG_RECONCILE_2026-07-13.md`.
 
-## Closed (earlier batches, carry-forward context)
+## Open queue (priority order — anchored on OPEN_REGISTER)
 
-- #1 role-result dup, #5 WHY horizontal rule, #3 lost-2-positions, #6 signature (resolved, no code):
-  `[FIXED 1.51.26-27]` — see `docs/qa/EXPORT_REVIEW_2026-07_ISSUE_MAP.md` RE-REVIEW section.
-- P1 Targeting persistence, P2 Results tense, P3 Salmon force-break, P4 CL render cluster (the
-  historical NVIDIA batch): `[SHIPPED 1.50.7xx-8xx]` — see `docs/qa/CLOUD_ROUTINE_PROMPT.md`
-  "NVIDIA BATCH STATUS" (historical) section. All non-regen items shipped; regen-gated items above
-  still need an owner signed-in generation to verify in output.
-- SIDEBAR-STABLE-001, FIELD-CAPS, RICH-BLOCK-GROUP-ALIGN-DEFAULT-001, FORCE-LAST-GRP,
-  AI-NOTICE-MISSING-PREVIEW-001, HWIC-INTRO-DETECT-001, CORE-COMP-FOCUS-TIGHTEN-001:
-  `[SHIPPED 1.50.9xx]` — see prior `SESSION_LOG_2026-06-25.md`.
+1. **Owner-verify session (one desktop hard-refresh + ONE targeted regen + click-through)** clears the bulk of the owner-gated backlog: regen-confirm rows 35/36/37/42, JD-stale row 74B, analysis rows 63/64; click checks rows 24/44/40/21/81/83, MASTER_BACKLOG `VERIFYING` rows (Personal dedup, photo remove-last/shape, slogan language), and the row 20 six-item export eyeball.
+2. **Mobile / second device (owner hands):** language switch on real phone (rows 58/65A), two-device isolation (rows 19/39a), SO-004 #185 capture (row 41 — probe armed, waiting on a live Android crash), GEN-BACKGROUND A/B (row 38 — flip default after).
+3. **Row 53 CROSS-APP-EXPORT-CONTAMINATION (P0)** — cross-app CV/brand/filename leak; six legs scoped, diagnostic-first; leg (a) is the worst open correctness bug.
+4. **Row 74C background SSE stall** — biggest mobile first-gen blocker (the 97.5% loop); sensitive stream code.
+5. **Rows 54/56 recall + trim** — targeted gen must pull relevant kernel items forward AND cut irrelevant bullets; pairs with the density work.
+6. **Row 49 sidebar group page-break** + **row 87d role-split "(cont.)"** — docx-worker page-distribution, highest-risk zone, dedicated diagnostic-first sessions.
+7. **Row 59A generator baseline** (umbrella: pagination, bidirectional orphans, header/banner residue row 62) — architecture largely shipped (1.51.375-377 + worker 1.14.150); frontier is content-density (quality_pct ~73-84% → 97.5%).
+8. **Row 8 Kernel v2 remainder** (bullets-path v2-direct migration + es/zh tier); **row 87a/86d core-comp 3-4 row backfill** (owner-approved regen after fixes); **row 22 CL slogan rich_content phase 2**.
 
-## Coordinator tunables + values (pagination, unchanged this session)
+## Still-open from the pre-register June backlog (reconcile 2026-07-13)
 
-See `SESSION_LOG_2026-06-25.md` bottom. Key: `PAGE1_BAND=200`, `MAIN_PDF_LINE_BONUS=150`,
-`MAIN_PAGE_N_BAND=105`, `SIDEBAR_PREVIEW_INFLATE=1.16`, `FORCE_LAST_GRP_FRAC=0.35`.
+PERF-005 (partial), HIWC-RERENDER-LOOP-001, GRAMMAR-MARKER-SCROLL-LAG-001 (mobile), PDF-ASK-WHERE-TO-SAVE-001 / EXPORT-PRINT-DIALOG-001, INTERESTS-CONTENT-001, KERNEL-HOBBIES-SPLIT-001, SETTINGS-REORG-001, WIZARD-ABOUTME-CONFLICT-001, SPELL-FI-VOIKKO-001, JD-FETCH-HOST-001, CUSTOM-LLM-OVERHAUL-001 remaining legs (relay `customLlms` persist not shipped), FT-PERSTYLE-KERNELS Phase C auto-load-on-switch, AUTO-PAGEBREAK-BLOCK-001 residuals. Full evidence table in `docs/qa/BACKLOG_RECONCILE_2026-07-13.md`.

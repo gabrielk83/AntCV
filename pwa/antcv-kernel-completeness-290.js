@@ -73,7 +73,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.358';
+  var VERSION = '1.51.396-matrix-containment';
   if (window.__antcvKernelCompleteness290 === VERSION) return;
   window.__antcvKernelCompleteness290 = VERSION;
 
@@ -130,10 +130,27 @@
     return false;
   }
 
+  // CJK-LENGTH-EQUIV-001 (owner 2026-07-12): every length floor below was
+  // calibrated for ENGLISH prose. Chinese carries roughly 3x the information
+  // per character, so a perfectly valid zh contribute_intro (7-9 chars, e.g.
+  // "our first priorities:" in 7 hanzi) failed the 10-char floor, the WHOLE
+  // response was discarded as KERNEL_INCOMPLETE, every retry failed the same
+  // way, and the zh kernel generation ended templated. Count each CJK char as
+  // 3 toward the floors. charCode ranges, not a regex literal, per this
+  // file's ASCII-only constraint (header notes).
+  function effectiveLen(t) {
+    var n = t.length;
+    for (var i = 0; i < t.length; i++) {
+      var c = t.charCodeAt(i);
+      if (c >= 0x3400 && c <= 0x9fff) n += 2;
+    }
+    return n;
+  }
+
   function isFilledString(v, minLen) {
     if (typeof v !== 'string') return false;
     var t = v.trim();
-    if (t.length < (minLen || 8)) return false;
+    if (effectiveLen(t) < (minLen || 8)) return false;
     if (isPlaceholderString(t)) return false;
     if (t === 'Focus Area' || t === 'Strategic Expertise') return false;
     if (t.length <= 2) return false;
@@ -246,7 +263,9 @@
     var t = value.trim();
     if (t.length === 0) return label + ' (empty)';
     if (isPlaceholderString(t)) return label + ' (placeholder text)';
-    if (t.length < minLen) return label + ' (' + t.length + ' chars, need >=' + minLen + ')';
+    // CJK-LENGTH-EQUIV-001: weighted length so zh prose is judged fairly.
+    var el = effectiveLen(t);
+    if (el < minLen) return label + ' (' + el + ' chars cjk-weighted, need >=' + minLen + ')';
     return null;
   }
 
@@ -335,6 +354,11 @@
     // the subtitle reverting to the [Specialisation …] placeholder), then ending
     // with 3 rows anyway. 3 matches the CL equivalent (cl.bring_rows, below) and
     // experience_roles — a 3-row Core Competencies table is acceptable.
+    // CORE-COMP-ROWSPEC-001 (owner 2026-07-13 ruling on the containment audit):
+    // 'there is a difference between TABLE ROW and the rows inside the table
+    // cell. we need 3-4 table rows' — the matrix now says data rows 3-4
+    // (caps.core_comp_data_rows=4, _min=3) while cells stay <=2 rendered lines
+    // (density.cell_max_lines). Guard floor = the matrix MINIMUM: 3.
     r = checkDataRowsStrict(cv.core_comp_rows, 3, 'cv_overrides.core_comp_rows');
     if (r) missing.push(r);
     r = checkDataRowsStrict(cl.bring_rows, 3, 'cl_overrides.bring_rows');
@@ -555,7 +579,7 @@
     parts.push('');
     parts.push('4. cv_overrides.core_comp_rows AND cl_overrides.bring_rows');
     parts.push('   - First row is the literal header ["Focus Area", "Strategic Expertise"].');
-    parts.push('   - At least 4-5 additional rows, each with two non-placeholder strings tailored to the JD.');
+    parts.push('   - 3-4 data rows (the gold row spec), each with two non-placeholder strings tailored to the JD; every cell must read complete in at most two rendered lines.');
     parts.push('');
     parts.push('5. cl_overrides.contribute_items');
     parts.push('   - At least 3 specific, non-placeholder action bullets, 12-30 words each, concrete actions.');

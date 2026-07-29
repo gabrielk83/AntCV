@@ -258,6 +258,20 @@ Output merges into `application_qualification` (`source='research'`, dated) and 
 time; the client `SEED` map becomes a cold-start fallback. Must respect robots/ToS of
 any site queried and never fabricate a qualification not actually seen in postings.
 
+**WRITER BUILT 2026-07-13** (closes this leg — register row 9). The production
+`source='research'` writer now exists: `POST /api/cluster-demand-research`
+(access-relay, token `CLUSTER_RESEARCH_TOKEN`) + `insertResearchQualifications`
++ `scripts/cluster-demand-research-push.mjs`. Research rows go in under
+`__global_market__` with `application_id` NULL and a **rank-scaled** weight
+`RESEARCH_WEIGHT * (21 - rank) / 20` — deterministic order, and every value ≤
+`RESEARCH_WEIGHT` (0.4) < a real required-JD qual (1.0), so live user-JD signal
+overtakes research exactly as this section requires. The weekly routine's write
+step is now `node scripts/cluster-demand-research-push.mjs` (was a manual D1
+write). Tests: `cluster-demand-research-writer.test.mjs` (12) +
+`cluster-demand-research-push.test.mjs` (6). Setup/deploy gate:
+`docs/deployment/google-cse-setup.md` §8 (owner sets `CLUSTER_RESEARCH_TOKEN` +
+deploys access-relay; not live until that deploy).
+
 ## 8. Acceptance
 
 - Uploading a JD writes `application_qualification` rows and updates `cluster_top_qualifications`.

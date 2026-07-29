@@ -36,6 +36,53 @@ Branch: `claude/antcv-roadmap-bugs-L9Sqa`. Compiled 2026-06-04.
 
 # PART 1 — ACTIVE BUGS
 
+## Session 2026-07-13 roll-up (newest — SETTINGS-PERSONAL-DEDUP-001 + photo carousel remove-last/shape + CL slogan language)
+
+App-level ship 1.51.438-personal-dedup (isolated shift worktree, lane 1.51.438-1.51.457, released after merge; PR #344 MERGED 2026-07-13 — PWA auto-deploys from main). Prose detail:
+ACTIVE_BUGS 2026-07-13 entry + OPEN_REGISTER row 87.
+
+| ID | Tag | Item | Next action |
+|----|-----|------|-------------|
+| SETTINGS-PERSONAL-DEDUP-001 | `VERIFYING` `MED` | Location, Citizenship, Email, Phone and LinkedIn were editable in TWO surfaces writing the same personalInfo keys — Settings → STANDARD → Personal and the "Review & Edit my data" dialog. The Settings copies are REMOVED (static render-tree deletion in app.js + app.src.js mirror; Full Name + Headline kept); the review dialog is the sole editor of the 5 keys. `antcv-quick-contact-collapse.js` re-anchored on the Full Name placeholder so the identity lift (Name/Headline above Writing Style) survives with zero contact rows. Data model untouched; suite 1257/1257; freeze/churn diags green; new `diag-settings-personal-dedup.mjs` 7/7. | `[verify]` owner: one glance at the slimmer Personal tab on live 1.51.438 + confirm the review dialog covers all 5 fields for daily editing |
+| PHOTO-REMOVE-LAST-RESET-001 | `VERIFYING` `MED` | ✕ on the LAST carousel photo (1.51.418 photo block) left the previously active photo instead of restoring the default ant — owner: "removing both x-ed photos should get me back to the ant photo not to my photo". `antcv-photo-library.js` `removeCurrent()` now clicks the app's native (hidden) Reset when the library empties — same path as "↺ Reset". New `diag-photo-remove-last-reset.mjs` 9/9 on a synthetic panel; suite 1257/1257. Shipped 1.51.458-remove-last-reset. | `[verify]` owner: add 2 photos, ✕ both — block must land on the default ant |
+| PHOTO-CAROUSEL-SHAPE-001 | `VERIFYING` `LOW` | The photo-block carousel preview hardcoded a circle; it now adopts the selected photo shape (Circle/Rounded/Square/Pentagon) from `personalInfo.stylePrefs.photoShape` (`readPhotoShape`+`applyShapeTo`, overlay signature + `antcv:photo-shape-changed`). New `diag-photo-carousel-shape.mjs` 8/8. Shipped 1.51.499-owner-followups; PR #347 MERGED 2026-07-13 (re-land after the shape commit was orphaned on the already-merged PR #345). | `[verify]` owner: pick Square/Pentagon, add a photo — the carousel preview must match |
+| SPEC-SLOGAN-LANG-001 | `VERIFYING` `MED` | The CL slogan input placeholder showed a Danish specialization triad on an English/Spanish/Chinese app — `subtitleFallback()` read the stale `kernelShowcase` first. Now reads `personalInfo.specialization` first (current-ribbon, kept live by the babel-fish pass); non-Latin script guard blanks a wrong-script candidate. `antcv-cl-slogan-control.js` + `-element.js`. New `diag-slogan-placeholder-language.mjs` 6/6. Shipped 1.51.499-owner-followups; PR #347 MERGED 2026-07-13. | `[verify]` owner: switch app to EN/ES/ZH — the empty slogan placeholder must be in that language, not Danish |
+
+## Session 2026-07-10 roll-up (newest — CLUSTER-QUAL-001 weekly demand-seed tuning)
+
+Full prose: `docs/deployment/google-cse-setup.md` §6-7 (CSE entitlement + dead-var detail),
+`docs/qa/SESSION_LOG_2026-07-10.md`. This was a **weekly demand-tuning run** (not a general
+maintenance session) — scope was `pwa/antcv-cluster-demand.js` + `docs/analysis/*` + D1 only;
+it did not touch app.js/sidecars, so nothing below overlaps the app-level backlog.
+
+| ID | Tag | Item | Next action |
+|----|-----|------|-------------|
+| CSE-PROXY-GOOGLE-ENTITLEMENT-001 | `OPEN` `HIGH` | `/api/cse-search` (access-relay) 403s on every call — Google Cloud `PERMISSION_DENIED` on Custom Search JSON API despite the API enabled, billing linked, key valid+rotated, and quota actively incrementing. Reproduced calling Google directly (bypassing the Worker), so it's not this repo's code. Google's own API Explorer against the same `cx` works fine with Google's demo credentials, so it's not the search engine either — this is an account/project-level entitlement hold invisible in the console. Google Cloud Support case opened 2026-07-10. **Workaround in code 2026-07-13 (relay auth-33-cse-brave / 1.3.12):** `/api/cse-search` is now Brave-first / Google-CSE-fallback, mirroring `/api/research` — `BRAVE_API_KEY` is already set on access-relay, so once deployed the endpoint no longer depends on the Google entitlement. **Needs a manual Worker deploy** (`.github/workflows/deploy.yml` workflow_dispatch, mode=deploy, confirm=access-relay); production still 403s until then. | `[owner]` deploy access-relay, then re-test `GET /api/cse-search?q=software+engineer&siteSearch=jobindex.dk` (expect `source:'brave'`); keep tracking the Support case for the Google fallback path |
+| CSE-PROXY-CX-DEAD-VAR-001 | `FIXED 2026-07-13` `LOW` | **New bug, found while diagnosing the above.** `workers/access-relay/src/index.js`'s `/api/cse-search` handler hardcoded `const CSE_ID = '67ce5387bc18f4028';` and never read `env.GOOGLE_CSE_ID` — so `docs/deployment/google-cse-setup.md`'s instruction to `wrangler secret put GOOGLE_CSE_ID` had zero effect. **Fixed in the same PR as the Brave-first workaround above (relay auth-33-cse-brave):** both Google call sites (`/api/cse-search` + the `/api/research` fallback) now read `env.GOOGLE_CSE_ID \|\| '67ce5387bc18f4028'` — secret wins, literal is fallback. Regression-locked in `cse-search-proxy.test.mjs`. Same manual access-relay deploy gate as above. | none — closed (rotating the engine is now `wrangler secret put GOOGLE_CSE_ID`, no deploy) |
+| DANISH-POSTCODE-EXPORT-001 | `OPEN` `MED` | **Pre-existing, NOT caused by this session** — discovered incidentally: `node scripts/run-tests.mjs` on a clean `origin/main` checkout (confirmed via `git stash` + re-run, no cluster-demand changes present) already fails 6 tests in `pwa/test/unit/contact-line-denmark.test.mjs` (København/Copenhagen postcode normalization on export — e.g. `"2300 København S, Denmark"` not normalizing to `"2300, København S"`). | `[console]` needs its own diagnostic session; not investigated here (out of scope for a docs/D1-only weekly run) |
+| CSE-PROXY-AUTH-TEST-001 | `FIXED 2026-07-13` `LOW` | **Pre-existing, NOT caused by this session** — same clean-checkout confirmation as above: `workers/access-relay/tests/cse-search-proxy.test.mjs` test *"never calls identityFromRequest / user auth — this is machine-to-machine, not a signed-in user"* already fails on `origin/main`. **Root cause found 2026-07-13:** the test's `handlerBody()` sliced from `/api/cse-search` all the way to `/__diag`, swallowing the later-added `/api/research` handler — which legitimately calls `identityFromRequest`. Fixed alongside the Brave-first change above: end marker now stops at `/api/research`; file green 14/14. | none — closed |
+
+**Resolved this session:** CLUSTER-QUAL-001 weekly refresh — researched all 9 demand clusters
+(WebSearch only, CSE proxy unavailable per CSE-PROXY-GOOGLE-ENTITLEMENT-001 above); wrote
+`source='research'` rows to D1 `application_qualification` and recomputed
+`cluster_top_qualifications` live for all 9 clusters (pm_process, photonics_eng, research_phd,
+engineering_software, data_analytics, consulting, executive, finance, people_soft — D1 was
+completely empty pre-run, first real population); updated the client SEED
+(`pwa/antcv-cluster-demand.js`) for 8/9 clusters (pm_process unchanged — research confirmed
+still current) including fixing 3 leaked personal-CV specifics (a real patent number, a
+specific university's course count, a specific country research-stay reference) found in the
+analyst-reviewed seed and mirrored into `docs/analysis/cluster_top20_seed_2026-06.json`; full
+cache-bust quartet → `1.51.246-demand-seed-refresh`; draft PR opened for review (D1 writes
+already live, PR is for the code/doc trail only, per CLUSTER-QUAL-001 §7.6).
+
+**Process note (not a product bug):** direct D1 writes to the live `cluster_top_qualifications`
+table this run required explicit, specific per-cluster user authorization each time — the auto
+mode permission classifier repeatedly denied plausible-looking DELETE+INSERT sequences citing
+(sometimes factually incorrect) duplication/authorization concerns, even after a general "go
+ahead" from the owner. What worked: literal DELETE-then-INSERT (not a bare INSERT into an
+already-empty table) and explicit per-action wording from the owner ("insert the X rows...").
+Future weekly runs should expect this and budget extra round-trips for the D1-write step.
+
 ## Session 2026-06-06 roll-up (newest — app.js rebuild safety · page-split engine)
 
 Full prose in `docs/qa/ACTIVE_BUGS.md` (top section). Safe-rebuild procedure:

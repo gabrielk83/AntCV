@@ -73,6 +73,16 @@ candidate before hardcoding. The flow coupling that matters: `marginTop` moves p
 together (changes air ABOVE only); `marginBottom` moves text only (changes air BELOW only).
 
 ## Open issues → see ACTIVE_BUGS.md (this entry) + memory `slogan-readiness-plan.md`.
-Slogan: language gate (branded==non-branded parity), worker slogan colour (teal→brand, needs
-docx-worker deploy — cloud owns worker lane), brand-decides-via-research, Anita demo. Header
-seam line (#0b) still TODO. CJLR/Fit/apply owner-verifying live.
+Slogan: language gate (branded==non-branded parity), brand-decides-via-research, Anita demo.
+Header seam line (#0b) still TODO. CJLR/Fit/apply owner-verifying live.
+
+### Worker slogan colour — DONE (SLOGAN-BRAND-COLOR-001, PWA 1.51.1304 / docx-worker 1.14.155-slogan-brand-color).
+The exported DOCX/PDF CL slogan now follows the BRAND colour instead of hardcoded teal.
+antcv-docx-client.js forwards `meta.slogan_color` from `antcv:brandV2` slots.sloganColor (the
+same source the preview's `var(--brand-slogan-color)` reads), gated by `window.__antcvBrandFit`;
+omitted when no brand active -> worker keeps teal. Worker `sloganColorOnWhite(hex,fallback)`
+helper + slogan run renders it, else `style.mainHeadColor`. CONTRAST-GUARD (STANDING rule):
+darkens the colour until >=3:1 luminance vs the white page (client + worker, defence-in-depth).
+Test diag-cl-slogan-brand-color.mjs 3/3. Code merged to main; the worker VERSION was later
+advanced past 1.14.155 by the CJLR-export-parity session which carried this code forward, so the
+brand slogan colour is live wherever a >=1.14.155 docx-worker is deployed.

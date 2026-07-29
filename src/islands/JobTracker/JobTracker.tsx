@@ -737,12 +737,36 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
       // palette (header/sidebar band + accents), not just describes it in text.
       const brandSc: Record<string, string> | undefined = (() => {
         if (!(d.brandfit || {})[uk]) return undefined;
-        const bc = (d.brand || {})[uk]; if (!bc) return undefined;
+        const bc: any = (d.brand || {})[uk]; if (!bc) return undefined;
         const hex = (v?: string) => (typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v.trim()) ? v.trim() : null);
-        const dark = (h: string) => { const r = parseInt(h.slice(1, 3), 16), g = parseInt(h.slice(3, 5), 16), bl = parseInt(h.slice(5, 7), 16); return (0.299 * r + 0.587 * g + 0.114 * bl) / 255 < 0.62; };
-        const navy = hex(bc.navy), accent = hex(bc.accent); const sc: Record<string, string> = {};
-        if (navy && dark(navy)) { sc.headerBg = navy; sc.sidebarBg = navy; }
-        if (accent) { sc.photoBorderColor = accent; sc.sidebarLineColor = accent; sc.sidebarHeadColor = accent; }
+        const sc: Record<string, string> = {};
+        // BRAND-COLORS-PERSIST-001: a brand record arrives in two shapes — the
+        // island's own fetchBrandColors returns flat {navy,accent}; gen-runner
+        // writes the AA-fitted {slots} palette (headerBg/sidebarHeadColor/…).
+        // Prefer slots — it already solves ink-on-band contrast (e.g. WHITE
+        // sidebar heads on a dark band, which the naive accent→sidebarHead put
+        // dark-on-dark). Fall back to the flat navy/accent shape.
+        const slots = bc.slots && typeof bc.slots === 'object' ? bc.slots : null;
+        if (slots) {
+          const M: [string, string][] = [
+            ['headerBg', 'headerBg'], ['headerInk', 'headerInk'], ['sidebarBg', 'sidebarBg'],
+            ['sidebarInk', 'sidebarInk'], ['sidebarHeadColor', 'sidebarHeadColor'],
+            ['mainHeadColor', 'mainHeadColor'], ['mainSubHeadColor', 'mainSubHeadColor'],
+            ['mainCompanyColor', 'mainCompanyColor'], ['mainYearColor', 'mainYearColor'],
+            ['mainTextColor', 'mainTextColor'], ['sloganColor', 'sloganColor'],
+            ['signatureColor', 'signatureColor'], ['aiNoticeColor', 'aiNoticeColor'],
+            ['photoBorderColor', 'photoContourColor'], ['sidebarLineColor', 'accent'],
+          ];
+          for (const [dst, src] of M) { const v = hex(slots[src]); if (v) sc[dst] = v; }
+          // A default-only fallback palette (#1d2b45, no real sample) is not a
+          // real employer brand — leave the app on the user's default style.
+          if ((sc.headerBg || '').toLowerCase() === '#1d2b45') return undefined;
+        } else {
+          const dark = (h: string) => { const r = parseInt(h.slice(1, 3), 16), g = parseInt(h.slice(3, 5), 16), bl = parseInt(h.slice(5, 7), 16); return (0.299 * r + 0.587 * g + 0.114 * bl) / 255 < 0.62; };
+          const navy = hex(bc.navy), accent = hex(bc.accent);
+          if (navy && dark(navy)) { sc.headerBg = navy; sc.sidebarBg = navy; }
+          if (accent) { sc.photoBorderColor = accent; sc.sidebarLineColor = accent; sc.sidebarHeadColor = accent; }
+        }
         return Object.keys(sc).length ? sc : undefined;
       })();
       const id = await createApplication({ jd_text: jd, jd_company: row[1], jd_role: row[2], category: categoryFor(row[2], row[1]), supporting_context: supporting, style_config: brandSc });

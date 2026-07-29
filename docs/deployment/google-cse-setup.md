@@ -1,5 +1,19 @@
 # Google Custom Search (CSE) — setup for the CLUSTER-QUAL-001 weekly demand-seed tuning
 
+> **⚠ SUPERSEDED — USE BRAVE, NOT CSE (2026-07-10).** Google CSE never worked on the
+> `antcv-access` project (403 / JSON-API entitlement not provisioned — the weekly
+> demand-tuning routine's own findings confirm this, and pursuing the org/DNS route is a
+> dead end). The relay's search backend is now **Brave Search**: `POST /api/research`
+> (body `{q, num, dateRestrict, siteSearch}`, auth = the owner JWT + browser UA) returns
+> `{ok, source:"brave", items:[{title, link, snippet}]}`. `env.BRAVE_API_KEY` is set on the
+> relay; a caller may also pass its own key via the `x-brave-key` header (BYOK-BRAVE-001).
+> **The weekly demand-seeding job should call `/api/research` (Brave), not CSE.** A working
+> distil pattern to copy: `src/islands/JobTracker` `webCompanyBrief()` — research() → askAI
+> distils a compact structured brief. The `POST /api/cluster-demand-research` writer
+> (`source='research'`, §7.6) is unchanged; only swap the *search* leg CSE→Brave. The rest of
+> this doc is retained for historical reference only.
+
+
 The client demand seed (`pwa/antcv-cluster-demand.js`, 9 clusters, spec 7.6) is
 kept current by a **weekly tuning** pass that re-researches each cluster's most
 demanded qualifications from live job postings. That research reads current

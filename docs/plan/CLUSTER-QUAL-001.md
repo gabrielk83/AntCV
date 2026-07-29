@@ -230,6 +230,12 @@ canonical-ordering layer can already weight by demand:
 
 ## 7.6 Nightly refresh — PLANNED (owner 2026-06-19)
 
+> **SEARCH LEG = BRAVE, not CSE (2026-07-10).** Google CSE is dead on this account (see
+> `docs/deployment/google-cse-setup.md` top note). The demand-seeding job's web-research
+> leg must use the relay `POST /api/research` (Brave, `env.BRAVE_API_KEY`; BYOK via
+> `x-brave-key`). Copy the distil pattern from `src/islands/JobTracker` `webCompanyBrief()`
+> (research() → askAI). The `POST /api/cluster-demand-research` writer is unchanged.
+
 A nightly job (antcv-nightly dispatch surface) should keep the demand model current
 from **live recruitment-site research**, two tracks:
 

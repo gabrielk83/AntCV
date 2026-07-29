@@ -940,8 +940,15 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
                         title={star ? 'In Top-5 — click to park out (stays in the list). Right-click / long-press to reject.' : 'Click to pin into Top-5. Right-click / long-press to reject.'}
                         style={{ ...cell, textAlign: 'center', fontWeight: 700, borderLeft: '4px solid ' + t.accent, cursor: 'pointer', userSelect: 'none' }}>{star ? '★' : ''}{r[0]}</td>
                       <td style={{ ...cell }}><span style={{ background: t.accent, color: '#fff', borderRadius: 4, padding: '1px 6px', fontSize: 11, fontWeight: 700 }}>{t.label}</span></td>
-                      <td style={{ ...cell, fontWeight: 600 }}>{r[1]}</td>
-                      <td style={cell}>{r[2]}</td>
+                      {/* JT-IDENTITY-EDIT-001 (owner 2026-07-29 "on mobile, the role content is
+                          still not editable … the editing is supposed to be in the JD list"):
+                          Company (r[1]) and Role (r[2]) are editable in place like the other
+                          cells — plain inputs (mobile keyboards handle these better than
+                          contentEditable), editRow marks the doc dirty, and blur quietly
+                          persists via the rev-safe save() so a phone tap-edit sticks without
+                          hunting for the Save button. */}
+                      <td style={{ ...cell, fontWeight: 600 }}><input value={r[1]} onChange={(e) => editRow(uk, 1, e.target.value)} onBlur={() => { if (dirty && !saving) void save(); }} title="Edit the company" placeholder="(company)" style={idIn} /></td>
+                      <td style={cell}><input value={r[2]} onChange={(e) => editRow(uk, 2, e.target.value)} onBlur={() => { if (dirty && !saving) void save(); }} title="Edit the role" placeholder="(role)" style={idIn} /></td>
                       <td style={cell}>{r[3]}</td>
                       <td style={{ ...cell, textAlign: 'center', fontSize: 14, padding: '5px 2px' }}>
                         <button onClick={() => void captureJd(r)} title={hasJd ? 'JD stored — click to view or replace it' : 'No JD — click to paste or attach it (the posting URL is walled or is a listing page)'}
@@ -993,7 +1000,8 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
               {top5.map((r) => <FocusCard key={r[11]} row={r} doc={doc} cluster={cluster} mobile={isMobile} busy={busyKey === r[11]}
                 onPrepare={() => void prepareAndOpen(r)} onOpen={() => void openSaved(r)}
                 pinned={pinnedOf(r[11])} onTogglePin={() => togglePin(r[11])} onPark={() => togglePark(r[11])} onReject={() => void rejectRow(r)}
-                onSaveSupport={saveSupport} onSaveWeb={saveWeb} onResearch={researchRow} onSaveNotes={saveNotes} />)}
+                onSaveSupport={saveSupport} onSaveWeb={saveWeb} onResearch={researchRow} onSaveNotes={saveNotes}
+                onEditCell={editRow} onCommitIdentity={() => { if (dirty && !saving) void save(); }} />)}
               {top5.length === 0 && <div>No Top-5 roles yet.</div>}
             </div>
           )}
@@ -1143,12 +1151,14 @@ function buildSupport(p: ReturnType<typeof parseSupport>): string {
   return out.join('\n');
 }
 
-function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, pinned, onTogglePin, onPark, onReject, onSaveSupport, onSaveWeb, onResearch, onSaveNotes }: {
+function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, pinned, onTogglePin, onPark, onReject, onSaveSupport, onSaveWeb, onResearch, onSaveNotes, onEditCell, onCommitIdentity }: {
   row: Row; doc: TrackerDoc | null; cluster: { qual: string }[]; mobile: boolean; busy: boolean;
   onPrepare: () => void; onOpen: () => void; pinned: boolean; onTogglePin: () => void; onPark: () => void; onReject: () => void;
   onSaveSupport: (uk: string, text: string) => Promise<boolean>;
   onSaveWeb: (uk: string, text: string) => Promise<boolean>; onResearch: (uk: string, company: string, role: string) => Promise<string>;
   onSaveNotes: (uk: string, n: { hm?: string; deadline?: string; why?: string }) => Promise<boolean>;
+  // JT-IDENTITY-EDIT-001: edit company/role from the card header (mobile-first view)
+  onEditCell: (uk: string, idx: number, value: string) => void; onCommitIdentity: () => void;
 }): JSX.Element {
   const uk = row[11]; const t = tierOf(row[12]);
   const rawSupport = (doc?.support || {})[uk] || '';
@@ -1221,8 +1231,16 @@ function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, pinned,
       <div style={{ background: t.accent, color: '#fff', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
         <span style={{ fontSize: fs(20, 24), fontWeight: 800 }}>★{row[0]}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 800, fontSize: fs(15, 18), lineHeight: 1.15 }}>{row[1]}</div>
-          <div style={{ fontSize: fs(12, 14), opacity: 0.92 }}>{row[2]}</div>
+          {/* JT-IDENTITY-EDIT-001: company/role are editable in the card header too —
+              on ≤820px the Top-5 cards ARE the tracker, so the phone gets the same
+              tap-to-edit as the desktop table. fontSize ≥16 on mobile stops the iOS
+              focus-zoom jump. Blur quietly persists via the parent's rev-safe save(). */}
+          <input value={row[1]} onChange={(e) => onEditCell(uk, 1, e.target.value)} onBlur={onCommitIdentity}
+            title="Edit the company" placeholder="(company)" aria-label="Company — tap to edit"
+            style={{ display: 'block', width: '100%', boxSizing: 'border-box', background: 'transparent', border: 'none', borderBottom: '1px dotted #ffffff59', outline: 'none', color: '#fff', fontWeight: 800, fontFamily: 'inherit', fontSize: fs(15, 18), lineHeight: 1.15, padding: 0 }} />
+          <input value={row[2]} onChange={(e) => onEditCell(uk, 2, e.target.value)} onBlur={onCommitIdentity}
+            title="Edit the role" placeholder="(role)" aria-label="Role — tap to edit"
+            style={{ display: 'block', width: '100%', boxSizing: 'border-box', background: 'transparent', border: 'none', borderBottom: '1px dotted #ffffff40', outline: 'none', color: '#fff', opacity: 0.92, fontFamily: 'inherit', fontSize: fs(12, 16), lineHeight: 1.3, padding: 0, marginTop: 2 }} />
         </div>
         <span title="Estimated fit (tier + cluster demand)" style={{ background: '#fff', color: pctColor, borderRadius: 14, padding: '3px 10px', fontSize: fs(13, 16), fontWeight: 800 }}>{pct}%</span>
         <span style={{ background: '#ffffff2e', borderRadius: 5, padding: '2px 8px', fontSize: fs(11, 13), fontWeight: 700 }}>{t.label}</span>
@@ -1313,6 +1331,10 @@ function Line({ icon, label, text, color, size }: { icon: string; label: string;
 const clamp2: React.CSSProperties = { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' };
 
 const ta: React.CSSProperties = { width: '100%', boxSizing: 'border-box', fontSize: 12, padding: '4px 6px', border: '1px solid #cfd8e6', borderRadius: 4, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.35, minHeight: 34 };
+// JT-IDENTITY-EDIT-001: company/role cells look like text until focused — a dotted
+// underline marks them editable; ≥16px would stop iOS zoom but the table uses 12px
+// like its sibling textareas, and the table is pinch-zoomable anyway.
+const idIn: React.CSSProperties = { width: '100%', boxSizing: 'border-box', fontSize: 12, fontWeight: 'inherit', fontFamily: 'inherit', padding: '3px 2px', background: 'transparent', border: 'none', borderBottom: '1px dotted #b7c2d4', borderRadius: 0, outline: 'none', color: 'inherit' };
 const mLbl: React.CSSProperties = { fontSize: 11, fontWeight: 700, color: '#334', margin: '7px 0 2px' };
 function btn(bg: string, color = '#fff', size = 12): React.CSSProperties {
   return { background: bg, color, border: 'none', padding: '6px 12px', borderRadius: 6, fontSize: size, cursor: 'pointer', fontWeight: 600 };

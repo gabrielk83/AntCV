@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.4024-cl-open-brandfix';
+  const TARGET_VERSION = '1.51.4025-jt-identity-edit';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.4024-cl-open-brandfix',
     '1.51.4003-applist-meta-edit',
     '1.51.3983-cl-opening-seed',
     '1.51.3982-inline-edit-appline',

@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.3902-jt-open-fix';
+const CACHE = 'antcv-1.51.3922-hdr-type-source-key';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

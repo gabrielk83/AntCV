@@ -20192,6 +20192,7 @@
           try {
             Qn({ fontSizes: e });
           } catch (e) {}
+          try{window.dispatchEvent(new CustomEvent("antcv:fontsizes-changed"))}catch(_){}
         },
         qr = (e, t) => {
           Jr((n) => {
@@ -20200,6 +20201,7 @@
             try {
               Qn({ fontSizes: o });
             } catch (e) {}
+            try{window.dispatchEvent(new CustomEvent("antcv:fontsizes-changed"))}catch(_){}
             return o;
           });
         },
@@ -20222,6 +20224,7 @@
             try {
               Qn({ fontSizes: o });
             } catch (e) {}
+            try{window.dispatchEvent(new CustomEvent("antcv:fontsizes-changed"))}catch(_){}
             return o;
           });
         },

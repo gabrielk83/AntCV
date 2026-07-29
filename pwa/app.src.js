@@ -48716,23 +48716,151 @@
                           React.createElement(
                             "div",
                             { style: { flex: 1, minWidth: 0 } },
-                            React.createElement(
-                              "div",
-                              {
-                                style: {
-                                  color: "#fff",
-                                  fontSize: 11,
-                                  fontWeight: 600,
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                  whiteSpace: "nowrap",
+                            // APPLIST-META-EDIT-001 (owner 2026-07-29): the company (jd_company)
+                            // and position (jd_role) are click-to-edit in place — same ref-managed
+                            // contentEditable pattern as the header name/spec/contact fields. Edits
+                            // stopPropagation so they don't trigger the row's load-on-click, persist
+                            // via PUT /api/applications/:id (oo.update), optimistically patch the
+                            // shared list state (zl → the Settings Apps list reflects too), and — if
+                            // this is the LOADED app (e.id === Fl) — mirror into the live meta so the
+                            // preview/export company/role update immediately. Both fields are always
+                            // sent together on every PUT because the relay's downgrade guard blocks
+                            // BOTH jd_company AND jd_role when the incoming company is empty (so a
+                            // role-only edit on a real-company row would otherwise be dropped).
+                            (() => {
+                              const __persist = async (co, ro) => {
+                                try {
+                                  zl((L) =>
+                                    Array.isArray(L)
+                                      ? L.map((r) =>
+                                          r && r.id === e.id
+                                            ? { ...r, jd_company: co, jd_role: ro }
+                                            : r,
+                                        )
+                                      : L,
+                                  );
+                                } catch (_) {}
+                                try {
+                                  if (Fl && e.id === Fl) {
+                                    const __mm = { ...(io || {}), company: co, role: ro };
+                                    try { lo(__mm); } catch (_) {}
+                                    try { u.set("meta", __mm); } catch (_) {}
+                                    try {
+                                      localStorage.setItem(
+                                        "antcv:activeAppCompany",
+                                        String(co || ""),
+                                      );
+                                    } catch (_) {}
+                                    try {
+                                      window.dispatchEvent(
+                                        new CustomEvent("antcv:sections-updated", {
+                                          detail: { reason: "applist-meta-edit" },
+                                        }),
+                                      );
+                                    } catch (_) {}
+                                  }
+                                } catch (_) {}
+                                try {
+                                  await oo.update(e.id, {
+                                    jd_company: co,
+                                    jd_role: ro,
+                                  });
+                                } catch (err) {
+                                  try { Gl((err && err.message) || String(err)); } catch (_) {}
+                                }
+                              };
+                              const __mkEdit = (field, val, label) =>
+                                React.createElement("span", {
+                                  key: field,
+                                  contentEditable: true,
+                                  suppressContentEditableWarning: true,
+                                  spellCheck: false,
+                                  title: "Click to edit the " + label,
+                                  ref: (el) => {
+                                    if (!el) return;
+                                    const sv = String(val == null ? "" : val);
+                                    if (el.__antcvAV === sv) return;
+                                    if (document.activeElement === el) return;
+                                    el.__antcvAV = sv;
+                                    if (el.textContent !== sv) el.textContent = sv;
+                                  },
+                                  onClick: (ev) => { try { ev.stopPropagation(); } catch (_) {} },
+                                  onMouseDown: (ev) => { try { ev.stopPropagation(); } catch (_) {} },
+                                  onKeyDown: (ev) => {
+                                    try {
+                                      if ("Enter" === ev.key) {
+                                        ev.preventDefault();
+                                        ev.currentTarget.blur();
+                                      }
+                                    } catch (_) {}
+                                  },
+                                  onFocus: (ev) => {
+                                    try {
+                                      ev.stopPropagation();
+                                      ev.currentTarget.style.outline =
+                                        "1px dashed rgba(126,255,212,0.8)";
+                                      ev.currentTarget.style.outlineOffset = "1px";
+                                    } catch (_) {}
+                                  },
+                                  onBlur: (ev) => {
+                                    try {
+                                      ev.currentTarget.style.outline = "none";
+                                      const v = String(ev.currentTarget.textContent || "")
+                                        .replace(/\s+/g, " ")
+                                        .trim();
+                                      const cur = String(
+                                        ("jd_company" === field ? e.jd_company : e.jd_role) || "",
+                                      );
+                                      if (v === cur) return;
+                                      const co = "jd_company" === field ? v : String(e.jd_company || "");
+                                      const ro = "jd_role" === field ? v : String(e.jd_role || "");
+                                      __persist(co, ro);
+                                    } catch (_) {}
+                                  },
+                                  style: {
+                                    cursor: "text",
+                                    outline: "none",
+                                    color: "jd_company" === field ? "#fff" : "rgba(255,255,255,0.82)",
+                                    minWidth: 24,
+                                    display: "inline-block",
+                                    borderBottom: "1px dotted rgba(255,255,255,0.25)",
+                                    padding: "0 1px",
+                                  },
+                                });
+                              return React.createElement(
+                                "div",
+                                {
+                                  style: {
+                                    color: "#fff",
+                                    fontSize: 11,
+                                    fontWeight: 600,
+                                    display: "flex",
+                                    flexWrap: "wrap",
+                                    alignItems: "baseline",
+                                    gap: 3,
+                                    lineHeight: 1.3,
+                                  },
                                 },
-                              },
-                              "#" + e.id + "  " +
-                                ((e.jd_company || "") +
-                                (e.jd_company && e.jd_role ? " - " : "") +
-                                (e.jd_role || "") || "(untitled)"),
-                            ),
+                                React.createElement(
+                                  "span",
+                                  {
+                                    key: "id",
+                                    style: {
+                                      color: "rgba(255,255,255,0.45)",
+                                      flexShrink: 0,
+                                    },
+                                  },
+                                  "#" + e.id,
+                                ),
+                                __mkEdit("jd_company", e.jd_company, "company"),
+                                React.createElement(
+                                  "span",
+                                  { key: "sep", style: { color: "rgba(255,255,255,0.3)" } },
+                                  "·",
+                                ),
+                                __mkEdit("jd_role", e.jd_role, "position"),
+                              );
+                            })(),
                             React.createElement(
                               "div",
                               {

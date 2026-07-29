@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.3983-cl-opening-seed';
+const CACHE = 'antcv-1.51.4003-applist-meta-edit';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

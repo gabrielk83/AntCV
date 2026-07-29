@@ -2565,7 +2565,33 @@
   // come from io first, then localStorage `meta`. Empty for a CV, an unsolicited app, or
   // an app with no targeted role/company. CL-only gating is the caller's job (this only
   // suppresses unsolicited/empty).
-  function __antcvAppLineText(io) {
+  // APPLINE-EDIT-001 / SLOGAN-EDIT-EMPTY-001 (owner 2026-07-29 "allow editing of the
+  // slogan and of the application line in the preview"). The application line was a
+  // read-only composed string, and the slogan node was not rendered at all when it
+  // resolved empty — so there was literally nothing to click on either one. Both are
+  // editable in the preview now, over a standalone override key (the same
+  // cloud-restore-safe pattern as antcv:clSlogan; see [[sidecar-prefs-clobber-hazard]]).
+  //
+  // __antcvAppLineComposed = the role/company sentence (the old body of
+  // __antcvAppLineText). __antcvAppLineText = the user's override when set, else the
+  // composed line — so all three render sites (preview, export srcdoc, DOCX payload)
+  // pick up an edit from ONE place.
+  function __antcvAppLineOverride() {
+    try { var v = String(localStorage.getItem("antcv:clAppLine") || "").trim(); return /^\[/.test(v) ? "" : v; } catch (_) { return ""; }
+  }
+  // The visible text of a contentEditable, EXCLUDING any sidecar control injected into
+  // it (antcv-appline-rule appends a contenteditable=false button cluster). Reading
+  // el.textContent straight would commit "-1.5pt(reset)" into the stored line.
+  function __antcvEditableText(el) {
+    try {
+      if (!el) return "";
+      var c = el.cloneNode(true);
+      var junk = c.querySelectorAll('[contenteditable="false"],[data-antcv-appline-rule-ctrl]');
+      for (var i = 0; i < junk.length; i++) if (junk[i].parentNode) junk[i].parentNode.removeChild(junk[i]);
+      return String(c.textContent || "").replace(/\s+/g, " ").trim();
+    } catch (_) { try { return String((el && el.textContent) || "").trim(); } catch (__) { return ""; } }
+  }
+  function __antcvAppLineComposed(io) {
     try {
       var role = String((io && io.role) || "").trim();
       var company = String((io && io.company) || "").trim();
@@ -2583,6 +2609,7 @@
       return t.trim();
     } catch (_) { return ""; }
   }
+  function __antcvAppLineText(io) { var ov = __antcvAppLineOverride(); return ov || __antcvAppLineComposed(io); }
   // SUBTITLE-PI-FALLBACK-001 (owner 2026-07-29, "many times also the specialization
   // line" goes missing after loading from Application History): the loaders take the
   // subtitle from the record's `subtitle` column then `meta.subtitle`. The nightly
@@ -2647,6 +2674,9 @@
       window.__antcvSloganUnsolActive = __antcvSloganUnsolActive;
       window.__antcvSloganOverrideIsGen = __antcvSloganOverrideIsGen;
       window.__antcvAppLineText = __antcvAppLineText;
+      window.__antcvAppLineComposed = __antcvAppLineComposed;
+      window.__antcvAppLineOverride = __antcvAppLineOverride;
+      window.__antcvEditableText = __antcvEditableText;
     }
   } catch (_) {}
 
@@ -20220,16 +20250,34 @@
           const e = u.get("fontSizes", null);
           return e && "object" == typeof e ? { ...zr, ...e } : zr;
         }),
+        // FONTSIZE-STEP-NAN-001 (owner 2026-07-29 "pressing Application line resizing is
+        // generating NaNPt between the + and -"): the row DISPLAYS a fallback when the key is
+        // missing, but the stepper added to the RAW value — undefined + 0.5 = NaN, which then
+        // persisted (JSON.stringify(NaN) is null, so it stuck as null on the next boot). The
+        // key goes missing because Kr REPLACES the whole fontSizes object, so any caller
+        // passing a pre-1.51.3862 object drops every key added by that release. Two guards:
+        // Kr now merges over the defaults, and qr falls back to the value the user can see
+        // (passed in as d) and refuses to store a non-finite result.
         Kr = (e) => {
-          (Jr(e), u.set("fontSizes", e));
+          const __m = { ...zr, ...(e && "object" == typeof e ? e : {}) };
+          (Jr(__m), u.set("fontSizes", __m));
           try {
-            Qn({ fontSizes: e });
+            Qn({ fontSizes: __m });
           } catch (e) {}
           try{window.dispatchEvent(new CustomEvent("antcv:fontsizes-changed"))}catch(_){}
         },
-        qr = (e, t) => {
+        qr = (e, t, d) => {
           Jr((n) => {
-            const o = { ...n, [e]: Math.round(2 * (n[e] + t)) / 2 };
+            const __c = n[e];
+            const __b =
+              "number" == typeof __c && isFinite(__c)
+                ? __c
+                : "number" == typeof d && isFinite(d)
+                  ? d
+                  : Number(zr[e]);
+            const __v = Math.round(2 * (__b + t)) / 2;
+            if (!isFinite(__v)) return n;
+            const o = { ...n, [e]: __v };
             u.set("fontSizes", o);
             try {
               Qn({ fontSizes: o });
@@ -47260,7 +47308,16 @@
                       if ((!st || /^\[/.test(st)) && __uns) st = String((io && io.subtitle) || "").trim();
                       st = st.replace(/\s*\|\s*/g, " • ").trim();
                       if (window.__antcvSloganCap) st = window.__antcvSloganCap(st);
-                      if (!st || /^\[/.test(st)) return null;
+                      // SLOGAN-EDIT-EMPTY-001 (owner 2026-07-29 "allow editing of the slogan …
+                      // in the preview"): the node was simply not rendered when the slogan
+                      // resolved empty, so a letter without one gave the owner nothing to click —
+                      // the field was editable in principle and unreachable in practice. Render a
+                      // faded prompt instead; typing into it writes the override exactly as an
+                      // edit to a real slogan does. PREVIEW ONLY — the export srcdoc, the DOCX
+                      // client and the worker all still resolve "" and emit nothing, so an
+                      // untouched prompt can never ship.
+                      var __slPh = !st || /^\[/.test(st);
+                      if (__slPh) st = "Positioning line";
                       var sa = String(localStorage.getItem("antcv:clSloganAlign") || "center").replace(/["']/g, "").toLowerCase();
                       if (sa !== "left" && sa !== "right" && sa !== "center" && sa !== "justify") sa = "center";
                       return React.createElement("div", {
@@ -47289,7 +47346,7 @@
                         // committed edit) — the correction survives until onBlur commits it.
                         ref: (el) => { if (!el) return; const __sv = (st === st.toUpperCase() && /[a-zA-Z]/.test(st)) ? (st.charAt(0).toUpperCase() + st.slice(1).toLowerCase()) : st; if (el.__antcvSloganV === __sv) return; if (document.activeElement === el) return; el.__antcvSloganV = __sv; if (el.textContent !== __sv) el.textContent = __sv; },
                         title: "Click to edit the positioning line",
-                        onBlur: (ev) => { try { const __nv = String(ev.currentTarget.textContent || "").trim(); if (__nv !== String(localStorage.getItem("antcv:clSlogan") || "")) { try { vr("slogan"); } catch (_) {} localStorage.setItem("antcv:clSlogan", __nv); window.dispatchEvent(new CustomEvent("antcv:sections-updated", { detail: { reason: "cl-slogan-inline" } })); } } catch (_) {} },
+                        onBlur: (ev) => { try { let __nv = window.__antcvEditableText ? window.__antcvEditableText(ev.currentTarget) : String(ev.currentTarget.textContent || "").trim(); if (__nv === "Positioning line") __nv = ""; if (__nv !== String(localStorage.getItem("antcv:clSlogan") || "")) { try { vr("slogan"); } catch (_) {} if (__nv) localStorage.setItem("antcv:clSlogan", __nv); else localStorage.removeItem("antcv:clSlogan"); window.dispatchEvent(new CustomEvent("antcv:sections-updated", { detail: { reason: "cl-slogan-inline" } })); } } catch (_) {} },
                         style: {
                           fontFamily: "'Cabin',sans-serif",
                           // HDR-TYPE-CONTROLS-001: was a hard-pinned 15px with
@@ -47308,6 +47365,8 @@
                           margin: "0 0 12px",
                           cursor: "text",
                           textTransform: "uppercase",
+                          // SLOGAN-EDIT-EMPTY-001: the prompt reads as a hint, not as content.
+                          opacity: __slPh ? 0.45 : 1,
                         },
                       });
                     } catch (_) { return null; }
@@ -47321,7 +47380,30 @@
                   (() => {
                     try {
                       var __al = window.__antcvAppLineText ? window.__antcvAppLineText(io) : "";
-                      if (!__al) return null;
+                      // APPLINE-EDIT-001 (owner 2026-07-29): an EMPTY line still renders in the
+                      // PREVIEW, as a faded prompt, so there is something to click and type into
+                      // — an unsolicited app or one with no stored role/company had no node at
+                      // all. The export builders keep returning "" for empty, so the prompt never
+                      // leaves the screen.
+                      var __alPh = !__al;
+                      if (__alPh) __al = "Application line";
+                      var __alCommit = (ev) => {
+                        try {
+                          var el = ev && ev.currentTarget;
+                          var nv = window.__antcvEditableText ? window.__antcvEditableText(el) : String((el && el.textContent) || "").trim();
+                          if (nv === "Application line") nv = "";
+                          // Typing the composed sentence back verbatim CLEARS the override, so the
+                          // line goes back to tracking role/company instead of freezing this text.
+                          var comp = "";
+                          try { comp = window.__antcvAppLineComposed ? window.__antcvAppLineComposed(io) : ""; } catch (_) {}
+                          if (nv && comp && nv === comp) nv = "";
+                          var prev = "";
+                          try { prev = String(localStorage.getItem("antcv:clAppLine") || ""); } catch (_) {}
+                          if (nv === prev) return;
+                          try { if (nv) localStorage.setItem("antcv:clAppLine", nv); else localStorage.removeItem("antcv:clAppLine"); } catch (_) {}
+                          window.dispatchEvent(new CustomEvent("antcv:sections-updated", { detail: { reason: "cl-appline-inline" } }));
+                        } catch (_) {}
+                      };
                       return React.createElement("div", {
                         key: "__cl_appline",
                         // APPLINE-NATIVE-MARK-001 (2026-07-23): a DEDICATED attribute so the
@@ -47356,7 +47438,23 @@
                           position: "relative",
                           ...(window.__antcvAppLineRuleStyle ? window.__antcvAppLineRuleStyle() : {}),
                         },
-                      }, __al);
+                      },
+                        // The editable text lives in an INNER span, not on the div itself: the
+                        // appline-rule sidecar appends its control cluster to the div, and a ref
+                        // that manages the DIV's textContent would delete that control on every
+                        // model change (and the sidecar would re-add it — the blink we just
+                        // removed). The span owns only the text; the div owns the rule + control.
+                        React.createElement("span", {
+                          "data-antcv-app-line-text": "1",
+                          contentEditable: true, suppressContentEditableWarning: true, spellCheck: true,
+                          title: "Click to edit the application line (clear it to track the role and company again)",
+                          // Model-changed-only ref, same reason as the slogan
+                          // (SLOGAN-APPLY-CORRECTION-001): as a React CHILD the text would be
+                          // reset to the model mid-edit and a spelling correction would revert.
+                          ref: (el) => { if (!el) return; if (el.__antcvAlV === __al) return; if (document.activeElement === el) return; el.__antcvAlV = __al; if (el.textContent !== __al) el.textContent = __al; },
+                          onBlur: __alCommit,
+                          style: { outline: "none", cursor: "text", opacity: __alPh ? 0.45 : 1 },
+                        }));
                     } catch (_) { return null; }
                   })(),
                   Pi.filter(
@@ -50596,7 +50694,7 @@
                           React.createElement(
                             "button",
                             {
-                              onClick: () => qr(t, -0.5),
+                              onClick: () => qr(t, -0.5, n),
                               style: {
                                 width: 16,
                                 height: 16,
@@ -50629,7 +50727,7 @@
                           React.createElement(
                             "button",
                             {
-                              onClick: () => qr(t, 0.5),
+                              onClick: () => qr(t, 0.5, n),
                               style: {
                                 width: 16,
                                 height: 16,

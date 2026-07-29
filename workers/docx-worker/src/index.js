@@ -25592,9 +25592,15 @@ function buildLinearDocument(ctx) {
   let __alText = "";
   {
     const __m2 = ctx.meta || {};
+    // APPLINE-EDIT-001 (owner 2026-07-29): the client forwards meta.app_line when the owner
+    // has edited the application line inline in the preview. An explicit override wins over
+    // the composed "Application for <role> at <company>" sentence below, so the DOCX prints
+    // what the preview shows. Absent field -> unchanged composition.
+    const __alOv = String(__m2.app_line || "").trim();
+    if (__alOv && !__alOv.startsWith("[")) __alText = __alOv;
     const __role = String(__m2.role || "").trim();
     const __company = String(__m2.company || "").trim();
-    if (__role || __company) {
+    if (!__alText && (__role || __company)) {
       const __unsol = /^(unsolicited|open application|uopfordret|åben ansøgning|speculative|主动申请)$/i;
       if (!(__company && __unsol.test(__company))) {
         const __lang = String(ctx.lang || "en").toLowerCase().slice(0, 2) || "en";

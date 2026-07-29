@@ -1067,6 +1067,15 @@ export function buildPayload({
           else if (targeted) { out.slogan_hidden = true; return out; }
           const al = String(localStorage.getItem('antcv:clSloganAlign') || 'center').replace(/["']/g, '').toLowerCase();
           out.slogan_align = (al === 'left' || al === 'right' || al === 'center') ? al : 'center';
+          // APPLINE-EDIT-001 (owner 2026-07-29): the application line is editable in the
+          // preview now, over the standalone antcv:clAppLine override. Forward it so the
+          // DOCX/PDF prints what the owner typed instead of re-composing "Application for
+          // <role> at <company>" from meta — preview == export on all three surfaces. An
+          // absent override omits the field entirely, so an untouched app is byte-identical.
+          try {
+            const __alOv = String(localStorage.getItem('antcv:clAppLine') || '').trim();
+            if (__alOv && !__alOv.startsWith('[')) out.app_line = __alOv;
+          } catch (_) {}
           // SLOGAN-BRAND-COLOR-001 (owner 2026-07-14): the EXPORTED slogan follows the
           // SAME brand slogan colour the PREVIEW paints — antcv:brandV2 slots.sloganColor,
           // gated by the same window.__antcvBrandFit flag the paper-wrapper IIFE reads

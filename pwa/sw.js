@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.3962-cl-load-hydrate';
+const CACHE = 'antcv-1.51.3982-inline-edit-appline';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

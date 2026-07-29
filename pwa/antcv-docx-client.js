@@ -2294,6 +2294,12 @@ function buildFontSizes(fs) {
     'mainBody', 'mainHead', 'sbBody', 'sbHead',
     'nameSize', 'specialisation', 'contactSize',
     'expSubHead', 'bulletContent', 'mainTblH', 'mainTblCell',
+    // HDR-TYPE-CONTROLS-001 (owner 2026-07-29): the application line and the CL
+    // slogan are panel-sized now, and all five identity lines carry a letter-
+    // spacing delta (pt, 0.05 steps). This whitelist is the DOCX leg's only gate
+    // — a key missing here is a control the user cannot reach in the export.
+    'applicationSize', 'sloganSize',
+    'nameTrack', 'specTrack', 'applicationTrack', 'contactTrack', 'sloganTrack',
   ];
   for (const k of keys) {
     if (typeof fs[k] === 'number') out[k] = fs[k];

@@ -6,6 +6,24 @@
 //     npm run build:app        (esbuild minify -> pwa/app.js)
 // Do NOT re-de-minify pwa/app.js into a new file again — this file is canonical.
 // Regenerated from pwa/app.js via prettier on 2026-06-05; kept from now on.
+//
+// DIVERGENCE NOTE — this file is BEHIND pwa/app.js.
+// The rebuild is gated (see docs/deployment/app-js-source-and-rebuild.md), so
+// fixes since 2026-06-05 have shipped as surgical in-place edits to the
+// minified pwa/app.js. This de-minification is an older generation and does not
+// use the same identifiers any more (fontSizes state is `Yr` here, `ca` there),
+// so a mechanical mirror is not possible. Grep pwa/app.js directly for current
+// behaviour.
+//
+// NOT MIRRORED HERE (edit sites live in pwa/app.js):
+//   HDR-TYPE-CONTROLS-001 (1.51.3862, owner 2026-07-29) — the Font sizes (pt)
+//   panel gained per-line LETTER SPACING (expansion +, compression −, 0.05pt
+//   steps) and split "Specialisation / Application" into two rows plus a new
+//   Slogan row. Keys added to the fontSizes object: applicationSize, sloganSize,
+//   nameTrack, specTrack, applicationTrack, contactTrack, sloganTrack. Wired
+//   through the preview band, the header-as-sections leg, the HTML export, the
+//   in-app DOCX stylesheet, the docx-worker payload and the copenhagen fit
+//   sidecar. See docs/qa/SESSION_LOG.md for the full site list.
 // ============================================================================
 (() => {
   // BRIDGE-SIDEBAR-PALETTE-001 (owner 2026-06-10): when the profile photo is in

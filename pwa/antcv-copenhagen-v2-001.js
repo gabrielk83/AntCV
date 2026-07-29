@@ -397,6 +397,22 @@
     if (__fit.contK != null) css += BAND + ' > div:last-of-type:not(:first-of-type){transform:scaleX(' + __fit.contK.toFixed(3) + ') !important;transform-origin:center !important;}';
     // SPEC-SHORTER-001: fitted spec size beats the static 18px rule above.
     if (__fit.specFs != null) css += BAND + ' > div:nth-of-type(2):not(:last-of-type){font-size:' + __fit.specFs + 'px !important;}';
+    // HDR-TYPE-CONTROLS-001 (owner 2026-07-29 "make sure nothing prevents the
+    // user from controlling these values"): the panel's letter-spacing deltas
+    // are the LAST word — they beat both the static .14em name tracking and the
+    // measured fit's letter-spacing, on every band line. Delta semantics: 0 =
+    // whatever the line already looked like, so an untouched app is unchanged.
+    var __trk = function (k) {
+      var v = __fsOv0 && __fsOv0[k];
+      return (typeof v === 'number' && isFinite(v)) ? Math.max(-2, Math.min(4, v)) * 96 / 72 : 0;
+    };
+    var __tkName = __trk('nameTrack'), __tkSpec = __trk('specTrack'), __tkCont = __trk('contactTrack');
+    if (__tkName) {
+      var __lsBase = (__fit.nameLs != null) ? __fit.nameLs : 0.14 * (__fit.nameFs != null ? __fit.nameFs : __px0(__fsOv0.nameSize, 23));
+      css += BAND + ' > div:first-of-type{letter-spacing:' + (__lsBase + __tkName).toFixed(2) + 'px !important;}';
+    }
+    if (__tkSpec) css += BAND + ' > div:nth-of-type(2):not(:last-of-type){letter-spacing:' + __tkSpec.toFixed(2) + 'px !important;}';
+    if (__tkCont) css += BAND + ' > div:last-of-type:not(:first-of-type){letter-spacing:' + __tkCont.toFixed(2) + 'px !important;}';
     return css;
   }
 

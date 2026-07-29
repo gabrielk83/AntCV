@@ -269,3 +269,28 @@ Also in the session:
   LONG" (da). Translate prompt now caps translated table cells (~60 chars).
 NEXT: rerun the nordic-minimal|zh + |da diagnostic gens on a >=356 client —
 expect the capture to write and the CL to apply; then resume the 15-kernel batch.
+
+---
+
+## STATUS STAMP — 2026-07-29 (origin session that opened this work order, resumed & synced)
+
+This work order was OPENED by the 2026-07-11 session (fea1300/5192d30/7a74ef9). That
+same conversation was resumed on 2026-07-29 after the tree had advanced ~2 weeks. Sync
+reconciliation:
+- Local main was a stale clone (behind origin by 11); fast-forwarded to origin/main
+  `e70cabd` — clean ff, no divergence, nothing forced, no WIP lost.
+- Nothing pending to deploy from this session. All translate-coverage work is already on
+  `main` and auto-deployed (PWA deploys on push). No code was changed in the 07-29 resume
+  — the LLM-path probe (below) + this stamp are the only actions.
+- LLM-path probe (07-29, live antcv.pages.dev): a full unsolicited gen ran ~7 min, hit
+  /api/kernel-showcase + /api/jd-analysis, all 200 — the LLM route is healthy. (The pane
+  was serving a SW-cached 1.51.331; the deployed source is main.)
+
+SHIPPED SINCE THIS ORDER OPENED (per the history above, through app.js 1.51.356):
+identity translation (name/Copenhagen/EU-Citizen/location incl. Settings 5th source),
+single-flight relang, CJK length-equivalence floors, da cell compaction, boot identity
+heal. Bucket B "trigger translate on generated content" = Fix 1 diagnosed at 1.51.334.
+
+OPEN (unchanged, owned by the ongoing translate sessions — NOT this resume): rerun the
+nordic-minimal|zh + |da diagnostic gens on a >=356 client, confirm the capture writes and
+the CL applies, then resume the 15-kernel batch.

@@ -24369,6 +24369,19 @@ var FONT_DEFAULTS = {
   mainTblCell: 10
 };
 var pt2hp = /* @__PURE__ */ __name((pt) => Math.round(Number(pt) * 2), "pt2hp");
+// HDR-TYPE-CONTROLS-001 (owner 2026-07-29): the Font sizes (pt) panel also owns
+// LETTER SPACING for the five identity lines (name, specialisation, application,
+// contact, slogan) in 0.05pt steps. 0.05pt = exactly 1 twentieth of a point = the
+// DOCX w:spacing unit, so a panel step maps onto Word character spacing losslessly.
+// The value is a DELTA on the line's existing tracking: 0 leaves the doc unchanged.
+var __trkTw = /* @__PURE__ */ __name((raw, k) => {
+  const v = raw && raw[k];
+  return typeof v === "number" && isFinite(v) ? Math.round(Math.max(-2, Math.min(4, v)) * 20) : 0;
+}, "__trkTw");
+var __fsPt = /* @__PURE__ */ __name((raw, k, d) => {
+  const v = raw && raw[k];
+  return typeof v === "number" && isFinite(v) && v > 0 ? v : d;
+}, "__fsPt");
 var hex = /* @__PURE__ */ __name((s) => (s || "").toString().replace(/^#/, "").toUpperCase(), "hex");
 function alignType(a) {
   switch ((a || "").toLowerCase()) {
@@ -25633,9 +25646,9 @@ function buildLinearDocument(ctx) {
           // source the preview's var(--brand-slogan-color) reads) when present, else keep
           // the package head colour (teal on Copenhagen). Contrast-guarded on white.
           color: __m.slogan_color ? sloganColorOnWhite(__m.slogan_color, style.mainHeadColor) : style.mainHeadColor,
-          size: pt2hp(11),
+          size: pt2hp(__fsPt(ctx.fsRaw, "sloganSize", 11)),
           font: style.mainBodyFont,
-          characterSpacing: 20
+          characterSpacing: 20 + __trkTw(ctx.fsRaw, "sloganTrack")
         })]
       }));
     }
@@ -25681,9 +25694,9 @@ function buildLinearDocument(ctx) {
           text: __al,
           bold: false,
           color: __alColor,
-          size: pt2hp(10.5),
+          size: pt2hp(__fsPt(ctx.fsRaw, "applicationSize", 10.5)),
           font: style.mainBodyFont,
-          characterSpacing: 4
+          characterSpacing: 4 + __trkTw(ctx.fsRaw, "applicationTrack")
         })]
       }));
     }
@@ -26112,7 +26125,7 @@ function __cphNameFit(ctx, contactPt, bridgePhotoOn) {
   const { pi, fsRaw } = ctx;
   const TRACK_EM = 0.14;
   if (fsRaw && typeof fsRaw.nameSize === "number" && fsRaw.nameSize > 0) {
-    return { pt: fsRaw.nameSize, track: Math.round(TRACK_EM * fsRaw.nameSize * 20) };
+    return { pt: fsRaw.nameSize, track: Math.round(TRACK_EM * fsRaw.nameSize * 20) + __trkTw(fsRaw, "nameTrack") };
   }
   const name = String(pi.name || "");
   const bits = [];
@@ -26124,7 +26137,7 @@ function __cphNameFit(ctx, contactPt, bridgePhotoOn) {
   if (pi.website) bits.push("\u{1F517} " + pi.website);
   if (Array.isArray(pi.contact_extra)) for (const it of pi.contact_extra) if (it && it.value) bits.push("• " + it.value);
   const contact = bits.join(" ");
-  if (!name || name.length < 4 || contact.length < 12) return { pt: 17.5, track: 49 };
+  if (!name || name.length < 4 || contact.length < 12) return { pt: 17.5, track: 49 + __trkTw(fsRaw, "nameTrack") };
   // contact width: est * pt, minus the -0.1pt/char tracking, all condensed w:w=73.
   // 0.885 = ground-truth calibration against the real CloudConvert render
   // (2026-07-24, app 2729: uncalibrated fit gave 19.5pt / width ratio 1.13;
@@ -26138,7 +26151,7 @@ function __cphNameFit(ctx, contactPt, bridgePhotoOn) {
   const units = __estWidthPt1(name) + TRACK_EM * Math.max(1, name.length - 1);
   let pt = target / units;
   pt = Math.max(15, Math.min(30, Math.round(pt * 2) / 2));
-  return { pt, track: Math.round(TRACK_EM * pt * 20) };
+  return { pt, track: Math.round(TRACK_EM * pt * 20) + __trkTw(fsRaw, "nameTrack") };
 }
 __name(__cphNameFit, "__cphNameFit");
 function buildHeaderCell(ctx, bridgePhoto) {
@@ -26200,7 +26213,7 @@ function buildHeaderCell(ctx, bridgePhoto) {
           color: style.headerNameColor,
           size: pt2hp(style._cph ? __cphFit.pt : fs.nameSize),
           font: style.headerFont,
-          ...(style._cph ? { characterSpacing: __cphFit.track } : {})
+          ...(style._cph ? { characterSpacing: __cphFit.track } : __trkTw(__fsRaw, "nameTrack") ? { characterSpacing: __trkTw(__fsRaw, "nameTrack") } : {})
         })
       ]
     }));
@@ -26244,7 +26257,7 @@ function buildHeaderCell(ctx, bridgePhoto) {
           color: style.headerSpecColor,
           size: pt2hp(style._cph ? __cphSpecPtFit : fs.specialisation),
           font: style.headerFont,
-          ...(style._cph ? { bold: true, characterSpacing: 11 } : {})
+          ...(style._cph ? { bold: true, characterSpacing: 11 + __trkTw(__fsRaw, "specTrack") } : __trkTw(__fsRaw, "specTrack") ? { characterSpacing: __trkTw(__fsRaw, "specTrack") } : {})
         })
       ]
     }));
@@ -26359,7 +26372,8 @@ function buildHeaderCell(ctx, bridgePhoto) {
         // COPENHAGEN-STAGE4: char-scale w:w=73 = the preview's scaleX(.73)
         // condense, plus the mockup's -.01em tracking — the whole contact
         // stays ONE line at ~name width without shrinking the glyph height.
-        const base = { color: style.headerContactColor, size: pt2hp(pt), font: style.headerFont, ...(style._cph ? { scale: 73, characterSpacing: -2 } : __bridgePhotoOn ? { characterSpacing: -10 } : {}) };
+        const __ctTrk = __trkTw(__fsRaw, "contactTrack");
+        const base = { color: style.headerContactColor, size: pt2hp(pt), font: style.headerFont, ...(style._cph ? { scale: 73, characterSpacing: -2 + __ctTrk } : __bridgePhotoOn ? { characterSpacing: -10 + __ctTrk } : __ctTrk ? { characterSpacing: __ctTrk } : {}) };
         const kids = [];
         if (__bridgePhotoOn) {
           // The 1.50" page-anchored medallion, first run of this paragraph —
@@ -29232,7 +29246,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.172-cph-render-flags";
+var VERSION = "1.14.173-hdr-type-ctrl";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

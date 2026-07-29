@@ -96,8 +96,13 @@
     var t = String(i0.t == null ? '' : i0.t);
     if (t.trim() && !/[.!?:]\s*$/.test(t)) { i0.t = t.replace(/\s+$/, '') + ':'; changed = true; }
     if (i0.mk) { i0.mk = false; changed = true; }
+    // CL-V5-CONTRIB-3-CLOSE-001 (owner 2026-07-29 "opening, 3 bullets and closing"): the
+    // locked shape is [lead, b1, b2, b3, closing] = 5 rows. Un-marking the last row is only
+    // right when a real closing row EXISTS; on a 4-row section (lead + 3 bullets, closing
+    // missing) it silently demoted the THIRD bullet to a paragraph, which is how a letter
+    // ended up showing two bullets and a stray line.
     var last = sec.items[sec.items.length - 1];
-    if (last && last !== i0 && typeof last === 'object' && last.mk) { last.mk = false; changed = true; }
+    if (sec.items.length >= 5 && last && last !== i0 && typeof last === 'object' && last.mk) { last.mk = false; changed = true; }
     return changed;
   }
 
@@ -114,14 +119,27 @@
     return changed;
   }
 
-  // Item 8 (owner 2026-07, corrected): WHY THIS COMPANY/ROLE shows a HORIZONTAL rule by default
-  // while its headline text stays hidden (owner: "permanent horizontal rule, not vertical").
-  // Set headlineRule (the standalone accent line) once; clear a previously-set headlineVRule.
-  function ensureWhyVRule(sec) {
+  // WHY-RULE-DEFAULT-OFF-001 (owner 2026-07-29, twice: "the horizontal line under the
+  // opening / before why this position is visible instead of hidden by default", then "the
+  // horizontal line before why this company is still visible"). This REVERSES Item 8
+  // (owner 2026-07), which made this sidecar stamp headlineRule:true onto the `why`
+  // section on every letter. That stamp is what app.js renders as the rule above WHY THIS
+  // POSITION / WHY YOUR COMPANY (the `t.headlineOff ? (t.headlineRule && …)` leg) — it is
+  // NOT the slogan rule, so hardening the slogan finder (SLOGAN-RULE-MISTARGET-001) left
+  // it standing. The rule is hidden by default now.
+  //
+  // Only undo the rule THIS sidecar auto-set: `__whyRuleSet` marks its own stamp, so a
+  // rule the user later turns on themselves in the section editor is left alone. The
+  // marker is dropped on the way out, which also makes the heal a one-shot per letter.
+  function ensureWhyRuleOff(sec) {
     if (!sec || sec.id !== 'why' || sec.type !== 'rich_block' || !sec.headlineOff) return false;
     var changed = false;
     if (sec.headlineVRule === true) { sec.headlineVRule = false; changed = true; }   // undo the wrong vertical cue
-    if (sec.headlineRule !== true && sec.__whyRuleSet !== true) { sec.headlineRule = true; sec.__whyRuleSet = true; changed = true; }
+    if (sec.__whyRuleSet === true) {
+      if (sec.headlineRule === true) sec.headlineRule = false;
+      delete sec.__whyRuleSet;
+      changed = true;
+    }
     return changed;
   }
 
@@ -131,7 +149,7 @@
       var secs = JSON.parse(localStorage.getItem('sections') || '{}');
       if (!secs || !Array.isArray(secs.cl)) return;
       var changed = false;
-      secs.cl.forEach(function (sec) { if (ensureWhyVRule(sec)) changed = true; });
+      secs.cl.forEach(function (sec) { if (ensureWhyRuleOff(sec)) changed = true; });
       // Structure/colon repairs run FIRST (the intro gets its ":" — c3 now preserves a trailing
       // ":" so it is not stripped — and bring markers lose the wrongly-forced colon BEFORE c4 so
       // c4 can then lowercase their body).

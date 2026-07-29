@@ -1087,7 +1087,11 @@ ${inlineStyles}
       photo: pi.photo || j('photo', null) || s('antcv_photo', null) || null,
       personalInfo: pi,
       styleConfig: pi.customStyleConfig || undefined,
-      fontSizes: pi.fontSizes || undefined,
+      // HDR-TYPE-CONTROLS-001: the panel writes localStorage "fontSizes" (ls.set);
+      // personalInfo.fontSizes is only a legacy mirror and is usually absent, so
+      // this fallback export path shipped WITHOUT the user's sizes / letter
+      // spacing. Read the canonical key when the mirror is empty.
+      fontSizes: pi.fontSizes || j('fontSizes', null) || undefined,
       language: clampLang(s('language', 'en')),
       navyColor: s('navyColor', '#283556'),
       watermark: demo ? 'DEMO' : '',

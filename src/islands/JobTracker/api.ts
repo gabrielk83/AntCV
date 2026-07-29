@@ -99,11 +99,68 @@ async function call(path: string, opts: RequestInit = {}): Promise<Response> {
   });
 }
 
+// JT-DOC-NONSTRING-001 (owner 2026-07-29: Open → "Could not open in AntCV:
+// (e || '').trim is not a function"). The tracker doc is ONE shared JSON written
+// by this island, the nightly runner and cloud routines. A routine had written
+// doc.support[<a Terma row>] as a structured object ({needs:[…], bring:[…]})
+// where the schema says string, so mergeResearchBlock's `(roleIntel||'').trim()`
+// threw and Open died in its catch — with a banner instead of an opened app.
+// The island cannot police every writer, so it stops trusting the value TYPE:
+// coerce every text-map entry to a string as the doc enters, once, at the edge.
+// Objects render as labelled lines (the content is real intel — keep it) rather
+// than "[object Object]".
+export function asText(v: unknown): string {
+  if (typeof v === 'string') return v;
+  if (v === null || v === undefined) return '';
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+  if (Array.isArray(v)) return v.map(asText).filter(Boolean).join('\n');
+  if (typeof v === 'object') {
+    return Object.entries(v as Record<string, unknown>)
+      .map(([k, val]) => { const t = asText(val); return t ? k.toUpperCase().replace(/[_-]+/g, ' ') + ': ' + t : ''; })
+      .filter(Boolean).join('\n');
+  }
+  return '';
+}
+
+const TEXT_MAPS = ['urls', 'jd', 'gen', 'signals', 'support', 'webintel'];
+export function normalizeDoc(doc: TrackerDoc | null): TrackerDoc | null {
+  if (!doc || typeof doc !== 'object') return null;
+  const out: TrackerDoc = { ...doc };
+  for (const k of TEXT_MAPS) {
+    const m = (out as Record<string, unknown>)[k];
+    if (!m || typeof m !== 'object' || Array.isArray(m)) continue;
+    const fixed: Record<string, string> = {};
+    for (const [uk, v] of Object.entries(m as Record<string, unknown>)) fixed[uk] = asText(v);
+    (out as Record<string, unknown>)[k] = fixed;
+  }
+  // sigfiles: [{name,text,added}] — a bad entry must not break the Signals chips.
+  const sf = out.sigfiles;
+  if (sf && typeof sf === 'object' && !Array.isArray(sf)) {
+    const fixed: Record<string, { name: string; text: string; added?: number }[]> = {};
+    for (const [uk, list] of Object.entries(sf)) {
+      fixed[uk] = (Array.isArray(list) ? list : []).filter(Boolean)
+        .map((f) => ({ name: asText((f || {}).name) || 'file', text: asText((f || {}).text), added: (f || {}).added }))
+        .filter((f) => f.text);
+    }
+    out.sigfiles = fixed;
+  }
+  // Rows are index-stable tuples rendered straight into inputs; only the rank
+  // (index 0) is numeric. A non-string cell would break the row editors.
+  if (Array.isArray(out.rows)) {
+    out.rows = out.rows.filter(Array.isArray).map((r) => {
+      const c = r.slice() as Row;
+      for (let i = 1; i < 13; i++) (c as unknown as unknown[])[i] = asText(r[i]);
+      return c;
+    });
+  }
+  return out;
+}
+
 export async function getDoc(): Promise<DocState> {
   const res = await call('/api/job-tracker', { method: 'GET' });
   if (!res.ok) throw new Error('load failed: HTTP ' + res.status);
   const j = await res.json();
-  return { doc: (j && j.doc) || null, rev: (j && j.rev) || 0 };
+  return { doc: normalizeDoc((j && j.doc) || null), rev: (j && j.rev) || 0 };
 }
 
 // PUT with optimistic concurrency. On 409 the caller receives the current
@@ -117,7 +174,7 @@ export async function putDoc(doc: TrackerDoc, baseRev: number | null): Promise<P
     body: JSON.stringify({ doc, base_rev: baseRev }),
   });
   const j = await res.json().catch(() => ({}));
-  if (res.status === 409) return { ok: false, conflict: true, serverDoc: j.doc ?? null, serverRev: j.rev };
+  if (res.status === 409) return { ok: false, conflict: true, serverDoc: normalizeDoc(j.doc ?? null), serverRev: j.rev };
   if (!res.ok) return { ok: false, error: (j && j.error) || ('HTTP ' + res.status) };
   return { ok: true, rev: j.rev };
 }

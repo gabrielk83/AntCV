@@ -323,6 +323,32 @@
         return "section";
       }
     },
+    // CPH-RENDER-FLAGS-001 (docs/design/COPENHAGEN_MODERN_NORDIC_PALETTE_SPEC.md,
+    // "OPEN — render-structure flags"): the mockup-divergence batch (rule
+    // thickness, grey section-head underline, no per-role rule, Results
+    // underline, sub-head rules, body link ink, AI-notice size) applies to the
+    // COPENHAGEN MODERN package only — every other package keeps the render it
+    // shipped with. Same package normalisation the outcomes-mode default uses
+    // (empty / legacy "scandinavian" => copenhagen-modern), and the same
+    // fail-open: an unreadable localStorage means the default package.
+    __antcvCphPkg = () => {
+      try {
+        let pkg = "";
+        try {
+          const p = JSON.parse(localStorage.getItem("stylePackage") || '""');
+          pkg = ("string" == typeof p ? p : "").toLowerCase().trim();
+        } catch (_) {}
+        if ("scandinavian" === pkg || "" === pkg) pkg = "copenhagen-modern";
+        return "copenhagen-modern" === pkg;
+      } catch (_) {
+        return true;
+      }
+    },
+    // The mockup's rule weight: 1.5pt everywhere a rule or an underline is drawn
+    // (section head, sidebar head, lead-ins, group lines). Everything else keeps 1px.
+    __antcvCphRule = () => (__antcvCphPkg() ? "1.5pt" : "1px"),
+    // ...and grey #777777 under the teal heads, per the mockup.
+    __antcvCphRuleInk = (fallback) => (__antcvCphPkg() ? "#777777" : fallback),
     // APP-CHROME-CONTRAST-001 (owner 2026-06-13): the app/setup/settings chrome
     // background is a gradient from navyColor (Ke), and its TEXT is light. If
     // navyColor is a pale value the text goes invisible. Clamp the chrome navy to
@@ -2639,7 +2665,9 @@
       while ((m = re.exec(s)) !== null) {
         found = true;
         if (m.index > cursor) out.push(s.slice(cursor, m.index));
-        out.push(React.createElement("a", { key: "mdl" + k++, href: m[2], target: "_blank", rel: "noopener noreferrer", style: { color: "#0563C1", textDecoration: "underline" } }, m[1]));
+        // CPH-RENDER-FLAGS-001 flag 7: body links render #0B4F8A (mockup) rather
+        // than the Office default #0563C1, which reads bright next to the teal.
+        out.push(React.createElement("a", { key: "mdl" + k++, href: m[2], target: "_blank", rel: "noopener noreferrer", style: { color: "#0B4F8A", textDecoration: "underline" } }, m[1]));
         cursor = m.index + m[0].length;
       }
       if (!found) return null;
@@ -6242,7 +6270,8 @@
               }),
             ),
             React.createElement("div", {
-              style: { borderBottom: `1px solid ${C}`, marginBottom: 4 },
+              // CPH-RENDER-FLAGS-001 flag 1: sidebar-head rule joins the 1.5pt sweep.
+              style: { borderBottom: `${__antcvCphRule()} solid ${C}`, marginBottom: 4 },
             }),
             t.map((t, n) =>
               React.createElement(
@@ -6555,7 +6584,8 @@
                 { key: "professionally" },
                 !n &&
                   React.createElement("div", {
-                    style: { borderBottom: `1px solid ${s}`, margin: "4px 0" },
+                    // CPH-RENDER-FLAGS-001 flag 1: group line joins the sweep.
+                    style: { borderBottom: `${__antcvCphRule()} solid ${s}`, margin: "4px 0" },
                   }),
                 React.createElement(
                   "p",
@@ -6727,6 +6757,16 @@
                         letterSpacing: 0.3,
                         overflowWrap: "break-word",
                         wordBreak: "break-word",
+                        // CPH-RENDER-FLAGS-001 flag 6: a {grp} sub-head sits on its
+                        // own rule in the mockup - teal in the main column, grey in
+                        // the sidebar - so a group reads as a division and not as a
+                        // bolder bullet. Copenhagen only.
+                        ...(__antcvCphPkg()
+                          ? {
+                              borderBottom: `${__antcvCphRule()} solid ${S ? "#777777" : C}`,
+                              paddingBottom: 1,
+                            }
+                          : {}),
                       },
                     },
                     React.createElement(B, {
@@ -6734,6 +6774,18 @@
                       value: P(row.t || ""),
                       placeholder: "[Sub-group]",
                     }),
+                    // ...with the group's own years set right, in the same grey the
+                    // role years use. Floated rather than flexed so the heading's
+                    // own alignment (centered by default) is untouched, and rendered
+                    // only when the row carries years - a group without them looks
+                    // exactly as it did.
+                    __antcvCphPkg() && (row.years || row.y)
+                      ? React.createElement(
+                          "span",
+                          { style: { color: "#777777", fontWeight: 400, whiteSpace: "nowrap", float: "right" } },
+                          String(row.years || row.y),
+                        )
+                      : null,
                   ),
                 };
               }
@@ -7214,8 +7266,10 @@
                   idx > 0 &&
                     !1 !== d.contHeadlines &&
                     React.createElement("div", {
+                      // CPH-RENDER-FLAGS-001: a (Cont.) head carries the same
+                      // rule as the head it continues.
                       style: {
-                        borderBottom: `1px solid ${C}`,
+                        borderBottom: `${__antcvCphRule()} solid ${S ? C : __antcvCphRuleInk(C)}`,
                         marginBottom: 4,
                       },
                     }),
@@ -7369,7 +7423,14 @@
                         }),
                       ),
                     ),
-                    React.createElement("div", {
+                    // CPH-RENDER-FLAGS-001 flag 3: the mockup draws NO rule under
+                    // a role row - the section rule is the only horizontal line in
+                    // the main column, and a rule per role turns the experience
+                    // block into a ruled table. Copenhagen only; every other
+                    // package keeps its per-role rule.
+                    __antcvCphPkg()
+                      ? null
+                      : React.createElement("div", {
                       style: {
                         borderBottom: `1px solid ${k.mainSubHeadColor || s}`,
                         margin: "2px 0 2px",
@@ -7653,14 +7714,25 @@
                             React.createElement(
                               "span",
                               {
+                                // CPH-RENDER-FLAGS-001 flag 5: the mockup sets the
+                                // "Results:" lead-in upright with a 1.5pt grey
+                                // underline instead of teal italic. Copenhagen only.
                                 style: {
                                   fontWeight: 700,
-                                  fontStyle: "italic",
+                                  fontStyle: __antcvCphPkg() ? "normal" : "italic",
                                   color:
                                     d.mainSubHeadColor ||
                                     d.mainBulletColor ||
                                     d.mainHeadColor ||
                                     "#283556",
+                                  ...(__antcvCphPkg()
+                                    ? {
+                                        textDecoration: "underline",
+                                        textDecorationColor: "#777777",
+                                        textDecorationThickness: "1.5pt",
+                                        textUnderlineOffset: "2px",
+                                      }
+                                    : {}),
                                 },
                               },
                               L("Results: "),
@@ -8393,7 +8465,12 @@
           e.ruleOff
             ? null
             : React.createElement("div", {
-                style: { borderBottom: `1px solid ${C}`, marginBottom: 4 },
+                // CPH-RENDER-FLAGS-001 flags 1 + 2: the section-head rule is
+                // 1.5pt on copenhagen (mockup weight, 1px everywhere else), and
+                // under a MAIN head it is grey #777777 rather than the teal of
+                // the head itself. Sidebar heads keep sidebarLineColor (teal),
+                // which the palette pass already locked.
+                style: { borderBottom: `${__antcvCphRule()} solid ${S ? C : __antcvCphRuleInk(C)}`, marginBottom: 4 },
               }),
         ),
         D,
@@ -51414,13 +51491,20 @@
                             position: "absolute",
                             right: 10,
                             bottom: 8,
-                            fontSize: 7,
+                            // CPH-RENDER-FLAGS-001 flag 11: the mockup sets the notice
+                            // ~7.5pt in grey #777777 rather than 7px teal - it is a
+                            // disclosure, not a third accent colour. Copenhagen only,
+                            // and a BRANDED app still wins (the brand var is checked
+                            // first, exactly as before).
+                            fontSize: __antcvCphPkg() ? 7.5 : 7,
                             lineHeight: 1.15,
                             letterSpacing: 0.3,
                             fontWeight: 600,
                             // BRANDFIT: AI notice takes the fitted brand grey when a
                             // brand is active (var set on the paper wrapper), else teal.
-                            color: "var(--brand-ai-notice-color, rgba(0,116,110,.7))",
+                            color: __antcvCphPkg()
+                              ? "var(--brand-ai-notice-color, #777777)"
+                              : "var(--brand-ai-notice-color, rgba(0,116,110,.7))",
                             pointerEvents: "none",
                             userSelect: "none",
                             zIndex: 6,

@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.3803-word-sheet';
+const CACHE = 'antcv-1.51.3822-cph-flags';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

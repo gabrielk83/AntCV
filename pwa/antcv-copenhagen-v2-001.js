@@ -33,7 +33,7 @@
 (function () {
   'use strict';
   if (window.__antcvCopenhagenV2) return;
-  window.__antcvCopenhagenV2 = '1.51.3702-photo-center';
+  window.__antcvCopenhagenV2 = '1.51.3822-cph-flags';
 
   var FLAG = 'antcv:copenhagen-v2';
   var STYLE_ID = 'antcv-copenhagen-v2-style';
@@ -107,6 +107,13 @@
   function buildCSS() {
     var side = sidebarSide();
     var BAND = '.antcv-preview-paper [data-antcv-candidate-band="1"]';
+    // CPH-RENDER-FLAGS-001 flag 8 (spec MOCKUP-DIVERGENCE, OPEN item 8): the
+    // sidebar is a floating INSET PANEL in the mockup and a floating panel with
+    // square corners reads as a printing error next to the 22px band. Radius
+    // ~9px, the mockup's panel value - the band keeps the owner's live-tuned 22px
+    // (JUDGMENT row, not ours to change). No overflow:hidden: a straddling photo
+    // must never be clipped, same rule the band follows.
+    var SB_RADIUS = 'border-radius:9px !important;';
     var css =
       BAND + '{' +
         'border-radius:22px !important;' +
@@ -116,7 +123,7 @@
       '}';
     if (isBridge()) {
       // bridge: same vertical heights, ~3.2px horizontal from the contour.
-      css += '.antcv-preview-paper [data-antcv-document-sidebar]{margin-' + side + ':3.2px !important;box-sizing:border-box !important;}';
+      css += '.antcv-preview-paper [data-antcv-document-sidebar]{margin-' + side + ':3.2px !important;box-sizing:border-box !important;' + SB_RADIUS + '}';
       // Bridge keeps the owner-tuned straddle nudge (live-measured 2026-07-22).
       css += photoNudgeCSS();
     } else {
@@ -124,7 +131,7 @@
       // bottom and the page-edge corner it aligns to.
       css += '.antcv-preview-paper [data-antcv-document-sidebar]{' +
         'margin-top:7.4px !important;margin-bottom:7.4px !important;margin-' + side + ':7.4px !important;' +
-        'box-sizing:border-box !important;}';
+        'box-sizing:border-box !important;' + SB_RADIUS + '}';
       // HEADER-DEFECTS 2026-07-23 ("figure is not aligned with corners"): the
       // misalignment was the bridge-tuned translate NUDGE leaking into non-bridge
       // modes — photoNudgeCSS is bridge-only now, so the floated photo sits at its

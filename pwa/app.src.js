@@ -17846,7 +17846,7 @@
                         } else {
                         if (e.jd_company || e.jd_role)
                           try {
-                            lo({
+                            try{var __pg=JSON.parse(localStorage.getItem("antcv:clProseGuard")||"{}")||{};var __ak=(e.jd_company||"")+"|"+(e.jd_role||"")+"|"+String(e.jd_language||localStorage.getItem("language")||"en").replace(/["']/g,"").toLowerCase().slice(0,2);var __b=__pg[__ak]=__pg[__ak]||{};(Array.isArray(e.cl_sections)?e.cl_sections:[]).forEach(function(s){if(s&&["opening","why","who","foundation","contribute","closure","bring"].indexOf(s.id)>=0){var __t=(Array.isArray(s.items)&&s.items[0]&&s.items[0].t)||s.content||"";if(__t&&!/^\s*\[/.test(__t))__b[s.id]=JSON.parse(JSON.stringify(s))}});localStorage.setItem("antcv:clProseGuard",JSON.stringify(__pg))}catch(_){} /*CL-OPENING-SEED-985*/lo({
                               company: e.jd_company || "",
                               role: e.jd_role || "",
                               subtitle: (io && io.subtitle) || "",
@@ -23571,7 +23571,7 @@
                 } else {
                   if (e.jd_company || e.jd_role)
                     try {
-                      lo({
+                      try{var __pg=JSON.parse(localStorage.getItem("antcv:clProseGuard")||"{}")||{};var __ak=(e.jd_company||"")+"|"+(e.jd_role||"")+"|"+String(e.jd_language||localStorage.getItem("language")||"en").replace(/["']/g,"").toLowerCase().slice(0,2);var __b=__pg[__ak]=__pg[__ak]||{};(Array.isArray(e.cl_sections)?e.cl_sections:[]).forEach(function(s){if(s&&["opening","why","who","foundation","contribute","closure","bring"].indexOf(s.id)>=0){var __t=(Array.isArray(s.items)&&s.items[0]&&s.items[0].t)||s.content||"";if(__t&&!/^\s*\[/.test(__t))__b[s.id]=JSON.parse(JSON.stringify(s))}});localStorage.setItem("antcv:clProseGuard",JSON.stringify(__pg))}catch(_){} /*CL-OPENING-SEED-985*/lo({
                         company: e.jd_company || "",
                         role: e.jd_role || "",
                         subtitle: (io && io.subtitle) || "",

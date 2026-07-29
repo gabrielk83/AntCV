@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.3982-inline-edit-appline';
+const CACHE = 'antcv-1.51.3983-cl-opening-seed';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

@@ -7,23 +7,16 @@
 // Do NOT re-de-minify pwa/app.js into a new file again — this file is canonical.
 // Regenerated from pwa/app.js via prettier on 2026-06-05; kept from now on.
 //
-// DIVERGENCE NOTE — this file is BEHIND pwa/app.js.
-// The rebuild is gated (see docs/deployment/app-js-source-and-rebuild.md), so
-// fixes since 2026-06-05 have shipped as surgical in-place edits to the
-// minified pwa/app.js. This de-minification is an older generation and does not
-// use the same identifiers any more (fontSizes state is `Yr` here, `ca` there),
-// so a mechanical mirror is not possible. Grep pwa/app.js directly for current
-// behaviour.
-//
-// NOT MIRRORED HERE (edit sites live in pwa/app.js):
-//   HDR-TYPE-CONTROLS-001 (1.51.3862, owner 2026-07-29) — the Font sizes (pt)
-//   panel gained per-line LETTER SPACING (expansion +, compression −, 0.05pt
-//   steps) and split "Specialisation / Application" into two rows plus a new
-//   Slogan row. Keys added to the fontSizes object: applicationSize, sloganSize,
-//   nameTrack, specTrack, applicationTrack, contactTrack, sloganTrack. Wired
-//   through the preview band, the header-as-sections leg, the HTML export, the
-//   in-app DOCX stylesheet, the docx-worker payload and the copenhagen fit
-//   sidecar. See docs/qa/SESSION_LOG.md for the full site list.
+// IDENTIFIER NOTE — this de-minification dates from 2026-06-05, so its short
+// names come from THAT minifier pass and no longer match the current pwa/app.js
+// one-for-one (the fontSizes state is `Yr` here and `ca` there, for instance).
+// Mirroring is therefore by HAND and by MEANING, not mechanical: find the same
+// site, use the local names. What must stay true is coverage — every change made
+// to pwa/app.js has a counterpart here, which is what the "both bundles" /
+// "mirror lock" tests in pwa/test/ enforce. This file is also where the design
+// RATIONALE lives: ~376 ticket markers carry explanation that does not survive
+// minification and exists nowhere else, so it must never be regenerated from
+// pwa/app.js — that would delete all of it.
 // ============================================================================
 (() => {
   // BRIDGE-SIDEBAR-PALETTE-001 (owner 2026-06-10): when the profile photo is in
@@ -2656,6 +2649,63 @@
       window.__antcvAppLineText = __antcvAppLineText;
     }
   } catch (_) {}
+
+  /* HDR-TYPE-CONTROLS-001 (owner 2026-07-29): "allow the panel [to] control the
+     preview (and export) for size and font compression/expansion for the Name,
+     Application, Specification, Contact line and Slogan ... make sure nothing
+     prevents the user from controlling these values".
+
+     One source of truth for both halves of that. These read the SAME
+     localStorage "fontSizes" object the Font sizes (pt) panel writes (ls.set),
+     so the preview band, the CL slogan/application line, the HTML export, the
+     DOCX payload and the copenhagen fit sidecar cannot disagree — a mismatch
+     between those legs is exactly how the application line ended up 11px on
+     screen and 10.5pt in the export (APPLINE-PARITY-001, fixed here).
+
+     Letter spacing is a signed DELTA in POINTS on whatever tracking the line
+     already had, stepping by 0.05. 0.05pt is exactly one twentieth of a point
+     — the unit of DOCX w:spacing — so one panel step is one w:spacing unit with
+     no rounding loss on the Word leg. Delta (not absolute) semantics mean 0
+     changes nothing, so every existing document renders as before. */
+  function __antcvFontPrefs() {
+    try {
+      var v = JSON.parse(localStorage.getItem("fontSizes") || "null");
+      return v && "object" == typeof v ? v : {};
+    } catch (_) { return {}; }
+  }
+  function __antcvFontPt(k, d) {
+    try {
+      var v = __antcvFontPrefs()[k];
+      return "number" == typeof v && isFinite(v) && v > 0 ? v : d;
+    } catch (_) { return d; }
+  }
+  function __antcvTrackPt(k) {
+    try {
+      var v = __antcvFontPrefs()[k];
+      return "number" == typeof v && isFinite(v) ? Math.max(-2, Math.min(4, v)) : 0;
+    } catch (_) { return 0; }
+  }
+  function __antcvTrackPx(k) { return (__antcvTrackPt(k) * 96) / 72; }
+  // undefined (not "0px") when unset, so React emits NO letter-spacing at all
+  // and the line keeps whatever the stylesheet/sidecar gives it.
+  function __antcvTrkCss(k) { var v = __antcvTrackPx(k); return v ? v.toFixed(2) + "px" : void 0; }
+  function __antcvTrkPtCss(k) { var v = __antcvTrackPt(k); return v ? v.toFixed(3) + "pt" : void 0; }
+  // Word's HTML leg ignores calc(), so resolve "em baseline + panel delta" to a
+  // single pt number here. baseEm = the line's historic em tracking.
+  function __antcvTrkPtOf(k, baseEm, sizePt) {
+    return (Number(baseEm) || 0) * (Number(sizePt) || 0) + __antcvTrackPt(k);
+  }
+  try {
+    "undefined" != typeof window &&
+      ((window.__antcvFontPrefs = __antcvFontPrefs),
+      (window.__antcvFontPt = __antcvFontPt),
+      (window.__antcvTrackPt = __antcvTrackPt),
+      (window.__antcvTrackPx = __antcvTrackPx),
+      (window.__antcvTrkCss = __antcvTrkCss),
+      (window.__antcvTrkPtCss = __antcvTrkPtCss),
+      (window.__antcvTrkPtOf = __antcvTrkPtOf));
+  } catch (_) {}
+
   function __antcvWriteSpec(v) {
     try {
       if ("string" != typeof v) return;
@@ -6059,6 +6109,14 @@
         bulletContent: 10.5,
         bulletMarkSize: 10.5,
         specialisation: 11,
+        // HDR-TYPE-CONTROLS-001 (see the prelude helpers).
+        applicationSize: 10.5,
+        sloganSize: 11,
+        nameTrack: 0,
+        specTrack: 0,
+        applicationTrack: 0,
+        contactTrack: 0,
+        sloganTrack: 0,
         ...l,
       },
       N = (e) => Math.round(1.333 * e),
@@ -6254,6 +6312,11 @@
                   fontWeight: 700,
                   color: S ? __sbInk : "#283556",
                   fontSize: r(t),
+                  // HDR-TYPE-CONTROLS-001: the figure layouts draw the identity
+                  // lines as SECTIONS rather than as the candidate band, so the
+                  // panel has to reach this leg too or the controls go dead the
+                  // moment the photo moves to header-left/right.
+                  letterSpacing: __antcvTrkCss("nameTrack"),
                   lineHeight: 1.1,
                   textAlign: S
                     ? "certs" === e.id || /cert/i.test(e.title || "")
@@ -6290,6 +6353,8 @@
                   fontFamily: A,
                   color: S ? __sbInk : "#283556",
                   fontSize: r(n),
+                  // HDR-TYPE-CONTROLS-001
+                  letterSpacing: __antcvTrkCss("specTrack"),
                   lineHeight: 1.2,
                   textAlign: S
                     ? "certs" === e.id || /cert/i.test(e.title || "")
@@ -6353,6 +6418,8 @@
                   key: n,
                   style: {
                     fontSize: r(o),
+                    // HDR-TYPE-CONTROLS-001
+                    letterSpacing: __antcvTrkCss("contactTrack"),
                     fontFamily: T,
                     marginBottom: 2,
                     color: S ? __sbInk : "#333",
@@ -15389,6 +15456,16 @@
                         bulletContent: 10.5,
                         bulletMarkSize: 10.5,
                         specialisation: 11,
+                        // HDR-TYPE-CONTROLS-001: reset-to-package must clear the
+                        // identity-line sizes + tracking too, else a package
+                        // switch keeps the previous app's typography.
+                        applicationSize: 10.5,
+                        sloganSize: 11,
+                        nameTrack: 0,
+                        specTrack: 0,
+                        applicationTrack: 0,
+                        contactTrack: 0,
+                        sloganTrack: 0,
                       });
                     } catch (e) {}
                     try {
@@ -20046,6 +20123,18 @@
           bulletContent: 10.5,
           bulletMarkSize: 10.5,
           specialisation: 11,
+          // HDR-TYPE-CONTROLS-001: the two NEW sizes default to what the EXPORT
+          // already drew (application line 10.5pt, slogan 11pt) so the panel
+          // opens at parity instead of moving the document on first paint. The
+          // five tracks are DELTAS — 0 means "whatever this line already
+          // looked like", so a fresh install is unchanged.
+          applicationSize: 10.5,
+          sloganSize: 11,
+          nameTrack: 0,
+          specTrack: 0,
+          applicationTrack: 0,
+          contactTrack: 0,
+          sloganTrack: 0,
         },
         [Fr, Mr] = e(() => u.get("abTestEnabled", !0)),
         [Wr, jr] = e(() => u.get("abGroupOverride", "auto")),
@@ -20107,6 +20196,28 @@
         qr = (e, t) => {
           Jr((n) => {
             const o = { ...n, [e]: Math.round(2 * (n[e] + t)) / 2 };
+            u.set("fontSizes", o);
+            try {
+              Qn({ fontSizes: o });
+            } catch (e) {}
+            return o;
+          });
+        },
+        // HDR-TYPE-CONTROLS-001: the letter-spacing twin of qr. Rounds to 0.05
+        // (Math.round(x*20)/20 — one DOCX w:spacing unit) and clamps to
+        // [-2pt, +4pt] so a held-down button cannot make a line unreadable.
+        // SAME persistence path as qr — state, localStorage "fontSizes", and
+        // styleConfig.fontSizes — which is what lets the export legs and the
+        // copenhagen sidecar read the value through __antcvTrackPt immediately.
+        __antcvTrkStep = (e, t) => {
+          Jr((n) => {
+            const o = {
+              ...n,
+              [e]: Math.max(
+                -2,
+                Math.min(4, Math.round(20 * ((Number(n[e]) || 0) + t)) / 20),
+              ),
+            };
             u.set("fontSizes", o);
             try {
               Qn({ fontSizes: o });
@@ -29759,12 +29870,12 @@
                 if ("name_block" === e.id) {
                   const t = r(e.content || ""),
                     o = c ? "center" : "left";
-                  return `<div style="margin:0 0 6pt;page-break-inside:avoid"><div style="font-family:'Cabin','Carlito',${s || d};font-weight:700;color:${c ? readableInk(__sbBg) : "#283556"};font-size:${u.nameSize}pt;line-height:1.1;text-align:${o};margin-top:2pt;margin-bottom:4pt">${t}</div>${f(n, 2, 4)}</div>`;
+                  return `<div style="margin:0 0 6pt;page-break-inside:avoid"><div style="font-family:'Cabin','Carlito',${s || d};font-weight:700;color:${c ? readableInk(__sbBg) : "#283556"};font-size:${u.nameSize}pt;letter-spacing:${__antcvTrackPt("nameTrack")}pt;line-height:1.1;text-align:${o};margin-top:2pt;margin-bottom:4pt">${t}</div>${f(n, 2, 4)}</div>`;
                 }
                 if ("spec_block" === e.id) {
                   const t = r(e.content || ""),
                     n = c ? "center" : "left";
-                  return `<div style="margin:0 0 6pt;page-break-inside:avoid"><div style="font-family:'Cabin','Carlito',${s || d};color:${c ? readableInk(__sbBg) : "#283556"};font-size:${u.specialisation}pt;line-height:1.2;text-align:${n};margin-bottom:4pt">${t}</div></div>`;
+                  return `<div style="margin:0 0 6pt;page-break-inside:avoid"><div style="font-family:'Cabin','Carlito',${s || d};color:${c ? readableInk(__sbBg) : "#283556"};font-size:${u.specialisation}pt;letter-spacing:${__antcvTrackPt("specTrack")}pt;line-height:1.2;text-align:${n};margin-bottom:4pt">${t}</div></div>`;
                 }
                 if ("contact_line" === e.id) {
                   const t = (e.items || []).filter((e) => !e.hidden);
@@ -29775,7 +29886,7 @@
                     p = t
                       .map(
                         (e) =>
-                          `<div style="${g};font-family:'Carlito',${d};font-size:${u.contactSize}pt;color:${i};text-align:${l};overflow-wrap:break-word;word-break:break-word"><b style="color:${s}">${o(e.l)}:</b> ${r(e.v || "")}</div>`,
+                          `<div style="${g};font-family:'Carlito',${d};font-size:${u.contactSize}pt;letter-spacing:${__antcvTrackPt("contactTrack")}pt;color:${i};text-align:${l};overflow-wrap:break-word;word-break:break-word"><b style="color:${s}">${o(e.l)}:</b> ${r(e.v || "")}</div>`,
                       )
                       .join("");
                   return `<div style="margin:0 0 6pt;page-break-inside:avoid">${h(n, b, l, u.mainHead)}${p}</div>`;
@@ -30080,13 +30191,13 @@
             // application line moved UNDER THE SLOGAN (app-line block below). Both doc types
             // render the same specialisation div now — the CL `y` branch is retired here.
             _ = I
-              ? `<div style="font-family:'Cabin',${s};font-size:${qo}pt;color:#fff;text-align:${E("specialisation")};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2pt;line-height:1.1">${(io.subtitle || (e ? "[Specialisering — 1–3 fokusområder, adskilt med •]" : "[Specialisation — 1–3 focus areas, separated by •]")).replace(/\s*\|\s*/g, " • ")}</div>`
+              ? `<div style="font-family:'Cabin',${s};font-size:${qo}pt;letter-spacing:${__antcvTrackPt("specTrack")}pt;color:#fff;text-align:${E("specialisation")};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2pt;line-height:1.1">${(io.subtitle || (e ? "[Specialisering — 1–3 fokusområder, adskilt med •]" : "[Specialisation — 1–3 focus areas, separated by •]")).replace(/\s*\|\s*/g, " • ")}</div>`
               : "",
             N = A
-              ? `<p style="font-family:'Cabin',${s};font-size:${u.nameSize}pt;font-weight:700;color:#fff;text-align:${E("name")};margin:12pt 0 3pt;line-height:1.1;mso-line-height-rule:exactly">${w.name || (e ? "Dit navn" : "Your Name")}</p>${window.__antcvHdrRuleHtml ? window.__antcvHdrRuleHtml("name", "#01B7BB", 2, 0) : ""}`
+              ? `<p style="font-family:'Cabin',${s};font-size:${u.nameSize}pt;letter-spacing:${__antcvTrackPt("nameTrack")}pt;font-weight:700;color:#fff;text-align:${E("name")};margin:12pt 0 3pt;line-height:1.1;mso-line-height-rule:exactly">${w.name || (e ? "Dit navn" : "Your Name")}</p>${window.__antcvHdrRuleHtml ? window.__antcvHdrRuleHtml("name", "#01B7BB", 2, 0) : ""}`
               : "",
             $ = O
-              ? `${window.__antcvHdrRuleHtml ? window.__antcvHdrRuleHtml("specialisation", "#01B7BB", 3, 1) : f("#01B7BB", 3, 1)}<p style="font-family:'Cabin',${s};font-size:${(Number(u.contactSize) || 10) + 1}pt;color:#fff;text-align:${E("contact")};margin:3pt 0;line-height:1.2;mso-line-height-rule:exactly">${x}</p>${window.__antcvHdrRuleHtml ? window.__antcvHdrRuleHtml("contact", "#01B7BB", 1, 0) : f("#01B7BB", 1, 0)}`
+              ? `${window.__antcvHdrRuleHtml ? window.__antcvHdrRuleHtml("specialisation", "#01B7BB", 3, 1) : f("#01B7BB", 3, 1)}<p style="font-family:'Cabin',${s};font-size:${(Number(u.contactSize) || 10) + 1}pt;letter-spacing:${__antcvTrackPt("contactTrack")}pt;color:#fff;text-align:${E("contact")};margin:3pt 0;line-height:1.2;mso-line-height-rule:exactly">${x}</p>${window.__antcvHdrRuleHtml ? window.__antcvHdrRuleHtml("contact", "#01B7BB", 1, 0) : f("#01B7BB", 1, 0)}`
               : "",
             L =
               A || I || O
@@ -30159,7 +30270,7 @@
               })(),
               g = 5;
             P =
-              `<table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${(() => { try { if (window.__antcvSloganStandaloneHidden ? window.__antcvSloganStandaloneHidden() : localStorage.getItem("antcv:clSloganHidden") === "1") return ""; var __uns = window.__antcvSloganUnsolActive ? window.__antcvSloganUnsolActive(io) : false; var st = __uns ? "" : String((io && io.cl_slogan) || "").trim(); if (!st || /^\[/.test(st)) { st = String(localStorage.getItem("antcv:clSlogan") || "").trim(); if (st && window.__antcvSloganLangGate && !window.__antcvSloganLangGate(st)) st = ""; if (st && __uns && window.__antcvSloganOverrideIsGen && window.__antcvSloganOverrideIsGen(st, io)) st = ""; } if ((!st || /^\[/.test(st)) && __uns) st = String(io.subtitle || "").trim(); st = st.replace(/\s*\|\s*/g, " • ").trim(); if (window.__antcvSloganCap) st = window.__antcvSloganCap(st); if (!st || /^\[/.test(st)) return ""; var sa = String(localStorage.getItem("antcv:clSloganAlign") || "center").replace(/["']/g, "").toLowerCase(); if (sa !== "left" && sa !== "right" && sa !== "center" && sa !== "justify") sa = "center"; return '<p style="font-family:\'Cabin\',' + d + ';font-size:11pt;font-weight:700;letter-spacing:.08em;text-align:' + sa + ';color:var(--brand-slogan-color,' + (t.mainLineColor || "#01746E") + ');margin:0 0 12pt">' + st.toUpperCase() + '</p>'; } catch (_) { return ""; } })()}${(() => { try { var __al = window.__antcvAppLineText ? window.__antcvAppLineText(io) : ""; if (!__al) return ""; return '<div style="font-family:\'Cabin\',' + d + ';font-size:10.5pt;font-weight:600;letter-spacing:.02em;text-align:center;color:var(--brand-slogan-color,' + (t.mainLineColor || "#01746E") + ');margin:0 0 12pt">' + __al + '</div>'; } catch (_) { return ""; } })()}${l.map(b).join("")}${u}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table>` +
+              `<table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${(() => { try { if (window.__antcvSloganStandaloneHidden ? window.__antcvSloganStandaloneHidden() : localStorage.getItem("antcv:clSloganHidden") === "1") return ""; var __uns = window.__antcvSloganUnsolActive ? window.__antcvSloganUnsolActive(io) : false; var st = __uns ? "" : String((io && io.cl_slogan) || "").trim(); if (!st || /^\[/.test(st)) { st = String(localStorage.getItem("antcv:clSlogan") || "").trim(); if (st && window.__antcvSloganLangGate && !window.__antcvSloganLangGate(st)) st = ""; if (st && __uns && window.__antcvSloganOverrideIsGen && window.__antcvSloganOverrideIsGen(st, io)) st = ""; } if ((!st || /^\[/.test(st)) && __uns) st = String(io.subtitle || "").trim(); st = st.replace(/\s*\|\s*/g, " • ").trim(); if (window.__antcvSloganCap) st = window.__antcvSloganCap(st); if (!st || /^\[/.test(st)) return ""; var sa = String(localStorage.getItem("antcv:clSloganAlign") || "center").replace(/["']/g, "").toLowerCase(); if (sa !== "left" && sa !== "right" && sa !== "center" && sa !== "justify") sa = "center"; return '<p style="font-family:\'Cabin\',' + d + ';font-size:' + __antcvFontPt("sloganSize", 11) + 'pt;font-weight:700;letter-spacing:' + __antcvTrkPtOf("sloganTrack", 0.08, __antcvFontPt("sloganSize", 11)).toFixed(3) + 'pt;text-align:' + sa + ';color:var(--brand-slogan-color,' + (t.mainLineColor || "#01746E") + ');margin:0 0 12pt">' + st.toUpperCase() + '</p>'; } catch (_) { return ""; } })()}${(() => { try { var __al = window.__antcvAppLineText ? window.__antcvAppLineText(io) : ""; if (!__al) return ""; return '<div style="font-family:\'Cabin\',' + d + ';font-size:' + __antcvFontPt("applicationSize", 10.5) + 'pt;font-weight:600;letter-spacing:' + __antcvTrkPtOf("applicationTrack", 0.02, __antcvFontPt("applicationSize", 10.5)).toFixed(3) + 'pt;text-align:center;color:var(--brand-slogan-color,' + (t.mainLineColor || "#01746E") + ');margin:0 0 12pt">' + __al + '</div>'; } catch (_) { return ""; } })()}${l.map(b).join("")}${u}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table>` +
               (c
                 ? `<div style="page-break-before:always;mso-page-break-before:always;break-before:page"><table width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="${n}" style="width:100%;border-collapse:collapse;background:${n};page-break-after:avoid;mso-page-break-after:avoid"><tr><td bgcolor="${n}" style="background:${n};padding:14pt 16pt 8pt;text-align:center;border-bottom:1pt solid ${S}">${N}${_}${$}</td></tr></table><table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${b(c)}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table></div>`
                 : "");
@@ -30708,6 +30819,13 @@
             D = h(y.mainTblH, 10.5),
             z = h(y.mainTblCell, 10),
             F = h(0.75 * (y.nameSize || 16), 12),
+            // HDR-TYPE-CONTROLS-001: panel letter spacing -> DOCX w:spacing.
+            // The unit is a twentieth of a point, which is exactly one panel
+            // step, so the owner's value survives the Word leg unrounded.
+            __tkN = Math.round(20 * __antcvTrackPt("nameTrack")),
+            __tkS = Math.round(20 * __antcvTrackPt("specTrack")),
+            __tkC = Math.round(20 * __antcvTrackPt("contactTrack")),
+            __tkX = (e) => (e ? `<w:spacing w:val="${e}"/>` : ""),
             M = (e, t, n, o, r = {}) =>
               `<w:style w:type="paragraph" w:customStyle="1" w:styleId="${e}"><w:name w:val="${t}"/><w:basedOn w:val="Normal"/>` +
               (r.qFormat ? "<w:qFormat/>" : "") +
@@ -30725,21 +30843,21 @@
                 "CV_Name",
                 "CV Name",
                 `<w:shd w:val="clear" w:color="auto" w:fill="${g}"/><w:spacing w:before="240" w:after="60"/><w:jc w:val="center"/>`,
-                `${j(b, !0)}<w:color w:val="${A}"/><w:sz w:val="${N}"/><w:szCs w:val="${N}"/>`,
+                `${j(b, !0)}<w:color w:val="${A}"/>${__tkX(__tkN)}<w:sz w:val="${N}"/><w:szCs w:val="${N}"/>`,
                 { qFormat: !0 },
               ),
               M(
                 "CV_Subtitle",
                 "CV Subtitle",
                 `<w:shd w:val="clear" w:color="auto" w:fill="${g}"/><w:spacing w:before="0" w:after="40"/><w:jc w:val="center"/>`,
-                `${j(b, !1)}<w:color w:val="${I}"/><w:sz w:val="${$}"/><w:szCs w:val="${$}"/>`,
+                `${j(b, !1)}<w:color w:val="${I}"/>${__tkX(__tkS)}<w:sz w:val="${$}"/><w:szCs w:val="${$}"/>`,
                 { qFormat: !0 },
               ),
               M(
                 "CV_Contact",
                 "CV Contact",
                 `<w:shd w:val="clear" w:color="auto" w:fill="${g}"/><w:spacing w:before="60" w:after="60"/><w:jc w:val="center"/>`,
-                `${j(b, !1)}<w:color w:val="${O}"/><w:sz w:val="${L}"/><w:szCs w:val="${L}"/>`,
+                `${j(b, !1)}<w:color w:val="${O}"/>${__tkX(__tkC)}<w:sz w:val="${L}"/><w:szCs w:val="${L}"/>`,
                 { qFormat: !0 },
               ),
               M(
@@ -45697,6 +45815,8 @@
                       fontFamily: e,
                       color: "#fff",
                       fontSize: (Yr.nameSize || 16) * (96 / 72),
+                      // HDR-TYPE-CONTROLS-001 (CV + CL both render this band)
+                      letterSpacing: __antcvTrkCss("nameTrack"),
                       fontWeight: 700,
                       marginTop: 12,
                       // ADV-SPACING-CONTROLS-001: candidate-header row gap.
@@ -45740,6 +45860,8 @@
                         fontFamily: e,
                         color: "rgba(255,255,255,0.9)",
                         fontSize: (Yr.specialisation || qo || 11) * (96 / 72),
+                        // HDR-TYPE-CONTROLS-001
+                        letterSpacing: __antcvTrkCss("specTrack"),
                         marginBottom: __nzPx(ya && ya.candidateGap, 5),
                         whiteSpace: "nowrap",
                         overflow: "hidden",
@@ -45781,6 +45903,8 @@
                               // bridge ×0.94 penalty); +1pt over the pre-822 contact size.
                               ((Yr.contactSize || 10) + 1) *
                               (96 / 72),
+                            // HDR-TYPE-CONTROLS-001
+                            letterSpacing: __antcvTrkCss("contactTrack"),
                             lineHeight: 1.2,
                             margin:
                               __nzPx(ya && ya.candidateGap, 5) + "px 0",
@@ -47132,9 +47256,17 @@
                         onBlur: (ev) => { try { const __nv = String(ev.currentTarget.textContent || "").trim(); if (__nv !== String(localStorage.getItem("antcv:clSlogan") || "")) { try { vr("slogan"); } catch (_) {} localStorage.setItem("antcv:clSlogan", __nv); window.dispatchEvent(new CustomEvent("antcv:sections-updated", { detail: { reason: "cl-slogan-inline" } })); } } catch (_) {} },
                         style: {
                           fontFamily: "'Cabin',sans-serif",
-                          fontSize: 15,
+                          // HDR-TYPE-CONTROLS-001: was a hard-pinned 15px with
+                          // no way to reach it from the panel. 11pt is what the
+                          // export already drew, so this also closes a small
+                          // preview/export size split.
+                          fontSize: (Number(Yr.sloganSize) || 11) * (96 / 72),
                           fontWeight: 700,
-                          letterSpacing: "0.08em",
+                          letterSpacing:
+                            (
+                              0.08 * ((Number(Yr.sloganSize) || 11) * (96 / 72)) +
+                              __antcvTrackPx("sloganTrack")
+                            ).toFixed(2) + "px",
                           textAlign: sa,
                           color: "var(--brand-slogan-color, " + ((ya && ya.mainLineColor) || "#00746E") + ")",
                           margin: "0 0 12px",
@@ -47163,9 +47295,19 @@
                         "data-antcv-app-line-native": "1",
                         style: {
                           fontFamily: "'Cabin',sans-serif",
-                          fontSize: 11,
+                          // APPLINE-PARITY-001 (HDR-TYPE-CONTROLS-001): this was
+                          // a hard-pinned 11px while the export drew 10.5pt
+                          // (14px) — a 27% split between what the owner saw and
+                          // what shipped. Both legs read the panel now, and both
+                          // default to 10.5pt.
+                          fontSize: (Number(Yr.applicationSize) || 10.5) * (96 / 72),
                           fontWeight: 600,
-                          letterSpacing: "0.02em",
+                          letterSpacing:
+                            (
+                              0.02 *
+                                ((Number(Yr.applicationSize) || 10.5) * (96 / 72)) +
+                              __antcvTrackPx("applicationTrack")
+                            ).toFixed(2) + "px",
                           textAlign: "center",
                           color: "var(--brand-slogan-color, var(--header-line-color, #01746E))",
                           margin: "0 0 12px",
@@ -50284,19 +50426,46 @@
                           userSelect: "none",
                         },
                       },
-                      "Font sizes (pt) — tap to expand",
+                      "Font sizes (pt) + letter spacing — tap to expand",
                     ),
                     [
-                      ["Name", "nameSize", null != (r = Yr.nameSize) ? r : 16],
+                      // HDR-TYPE-CONTROLS-001: Specialisation and Application
+                      // used to share ONE row (both driving "specialisation").
+                      // They are separate controls now because they are no
+                      // longer in the same place — CL-APP-SUBTITLE-HEADING-
+                      // SWAP-001 moved the application line out of the header
+                      // and under the slogan, leaving the specialisation in the
+                      // band on both documents. The Slogan had no control at
+                      // all. 4th tuple slot = the letter-spacing key.
                       [
-                        "Specialisation / Application",
+                        "Name",
+                        "nameSize",
+                        null != (r = Yr.nameSize) ? r : 16,
+                        "nameTrack",
+                      ],
+                      [
+                        "Specialisation",
                         "specialisation",
                         null != (p = Yr.specialisation) ? p : 11,
+                        "specTrack",
+                      ],
+                      [
+                        "Application line",
+                        "applicationSize",
+                        null != Yr.applicationSize ? Yr.applicationSize : 10.5,
+                        "applicationTrack",
                       ],
                       [
                         "Contact line",
                         "contactSize",
                         null != (y = Yr.contactSize) ? y : 10,
+                        "contactTrack",
+                      ],
+                      [
+                        "Slogan",
+                        "sloganSize",
+                        null != Yr.sloganSize ? Yr.sloganSize : 11,
+                        "sloganTrack",
                       ],
                       [
                         "Sidebar headings",
@@ -50347,7 +50516,7 @@
                             ? Yr.bulletContent
                             : 10.5,
                       ],
-                    ].map(([e, t, n]) =>
+                    ].map(([e, t, n, __tk]) =>
                       React.createElement(
                         "div",
                         {
@@ -50356,12 +50525,27 @@
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "space-between",
+                            // HDR-TYPE-CONTROLS-001: the row now carries two
+                            // control groups, so the label has to be allowed to
+                            // ellipsise (minWidth:0) rather than push them out.
+                            gap: 3,
                             marginBottom: 3,
                           },
                         },
                         React.createElement(
                           "span",
-                          { style: { color: "#555", flex: 1, fontSize: 9 } },
+                          {
+                            title: e,
+                            style: {
+                              color: "#555",
+                              flex: 1,
+                              minWidth: 0,
+                              fontSize: 9,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            },
+                          },
                           e,
                         ),
                         React.createElement(
@@ -50426,6 +50610,84 @@
                             "+",
                           ),
                         ),
+                        // HDR-TYPE-CONTROLS-001: letter spacing — + expands,
+                        // − compresses, 0.05pt a step. Only the five identity
+                        // rows carry it (they are the lines the owner types
+                        // to fit); the body/sidebar rows keep size only.
+                        __tk
+                          ? React.createElement(
+                              "div",
+                              {
+                                title:
+                                  "Letter spacing — + expands, − compresses, 0.05pt steps",
+                                style: {
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 2,
+                                  paddingLeft: 4,
+                                  marginLeft: 1,
+                                  borderLeft: `1px solid ${s}33`,
+                                },
+                              },
+                              React.createElement(
+                                "button",
+                                {
+                                  onClick: () => __antcvTrkStep(__tk, -0.05),
+                              style: {
+                                width: 16,
+                                height: 16,
+                                fontSize: 10,
+                                lineHeight: 1,
+                                border: `1px solid ${s}`,
+                                borderRadius: 3,
+                                background: "none",
+                                color: s,
+                                cursor: "pointer",
+                                padding: 0,
+                              },
+                                },
+                                "−",
+                              ),
+                              React.createElement(
+                                "span",
+                                {
+                                  style: {
+                                    fontSize: 9,
+                                    fontWeight: 600,
+                                    // inked only when the owner has moved it,
+                                    // so "untouched" reads at a glance
+                                    color: (Number(Yr[__tk]) || 0) ? s : "#aaa",
+                                    minWidth: 30,
+                                    textAlign: "center",
+                                  },
+                                },
+                                ((e) =>
+                                  (e > 0 ? "+" : e < 0 ? "−" : "±") +
+                                  Math.abs(e).toFixed(2))(
+                                  Number(Yr[__tk]) || 0,
+                                ),
+                              ),
+                              React.createElement(
+                                "button",
+                                {
+                                  onClick: () => __antcvTrkStep(__tk, 0.05),
+                              style: {
+                                width: 16,
+                                height: 16,
+                                fontSize: 10,
+                                lineHeight: 1,
+                                border: `1px solid ${s}`,
+                                borderRadius: 3,
+                                background: "none",
+                                color: s,
+                                cursor: "pointer",
+                                padding: 0,
+                              },
+                                },
+                                "+",
+                              ),
+                            )
+                          : null,
                       ),
                     ),
                     React.createElement(
@@ -50440,7 +50702,15 @@
                       [
                         [
                           "All Candidate Header ↕",
-                          ["nameSize", "specialisation", "contactSize"],
+                          // HDR-TYPE-CONTROLS-001: the bulk size row covers the
+                          // two new identity lines as well.
+                          [
+                            "nameSize",
+                            "specialisation",
+                            "applicationSize",
+                            "contactSize",
+                            "sloganSize",
+                          ],
                         ],
                         [
                           "All Main ↕",
@@ -50537,6 +50807,110 @@
                               },
                               "+",
                             ),
+                          ),
+                        ),
+                      ),
+                      // HDR-TYPE-CONTROLS-001: bulk letter spacing. The five
+                      // identity lines are usually tuned together (the owner is
+                      // fitting a header, not one word), so give them one pair
+                      // of buttons alongside the per-row controls.
+                      React.createElement(
+                        "div",
+                        {
+                          key: "__trk_all",
+                          title:
+                            "Letter spacing for all five identity lines — + expands, − compresses, 0.05pt steps",
+                          style: {
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            marginBottom: 2,
+                          },
+                        },
+                        React.createElement(
+                          "span",
+                          {
+                            style: {
+                              color: s,
+                              fontSize: 9,
+                              fontWeight: 600,
+                              flex: 1,
+                            },
+                          },
+                          "All Identity Lines ↔",
+                        ),
+                        React.createElement(
+                          "div",
+                          {
+                            style: {
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 3,
+                            },
+                          },
+                          React.createElement(
+                            "button",
+                            {
+                              onClick: () =>
+                                [
+                                  "nameTrack",
+                                  "specTrack",
+                                  "applicationTrack",
+                                  "contactTrack",
+                                  "sloganTrack",
+                                ].forEach((e) => __antcvTrkStep(e, -0.05)),
+                                  style: {
+                                    width: 16,
+                                    height: 16,
+                                    fontSize: 10,
+                                    lineHeight: 1,
+                                    border: `1px solid ${s}`,
+                                    borderRadius: 3,
+                                    background: "none",
+                                    color: s,
+                                    cursor: "pointer",
+                                    padding: 0,
+                                  },
+                            },
+                            "−",
+                          ),
+                          React.createElement(
+                            "span",
+                            {
+                              style: {
+                                fontSize: 9,
+                                color: "#888",
+                                minWidth: 22,
+                                textAlign: "center",
+                              },
+                            },
+                            "all",
+                          ),
+                          React.createElement(
+                            "button",
+                            {
+                              onClick: () =>
+                                [
+                                  "nameTrack",
+                                  "specTrack",
+                                  "applicationTrack",
+                                  "contactTrack",
+                                  "sloganTrack",
+                                ].forEach((e) => __antcvTrkStep(e, 0.05)),
+                                  style: {
+                                    width: 16,
+                                    height: 16,
+                                    fontSize: 10,
+                                    lineHeight: 1,
+                                    border: `1px solid ${s}`,
+                                    borderRadius: 3,
+                                    background: "none",
+                                    color: s,
+                                    cursor: "pointer",
+                                    padding: 0,
+                                  },
+                            },
+                            "+",
                           ),
                         ),
                       ),

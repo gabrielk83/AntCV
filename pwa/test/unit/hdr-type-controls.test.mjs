@@ -19,6 +19,7 @@ import { readFile } from 'node:fs/promises';
 
 const here = (p) => new URL(p, import.meta.url);
 const app = await readFile(here('../../app.js'), 'utf8');
+const src = await readFile(here('../../app.src.js'), 'utf8');
 const cph = await readFile(here('../../antcv-copenhagen-v2-001.js'), 'utf8');
 const docxClient = await readFile(here('../../antcv-docx-client.js'), 'utf8');
 const gate = await readFile(here('../../antcv-pdf-preview-gate.js'), 'utf8');
@@ -138,6 +139,52 @@ test('the DOCX payload whitelist carries every new key', () => {
 
 test('the fallback export path reads the canonical fontSizes key', () => {
   assert.ok(gate.includes("pi.fontSizes || j('fontSizes', null)"), 'falls back to localStorage fontSizes');
+});
+
+// ---------------------------------------------------------------- mirror lock
+
+// pwa/app.src.js is the de-minified maintained mirror. Its short names come
+// from an OLDER minifier pass, so mirroring is by MEANING, not byte-for-byte
+// (the fontSizes state is `Yr` there and `ca` in app.js). What must hold is
+// COVERAGE: every key and helper this feature introduced exists in both files,
+// the same number of times. Counting catches the failure the prose can't — a
+// site mirrored in one bundle but forgotten in the other.
+test('mirror lock: app.src.js carries every key and helper, at the same count', () => {
+  for (const k of [...SIZE_KEYS.filter((x) => x !== 'specialisation' && x !== 'nameSize' && x !== 'contactSize'), ...TRACK_KEYS]) {
+    assert.equal(src.split(k).length - 1, app.split(k).length - 1, k + ': count must match app.js');
+  }
+  for (const h of ['__antcvTrkStep', '__antcvTrkCss', '__antcvTrackPx', '__antcvFontPt', '__antcvTrkPtOf', '__tkX']) {
+    assert.equal(src.split(h).length - 1, app.split(h).length - 1, h + ': count must match app.js');
+  }
+});
+
+test('mirror lock: app.src.js splits the rows and drives the same steppers', () => {
+  assert.ok(!/\["?"?Specialisation \/ Application"/.test(src.replace(/\s+/g, ' ')), 'the fused row is gone from the source too');
+  for (const label of ['"Specialisation"', '"Application line"', '"Slogan"', '"All Identity Lines ↔"']) {
+    assert.ok(src.includes(label), 'app.src.js carries the ' + label + ' row');
+  }
+  assert.ok(/__antcvTrkStep\(__tk, -0\.05\)/.test(src), 'source compression button steps -0.05');
+  assert.ok(/__antcvTrkStep\(__tk, 0\.05\)/.test(src), 'source expansion button steps +0.05');
+  assert.ok(/Math\.round\(20 \* \(\(Number\(n\[e\]\) \|\| 0\) \+ t\)\) \/ 20/.test(src), 'source stepper rounds to 0.05');
+});
+
+test('mirror lock: app.src.js unpins the CL slogan and application line too', () => {
+  assert.ok(!src.includes('letterSpacing: "0.08em"'), 'source slogan unpinned');
+  assert.ok(!src.includes('letterSpacing: "0.02em"'), 'source app line unpinned');
+  assert.ok(src.includes('(Number(Yr.sloganSize) || 11)'), 'source slogan reads the panel');
+  assert.ok(src.includes('(Number(Yr.applicationSize) || 10.5)'), 'source app line reads the panel');
+});
+
+// The rationale comments only survive in app.src.js — minification strips them,
+// so this file is the sole home of ~376 ticket-marked design decisions. Nothing
+// may regenerate it from app.js: that would delete all of them.
+test('mirror lock: app.src.js remains the rationale home (never regenerate it)', () => {
+  const marks = (s) => new Set([...s.matchAll(/\b[A-Z][A-Z0-9]*(?:-[A-Z0-9]+){1,5}-\d{3}[a-z]?\b/g)].map((m) => m[0]));
+  const inSrc = marks(src), inApp = marks(app);
+  const missing = [...inApp].filter((m) => !inSrc.has(m));
+  assert.deepEqual(missing, [], 'every ticket marker in app.js must also appear in app.src.js');
+  assert.ok(inSrc.size > 300, 'app.src.js should carry the full rationale set, got ' + inSrc.size);
+  assert.ok(inSrc.size > inApp.size, 'app.src.js documents strictly more than the minified bundle can');
 });
 
 // ---------------------------------------------------------------- cache bust

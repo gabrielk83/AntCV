@@ -116,11 +116,8 @@ was already close (15px preview vs 11pt export) and is now exactly 11pt on both.
 
 ## Debt / notes
 
-- **`pwa/app.src.js` is NOT mirrored.** It is an older de-minification generation
-  and no longer shares identifiers with the shipped bundle (fontSizes is `Yr`
-  there, `ca` in `app.js`), so a mechanical mirror is impossible and a partial one
-  would be misleading. A divergence note naming this change was added to its
-  header instead. `pwa/app.js` is authoritative — grep it directly.
+- **`pwa/app.src.js` IS mirrored** — 31 sites. This corrects an earlier call in
+  this session not to mirror it; see "The app.src.js question" below.
 - **Deployed.** PWA push run 30450455893 (auto, from `main`), then docx-worker
   `workflow_dispatch` run 30450517787 — one deployer at a time, PWA first. Live:
   `antcv.pages.dev` serves `app.js?v=1.51.3862-hdr-type-ctrl` with `__antcvTrkStep`
@@ -128,3 +125,46 @@ was already close (15px preview vs 11pt export) and is now exactly 11pt on both.
   reports `1.14.173-hdr-type-ctrl`.
 - `workers/docx-worker/CHANGELOG.md` still has the documented 1.14.161–172 gap
   (pre-existing debt, not backfilled here); the 1.14.173 entry sits on top of it.
+
+## The app.src.js question — regenerate, or hand-mirror?
+
+Owner follow-up: "restructure app.src.js so it covers for app.js again."
+
+I first judged `app.src.js` too stale to mirror mechanically and skipped it. That
+call was wrong, and the fix is not the one it looks like.
+
+**A marker census settles the staleness question.** Every one of the 68
+ticket markers in `app.js` is already present in `app.src.js` — sessions have
+been mirroring faithfully all along. The file was covered; only THIS change was
+missing from it.
+
+**Regeneration was built, tested, and rejected.** `app.js -> prettier ->
+app.src.js` is the safe direction (it cannot touch the shipped bundle), and it
+worked: gated on a normalised-AST comparison, the reformatted output was
+*provably the same program* — identical sha256 over the canonical tree, once two
+formatter-legal normalisations were applied (a stray no-op `;`, which prettier
+drops; and redundant parens around an associative logical chain, `X || (Y || Z)`
+reprinting as `X || Y || Z` — same operands, same order, same short-circuit
+points). Two things killed it anyway:
+
+1. **It deletes the engineering record.** `app.src.js` carries **444** ticket
+   markers against `app.js`'s 68 — **376 exist nowhere else**. Minification
+   strips comments, so a rationale written into `app.src.js` (e.g. the 20-line
+   UPLOAD-SCREEN-TOP-CLIP-001 note explaining that the clip was
+   `justifyContent:"center"` and not a scroll artifact) is *unrecoverable* from
+   `app.js`. Regenerating would have destroyed all of it.
+2. **74 assertions across 43 test files** anchor on those comments as markers.
+   They failed immediately — correctly.
+
+So `app.src.js` is not a build input at all. It is a **de-minified mirror that
+doubles as the design-decision record**, hand-maintained by meaning rather than
+by bytes (its short names come from an older minifier pass — fontSizes is `Yr`
+there, `ca` in `app.js`). Mirroring it is manual work, and that is the cost of
+having the rationale survive.
+
+**What shipped instead:** the 31 HDR-TYPE-CONTROLS-001 sites hand-mirrored with
+the local identifiers, richer rationale comments than `app.js` carries, the stale
+"DIVERGENCE NOTE" replaced with an identifier note explaining the mirroring
+convention, and four new mirror-lock tests that pin key-count parity between the
+two files and assert the marker set may never shrink — so the next session gets a
+red test instead of a judgement call.

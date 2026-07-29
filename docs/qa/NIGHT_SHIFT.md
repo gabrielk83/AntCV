@@ -30,7 +30,6 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 
 <!-- SHIFT:BEGIN — one JSON object per line; managed by scripts/shift.mjs, safe to hand-edit a line if a session died without releasing -->
 {"id":"sh_ms64lq68_84ui","started":"2026-07-29T13:47:01.917Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.3983-1.51.4002","task":"CL opening empty (schema names opening_content, schema exposes meta.opening) + brand band picks a too-light accent as primary","beat":"2026-07-29T13:47:03.365Z"}
-{"id":"sh_ms65f57i_ka3i","started":"2026-07-29T13:56:57.249Z","host":"GabyPC2","worktree":null,"branch":"claude/inspiring-darwin-bc4f0e","range":"1.51.4003-1.51.4022","task":"JD-list edit position/company","beat":"2026-07-29T13:56:57.506Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

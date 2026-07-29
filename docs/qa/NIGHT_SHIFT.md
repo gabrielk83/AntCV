@@ -29,7 +29,7 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 ## ACTIVE CLAIMS
 
 <!-- SHIFT:BEGIN — one JSON object per line; managed by scripts/shift.mjs, safe to hand-edit a line if a session died without releasing -->
-{"id":"sh_ms0icv5u_gwn9","started":"2026-07-29T12:03:24.053Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.3882-1.51.3901","task":"CL load-from-history: slogan/spec/appline-rule/brand-stick + contribute+who structure","beat":"2026-07-29T12:03:24.803Z"}
+{"id":"sh_ms0icv5u_gwn9","started":"2026-07-29T12:08:28.400Z","host":"GabyPC2","worktree":null,"branch":"main","range":"1.51.3902-1.51.3921","task":"JD-list Open dead-ends when the row has no stored JD (walled URL fetch) — recover + surface","beat":"2026-07-29T12:08:28.612Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

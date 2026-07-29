@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   getDoc, putDoc, fetchJdUrl, createApplication, setActive, classifyReason,
-  fetchClusterTop20, askAI, fitPercent, fetchBrandColors, research, claimTabAppId, TRACKED_STATUSES, type TrackerDoc, type Row,
+  fetchClusterTop20, askAI, fitPercent, fetchBrandColors, research, claimTabAppId, TRACKED_STATUSES, asText, type TrackerDoc, type Row,
 } from './api';
 import { computeTier, orderTop5 } from './rank';
 import { top5ClickAction } from './top5controls';
@@ -112,10 +112,12 @@ async function extractFileText(file: File, setStatus: (s: string) => void): Prom
 // fit % / card / Ask-AI, and (server-side, same shape) the nightly gen-runner.
 function signalsBlockOf(d: TrackerDoc | null, uk: string): string {
   const parts: string[] = [];
-  const manual = ((d?.signals || {})[uk] || '').trim();
+  // JT-DOC-NONSTRING-001: normalizeDoc() coerces these at the edge; the reads
+  // stay type-safe here too so a runtime-constructed doc can never throw.
+  const manual = asText((d?.signals || {})[uk]).trim();
   if (manual) parts.push(manual);
   for (const f of (d?.sigfiles || {})[uk] || []) {
-    if (f && f.text) parts.push('--- attached signal material: ' + (f.name || 'file') + ' ---\n' + f.text);
+    if (f && f.text) parts.push('--- attached signal material: ' + (asText(f.name) || 'file') + ' ---\n' + asText(f.text));
   }
   return parts.join('\n');
 }
@@ -152,8 +154,10 @@ function mergeDocs(server: TrackerDoc, local: TrackerDoc): TrackerDoc {
 // nightly runner know them. Input isolation holds: this block lives in
 // supporting_context only, NEVER merged into the JD block.
 function mergeResearchBlock(roleIntel: string, webBrief: string): string {
-  const intel = (roleIntel || '').trim();
-  let web = (webBrief || '').trim();
+  // JT-DOC-NONSTRING-001: this was the throw site — a routine-written object in
+  // doc.support killed Open. Coerce, never assume.
+  const intel = asText(roleIntel).trim();
+  let web = asText(webBrief).trim();
   if (!intel && !web) return '';
   if (intel && web) {
     const norm = (s: string) => s.toLowerCase().replace(/[^a-zà-ú0-9]+/gi, ' ').replace(/\s+/g, ' ').trim();
@@ -339,6 +343,48 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     } catch (e) { setErr(String((e as Error).message || e)); }
     finally { setSigBusy(null); if (sigRef.current) sigRef.current.value = ''; }
   }
+  // JT-OPEN-NOJD-001 (owner 2026-07-29 "press Open, approve the popup, nothing
+  // happens"): a row whose posting URL is bot-walled (403) or points at a careers
+  // LISTING page — Terma, Hilti, 3Shape, Microsoft, … 13 rows on the live doc —
+  // never gets JD text, so Open bailed on `No JD text for this role`, a banner at
+  // the top of a wide panel that reads as "nothing happened". Ask for the JD in
+  // place instead: paste it (seeded from any signal material already attached) or
+  // attach a file, and Open continues with it. The pasted JD persists onto the row.
+  const [jdAsk, setJdAsk] = useState<{ uk: string; label: string; why: string; text: string } | null>(null);
+  const [jdAskBusy, setJdAskBusy] = useState(false);
+  const jdAskResolve = useRef<((t: string | null) => void) | null>(null);
+  const jdFileRef = useRef<HTMLInputElement>(null);
+  function askForJd(uk: string, label: string, why: string, seed: string): Promise<string | null> {
+    return new Promise((resolve) => { jdAskResolve.current = resolve; setJdAsk({ uk, label, why, text: seed }); });
+  }
+  function closeJdAsk(text: string | null): void {
+    const r = jdAskResolve.current; jdAskResolve.current = null;
+    setJdAsk(null); setJdAskBusy(false);
+    if (r) r(text);
+  }
+  async function jdAskAttach(file: File): Promise<void> {
+    setJdAskBusy(true);
+    try {
+      const text = (await extractFileText(file, (s) => setJdAsk((a) => (a ? { ...a, why: s } : a)))).replace(/\r/g, '').trim();
+      if (text.length < 200) { setJdAsk((a) => (a ? { ...a, why: 'That file gave only ' + text.length + ' characters — need at least 200. Try a clearer scan, or paste the text.' } : a)); return; }
+      setJdAsk((a) => (a ? { ...a, text, why: 'Loaded ' + text.length + ' characters from ' + (file.name || 'the file') + '.' } : a));
+    } catch (e) {
+      setJdAsk((a) => (a ? { ...a, why: String((e as Error).message || e) } : a));
+    } finally { setJdAskBusy(false); if (jdFileRef.current) jdFileRef.current.value = ''; }
+  }
+
+  // Add / replace the JD text on a row from the JD column, without going through
+  // Open — the 13 URL-walled rows need this once and then Open just works.
+  async function captureJd(row: Row): Promise<void> {
+    const uk = row[11]; const label = row[2] || row[1];
+    const existing = (doc?.jd || {})[uk] || '';
+    const text = await askForJd(uk, label, '', existing || signalsBlockOf(doc, uk).slice(0, 20000));
+    if (!text) return;
+    setDocState((d) => (d ? { ...d, jd: { ...(d.jd || {}), [uk]: text } } : d));
+    setDirty(true);
+    setNote('Stored ' + text.length + ' characters of JD for "' + label + '" — press Save to keep it, or Open to generate from it.');
+  }
+
   function removeSignalFile(uk: string, i: number): void {
     setDocState((d) => {
       if (!d) return d;
@@ -681,12 +727,23 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     setBusyKey(uk); setErr(null); setNote(null);
     try {
       let d = doc; let jd = (d.jd || {})[uk] || '';
+      let why = '';
       if ((!jd || jd.length < 200) && d.urls?.[uk]) {
         setNote('Fetching JD…');
         const f = await fetchJdUrl(d.urls[uk]);
         if (f.ok && f.text && f.text.length > 200) { jd = f.text; d = { ...d, jd: { ...(d.jd || {}), [uk]: jd } }; }
+        else why = f.error || 'the fetch returned no usable job text (the link may be a careers LISTING page, not the posting itself)';
+      } else if (!jd || jd.length < 200) {
+        why = 'this row has no posting URL and no stored JD.';
       }
-      if (!jd || jd.length < 200) { setErr('No JD text for this role — add the DIRECT posting URL or a JD file first.'); return; }
+      // JT-OPEN-NOJD-001: recover in place instead of dead-ending on a banner.
+      if (!jd || jd.length < 200) {
+        console.warn('[jt-open] no JD for "' + label + '" (' + uk + ') — asking for a paste. Reason:', why);
+        setNote(null);
+        const pasted = await askForJd(uk, label, why, signalsBlockOf(d, uk).slice(0, 20000));
+        if (pasted === null) { console.warn('[jt-open] cancelled at the JD prompt — not opening', uk); setErr('Open cancelled — "' + label + '" still has no JD. ' + why); return; }
+        jd = pasted; d = { ...d, jd: { ...(d.jd || {}), [uk]: jd } };
+      }
       // WEB-COMPANY-INTEL-001: pull (and cache) net-sourced employer research so
       // generation gets holistic + specific company context, not only the JD.
       let webBrief = (d.webintel || {})[uk] || '';
@@ -770,7 +827,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
         return Object.keys(sc).length ? sc : undefined;
       })();
       const id = await createApplication({ jd_text: jd, jd_company: row[1], jd_role: row[2], category: categoryFor(row[2], row[1]), supporting_context: supporting, style_config: brandSc });
-      if (!id) { setErr('Could not create the application.'); return; }
+      if (!id) { console.error('[jt-open] the relay returned no application id for', uk); setErr('Could not create the application.'); return; }
       const next: TrackerDoc = { ...d, artifacts: { ...(d.artifacts || {}), [uk]: { application_id: id, generated_at: Date.now() } } };
       await setActive(id);
       // LOAD-EDITOR-UNSOLICITED-001 (complete fix): claim this app-id for THIS tab BEFORE the
@@ -779,10 +836,17 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
       // JD is staged under this app's own namespace. Kill: antcv:disable-tracker-open-adopt.
       claimTabAppId(id);
       try { localStorage.setItem('antcv:lastJdText', jd); } catch { /* */ }
-      if (!(await persist(next, true))) return;
+      // JT-OPEN-NOJD-001: the application is created and already the active one —
+      // OPEN IT even if the tracker-doc PUT loses a rev race (the nightly runner
+      // writes this same doc every few minutes, so 409/503 here is a live risk).
+      // Gating the reload on the save stranded the owner with a created app and a
+      // panel that looked inert. Worst case the row re-shows "✨ Open" and the
+      // employer+role dedup reuses this same application next time.
+      if (!(await persist(next, true))) console.warn('[jt-open] tracker-doc save failed — opening', id, 'anyway; the row may not show ↗ Open until the next save');
+      console.log('[jt-open] opening application', id, 'for', uk);
       onClose();
       setTimeout(() => { try { location.reload(); } catch { /* */ } }, 80);
-    } catch (e) { setErr('Could not open in AntCV: ' + String((e as Error).message || e)); }
+    } catch (e) { console.error('[jt-open] failed for', uk, e); setErr('Could not open in AntCV: ' + String((e as Error).message || e)); }
     finally { setBusyKey(null); }
   }
 
@@ -879,7 +943,10 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
                       <td style={{ ...cell, fontWeight: 600 }}>{r[1]}</td>
                       <td style={cell}>{r[2]}</td>
                       <td style={cell}>{r[3]}</td>
-                      <td style={{ ...cell, textAlign: 'center', fontSize: 14 }} title={hasJd ? 'JD stored' : 'No JD — add a direct posting URL / file'}>{hasJd ? '✅' : '—'}</td>
+                      <td style={{ ...cell, textAlign: 'center', fontSize: 14, padding: '5px 2px' }}>
+                        <button onClick={() => void captureJd(r)} title={hasJd ? 'JD stored — click to view or replace it' : 'No JD — click to paste or attach it (the posting URL is walled or is a listing page)'}
+                          style={{ background: 'transparent', border: hasJd ? 'none' : '1px dashed #b7c2d4', borderRadius: 4, cursor: 'pointer', fontSize: hasJd ? 14 : 10.5, color: '#556', padding: hasJd ? 0 : '1px 3px', lineHeight: 1.4 }}>{hasJd ? '✅' : '＋ JD'}</button>
+                      </td>
                       <td style={cell}><select value={r[8]} onChange={(e) => editRow(uk, 8, e.target.value)} style={{ fontSize: 12, width: '100%' }}>{TRACKED_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}{!TRACKED_STATUSES.includes(r[8]) && r[8] ? <option value={r[8]}>{r[8]}</option> : null}</select></td>
                       <td style={cell}><textarea value={r[9]} onChange={(e) => editRow(uk, 9, e.target.value)} onFocus={() => setExpandRow(uk)} rows={expandRow === uk ? 5 : 2} style={ta} /></td>
                       <td style={cell}><textarea value={r[10]} onChange={(e) => editRow(uk, 10, e.target.value)} onFocus={() => setExpandRow(uk)} rows={expandRow === uk ? 5 : 2} style={ta} /></td>
@@ -934,6 +1001,34 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
         <div style={{ padding: '6px 16px', fontSize: 11, color: '#667', borderTop: '1px solid #e3e8f0' }}>
           {filteredRows.length}{filteredRows.length !== rows.length ? ' of ' + rows.length : ''} roles shown · {jdCount} with JD · ★ = Top 5 · edits sync to your Excel.
         </div>
+
+        {/* JT-OPEN-NOJD-001: in-place JD capture — raised by Open when the row has
+            no JD and the URL fetch is walled, and by the JD column's "＋ JD". */}
+        {jdAsk && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,22,40,0.6)', zIndex: 100001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+            onClick={(e) => { if (e.target === e.currentTarget) closeJdAsk(null); }}>
+            <div style={{ background: '#fff', borderRadius: 10, width: 'min(760px, 100%)', maxHeight: '86vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 18px 50px rgba(0,0,0,0.4)' }}>
+              <div style={{ background: NAVY, color: '#fff', padding: '9px 14px', fontWeight: 700, fontSize: 14 }}>📋 Paste the job description — {jdAsk.label}</div>
+              <div style={{ padding: '9px 14px', fontSize: 12, color: '#553', background: '#fff8e6', borderBottom: '1px solid #f0e2b8' }}>
+                {jdAsk.why ? 'Could not fetch the JD automatically: ' + jdAsk.why + ' ' : ''}Open the posting in a browser tab, copy the visible job description, and paste it below (or attach the file). It is stored on this row, so you only do this once.
+              </div>
+              <div style={{ padding: 14, overflow: 'auto' }}>
+                <textarea value={jdAsk.text} onChange={(e) => setJdAsk((a) => (a ? { ...a, text: e.target.value } : a))} rows={14}
+                  placeholder="Paste the full job description here…" style={{ ...ta, fontSize: 12.5, minHeight: 240 }} />
+                <div style={{ fontSize: 11, color: '#667', marginTop: 4 }}>{jdAsk.text.trim().length} characters — 200 minimum.</div>
+              </div>
+              <div style={{ padding: '10px 14px', borderTop: '1px solid #e3e8f0', display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input ref={jdFileRef} type="file" accept=".txt,.md,.json,.text,.csv,.pdf,image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" style={{ display: 'none' }}
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) void jdAskAttach(f); }} />
+                <button onClick={() => jdFileRef.current?.click()} disabled={jdAskBusy} title="Attach the JD as a file — PDF, text or image/scan (OCR)"
+                  style={{ ...btn('#eef1f6', NAVY), border: '1px solid #c3ccdb' }}>{jdAskBusy ? '…' : '📎 Attach file'}</button>
+                <span style={{ flex: 1 }} />
+                <button onClick={() => closeJdAsk(null)} style={btn('#eef1f6', '#334')}>Cancel</button>
+                <button onClick={() => closeJdAsk(jdAsk.text.trim())} disabled={jdAsk.text.trim().length < 200} style={btn(jdAsk.text.trim().length < 200 ? '#9fb0c9' : '#2e7d32')}>Use this JD</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* JOBTRACKER-TOP5-CONTROLS-001: row context menu (right-click / long-press) */}
         {ctxMenu && (() => {

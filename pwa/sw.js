@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.4023-cl-opening-fallback';
+const CACHE = 'antcv-1.51.4024-cl-open-brandfix';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

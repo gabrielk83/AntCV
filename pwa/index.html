@@ -411,7 +411,7 @@
           app.src = 'app.js?v=1.51.4046-company-retry';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.4046-company-retry';
+            vo.src = 'antcv-version-override.js?v=1.51.4086-demand-seed-refresh';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -749,7 +749,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <!-- CLUSTER-QUAL-001: 20-most-demanded-skills model (read half); loaded before the
      normalizer + docx-client so its window.AntcvClusterDemand is available to the
      blended numeric+demand ordering. -->
-<script src="antcv-cluster-demand.js?v=1.51.3722-demand-seed-refresh" defer></script>
+<script src="antcv-cluster-demand.js?v=1.51.4086-demand-seed-refresh" defer></script>
 <!-- CLUSTER-QUAL-001 stage 2b (section 3.4): real D1-backed top-20 for the CURRENT
      application's category, preferred by __clusterRule over the static seed above. -->
 <script src="antcv-cluster-demand-live.js?v=1.51.167" defer></script>

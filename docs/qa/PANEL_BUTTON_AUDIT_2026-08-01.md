@@ -1,13 +1,13 @@
 # Panel/preview button audit — 2026-08-01 (NIGHTLY-PREVIEW-BUTTON-AUDIT-001, register row 23)
 
 Harness: pwa/test/diag-panel-button-audit.mjs (real browser boot, network blocked, dialogs dismissed).
-Bundle: ?-era app.js; buttons enumerated: 208.
+Bundle: ?-era app.js; buttons enumerated: 215.
 
 ## Verdict counts
 - skipped-dangerous: 14
-- ui-only: 16
-- active: 133
-- not-visible-or-disabled: 45
+- ui-only: 13
+- active: 136
+- not-visible-or-disabled: 52
 
 ## THROWS (page errors on click) — fix first
 
@@ -15,9 +15,9 @@ Bundle: ?-era app.js; buttons enumerated: 208.
 
 ## Preview-only suspects (keys written by controls, never read by the export builder)
 - antcv:coreCompGuard
-- antcv:mainOverflow
 - settingsTab
 - settingsSubTab
+- antcv:mainOverflow
 - antcv.sectionHeadlineAlignment.userTouched.v1
 - topbarOrder
 - antcv:docWriterTab

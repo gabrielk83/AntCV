@@ -17,7 +17,8 @@
  * Kill switch antcv:copenhagen-v2=0 restores convergence (1 write) on HEAD.
  *
  * PASS = the CV preview settles: <= 6 antcv:mainOverflow writes over 9s AND the
- * usable-page-height is stable (last - first <= 8px). Any monotone climb FAILs.
+ * usable-page-height is stable over the SETTLED tail (excl. the leading mount
+ * transient; see DIAG-CPH-STORM-DRIFT-FLAKE-001). Any monotone climb FAILs.
  * This asserts BOTH the default-ON path and the kill-switch path converge.
  * Run: node pwa/test/diag-copenhagen-overflow-storm.mjs */
 import { chromium } from 'playwright';
@@ -71,7 +72,19 @@ async function run(killSwitch) {
   const w = await page.evaluate(() => window.__mo_writes || []);
   await page.close();
   const u = w.map(s => s.usablePx).filter(n => typeof n === 'number');
-  const drift = u.length ? (u[u.length - 1] - u[0]) : 0;
+  // Drift over the SETTLED tail — u[0] can capture a pre-layout / mount-remount
+  // transient whose absolute value swings by hundreds of px between runs on the
+  // SAME bytes (desktop first-write lands pre-layout, CI / a warm run lands
+  // settled). That environment/timing flake false-FAILed this diag on 2026-08-01
+  // desktop (writes bounded 1-3 = no storm, yet u[0]-transient drift 945px, while
+  // a second run on the same commit read 15px). A real storm is a MONOTONE CLIMB
+  // across MANY writes (35 writes / 435px+ still growing) — 364 emits one write
+  // per distinct usablePx, so a live climb is inseparable from a high write count.
+  // Dropping the single leading mount transient removes the flake; the write-count
+  // bound below is the decisive storm signal and a real climb still shows a large
+  // tail drift AND >8 writes, so detection is not weakened (DIAG-CPH-STORM-DRIFT-FLAKE-001).
+  const tail = u.slice(1);
+  const drift = tail.length ? (tail[tail.length - 1] - tail[0]) : 0;
   return { writes: w.length, drift, errs: errs.length };
 }
 

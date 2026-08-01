@@ -18870,7 +18870,7 @@ var HyperlinkStyle = class extends StyleForCharacter {
       name: "Hyperlink",
       basedOn: "DefaultParagraphFont",
       run: {
-        color: "0563C1",
+        color: "0B4F8A",
         underline: {
           type: UnderlineType.SINGLE
         }
@@ -23798,7 +23798,7 @@ function makePhotosCircular(documentXml, shape) {
   return { xml: next, count: count3 };
 }
 __name(makePhotosCircular, "makePhotosCircular");
-function aiNoticeVmlRun(side, __idx, noticeText, noticeFont, bodyLevel, underColor) {
+function aiNoticeVmlRun(side, __idx, noticeText, noticeFont, bodyLevel, underColor, cph) {
   __idx = Number.isFinite(__idx) ? __idx : 0;
   // FURNITURE-ZH-001: caller (postProcessDocx) forwards the localized notice +
   // font; Chinese needs a CJK eastAsia face or the glyphs box out in the VML.
@@ -23842,7 +23842,10 @@ function aiNoticeVmlRun(side, __idx, noticeText, noticeFont, bodyLevel, underCol
   // page bottom in the brand color. When the notice's corner sits over a
   // colored ground (underColor = the spine fill on the spine's side), pick the
   // higher-contrast ink; plain white ground keeps the subtle gray.
-  let __inkC = "9A9A9A";
+  // CPH-RENDER-FLAGS-001 flag 11: the notice is a disclosure, not a third
+  // accent - copenhagen sets it in the same grey #777777 the rules use. The
+  // contrast guard below still overrides it over a coloured spine.
+  let __inkC = cph ? "777777" : "9A9A9A";
   const __uc = (underColor || "").replace(/[^0-9A-Fa-f]/g, "").slice(0, 6);
   if (__uc.length === 6) {
     const lin = (i) => { let v = parseInt(__uc.slice(i, i + 2), 16) / 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
@@ -23856,7 +23859,7 @@ function aiNoticeVmlRun(side, __idx, noticeText, noticeFont, bodyLevel, underCol
     'mso-position-vertical-relative:page;z-index:251658240;mso-wrap-style:square" filled="f" stroked="f">' +
     '<v:textbox inset="14pt,1pt,14pt,11pt"><w:txbxContent>' +
     '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="220" w:lineRule="auto"/><w:jc w:val="' + horiz + '"/></w:pPr>' +
-    '<w:r><w:rPr><w:rFonts w:ascii="' + _font + '" w:hAnsi="' + _font + '" w:eastAsia="' + _font + '"/><w:i/><w:color w:val="' + __inkC + '"/><w:sz w:val="13"/></w:rPr>' +
+    '<w:r><w:rPr><w:rFonts w:ascii="' + _font + '" w:hAnsi="' + _font + '" w:eastAsia="' + _font + '"/><w:i/><w:color w:val="' + __inkC + '"/><w:sz w:val="' + (cph ? 15 : 13) + '"/></w:rPr>' +
     '<w:t xml:space="preserve">' + _txt + '</w:t></w:r>' +
     '</w:p></w:txbxContent></v:textbox></v:rect></w:pict></w:r>';
 }
@@ -23920,7 +23923,7 @@ function postProcessDocx(input, opts = {}) {
       // spine fill is its ground; readable ink is computed inside aiNoticeVmlRun.
       const __noticeUnder = (opts && opts.spineColor && opts.spineSide &&
         (aiWmMatch[1] === opts.spineSide)) ? opts.spineColor : "";
-      xml2 = xml2.replace(AIWM_RE, aiNoticeVmlRun(aiWmMatch[1], __aiWmIdx++, opts && opts.aiNotice, opts && opts.aiFont, aiWmMatch[2] === "B", __noticeUnder));
+      xml2 = xml2.replace(AIWM_RE, aiNoticeVmlRun(aiWmMatch[1], __aiWmIdx++, opts && opts.aiNotice, opts && opts.aiFont, aiWmMatch[2] === "B", __noticeUnder, !!(opts && opts.cph)));
       aiNoticeInjected = true;
       if (__aiWmIdx > 8) break;
     }
@@ -24049,7 +24052,7 @@ function postProcessDocx(input, opts = {}) {
           '<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w10="urn:schemas-microsoft-com:office:word">' +
           '<w:p><w:pPr>' +
           '<w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/>' +
-          '<w:rPr><w:sz w:val="2"/><w:szCs w:val="2"/></w:rPr></w:pPr>' + spineRun1 + watermarkRun + headerBoxRun + (opts && opts.docType === "cl" ? aiNoticeVmlRun("right", 90, opts && opts.aiNotice, opts && opts.aiFont, true, "") : "") + '</w:p></w:hdr>';
+          '<w:rPr><w:sz w:val="2"/><w:szCs w:val="2"/></w:rPr></w:pPr>' + spineRun1 + watermarkRun + headerBoxRun + (opts && opts.docType === "cl" ? aiNoticeVmlRun("right", 90, opts && opts.aiNotice, opts && opts.aiFont, true, "", !!(opts && opts.cph)) : "") + '</w:p></w:hdr>';
         files["word/headerCph.xml"] = strToU8(header2Xml);
         let rels2 = files[relsName] ? strFromU8(files[relsName]) : '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
         let maxRid2 = 0;
@@ -24366,6 +24369,19 @@ var FONT_DEFAULTS = {
   mainTblCell: 10
 };
 var pt2hp = /* @__PURE__ */ __name((pt) => Math.round(Number(pt) * 2), "pt2hp");
+// HDR-TYPE-CONTROLS-001 (owner 2026-07-29): the Font sizes (pt) panel also owns
+// LETTER SPACING for the five identity lines (name, specialisation, application,
+// contact, slogan) in 0.05pt steps. 0.05pt = exactly 1 twentieth of a point = the
+// DOCX w:spacing unit, so a panel step maps onto Word character spacing losslessly.
+// The value is a DELTA on the line's existing tracking: 0 leaves the doc unchanged.
+var __trkTw = /* @__PURE__ */ __name((raw, k) => {
+  const v = raw && raw[k];
+  return typeof v === "number" && isFinite(v) ? Math.round(Math.max(-2, Math.min(4, v)) * 20) : 0;
+}, "__trkTw");
+var __fsPt = /* @__PURE__ */ __name((raw, k, d) => {
+  const v = raw && raw[k];
+  return typeof v === "number" && isFinite(v) && v > 0 ? v : d;
+}, "__fsPt");
 var hex = /* @__PURE__ */ __name((s) => (s || "").toString().replace(/^#/, "").toUpperCase(), "hex");
 function alignType(a) {
   switch ((a || "").toLowerCase()) {
@@ -24549,7 +24565,7 @@ function inlineRuns(text, baseRun) {
     if (before) out.push(...styledRuns(before, baseRun));
     out.push(new ExternalHyperlink({
       link: m[2],
-      children: [new TextRun({ ...baseRun, text: m[1], underline: {}, color: "0563C1" })]
+      children: [new TextRun({ ...baseRun, text: m[1], underline: {}, color: "0B4F8A" })]
     }));
     cursor = m.index + m[0].length;
   }
@@ -24728,7 +24744,7 @@ async function generateDocx(payload) {
   let postProcessError = null;
   let markersRemaining = 0;
   try {
-    const result = postProcessDocx(raw, { watermark: payload.watermark || "", photoShape: resolvePhotoShape(payload), headerBg: (style && style.headerBg) || "", aiNotice: style && style._aiNotice, aiFont: style && style._aiFont, docType: payload.doc,
+    const result = postProcessDocx(raw, { watermark: payload.watermark || "", photoShape: resolvePhotoShape(payload), headerBg: (style && style.headerBg) || "", aiNotice: style && style._aiNotice, aiFont: style && style._aiFont, cph: !!(style && style._cph), docType: payload.doc,
       // COPENHAGEN-STAGE4: rounded navy header box + cyan 1.5pt border as a
       // page-anchored VML roundrect in a FIRST-PAGE header part (titlePg) —
       // the band cells above dropped their shading for it. Page 1 only; the
@@ -25576,9 +25592,15 @@ function buildLinearDocument(ctx) {
   let __alText = "";
   {
     const __m2 = ctx.meta || {};
+    // APPLINE-EDIT-001 (owner 2026-07-29): the client forwards meta.app_line when the owner
+    // has edited the application line inline in the preview. An explicit override wins over
+    // the composed "Application for <role> at <company>" sentence below, so the DOCX prints
+    // what the preview shows. Absent field -> unchanged composition.
+    const __alOv = String(__m2.app_line || "").trim();
+    if (__alOv && !__alOv.startsWith("[")) __alText = __alOv;
     const __role = String(__m2.role || "").trim();
     const __company = String(__m2.company || "").trim();
-    if (__role || __company) {
+    if (!__alText && (__role || __company)) {
       const __unsol = /^(unsolicited|open application|uopfordret|åben ansøgning|speculative|主动申请)$/i;
       if (!(__company && __unsol.test(__company))) {
         const __lang = String(ctx.lang || "en").toLowerCase().slice(0, 2) || "en";
@@ -25630,9 +25652,9 @@ function buildLinearDocument(ctx) {
           // source the preview's var(--brand-slogan-color) reads) when present, else keep
           // the package head colour (teal on Copenhagen). Contrast-guarded on white.
           color: __m.slogan_color ? sloganColorOnWhite(__m.slogan_color, style.mainHeadColor) : style.mainHeadColor,
-          size: pt2hp(11),
+          size: pt2hp(__fsPt(ctx.fsRaw, "sloganSize", 11)),
           font: style.mainBodyFont,
-          characterSpacing: 20
+          characterSpacing: 20 + __trkTw(ctx.fsRaw, "sloganTrack")
         })]
       }));
     }
@@ -25678,9 +25700,9 @@ function buildLinearDocument(ctx) {
           text: __al,
           bold: false,
           color: __alColor,
-          size: pt2hp(10.5),
+          size: pt2hp(__fsPt(ctx.fsRaw, "applicationSize", 10.5)),
           font: style.mainBodyFont,
-          characterSpacing: 4
+          characterSpacing: 4 + __trkTw(ctx.fsRaw, "applicationTrack")
         })]
       }));
     }
@@ -25736,7 +25758,7 @@ function buildLinearDocument(ctx) {
       // below = after — equalized at ~160tw (see the standalone rule).
       spacing: { before: 40, after: 160, line: 40, lineRule: "exact" },
       keepNext: true,
-      border: { bottom: { color: style.mainHeadColor, space: 4, style: BorderStyle.SINGLE, size: 8 } },
+      border: { bottom: { color: style.mainHeadColor, space: 4, style: BorderStyle.SINGLE, size: style._cph ? 12 : 8 } },
       children: [new TextRun({ text: "" })]
     }));
     bodyChildren.push(...renderSection(closureSec, ctx, false));
@@ -26109,7 +26131,7 @@ function __cphNameFit(ctx, contactPt, bridgePhotoOn) {
   const { pi, fsRaw } = ctx;
   const TRACK_EM = 0.14;
   if (fsRaw && typeof fsRaw.nameSize === "number" && fsRaw.nameSize > 0) {
-    return { pt: fsRaw.nameSize, track: Math.round(TRACK_EM * fsRaw.nameSize * 20) };
+    return { pt: fsRaw.nameSize, track: Math.round(TRACK_EM * fsRaw.nameSize * 20) + __trkTw(fsRaw, "nameTrack") };
   }
   const name = String(pi.name || "");
   const bits = [];
@@ -26121,7 +26143,7 @@ function __cphNameFit(ctx, contactPt, bridgePhotoOn) {
   if (pi.website) bits.push("\u{1F517} " + pi.website);
   if (Array.isArray(pi.contact_extra)) for (const it of pi.contact_extra) if (it && it.value) bits.push("• " + it.value);
   const contact = bits.join(" ");
-  if (!name || name.length < 4 || contact.length < 12) return { pt: 17.5, track: 49 };
+  if (!name || name.length < 4 || contact.length < 12) return { pt: 17.5, track: 49 + __trkTw(fsRaw, "nameTrack") };
   // contact width: est * pt, minus the -0.1pt/char tracking, all condensed w:w=73.
   // 0.885 = ground-truth calibration against the real CloudConvert render
   // (2026-07-24, app 2729: uncalibrated fit gave 19.5pt / width ratio 1.13;
@@ -26135,7 +26157,7 @@ function __cphNameFit(ctx, contactPt, bridgePhotoOn) {
   const units = __estWidthPt1(name) + TRACK_EM * Math.max(1, name.length - 1);
   let pt = target / units;
   pt = Math.max(15, Math.min(30, Math.round(pt * 2) / 2));
-  return { pt, track: Math.round(TRACK_EM * pt * 20) };
+  return { pt, track: Math.round(TRACK_EM * pt * 20) + __trkTw(fsRaw, "nameTrack") };
 }
 __name(__cphNameFit, "__cphNameFit");
 function buildHeaderCell(ctx, bridgePhoto) {
@@ -26197,7 +26219,7 @@ function buildHeaderCell(ctx, bridgePhoto) {
           color: style.headerNameColor,
           size: pt2hp(style._cph ? __cphFit.pt : fs.nameSize),
           font: style.headerFont,
-          ...(style._cph ? { characterSpacing: __cphFit.track } : {})
+          ...(style._cph ? { characterSpacing: __cphFit.track } : __trkTw(__fsRaw, "nameTrack") ? { characterSpacing: __trkTw(__fsRaw, "nameTrack") } : {})
         })
       ]
     }));
@@ -26241,7 +26263,7 @@ function buildHeaderCell(ctx, bridgePhoto) {
           color: style.headerSpecColor,
           size: pt2hp(style._cph ? __cphSpecPtFit : fs.specialisation),
           font: style.headerFont,
-          ...(style._cph ? { bold: true, characterSpacing: 11 } : {})
+          ...(style._cph ? { bold: true, characterSpacing: 11 + __trkTw(__fsRaw, "specTrack") } : __trkTw(__fsRaw, "specTrack") ? { characterSpacing: __trkTw(__fsRaw, "specTrack") } : {})
         })
       ]
     }));
@@ -26356,7 +26378,8 @@ function buildHeaderCell(ctx, bridgePhoto) {
         // COPENHAGEN-STAGE4: char-scale w:w=73 = the preview's scaleX(.73)
         // condense, plus the mockup's -.01em tracking — the whole contact
         // stays ONE line at ~name width without shrinking the glyph height.
-        const base = { color: style.headerContactColor, size: pt2hp(pt), font: style.headerFont, ...(style._cph ? { scale: 73, characterSpacing: -2 } : __bridgePhotoOn ? { characterSpacing: -10 } : {}) };
+        const __ctTrk = __trkTw(__fsRaw, "contactTrack");
+        const base = { color: style.headerContactColor, size: pt2hp(pt), font: style.headerFont, ...(style._cph ? { scale: 73, characterSpacing: -2 + __ctTrk } : __bridgePhotoOn ? { characterSpacing: -10 + __ctTrk } : __ctTrk ? { characterSpacing: __ctTrk } : {}) };
         const kids = [];
         if (__bridgePhotoOn) {
           // The 1.50" page-anchored medallion, first run of this paragraph —
@@ -27114,7 +27137,7 @@ function renderSection(s, ctx, isSidebar) {
         keepNext: true,
         alignment: isSidebar ? AlignmentType.CENTER : void 0,
         shading: isSidebar ? { type: ShadingType.CLEAR, fill: ctx.style.sidebarBg, color: "auto" } : void 0,
-        border: { bottom: { color: isSidebar ? ctx.style.sidebarHeadColor : ctx.style.mainHeadColor, space: isSidebar ? 2 : 4, style: BorderStyle.SINGLE, size: 8 } },
+        border: { bottom: { color: isSidebar ? ctx.style.sidebarHeadColor : ctx.style.mainHeadColor, space: isSidebar ? 2 : 4, style: BorderStyle.SINGLE, size: ctx.style._cph ? 12 : 8 } },
         children: [new TextRun({ text: "" })]
       });
       return [...pageBreakPara, __rule, ...body];
@@ -27272,7 +27295,11 @@ function headingParagraph(title2, ctx, isSidebar, noRule, sec) {
       return isSidebar ? AlignmentType.CENTER : void 0;
     })(),
     shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
-    border: noRule ? void 0 : { bottom: { color: isSidebar ? style.sidebarHeadColor : style.mainHeadColor, space: isSidebar ? 2 : 4, style: BorderStyle.SINGLE, size: 8 } },
+    // CPH-RENDER-FLAGS-001 flags 1 + 2 (export mirror of the preview): on
+    // copenhagen the section-head rule is 1.5pt (size = eighths of a point)
+    // and grey #777777 under a MAIN head, where it used to repeat the teal of
+    // the head itself. Sidebar heads keep sidebarHeadColor.
+    border: noRule ? void 0 : { bottom: { color: isSidebar ? style.sidebarHeadColor : (style._cph ? "777777" : style.mainHeadColor), space: isSidebar ? 2 : 4, style: BorderStyle.SINGLE, size: style._cph ? 12 : 8 } },
     children: [
       new BookmarkStart(bookmarkName, bookmarkNumericId),
       new TextRun({ text: title2, ...headingRunOpts }),
@@ -28051,9 +28078,12 @@ function renderExperience(s, ctx) {
             // LABEL is a main inline label, so it follows MAIN-HEADINGS-GREEN-001
             // → mainHeadColor (teal #00746E), not the black body ink. The outcome
             // text after it stays neutral body ink (content, like company/year).
+            // CPH-RENDER-FLAGS-001 flag 5: upright with a grey underline on
+            // copenhagen (the mockup reserves italics for the company line).
             text: style._resultsLabel || "Results: ",
             bold: true,
-            italics: true,
+            italics: !style._cph,
+            ...(style._cph ? { underline: { type: "single", color: "777777" } } : {}),
             color: style.mainHeadColor,
             size: pt2hp(fs.mainBody),
             font: style.mainBodyFont
@@ -29222,7 +29252,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.171-spec-photo";
+var VERSION = "1.14.174-appline-edit";
 var index_default = {
   async fetch(request, env2, ctx) {
     const url = new URL(request.url);

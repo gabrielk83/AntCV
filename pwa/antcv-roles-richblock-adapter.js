@@ -28,6 +28,25 @@
 (function () {
   'use strict';
   var VERSION = '1.51.x-roles-richblock-adapter';
+
+  // CPH-RENDER-FLAGS-001 flag 3 (spec COPENHAGEN_MODERN_NORDIC_PALETTE_SPEC.md,
+  // OPEN item 3: "Role row draws a teal 1px bottom rule; mockup: NO per-role
+  // rule"). Since ROLES-AS-RICHBLOCK-001 the role rows render HERE, not in the
+  // app.js experience branch - which is why the rule survived a fix applied
+  // there. Same package normalisation the app uses (empty / legacy
+  // "scandinavian" => copenhagen-modern), same fail-open. An explicit row.hr is
+  // still honoured on every other package.
+  function cphPkg() {
+    try {
+      var pkg = '';
+      try {
+        var p = JSON.parse(localStorage.getItem('stylePackage') || '""');
+        pkg = (typeof p === 'string' ? p : '').toLowerCase().trim();
+      } catch (_) {}
+      if (pkg === 'scandinavian' || pkg === '') pkg = 'copenhagen-modern';
+      return pkg === 'copenhagen-modern';
+    } catch (_) { return true; }
+  }
   var FLAG = 'antcv:roles-richblock';
 
   // CUTOVER (owner 2026-07-14 "E is approved — do it"): rich_block is the DEFAULT render +
@@ -330,7 +349,7 @@
     // Keeping the structure stable (always flex) lets antcv-item-align toggle it live
     // via data-antcv-role-line WITHOUT waiting for a React re-render.
     var JC = { left: 'flex-start', center: 'center', right: 'flex-end', justify: 'space-between' }[align] || 'space-between';
-    var hrNode = row.hr !== false ? h('div', { style: { borderBottom: '1px solid ' + subColor, margin: '2px 0 2px' } }) : null;
+    var hrNode = (row.hr !== false && !cphPkg()) ? h('div', { style: { borderBottom: '1px solid ' + subColor, margin: '2px 0 2px' } }) : null;
     return h('div', {
       'data-antcv-row-path': 'items.' + i, 'data-antcv-role-head': '1',
       // stamp the role-head key so item-align / section-align can move it via the
@@ -378,7 +397,7 @@
         placeholder: '[part ' + (n + 1) + ']'
       })));
     }
-    var hrNode = row.hr ? h('div', { style: { borderBottom: '1px solid ' + C, margin: '2px 0 2px' } }) : null;
+    var hrNode = (row.hr && !cphPkg()) ? h('div', { style: { borderBottom: '1px solid ' + C, margin: '2px 0 2px' } }) : null;
     // Increment B — JUSTIFY = role-line layout: first n-1 segments grouped left,
     // last segment right, space-between. Mirrors the chimera role line; the RTL
     // inversion (he/ar) comes free from the document `dir`, exactly as the chimera

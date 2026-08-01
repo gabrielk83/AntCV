@@ -75,6 +75,14 @@
   }
 
   function renderRule(el) {
+    // APPLINE-RULE-NATIVE-001 (owner 2026-07-29 "the horizontal line under the
+    // application is bleeping"): the rule is now rendered by REACT itself
+    // (app.src.js/app.js __cl_appline -> window.__antcvAppLineRuleStyle), reading the
+    // SAME headerItemRule.application store. Writing it here as well made the two
+    // fight: React dropped the inline border on every sections-updated re-render and
+    // this sidecar painted it back 150ms later — a visible blink. Leave the border to
+    // React whenever the native node is present; this sidecar keeps only the CONTROL.
+    if (el.hasAttribute('data-antcv-app-line-native')) return;
     var s = read();
     // MOCKUP LOCK default: rule ON at 1.5pt when the store is absent (an explicit
     // user off — s.on === false — is respected).
@@ -128,10 +136,17 @@
   }
 
   // slogan element finder (same logic as the colour controls)
+  // SLOGAN-RULE-MISTARGET-001 (owner 2026-07-29 "the horizontal line under the opening /
+  // before why this position is visible instead of hidden by default"): the old finder
+  // ended in "the first contenteditable inside the CL flow". Whenever the slogan does NOT
+  // render — which SLOGAN-PLACEMENT-PERAPP-001 shows was the normal state after an
+  // Application-History load — that first contenteditable is the OPENING paragraph, so the
+  // slogan rule was drawn under the opening. Only ever match an EXPLICIT slogan node.
   function sloganEl() {
     var paper = document.querySelector('.antcv-preview-paper'); if (!paper) return null;
-    return paper.querySelector('[data-antcv-cl-slogan-element]') || paper.querySelector('[title*="positioning line" i]') ||
-      (function () { var f = paper.querySelector('[data-antcv-cl-flow]'); return f ? f.querySelector('[contenteditable]:not([data-antcv-app-line])') : null; })();
+    return paper.querySelector('[data-antcv-cl-slogan-element]') ||
+      paper.querySelector('[data-antcv-cl-slogan-native]') ||
+      paper.querySelector('[title*="positioning line" i]');
   }
   function renderSloganRule() {
     var el = sloganEl(); if (!el) return;

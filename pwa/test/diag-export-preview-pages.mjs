@@ -55,12 +55,19 @@ const r = await page.evaluate(async ()=>{
   const d = ifr && ifr.contentDocument;
   const css = d ? Array.from(d.querySelectorAll('style')).map(s=>s.textContent||'').join('\n') : '';
   const pager = document.getElementById('antcv-pdf-preview-modal-pager');
-  const chips = pager ? Array.from(pager.querySelectorAll('button')).map(b=>b.textContent) : [];
+  // NUMERIC-CHIPS-ONLY (2026-07-26): the pager also holds the non-numeric
+  // "Legacy ATS view" toggle, added after this diag was written. Counting every
+  // button made the chip assertion fail AND - because the scroll block was gated
+  // on `chips.length === 2` - silently skipped the scroll test, so one stale
+  // selector reported as two failures. Count and click the PAGE chips only.
+  const allBtns = pager ? Array.from(pager.querySelectorAll('button')) : [];
+  const pageBtns = allBtns.filter(b => /^\s*\d+\s*$/.test(b.textContent || ''));
+  const chips = pageBtns.map(b => b.textContent);
   // chip 2 scrolls the iframe to page-row 2
   let scrolled = false;
   if (pager && chips.length === 2 && d) {
     const before = d.documentElement.scrollTop;
-    pager.querySelectorAll('button')[1].click();
+    pageBtns[1].click();
     await new Promise(r2=>setTimeout(r2,900));
     const rows = d.querySelectorAll('.antcv-page-row');
     const r2top = rows.length > 1 ? rows[1].getBoundingClientRect().top : 9999;

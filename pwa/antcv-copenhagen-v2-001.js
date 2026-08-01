@@ -33,7 +33,7 @@
 (function () {
   'use strict';
   if (window.__antcvCopenhagenV2) return;
-  window.__antcvCopenhagenV2 = '1.51.3702-photo-center';
+  window.__antcvCopenhagenV2 = '1.51.3822-cph-flags';
 
   var FLAG = 'antcv:copenhagen-v2';
   var STYLE_ID = 'antcv-copenhagen-v2-style';
@@ -107,6 +107,13 @@
   function buildCSS() {
     var side = sidebarSide();
     var BAND = '.antcv-preview-paper [data-antcv-candidate-band="1"]';
+    // CPH-RENDER-FLAGS-001 flag 8 (spec MOCKUP-DIVERGENCE, OPEN item 8): the
+    // sidebar is a floating INSET PANEL in the mockup and a floating panel with
+    // square corners reads as a printing error next to the 22px band. Radius
+    // ~9px, the mockup's panel value - the band keeps the owner's live-tuned 22px
+    // (JUDGMENT row, not ours to change). No overflow:hidden: a straddling photo
+    // must never be clipped, same rule the band follows.
+    var SB_RADIUS = 'border-radius:9px !important;';
     var css =
       BAND + '{' +
         'border-radius:22px !important;' +
@@ -116,7 +123,7 @@
       '}';
     if (isBridge()) {
       // bridge: same vertical heights, ~3.2px horizontal from the contour.
-      css += '.antcv-preview-paper [data-antcv-document-sidebar]{margin-' + side + ':3.2px !important;box-sizing:border-box !important;}';
+      css += '.antcv-preview-paper [data-antcv-document-sidebar]{margin-' + side + ':3.2px !important;box-sizing:border-box !important;' + SB_RADIUS + '}';
       // Bridge keeps the owner-tuned straddle nudge (live-measured 2026-07-22).
       css += photoNudgeCSS();
     } else {
@@ -124,7 +131,7 @@
       // bottom and the page-edge corner it aligns to.
       css += '.antcv-preview-paper [data-antcv-document-sidebar]{' +
         'margin-top:7.4px !important;margin-bottom:7.4px !important;margin-' + side + ':7.4px !important;' +
-        'box-sizing:border-box !important;}';
+        'box-sizing:border-box !important;' + SB_RADIUS + '}';
       // HEADER-DEFECTS 2026-07-23 ("figure is not aligned with corners"): the
       // misalignment was the bridge-tuned translate NUDGE leaking into non-bridge
       // modes — photoNudgeCSS is bridge-only now, so the floated photo sits at its
@@ -360,12 +367,30 @@
     // lock): 23px is only the PRE-FIT default — the measured fit rules emitted
     // last override it with the width-matched size. Spec/contact statics honor
     // the Font sizes (pt) panel when set (pt -> px at 96/72).
+    // HDR-TYPE-SOURCE-KEY-001 (owner 2026-07-29 "font size resizing and compression is not
+    // doing anything in the preview"): these rules are emitted with !important, so they beat
+    // the panel's React inline styles — which is fine ONLY if they read the same store the
+    // panel writes. They did not. The panel writes the CANONICAL top-level localStorage
+    // `fontSizes` (app.js `L.set("fontSizes", …)`, read back by window.__antcvFontPrefs);
+    // this block read `styleConfig.fontSizes`, a legacy mirror that is normally absent — so
+    // __fsOv0 was {} on every pass, the static 23/18/13px defaults shipped with !important
+    // over whatever the user set, and __trk() below returned 0 for every tracking delta,
+    // making BOTH the size and the letter-spacing controls inert on the band. Exactly the
+    // sibling of the antcv-pdf-preview-gate personalInfo.fontSizes bug fixed in 1.51.3862.
+    // Canonical first, legacy mirrors kept as fallbacks so nothing that used to work stops.
     var __fsOv0 = {};
     try {
-      var __scR0 = localStorage.getItem('styleConfig');
-      var __scP0 = __scR0 ? JSON.parse(__scR0) : null;
-      if (typeof __scP0 === 'string') __scP0 = JSON.parse(__scP0);
-      __fsOv0 = (__scP0 && __scP0.fontSizes) || {};
+      var __canon = (typeof window.__antcvFontPrefs === 'function')
+        ? window.__antcvFontPrefs()
+        : (JSON.parse(localStorage.getItem('fontSizes') || 'null') || null);
+      if (__canon && typeof __canon === 'object' && Object.keys(__canon).length) {
+        __fsOv0 = __canon;
+      } else {
+        var __scR0 = localStorage.getItem('styleConfig');
+        var __scP0 = __scR0 ? JSON.parse(__scR0) : null;
+        if (typeof __scP0 === 'string') __scP0 = JSON.parse(__scP0);
+        __fsOv0 = (__scP0 && __scP0.fontSizes) || {};
+      }
     } catch (_) { __fsOv0 = {}; }
     var __px0 = function (pt, dflt) { return (typeof pt === 'number' && pt > 0) ? Math.round(pt * 96 / 72 * 2) / 2 : dflt; };
     css += BAND + ' > div:first-of-type{font-size:' + __px0(__fsOv0.nameSize, 23) + 'px !important;}';
@@ -384,12 +409,43 @@
     // every static sizing rule above (same specificity — source order decides).
     // Emitted UNCONDITIONALLY: a pass that could not measure (band mid-re-render)
     // still re-asserts the chosen fit, so the lines can never snap back.
+    // HDR-TYPE-USER-WINS-001 (owner 2026-07-29, same report): reading the canonical store
+    // is not enough on its own — the measured fit is emitted AFTER the static sizes and
+    // would still overwrite the panel value, so the size control stayed dead for the name,
+    // spec and contact lines. The owner's rule for these controls is "nothing may prevent
+    // the user from setting those values", so a line whose panel size has been moved OFF
+    // the app default is no longer re-fitted; it renders exactly what was asked for. A line
+    // still on its default keeps the width-matched fit unchanged. Note the panel writes the
+    // WHOLE fontSizes object on any change, so "key present" cannot mean "user set it" —
+    // the test has to be "differs from the app default".
+    var __DEF = { nameSize: [16], specialisation: [11], contactSize: [9, 10] };
+    var __userSet = function (k) {
+      var v = __fsOv0 && __fsOv0[k];
+      if (typeof v !== 'number' || !isFinite(v) || v <= 0) return false;
+      return __DEF[k].indexOf(v) < 0;
+    };
     if (__fit.nameLs != null) css += BAND + ' > div:first-of-type{letter-spacing:' + __fit.nameLs.toFixed(2) + 'px !important;}';
-    if (__fit.nameFs != null) css += BAND + ' > div:first-of-type{font-size:' + __fit.nameFs + 'px !important;}';
-    if (__fit.contFs != null) css += BAND + ' > div:last-of-type:not(:first-of-type){font-size:' + __fit.contFs + 'px !important;}';
+    if (__fit.nameFs != null && !__userSet('nameSize')) css += BAND + ' > div:first-of-type{font-size:' + __fit.nameFs + 'px !important;}';
+    if (__fit.contFs != null && !__userSet('contactSize')) css += BAND + ' > div:last-of-type:not(:first-of-type){font-size:' + __fit.contFs + 'px !important;}';
     if (__fit.contK != null) css += BAND + ' > div:last-of-type:not(:first-of-type){transform:scaleX(' + __fit.contK.toFixed(3) + ') !important;transform-origin:center !important;}';
     // SPEC-SHORTER-001: fitted spec size beats the static 18px rule above.
-    if (__fit.specFs != null) css += BAND + ' > div:nth-of-type(2):not(:last-of-type){font-size:' + __fit.specFs + 'px !important;}';
+    if (__fit.specFs != null && !__userSet('specialisation')) css += BAND + ' > div:nth-of-type(2):not(:last-of-type){font-size:' + __fit.specFs + 'px !important;}';
+    // HDR-TYPE-CONTROLS-001 (owner 2026-07-29 "make sure nothing prevents the
+    // user from controlling these values"): the panel's letter-spacing deltas
+    // are the LAST word — they beat both the static .14em name tracking and the
+    // measured fit's letter-spacing, on every band line. Delta semantics: 0 =
+    // whatever the line already looked like, so an untouched app is unchanged.
+    var __trk = function (k) {
+      var v = __fsOv0 && __fsOv0[k];
+      return (typeof v === 'number' && isFinite(v)) ? Math.max(-2, Math.min(4, v)) * 96 / 72 : 0;
+    };
+    var __tkName = __trk('nameTrack'), __tkSpec = __trk('specTrack'), __tkCont = __trk('contactTrack');
+    if (__tkName) {
+      var __lsBase = (__fit.nameLs != null) ? __fit.nameLs : 0.14 * (__fit.nameFs != null ? __fit.nameFs : __px0(__fsOv0.nameSize, 23));
+      css += BAND + ' > div:first-of-type{letter-spacing:' + (__lsBase + __tkName).toFixed(2) + 'px !important;}';
+    }
+    if (__tkSpec) css += BAND + ' > div:nth-of-type(2):not(:last-of-type){letter-spacing:' + __tkSpec.toFixed(2) + 'px !important;}';
+    if (__tkCont) css += BAND + ' > div:last-of-type:not(:first-of-type){letter-spacing:' + __tkCont.toFixed(2) + 'px !important;}';
     return css;
   }
 
@@ -530,8 +586,14 @@
 
   // React to the flag being toggled in this tab (custom event) or another tab
   // (storage event), and re-assert on the app's re-render nudges.
-  window.addEventListener('storage', function (e) { if (!e || e.key === FLAG || e.key == null) apply(); });
+  window.addEventListener('storage', function (e) { if (!e || e.key === FLAG || e.key === 'fontSizes' || e.key == null) apply(); });
   window.addEventListener('antcv:sections-updated', apply);
+  // HDR-TYPE-SOURCE-KEY-001: the band's size + letter-spacing rules are emitted with
+  // !important, so a panel change only shows once THIS stylesheet is rebuilt. Nothing the
+  // panel does fires sections-updated, and `storage` never fires in the writing tab — so
+  // without this the controls looked dead until an unrelated re-render. The three fontSizes
+  // setters in app.js dispatch it; buildCSS is a pure re-derive, so re-running is cheap.
+  window.addEventListener('antcv:fontsizes-changed', apply);
   document.addEventListener('DOMContentLoaded', apply);
   // CPH-NAME-WIDTH-001c: a pass that measured the FALLBACK face caches a
   // skewed fit — re-derive once the real webfonts are in.

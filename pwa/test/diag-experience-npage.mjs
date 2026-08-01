@@ -65,7 +65,21 @@ function snap() {
     };
   });
 }
-const s1 = await snap();
+// CONVERGENCE-WAIT (2026-07-26): this used to snap once at 11s and compare with a
+// single re-read 4s later. On a 16-role fixture the greedy multi-page walk is still
+// converging at 11s (measured sequence: t=11s {"1":2,"2":3,"3":4,"5":5} -> t=13.5s
+// {"1":2,"2":3,"3":4,"4":5}, then IDENTICAL for the next 30s), so the check reported
+// "oscillation" for what is simply a slow settle - a fixed magic number racing the
+// measurer on whatever the host's speed happens to be. Poll until two consecutive
+// reads AGREE (bounded), then assert it STAYS agreed. That tests the real intent -
+// the map reaches a fixed point and holds - and is immune to machine speed.
+let s1 = await snap(), converged = false;
+for (let i = 0; i < 12; i++) {                 // up to ~30s beyond the initial settle
+  await page.waitForTimeout(2500);
+  const nxt = await snap();
+  if (JSON.stringify(nxt.expMap) === JSON.stringify(s1.expMap)) { converged = true; s1 = nxt; break; }
+  s1 = nxt;
+}
 await page.waitForTimeout(4000);
 const s2 = await snap();
 
@@ -79,7 +93,8 @@ let fail = 0;
 const check=(c,l)=>{ console.log((c?'PASS':'FAIL')+' — '+l); if(!c) fail++; };
 check(s1.maxPage >= 3, `experience map has a role on page >= 3 (maxPage=${s1.maxPage}, map=${JSON.stringify(s1.expMap)})`);
 check(s1.pageRows >= 3, `preview rendered >= 3 page-boxes (pageRows=${s1.pageRows})`);
-check(JSON.stringify(s1.expMap) === JSON.stringify(s2.expMap), `experience map stable across +4s (no oscillation)`);
+check(converged, `experience map reached a fixed point within the settle window`);
+check(JSON.stringify(s1.expMap) === JSON.stringify(s2.expMap), `experience map STAYS at that fixed point across a further +4s (no oscillation)`);
 check(errs.length === 0, 'no app errors');
 
 console.log('\n' + (fail===0 ? 'ALL N-PAGE DIAG CHECKS PASS' : fail+' CHECK(S) FAILED'));

@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   getDoc, putDoc, fetchJdUrl, createApplication, setActive, classifyReason,
-  fetchClusterTop20, askAI, fitPercent, fetchBrandColors, research, claimTabAppId, TRACKED_STATUSES, type TrackerDoc, type Row,
+  fetchClusterTop20, askAI, fitPercent, fetchBrandColors, research, claimTabAppId, TRACKED_STATUSES, asText, type TrackerDoc, type Row,
 } from './api';
 import { computeTier, orderTop5 } from './rank';
 import { top5ClickAction } from './top5controls';
@@ -112,10 +112,12 @@ async function extractFileText(file: File, setStatus: (s: string) => void): Prom
 // fit % / card / Ask-AI, and (server-side, same shape) the nightly gen-runner.
 function signalsBlockOf(d: TrackerDoc | null, uk: string): string {
   const parts: string[] = [];
-  const manual = ((d?.signals || {})[uk] || '').trim();
+  // JT-DOC-NONSTRING-001: normalizeDoc() coerces these at the edge; the reads
+  // stay type-safe here too so a runtime-constructed doc can never throw.
+  const manual = asText((d?.signals || {})[uk]).trim();
   if (manual) parts.push(manual);
   for (const f of (d?.sigfiles || {})[uk] || []) {
-    if (f && f.text) parts.push('--- attached signal material: ' + (f.name || 'file') + ' ---\n' + f.text);
+    if (f && f.text) parts.push('--- attached signal material: ' + (asText(f.name) || 'file') + ' ---\n' + asText(f.text));
   }
   return parts.join('\n');
 }
@@ -152,8 +154,10 @@ function mergeDocs(server: TrackerDoc, local: TrackerDoc): TrackerDoc {
 // nightly runner know them. Input isolation holds: this block lives in
 // supporting_context only, NEVER merged into the JD block.
 function mergeResearchBlock(roleIntel: string, webBrief: string): string {
-  const intel = (roleIntel || '').trim();
-  let web = (webBrief || '').trim();
+  // JT-DOC-NONSTRING-001: this was the throw site — a routine-written object in
+  // doc.support killed Open. Coerce, never assume.
+  const intel = asText(roleIntel).trim();
+  let web = asText(webBrief).trim();
   if (!intel && !web) return '';
   if (intel && web) {
     const norm = (s: string) => s.toLowerCase().replace(/[^a-zà-ú0-9]+/gi, ' ').replace(/\s+/g, ' ').trim();
@@ -339,6 +343,48 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     } catch (e) { setErr(String((e as Error).message || e)); }
     finally { setSigBusy(null); if (sigRef.current) sigRef.current.value = ''; }
   }
+  // JT-OPEN-NOJD-001 (owner 2026-07-29 "press Open, approve the popup, nothing
+  // happens"): a row whose posting URL is bot-walled (403) or points at a careers
+  // LISTING page — Terma, Hilti, 3Shape, Microsoft, … 13 rows on the live doc —
+  // never gets JD text, so Open bailed on `No JD text for this role`, a banner at
+  // the top of a wide panel that reads as "nothing happened". Ask for the JD in
+  // place instead: paste it (seeded from any signal material already attached) or
+  // attach a file, and Open continues with it. The pasted JD persists onto the row.
+  const [jdAsk, setJdAsk] = useState<{ uk: string; label: string; why: string; text: string } | null>(null);
+  const [jdAskBusy, setJdAskBusy] = useState(false);
+  const jdAskResolve = useRef<((t: string | null) => void) | null>(null);
+  const jdFileRef = useRef<HTMLInputElement>(null);
+  function askForJd(uk: string, label: string, why: string, seed: string): Promise<string | null> {
+    return new Promise((resolve) => { jdAskResolve.current = resolve; setJdAsk({ uk, label, why, text: seed }); });
+  }
+  function closeJdAsk(text: string | null): void {
+    const r = jdAskResolve.current; jdAskResolve.current = null;
+    setJdAsk(null); setJdAskBusy(false);
+    if (r) r(text);
+  }
+  async function jdAskAttach(file: File): Promise<void> {
+    setJdAskBusy(true);
+    try {
+      const text = (await extractFileText(file, (s) => setJdAsk((a) => (a ? { ...a, why: s } : a)))).replace(/\r/g, '').trim();
+      if (text.length < 200) { setJdAsk((a) => (a ? { ...a, why: 'That file gave only ' + text.length + ' characters — need at least 200. Try a clearer scan, or paste the text.' } : a)); return; }
+      setJdAsk((a) => (a ? { ...a, text, why: 'Loaded ' + text.length + ' characters from ' + (file.name || 'the file') + '.' } : a));
+    } catch (e) {
+      setJdAsk((a) => (a ? { ...a, why: String((e as Error).message || e) } : a));
+    } finally { setJdAskBusy(false); if (jdFileRef.current) jdFileRef.current.value = ''; }
+  }
+
+  // Add / replace the JD text on a row from the JD column, without going through
+  // Open — the 13 URL-walled rows need this once and then Open just works.
+  async function captureJd(row: Row): Promise<void> {
+    const uk = row[11]; const label = row[2] || row[1];
+    const existing = (doc?.jd || {})[uk] || '';
+    const text = await askForJd(uk, label, '', existing || signalsBlockOf(doc, uk).slice(0, 20000));
+    if (!text) return;
+    setDocState((d) => (d ? { ...d, jd: { ...(d.jd || {}), [uk]: text } } : d));
+    setDirty(true);
+    setNote('Stored ' + text.length + ' characters of JD for "' + label + '" — press Save to keep it, or Open to generate from it.');
+  }
+
   function removeSignalFile(uk: string, i: number): void {
     setDocState((d) => {
       if (!d) return d;
@@ -475,6 +521,12 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
   const saveWeb = useCallback(async (uk: string, text: string): Promise<boolean> => {
     if (!doc) return false;
     return persist({ ...doc, webintel: { ...(doc.webintel || {}), [uk]: text } }, true);
+  }, [doc, persist]);
+
+  // TARGET-FACTS-CAPTURE-001: per-row hiring-manager / deadline / "why me" (Top-5 card).
+  const saveNotes = useCallback(async (uk: string, n: { hm?: string; deadline?: string; why?: string }): Promise<boolean> => {
+    if (!doc) return false;
+    return persist({ ...doc, notes: { ...(doc.notes || {}), [uk]: n } }, true);
   }, [doc, persist]);
 
   // Append a row from a JD (shared by URL + file paths). Returns the new row's uk
@@ -675,12 +727,23 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     setBusyKey(uk); setErr(null); setNote(null);
     try {
       let d = doc; let jd = (d.jd || {})[uk] || '';
+      let why = '';
       if ((!jd || jd.length < 200) && d.urls?.[uk]) {
         setNote('Fetching JD…');
         const f = await fetchJdUrl(d.urls[uk]);
         if (f.ok && f.text && f.text.length > 200) { jd = f.text; d = { ...d, jd: { ...(d.jd || {}), [uk]: jd } }; }
+        else why = f.error || 'the fetch returned no usable job text (the link may be a careers LISTING page, not the posting itself)';
+      } else if (!jd || jd.length < 200) {
+        why = 'this row has no posting URL and no stored JD.';
       }
-      if (!jd || jd.length < 200) { setErr('No JD text for this role — add the DIRECT posting URL or a JD file first.'); return; }
+      // JT-OPEN-NOJD-001: recover in place instead of dead-ending on a banner.
+      if (!jd || jd.length < 200) {
+        console.warn('[jt-open] no JD for "' + label + '" (' + uk + ') — asking for a paste. Reason:', why);
+        setNote(null);
+        const pasted = await askForJd(uk, label, why, signalsBlockOf(d, uk).slice(0, 20000));
+        if (pasted === null) { console.warn('[jt-open] cancelled at the JD prompt — not opening', uk); setErr('Open cancelled — "' + label + '" still has no JD. ' + why); return; }
+        jd = pasted; d = { ...d, jd: { ...(d.jd || {}), [uk]: jd } };
+      }
       // WEB-COMPANY-INTEL-001: pull (and cache) net-sourced employer research so
       // generation gets holistic + specific company context, not only the JD.
       let webBrief = (d.webintel || {})[uk] || '';
@@ -708,8 +771,14 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
       if (locBits) tf.push('Location / mobility: ' + locBits + '. If this needs relocation or weekly fly-in, the candidate is open to it per the envelope — acknowledge fit naturally, never over-explain.');
       if (String(row[6] || '').trim()) tf.push('Fit angle for this role: ' + String(row[6]).trim());
       if (String(row[10] || '').trim()) tf.push('Watch / risk to handle: ' + String(row[10]).trim());
+      // TARGET-FACTS-CAPTURE-001: per-row captured notes — hiring manager (→ greeting), deadline, "why me".
+      const nt = (d.notes || {})[uk] || {};
+      const hmName = String(nt.hm || '').trim();
+      if (String(nt.deadline || '').trim()) tf.push('Application deadline: ' + String(nt.deadline).trim() + '.');
+      if (String(nt.why || '').trim()) tf.push('Why this role for the candidate (their OWN words — weave the genuine motivation into WHY-THIS-POSITION; do not quote verbatim): ' + String(nt.why).trim());
       const targetFacts = tf.length ? '\n\nTARGET FACTS (calibration only — use to set altitude, emphasis and tone; NEVER copy verbatim into the CV or cover letter, and never state the salary figure or the tier):\n• ' + tf.join('\n• ') : '';
-      const supporting = 'TARGET-ROLE GUIDELINES (Dream Envelope):\n' + envText
+      const hmDirective = hmName ? '\n\nHIRING MANAGER: ' + hmName + ' — address the cover-letter greeting to this person by name (e.g. "Dear ' + hmName + ',"), not the generic hiring team.' : '';
+      const supporting = 'TARGET-ROLE GUIDELINES (Dream Envelope):\n' + envText + hmDirective
         + targetFacts
         // RESEARCH-MERGE-001: one merged, deduped research block (JD role intel
         // + web company research) instead of two blocks restating each other.
@@ -725,16 +794,40 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
       // palette (header/sidebar band + accents), not just describes it in text.
       const brandSc: Record<string, string> | undefined = (() => {
         if (!(d.brandfit || {})[uk]) return undefined;
-        const bc = (d.brand || {})[uk]; if (!bc) return undefined;
+        const bc: any = (d.brand || {})[uk]; if (!bc) return undefined;
         const hex = (v?: string) => (typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v.trim()) ? v.trim() : null);
-        const dark = (h: string) => { const r = parseInt(h.slice(1, 3), 16), g = parseInt(h.slice(3, 5), 16), bl = parseInt(h.slice(5, 7), 16); return (0.299 * r + 0.587 * g + 0.114 * bl) / 255 < 0.62; };
-        const navy = hex(bc.navy), accent = hex(bc.accent); const sc: Record<string, string> = {};
-        if (navy && dark(navy)) { sc.headerBg = navy; sc.sidebarBg = navy; }
-        if (accent) { sc.photoBorderColor = accent; sc.sidebarLineColor = accent; sc.sidebarHeadColor = accent; }
+        const sc: Record<string, string> = {};
+        // BRAND-COLORS-PERSIST-001: a brand record arrives in two shapes — the
+        // island's own fetchBrandColors returns flat {navy,accent}; gen-runner
+        // writes the AA-fitted {slots} palette (headerBg/sidebarHeadColor/…).
+        // Prefer slots — it already solves ink-on-band contrast (e.g. WHITE
+        // sidebar heads on a dark band, which the naive accent→sidebarHead put
+        // dark-on-dark). Fall back to the flat navy/accent shape.
+        const slots = bc.slots && typeof bc.slots === 'object' ? bc.slots : null;
+        if (slots) {
+          const M: [string, string][] = [
+            ['headerBg', 'headerBg'], ['headerInk', 'headerInk'], ['sidebarBg', 'sidebarBg'],
+            ['sidebarInk', 'sidebarInk'], ['sidebarHeadColor', 'sidebarHeadColor'],
+            ['mainHeadColor', 'mainHeadColor'], ['mainSubHeadColor', 'mainSubHeadColor'],
+            ['mainCompanyColor', 'mainCompanyColor'], ['mainYearColor', 'mainYearColor'],
+            ['mainTextColor', 'mainTextColor'], ['sloganColor', 'sloganColor'],
+            ['signatureColor', 'signatureColor'], ['aiNoticeColor', 'aiNoticeColor'],
+            ['photoBorderColor', 'photoContourColor'], ['sidebarLineColor', 'accent'],
+          ];
+          for (const [dst, src] of M) { const v = hex(slots[src]); if (v) sc[dst] = v; }
+          // A default-only fallback palette (#1d2b45, no real sample) is not a
+          // real employer brand — leave the app on the user's default style.
+          if ((sc.headerBg || '').toLowerCase() === '#1d2b45') return undefined;
+        } else {
+          const dark = (h: string) => { const r = parseInt(h.slice(1, 3), 16), g = parseInt(h.slice(3, 5), 16), bl = parseInt(h.slice(5, 7), 16); return (0.299 * r + 0.587 * g + 0.114 * bl) / 255 < 0.62; };
+          const navy = hex(bc.navy), accent = hex(bc.accent);
+          if (navy && dark(navy)) { sc.headerBg = navy; sc.sidebarBg = navy; }
+          if (accent) { sc.photoBorderColor = accent; sc.sidebarLineColor = accent; sc.sidebarHeadColor = accent; }
+        }
         return Object.keys(sc).length ? sc : undefined;
       })();
       const id = await createApplication({ jd_text: jd, jd_company: row[1], jd_role: row[2], category: categoryFor(row[2], row[1]), supporting_context: supporting, style_config: brandSc });
-      if (!id) { setErr('Could not create the application.'); return; }
+      if (!id) { console.error('[jt-open] the relay returned no application id for', uk); setErr('Could not create the application.'); return; }
       const next: TrackerDoc = { ...d, artifacts: { ...(d.artifacts || {}), [uk]: { application_id: id, generated_at: Date.now() } } };
       await setActive(id);
       // LOAD-EDITOR-UNSOLICITED-001 (complete fix): claim this app-id for THIS tab BEFORE the
@@ -743,10 +836,17 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
       // JD is staged under this app's own namespace. Kill: antcv:disable-tracker-open-adopt.
       claimTabAppId(id);
       try { localStorage.setItem('antcv:lastJdText', jd); } catch { /* */ }
-      if (!(await persist(next, true))) return;
+      // JT-OPEN-NOJD-001: the application is created and already the active one —
+      // OPEN IT even if the tracker-doc PUT loses a rev race (the nightly runner
+      // writes this same doc every few minutes, so 409/503 here is a live risk).
+      // Gating the reload on the save stranded the owner with a created app and a
+      // panel that looked inert. Worst case the row re-shows "✨ Open" and the
+      // employer+role dedup reuses this same application next time.
+      if (!(await persist(next, true))) console.warn('[jt-open] tracker-doc save failed — opening', id, 'anyway; the row may not show ↗ Open until the next save');
+      console.log('[jt-open] opening application', id, 'for', uk);
       onClose();
       setTimeout(() => { try { location.reload(); } catch { /* */ } }, 80);
-    } catch (e) { setErr('Could not open in AntCV: ' + String((e as Error).message || e)); }
+    } catch (e) { console.error('[jt-open] failed for', uk, e); setErr('Could not open in AntCV: ' + String((e as Error).message || e)); }
     finally { setBusyKey(null); }
   }
 
@@ -840,10 +940,20 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
                         title={star ? 'In Top-5 — click to park out (stays in the list). Right-click / long-press to reject.' : 'Click to pin into Top-5. Right-click / long-press to reject.'}
                         style={{ ...cell, textAlign: 'center', fontWeight: 700, borderLeft: '4px solid ' + t.accent, cursor: 'pointer', userSelect: 'none' }}>{star ? '★' : ''}{r[0]}</td>
                       <td style={{ ...cell }}><span style={{ background: t.accent, color: '#fff', borderRadius: 4, padding: '1px 6px', fontSize: 11, fontWeight: 700 }}>{t.label}</span></td>
-                      <td style={{ ...cell, fontWeight: 600 }}>{r[1]}</td>
-                      <td style={cell}>{r[2]}</td>
+                      {/* JT-IDENTITY-EDIT-001 (owner 2026-07-29 "on mobile, the role content is
+                          still not editable … the editing is supposed to be in the JD list"):
+                          Company (r[1]) and Role (r[2]) are editable in place like the other
+                          cells — plain inputs (mobile keyboards handle these better than
+                          contentEditable), editRow marks the doc dirty, and blur quietly
+                          persists via the rev-safe save() so a phone tap-edit sticks without
+                          hunting for the Save button. */}
+                      <td style={{ ...cell, fontWeight: 600 }}><input value={r[1]} onChange={(e) => editRow(uk, 1, e.target.value)} onBlur={() => { if (dirty && !saving) void save(); }} title="Edit the company" placeholder="(company)" style={idIn} /></td>
+                      <td style={cell}><input value={r[2]} onChange={(e) => editRow(uk, 2, e.target.value)} onBlur={() => { if (dirty && !saving) void save(); }} title="Edit the role" placeholder="(role)" style={idIn} /></td>
                       <td style={cell}>{r[3]}</td>
-                      <td style={{ ...cell, textAlign: 'center', fontSize: 14 }} title={hasJd ? 'JD stored' : 'No JD — add a direct posting URL / file'}>{hasJd ? '✅' : '—'}</td>
+                      <td style={{ ...cell, textAlign: 'center', fontSize: 14, padding: '5px 2px' }}>
+                        <button onClick={() => void captureJd(r)} title={hasJd ? 'JD stored — click to view or replace it' : 'No JD — click to paste or attach it (the posting URL is walled or is a listing page)'}
+                          style={{ background: 'transparent', border: hasJd ? 'none' : '1px dashed #b7c2d4', borderRadius: 4, cursor: 'pointer', fontSize: hasJd ? 14 : 10.5, color: '#556', padding: hasJd ? 0 : '1px 3px', lineHeight: 1.4 }}>{hasJd ? '✅' : '＋ JD'}</button>
+                      </td>
                       <td style={cell}><select value={r[8]} onChange={(e) => editRow(uk, 8, e.target.value)} style={{ fontSize: 12, width: '100%' }}>{TRACKED_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}{!TRACKED_STATUSES.includes(r[8]) && r[8] ? <option value={r[8]}>{r[8]}</option> : null}</select></td>
                       <td style={cell}><textarea value={r[9]} onChange={(e) => editRow(uk, 9, e.target.value)} onFocus={() => setExpandRow(uk)} rows={expandRow === uk ? 5 : 2} style={ta} /></td>
                       <td style={cell}><textarea value={r[10]} onChange={(e) => editRow(uk, 10, e.target.value)} onFocus={() => setExpandRow(uk)} rows={expandRow === uk ? 5 : 2} style={ta} /></td>
@@ -890,7 +1000,8 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
               {top5.map((r) => <FocusCard key={r[11]} row={r} doc={doc} cluster={cluster} mobile={isMobile} busy={busyKey === r[11]}
                 onPrepare={() => void prepareAndOpen(r)} onOpen={() => void openSaved(r)}
                 pinned={pinnedOf(r[11])} onTogglePin={() => togglePin(r[11])} onPark={() => togglePark(r[11])} onReject={() => void rejectRow(r)}
-                onSaveSupport={saveSupport} onSaveWeb={saveWeb} onResearch={researchRow} />)}
+                onSaveSupport={saveSupport} onSaveWeb={saveWeb} onResearch={researchRow} onSaveNotes={saveNotes}
+                onEditCell={editRow} onCommitIdentity={() => { if (dirty && !saving) void save(); }} />)}
               {top5.length === 0 && <div>No Top-5 roles yet.</div>}
             </div>
           )}
@@ -898,6 +1009,34 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
         <div style={{ padding: '6px 16px', fontSize: 11, color: '#667', borderTop: '1px solid #e3e8f0' }}>
           {filteredRows.length}{filteredRows.length !== rows.length ? ' of ' + rows.length : ''} roles shown · {jdCount} with JD · ★ = Top 5 · edits sync to your Excel.
         </div>
+
+        {/* JT-OPEN-NOJD-001: in-place JD capture — raised by Open when the row has
+            no JD and the URL fetch is walled, and by the JD column's "＋ JD". */}
+        {jdAsk && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,22,40,0.6)', zIndex: 100001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+            onClick={(e) => { if (e.target === e.currentTarget) closeJdAsk(null); }}>
+            <div style={{ background: '#fff', borderRadius: 10, width: 'min(760px, 100%)', maxHeight: '86vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 18px 50px rgba(0,0,0,0.4)' }}>
+              <div style={{ background: NAVY, color: '#fff', padding: '9px 14px', fontWeight: 700, fontSize: 14 }}>📋 Paste the job description — {jdAsk.label}</div>
+              <div style={{ padding: '9px 14px', fontSize: 12, color: '#553', background: '#fff8e6', borderBottom: '1px solid #f0e2b8' }}>
+                {jdAsk.why ? 'Could not fetch the JD automatically: ' + jdAsk.why + ' ' : ''}Open the posting in a browser tab, copy the visible job description, and paste it below (or attach the file). It is stored on this row, so you only do this once.
+              </div>
+              <div style={{ padding: 14, overflow: 'auto' }}>
+                <textarea value={jdAsk.text} onChange={(e) => setJdAsk((a) => (a ? { ...a, text: e.target.value } : a))} rows={14}
+                  placeholder="Paste the full job description here…" style={{ ...ta, fontSize: 12.5, minHeight: 240 }} />
+                <div style={{ fontSize: 11, color: '#667', marginTop: 4 }}>{jdAsk.text.trim().length} characters — 200 minimum.</div>
+              </div>
+              <div style={{ padding: '10px 14px', borderTop: '1px solid #e3e8f0', display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input ref={jdFileRef} type="file" accept=".txt,.md,.json,.text,.csv,.pdf,image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" style={{ display: 'none' }}
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) void jdAskAttach(f); }} />
+                <button onClick={() => jdFileRef.current?.click()} disabled={jdAskBusy} title="Attach the JD as a file — PDF, text or image/scan (OCR)"
+                  style={{ ...btn('#eef1f6', NAVY), border: '1px solid #c3ccdb' }}>{jdAskBusy ? '…' : '📎 Attach file'}</button>
+                <span style={{ flex: 1 }} />
+                <button onClick={() => closeJdAsk(null)} style={btn('#eef1f6', '#334')}>Cancel</button>
+                <button onClick={() => closeJdAsk(jdAsk.text.trim())} disabled={jdAsk.text.trim().length < 200} style={btn(jdAsk.text.trim().length < 200 ? '#9fb0c9' : '#2e7d32')}>Use this JD</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* JOBTRACKER-TOP5-CONTROLS-001: row context menu (right-click / long-press) */}
         {ctxMenu && (() => {
@@ -1012,11 +1151,14 @@ function buildSupport(p: ReturnType<typeof parseSupport>): string {
   return out.join('\n');
 }
 
-function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, pinned, onTogglePin, onPark, onReject, onSaveSupport, onSaveWeb, onResearch }: {
+function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, pinned, onTogglePin, onPark, onReject, onSaveSupport, onSaveWeb, onResearch, onSaveNotes, onEditCell, onCommitIdentity }: {
   row: Row; doc: TrackerDoc | null; cluster: { qual: string }[]; mobile: boolean; busy: boolean;
   onPrepare: () => void; onOpen: () => void; pinned: boolean; onTogglePin: () => void; onPark: () => void; onReject: () => void;
   onSaveSupport: (uk: string, text: string) => Promise<boolean>;
   onSaveWeb: (uk: string, text: string) => Promise<boolean>; onResearch: (uk: string, company: string, role: string) => Promise<string>;
+  onSaveNotes: (uk: string, n: { hm?: string; deadline?: string; why?: string }) => Promise<boolean>;
+  // JT-IDENTITY-EDIT-001: edit company/role from the card header (mobile-first view)
+  onEditCell: (uk: string, idx: number, value: string) => void; onCommitIdentity: () => void;
 }): JSX.Element {
   const uk = row[11]; const t = tierOf(row[12]);
   const rawSupport = (doc?.support || {})[uk] || '';
@@ -1036,6 +1178,12 @@ function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, pinned,
   useEffect(() => { if (!webDirty) setWeb(rawWeb); }, [rawWeb, webDirty]);
   async function saveWebEdit(): Promise<void> { setSavingWeb(true); try { if (await onSaveWeb(uk, web)) setWebDirty(false); } finally { setSavingWeb(false); } }
   async function doResearch(): Promise<void> { setResearching(true); try { const w = await onResearch(uk, row[1], row[2]); if (w) { setWeb(w); setWebDirty(false); } else alert('Web search returned no results for "' + row[1] + '" — try again in a moment; if it persists, check the proxy URL and any BYOK Brave key in Settings → API Keys.'); } catch (e) { alert('Research failed: ' + String((e as Error).message || e)); } finally { setResearching(false); } }
+
+  const [notes, setNotesState] = useState<{ hm?: string; deadline?: string; why?: string }>((doc?.notes || {})[uk] || {});
+  const [notesDirty, setNotesDirty] = useState(false);
+  const [savingNotes, setSavingNotes] = useState(false);
+  function setField(f: 'hm' | 'deadline' | 'why', v: string): void { setNotesState((p) => ({ ...p, [f]: v })); setNotesDirty(true); }
+  async function saveNotesEdit(): Promise<void> { setSavingNotes(true); try { if (await onSaveNotes(uk, notes)) setNotesDirty(false); } finally { setSavingNotes(false); } }
 
   const hasJd = ((doc?.jd || {})[uk] || '').length > 200;
   const saved = doc?.artifacts?.[uk]?.application_id;
@@ -1083,8 +1231,16 @@ function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, pinned,
       <div style={{ background: t.accent, color: '#fff', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
         <span style={{ fontSize: fs(20, 24), fontWeight: 800 }}>★{row[0]}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 800, fontSize: fs(15, 18), lineHeight: 1.15 }}>{row[1]}</div>
-          <div style={{ fontSize: fs(12, 14), opacity: 0.92 }}>{row[2]}</div>
+          {/* JT-IDENTITY-EDIT-001: company/role are editable in the card header too —
+              on ≤820px the Top-5 cards ARE the tracker, so the phone gets the same
+              tap-to-edit as the desktop table. fontSize ≥16 on mobile stops the iOS
+              focus-zoom jump. Blur quietly persists via the parent's rev-safe save(). */}
+          <input value={row[1]} onChange={(e) => onEditCell(uk, 1, e.target.value)} onBlur={onCommitIdentity}
+            title="Edit the company" placeholder="(company)" aria-label="Company — tap to edit"
+            style={{ display: 'block', width: '100%', boxSizing: 'border-box', background: 'transparent', border: 'none', borderBottom: '1px dotted #ffffff59', outline: 'none', color: '#fff', fontWeight: 800, fontFamily: 'inherit', fontSize: fs(15, 18), lineHeight: 1.15, padding: 0 }} />
+          <input value={row[2]} onChange={(e) => onEditCell(uk, 2, e.target.value)} onBlur={onCommitIdentity}
+            title="Edit the role" placeholder="(role)" aria-label="Role — tap to edit"
+            style={{ display: 'block', width: '100%', boxSizing: 'border-box', background: 'transparent', border: 'none', borderBottom: '1px dotted #ffffff40', outline: 'none', color: '#fff', opacity: 0.92, fontFamily: 'inherit', fontSize: fs(12, 16), lineHeight: 1.3, padding: 0, marginTop: 2 }} />
         </div>
         <span title="Estimated fit (tier + cluster demand)" style={{ background: '#fff', color: pctColor, borderRadius: 14, padding: '3px 10px', fontSize: fs(13, 16), fontWeight: 800 }}>{pct}%</span>
         <span style={{ background: '#ffffff2e', borderRadius: 5, padding: '2px 8px', fontSize: fs(11, 13), fontWeight: 700 }}>{t.label}</span>
@@ -1138,6 +1294,19 @@ function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, pinned,
             style={{ ...ta, fontSize: fs(12, 14), lineHeight: 1.4, background: '#f6f9fe', border: '1px solid #cfddf0', color: '#1d2a44' }} />
           {webDirty && <button onClick={() => void saveWebEdit()} disabled={savingWeb} style={{ ...btn('#1d3a6e', '#fff', fs(11, 13)), marginTop: 6 }}>{savingWeb ? 'Saving…' : '💾 Save research'}</button>}
         </div>
+        <div style={{ marginTop: 12, borderTop: '1px dashed #d5deec', paddingTop: 10 }}>
+          <div style={{ fontSize: fs(11, 13), fontWeight: 800, color: t.accent, letterSpacing: 0.3, textTransform: 'uppercase', marginBottom: 6 }}>📇 Contact &amp; notes</div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
+            <input value={notes.hm || ''} onChange={(e) => setField('hm', e.target.value)} placeholder="Hiring manager (→ greeting)"
+              style={{ ...ta, flex: '1 1 150px', minHeight: 0, fontSize: fs(12, 14) }} />
+            <input value={notes.deadline || ''} onChange={(e) => setField('deadline', e.target.value)} placeholder="Deadline"
+              style={{ ...ta, flex: '0 1 110px', minHeight: 0, fontSize: fs(12, 14) }} />
+          </div>
+          <textarea value={notes.why || ''} onChange={(e) => setField('why', e.target.value)} rows={2}
+            placeholder="Why this role for me — your genuine motivation (woven into WHY-THIS-POSITION, never quoted verbatim)"
+            style={{ ...ta, fontSize: fs(12, 14), lineHeight: 1.4 }} />
+          {notesDirty && <button onClick={() => void saveNotesEdit()} disabled={savingNotes} style={{ ...btn('#2e7d32', '#fff', fs(11, 13)), marginTop: 6 }}>{savingNotes ? 'Saving…' : '💾 Save notes'}</button>}
+        </div>
         <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           {saved
             ? <button onClick={onOpen} disabled={busy} style={btn('#2e7d32', '#fff', fs(12, 14))}>{busy ? '…' : '↗ Open in preview'}</button>
@@ -1162,6 +1331,10 @@ function Line({ icon, label, text, color, size }: { icon: string; label: string;
 const clamp2: React.CSSProperties = { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' };
 
 const ta: React.CSSProperties = { width: '100%', boxSizing: 'border-box', fontSize: 12, padding: '4px 6px', border: '1px solid #cfd8e6', borderRadius: 4, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.35, minHeight: 34 };
+// JT-IDENTITY-EDIT-001: company/role cells look like text until focused — a dotted
+// underline marks them editable; ≥16px would stop iOS zoom but the table uses 12px
+// like its sibling textareas, and the table is pinch-zoomable anyway.
+const idIn: React.CSSProperties = { width: '100%', boxSizing: 'border-box', fontSize: 12, fontWeight: 'inherit', fontFamily: 'inherit', padding: '3px 2px', background: 'transparent', border: 'none', borderBottom: '1px dotted #b7c2d4', borderRadius: 0, outline: 'none', color: 'inherit' };
 const mLbl: React.CSSProperties = { fontSize: 11, fontWeight: 700, color: '#334', margin: '7px 0 2px' };
 function btn(bg: string, color = '#fff', size = 12): React.CSSProperties {
   return { background: bg, color, border: 'none', padding: '6px 12px', borderRadius: 6, fontSize: size, cursor: 'pointer', fontWeight: 600 };

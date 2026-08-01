@@ -6,6 +6,17 @@
 //     npm run build:app        (esbuild minify -> pwa/app.js)
 // Do NOT re-de-minify pwa/app.js into a new file again — this file is canonical.
 // Regenerated from pwa/app.js via prettier on 2026-06-05; kept from now on.
+//
+// IDENTIFIER NOTE — this de-minification dates from 2026-06-05, so its short
+// names come from THAT minifier pass and no longer match the current pwa/app.js
+// one-for-one (the fontSizes state is `Yr` here and `ca` there, for instance).
+// Mirroring is therefore by HAND and by MEANING, not mechanical: find the same
+// site, use the local names. What must stay true is coverage — every change made
+// to pwa/app.js has a counterpart here, which is what the "both bundles" /
+// "mirror lock" tests in pwa/test/ enforce. This file is also where the design
+// RATIONALE lives: ~376 ticket markers carry explanation that does not survive
+// minification and exists nowhere else, so it must never be regenerated from
+// pwa/app.js — that would delete all of it.
 // ============================================================================
 (() => {
   // BRIDGE-SIDEBAR-PALETTE-001 (owner 2026-06-10): when the profile photo is in
@@ -323,6 +334,32 @@
         return "section";
       }
     },
+    // CPH-RENDER-FLAGS-001 (docs/design/COPENHAGEN_MODERN_NORDIC_PALETTE_SPEC.md,
+    // "OPEN — render-structure flags"): the mockup-divergence batch (rule
+    // thickness, grey section-head underline, no per-role rule, Results
+    // underline, sub-head rules, body link ink, AI-notice size) applies to the
+    // COPENHAGEN MODERN package only — every other package keeps the render it
+    // shipped with. Same package normalisation the outcomes-mode default uses
+    // (empty / legacy "scandinavian" => copenhagen-modern), and the same
+    // fail-open: an unreadable localStorage means the default package.
+    __antcvCphPkg = () => {
+      try {
+        let pkg = "";
+        try {
+          const p = JSON.parse(localStorage.getItem("stylePackage") || '""');
+          pkg = ("string" == typeof p ? p : "").toLowerCase().trim();
+        } catch (_) {}
+        if ("scandinavian" === pkg || "" === pkg) pkg = "copenhagen-modern";
+        return "copenhagen-modern" === pkg;
+      } catch (_) {
+        return true;
+      }
+    },
+    // The mockup's rule weight: 1.5pt everywhere a rule or an underline is drawn
+    // (section head, sidebar head, lead-ins, group lines). Everything else keeps 1px.
+    __antcvCphRule = () => (__antcvCphPkg() ? "1.5pt" : "1px"),
+    // ...and grey #777777 under the teal heads, per the mockup.
+    __antcvCphRuleInk = (fallback) => (__antcvCphPkg() ? "#777777" : fallback),
     // APP-CHROME-CONTRAST-001 (owner 2026-06-13): the app/setup/settings chrome
     // background is a gradient from navyColor (Ke), and its TEXT is light. If
     // navyColor is a pale value the text goes invisible. Clamp the chrome navy to
@@ -2528,7 +2565,33 @@
   // come from io first, then localStorage `meta`. Empty for a CV, an unsolicited app, or
   // an app with no targeted role/company. CL-only gating is the caller's job (this only
   // suppresses unsolicited/empty).
-  function __antcvAppLineText(io) {
+  // APPLINE-EDIT-001 / SLOGAN-EDIT-EMPTY-001 (owner 2026-07-29 "allow editing of the
+  // slogan and of the application line in the preview"). The application line was a
+  // read-only composed string, and the slogan node was not rendered at all when it
+  // resolved empty — so there was literally nothing to click on either one. Both are
+  // editable in the preview now, over a standalone override key (the same
+  // cloud-restore-safe pattern as antcv:clSlogan; see [[sidecar-prefs-clobber-hazard]]).
+  //
+  // __antcvAppLineComposed = the role/company sentence (the old body of
+  // __antcvAppLineText). __antcvAppLineText = the user's override when set, else the
+  // composed line — so all three render sites (preview, export srcdoc, DOCX payload)
+  // pick up an edit from ONE place.
+  function __antcvAppLineOverride() {
+    try { var v = String(localStorage.getItem("antcv:clAppLine") || "").trim(); return /^\[/.test(v) ? "" : v; } catch (_) { return ""; }
+  }
+  // The visible text of a contentEditable, EXCLUDING any sidecar control injected into
+  // it (antcv-appline-rule appends a contenteditable=false button cluster). Reading
+  // el.textContent straight would commit "-1.5pt(reset)" into the stored line.
+  function __antcvEditableText(el) {
+    try {
+      if (!el) return "";
+      var c = el.cloneNode(true);
+      var junk = c.querySelectorAll('[contenteditable="false"],[data-antcv-appline-rule-ctrl]');
+      for (var i = 0; i < junk.length; i++) if (junk[i].parentNode) junk[i].parentNode.removeChild(junk[i]);
+      return String(c.textContent || "").replace(/\s+/g, " ").trim();
+    } catch (_) { try { return String((el && el.textContent) || "").trim(); } catch (__) { return ""; } }
+  }
+  function __antcvAppLineComposed(io) {
     try {
       var role = String((io && io.role) || "").trim();
       var company = String((io && io.company) || "").trim();
@@ -2546,8 +2609,64 @@
       return t.trim();
     } catch (_) { return ""; }
   }
+  function __antcvAppLineText(io) { var ov = __antcvAppLineOverride(); return ov || __antcvAppLineComposed(io); }
+  // SUBTITLE-PI-FALLBACK-001 (owner 2026-07-29, "many times also the specialization
+  // line" goes missing after loading from Application History): the loaders take the
+  // subtitle from the record's `subtitle` column then `meta.subtitle`. The nightly
+  // gen-runner writes a MINIMAL meta (source/tier/urlkey/slogan/...) with no subtitle,
+  // and several rows also carry an EMPTY subtitle column — so the spec line resolved to
+  // "" and vanished. personalInfo.specialization is a GLOBAL candidate property (it is
+  // what the CV header renders), so using it as the last resort restores the line
+  // without leaking the previously-loaded application's identity.
+  function __antcvPiSpec() {
+    try {
+      var pi = JSON.parse(localStorage.getItem("personalInfo") || "{}") || {};
+      var s = String((pi && pi.specialization) || "").trim();
+      return /^\[/.test(s) ? "" : s;
+    } catch (_) { return ""; }
+  }
+  // SLOGAN-PLACEMENT-PERAPP-001 (owner 2026-07-29, "the slogan (in cover letter) is
+  // empty" after loading from Application History): `antcv:clSloganMode` and
+  // `antcv:clSloganHidden` are GLOBAL sticky keys that no load path ever reset, while
+  // the per-app placement the generator decided rides in `meta.slogan_placement`
+  // (brand_fit.decide_slogan_placement -> "heading" | "leadin") and was NEVER read by
+  // the PWA. Once any app put the mode in 'leadin', __antcvSloganStandaloneHidden()
+  // returned true for EVERY subsequently loaded app and the standalone tagline
+  // rendered nothing. Restore the mode per app and drop a sticky hide, symmetric with
+  // the SLOGAN-LOAD-SYMMETRIC-001 clear of the slogan TEXT.
+  function __antcvApplySloganPlacement(meta) {
+    try {
+      var p = String((meta && meta.slogan_placement) || "heading").toLowerCase();
+      localStorage.setItem("antcv:clSloganMode", p === "leadin" ? "leadin" : "heading");
+      localStorage.removeItem("antcv:clSloganHidden");
+    } catch (_) {}
+  }
+  // APPLINE-RULE-NATIVE-001 (owner 2026-07-29, "the horizontal line under the
+  // application is bleeping"): the rule under the CL application line was painted by
+  // antcv-appline-rule.js as an INLINE style on the React-owned node, so every
+  // sections-updated re-render dropped it and the sidecar's 150ms/1.5s passes put it
+  // back — a visible blink. Render it NATIVELY from the same `headerItemRule.application`
+  // store (legacy `antcv:applineRule` honoured as a fallback, default VISIBLE at 1.5pt)
+  // so React owns it and nothing repaints. The sidecar keeps the CONTROL only.
+  function __antcvAppLineRuleStyle() {
+    try {
+      var hir = {}; try { hir = (JSON.parse(localStorage.getItem("headerItemRule") || "null") || {}).application || {}; } catch (_) {}
+      var legacy = {}; try { legacy = JSON.parse(localStorage.getItem("antcv:applineRule") || "{}") || {}; } catch (_) {}
+      var v = Object.assign({}, legacy, hir);
+      if (v.on === false) return {};
+      var pt = [0.75, 1.5, 2.25].indexOf(Number(v.pt)) >= 0 ? Number(v.pt) : 1.5;
+      var px = Math.max(0.5, Math.round((pt * 4 / 3) * 2) / 2);
+      var c = (typeof v.color === "string" && /^#?[0-9a-fA-F]{6}$/.test(v.color))
+        ? ("#" + v.color.replace("#", ""))
+        : "var(--brand-accent, var(--header-line-color, #00746E))";
+      return { borderBottom: px + "px solid " + c, paddingBottom: 7 };
+    } catch (_) { return {}; }
+  }
   try {
     if (typeof window !== "undefined") {
+      window.__antcvPiSpec = __antcvPiSpec;
+      window.__antcvApplySloganPlacement = __antcvApplySloganPlacement;
+      window.__antcvAppLineRuleStyle = __antcvAppLineRuleStyle;
       window.__antcvSloganMode = __antcvSloganMode;
       window.__antcvSloganStandaloneHidden = __antcvSloganStandaloneHidden;
       window.__antcvSloganOpeningLeadIn = __antcvSloganOpeningLeadIn;
@@ -2555,8 +2674,68 @@
       window.__antcvSloganUnsolActive = __antcvSloganUnsolActive;
       window.__antcvSloganOverrideIsGen = __antcvSloganOverrideIsGen;
       window.__antcvAppLineText = __antcvAppLineText;
+      window.__antcvAppLineComposed = __antcvAppLineComposed;
+      window.__antcvAppLineOverride = __antcvAppLineOverride;
+      window.__antcvEditableText = __antcvEditableText;
     }
   } catch (_) {}
+
+  /* HDR-TYPE-CONTROLS-001 (owner 2026-07-29): "allow the panel [to] control the
+     preview (and export) for size and font compression/expansion for the Name,
+     Application, Specification, Contact line and Slogan ... make sure nothing
+     prevents the user from controlling these values".
+
+     One source of truth for both halves of that. These read the SAME
+     localStorage "fontSizes" object the Font sizes (pt) panel writes (ls.set),
+     so the preview band, the CL slogan/application line, the HTML export, the
+     DOCX payload and the copenhagen fit sidecar cannot disagree — a mismatch
+     between those legs is exactly how the application line ended up 11px on
+     screen and 10.5pt in the export (APPLINE-PARITY-001, fixed here).
+
+     Letter spacing is a signed DELTA in POINTS on whatever tracking the line
+     already had, stepping by 0.05. 0.05pt is exactly one twentieth of a point
+     — the unit of DOCX w:spacing — so one panel step is one w:spacing unit with
+     no rounding loss on the Word leg. Delta (not absolute) semantics mean 0
+     changes nothing, so every existing document renders as before. */
+  function __antcvFontPrefs() {
+    try {
+      var v = JSON.parse(localStorage.getItem("fontSizes") || "null");
+      return v && "object" == typeof v ? v : {};
+    } catch (_) { return {}; }
+  }
+  function __antcvFontPt(k, d) {
+    try {
+      var v = __antcvFontPrefs()[k];
+      return "number" == typeof v && isFinite(v) && v > 0 ? v : d;
+    } catch (_) { return d; }
+  }
+  function __antcvTrackPt(k) {
+    try {
+      var v = __antcvFontPrefs()[k];
+      return "number" == typeof v && isFinite(v) ? Math.max(-2, Math.min(4, v)) : 0;
+    } catch (_) { return 0; }
+  }
+  function __antcvTrackPx(k) { return (__antcvTrackPt(k) * 96) / 72; }
+  // undefined (not "0px") when unset, so React emits NO letter-spacing at all
+  // and the line keeps whatever the stylesheet/sidecar gives it.
+  function __antcvTrkCss(k) { var v = __antcvTrackPx(k); return v ? v.toFixed(2) + "px" : void 0; }
+  function __antcvTrkPtCss(k) { var v = __antcvTrackPt(k); return v ? v.toFixed(3) + "pt" : void 0; }
+  // Word's HTML leg ignores calc(), so resolve "em baseline + panel delta" to a
+  // single pt number here. baseEm = the line's historic em tracking.
+  function __antcvTrkPtOf(k, baseEm, sizePt) {
+    return (Number(baseEm) || 0) * (Number(sizePt) || 0) + __antcvTrackPt(k);
+  }
+  try {
+    "undefined" != typeof window &&
+      ((window.__antcvFontPrefs = __antcvFontPrefs),
+      (window.__antcvFontPt = __antcvFontPt),
+      (window.__antcvTrackPt = __antcvTrackPt),
+      (window.__antcvTrackPx = __antcvTrackPx),
+      (window.__antcvTrkCss = __antcvTrkCss),
+      (window.__antcvTrkPtCss = __antcvTrkPtCss),
+      (window.__antcvTrkPtOf = __antcvTrkPtOf));
+  } catch (_) {}
+
   function __antcvWriteSpec(v) {
     try {
       if ("string" != typeof v) return;
@@ -2639,7 +2818,9 @@
       while ((m = re.exec(s)) !== null) {
         found = true;
         if (m.index > cursor) out.push(s.slice(cursor, m.index));
-        out.push(React.createElement("a", { key: "mdl" + k++, href: m[2], target: "_blank", rel: "noopener noreferrer", style: { color: "#0563C1", textDecoration: "underline" } }, m[1]));
+        // CPH-RENDER-FLAGS-001 flag 7: body links render #0B4F8A (mockup) rather
+        // than the Office default #0563C1, which reads bright next to the teal.
+        out.push(React.createElement("a", { key: "mdl" + k++, href: m[2], target: "_blank", rel: "noopener noreferrer", style: { color: "#0B4F8A", textDecoration: "underline" } }, m[1]));
         cursor = m.index + m[0].length;
       }
       if (!found) return null;
@@ -3934,7 +4115,7 @@
             "NORDIC COVER-LETTER TEMPLATE FORMAT (owner-locked for this candidate — OVERRIDES the generic WHAT I BRING / FOUNDATION guidance above where they differ): " +
               "(1) WHAT I BRING (bring_rows): each row is [a NEED of the role/company] : [the candidate's MATCHING action, evidence, or result]. LEFT column = a concrete need the JD/company has (e.g. 'supplier or production readiness', 'validation and quality', 'management communication'); RIGHT column = what the candidate concretely does / has delivered that meets it (e.g. 'assessed feasibility, lead time, quality risk, and total landed cost before technical-commercial decisions'). This is NOT a Focus-Area / capability-label table - it is a NEED→ACTION mapping. 3-4 rows. CONSENSUS TIE-IN: draw the NEEDS (left column) from the most important JD signals - including the multi-LLM CONSENSUS JD signals when present in the additional signals - and for an unsolicited draft (no JD) infer needs from the company info + target role type and mark assumptions in the RATIONALE ONLY - never print 'Assumed need', 'assumption', or any meta-label inside the letter text; write the need as a natural bold lead (e.g. 'Supplier scoring:') as if it were named by the JD. LINE-FILL (owner-corrected): each WHAT-I-BRING and HOW-I-WOULD-CONTRIBUTE line MUST fill its full typeset line (~90-110 characters). When a line comes out short, ADD CONCRETE SUBSTANCE from the candidate's real record (scope, tool, stakeholder, timeframe, measurable detail) until it fills - NEVER pad with filler words and NEVER shorten other lines to compensate. A 40-60 character fragment on its own line is a failed generation. LINE-FILL-SLOTS-001 (owner 2026-07-03): the SAME rule applies to the OPENING paragraph (opening_content), foundation_hands_on, and foundation_professionally - each is a multi-line block whose LAST line must ALSO fill the typeset line: when the final line would run under ~60 characters, ADD one more concrete detail from the stored record (a tool, market, stakeholder, or measurable scope) so the block ends on a full line - never trail off after a short fragment. ALSO return cl_overrides.bring_intro: ONE short, plain phrase (no overselling) naming what the candidate brings - an ANCHOR word then the broad areas it covers, e.g. 'structure - across scope, suppliers, validation, and business decisions'. It FRAMES the rows below at a higher level - do NOT just repeat the row needs; end WITHOUT a trailing colon (the layout adds it). MUST fit ONE rendered line (about 90 characters). " +
               "(2) FOUNDATION: foundation_hands_on = the specific SKILLS that match the JD/company (e.g. requirements and ALM/Codebeamer tooling, FMEA, DV/PV validation setups, RFQ/RFI and supplier scoring, optical/electro-optical systems, change control, traceability, KPI reporting) - select ONLY those that genuinely match; this is a grounded skills selection, NOT a generic working-style paragraph. foundation_professionally = TRANSLATE those skills into VALUE for this company and role (e.g. turn mixed technical and commercial input into clear scope, decisions, and measurable progress, while keeping engineering, product, suppliers, and management aligned). " +
-              "(3) HOW I WOULD CONTRIBUTE: the 4 contribute_items are concrete actions tied to the JD's specific leads / the company's culture; contribute_closing is the GOAL line - the outcome the company gains (e.g. 'faster decisions, cleaner execution, and technical work visible to engineering and management'). " +
+              "(3) HOW I WOULD CONTRIBUTE (owner-locked shape, CL-V5-CONTRIB-3-CLOSE-001: OPENING + 3 BULLETS + CLOSING - never more, never fewer): the EXACTLY THREE contribute_items are concrete actions tied to the JD's specific leads / the company's culture; contribute_closing is MANDATORY - the GOAL line - the outcome the company gains (e.g. 'faster decisions, cleaner execution, and technical work visible to engineering and management'). " +
               "(4) POSITIONING LINE (meta.subtitle): the catchy 3-concept line ('Processes • Products • People' for Gabriel unsolicited; otherwise a role-smart line). Keep WHO I AM / WHY as lead-in narrative paragraphs (no inline label). (5) LENGTH — KEEP IT TIGHT (Nordic, owner 2026-06-30): who_content is COMPRESSED to about 55-70 words (3 short sentences); why_content is 1-2 SHORT sentences; contribute_intro is a COMPLETE one-line lead-in of about 80-90 characters that FRAMES the action bullets and ENDS WITH A COLON (example shape: 'In the first months I would focus on a few concrete priorities:'); keep it to ONE line but NEVER chop it to a bare fragment like 'My first priorities would' - the <=30-char ORPHAN rule means RE-TIGHTEN the whole line, it is NOT a target length; contribute_closing (the Goal line) MUST fit ONE rendered line (about 100 characters). Trim words rather than let a line wrap. " +
               "(6) NO-JD RULE (whole letter, owner 2026-06-30 generic template): if there is NO job description (unsolicited), do not leave any part empty and do not invent facts - use the candidate's real background, strongest general skills, and the target role type, and MARK any assumption; never fabricate numbers, employers, titles, or credentials. " +
               "(7) WRITING RULES (apply to EVERY section, body + recruiter-answers). BANNED WORDS: spearhead, ensure, foster, streamline, strengthen, empower, leverage, enable, robust, comprehensive, cutting-edge, state-of-the-art, world-class, leading, impactful, rooted, grounded, committed, passionate, holistic, cross-functional, collaborative, journey, dynamic, proactive, results-driven, strategic, agile, discuss. BANNED PHRASES: 'drive change', 'deliver value', 'key role', 'pivotal role', 'proven track record', 'strong communicator', 'strategic mindset', 'mission-driven', 'I am passionate about', 'I look forward to hearing from you', 'responsible for', 'end-to-end'. SEMANTIC CONSTRAINTS: never invent metrics (use scope/method/outcome if no real number); do NOT imply ownership not supported (use contributed/supported/partnered/coordinated); team-management verb is directed/supervised/ran, NEVER a bare 'led'; each WHAT I BRING expertise cell max ~2 lines / ~90 chars; plain hyphen '-' only, NEVER an em dash; keep patent numbers verbatim; WORK STYLE ends on a people skill; the positioning/specialization line is at most three concepts. No exclamation marks, no filler transitions (moreover / therefore / furthermore). " +
@@ -3949,9 +4130,9 @@
       // sequence. Employer NEED, candidate EVIDENCE and proposed APPROACH are three SEPARATE
       // subsections, and the identity block moves to the END.
       r.push(
-        "COVER-LETTER SEQUENCE v5 (CL-V5-STRUCT-001) - MANDATORY, OVERRIDES any earlier ordering guidance. Write the letter in EXACTLY this order: (1) headline + subtitle + greeting; (2) OPENING & APPLICATION CONTEXT (opening_content) - name the role and company, mention verified prior contact only if it genuinely happened, then bridge to professional identity in a second sentence; no full summary; (3) 'Why this position:' (why_content) - role- and company-specific, why this mix of work, interfaces and company stage fits; no generic praise; (4) 'How I see the role:' (role_view_intro + role_view_rows) - one lead sentence naming the connected priorities and ending with a colon (example shape: 'The work appears to centre on three connected priorities:'), then EXACTLY THREE employer-centred bullets, each a short bold label plus ONE sentence; (5) 'What I bring:' (bring_intro + bring_rows) - one linking sentence, then EXACTLY THREE evidence bullets: (a) decision foundation (evidence, requirements, supplier input, risk, gates), (b) the strongest hands-on cost or technical result, (c) project, team and stakeholder direction; lead with the most role-critical metric; (6) 'How I will contribute:' (contribute_intro + contribute_items) - an adapt-with-the-team lead-in, then 3-4 bullets: shared direction in the first weeks; decision rhythm; connecting technical or lab work to validation and production; and a SEPARATE team-trust bullet when people coordination is central. Name only role-relevant tools, each tied to a concrete purpose, in collaborative voice ('I would', 'with the team'); (7) 'Who I am' AT THE END (who_lead + who_summary + who_operate + who_eligibility + who_goal) - a lead sentence, then Professional summary / How I operate / Eligibility / My goal. who_eligibility is the ONE cl_overrides field you may return as an empty string: fill it ONLY when the candidate has CONFIRMED the facts AND the role makes them relevant (e.g. security-relevant work) - residence and citizenship, criminal-record status, family-tie declarations - and NEVER infer eligibility or clearance from residence or citizenship. 'My goal' is the contribution wanted, never unilateral control; (8) CLOSING (closure_content) - connect the strongest match, invite a conversation, and stay SHORTER than the body. " +
+        "COVER-LETTER SEQUENCE v5 (CL-V5-STRUCT-001) - MANDATORY, OVERRIDES any earlier ordering guidance. Write the letter in EXACTLY this order: (1) headline + subtitle + greeting; (2) OPENING & APPLICATION CONTEXT (opening_content) - name the role and company, mention verified prior contact only if it genuinely happened, then bridge to professional identity in a second sentence; no full summary; (3) 'Why this position:' (why_content) - role- and company-specific, why this mix of work, interfaces and company stage fits; no generic praise; (4) 'How I see the role:' (role_view_intro + role_view_rows) - one lead sentence naming the connected priorities and ending with a colon (example shape: 'The work appears to centre on three connected priorities:'), then EXACTLY THREE employer-centred bullets, each a short bold label plus ONE sentence; (5) 'What I bring:' (bring_intro + bring_rows) - one linking sentence, then EXACTLY THREE evidence bullets: (a) decision foundation (evidence, requirements, supplier input, risk, gates), (b) the strongest hands-on cost or technical result, (c) project, team and stakeholder direction; lead with the most role-critical metric; (6) 'How I will contribute:' (contribute_intro + contribute_items + contribute_closing) - OWNER-LOCKED SHAPE (CL-V5-CONTRIB-3-CLOSE-001): an OPENING (the adapt-with-the-team lead-in), EXACTLY THREE bullets, then a CLOSING line. The three bullets are: shared direction in the first weeks; decision rhythm; connecting technical or lab work to validation and production - fold the team-trust angle into one of the three when people coordination is central, do NOT add a fourth bullet. contribute_closing is MANDATORY: ONE plain line (no bold label, not a bullet) naming the concrete outcome the company gains, about 100 characters. Name only role-relevant tools, each tied to a concrete purpose, in collaborative voice ('I would', 'with the team'); (7) 'Who I am' AT THE END (who_lead + who_summary + who_operate + who_eligibility + who_goal) - who_goal ('My goal') is MANDATORY and must always be returned; it is the ONLY row besides the lead that may never be dropped - a lead sentence, then Professional summary / How I operate / Eligibility / My goal. who_eligibility is the ONE cl_overrides field you may return as an empty string: fill it ONLY when the candidate has CONFIRMED the facts AND the role makes them relevant (e.g. security-relevant work) - residence and citizenship, criminal-record status, family-tie declarations - and NEVER infer eligibility or clearance from residence or citizenship. 'My goal' is the contribution wanted, never unilateral control; (8) CLOSING (closure_content) - connect the strongest match, invite a conversation, and stay SHORTER than the body. " +
           "STRUCTURAL SEPARATION RULE (v5, non-negotiable): the EMPLOYER'S NEED (4), the CANDIDATE'S EVIDENCE (5) and the PROPOSED APPROACH (6) must NEVER be fused into one bullet. A 'How I see the role' bullet states the problem ONLY - no 'I', no evidence, no proposed fix. A 'What I bring' bullet is evidence from the real record. A 'How I will contribute' bullet is what the candidate would do with the team. If a sentence does two of those jobs, split it across the two subsections. " +
-          "The v5 sequence REPLACES the older greeting-opening-why-who-foundation-bring-contribute-closure order: do NOT emit foundation_hands_on / foundation_professionally for a v5 letter - that content belongs in who_summary and who_operate. " +
+          "The v5 sequence REPLACES the older greeting-opening-why-who-foundation-bring-contribute-closure order: do NOT emit foundation_hands_on / foundation_professionally for a v5 letter - that content belongs in who_summary and who_operate. OPENING-MANDATORY (CL-OPENING-EMPTY-GEN-001): the opening section is REQUIRED and must contain 1-3 real sentences naming the role and company (no brackets, never empty, never a placeholder); a CL with an empty or bracketed opening is a FAILED generation - rewrite the opening before returning. " +
           "DOCUMENT-PURPOSE VARIANTS: FORMAL = the full logic above; PRE-APPLICATION = shorter, focused questions, one invitation; POST-APPLICATION = brief reference to the prior application, the new context, and the next-step ask.",
       );
       // COMPRESSION-TIGHT-001 (owner 2026-06-30, CV + CL review): bullets/cells/paragraphs were
@@ -4480,7 +4661,7 @@
                     ],
             },
           ],
-          cl: !0 /* TEMPLATE-STRUCT-DEFAULT-001 (owner 2026-07-03): the docx-matching CL skeleton (greeting-opening-why-who-foundation-bring-contribute-closure, rich_block lead-ins) is the BASE for EVERY tone register. The old toneRegister gate made an ABSENT key fall to the legacy pre-Nordic shape (Dear [Hiring Manager], Focus-area table, text_bullets contribute) even though the app's tone DEFAULT is scandinavian - so fresh/demo/wiped sessions got the off-struct base and the rich-block converter sidecars had to patch over it. Legacy branch kept below for reference only. */ ? [{"id":"greeting","title":"Greeting","loc":"main","on":true,"type":"text","content":"Dear [Hiring Team / Name],"},{"id":"opening","title":"Opening","loc":"main","on":true,"type":"rich_block","headlineOff":true,"items":[{"b":"","t":"[OPENING & APPLICATION CONTEXT - name the role and the company. Mention verified prior contact briefly (e.g. \"Following our earlier coffee meeting\") ONLY when it genuinely happened. A second sentence bridges to the candidate's professional identity. Do NOT summarise the whole background here.]"}]},{"id":"why","title":"WHY THIS POSITION","loc":"main","on":true,"type":"rich_block","headlineOff":true,"leadColon":true,"items":[{"b":"Why this company and position","t":"[NO-JD RULE (whole letter): with no JD (unsolicited), never leave a part empty and never invent facts - use the candidate's real background, strongest general skills, and the target role type, mark assumptions. WHY THIS POSITION: role- and company-specific - why this mix of work, interfaces and company stage fits. One specific company observation (e.g. \"<Company> is moving from <A> to <B>\"), then connect to the candidate's profile. No generic praise.]"}]},{"id":"role_view","title":"HOW I SEE THE ROLE","loc":"main","on":true,"type":"rich_block","headlineOff":true,"leadColon":true,"items":[{"b":"How I see the role","t":"[LEAD SENTENCE - one line naming the connected priorities the work centres on, ending with a colon (example shape: \"The work appears to centre on three connected priorities:\").]"},{"b":"[Employer priority 1 - short label]","t":"[ONE sentence stating the EMPLOYER'S problem only - what this role has to solve. NO candidate evidence, NO proposed solution, no \"I\".]","mk":true},{"b":"[Employer priority 2 - short label]","t":"[ONE sentence stating the second employer problem. Employer-centred only.]","mk":true},{"b":"[Employer priority 3 - short label]","t":"[ONE sentence stating the third employer problem. Employer-centred only.]","mk":true}]},{"id":"bring","title":"WHAT I BRING","loc":"main","on":true,"type":"rich_block","headlineOff":true,"leadColon":true,"items":[{"b":"What I bring","t":"[LINKING SENTENCE - one short, plain phrase naming what the candidate brings and the areas it covers, ending so the bullets below read as proof (example shape: \"Technical depth, project discipline and collaborative team direction relevant to these challenges\"). No overselling, no adjectives like strong/proven/passionate.]"},{"b":"[Decision foundation - short label]","t":"[EVIDENCE: how the candidate builds the decision foundation - evidence, requirements, supplier input, risk, gates. Real proof points only; lead with the most role-critical metric.]","mk":true},{"b":"[Strongest hands-on result - short label]","t":"[EVIDENCE: the strongest hands-on cost or technical result, with its real measurable outcome. Never invent a number.]","mk":true},{"b":"[Project, team and stakeholder direction - short label]","t":"[EVIDENCE: project, team and stakeholder direction the candidate has actually run, with scope (team size, cycle time, named forums).]","mk":true}]},{"id":"contribute","title":"HOW I WILL CONTRIBUTE","loc":"main","on":true,"type":"rich_block","headlineOff":true,"leadColon":true,"items":[{"b":"How I will contribute","t":"[ADAPT-WITH-THE-TEAM LEAD-IN - one line, ending with a colon (example shape: \"I would bring this approach, adapting tools and rhythm with the team:\").]"},{"b":"[First weeks - short label]","t":"[What the candidate would review and agree in the first weeks to build a shared direction. Collaborative voice (\"I would\", \"with the team\").]","mk":true},{"b":"[Decision rhythm - short label]","t":"[How the candidate would turn meetings, prototypes and test results into traceable actions with owners and deadlines.]","mk":true},{"b":"[Technical work to validation/production - short label]","t":"[How the candidate would connect the technical or lab work to validation and production. Name only role-relevant tools, each tied to a concrete purpose.]","mk":true},{"b":"[Team trust - short label]","t":"[SEPARATE team-trust bullet - include when people coordination is central to the role; drop it when it is not.]","mk":true}]},{"id":"who","title":"WHO I AM","loc":"main","on":true,"type":"rich_block","headlineOff":true,"leadColon":true,"items":[{"b":"Who I am","t":"[LEAD SENTENCE - one line on the conditions the candidate works best in (example shape: \"I work best where technical uncertainty, people and delivery decisions move forward together.\").]"},{"b":"Professional summary","t":"[Identity tied to the role: years, disciplines, the environments the candidate has come from. From the real background, calm and direct.]","mk":true},{"b":"How I operate","t":"[Work style in one sentence - how the candidate decides, prioritises and follows up across teams.]","mk":true},{"b":"Eligibility","t":"[ONLY when candidate-confirmed AND relevant to the role (e.g. security-relevant work): residence and citizenship, criminal-record status, family-tie declarations. Never infer eligibility or clearance from residence or citizenship. Omit the whole bullet when not confirmed or not relevant.]","mk":true},{"b":"My goal","t":"[The contribution the candidate wants to make in this role - never unilateral control.]","mk":true}]},{"id":"foundation","title":"FOUNDATION","loc":"main","on":false,"type":"rich_block","headlineOff":true,"items":[{"b":"Foundation","t":"[Legacy pre-v5 section. v5 carries this content in the end-block \"Who I am\" (Professional summary / How I operate). Left off by default.]"},{"b":"Hands-on","t":"[Select only skills that match Company Info + Holistic Leads + Specific Leads + JD analysis.]","mk":true},{"b":"Professionally","t":"[Translate those skills into value for this company and role.]","mk":true}]},{"id":"closure","title":"Closure","loc":"main","on":true,"type":"text","content":"[CLOSING - connect the strongest match, invite a conversation, and stay SHORTER than the body: \"I would welcome a talk on how [strongest match] could support [Company] in [scope].\" No generic sign-offs. Write in the target language (en/da/es/zh, etc.); default to the role's local language if the JD is in it.]"}] : [
+          cl: !0 /* TEMPLATE-STRUCT-DEFAULT-001 (owner 2026-07-03): the docx-matching CL skeleton (greeting-opening-why-who-foundation-bring-contribute-closure, rich_block lead-ins) is the BASE for EVERY tone register. The old toneRegister gate made an ABSENT key fall to the legacy pre-Nordic shape (Dear [Hiring Manager], Focus-area table, text_bullets contribute) even though the app's tone DEFAULT is scandinavian - so fresh/demo/wiped sessions got the off-struct base and the rich-block converter sidecars had to patch over it. Legacy branch kept below for reference only. */ ? [{"id":"greeting","title":"Greeting","loc":"main","on":true,"type":"text","content":"Dear [Hiring Team / Name],"},{"id":"opening","title":"Opening","loc":"main","on":true,"type":"rich_block","headlineOff":true,"items":[{"b":"","t":"[OPENING & APPLICATION CONTEXT - name the role and the company. Mention verified prior contact briefly (e.g. \"Following our earlier coffee meeting\") ONLY when it genuinely happened. A second sentence bridges to the candidate's professional identity. Do NOT summarise the whole background here.]"}]},{"id":"why","title":"WHY THIS POSITION","loc":"main","on":true,"type":"rich_block","headlineOff":true,"leadColon":true,"items":[{"b":"Why this company and position","t":"[NO-JD RULE (whole letter): with no JD (unsolicited), never leave a part empty and never invent facts - use the candidate's real background, strongest general skills, and the target role type, mark assumptions. WHY THIS POSITION: role- and company-specific - why this mix of work, interfaces and company stage fits. One specific company observation (e.g. \"<Company> is moving from <A> to <B>\"), then connect to the candidate's profile. No generic praise.]"}]},{"id":"role_view","title":"HOW I SEE THE ROLE","loc":"main","on":true,"type":"rich_block","headlineOff":true,"leadColon":true,"items":[{"b":"How I see the role","t":"[LEAD SENTENCE - one line naming the connected priorities the work centres on, ending with a colon (example shape: \"The work appears to centre on three connected priorities:\").]"},{"b":"[Employer priority 1 - short label]","t":"[ONE sentence stating the EMPLOYER'S problem only - what this role has to solve. NO candidate evidence, NO proposed solution, no \"I\".]","mk":true},{"b":"[Employer priority 2 - short label]","t":"[ONE sentence stating the second employer problem. Employer-centred only.]","mk":true},{"b":"[Employer priority 3 - short label]","t":"[ONE sentence stating the third employer problem. Employer-centred only.]","mk":true}]},{"id":"bring","title":"WHAT I BRING","loc":"main","on":true,"type":"rich_block","headlineOff":true,"leadColon":true,"items":[{"b":"What I bring","t":"[LINKING SENTENCE - one short, plain phrase naming what the candidate brings and the areas it covers, ending so the bullets below read as proof (example shape: \"Technical depth, project discipline and collaborative team direction relevant to these challenges\"). No overselling, no adjectives like strong/proven/passionate.]"},{"b":"[Decision foundation - short label]","t":"[EVIDENCE: how the candidate builds the decision foundation - evidence, requirements, supplier input, risk, gates. Real proof points only; lead with the most role-critical metric.]","mk":true},{"b":"[Strongest hands-on result - short label]","t":"[EVIDENCE: the strongest hands-on cost or technical result, with its real measurable outcome. Never invent a number.]","mk":true},{"b":"[Project, team and stakeholder direction - short label]","t":"[EVIDENCE: project, team and stakeholder direction the candidate has actually run, with scope (team size, cycle time, named forums).]","mk":true}]},{"id":"contribute","title":"HOW I WILL CONTRIBUTE","loc":"main","on":true,"type":"rich_block","headlineOff":true,"leadColon":true,"items":[{"b":"How I will contribute","t":"[ADAPT-WITH-THE-TEAM LEAD-IN - one line, ending with a colon (example shape: \"I would bring this approach, adapting tools and rhythm with the team:\").]"},{"b":"[First weeks - short label]","t":"[What the candidate would review and agree in the first weeks to build a shared direction. Collaborative voice (\"I would\", \"with the team\").]","mk":true},{"b":"[Decision rhythm - short label]","t":"[How the candidate would turn meetings, prototypes and test results into traceable actions with owners and deadlines.]","mk":true},{"b":"[Technical work to validation/production - short label]","t":"[How the candidate would connect the technical or lab work to validation and production. Name only role-relevant tools, each tied to a concrete purpose. Fold the team-trust angle in here when people coordination is central to the role.]","mk":true},{"b":"","t":"[CLOSING GOAL LINE - ONE plain line (no bold label, not a bullet) naming the concrete outcome the company gains, e.g. \"faster decisions, cleaner execution, and technical work visible to engineering and management\". Must fit ONE rendered line (about 100 characters).]"}]},{"id":"who","title":"WHO I AM","loc":"main","on":true,"type":"rich_block","headlineOff":true,"leadColon":true,"items":[{"b":"Who I am","t":"[LEAD SENTENCE - one line on the conditions the candidate works best in (example shape: \"I work best where technical uncertainty, people and delivery decisions move forward together.\").]"},{"b":"Professional summary","t":"[Identity tied to the role: years, disciplines, the environments the candidate has come from. From the real background, calm and direct.]","mk":true},{"b":"How I operate","t":"[Work style in one sentence - how the candidate decides, prioritises and follows up across teams.]","mk":true},{"b":"Eligibility","t":"[ONLY when candidate-confirmed AND relevant to the role (e.g. security-relevant work): residence and citizenship, criminal-record status, family-tie declarations. Never infer eligibility or clearance from residence or citizenship. Omit the whole bullet when not confirmed or not relevant.]","mk":true},{"b":"My goal","t":"[The contribution the candidate wants to make in this role - never unilateral control.]","mk":true}]},{"id":"foundation","title":"FOUNDATION","loc":"main","on":false,"type":"rich_block","headlineOff":true,"items":[{"b":"Foundation","t":"[Legacy pre-v5 section. v5 carries this content in the end-block \"Who I am\" (Professional summary / How I operate). Left off by default.]"},{"b":"Hands-on","t":"[Select only skills that match Company Info + Holistic Leads + Specific Leads + JD analysis.]","mk":true},{"b":"Professionally","t":"[Translate those skills into value for this company and role.]","mk":true}]},{"id":"closure","title":"Closure","loc":"main","on":true,"type":"text","content":"[CLOSING - connect the strongest match, invite a conversation, and stay SHORTER than the body: \"I would welcome a talk on how [strongest match] could support [Company] in [scope].\" No generic sign-offs. Write in the target language (en/da/es/zh, etc.); default to the role's local language if the JD is in it.]"}] : [
             {
               id: "greeting",
               title: "Greeting",
@@ -5958,6 +6139,14 @@
         bulletContent: 10.5,
         bulletMarkSize: 10.5,
         specialisation: 11,
+        // HDR-TYPE-CONTROLS-001 (see the prelude helpers).
+        applicationSize: 10.5,
+        sloganSize: 11,
+        nameTrack: 0,
+        specTrack: 0,
+        applicationTrack: 0,
+        contactTrack: 0,
+        sloganTrack: 0,
         ...l,
       },
       N = (e) => Math.round(1.333 * e),
@@ -6153,6 +6342,11 @@
                   fontWeight: 700,
                   color: S ? __sbInk : "#283556",
                   fontSize: r(t),
+                  // HDR-TYPE-CONTROLS-001: the figure layouts draw the identity
+                  // lines as SECTIONS rather than as the candidate band, so the
+                  // panel has to reach this leg too or the controls go dead the
+                  // moment the photo moves to header-left/right.
+                  letterSpacing: __antcvTrkCss("nameTrack"),
                   lineHeight: 1.1,
                   textAlign: S
                     ? "certs" === e.id || /cert/i.test(e.title || "")
@@ -6189,6 +6383,8 @@
                   fontFamily: A,
                   color: S ? __sbInk : "#283556",
                   fontSize: r(n),
+                  // HDR-TYPE-CONTROLS-001
+                  letterSpacing: __antcvTrkCss("specTrack"),
                   lineHeight: 1.2,
                   textAlign: S
                     ? "certs" === e.id || /cert/i.test(e.title || "")
@@ -6242,7 +6438,8 @@
               }),
             ),
             React.createElement("div", {
-              style: { borderBottom: `1px solid ${C}`, marginBottom: 4 },
+              // CPH-RENDER-FLAGS-001 flag 1: sidebar-head rule joins the 1.5pt sweep.
+              style: { borderBottom: `${__antcvCphRule()} solid ${C}`, marginBottom: 4 },
             }),
             t.map((t, n) =>
               React.createElement(
@@ -6251,6 +6448,8 @@
                   key: n,
                   style: {
                     fontSize: r(o),
+                    // HDR-TYPE-CONTROLS-001
+                    letterSpacing: __antcvTrkCss("contactTrack"),
                     fontFamily: T,
                     marginBottom: 2,
                     color: S ? __sbInk : "#333",
@@ -6555,7 +6754,8 @@
                 { key: "professionally" },
                 !n &&
                   React.createElement("div", {
-                    style: { borderBottom: `1px solid ${s}`, margin: "4px 0" },
+                    // CPH-RENDER-FLAGS-001 flag 1: group line joins the sweep.
+                    style: { borderBottom: `${__antcvCphRule()} solid ${s}`, margin: "4px 0" },
                   }),
                 React.createElement(
                   "p",
@@ -6727,6 +6927,16 @@
                         letterSpacing: 0.3,
                         overflowWrap: "break-word",
                         wordBreak: "break-word",
+                        // CPH-RENDER-FLAGS-001 flag 6: a {grp} sub-head sits on its
+                        // own rule in the mockup - teal in the main column, grey in
+                        // the sidebar - so a group reads as a division and not as a
+                        // bolder bullet. Copenhagen only.
+                        ...(__antcvCphPkg()
+                          ? {
+                              borderBottom: `${__antcvCphRule()} solid ${S ? "#777777" : C}`,
+                              paddingBottom: 1,
+                            }
+                          : {}),
                       },
                     },
                     React.createElement(B, {
@@ -6734,6 +6944,18 @@
                       value: P(row.t || ""),
                       placeholder: "[Sub-group]",
                     }),
+                    // ...with the group's own years set right, in the same grey the
+                    // role years use. Floated rather than flexed so the heading's
+                    // own alignment (centered by default) is untouched, and rendered
+                    // only when the row carries years - a group without them looks
+                    // exactly as it did.
+                    __antcvCphPkg() && (row.years || row.y)
+                      ? React.createElement(
+                          "span",
+                          { style: { color: "#777777", fontWeight: 400, whiteSpace: "nowrap", float: "right" } },
+                          String(row.years || row.y),
+                        )
+                      : null,
                   ),
                 };
               }
@@ -7214,8 +7436,10 @@
                   idx > 0 &&
                     !1 !== d.contHeadlines &&
                     React.createElement("div", {
+                      // CPH-RENDER-FLAGS-001: a (Cont.) head carries the same
+                      // rule as the head it continues.
                       style: {
-                        borderBottom: `1px solid ${C}`,
+                        borderBottom: `${__antcvCphRule()} solid ${S ? C : __antcvCphRuleInk(C)}`,
                         marginBottom: 4,
                       },
                     }),
@@ -7369,7 +7593,14 @@
                         }),
                       ),
                     ),
-                    React.createElement("div", {
+                    // CPH-RENDER-FLAGS-001 flag 3: the mockup draws NO rule under
+                    // a role row - the section rule is the only horizontal line in
+                    // the main column, and a rule per role turns the experience
+                    // block into a ruled table. Copenhagen only; every other
+                    // package keeps its per-role rule.
+                    __antcvCphPkg()
+                      ? null
+                      : React.createElement("div", {
                       style: {
                         borderBottom: `1px solid ${k.mainSubHeadColor || s}`,
                         margin: "2px 0 2px",
@@ -7653,14 +7884,25 @@
                             React.createElement(
                               "span",
                               {
+                                // CPH-RENDER-FLAGS-001 flag 5: the mockup sets the
+                                // "Results:" lead-in upright with a 1.5pt grey
+                                // underline instead of teal italic. Copenhagen only.
                                 style: {
                                   fontWeight: 700,
-                                  fontStyle: "italic",
+                                  fontStyle: __antcvCphPkg() ? "normal" : "italic",
                                   color:
                                     d.mainSubHeadColor ||
                                     d.mainBulletColor ||
                                     d.mainHeadColor ||
                                     "#283556",
+                                  ...(__antcvCphPkg()
+                                    ? {
+                                        textDecoration: "underline",
+                                        textDecorationColor: "#777777",
+                                        textDecorationThickness: "1.5pt",
+                                        textUnderlineOffset: "2px",
+                                      }
+                                    : {}),
                                 },
                               },
                               L("Results: "),
@@ -8393,7 +8635,12 @@
           e.ruleOff
             ? null
             : React.createElement("div", {
-                style: { borderBottom: `1px solid ${C}`, marginBottom: 4 },
+                // CPH-RENDER-FLAGS-001 flags 1 + 2: the section-head rule is
+                // 1.5pt on copenhagen (mockup weight, 1px everywhere else), and
+                // under a MAIN head it is grey #777777 rather than the teal of
+                // the head itself. Sidebar heads keep sidebarLineColor (teal),
+                // which the palette pass already locked.
+                style: { borderBottom: `${__antcvCphRule()} solid ${S ? C : __antcvCphRuleInk(C)}`, marginBottom: 4 },
               }),
         ),
         D,
@@ -12618,7 +12865,40 @@
                                                                 e.bullets || [],
                                                             })),
                                                         }
-                                                      : null
+                                                      : // GAP-APPLY-RICHBLOCK-001 (owner 2026-07-29, UNSOL-APP-DEFECTS item a):
+                                                        // this builder had NO rich_block branch, so every rich_block section
+                                                        // returned null and never reached the model. The CV/CL migrated to
+                                                        // rich_block (roles cutover + CL v5), so on a real document — Terma
+                                                        // app 2751: CV 15/15 rich_block, CL 7/9 — "I cover this — apply to
+                                                        // docs" asked the model to patch sections it was never shown. Emit
+                                                        // EXACTLY the rows Pe()'s rich_block applier consumes, in order
+                                                        // (skip grp sub-headings, hidden rows and empty bodies), so the
+                                                        // value→row mapping stays aligned (FIXIT-DESYNC-001).
+                                                        "rich_block" === e.type
+                                                        ? {
+                                                            id: e.id,
+                                                            type: "rich_block",
+                                                            items: (
+                                                              e.items || []
+                                                            )
+                                                              .filter(
+                                                                (t, n) =>
+                                                                  t &&
+                                                                  !t.grp &&
+                                                                  !(
+                                                                    e.hidden &&
+                                                                    e.hidden[n]
+                                                                  ) &&
+                                                                  (
+                                                                    t.t || ""
+                                                                  ).trim(),
+                                                              )
+                                                              .map((e) => ({
+                                                                b: e.b || "",
+                                                                t: e.t || "",
+                                                              })),
+                                                          }
+                                                        : null
                                           : null;
                                     ((a.cv || []).forEach((e) => {
                                       const t = o(e);
@@ -12628,7 +12908,7 @@
                                         const t = o(e);
                                         t && (n.cl[e.id] = t);
                                       }));
-                                    const i = `A gap was identified in the CV/cover letter vs. the job description:\nGAP: "${e}"\nUSER RESPONSE (what they actually have/do that covers this gap): "${t}"\nJob context: ${r.role || "Unknown role"} at ${r.company || "Unknown company"}. Language: ${"da" === l ? "Danish" : "English"}.\nTASK: Apply this correction to the CV and cover letter by surfacing the capability the user described. For each section where the gap is currently hurting the narrative, produce a patched version. Only patch sections where the change is meaningful — do NOT rewrite untouched text. Keep all other facts intact.\nRules:\n- PROFILE / WHO I AM / SELECTED OUTCOMES / experience bullets / WHAT I BRING table / CORE COMPETENCIES table: these are the highest-leverage places to add the capability.\n- Preserve section structure exactly (same type, same item count, same role IDs, same column count).\n- For tables, keep "focus" frozen and only tighten/extend "expertise" (10–18 words, ~60–110 chars, 2 lines max at Calibri 10pt).\n- For experience, only touch bullets of the role where the capability naturally lives (pick the most relevant role; don't scatter).\n- Danish output if language=da; English otherwise.\n- Never invent credentials — only reframe what the user stated.\nReturn ONLY JSON in this shape:\n{\n "summary": "1-sentence description of what you changed",\n "cv_patches": { "<section_id>": <patched-section-payload-matching-input-shape>, ... },\n "cl_patches": { "<section_id>": <patched-section-payload-matching-input-shape>, ... }\n}\nOnly include sections you actually changed. Current state:\n${JSON.stringify(n)}`,
+                                    const i = `A gap was identified in the CV/cover letter vs. the job description:\nGAP: "${e}"\nUSER RESPONSE (what they actually have/do that covers this gap): "${t}"\nJob context: ${r.role || "Unknown role"} at ${r.company || "Unknown company"}. Language: ${"da" === l ? "Danish" : "English"}.\nTASK: Apply this correction to the CV and cover letter by surfacing the capability the user described. For each section where the gap is currently hurting the narrative, produce a patched version. Only patch sections where the change is meaningful — do NOT rewrite untouched text. Keep all other facts intact.\nRules:\n- PROFILE / WHO I AM / SELECTED OUTCOMES / experience bullets / WHAT I BRING table / CORE COMPETENCIES table: these are the highest-leverage places to add the capability.\n- Preserve section structure exactly (same type, same item count, same role IDs, same column count).\n- For tables, keep "focus" frozen and only tighten/extend "expertise" (10–18 words, ~60–110 chars, 2 lines max at Calibri 10pt).\n- For rich_block sections, keep every "b" lead-in label FROZEN and rewrite only "t"; return the SAME number of items in the SAME order as the input.\n- For experience, only touch bullets of the role where the capability naturally lives (pick the most relevant role; don't scatter).\n- Danish output if language=da; English otherwise.\n- Never invent credentials — only reframe what the user stated.\nReturn ONLY JSON in this shape:\n{\n "summary": "1-sentence description of what you changed",\n "cv_patches": { "<section_id>": <patched-section-payload-matching-input-shape>, ... },\n "cl_patches": { "<section_id>": <patched-section-payload-matching-input-shape>, ... }\n}\nOnly include sections you actually changed. Current state:\n${JSON.stringify(n)}`,
                                       c =
                                         '\n\nABSOLUTE: Your response MUST start with the character "{" and contain ONLY a single valid JSON object. NO prose. NO markdown fences. NO commentary. First character: "{". Last character: "}".';
                                     await U();
@@ -15239,6 +15519,16 @@
                         bulletContent: 10.5,
                         bulletMarkSize: 10.5,
                         specialisation: 11,
+                        // HDR-TYPE-CONTROLS-001: reset-to-package must clear the
+                        // identity-line sizes + tracking too, else a package
+                        // switch keeps the previous app's typography.
+                        applicationSize: 10.5,
+                        sloganSize: 11,
+                        nameTrack: 0,
+                        specTrack: 0,
+                        applicationTrack: 0,
+                        contactTrack: 0,
+                        sloganTrack: 0,
                       });
                     } catch (e) {}
                     try {
@@ -17556,12 +17846,12 @@
                         } else {
                         if (e.jd_company || e.jd_role)
                           try {
-                            lo({
+                            try{var __pg=JSON.parse(localStorage.getItem("antcv:clProseGuard")||"{}")||{};var __ak=(e.jd_company||"")+"|"+(e.jd_role||"")+"|"+String(e.jd_language||localStorage.getItem("language")||"en").replace(/["']/g,"").toLowerCase().slice(0,2);var __b=__pg[__ak]=__pg[__ak]||{};(Array.isArray(e.cl_sections)?e.cl_sections:[]).forEach(function(s){if(s&&["opening","why","who","foundation","contribute","closure","bring"].indexOf(s.id)>=0){var __t=(Array.isArray(s.items)&&s.items[0]&&s.items[0].t)||s.content||"";if(__t&&!/^\s*\[/.test(__t))__b[s.id]=JSON.parse(JSON.stringify(s))}});localStorage.setItem("antcv:clProseGuard",JSON.stringify(__pg))}catch(_){} /*CL-OPENING-SEED-985*/try{var __sc2=(e.meta&&e.meta.styleConfig)||null;if(__sc2&&Object.keys(__sc2).length){localStorage.setItem("antcv:brandV2",JSON.stringify({version:2,slots:{headerBg:__sc2.headerBg,headerInk:__sc2.headerInk||"#ffffff",sidebarBg:__sc2.sidebarBg,sidebarInk:__sc2.sidebarInk||"#1a1a1a",accent:__sc2.accent||__sc2.sidebarLineColor||__sc2.mainHeadColor}}))}else{localStorage.removeItem("antcv:brandV2")}}catch(_){} /*BRANDV2-FOLLOW-APP-001*/lo({
                               company: e.jd_company || "",
                               role: e.jd_role || "",
                               subtitle: (io && io.subtitle) || "",
-                              greeting: (io && io.greeting) || "",
-                              opening: (io && io.opening) || "",
+                              greeting: ((Array.isArray(e.cl_sections)?((e.cl_sections.find(s=>s&&s.id==="greeting")||{}).content||""):"")||(io&&io.greeting)||""),
+                              opening: (((cs=>{const o=cs.find(s=>s&&s.id==="opening")||{};return o.content||(Array.isArray(o.items)&&o.items[0]&&o.items[0].t)||"";})(Array.isArray(e.cl_sections)?e.cl_sections:[]))||(io&&io.opening)||""),
                             });
                           } catch (e) {}
                         if (
@@ -19896,6 +20186,18 @@
           bulletContent: 10.5,
           bulletMarkSize: 10.5,
           specialisation: 11,
+          // HDR-TYPE-CONTROLS-001: the two NEW sizes default to what the EXPORT
+          // already drew (application line 10.5pt, slogan 11pt) so the panel
+          // opens at parity instead of moving the document on first paint. The
+          // five tracks are DELTAS — 0 means "whatever this line already
+          // looked like", so a fresh install is unchanged.
+          applicationSize: 10.5,
+          sloganSize: 11,
+          nameTrack: 0,
+          specTrack: 0,
+          applicationTrack: 0,
+          contactTrack: 0,
+          sloganTrack: 0,
         },
         [Fr, Mr] = e(() => u.get("abTestEnabled", !0)),
         [Wr, jr] = e(() => u.get("abGroupOverride", "auto")),
@@ -19948,19 +20250,62 @@
           const e = u.get("fontSizes", null);
           return e && "object" == typeof e ? { ...zr, ...e } : zr;
         }),
+        // FONTSIZE-STEP-NAN-001 (owner 2026-07-29 "pressing Application line resizing is
+        // generating NaNPt between the + and -"): the row DISPLAYS a fallback when the key is
+        // missing, but the stepper added to the RAW value — undefined + 0.5 = NaN, which then
+        // persisted (JSON.stringify(NaN) is null, so it stuck as null on the next boot). The
+        // key goes missing because Kr REPLACES the whole fontSizes object, so any caller
+        // passing a pre-1.51.3862 object drops every key added by that release. Two guards:
+        // Kr now merges over the defaults, and qr falls back to the value the user can see
+        // (passed in as d) and refuses to store a non-finite result.
         Kr = (e) => {
-          (Jr(e), u.set("fontSizes", e));
+          const __m = { ...zr, ...(e && "object" == typeof e ? e : {}) };
+          (Jr(__m), u.set("fontSizes", __m));
           try {
-            Qn({ fontSizes: e });
+            Qn({ fontSizes: __m });
           } catch (e) {}
+          try{window.dispatchEvent(new CustomEvent("antcv:fontsizes-changed"))}catch(_){}
         },
-        qr = (e, t) => {
+        qr = (e, t, d) => {
           Jr((n) => {
-            const o = { ...n, [e]: Math.round(2 * (n[e] + t)) / 2 };
+            const __c = n[e];
+            const __b =
+              "number" == typeof __c && isFinite(__c)
+                ? __c
+                : "number" == typeof d && isFinite(d)
+                  ? d
+                  : Number(zr[e]);
+            const __v = Math.round(2 * (__b + t)) / 2;
+            if (!isFinite(__v)) return n;
+            const o = { ...n, [e]: __v };
             u.set("fontSizes", o);
             try {
               Qn({ fontSizes: o });
             } catch (e) {}
+            try{window.dispatchEvent(new CustomEvent("antcv:fontsizes-changed"))}catch(_){}
+            return o;
+          });
+        },
+        // HDR-TYPE-CONTROLS-001: the letter-spacing twin of qr. Rounds to 0.05
+        // (Math.round(x*20)/20 — one DOCX w:spacing unit) and clamps to
+        // [-2pt, +4pt] so a held-down button cannot make a line unreadable.
+        // SAME persistence path as qr — state, localStorage "fontSizes", and
+        // styleConfig.fontSizes — which is what lets the export legs and the
+        // copenhagen sidecar read the value through __antcvTrackPt immediately.
+        __antcvTrkStep = (e, t) => {
+          Jr((n) => {
+            const o = {
+              ...n,
+              [e]: Math.max(
+                -2,
+                Math.min(4, Math.round(20 * ((Number(n[e]) || 0) + t)) / 20),
+              ),
+            };
+            u.set("fontSizes", o);
+            try {
+              Qn({ fontSizes: o });
+            } catch (e) {}
+            try{window.dispatchEvent(new CustomEvent("antcv:fontsizes-changed"))}catch(_){}
             return o;
           });
         },
@@ -23226,12 +23571,12 @@
                 } else {
                   if (e.jd_company || e.jd_role)
                     try {
-                      lo({
+                      try{var __pg=JSON.parse(localStorage.getItem("antcv:clProseGuard")||"{}")||{};var __ak=(e.jd_company||"")+"|"+(e.jd_role||"")+"|"+String(e.jd_language||localStorage.getItem("language")||"en").replace(/["']/g,"").toLowerCase().slice(0,2);var __b=__pg[__ak]=__pg[__ak]||{};(Array.isArray(e.cl_sections)?e.cl_sections:[]).forEach(function(s){if(s&&["opening","why","who","foundation","contribute","closure","bring"].indexOf(s.id)>=0){var __t=(Array.isArray(s.items)&&s.items[0]&&s.items[0].t)||s.content||"";if(__t&&!/^\s*\[/.test(__t))__b[s.id]=JSON.parse(JSON.stringify(s))}});localStorage.setItem("antcv:clProseGuard",JSON.stringify(__pg))}catch(_){} /*CL-OPENING-SEED-985*/try{var __sc2=(e.meta&&e.meta.styleConfig)||null;if(__sc2&&Object.keys(__sc2).length){localStorage.setItem("antcv:brandV2",JSON.stringify({version:2,slots:{headerBg:__sc2.headerBg,headerInk:__sc2.headerInk||"#ffffff",sidebarBg:__sc2.sidebarBg,sidebarInk:__sc2.sidebarInk||"#1a1a1a",accent:__sc2.accent||__sc2.sidebarLineColor||__sc2.mainHeadColor}}))}else{localStorage.removeItem("antcv:brandV2")}}catch(_){} /*BRANDV2-FOLLOW-APP-001*/lo({
                         company: e.jd_company || "",
                         role: e.jd_role || "",
                         subtitle: (io && io.subtitle) || "",
-                        greeting: (io && io.greeting) || "",
-                        opening: (io && io.opening) || "",
+                        greeting: ((Array.isArray(e.cl_sections)?((e.cl_sections.find(s=>s&&s.id==="greeting")||{}).content||""):"")||(io&&io.greeting)||""),
+                        opening: (((cs=>{const o=cs.find(s=>s&&s.id==="opening")||{};return o.content||(Array.isArray(o.items)&&o.items[0]&&o.items[0].t)||"";})(Array.isArray(e.cl_sections)?e.cl_sections:[]))||(io&&io.opening)||""),
                       });
                     } catch (e) {}
                   if (
@@ -27018,7 +27363,7 @@
                 __neutralCo +
                 __quickCtx +
                 `You are an expert CV and cover letter writer for ${ie().name || "the user"}.\n${GABRIEL_BG}\nINSTRUCTIONS:\n- ANTI-FABRICATION RULE (highest priority). The candidate's actual background, as captured above and in the source documents, is the ONLY truth. NEVER invent industry experience (pharma, automotive, fintech, medical-device, banking, etc.), years of tenure, certifications, languages, tools, role titles, scope of leadership, or specific named systems that aren't supported by the source.\n  When the JD asks for something the candidate has, but the draft does not yet highlight it: REFRAME the existing experience using vocabulary aligned with the JD. Pull forward the relevant project, decision, or method from the candidate's real history. That is the right move.\n  When the JD asks for something the candidate does NOT have: do not write around it in PROFILE / SELECTED OUTCOMES / WHO I AM / WHY THIS POSITION. Leave the signal unaddressed in those sections. Do not approximate ("exposure to", "familiarity with", "interest in") to cover a gap.\n  HOW I WOULD CONTRIBUTE is the legitimate place to name a real gap explicitly and describe a concrete plan to close it (focused study, hands-on use, applying related experience). Naming the gap there is honest; inventing experience anywhere else is not.\n- SECTION FORMAT PREFERENCES: the candidate may have chosen a preferred display format per section. Supported values are: paragraph, bullets, emoji_bullets, hybrid_1 (intro + plain bullets), hybrid_2 (intro + emoji bullets), hybrid_3 (intro + emoji bullets + closing line), or table (two-column key/value). When such preferences are present (passed in via the user data under stylePrefs.sectionFormats), honor them: emit the section in the chosen shape. For emoji formats (emoji_bullets, hybrid_2, hybrid_3), ALSO return an emojis array parallel to items, one short unicode emoji per item, chosen to fit the content of that line (e.g. 📊 for measurement bullets, 🛠️ for tooling bullets, 🎯 for outcomes, 🏗️ for build/foundation, 🚀 for launch/contribute, ⚖️ for compliance, 📜 for certifications, 🎓 for education). Pick at most one emoji per item; never more. Keep emojis short (1 grapheme cluster). If a section preference is absent, fall back to the section's default type.\n- Cover letter total word count: 450-750 words (count carefully).\n- VOICE & TONE — SCANDINAVIAN PROFESSIONAL (applies regardless of output language).\n The candidate writes in a Scandinavian / Danish professional register at all times. This tone is about HOW they write, not WHICH language they write in. Whether the output is English or Danish, the voice stays the same:\n • Calm, factual, direct. Sentences state what was done — they don't perform.\n • Collaborative, not self-aggrandising. "I worked with the team to ship X" rather than "I single-handedly drove transformative change".\n • Understated confidence. The accomplishments speak for themselves; no need to flag them as impressive.\n • Concrete and specific. Numbers, scope, named systems. Not adjectives about the impact.\n • First-person without bombast. "I led the CCB" not "Led groundbreaking change governance initiatives".\n • Even in English, AVOID American resume-speak energy: no "transformative", "passionate", "dynamic", "cutting-edge", "results-driven", "thought leader", "spearheaded", "championed", "drove change", "took ownership of mission-critical initiatives", "rolled up my sleeves", "wore many hats", "moved the needle".\n • Aim for the energy of a senior Scandinavian engineer writing a memo to colleagues — clear, factual, slightly self-effacing, trusts the reader to recognise good work without it being announced.\n • If you find yourself writing a sentence that would feel out of place in a Danish professional context, rewrite it. Test: would this sound natural said aloud in a calm voice in a meeting in Copenhagen? If no, rewrite.${g}\n- After the bullets, write a closing line that names the specific concrete value the team would gain. Do NOT use the phrase "and that's good because" — that wording is banned. State the value directly.\n- COMPANY AND ROLE: Extract "company" and "role" ONLY from the JOB DESCRIPTION document. The additional signals and attached files may contain references to other companies (competitor CVs, recruiter notes, etc.) — ignore those for the meta.company and meta.role fields. The JD is always the authoritative source for who you are applying to. When a JOB DESCRIPTION is present, meta.company and meta.role MUST be filled with the real company name and role title taken from it — never leave them empty and never output "Unsolicited" when the JD names the employer. Leave meta.company empty ONLY when there is genuinely no JD (a true open/unsolicited application).\n- The CV PROFILE must echo 2-3 key signals from the cover letter.\n- If a hiring manager name appears in the job description or signals, tailor accordingly.\n- EDUCATION section: Render items as a sidebar list aligned LEFT (not centered). Use ONLY the candidate's OWN stored education entries (the STORED EDUCATION list above, when present) — never invent, embellish, or add degrees, institutions, or specialization tails that are not in the stored entry text (GEN-EDU-DEHARDCODE-001, owner 2026-07-03: one candidate's exact degree list was baked in this prompt and leaked onto other candidates). When the candidate has NO stored education, return education_items as an empty array — never fabricate a degree. Include the degree label before the colon in bold. CRITICAL: do NOT add subjects, specializations, or research areas that are not in the stored entries, even if the job description mentions them. The candidate's actual coursework is fixed; tailoring happens through which stored details you surface or trim, not by inventing new ones.\n- EXPERIENCE ROLES — INCLUDE ALL, MARK IRRELEVANT ONES on:false. Same rule as the sidebar: do NOT drop any role from the candidate's work history based on JD relevance. Return EVERY role from personalInfo in experience_roles, newest-first. Set on:true for roles relevant to the job description and on:false for roles not relevant (very early-career or off-domain) — but every role MUST still be present with its real title, company, years, and bullets filled. A hidden role (on:false) keeps its content so the user can toggle it back on in the editor in one click; a DROPPED role forces the user to retype it from memory, which is much worse. NEVER emit an on:false role as an empty or placeholder slot — populate it from the candidate's actual history exactly as a visible role. Only the on flag differs.${__tenseRule}${__langRule}${__clusterRule}${__platformRule}${__brandFitRule}\n- SIDEBAR SECTIONS — INCLUDE ALL ITEMS, MARK IRRELEVANT ONES HIDDEN. NEW RULE (CRITICAL): Do NOT drop sidebar items based on JD relevance. Instead include EVERY item from the candidate's personalInfo (tools, certifications, education, publications, regulatory, additional) in the output, but mark each item with a "hidden" flag: hidden:false (or omit hidden) for items relevant to the job description, hidden:true for items not relevant. Order each list by descending JD relevance — most relevant first, less relevant last. SIDEBAR LINE ECONOMY (owner rule): the sidebar drives the page count — pack it tight. Within each group, order items so LONGER and SHORTER values sit adjacent (they share rendered lines and reduce total line count), hide (hidden:true) JD-irrelevant qualifications and niche tools entirely, and prefer the compressed form of every value; every saved sidebar line moves the CV toward the page target. The user will see all items in the editor and can toggle any back on if you marked them hidden. If you accidentally drop an item, the user has to retype it from memory. This is much worse than including it with hidden:true.\n Per-section guidance for hidden:true vs hidden:false:\n • tools_items — MINIMUM 4 categories REQUIRED, target 5-6 categories. Returning fewer than 4 is a failed generation; do NOT return a single-row tools section. Derive categories from the candidate's actual work history, education, and domain — shape example (category labels and tools MUST come from the candidate's OWN stored data, never copied from this pattern): \"<core craft of the candidate>\" (their 3-4 specialist tools), \"<second craft or platform area>\" (their stack or instruments), \"Project & lifecycle\" (their planning and tracking tools), \"Process & methods\" (their named methods and standards), \"Documentation & reporting\" (their reporting and office tools). Keep visible the categories whose tools appear in or are clearly implied by the job description; mark hidden:true the ones that are clearly off-topic for this role (but STILL include them — the user can toggle back on). Keep the same compressed values for visible items as before (2–4 most relevant tools per category). In a no-JD (unsolicited / kernel) showcase context, include 5-6 categories spanning the candidate's full range with hidden:false on all of them.\n • certifications_items — keep visible the certifications relevant to the job description — judge each stored certification by its OWN domain (a business-analysis certificate for BA roles, a quality or process-improvement certificate for process/quality roles, an industry standard for that industry's roles, a language certificate for roles local to that language's country). Mark hidden:true the others.\n • education_items — ALL degrees stay visible (hidden:false). Even for non-academic roles, the candidate's education is required content. Optional specialization tails follow the existing EDUCATION formatting rules.\n • publications_items — visible (hidden:false) for R&D, nanotechnology, sensors, hardware innovation, academic-publishing JDs. Otherwise mark them hidden:true (do NOT drop them — keep them in the array with hidden:true). PATENT NUMBERS ARE NEVER DROPPED: every patent entry keeps its OWN stored patent number verbatim — compressing a patent line trims wording, never the number.\n • regulatory_items — keep visible the standards/frameworks relevant to the job description; mark hidden:true the others. UNSOLICITED-BREADTH-001: in a no-JD (unsolicited) showcase there is nothing to be "irrelevant" to — keep the candidate's regulatory items VISIBLE (hidden:false) across the groups, showing the full breadth. Do NOT shrink regulatory to one or two rows in unsolicited mode. GROUP SUBHEADINGS rule unchanged: items with {"group":"..."} render as teal subheadings followed by regular {"l":"...","v":"..."} rows. Group names come from the candidate's OWN stored regulatory items (the STORED REGULATORY / STANDARDS list above, when present): use the stored group headings verbatim; if the stored items carry no groups, group the stored standards sensibly by domain. NEVER add a standard or a group taxonomy the candidate has not stored (GEN-REG-DEHARDCODE-001, owner 2026-07-03: one candidate's exact group taxonomy was baked in this prompt and leaked onto other candidates). Use only groups with 2+ visible items, otherwise list visible items flat without groups. When the candidate has NO stored regulatory items, return regulatory_items as an empty array — never fabricate standards.\n  Return shape: [{"group":"..."},{"l":"<standard code>","v":"<short scope>","hidden":false},{"l":"<standard code>","v":"...","hidden":true},...]. If JD is pure business/finance/HR with zero regulatory relevance, every item should be hidden:true (still all present in the array).\n • additional_items — keep visible the items relevant (Languages always visible, Accessibility always visible, others judged on relevance). The Accessibility row MUST state the candidate's OWN stored accessibility need explicitly and factually; NEVER invent one (GEN-ACCESS-DEHARDCODE-001, owner 2026-07-03: a hearing-impaired example baked in this prompt was hallucinated onto other candidates) - when the candidate has no stored accessibility note, OMIT the row entirely; never an unspecified accommodation note. ACCESS-NO-COMMENT-001 (owner 2026-06-19): the CV accessibility row is FIRST-PERSON-FACTUAL — state ONLY the candidate's stored accommodation and what helps them, in their own factual terms. Do NOT append a third-person editorial verdict such as "it has not limited his career" — that is a recommender-style comment ABOUT the candidate, not a CV line; it may appear ONLY in a cover letter where the context fits, NEVER in the CV accessibility row. Do NOT list hobbies here — they belong in interests_items.
- • interests_items — move the candidate's stored hobbies into the INTERESTS section as verb-led bullets in the SAME format as SELECTED OUTCOMES: [{"b":"<verb phrase>","t":"<what the interest involves — one short line>"}]. 2-4 items, drawn ONLY from the stored hobbies; never invent interests. INTERESTS-FILL-001: NEVER leave INTERESTS as the "[Verb] / [what the interest involves]" placeholder — if the candidate has ANY stored hobbies or community activity, populate 2-4 real interest bullets; an unfilled placeholder INTERESTS section is a failed generation. In unsolicited mode LANGUAGES and ACCESSIBILITY must also carry the candidate's real, FULL data (every language with its real level; the candidate's OWN stored accessibility note if one exists - NEVER invent one, and omit/hide ACCESSIBILITY entirely when the candidate has none), never a thinned subset. Example: {"b":"Coaching","t":"junior rugby — weekly sessions as assistant coach"}.\n- ROLE MERGE-OR-SPLIT (when the candidate has multiple consecutive roles at the same company with overlapping/contiguous date ranges). Choose ONE structure that best fits the JD: (A) MERGE into a single role with the combined date span and a combined title (e.g. "System Architect & Change Control Lead | <company> | 2017 - 2025") and the merged bullets — use when the JD is broad/cross-functional; or (B) SPLIT into two roles with DISTINCT, NON-OVERLAPPING titles (e.g. "Change Control Lead | <company> | 2020 - 2025" then "System Architect | <company> | 2017 - 2020") — use when the JD values the role transition. HARD RULE: never output BOTH a merged title AND a separate copy of one of its components. Specifically FORBIDDEN: a role titled "System Architect & Change Control Lead" alongside a second role titled "System Architect" at the same company — that repeats "System Architect" twice and is the exact mistake to avoid. If you MERGE, there is ONE role and the earlier-period role is turned OFF (on:false). If you SPLIT, neither title may contain the other's distinguishing component. NEVER show overlapping copies — pick one structure and turn off the other.\n- PATENTS GO ONLY IN PUBLICATIONS & PATENT, never in an EXPERIENCE role's bullets. Do NOT write "Co-invented Patent No. …" or any patent-number line inside experience_roles bullets — the patent already lives in the publications section. A role bullet may describe the underlying work (the design or engineering change the patent covers, described in plain words) but must not carry the patent number.\n- VOLUNTEER EXPERIENCE AS ROLE (optional). If the candidate has documented volunteer/community work AND the job description values leadership, coaching, sports, community organising, or people operations — promote the volunteer activity to a full role slot. Otherwise keep it as a one-liner in additional_items. Title should include " (Volunteer)" in English or " (Frivilligt arbejde)" in Danish.\n- LANGUAGES (additional_items). Use the languages from the candidate\'s personalInfo. Use the ACTUAL stored proficiency for each language VERBATIM - NEVER inflate or escalate a level for geographic context, and NEVER invent a language that is not in personalInfo.${/\bgabriel\b/i.test(String(ie().name||""))?' For Gabriel the canonical set is exactly: English (native), Hebrew (native), Spanish (professional), Danish (B1). Danish is B1, never "professional" or "fluent", and there is NO German.':""}\n- HOBBIES IS ALWAYS RETAINED VERBATIM. The Hobbies entry from personalInfo.additional must ALWAYS appear in additional_items, copied exactly word-for-word. Do NOT paraphrase, tighten, or "improve" the Hobbies text. The user has chosen the exact wording. Hobbies humanizes the candidate and is appropriate for every role. Other items in Additional Information (Accessibility, Global, Volunteer) are JD-aware: include if relevant, drop if not (Volunteer is a special case — see EXPERIENCE rules above for promotion).\n- LENGTH BUDGETS — write tight from the start. These are HARD caps, not suggestions. Writing longer then compressing wastes tokens.\n  TARGET TOTAL LENGTH: aim for ${u.get("pageBudget", 1.5)} pages of CV content. Tune budgets below toward that target — 1pp uses the lower end of every range, 1.5pp mid, 2pp upper end, 2.5-3pp upper end + add a 2nd line where a sentence reads stronger as two.\n  COVER LETTER TARGET LENGTH: aim for ${u.get("pageBudgetCl", 1)} page(s) for the cover letter (range 0.5-2.5; 0.5 = a short note, 1 = tight, 2.5 = maximum). At 0.5-1 page keep who_content toward the lower end (≈60 words), why_content to a single sentence, and contribute/foundation tight — do NOT pad to fill space; a short, dense cover letter beats a padded one. At 1.5+ pages you may run who_content to the upper end, add the fuller foundation paragraphs, and expand contribute_items detail. Scale the content to the target — never pad to reach it.\n • PROFILE (profile_content): THREE short parts per the PERSONALITY KERNEL's PROFILE STRUCTURE (WHO I AM 1-2 sentences + BODY-MIND 1 sentence + ONE behaviour-based special-capability close as the FINAL sentence), 45-62 words total, approximately 320-400 characters (HARD CAP 400 chars). Every word earns its place. No filler, no throat-clearing. WHO I AM hits the signal hard: role + years + 2-3 JD-relevant anchors (JD-driven) or the broad IT-professional identity (unsolicited). PROFILE-NO-FILLER-001: never fill the profile with vague generic claims - e.g. "has worked with people from many backgrounds", "works well with others", "team player", "strong communicator"; show people-orientation through a CONCRETE BEHAVIOUR instead (e.g. aligns engineers, suppliers and management around one clear decision; adapts the message to the listener). PROFILE-NO-DISABILITY-001: NEVER mention a disability, health condition, hearing impairment or any accessibility need in profile_content, and NEVER use "has not limited his/their career" (or similar) framing anywhere in the profile - that belongs ONLY in the dedicated Accessibility row (CV) or, where it genuinely fits, the cover letter.\n • WORK STYLE (work_style_content): 1-2 sentences, 22-32 words total, approximately 145-200 characters (HARD CAP 200 chars; 1.5-2 lines, never 3-4 lines, never dropped). TWO axes maximum: Axis 1 = decision and work method (information, uncertainty, quality, decisions, written outcomes, risk, practical next steps); Axis 2 = the FINAL clause, which MUST be about people - working with colleagues, aligning engineers / suppliers / customers / management, adapting the message to the listener, building trust, representing the company with care, or keeping goals and next steps clear. The final clause must NOT be about tools, data, systems, documentation, processes or metrics. Behaviour, not adjective labels.\n${v}\n   Note: First-page roles (typically r1-r5) use bullets at the upper end of the range. Continuation roles (r6 onward, including any volunteer or earlier-career slot) carry a HARD MAXIMUM of 3 bullets each (never more, even for an interesting volunteer / community / sports role such as Team Operations Manager; pick the 3 strongest and drop the rest). They use bullets at the lower end — page 2 vertical space is usually tight. How to know which roles go to page 2: count active roles — roles 1 through ~3 are page 1, roles 4+ are page 2. Format: "Verb + concrete object + specific outcome with numbers/tools." Retain all numbers, proper nouns, tools, certifications. BULLET ORDER (SECTION-ORDER-001): within EACH role, order that role's OWN bullets STRONGEST-FIRST - lead with the most QUANTIFIED / highest-impact bullet (a big delta like "250 to 10" outranks a high fraction like "3,400 of 3,600"), then the next strongest. The ROLES themselves stay newest-first (reverse-chronological) - never reorder roles by impact. When a JD is present, a bullet more relevant to the JD outranks a less-relevant bullet of similar impact. Apply the same JD-relevance-then-impact ordering to every list (tools, certifications, regulatory, outcomes). RANK KEY (SECTION-ORDER-001b): the order is set by the STRENGTH of each signal - a specific quantified accomplishment, a concrete scope of work, or a named tool - measured AGAINST THE JOB (how directly it matches the JD needs); a stronger job-match outranks a weaker one. When there is NO JD (unsolicited), rank by general professional importance / common sense for a Scandinavian, English-language CV: breadth and the most universally valued, transferable accomplishments and tools first.\n • PROFILE + WORK STYLE together should occupy about 1/4 of the top of the main column — tight, not sprawling.\n- DIFFERENTIATION RULES — each section answers ONE question. Do NOT let two sections cover the same content from slightly different angles. The reader should never feel they are reading the same idea twice.\n • PROFILE answers WHO I AM PROFESSIONALLY (role, years, the kinds of problems I solve). It is positioning, not evidence. NO numbers, NO named systems, NO specific outcomes — those belong in SELECTED OUTCOMES. Two sentences of identity. Test: if you remove the PROFILE and the rest of the CV still reads coherently, the PROFILE was doing its job (positioning, not duplicating).\n • SELECTED OUTCOMES answers WHAT I HAVE DELIVERED. Five proof points, EACH carrying a concrete METRIC — a number, %, count, timeframe, ratio, or named scale (e.g. "cut cycle time from 250 to 10 days", "led a 7-person team", "10x cost reduction"). A proof point with NO number/metric is not an outcome — replace it or drop it. This is where metrics live. NUMERIC-OUTCOMES-001: at LEAST 4 of the outcomes MUST contain a real digit (a number, %, ratio, count, timeframe, team size, or money amount). If the candidate's history does not support a number for a given outcome, DROP it and surface a different role's quantified result instead — never pad the list with a non-numeric line. When a role bullet implies a magnitude (team size, cycle time, budget, volume, number of suppliers/parts), pull that number forward into the outcome. Verb variety required (see VERB RULE below). Do NOT restate the PROFILE in bullet form, and do NOT restate a PROFESSIONAL EXPERIENCE bullet — an outcome is the QUANTIFIED RESULT of the work, NOT the responsibility the bullet already describes; if an outcome would duplicate a role bullet's wording or topic, rewrite it to lead with the measured result. CONCRETE NO-RESTATE EXAMPLE: if a role bullet already reads "Supervise 7-person task force at the ODM partner", that role's SELECTED OUTCOME must NOT re-describe the same 7-person team or the ODM site again - emit ONLY the distinct measured result drawn from the candidate's own history (a patent, a shipped system, a measured delta). The outcome must add a NEW fact (a number, a patent, a delivered system), never echo a bullet headline.\n • CORE COMPETENCIES answers WHAT KIND OF WORK I CAN OWN. 3-4 focus areas (NOT six - keep it to three or four rows) with 1-2 line descriptions. This is a capability taxonomy, not a list of past achievements. The Strategic Expertise column describes the practice ("CCB, risk assessment, audit-ready documentation" - acronym in the table per ACRONYM-TABLE-001), NOT the outcome ("Cut cycle time by 95%"). Outcomes belong in SELECTED OUTCOMES; capabilities belong here.\n- ACRONYMS IN TABLES (ACRONYM-TABLE-001): inside the CORE COMPETENCIES and WHAT I BRING tables (and any narrow column), use the standard ACRONYM of a long multi-word term to save width - write "CCB" for "Change Control Board" (likewise FMEA, DOE, ASPICE, EMC). The FIRST time that SAME term appears in PROSE (a profile sentence, a WHO I AM line, or an experience bullet), write it in FULL with the acronym in parentheses ONCE - "Change Control Board (CCB)" - so the table acronym is explained. Never leave a table-only acronym unexplained: if "CCB" appears in a table, "Change Control Board (CCB)" must appear exactly once in the prose, and plain "CCB" everywhere after.\n • Anti-repetition test for the CV: if the same noun phrase ("change governance", "KPI reporting", "stakeholder alignment") appears in PROFILE, OUTCOMES, AND CORE COMPETENCIES, you have a repetition problem. Each of these three sections should pull from a slightly different vocabulary register. Use synonyms and varied framing across the three sections.\n • WHO I AM (cl who_content) answers WHO I AM AS A PERSON DOING THIS WORK. A paragraph of 3-5 sentences (not 2-3), about 60-100 words. Cover: years of experience and discipline; the kinds of environments you have come from and what was characteristic about them; how you operate (what problems you take on, what you keep at the centre of your work); and the orientation most relevant to this specific role. This is a NARRATIVE — write it the way you would introduce yourself to a hiring manager before showing them artefacts. NO skill list. NO technology list. NO outcome list. Those are What-I-Bring's job. WHO I AM is the human introduction; WHAT I BRING is the capability map. NO-INLINE-LABEL-001: write who_content as ONLY the paragraph prose — do NOT begin it with a "WHO I AM:" / "<b>WHO I AM:</b>" label, and likewise never prefix why_content with a "WHY …:" label. The section heading already shows the title; an inline repeat is a duplicate the owner does not want. A WHO I AM that runs only one short sentence is too thin — Word readers expect at least four lines of body text in this section. End the paragraph so its FINAL rendered line carries at least 4 words; if the closing sentence would leave a 1-2 word orphan on the last line, trim 1-2 words earlier in the paragraph (never a number or proper noun).\n • WHAT I BRING (cl bring_rows) answers WHAT CAPABILITIES THE EMPLOYER GETS. The 5-row Focus Area / Strategic Expertise table mapped to the JD. This is where skills, methods, and frameworks go. Do NOT prose-write what is already in the table inside WHO I AM.\n • Anti-repetition test for the cover letter: WHO I AM should never name a tool, framework, or methodology that also appears in WHAT I BRING. If you catch yourself listing capabilities in WHO I AM, move them to WHAT I BRING and rewrite WHO I AM as identity prose.\n- VERB RULE — SELECTED OUTCOMES.\n • Use varied, specific verbs in every outcomes_items bullet. Avoid generic "led/managed/oversaw" unless the candidate's memory digest indicates this verb is appropriate to their actual responsibility.\n • SELECTED OUTCOMES (outcomes_items) — 5 to 12 BULLETS. Aim for ONE strong QUANTIFIED outcome anchored to EACH major role the candidate has, so the per-role "Results" view covers EVERY role (including page-2 roles) — 5 minimum, 12 maximum. The candidate's full history can decompose to ~11 distinct roles (e.g. system architect, change-control lead, CRM/sys-admin split, research/teaching assistant, electro-optics engineer, team lead, security guard, volunteer/frivilligt arbejde) — emit one outcome per active role so EVERY role, including page-2 and earlier-career ones, carries a Result. RANK by impact (concrete numbers > scope/scale > named systems > generic process) and MERGE adjacent ones ONLY when they share a theme AND belong to the same role; never collapse two different roles into one outcome. The output JSON array MUST have 5–12 elements. Returning more than 12 will be trimmed by signal density — so YOU pick the best 5–12 yourself, one per role where the candidate's history supports it.\n • SELECTED OUTCOMES (outcomes_items) — VERB VARIETY REQUIRED. Each bullet must start with a different leading verb than the one before it. Approved verbs (use a varied mix — never repeat the same verb on consecutive bullets, and never use one verb for more than 2 of the 5 bullets total): Owned, Built, Ran, Designed, Architected, Drove, Delivered, Implemented, Established, Shipped, Reduced, Cut, Scaled, Mapped, Translated, Coordinated, Negotiated, Resolved, Investigated, Validated, Qualified, Authored, Chaired, Guided, Mentored, Restructured, Initiated, Configured, Specified, Directed, Supervised. Pick the verb that most accurately describes the action — DO NOT default to "Directed" or "Supervised" for everything. The 5 bullets together should read with verb variety, not as a list of identical openings.\n${x}\n • If the original draft used "Led", rewrite the bullet to start with the most accurate verb from the approved list above, preserving every number, tool name, certification, and proper noun.\n- ORPHAN RULE: Every paragraph and bullet in the MAIN COLUMN must have >=4 words on its final rendered line (~480px Calibri 11px). Shorten orphans with shorter synonyms or removing filler — never remove numbers, proper nouns, technical terms.\n- DANISH-MARKET ENGLISH WORD CHOICE (DK-ENGLISH-001): when the output language is ENGLISH (Danish / Nordic recruiters read these), several correct English words read as aggressive, self-promotional, inflated, or ambiguous in Denmark. Prefer the softer, concrete alternative; keep all numbers, tools and proper nouns. REMOVE ENTIRELY (empty recruiter filler): "dynamic". AVOID -> PREFER: discussed -> reviewed / clarified / agreed / presented; challenged -> tested assumptions / questioned gaps / identified risks; argued -> made the case for / recommended; defended -> explained / justified / supported with data; pushed -> moved forward / followed up; demanded -> requested / specified / set requirements; enforced -> applied / checked / followed up on; controlled -> monitored / tracked / checked; owned -> was responsible for / handled / coordinated; managed -> coordinated / planned / supervised technically; led -> coordinated / guided / took technical lead on; supervised -> "supervised technical work" / "coordinated engineering activities" (never bare "supervised", which implies formal line management); influenced -> contributed to / shaped / recommended; evangelized -> introduced / explained / promoted internally; sold -> presented the case for / gained agreement; promoted -> introduced / supported adoption of; aggressive -> ambitious / fast / demanding; ambitious -> "tight timeline" / "clear target" / "high technical bar"; passionate -> interested in / motivated by / focused on; impactful -> state the actual result; strategic -> name the decision, roadmap or trade-off; stakeholder -> the concrete party (customer, supplier, QA, production, management, hiring manager); robust -> "stable under X" / "passed Y" / "reduced failure risk"; negotiated -> agreed terms / clarified scope / balanced constraints; compromised -> balanced / traded off / agreed a middle option (NEVER "compromised" - in Danish-English it reads as "damaged"); eventually -> finally / later / in the end (Danes hear "eventuelt" = possibly); actual -> real / current / specific (Danes hear "aktuel" = current). Danish output uses natural Danish and is exempt.\n- PUNCTUATION DASH RULE: use the plain hyphen "-" everywhere — year ranges ("2020 - 2025"), two-part compressions, table separators. NEVER output an em dash ("—") in ANY generated value; it is a banned token and forces a rewrite.\n- Rationale: genuine assessment, real gaps honestly stated.\n- CORE COMPETENCIES table (core_comp_rows) — table is 4.8" wide; Focus Area column ≈ 1.44"; Strategic Expertise column ≈ 3.36".\n • **FOCUS AREA**: 1-3 words, 17 chars max. Examples: "Change governance", "EO system validation", "KPI reporting", "Requirements traceability". Forbidden: generic ("problem solving", "leadership", "communication").\n${E}\n • Forbidden: vague words, repeated buzzwords. Use ChatGPT draft as primary vocabulary source where available.\n- WHAT I BRING table (bring_rows) — CL table is 6.0" wide; Strategic Expertise column ≈ 4.2". Each Strategic Expertise cell is a HARD CAP of ~52 characters (count them - this is the USABLE text AFTER the cell left/right edge padding ~5pt per side; do NOT fill the full column width or it wraps) and MUST fit ONE rendered line. If a cell would exceed ~52 characters, cut a clause or use shorter words; NEVER wrap to a 2nd line. GOOD (49 ch): "Requirements traceability and trade-off analysis." TOO LONG (98 ch, FORBIDDEN): "Requirements traceability, trade-off analysis, and supplier coordination for electro-optical systems." Keep every row to ONE tight line.\n • **FOCUS AREA**: 1-3 words, max 5. Same standard as core_comp. BRING-DISTINCT-001: the WHAT I BRING focus areas MUST NOT reuse the CORE COMPETENCIES focus-area names or cover the same ground — never put a shared label such as "Validation & Compliance" or "Technical-Commercial Evaluation" in BOTH tables. CORE COMPETENCIES is a capability taxonomy (what work I can own); WHAT I BRING is the employer-facing value mapped to the target (what they get). Use different words AND a different angle for every bring row; if a bring row would duplicate a core_comp row, replace it with a distinct capability.\n${S}\n- HOW I WOULD CONTRIBUTE structure (contribute_intro + contribute_items + contribute_closing): MANDATORY STRUCTURE:\n contribute_intro: a SHORT one-line lead-in that ENDS WITH A COLON - HARD CAP ~70 characters so it NEVER wraps to a second line (examples: "My first priorities here would be:" / "If a role fits, I would focus on:"). Do NOT pack the domain gap into it (that belongs in who/why); keep it to ONE rendered line.\n contribute_items: 4 bullets. Each bullet must describe a CONCRETE ACTION with a CLEAR MEASURABLE OUTCOME. CONTRIBUTE-ONE-LINE-001: each bullet is a HARD CAP of ~78 characters and MUST fit ONE rendered line INCLUDING its bullet marker and indent - the marker + indent eat ~12 characters of the line, so do NOT write to the full text width. If a bullet would exceed ~78 characters, cut a clause or use shorter words; NEVER let a contribute bullet wrap to a 2nd line. Forbidden: vague wording, generic verbs (coordinate, support, assist), or bullets without a stated result. The 4 bullets together must follow this embedded approach — weave these principles in naturally, do NOT state them as a list:\n  • Start fast: learn the current setup, tools, and main flows before proposing anything. Real impact starts with understanding how the team and users experience the work today.\n  • Map before changing: identify the 1-2 highest-leverage gaps in the current process (not the most visible ones — the ones where a small fix removes a big drag).\n  • Turn insight into focused action: each bullet should describe a specific action tied to a specific outcome for the team or product, not a general ambition.\n  • Measure the change: where possible, each bullet should imply a metric or a before/after state the team can observe.\n${R}\n contribute_closing: ONE non-bulleted closing line that follows the bullets. Keep it to ONE sentence, ~120 characters max - tight at the sentence level, so trim every spare word. Shape: "My aim is to help [Company] [single concrete scope] - focused on what the team gains." State ONE concrete scope, then stop. Do NOT stack adjectives ("clear, reviewable, and practical"), do NOT chain two value clauses, do NOT use an em dash. This is a SEPARATE field from contribute_items (NOT a bullet).\n- WHY THIS POSITION / WHY YOUR COMPANY (why_content): 1-2 sentences on fit. HEADING BY CONTEXT (WHY-TITLE-CONTEXT-001): when a JOB DESCRIPTION is present (a specific role) the section heading is "WHY THIS POSITION"; for a true unsolicited application (no JD) the heading NAMES THE TARGET'S NATURE per case — "WHY YOUR COMPANY", "WHY YOUR INSTITUTE", or "WHY YOUR ORGANISATION" (a research institute is an institute, an NGO/public body an organisation, a firm a company), defaulting to "WHY YOUR COMPANY" when unsure. The sentence MUST be tailored to the specific target — vary it, never a boilerplate fit line. Match the output language. Do NOT also repeat the heading as an inline bold label at the start of the paragraph (no "<b>WHY …:</b>" prefix) — the heading already shows it. Do NOT pin the candidate to one narrow specialty — NEVER write "the work I do best: <one narrow niche>" or frame the candidate as only a single-niche specialist. Frame the fit around the BREADTH the stored background actually shows (cross-disciplinary product / systems / process strengths from the whole work history), mapped to what the company or role actually needs.\n- FOUNDATION (foundation_hands_on + foundation_professionally): Two paragraphs describing HOW the candidate works — their working style, discipline, and approach — NOT a list of tools, technologies, degrees, or certifications.\n • foundation_hands_on: 1–2 SHORT sentences, MAX ~155 characters / 2 rendered lines (trim 2-3 words rather than spill onto a 3rd line) - their hands-on practice and how they operate day-to-day. Example of good: "I start by framing the decision — writing down the question, the criteria, and what would count as a good-enough answer. Then I build the smallest prototype that exposes the real risk, not the imagined one." Example of BAD (do NOT write this way): "Python, MATLAB, LabVIEW, Jira, Confluence, Six Sigma Black Belt." That's a tool list, which belongs in TOOLS & METHODS, not here.\n • foundation_professionally: 1–2 sentences about how they operate in a professional/team setting — how they make decisions visible, how they bring others along, how they handle trade-offs. Example of good: "I keep decisions and their rationale in the open — in a shared doc or a short meeting note — so anyone joining later can see what was decided and why. When a trade-off needs to be made, I surface it early rather than smuggling it in." Example of BAD: "MBA from [Business School], M.Sc. from [University], 15+ years experience." That's a credential list, which belongs in EDUCATION/PROFILE, not here.\n Both paragraphs must use first-person ("I"), be specific, and describe BEHAVIOUR not CREDENTIALS. If you catch yourself listing nouns (tools, degrees, standards), stop and rewrite as a verb-driven sentence about the candidate's way of working.\n- CLOSURE LINE (closure_content): Write 1–2 confident, specific sentences. Use this structure: "I would welcome the chance to talk through how I could support [exact company name from JD] in [position/department] by contributing to [relevant scope of work — be specific about what that company does]." Avoid all formulaic phrases. BANNED WORD (English output only): never use the word "discuss" in English prose — to Danish / Scandinavian readers it reads as urging or pressuring; use "talk through", "explore", "go through", or "a conversation about" instead. (Danish output may use "drøfte" / "tale om" normally.) In Danish: "Jeg vil meget gerne drøfte, hvordan jeg konkret kan bidrage til [company]s arbejde med [scope] — og jeg modtager gerne en invitation til samtale." MUST match output language exactly. Never mix languages.${a ? "\n\n🇩🇰 FINAL LANGUAGE CHECK BEFORE OUTPUTTING: Reread your draft. Every value that is not a proper noun MUST be in Danish. If you see English sentences, translate them now. The schema below shows English example values for clarity ONLY — your actual values must be Danish." : __langGenLock(je)}\n\n⚠️ CRITICAL OUTPUT REQUIREMENT — EVERY cl_overrides FIELD MUST BE FILLED.\nThe schema below shows EXAMPLE shapes. Marker strings like "FILL_who_content_here", "FILL_why_content_here", "FILL_foundation_hands_on_here", "FILL_foundation_professionally_here", "FILL_closure_content_here" are placeholders you MUST REPLACE with real prose content following the instructions above. NEVER return an empty string ""  for any cl_overrides field. NEVER return a marker string verbatim. NEVER omit a field. If you are about to return an empty string or a marker, instead write real grounded content using the candidate's actual experience. An empty CL field is a failed generation. EVERY cv_overrides field MUST ALSO be fully written: profile_content and work_style_content are REQUIRED — NEVER return an empty string or a bracketed placeholder for either. work_style_content MUST be 1-2 real sentences (it renders inline after a bold "Work style:" label, so an empty value drops the label). In an UNSOLICITED draft (no JD) profile_content's FIRST sentence MUST be the candidate's broad professional identity as the STORED profile and history support it, NEVER a narrow specialist opener (GEN-PROFILE-001). An empty PROFILE or WORK STYLE is a failed generation.\n\nReturn ONLY valid JSON (no markdown):\n{"meta":{"company":"<EXACT employer name copied from the JOB DESCRIPTION — REQUIRED when a JD is present; empty string ONLY for a true no-JD unsolicited run>","role":"<EXACT role title copied from the JOB DESCRIPTION — REQUIRED when a JD is present; empty string ONLY for a true no-JD unsolicited run>","subtitle":"Role • Area • Area","cl_slogan":"<COVER-LETTER SLOGAN - a SHARP, SPECIFIC OBSERVATION about THIS candidate in THIS role: the one thing they uniquely do that the JD actually needs. A punchy HEADLINE of 4-13 words (HARD CAP 13; aim for 6-11 - shorter and sharper scores higher). PREFERRED SHAPE: 'A [candidate's real role identity] WHO [concrete, role-specific value verb + domain object]' - the GOLD STANDARD is 'A PROJECT MANAGER WHO MOVES OPTICAL HARDWARE FROM LAB TO SCALABLE DELIVERY'. Name the candidate's actual edge/move against THIS JD so it reads as INSIGHT, not filler. It is a HEADLINE, NOT a sentence: no comma-splice, no clause after a comma, no full stop; do NOT open with 'As a' (that truncates to a dangling fragment). Draw ONLY on the candidate's real stored experience/interests, worded EXACTLY as the stored data states it - NEVER invent, inflate, or change a role, title, tenure, or activity (SLOGAN-NO-FABRICATION-001: if the kernel says 'assistant coach of junior rugby', NEVER write 'rugby coach' or 'former rugby coach'; if an activity is current NEVER write 'former'). If there is no clean real hook, use a plain professional observation rather than inventing a personal one. Alt shapes when 'A [role] WHO [x]' does not fit: '[real strength] for [what this role delivers]', '[domain A] to [domain B]', '[real activity] that [outcome]'. NEVER a copy of the subtitle/specialization triad, NEVER a bullet-separated keyword list, no buzzwords. Empty string ONLY for a true no-JD unsolicited run>","greeting":"Dear X,","opening":"Opening."},"cv_overrides":{"profile_content":"","work_style_content":"","core_comp_rows":[["Focus","Exp"],["Focus","Exp"],["Focus","Exp"],["Focus","Exp"]],"outcomes_items":[{"b":"B","t":"t"},{"b":"B","t":"t"},{"b":"B","t":"t"},{"b":"B","t":"t"},{"b":"B","t":"t"}],"experience_roles":[{"id":"r1","title":"<USE CANDIDATE'S MOST RECENT ROLE TITLE>","company":"<USE CANDIDATE'S MOST RECENT COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet from candidate's history>","<bullet>","<bullet>"]},{"id":"r2","title":"<NEXT ROLE TITLE>","company":"<NEXT COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet>","<bullet>","<bullet>"]},{"id":"r3","title":"<ROLE TITLE>","company":"<COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet>","<bullet>"]},{"id":"r4","title":"<ROLE TITLE>","company":"<COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet>","<bullet>"]},{"id":"r5","title":"<ROLE TITLE>","company":"<COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet>","<bullet>"]},{"id":"r6","title":"<OLDEST ROLE TO INCLUDE>","company":"<COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet>","<bullet>"]},{"id":"r7","on":false,"bullets":["<unused slot>"]},{"id":"r8","on":false,"bullets":["<unused slot>"]},{"id":"r9","on":false,"bullets":["<unused slot>"]},{"id":"r10","on":false,"bullets":["<unused slot>"]}],"tools_items":[{"l":"Cat","v":"tools"},{"l":"Cat","v":"tools"},{"l":"Cat","v":"tools"},{"l":"Cat","v":"tools"},{"l":"Cat","v":"tools"}],"certifications_items":["cert1","cert2"],"education_items":[{"deg":"<HIGHEST DEGREE>","sch":"<INSTITUTION, brief detail>"}],"publications_items":["pub1 or empty array"],"regulatory_items":[{"group":"Group Name"},{"l":"CODE","v":"description"}],"additional_items":[{"l":"Languages","v":"<candidate's languages from memory digest, comma-separated, native/professional/B1 etc>"},{"l":"Accessibility","v":"<must say explicitly the request is as a the candidate's own stored accessibility need, factual and first-person; omit row when no accessibility item is stored - never invent one>"}]},"cl_overrides":{"who_content":"FILL_who_content_here_3_to_5_sentence_narrative_60_to_100_words","bring_rows":[["Need from JD/company","Matching action / evidence / result"],["need","matching action"],["need","matching action"],["need","matching action"]],"why_content":"FILL_why_content_here_1_to_2_sentences_about_role_fit","role_view_intro":"FILL_role_view_intro_here_one_lead_line_ending_with_a_colon","role_view_rows":[["<employer priority 1 - short label>","<ONE sentence: the EMPLOYER'S problem only - no candidate evidence, no solution>"],["<employer priority 2 - short label>","<ONE sentence: employer problem only>"],["<employer priority 3 - short label>","<ONE sentence: employer problem only>"]],"contribute_intro":"My immediate priority would be to close the gap in [gap], through focused study and hands-on use. Then I would focus on:","contribute_items":["b1","b2","b3","b4"],"contribute_closing":"My aim is to help [Company] [single concrete scope] - focused on what the team gains.","who_lead":"FILL_who_lead_here_one_sentence_on_the_conditions_you_work_best_in","who_summary":"FILL_who_summary_here_years_disciplines_and_environments","who_operate":"FILL_who_operate_here_one_sentence_work_style","who_eligibility":"","who_goal":"FILL_who_goal_here_the_contribution_you_want_to_make","foundation_hands_on":"FILL_foundation_hands_on_here_1_to_2_sentences_about_daily_practice","foundation_professionally":"FILL_foundation_professionally_here_1_to_2_sentences_about_team_setting","closure_content":"FILL_closure_content_here_1_to_2_sentence_closing_per_instructions"},"rationale":{"fit_summary":"1-2 sentence honest overall fit.","top_fit_points":["fit 1","fit 2","fit 3"],"gaps":["gap 1","gap 2"],"tailoring_decisions":"Key tailoring choices made.","cover_letter_strategy":"Why this angle.","red_flags":["A JD-side risk/caveat worth flagging (vague comp, imminent or passed deadline, unrealistic skill mix, no recruiter contact). [] if none."],"questions_in_jd":[{"question":"A question the JD explicitly asks the candidate to answer (empty array if none).","suggested_answer":"A short answer grounded ONLY in the candidate data, else [needs candidate input on X].","grounded":true}],"assumptions":["An assumption made when claiming fit or proposing to close a gap — state it plainly; honest framing."],"confidence_notes":[{"text":"A specific drafted CV/CL sentence.","confidence":0.0,"issue":"Why it is weakly grounded in the candidate data; null when well-grounded."}],"recommendations":["A concrete, honest action to strengthen this application (cite adjacent experience as adjacent, never as held)."],"detected_language":"ISO 639-1 code of the JD (en, da, sv, de, fr, es, ...).","supporting_context":"Role-specific tips or signals from the JD page that apply ONLY to this role (e.g. hiring manager preferences, team migrations). Empty string if none. Not facts about the candidate."}}`;
+ • interests_items — move the candidate's stored hobbies into the INTERESTS section as verb-led bullets in the SAME format as SELECTED OUTCOMES: [{"b":"<verb phrase>","t":"<what the interest involves — one short line>"}]. 2-4 items, drawn ONLY from the stored hobbies; never invent interests. INTERESTS-FILL-001: NEVER leave INTERESTS as the "[Verb] / [what the interest involves]" placeholder — if the candidate has ANY stored hobbies or community activity, populate 2-4 real interest bullets; an unfilled placeholder INTERESTS section is a failed generation. In unsolicited mode LANGUAGES and ACCESSIBILITY must also carry the candidate's real, FULL data (every language with its real level; the candidate's OWN stored accessibility note if one exists - NEVER invent one, and omit/hide ACCESSIBILITY entirely when the candidate has none), never a thinned subset. Example: {"b":"Coaching","t":"junior rugby — weekly sessions as assistant coach"}.\n- ROLE MERGE-OR-SPLIT (when the candidate has multiple consecutive roles at the same company with overlapping/contiguous date ranges). Choose ONE structure that best fits the JD: (A) MERGE into a single role with the combined date span and a combined title (e.g. "System Architect & Change Control Lead | <company> | 2017 - 2025") and the merged bullets — use when the JD is broad/cross-functional; or (B) SPLIT into two roles with DISTINCT, NON-OVERLAPPING titles (e.g. "Change Control Lead | <company> | 2020 - 2025" then "System Architect | <company> | 2017 - 2020") — use when the JD values the role transition. HARD RULE: never output BOTH a merged title AND a separate copy of one of its components. Specifically FORBIDDEN: a role titled "System Architect & Change Control Lead" alongside a second role titled "System Architect" at the same company — that repeats "System Architect" twice and is the exact mistake to avoid. If you MERGE, there is ONE role and the earlier-period role is turned OFF (on:false). If you SPLIT, neither title may contain the other's distinguishing component. NEVER show overlapping copies — pick one structure and turn off the other.\n- PATENTS GO ONLY IN PUBLICATIONS & PATENT, never in an EXPERIENCE role's bullets. Do NOT write "Co-invented Patent No. …" or any patent-number line inside experience_roles bullets — the patent already lives in the publications section. A role bullet may describe the underlying work (the design or engineering change the patent covers, described in plain words) but must not carry the patent number.\n- VOLUNTEER EXPERIENCE AS ROLE (optional). If the candidate has documented volunteer/community work AND the job description values leadership, coaching, sports, community organising, or people operations — promote the volunteer activity to a full role slot. Otherwise keep it as a one-liner in additional_items. Title should include " (Volunteer)" in English or " (Frivilligt arbejde)" in Danish.\n- LANGUAGES (additional_items). Use the languages from the candidate\'s personalInfo. Use the ACTUAL stored proficiency for each language VERBATIM - NEVER inflate or escalate a level for geographic context, and NEVER invent a language that is not in personalInfo.${/\bgabriel\b/i.test(String(ie().name||""))?' For Gabriel the canonical set is exactly: English (native), Hebrew (native), Spanish (professional), Danish (B1). Danish is B1, never "professional" or "fluent", and there is NO German.':""}\n- HOBBIES IS ALWAYS RETAINED VERBATIM. The Hobbies entry from personalInfo.additional must ALWAYS appear in additional_items, copied exactly word-for-word. Do NOT paraphrase, tighten, or "improve" the Hobbies text. The user has chosen the exact wording. Hobbies humanizes the candidate and is appropriate for every role. Other items in Additional Information (Accessibility, Global, Volunteer) are JD-aware: include if relevant, drop if not (Volunteer is a special case — see EXPERIENCE rules above for promotion).\n- LENGTH BUDGETS — write tight from the start. These are HARD caps, not suggestions. Writing longer then compressing wastes tokens.\n  TARGET TOTAL LENGTH: aim for ${u.get("pageBudget", 1.5)} pages of CV content. Tune budgets below toward that target — 1pp uses the lower end of every range, 1.5pp mid, 2pp upper end, 2.5-3pp upper end + add a 2nd line where a sentence reads stronger as two.\n  COVER LETTER TARGET LENGTH: aim for ${u.get("pageBudgetCl", 1)} page(s) for the cover letter (range 0.5-2.5; 0.5 = a short note, 1 = tight, 2.5 = maximum). At 0.5-1 page keep who_content toward the lower end (≈60 words), why_content to a single sentence, and contribute/foundation tight — do NOT pad to fill space; a short, dense cover letter beats a padded one. At 1.5+ pages you may run who_content to the upper end, add the fuller foundation paragraphs, and expand contribute_items detail. Scale the content to the target — never pad to reach it.\n • PROFILE (profile_content): THREE short parts per the PERSONALITY KERNEL's PROFILE STRUCTURE (WHO I AM 1-2 sentences + BODY-MIND 1 sentence + ONE behaviour-based special-capability close as the FINAL sentence), 45-62 words total, approximately 320-400 characters (HARD CAP 400 chars). Every word earns its place. No filler, no throat-clearing. WHO I AM hits the signal hard: role + years + 2-3 JD-relevant anchors (JD-driven) or the broad IT-professional identity (unsolicited). PROFILE-NO-FILLER-001: never fill the profile with vague generic claims - e.g. "has worked with people from many backgrounds", "works well with others", "team player", "strong communicator"; show people-orientation through a CONCRETE BEHAVIOUR instead (e.g. aligns engineers, suppliers and management around one clear decision; adapts the message to the listener). PROFILE-NO-DISABILITY-001: NEVER mention a disability, health condition, hearing impairment or any accessibility need in profile_content, and NEVER use "has not limited his/their career" (or similar) framing anywhere in the profile - that belongs ONLY in the dedicated Accessibility row (CV) or, where it genuinely fits, the cover letter.\n • WORK STYLE (work_style_content): 1-2 sentences, 22-32 words total, approximately 145-200 characters (HARD CAP 200 chars; 1.5-2 lines, never 3-4 lines, never dropped). TWO axes maximum: Axis 1 = decision and work method (information, uncertainty, quality, decisions, written outcomes, risk, practical next steps); Axis 2 = the FINAL clause, which MUST be about people - working with colleagues, aligning engineers / suppliers / customers / management, adapting the message to the listener, building trust, representing the company with care, or keeping goals and next steps clear. The final clause must NOT be about tools, data, systems, documentation, processes or metrics. Behaviour, not adjective labels.\n${v}\n   Note: First-page roles (typically r1-r5) use bullets at the upper end of the range. Continuation roles (r6 onward, including any volunteer or earlier-career slot) carry a HARD MAXIMUM of 3 bullets each (never more, even for an interesting volunteer / community / sports role such as Team Operations Manager; pick the 3 strongest and drop the rest). They use bullets at the lower end — page 2 vertical space is usually tight. How to know which roles go to page 2: count active roles — roles 1 through ~3 are page 1, roles 4+ are page 2. Format: "Verb + concrete object + specific outcome with numbers/tools." Retain all numbers, proper nouns, tools, certifications. BULLET ORDER (SECTION-ORDER-001): within EACH role, order that role's OWN bullets STRONGEST-FIRST - lead with the most QUANTIFIED / highest-impact bullet (a big delta like "250 to 10" outranks a high fraction like "3,400 of 3,600"), then the next strongest. The ROLES themselves stay newest-first (reverse-chronological) - never reorder roles by impact. When a JD is present, a bullet more relevant to the JD outranks a less-relevant bullet of similar impact. Apply the same JD-relevance-then-impact ordering to every list (tools, certifications, regulatory, outcomes). RANK KEY (SECTION-ORDER-001b): the order is set by the STRENGTH of each signal - a specific quantified accomplishment, a concrete scope of work, or a named tool - measured AGAINST THE JOB (how directly it matches the JD needs); a stronger job-match outranks a weaker one. When there is NO JD (unsolicited), rank by general professional importance / common sense for a Scandinavian, English-language CV: breadth and the most universally valued, transferable accomplishments and tools first.\n • PROFILE + WORK STYLE together should occupy about 1/4 of the top of the main column — tight, not sprawling.\n- DIFFERENTIATION RULES — each section answers ONE question. Do NOT let two sections cover the same content from slightly different angles. The reader should never feel they are reading the same idea twice.\n • PROFILE answers WHO I AM PROFESSIONALLY (role, years, the kinds of problems I solve). It is positioning, not evidence. NO numbers, NO named systems, NO specific outcomes — those belong in SELECTED OUTCOMES. Two sentences of identity. Test: if you remove the PROFILE and the rest of the CV still reads coherently, the PROFILE was doing its job (positioning, not duplicating).\n • SELECTED OUTCOMES answers WHAT I HAVE DELIVERED. Five proof points, EACH carrying a concrete METRIC — a number, %, count, timeframe, ratio, or named scale (e.g. "cut cycle time from 250 to 10 days", "led a 7-person team", "10x cost reduction"). A proof point with NO number/metric is not an outcome — replace it or drop it. This is where metrics live. NUMERIC-OUTCOMES-001: at LEAST 4 of the outcomes MUST contain a real digit (a number, %, ratio, count, timeframe, team size, or money amount). If the candidate's history does not support a number for a given outcome, DROP it and surface a different role's quantified result instead — never pad the list with a non-numeric line. When a role bullet implies a magnitude (team size, cycle time, budget, volume, number of suppliers/parts), pull that number forward into the outcome. Verb variety required (see VERB RULE below). Do NOT restate the PROFILE in bullet form, and do NOT restate a PROFESSIONAL EXPERIENCE bullet — an outcome is the QUANTIFIED RESULT of the work, NOT the responsibility the bullet already describes; if an outcome would duplicate a role bullet's wording or topic, rewrite it to lead with the measured result. CONCRETE NO-RESTATE EXAMPLE: if a role bullet already reads "Supervise 7-person task force at the ODM partner", that role's SELECTED OUTCOME must NOT re-describe the same 7-person team or the ODM site again - emit ONLY the distinct measured result drawn from the candidate's own history (a patent, a shipped system, a measured delta). The outcome must add a NEW fact (a number, a patent, a delivered system), never echo a bullet headline.\n • CORE COMPETENCIES answers WHAT KIND OF WORK I CAN OWN. 3-4 focus areas (NOT six - keep it to three or four rows) with 1-2 line descriptions. This is a capability taxonomy, not a list of past achievements. The Strategic Expertise column describes the practice ("CCB, risk assessment, audit-ready documentation" - acronym in the table per ACRONYM-TABLE-001), NOT the outcome ("Cut cycle time by 95%"). Outcomes belong in SELECTED OUTCOMES; capabilities belong here.\n- ACRONYMS IN TABLES (ACRONYM-TABLE-001): inside the CORE COMPETENCIES and WHAT I BRING tables (and any narrow column), use the standard ACRONYM of a long multi-word term to save width - write "CCB" for "Change Control Board" (likewise FMEA, DOE, ASPICE, EMC). The FIRST time that SAME term appears in PROSE (a profile sentence, a WHO I AM line, or an experience bullet), write it in FULL with the acronym in parentheses ONCE - "Change Control Board (CCB)" - so the table acronym is explained. Never leave a table-only acronym unexplained: if "CCB" appears in a table, "Change Control Board (CCB)" must appear exactly once in the prose, and plain "CCB" everywhere after.\n • Anti-repetition test for the CV: if the same noun phrase ("change governance", "KPI reporting", "stakeholder alignment") appears in PROFILE, OUTCOMES, AND CORE COMPETENCIES, you have a repetition problem. Each of these three sections should pull from a slightly different vocabulary register. Use synonyms and varied framing across the three sections.\n • WHO I AM (cl who_content) answers WHO I AM AS A PERSON DOING THIS WORK. A paragraph of 3-5 sentences (not 2-3), about 60-100 words. Cover: years of experience and discipline; the kinds of environments you have come from and what was characteristic about them; how you operate (what problems you take on, what you keep at the centre of your work); and the orientation most relevant to this specific role. This is a NARRATIVE — write it the way you would introduce yourself to a hiring manager before showing them artefacts. NO skill list. NO technology list. NO outcome list. Those are What-I-Bring's job. WHO I AM is the human introduction; WHAT I BRING is the capability map. NO-INLINE-LABEL-001: write who_content as ONLY the paragraph prose — do NOT begin it with a "WHO I AM:" / "<b>WHO I AM:</b>" label, and likewise never prefix why_content with a "WHY …:" label. The section heading already shows the title; an inline repeat is a duplicate the owner does not want. A WHO I AM that runs only one short sentence is too thin — Word readers expect at least four lines of body text in this section. End the paragraph so its FINAL rendered line carries at least 4 words; if the closing sentence would leave a 1-2 word orphan on the last line, trim 1-2 words earlier in the paragraph (never a number or proper noun).\n • WHAT I BRING (cl bring_rows) answers WHAT CAPABILITIES THE EMPLOYER GETS. The 5-row Focus Area / Strategic Expertise table mapped to the JD. This is where skills, methods, and frameworks go. Do NOT prose-write what is already in the table inside WHO I AM.\n • Anti-repetition test for the cover letter: WHO I AM should never name a tool, framework, or methodology that also appears in WHAT I BRING. If you catch yourself listing capabilities in WHO I AM, move them to WHAT I BRING and rewrite WHO I AM as identity prose.\n- VERB RULE — SELECTED OUTCOMES.\n • Use varied, specific verbs in every outcomes_items bullet. Avoid generic "led/managed/oversaw" unless the candidate's memory digest indicates this verb is appropriate to their actual responsibility.\n • SELECTED OUTCOMES (outcomes_items) — 5 to 12 BULLETS. Aim for ONE strong QUANTIFIED outcome anchored to EACH major role the candidate has, so the per-role "Results" view covers EVERY role (including page-2 roles) — 5 minimum, 12 maximum. The candidate's full history can decompose to ~11 distinct roles (e.g. system architect, change-control lead, CRM/sys-admin split, research/teaching assistant, electro-optics engineer, team lead, security guard, volunteer/frivilligt arbejde) — emit one outcome per active role so EVERY role, including page-2 and earlier-career ones, carries a Result. RANK by impact (concrete numbers > scope/scale > named systems > generic process) and MERGE adjacent ones ONLY when they share a theme AND belong to the same role; never collapse two different roles into one outcome. The output JSON array MUST have 5–12 elements. Returning more than 12 will be trimmed by signal density — so YOU pick the best 5–12 yourself, one per role where the candidate's history supports it.\n • SELECTED OUTCOMES (outcomes_items) — VERB VARIETY REQUIRED. Each bullet must start with a different leading verb than the one before it. Approved verbs (use a varied mix — never repeat the same verb on consecutive bullets, and never use one verb for more than 2 of the 5 bullets total): Owned, Built, Ran, Designed, Architected, Drove, Delivered, Implemented, Established, Shipped, Reduced, Cut, Scaled, Mapped, Translated, Coordinated, Negotiated, Resolved, Investigated, Validated, Qualified, Authored, Chaired, Guided, Mentored, Restructured, Initiated, Configured, Specified, Directed, Supervised. Pick the verb that most accurately describes the action — DO NOT default to "Directed" or "Supervised" for everything. The 5 bullets together should read with verb variety, not as a list of identical openings.\n${x}\n • If the original draft used "Led", rewrite the bullet to start with the most accurate verb from the approved list above, preserving every number, tool name, certification, and proper noun.\n- ORPHAN RULE: Every paragraph and bullet in the MAIN COLUMN must have >=4 words on its final rendered line (~480px Calibri 11px). Shorten orphans with shorter synonyms or removing filler — never remove numbers, proper nouns, technical terms.\n- DANISH-MARKET ENGLISH WORD CHOICE (DK-ENGLISH-001): when the output language is ENGLISH (Danish / Nordic recruiters read these), several correct English words read as aggressive, self-promotional, inflated, or ambiguous in Denmark. Prefer the softer, concrete alternative; keep all numbers, tools and proper nouns. REMOVE ENTIRELY (empty recruiter filler): "dynamic". AVOID -> PREFER: discussed -> reviewed / clarified / agreed / presented; challenged -> tested assumptions / questioned gaps / identified risks; argued -> made the case for / recommended; defended -> explained / justified / supported with data; pushed -> moved forward / followed up; demanded -> requested / specified / set requirements; enforced -> applied / checked / followed up on; controlled -> monitored / tracked / checked; owned -> was responsible for / handled / coordinated; managed -> coordinated / planned / supervised technically; led -> coordinated / guided / took technical lead on; supervised -> "supervised technical work" / "coordinated engineering activities" (never bare "supervised", which implies formal line management); influenced -> contributed to / shaped / recommended; evangelized -> introduced / explained / promoted internally; sold -> presented the case for / gained agreement; promoted -> introduced / supported adoption of; aggressive -> ambitious / fast / demanding; ambitious -> "tight timeline" / "clear target" / "high technical bar"; passionate -> interested in / motivated by / focused on; impactful -> state the actual result; strategic -> name the decision, roadmap or trade-off; stakeholder -> the concrete party (customer, supplier, QA, production, management, hiring manager); robust -> "stable under X" / "passed Y" / "reduced failure risk"; negotiated -> agreed terms / clarified scope / balanced constraints; compromised -> balanced / traded off / agreed a middle option (NEVER "compromised" - in Danish-English it reads as "damaged"); eventually -> finally / later / in the end (Danes hear "eventuelt" = possibly); actual -> real / current / specific (Danes hear "aktuel" = current). Danish output uses natural Danish and is exempt.\n- PUNCTUATION DASH RULE: use the plain hyphen "-" everywhere — year ranges ("2020 - 2025"), two-part compressions, table separators. NEVER output an em dash ("—") in ANY generated value; it is a banned token and forces a rewrite.\n- Rationale: genuine assessment, real gaps honestly stated.\n- CORE COMPETENCIES table (core_comp_rows) — table is 4.8" wide; Focus Area column ≈ 1.44"; Strategic Expertise column ≈ 3.36".\n • **FOCUS AREA**: 1-3 words, 17 chars max. Examples: "Change governance", "EO system validation", "KPI reporting", "Requirements traceability". Forbidden: generic ("problem solving", "leadership", "communication").\n${E}\n • Forbidden: vague words, repeated buzzwords. Use ChatGPT draft as primary vocabulary source where available.\n- WHAT I BRING table (bring_rows) — CL table is 6.0" wide; Strategic Expertise column ≈ 4.2". Each Strategic Expertise cell is a HARD CAP of ~52 characters (count them - this is the USABLE text AFTER the cell left/right edge padding ~5pt per side; do NOT fill the full column width or it wraps) and MUST fit ONE rendered line. If a cell would exceed ~52 characters, cut a clause or use shorter words; NEVER wrap to a 2nd line. GOOD (49 ch): "Requirements traceability and trade-off analysis." TOO LONG (98 ch, FORBIDDEN): "Requirements traceability, trade-off analysis, and supplier coordination for electro-optical systems." Keep every row to ONE tight line.\n • **FOCUS AREA**: 1-3 words, max 5. Same standard as core_comp. BRING-DISTINCT-001: the WHAT I BRING focus areas MUST NOT reuse the CORE COMPETENCIES focus-area names or cover the same ground — never put a shared label such as "Validation & Compliance" or "Technical-Commercial Evaluation" in BOTH tables. CORE COMPETENCIES is a capability taxonomy (what work I can own); WHAT I BRING is the employer-facing value mapped to the target (what they get). Use different words AND a different angle for every bring row; if a bring row would duplicate a core_comp row, replace it with a distinct capability.\n${S}\n- HOW I WOULD CONTRIBUTE structure (contribute_intro + contribute_items + contribute_closing): MANDATORY STRUCTURE:\n contribute_intro: a SHORT one-line lead-in that ENDS WITH A COLON - HARD CAP ~70 characters so it NEVER wraps to a second line (examples: "My first priorities here would be:" / "If a role fits, I would focus on:"). Do NOT pack the domain gap into it (that belongs in who/why); keep it to ONE rendered line.\n contribute_items: EXACTLY 3 bullets (owner-locked: opening + 3 bullets + closing; contribute_closing is MANDATORY, never omit it). Each bullet must describe a CONCRETE ACTION with a CLEAR MEASURABLE OUTCOME. CONTRIBUTE-ONE-LINE-001: each bullet is a HARD CAP of ~78 characters and MUST fit ONE rendered line INCLUDING its bullet marker and indent - the marker + indent eat ~12 characters of the line, so do NOT write to the full text width. If a bullet would exceed ~78 characters, cut a clause or use shorter words; NEVER let a contribute bullet wrap to a 2nd line. Forbidden: vague wording, generic verbs (coordinate, support, assist), or bullets without a stated result. The 4 bullets together must follow this embedded approach — weave these principles in naturally, do NOT state them as a list:\n  • Start fast: learn the current setup, tools, and main flows before proposing anything. Real impact starts with understanding how the team and users experience the work today.\n  • Map before changing: identify the 1-2 highest-leverage gaps in the current process (not the most visible ones — the ones where a small fix removes a big drag).\n  • Turn insight into focused action: each bullet should describe a specific action tied to a specific outcome for the team or product, not a general ambition.\n  • Measure the change: where possible, each bullet should imply a metric or a before/after state the team can observe.\n${R}\n contribute_closing: ONE non-bulleted closing line that follows the bullets. Keep it to ONE sentence, ~120 characters max - tight at the sentence level, so trim every spare word. Shape: "My aim is to help [Company] [single concrete scope] - focused on what the team gains." State ONE concrete scope, then stop. Do NOT stack adjectives ("clear, reviewable, and practical"), do NOT chain two value clauses, do NOT use an em dash. This is a SEPARATE field from contribute_items (NOT a bullet).\n- WHY THIS POSITION / WHY YOUR COMPANY (why_content): 1-2 sentences on fit. HEADING BY CONTEXT (WHY-TITLE-CONTEXT-001): when a JOB DESCRIPTION is present (a specific role) the section heading is "WHY THIS POSITION"; for a true unsolicited application (no JD) the heading NAMES THE TARGET'S NATURE per case — "WHY YOUR COMPANY", "WHY YOUR INSTITUTE", or "WHY YOUR ORGANISATION" (a research institute is an institute, an NGO/public body an organisation, a firm a company), defaulting to "WHY YOUR COMPANY" when unsure. The sentence MUST be tailored to the specific target — vary it, never a boilerplate fit line. Match the output language. Do NOT also repeat the heading as an inline bold label at the start of the paragraph (no "<b>WHY …:</b>" prefix) — the heading already shows it. Do NOT pin the candidate to one narrow specialty — NEVER write "the work I do best: <one narrow niche>" or frame the candidate as only a single-niche specialist. Frame the fit around the BREADTH the stored background actually shows (cross-disciplinary product / systems / process strengths from the whole work history), mapped to what the company or role actually needs.\n- FOUNDATION (foundation_hands_on + foundation_professionally): Two paragraphs describing HOW the candidate works — their working style, discipline, and approach — NOT a list of tools, technologies, degrees, or certifications.\n • foundation_hands_on: 1–2 SHORT sentences, MAX ~155 characters / 2 rendered lines (trim 2-3 words rather than spill onto a 3rd line) - their hands-on practice and how they operate day-to-day. Example of good: "I start by framing the decision — writing down the question, the criteria, and what would count as a good-enough answer. Then I build the smallest prototype that exposes the real risk, not the imagined one." Example of BAD (do NOT write this way): "Python, MATLAB, LabVIEW, Jira, Confluence, Six Sigma Black Belt." That's a tool list, which belongs in TOOLS & METHODS, not here.\n • foundation_professionally: 1–2 sentences about how they operate in a professional/team setting — how they make decisions visible, how they bring others along, how they handle trade-offs. Example of good: "I keep decisions and their rationale in the open — in a shared doc or a short meeting note — so anyone joining later can see what was decided and why. When a trade-off needs to be made, I surface it early rather than smuggling it in." Example of BAD: "MBA from [Business School], M.Sc. from [University], 15+ years experience." That's a credential list, which belongs in EDUCATION/PROFILE, not here.\n Both paragraphs must use first-person ("I"), be specific, and describe BEHAVIOUR not CREDENTIALS. If you catch yourself listing nouns (tools, degrees, standards), stop and rewrite as a verb-driven sentence about the candidate's way of working.\n- CLOSURE LINE (closure_content): Write 1–2 confident, specific sentences. Use this structure: "I would welcome the chance to talk through how I could support [exact company name from JD] in [position/department] by contributing to [relevant scope of work — be specific about what that company does]." Avoid all formulaic phrases. BANNED WORD (English output only): never use the word "discuss" in English prose — to Danish / Scandinavian readers it reads as urging or pressuring; use "talk through", "explore", "go through", or "a conversation about" instead. (Danish output may use "drøfte" / "tale om" normally.) In Danish: "Jeg vil meget gerne drøfte, hvordan jeg konkret kan bidrage til [company]s arbejde med [scope] — og jeg modtager gerne en invitation til samtale." MUST match output language exactly. Never mix languages.${a ? "\n\n🇩🇰 FINAL LANGUAGE CHECK BEFORE OUTPUTTING: Reread your draft. Every value that is not a proper noun MUST be in Danish. If you see English sentences, translate them now. The schema below shows English example values for clarity ONLY — your actual values must be Danish." : __langGenLock(je)}\n\n⚠️ CRITICAL OUTPUT REQUIREMENT — EVERY cl_overrides FIELD MUST BE FILLED.\nThe schema below shows EXAMPLE shapes. Marker strings like "FILL_who_content_here", "FILL_why_content_here", "FILL_foundation_hands_on_here", "FILL_foundation_professionally_here", "FILL_closure_content_here" are placeholders you MUST REPLACE with real prose content following the instructions above. NEVER return an empty string ""  for any cl_overrides field. NEVER return a marker string verbatim. NEVER omit a field. If you are about to return an empty string or a marker, instead write real grounded content using the candidate's actual experience. An empty CL field is a failed generation. EVERY cv_overrides field MUST ALSO be fully written: profile_content and work_style_content are REQUIRED — NEVER return an empty string or a bracketed placeholder for either. work_style_content MUST be 1-2 real sentences (it renders inline after a bold "Work style:" label, so an empty value drops the label). In an UNSOLICITED draft (no JD) profile_content's FIRST sentence MUST be the candidate's broad professional identity as the STORED profile and history support it, NEVER a narrow specialist opener (GEN-PROFILE-001). An empty PROFILE or WORK STYLE is a failed generation.\n\nReturn ONLY valid JSON (no markdown):\n{"meta":{"company":"<EXACT employer name copied from the JOB DESCRIPTION — REQUIRED when a JD is present; empty string ONLY for a true no-JD unsolicited run>","role":"<EXACT role title copied from the JOB DESCRIPTION — REQUIRED when a JD is present; empty string ONLY for a true no-JD unsolicited run>","subtitle":"Role • Area • Area","cl_slogan":"<COVER-LETTER SLOGAN - a SHARP, SPECIFIC OBSERVATION about THIS candidate in THIS role: the one thing they uniquely do that the JD actually needs. A punchy HEADLINE of 4-13 words (HARD CAP 13; aim for 6-11 - shorter and sharper scores higher). PREFERRED SHAPE: 'A [candidate's real role identity] WHO [concrete, role-specific value verb + domain object]' - the GOLD STANDARD is 'A PROJECT MANAGER WHO MOVES OPTICAL HARDWARE FROM LAB TO SCALABLE DELIVERY'. Name the candidate's actual edge/move against THIS JD so it reads as INSIGHT, not filler. It is a HEADLINE, NOT a sentence: no comma-splice, no clause after a comma, no full stop; do NOT open with 'As a' (that truncates to a dangling fragment). Draw ONLY on the candidate's real stored experience/interests, worded EXACTLY as the stored data states it - NEVER invent, inflate, or change a role, title, tenure, or activity (SLOGAN-NO-FABRICATION-001: if the kernel says 'assistant coach of junior rugby', NEVER write 'rugby coach' or 'former rugby coach'; if an activity is current NEVER write 'former'). If there is no clean real hook, use a plain professional observation rather than inventing a personal one. Alt shapes when 'A [role] WHO [x]' does not fit: '[real strength] for [what this role delivers]', '[domain A] to [domain B]', '[real activity] that [outcome]'. NEVER a copy of the subtitle/specialization triad, NEVER a bullet-separated keyword list, no buzzwords. Empty string ONLY for a true no-JD unsolicited run>","greeting":"Dear X,","opening":"Opening."},"cv_overrides":{"profile_content":"","work_style_content":"","core_comp_rows":[["Focus","Exp"],["Focus","Exp"],["Focus","Exp"],["Focus","Exp"]],"outcomes_items":[{"b":"B","t":"t"},{"b":"B","t":"t"},{"b":"B","t":"t"},{"b":"B","t":"t"},{"b":"B","t":"t"}],"experience_roles":[{"id":"r1","title":"<USE CANDIDATE'S MOST RECENT ROLE TITLE>","company":"<USE CANDIDATE'S MOST RECENT COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet from candidate's history>","<bullet>","<bullet>"]},{"id":"r2","title":"<NEXT ROLE TITLE>","company":"<NEXT COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet>","<bullet>","<bullet>"]},{"id":"r3","title":"<ROLE TITLE>","company":"<COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet>","<bullet>"]},{"id":"r4","title":"<ROLE TITLE>","company":"<COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet>","<bullet>"]},{"id":"r5","title":"<ROLE TITLE>","company":"<COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet>","<bullet>"]},{"id":"r6","title":"<OLDEST ROLE TO INCLUDE>","company":"<COMPANY>","years":"YYYY - YYYY","on":true,"bullets":["<bullet>","<bullet>"]},{"id":"r7","on":false,"bullets":["<unused slot>"]},{"id":"r8","on":false,"bullets":["<unused slot>"]},{"id":"r9","on":false,"bullets":["<unused slot>"]},{"id":"r10","on":false,"bullets":["<unused slot>"]}],"tools_items":[{"l":"Cat","v":"tools"},{"l":"Cat","v":"tools"},{"l":"Cat","v":"tools"},{"l":"Cat","v":"tools"},{"l":"Cat","v":"tools"}],"certifications_items":["cert1","cert2"],"education_items":[{"deg":"<HIGHEST DEGREE>","sch":"<INSTITUTION, brief detail>"}],"publications_items":["pub1 or empty array"],"regulatory_items":[{"group":"Group Name"},{"l":"CODE","v":"description"}],"additional_items":[{"l":"Languages","v":"<candidate's languages from memory digest, comma-separated, native/professional/B1 etc>"},{"l":"Accessibility","v":"<must say explicitly the request is as a the candidate's own stored accessibility need, factual and first-person; omit row when no accessibility item is stored - never invent one>"}]},"cl_overrides":{"who_content":"FILL_who_content_here_3_to_5_sentence_narrative_60_to_100_words","bring_rows":[["Need from JD/company","Matching action / evidence / result"],["need","matching action"],["need","matching action"],["need","matching action"]],"why_content":"FILL_why_content_here_1_to_2_sentences_about_role_fit","role_view_intro":"FILL_role_view_intro_here_one_lead_line_ending_with_a_colon","role_view_rows":[["<employer priority 1 - short label>","<ONE sentence: the EMPLOYER'S problem only - no candidate evidence, no solution>"],["<employer priority 2 - short label>","<ONE sentence: employer problem only>"],["<employer priority 3 - short label>","<ONE sentence: employer problem only>"]],"contribute_intro":"My immediate priority would be to close the gap in [gap], through focused study and hands-on use. Then I would focus on:","contribute_items":["b1","b2","b3"],"contribute_closing":"My aim is to help [Company] [single concrete scope] - focused on what the team gains.","who_lead":"FILL_who_lead_here_one_sentence_on_the_conditions_you_work_best_in","who_summary":"FILL_who_summary_here_years_disciplines_and_environments","who_operate":"FILL_who_operate_here_one_sentence_work_style","who_eligibility":"","who_goal":"FILL_who_goal_here_the_contribution_you_want_to_make","foundation_hands_on":"FILL_foundation_hands_on_here_1_to_2_sentences_about_daily_practice","foundation_professionally":"FILL_foundation_professionally_here_1_to_2_sentences_about_team_setting","closure_content":"FILL_closure_content_here_1_to_2_sentence_closing_per_instructions"},"rationale":{"fit_summary":"1-2 sentence honest overall fit.","top_fit_points":["fit 1","fit 2","fit 3"],"gaps":["gap 1","gap 2"],"tailoring_decisions":"Key tailoring choices made.","cover_letter_strategy":"Why this angle.","red_flags":["A JD-side risk/caveat worth flagging (vague comp, imminent or passed deadline, unrealistic skill mix, no recruiter contact). [] if none."],"questions_in_jd":[{"question":"A question the JD explicitly asks the candidate to answer (empty array if none).","suggested_answer":"A short answer grounded ONLY in the candidate data, else [needs candidate input on X].","grounded":true}],"assumptions":["An assumption made when claiming fit or proposing to close a gap — state it plainly; honest framing."],"confidence_notes":[{"text":"A specific drafted CV/CL sentence.","confidence":0.0,"issue":"Why it is weakly grounded in the candidate data; null when well-grounded."}],"recommendations":["A concrete, honest action to strengthen this application (cite adjacent experience as adjacent, never as held)."],"detected_language":"ISO 639-1 code of the JD (en, da, sv, de, fr, es, ...).","supporting_context":"Role-specific tips or signals from the JD page that apply ONLY to this role (e.g. hiring manager preferences, team migrations). Empty string if none. Not facts about the candidate."}}`;
             let C, T;
             const O =
               '\n\nABSOLUTE OUTPUT RULE: Your response MUST start with the character "{" and contain ONLY a single valid JSON object. NO prose preamble. NO explanation. NO markdown fences. NO commentary. The very first character of your response must be "{". The very last character must be "}".';
@@ -27060,7 +27405,15 @@
                       ((t(e.who_content) || t(e.who_lead) || t(e.who_summary)) ? 1 : 0) +
                       (t(e.why_content) ? 1 : 0) +
                       ((t(e.foundation_hands_on) || (Array.isArray(e.role_view_rows) && e.role_view_rows.length >= 2)) ? 1 : 0) +
-                      ((t(e.foundation_professionally) || t(e.who_operate) || t(e.who_goal)) ? 1 : 0) +
+                      // CL-V5-WHO-GOAL-001 (owner 2026-07-29 "Who I am should include the goal
+                      // lead-in"): who_goal was only ever OR'd with who_operate, so a response
+                      // that dropped it still scored — and the who builder just omits the "My
+                      // goal" row when the field is absent. Live evidence (saved app #2802): WHO
+                      // I AM shipped lead + summary + operate + eligibility and NO goal row.
+                      // Score the operate row and the goal row separately so a goal-less draft
+                      // is cycled to the next provider instead of accepted.
+                      ((t(e.foundation_professionally) || t(e.who_operate)) ? 1 : 0) +
+                      (t(e.who_goal) ? 1 : 0) +
                       (t(e.closure_content) ? 1 : 0) +
                       (cib ? 1 : 0);
                   // CL-EMPTY-BODY-FIELDS-001 (owner 2026-06-09): the WHO I AM / WHY /
@@ -27070,9 +27423,11 @@
                   // 6th critical field and the bar is ≥4 of 6, so an empty-body draft
                   // is retried for REAL content (the placeholder/neutral fallback in
                   // the post-processor is the final guarantee if every retry fails).
-                  if (n < 4 && N < L) {
+                  // CL-V5-WHO-GOAL-001: 7 critical fields now (who_goal split out of the
+                  // who_operate OR-pair); bar raised to 5/7 to keep the same proportion.
+                  if (n < 5 && N < L) {
                     console.warn(
-                      `[v1.40.100 generate] attempt ${N}/${L}${B ? " (" + B + ")" : ""}: only ${n}/6 critical CL fields filled — cycling to next provider`,
+                      `[v1.40.100 generate] attempt ${N}/${L}${B ? " (" + B + ")" : ""}: only ${n}/7 critical CL fields filled — cycling to next provider`,
                     );
                     const e = new Error("PARTIAL_CL_RESPONSE");
                     throw (
@@ -27082,7 +27437,7 @@
                     );
                   }
                   console.log(
-                    `[v1.40.100 generate] attempt ${N}${B ? " (" + B + ")" : ""}: ${n}/6 critical CL fields filled — accepting`,
+                    `[v1.40.100 generate] attempt ${N}${B ? " (" + B + ")" : ""}: ${n}/7 critical CL fields filled — accepting`,
                   );
                 } catch (e) {
                   if (e && "PartialResponse" === e.name) throw e;
@@ -27122,6 +27477,30 @@
                     );
                     const e = new Error("PARTIAL_CV_RESPONSE");
                     throw ((e.name = "PartialResponse"), (e._partialCount = cvMissing), e);
+                  }
+                } catch (e) {
+                  if (e && "PartialResponse" === e.name) throw e;
+                }
+                // GEN-COMPANY-MISSING-RETRY-001 (owner 2026-07-29, an Aimpoint fresh gen
+                // came out "unspecified"): with a JD present the prompt REQUIRES
+                // meta.company (the exact employer copied from the JD), but the accept
+                // gate above scored only the CL/CV BODY fields — so a response with a
+                // complete letter but an EMPTY/placeholder company passed and committed
+                // with no company, rendering the app Unsolicited/"unspecified". Mirror
+                // the CL/CV critical-field gates: an empty/placeholder company under a
+                // real JD is a failed extraction -> cycle the provider ladder. After L
+                // attempts it falls through and commits as before (never hard-fails).
+                try {
+                  if (!__noJD && N < L) {
+                    const __mc = String((T && T.meta && T.meta.company) || "").trim();
+                    const __mcBad = !__mc || /^[<\[]/.test(__mc) || !!(window.__antcvUnsol && window.__antcvUnsol(__mc));
+                    if (__mcBad) {
+                      console.warn(
+                        `[generate] attempt ${N}/${L}${B ? " (" + B + ")" : ""}: JD present but meta.company empty/placeholder ("${__mc}") — cycling provider`,
+                      );
+                      const e = new Error("PARTIAL_META_COMPANY");
+                      throw ((e.name = "PartialResponse"), (e._partialCount = 1), e);
+                    }
                   }
                 } catch (e) {
                   if (e && "PartialResponse" === e.name) throw e;
@@ -28575,6 +28954,38 @@
                                                 "🚀",
                                             );
                                     }
+                                    // CL-V5-CONTRIB-3-CLOSE-001 (owner 2026-07-29: "How will I
+                                    // contribute should include opening, 3 bullets and closing").
+                                    // The v5 skeleton makes contribute a rich_block, and a
+                                    // rich_block renders `items` ONLY — the intro/items/closing
+                                    // FIELDS built above are invisible to it, and the LLM's flat
+                                    // contribute_items strings are not {b,t} rows. Project both
+                                    // shapes onto: lead row -> up to THREE bullets -> the closing
+                                    // goal line as a plain unlabelled row. Live evidence (saved app
+                                    // #2802): contribute rendered a lead + 2 unlabelled bullets and
+                                    // no closing at all.
+                                    if (e.type === "rich_block") {
+                                      const __cRow = (x) =>
+                                        typeof x === "string"
+                                          ? { b: "", t: String(x).trim(), mk: !0 }
+                                          : (x && typeof x === "object"
+                                              ? { b: String(x.b == null ? "" : x.b).trim(), t: String(x.t == null ? "" : x.t).trim(), mk: !!x.mk }
+                                              : null);
+                                      const __cRows = (_cItems || []).map(__cRow)
+                                        .filter((x) => x && x.t && !/^\[/.test(x.t) && !/^\[/.test(x.b));
+                                      const __cBul = __cRows.filter((x) => x.mk).slice(0, 3);
+                                      if (__cBul.length) {
+                                        const __cPlain = __cRows.filter((x) => !x.mk);
+                                        const __cLead = (__cPlain[0] && __cPlain[0].t)
+                                          || a(F.contribute_intro) || a(e.intro) || n.contribute_intro
+                                          || "I would bring this approach, adapting tools and rhythm with the team:";
+                                        const __cClose = (__cPlain.length > 1 ? __cPlain[__cPlain.length - 1].t : "")
+                                          || a(F.contribute_closing) || a(e.closing) || n.contribute_closing || "";
+                                        const __cItemsOut = [{ b: (__cPlain[0] && __cPlain[0].b) || "How I will contribute", t: __cLead }, ...__cBul];
+                                        if (__cClose && !/^\[/.test(__cClose)) __cItemsOut.push({ b: "", t: __cClose });
+                                        return { ..._cBase, type: "rich_block", headlineOff: !0, leadColon: !0, intro: void 0, closing: void 0, items: __cItemsOut };
+                                      }
+                                    }
                                     return _cBase;
                                   })()
                                 : "foundation" === e.id
@@ -29567,12 +29978,12 @@
                 if ("name_block" === e.id) {
                   const t = r(e.content || ""),
                     o = c ? "center" : "left";
-                  return `<div style="margin:0 0 6pt;page-break-inside:avoid"><div style="font-family:'Cabin','Carlito',${s || d};font-weight:700;color:${c ? readableInk(__sbBg) : "#283556"};font-size:${u.nameSize}pt;line-height:1.1;text-align:${o};margin-top:2pt;margin-bottom:4pt">${t}</div>${f(n, 2, 4)}</div>`;
+                  return `<div style="margin:0 0 6pt;page-break-inside:avoid"><div style="font-family:'Cabin','Carlito',${s || d};font-weight:700;color:${c ? readableInk(__sbBg) : "#283556"};font-size:${u.nameSize}pt;letter-spacing:${__antcvTrackPt("nameTrack")}pt;line-height:1.1;text-align:${o};margin-top:2pt;margin-bottom:4pt">${t}</div>${f(n, 2, 4)}</div>`;
                 }
                 if ("spec_block" === e.id) {
                   const t = r(e.content || ""),
                     n = c ? "center" : "left";
-                  return `<div style="margin:0 0 6pt;page-break-inside:avoid"><div style="font-family:'Cabin','Carlito',${s || d};color:${c ? readableInk(__sbBg) : "#283556"};font-size:${u.specialisation}pt;line-height:1.2;text-align:${n};margin-bottom:4pt">${t}</div></div>`;
+                  return `<div style="margin:0 0 6pt;page-break-inside:avoid"><div style="font-family:'Cabin','Carlito',${s || d};color:${c ? readableInk(__sbBg) : "#283556"};font-size:${u.specialisation}pt;letter-spacing:${__antcvTrackPt("specTrack")}pt;line-height:1.2;text-align:${n};margin-bottom:4pt">${t}</div></div>`;
                 }
                 if ("contact_line" === e.id) {
                   const t = (e.items || []).filter((e) => !e.hidden);
@@ -29583,7 +29994,7 @@
                     p = t
                       .map(
                         (e) =>
-                          `<div style="${g};font-family:'Carlito',${d};font-size:${u.contactSize}pt;color:${i};text-align:${l};overflow-wrap:break-word;word-break:break-word"><b style="color:${s}">${o(e.l)}:</b> ${r(e.v || "")}</div>`,
+                          `<div style="${g};font-family:'Carlito',${d};font-size:${u.contactSize}pt;letter-spacing:${__antcvTrackPt("contactTrack")}pt;color:${i};text-align:${l};overflow-wrap:break-word;word-break:break-word"><b style="color:${s}">${o(e.l)}:</b> ${r(e.v || "")}</div>`,
                       )
                       .join("");
                   return `<div style="margin:0 0 6pt;page-break-inside:avoid">${h(n, b, l, u.mainHead)}${p}</div>`;
@@ -29888,13 +30299,13 @@
             // application line moved UNDER THE SLOGAN (app-line block below). Both doc types
             // render the same specialisation div now — the CL `y` branch is retired here.
             _ = I
-              ? `<div style="font-family:'Cabin',${s};font-size:${qo}pt;color:#fff;text-align:${E("specialisation")};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2pt;line-height:1.1">${(io.subtitle || (e ? "[Specialisering — 1–3 fokusområder, adskilt med •]" : "[Specialisation — 1–3 focus areas, separated by •]")).replace(/\s*\|\s*/g, " • ")}</div>`
+              ? `<div style="font-family:'Cabin',${s};font-size:${qo}pt;letter-spacing:${__antcvTrackPt("specTrack")}pt;color:#fff;text-align:${E("specialisation")};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2pt;line-height:1.1">${(io.subtitle || (e ? "[Specialisering — 1–3 fokusområder, adskilt med •]" : "[Specialisation — 1–3 focus areas, separated by •]")).replace(/\s*\|\s*/g, " • ")}</div>`
               : "",
             N = A
-              ? `<p style="font-family:'Cabin',${s};font-size:${u.nameSize}pt;font-weight:700;color:#fff;text-align:${E("name")};margin:12pt 0 3pt;line-height:1.1;mso-line-height-rule:exactly">${w.name || (e ? "Dit navn" : "Your Name")}</p>${window.__antcvHdrRuleHtml ? window.__antcvHdrRuleHtml("name", "#01B7BB", 2, 0) : ""}`
+              ? `<p style="font-family:'Cabin',${s};font-size:${u.nameSize}pt;letter-spacing:${__antcvTrackPt("nameTrack")}pt;font-weight:700;color:#fff;text-align:${E("name")};margin:12pt 0 3pt;line-height:1.1;mso-line-height-rule:exactly">${w.name || (e ? "Dit navn" : "Your Name")}</p>${window.__antcvHdrRuleHtml ? window.__antcvHdrRuleHtml("name", "#01B7BB", 2, 0) : ""}`
               : "",
             $ = O
-              ? `${window.__antcvHdrRuleHtml ? window.__antcvHdrRuleHtml("specialisation", "#01B7BB", 3, 1) : f("#01B7BB", 3, 1)}<p style="font-family:'Cabin',${s};font-size:${(Number(u.contactSize) || 10) + 1}pt;color:#fff;text-align:${E("contact")};margin:3pt 0;line-height:1.2;mso-line-height-rule:exactly">${x}</p>${window.__antcvHdrRuleHtml ? window.__antcvHdrRuleHtml("contact", "#01B7BB", 1, 0) : f("#01B7BB", 1, 0)}`
+              ? `${window.__antcvHdrRuleHtml ? window.__antcvHdrRuleHtml("specialisation", "#01B7BB", 3, 1) : f("#01B7BB", 3, 1)}<p style="font-family:'Cabin',${s};font-size:${(Number(u.contactSize) || 10) + 1}pt;letter-spacing:${__antcvTrackPt("contactTrack")}pt;color:#fff;text-align:${E("contact")};margin:3pt 0;line-height:1.2;mso-line-height-rule:exactly">${x}</p>${window.__antcvHdrRuleHtml ? window.__antcvHdrRuleHtml("contact", "#01B7BB", 1, 0) : f("#01B7BB", 1, 0)}`
               : "",
             L =
               A || I || O
@@ -29967,7 +30378,7 @@
               })(),
               g = 5;
             P =
-              `<table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${(() => { try { if (window.__antcvSloganStandaloneHidden ? window.__antcvSloganStandaloneHidden() : localStorage.getItem("antcv:clSloganHidden") === "1") return ""; var __uns = window.__antcvSloganUnsolActive ? window.__antcvSloganUnsolActive(io) : false; var st = __uns ? "" : String((io && io.cl_slogan) || "").trim(); if (!st || /^\[/.test(st)) { st = String(localStorage.getItem("antcv:clSlogan") || "").trim(); if (st && window.__antcvSloganLangGate && !window.__antcvSloganLangGate(st)) st = ""; if (st && __uns && window.__antcvSloganOverrideIsGen && window.__antcvSloganOverrideIsGen(st, io)) st = ""; } if ((!st || /^\[/.test(st)) && __uns) st = String(io.subtitle || "").trim(); st = st.replace(/\s*\|\s*/g, " • ").trim(); if (window.__antcvSloganCap) st = window.__antcvSloganCap(st); if (!st || /^\[/.test(st)) return ""; var sa = String(localStorage.getItem("antcv:clSloganAlign") || "center").replace(/["']/g, "").toLowerCase(); if (sa !== "left" && sa !== "right" && sa !== "center" && sa !== "justify") sa = "center"; return '<p style="font-family:\'Cabin\',' + d + ';font-size:11pt;font-weight:700;letter-spacing:.08em;text-align:' + sa + ';color:var(--brand-slogan-color,' + (t.mainLineColor || "#01746E") + ');margin:0 0 12pt">' + st.toUpperCase() + '</p>'; } catch (_) { return ""; } })()}${(() => { try { var __al = window.__antcvAppLineText ? window.__antcvAppLineText(io) : ""; if (!__al) return ""; return '<div style="font-family:\'Cabin\',' + d + ';font-size:10.5pt;font-weight:600;letter-spacing:.02em;text-align:center;color:var(--brand-slogan-color,' + (t.mainLineColor || "#01746E") + ');margin:0 0 12pt">' + __al + '</div>'; } catch (_) { return ""; } })()}${l.map(b).join("")}${u}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table>` +
+              `<table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${(() => { try { if (window.__antcvSloganStandaloneHidden ? window.__antcvSloganStandaloneHidden() : localStorage.getItem("antcv:clSloganHidden") === "1") return ""; var __uns = window.__antcvSloganUnsolActive ? window.__antcvSloganUnsolActive(io) : false; var st = __uns ? "" : String((io && io.cl_slogan) || "").trim(); if (!st || /^\[/.test(st)) { st = String(localStorage.getItem("antcv:clSlogan") || "").trim(); if (st && window.__antcvSloganLangGate && !window.__antcvSloganLangGate(st)) st = ""; if (st && __uns && window.__antcvSloganOverrideIsGen && window.__antcvSloganOverrideIsGen(st, io)) st = ""; } if ((!st || /^\[/.test(st)) && __uns) st = String(io.subtitle || "").trim(); st = st.replace(/\s*\|\s*/g, " • ").trim(); if (window.__antcvSloganCap) st = window.__antcvSloganCap(st); if (!st || /^\[/.test(st)) return ""; var sa = String(localStorage.getItem("antcv:clSloganAlign") || "center").replace(/["']/g, "").toLowerCase(); if (sa !== "left" && sa !== "right" && sa !== "center" && sa !== "justify") sa = "center"; return '<p style="font-family:\'Cabin\',' + d + ';font-size:' + __antcvFontPt("sloganSize", 11) + 'pt;font-weight:700;letter-spacing:' + __antcvTrkPtOf("sloganTrack", 0.08, __antcvFontPt("sloganSize", 11)).toFixed(3) + 'pt;text-align:' + sa + ';color:var(--brand-slogan-color,' + (t.mainLineColor || "#01746E") + ');margin:0 0 12pt">' + st.toUpperCase() + '</p>'; } catch (_) { return ""; } })()}${(() => { try { var __al = window.__antcvAppLineText ? window.__antcvAppLineText(io) : ""; if (!__al) return ""; return '<div style="font-family:\'Cabin\',' + d + ';font-size:' + __antcvFontPt("applicationSize", 10.5) + 'pt;font-weight:600;letter-spacing:' + __antcvTrkPtOf("applicationTrack", 0.02, __antcvFontPt("applicationSize", 10.5)).toFixed(3) + 'pt;text-align:center;color:var(--brand-slogan-color,' + (t.mainLineColor || "#01746E") + ');margin:0 0 12pt">' + __al + '</div>'; } catch (_) { return ""; } })()}${l.map(b).join("")}${u}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table>` +
               (c
                 ? `<div style="page-break-before:always;mso-page-break-before:always;break-before:page"><table width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="${n}" style="width:100%;border-collapse:collapse;background:${n};page-break-after:avoid;mso-page-break-after:avoid"><tr><td bgcolor="${n}" style="background:${n};padding:14pt 16pt 8pt;text-align:center;border-bottom:1pt solid ${S}">${N}${_}${$}</td></tr></table><table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${b(c)}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table></div>`
                 : "");
@@ -30516,6 +30927,13 @@
             D = h(y.mainTblH, 10.5),
             z = h(y.mainTblCell, 10),
             F = h(0.75 * (y.nameSize || 16), 12),
+            // HDR-TYPE-CONTROLS-001: panel letter spacing -> DOCX w:spacing.
+            // The unit is a twentieth of a point, which is exactly one panel
+            // step, so the owner's value survives the Word leg unrounded.
+            __tkN = Math.round(20 * __antcvTrackPt("nameTrack")),
+            __tkS = Math.round(20 * __antcvTrackPt("specTrack")),
+            __tkC = Math.round(20 * __antcvTrackPt("contactTrack")),
+            __tkX = (e) => (e ? `<w:spacing w:val="${e}"/>` : ""),
             M = (e, t, n, o, r = {}) =>
               `<w:style w:type="paragraph" w:customStyle="1" w:styleId="${e}"><w:name w:val="${t}"/><w:basedOn w:val="Normal"/>` +
               (r.qFormat ? "<w:qFormat/>" : "") +
@@ -30533,21 +30951,21 @@
                 "CV_Name",
                 "CV Name",
                 `<w:shd w:val="clear" w:color="auto" w:fill="${g}"/><w:spacing w:before="240" w:after="60"/><w:jc w:val="center"/>`,
-                `${j(b, !0)}<w:color w:val="${A}"/><w:sz w:val="${N}"/><w:szCs w:val="${N}"/>`,
+                `${j(b, !0)}<w:color w:val="${A}"/>${__tkX(__tkN)}<w:sz w:val="${N}"/><w:szCs w:val="${N}"/>`,
                 { qFormat: !0 },
               ),
               M(
                 "CV_Subtitle",
                 "CV Subtitle",
                 `<w:shd w:val="clear" w:color="auto" w:fill="${g}"/><w:spacing w:before="0" w:after="40"/><w:jc w:val="center"/>`,
-                `${j(b, !1)}<w:color w:val="${I}"/><w:sz w:val="${$}"/><w:szCs w:val="${$}"/>`,
+                `${j(b, !1)}<w:color w:val="${I}"/>${__tkX(__tkS)}<w:sz w:val="${$}"/><w:szCs w:val="${$}"/>`,
                 { qFormat: !0 },
               ),
               M(
                 "CV_Contact",
                 "CV Contact",
                 `<w:shd w:val="clear" w:color="auto" w:fill="${g}"/><w:spacing w:before="60" w:after="60"/><w:jc w:val="center"/>`,
-                `${j(b, !1)}<w:color w:val="${O}"/><w:sz w:val="${L}"/><w:szCs w:val="${L}"/>`,
+                `${j(b, !1)}<w:color w:val="${O}"/>${__tkX(__tkC)}<w:sz w:val="${L}"/><w:szCs w:val="${L}"/>`,
                 { qFormat: !0 },
               ),
               M(
@@ -41601,7 +42019,11 @@
                                                           // authoritative per-app columns for these.
                                                           company: n.meta.company || n.jd_company || "",
                                                           role: n.meta.role || n.jd_role || "",
-                                                          subtitle: n.subtitle || n.meta.subtitle || "",
+                                                          // SUBTITLE-PI-FALLBACK-001 (owner 2026-07-29): see the topbar twin — a
+                                                          // minimal gen-runner meta + an empty `subtitle` column left the
+                                                          // specialisation line blank on load. personalInfo.specialization is
+                                                          // global to the candidate, so it cannot leak the previous app.
+                                                          subtitle: n.subtitle || n.meta.subtitle || (window.__antcvPiSpec ? window.__antcvPiSpec() : "") || "",
                                                           // SLOGAN-UNSOL-GENERIC-001: unsolicited keeps the generic standing default — never carry a tailored slogan in meta.
                                                           cl_slogan: (window.__antcvUnsol && window.__antcvUnsol(n.meta.company || n.jd_company || "")) ? "" : (n.meta.cl_slogan || n.meta.slogan || (io && io.cl_slogan) || ""),
                                                         }
@@ -41634,6 +42056,25 @@
                                                     // SLOGAN-UNSOL-GENERIC-001: never copy a tailored gen slogan into the override for an unsolicited app — it keeps the generic standing default.
                                                     var __unsL = (() => { try { var __c = (n.meta && n.meta.company) || n.jd_company || ""; return !!(__c && window.__antcvUnsol && window.__antcvUnsol(__c)); } catch (_) { return false; } })();
                                                     var __sl = __unsL ? "" : ((n.meta && (n.meta.cl_slogan || n.meta.slogan)) || ""); if (__sl) { try { localStorage.setItem("antcv:clSlogan", __sl); localStorage.setItem("antcv:clSloganCtx", JSON.stringify({ v: __sl, app: e.id })); } catch (_) {} } else { /* SLOGAN-LOAD-SYMMETRIC-001 (owner 2026-07-21, "make sure visible slogan is part of the load/restore"): this app has NO slogan -> CLEAR the standalone override so the PREVIOUS app's visible slogan cannot stick (same class as the colour-stick). */ try { localStorage.removeItem("antcv:clSlogan"); localStorage.removeItem("antcv:clSloganCtx"); } catch (_) {} }
+                                                    // SLOGAN-PLACEMENT-PERAPP-001 (owner 2026-07-29 "the slogan is empty" after an
+                                                    // Application-History load): antcv:clSloganMode / antcv:clSloganHidden are GLOBAL
+                                                    // sticky keys no load path reset, and the per-app placement the generator decided
+                                                    // (meta.slogan_placement, brand_fit.decide_slogan_placement) was never read. One
+                                                    // 'leadin' app therefore hid the standalone tagline for EVERY app loaded after it.
+                                                    try { if (window.__antcvApplySloganPlacement) window.__antcvApplySloganPlacement(n.meta); } catch (_) {}
+                                                    // PALETTE-STICK-CLEAR-APPLOAD-001 (owner 2026-07-29 "the colour scheme is locking on
+                                                    // one application and not changing for others"): the JD-list Open path already does
+                                                    // this symmetric brand reset (PALETTE-STICK-CLEAR-001), but the two APPLICATION
+                                                    // HISTORY loaders never did — so window.__antcvBrandFit + antcv:brandV2 survived the
+                                                    // switch and every later app kept the first branded app's colours. Clear first, then
+                                                    // re-apply only this app's own brand (meta.brandV2, else its meta.styleConfig slots).
+                                                    try {
+                                                      var __mbv = n.meta && n.meta.brandV2, __msc = n.meta && n.meta.styleConfig;
+                                                      window.__antcvBrandFit = !1; localStorage.removeItem("antcv:brandV2");
+                                                      var __bvA = (__mbv && "object" == typeof __mbv) ? __mbv
+                                                        : (__msc && "object" == typeof __msc ? { version: 2, slots: { headerBg: __msc.headerBg, headerInk: __msc.headerNameColor || __msc.headerInk, sidebarBg: __msc.sidebarBg, sidebarInk: __msc.sidebarInk, accent: __msc.accent || __msc.sidebarLineColor, aiNoticeColor: __msc.aiNoticeColor, sloganColor: __msc.sloganColor, signatureColor: __msc.signatureColor } } : null);
+                                                      if (__bvA && __bvA.slots && __bvA.slots.headerBg) { window.__antcvBrandFit = !0; localStorage.setItem("antcv:brandV2", JSON.stringify(__bvA)); }
+                                                    } catch (_) {}
                                                   } catch (_e) {} })(),
                                                   // APP-SWITCH-LANGUAGE-001 (owner 2026-07-10): switching to a saved
                                                   // application also switches the language dropdown to that app's jd_language.
@@ -45482,6 +45923,8 @@
                       fontFamily: e,
                       color: "#fff",
                       fontSize: (Yr.nameSize || 16) * (96 / 72),
+                      // HDR-TYPE-CONTROLS-001 (CV + CL both render this band)
+                      letterSpacing: __antcvTrkCss("nameTrack"),
                       fontWeight: 700,
                       marginTop: 12,
                       // ADV-SPACING-CONTROLS-001: candidate-header row gap.
@@ -45525,6 +45968,8 @@
                         fontFamily: e,
                         color: "rgba(255,255,255,0.9)",
                         fontSize: (Yr.specialisation || qo || 11) * (96 / 72),
+                        // HDR-TYPE-CONTROLS-001
+                        letterSpacing: __antcvTrkCss("specTrack"),
                         marginBottom: __nzPx(ya && ya.candidateGap, 5),
                         whiteSpace: "nowrap",
                         overflow: "hidden",
@@ -45566,6 +46011,8 @@
                               // bridge ×0.94 penalty); +1pt over the pre-822 contact size.
                               ((Yr.contactSize || 10) + 1) *
                               (96 / 72),
+                            // HDR-TYPE-CONTROLS-001
+                            letterSpacing: __antcvTrkCss("contactTrack"),
                             lineHeight: 1.2,
                             margin:
                               __nzPx(ya && ya.candidateGap, 5) + "px 0",
@@ -46739,8 +47186,12 @@
                                       f,
                                     ),
                                     React.createElement("div", {
+                                      // CPH-RENDER-FLAGS-001 flags 1 + 2: the
+                                      // PAGINATED continuation head draws its own
+                                      // rule (this render path, not the section
+                                      // head above) - it takes the same 1.5pt grey.
                                       style: {
-                                        borderBottom: `1px solid ${s}`,
+                                        borderBottom: `${__antcvCphRule()} solid ${__antcvCphRuleInk(s)}`,
                                         marginBottom: 4,
                                       },
                                     }),
@@ -46881,11 +47332,27 @@
                       if ((!st || /^\[/.test(st)) && __uns) st = String((io && io.subtitle) || "").trim();
                       st = st.replace(/\s*\|\s*/g, " • ").trim();
                       if (window.__antcvSloganCap) st = window.__antcvSloganCap(st);
-                      if (!st || /^\[/.test(st)) return null;
+                      // SLOGAN-EDIT-EMPTY-001 (owner 2026-07-29 "allow editing of the slogan …
+                      // in the preview"): the node was simply not rendered when the slogan
+                      // resolved empty, so a letter without one gave the owner nothing to click —
+                      // the field was editable in principle and unreachable in practice. Render a
+                      // faded prompt instead; typing into it writes the override exactly as an
+                      // edit to a real slogan does. PREVIEW ONLY — the export srcdoc, the DOCX
+                      // client and the worker all still resolve "" and emit nothing, so an
+                      // untouched prompt can never ship.
+                      var __slPh = !st || /^\[/.test(st);
+                      if (__slPh) st = "Positioning line";
                       var sa = String(localStorage.getItem("antcv:clSloganAlign") || "center").replace(/["']/g, "").toLowerCase();
                       if (sa !== "left" && sa !== "right" && sa !== "center" && sa !== "justify") sa = "center";
                       return React.createElement("div", {
                         key: "__cl_slogan",
+                        // SLOGAN-NATIVE-MARK-001 (2026-07-29): a DEDICATED attribute so the
+                        // appline-rule sidecar can target the slogan EXACTLY. Its old finder
+                        // fell back to "the first contenteditable in the CL flow", which is the
+                        // OPENING whenever the slogan does not render — that is how a slogan
+                        // rule ended up drawn under the opening (owner: "the horizontal line
+                        // under the opening / before why this position is visible").
+                        "data-antcv-cl-slogan-native": "1",
                         // SLOGAN-SPELLCHECK-001 (owner 2026-07-14, rev2): spellcheck ON, matching
                         // the specialisation field which DOES spellcheck. Two fixes vs rev1 which
                         // still showed no underlines: (1) NO explicit lang — an app-language lang
@@ -46903,17 +47370,27 @@
                         // committed edit) — the correction survives until onBlur commits it.
                         ref: (el) => { if (!el) return; const __sv = (st === st.toUpperCase() && /[a-zA-Z]/.test(st)) ? (st.charAt(0).toUpperCase() + st.slice(1).toLowerCase()) : st; if (el.__antcvSloganV === __sv) return; if (document.activeElement === el) return; el.__antcvSloganV = __sv; if (el.textContent !== __sv) el.textContent = __sv; },
                         title: "Click to edit the positioning line",
-                        onBlur: (ev) => { try { const __nv = String(ev.currentTarget.textContent || "").trim(); if (__nv !== String(localStorage.getItem("antcv:clSlogan") || "")) { try { vr("slogan"); } catch (_) {} localStorage.setItem("antcv:clSlogan", __nv); window.dispatchEvent(new CustomEvent("antcv:sections-updated", { detail: { reason: "cl-slogan-inline" } })); } } catch (_) {} },
+                        onBlur: (ev) => { try { let __nv = window.__antcvEditableText ? window.__antcvEditableText(ev.currentTarget) : String(ev.currentTarget.textContent || "").trim(); if (__nv === "Positioning line") __nv = ""; if (__nv !== String(localStorage.getItem("antcv:clSlogan") || "")) { try { vr("slogan"); } catch (_) {} if (__nv) localStorage.setItem("antcv:clSlogan", __nv); else localStorage.removeItem("antcv:clSlogan"); window.dispatchEvent(new CustomEvent("antcv:sections-updated", { detail: { reason: "cl-slogan-inline" } })); } } catch (_) {} },
                         style: {
                           fontFamily: "'Cabin',sans-serif",
-                          fontSize: 15,
+                          // HDR-TYPE-CONTROLS-001: was a hard-pinned 15px with
+                          // no way to reach it from the panel. 11pt is what the
+                          // export already drew, so this also closes a small
+                          // preview/export size split.
+                          fontSize: (Number(Yr.sloganSize) || 11) * (96 / 72),
                           fontWeight: 700,
-                          letterSpacing: "0.08em",
+                          letterSpacing:
+                            (
+                              0.08 * ((Number(Yr.sloganSize) || 11) * (96 / 72)) +
+                              __antcvTrackPx("sloganTrack")
+                            ).toFixed(2) + "px",
                           textAlign: sa,
                           color: "var(--brand-slogan-color, " + ((ya && ya.mainLineColor) || "#00746E") + ")",
                           margin: "0 0 12px",
                           cursor: "text",
                           textTransform: "uppercase",
+                          // SLOGAN-EDIT-EMPTY-001: the prompt reads as a hint, not as content.
+                          opacity: __slPh ? 0.45 : 1,
                         },
                       });
                     } catch (_) { return null; }
@@ -46927,7 +47404,30 @@
                   (() => {
                     try {
                       var __al = window.__antcvAppLineText ? window.__antcvAppLineText(io) : "";
-                      if (!__al) return null;
+                      // APPLINE-EDIT-001 (owner 2026-07-29): an EMPTY line still renders in the
+                      // PREVIEW, as a faded prompt, so there is something to click and type into
+                      // — an unsolicited app or one with no stored role/company had no node at
+                      // all. The export builders keep returning "" for empty, so the prompt never
+                      // leaves the screen.
+                      var __alPh = !__al;
+                      if (__alPh) __al = "Application line";
+                      var __alCommit = (ev) => {
+                        try {
+                          var el = ev && ev.currentTarget;
+                          var nv = window.__antcvEditableText ? window.__antcvEditableText(el) : String((el && el.textContent) || "").trim();
+                          if (nv === "Application line") nv = "";
+                          // Typing the composed sentence back verbatim CLEARS the override, so the
+                          // line goes back to tracking role/company instead of freezing this text.
+                          var comp = "";
+                          try { comp = window.__antcvAppLineComposed ? window.__antcvAppLineComposed(io) : ""; } catch (_) {}
+                          if (nv && comp && nv === comp) nv = "";
+                          var prev = "";
+                          try { prev = String(localStorage.getItem("antcv:clAppLine") || ""); } catch (_) {}
+                          if (nv === prev) return;
+                          try { if (nv) localStorage.setItem("antcv:clAppLine", nv); else localStorage.removeItem("antcv:clAppLine"); } catch (_) {}
+                          window.dispatchEvent(new CustomEvent("antcv:sections-updated", { detail: { reason: "cl-appline-inline" } }));
+                        } catch (_) {}
+                      };
                       return React.createElement("div", {
                         key: "__cl_appline",
                         // APPLINE-NATIVE-MARK-001 (2026-07-23): a DEDICATED attribute so the
@@ -46937,14 +47437,48 @@
                         "data-antcv-app-line-native": "1",
                         style: {
                           fontFamily: "'Cabin',sans-serif",
-                          fontSize: 11,
+                          // APPLINE-PARITY-001 (HDR-TYPE-CONTROLS-001): this was
+                          // a hard-pinned 11px while the export drew 10.5pt
+                          // (14px) — a 27% split between what the owner saw and
+                          // what shipped. Both legs read the panel now, and both
+                          // default to 10.5pt.
+                          fontSize: (Number(Yr.applicationSize) || 10.5) * (96 / 72),
                           fontWeight: 600,
-                          letterSpacing: "0.02em",
+                          letterSpacing:
+                            (
+                              0.02 *
+                                ((Number(Yr.applicationSize) || 10.5) * (96 / 72)) +
+                              __antcvTrackPx("applicationTrack")
+                            ).toFixed(2) + "px",
                           textAlign: "center",
                           color: "var(--brand-slogan-color, var(--header-line-color, #01746E))",
                           margin: "0 0 12px",
+                          // APPLINE-RULE-NATIVE-001 (owner 2026-07-29 "the horizontal line under
+                          // the application is bleeping"): the rule is rendered HERE, by React,
+                          // from headerItemRule.application — no longer written as an inline
+                          // style by antcv-appline-rule.js, which React stripped on every
+                          // sections-updated re-render and the sidecar re-applied 150ms later.
+                          // `position` is set here too so the sidecar never writes it either.
+                          position: "relative",
+                          ...(window.__antcvAppLineRuleStyle ? window.__antcvAppLineRuleStyle() : {}),
                         },
-                      }, __al);
+                      },
+                        // The editable text lives in an INNER span, not on the div itself: the
+                        // appline-rule sidecar appends its control cluster to the div, and a ref
+                        // that manages the DIV's textContent would delete that control on every
+                        // model change (and the sidecar would re-add it — the blink we just
+                        // removed). The span owns only the text; the div owns the rule + control.
+                        React.createElement("span", {
+                          "data-antcv-app-line-text": "1",
+                          contentEditable: true, suppressContentEditableWarning: true, spellCheck: true,
+                          title: "Click to edit the application line (clear it to track the role and company again)",
+                          // Model-changed-only ref, same reason as the slogan
+                          // (SLOGAN-APPLY-CORRECTION-001): as a React CHILD the text would be
+                          // reset to the model mid-edit and a spelling correction would revert.
+                          ref: (el) => { if (!el) return; if (el.__antcvAlV === __al) return; if (document.activeElement === el) return; el.__antcvAlV = __al; if (el.textContent !== __al) el.textContent = __al; },
+                          onBlur: __alCommit,
+                          style: { outline: "none", cursor: "text", opacity: __alPh ? 0.45 : 1 },
+                        }));
                     } catch (_) { return null; }
                   })(),
                   Pi.filter(
@@ -48104,13 +48638,37 @@
                                         // inherited the PREVIOUS app's role/company/slogan; and this loader
                                         // never applied the brand palette, refreshed the slogan, or switched
                                         // the language. Force all of them from the saved per-app record.
-                                        var __co = (n.meta && n.meta.company) || n.jd_company || "", __ro = (n.meta && n.meta.role) || n.jd_role || "", __su = n.subtitle || (n.meta && n.meta.subtitle) || "", __sl = (n.meta && (n.meta.cl_slogan || n.meta.slogan)) || "";
+                                        // SUBTITLE-PI-FALLBACK-001 (owner 2026-07-29): the nightly gen-runner
+                                        // persists a MINIMAL meta (no subtitle) and several rows carry an EMPTY
+                                        // `subtitle` column, so __su resolved to "" and the CL/CV specialisation
+                                        // line disappeared on load. personalInfo.specialization is the global
+                                        // candidate property the header already renders — safe last resort.
+                                        var __co = (n.meta && n.meta.company) || n.jd_company || "", __ro = (n.meta && n.meta.role) || n.jd_role || "", __su = n.subtitle || (n.meta && n.meta.subtitle) || (window.__antcvPiSpec ? window.__antcvPiSpec() : "") || "", __sl = (n.meta && (n.meta.cl_slogan || n.meta.slogan)) || "";
                                         // SLOGAN-UNSOL-GENERIC-001: an unsolicited app keeps the generic standing default — do not seed a tailored slogan into meta.cl_slogan or the override.
                                         var __unsL = !!(__co && window.__antcvUnsol && window.__antcvUnsol(__co)); if (__unsL) __sl = "";
                                         var __mm = { ...(io || {}), ...(n.meta && "object" == typeof n.meta ? n.meta : {}), company: __co, role: __ro, subtitle: __su, cl_slogan: __sl };
                                         lo(__mm); try { u.set("meta", __mm); } catch (_) {}
                                         if (n.meta && n.meta.styleConfig && "object" == typeof n.meta.styleConfig) wa(n.meta.styleConfig); else if (n.meta && null === n.meta.styleConfig) { try { u.remove("styleConfig"); } catch (_) {} } else { /* A4 STYLECONFIG-PER-APP-001 (owner 2026-07-21): an app carrying NO styleConfig must not inherit the PREVIOUS app's palette — that stale global is the colour-stick root (a kernel showed NVIDIA). Drop it so the package default re-derives on mount. A Custom package keeps its saved palette. */ try { var __pkgC = String(localStorage.getItem("stylePackage") || "").replace(/["']/g, ""); if ("custom" !== __pkgC) u.remove("styleConfig"); } catch (_) {} }
                                         if (__sl) { try { localStorage.setItem("antcv:clSlogan", __sl); localStorage.setItem("antcv:clSloganCtx", JSON.stringify({ v: __sl, app: e.id })); } catch (_) {} } else { /* SLOGAN-LOAD-SYMMETRIC-001 (owner 2026-07-21, "make sure visible slogan is part of the load/restore"): this app has NO slogan -> CLEAR the standalone override so the PREVIOUS app's visible slogan cannot stick (same class as the colour-stick). */ try { localStorage.removeItem("antcv:clSlogan"); localStorage.removeItem("antcv:clSloganCtx"); } catch (_) {} }
+                                                    // SLOGAN-PLACEMENT-PERAPP-001 (owner 2026-07-29 "the slogan is empty" after an
+                                                    // Application-History load): antcv:clSloganMode / antcv:clSloganHidden are GLOBAL
+                                                    // sticky keys no load path reset, and the per-app placement the generator decided
+                                                    // (meta.slogan_placement, brand_fit.decide_slogan_placement) was never read. One
+                                                    // 'leadin' app therefore hid the standalone tagline for EVERY app loaded after it.
+                                                    try { if (window.__antcvApplySloganPlacement) window.__antcvApplySloganPlacement(n.meta); } catch (_) {}
+                                                    // PALETTE-STICK-CLEAR-APPLOAD-001 (owner 2026-07-29 "the colour scheme is locking on
+                                                    // one application and not changing for others"): the JD-list Open path already does
+                                                    // this symmetric brand reset (PALETTE-STICK-CLEAR-001), but the two APPLICATION
+                                                    // HISTORY loaders never did — so window.__antcvBrandFit + antcv:brandV2 survived the
+                                                    // switch and every later app kept the first branded app's colours. Clear first, then
+                                                    // re-apply only this app's own brand (meta.brandV2, else its meta.styleConfig slots).
+                                                    try {
+                                                      var __mbv = n.meta && n.meta.brandV2, __msc = n.meta && n.meta.styleConfig;
+                                                      window.__antcvBrandFit = !1; localStorage.removeItem("antcv:brandV2");
+                                                      var __bvA = (__mbv && "object" == typeof __mbv) ? __mbv
+                                                        : (__msc && "object" == typeof __msc ? { version: 2, slots: { headerBg: __msc.headerBg, headerInk: __msc.headerNameColor || __msc.headerInk, sidebarBg: __msc.sidebarBg, sidebarInk: __msc.sidebarInk, accent: __msc.accent || __msc.sidebarLineColor, aiNoticeColor: __msc.aiNoticeColor, sloganColor: __msc.sloganColor, signatureColor: __msc.signatureColor } } : null);
+                                                      if (__bvA && __bvA.slots && __bvA.slots.headerBg) { window.__antcvBrandFit = !0; localStorage.setItem("antcv:brandV2", JSON.stringify(__bvA)); }
+                                                    } catch (_) {}
                                         // APP-SWITCH-CONTENT-LANG-001 (topbar twin): set the selector from the CONTENT's
                                         // script (what the CV is written in) so a zh-content app flips the bar to zh, not
                                         // from jd_language (the JD's language). Falls back to jd_language for Latin/empty.
@@ -48182,23 +48740,151 @@
                           React.createElement(
                             "div",
                             { style: { flex: 1, minWidth: 0 } },
-                            React.createElement(
-                              "div",
-                              {
-                                style: {
-                                  color: "#fff",
-                                  fontSize: 11,
-                                  fontWeight: 600,
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                  whiteSpace: "nowrap",
+                            // APPLIST-META-EDIT-001 (owner 2026-07-29): the company (jd_company)
+                            // and position (jd_role) are click-to-edit in place — same ref-managed
+                            // contentEditable pattern as the header name/spec/contact fields. Edits
+                            // stopPropagation so they don't trigger the row's load-on-click, persist
+                            // via PUT /api/applications/:id (oo.update), optimistically patch the
+                            // shared list state (zl → the Settings Apps list reflects too), and — if
+                            // this is the LOADED app (e.id === Fl) — mirror into the live meta so the
+                            // preview/export company/role update immediately. Both fields are always
+                            // sent together on every PUT because the relay's downgrade guard blocks
+                            // BOTH jd_company AND jd_role when the incoming company is empty (so a
+                            // role-only edit on a real-company row would otherwise be dropped).
+                            (() => {
+                              const __persist = async (co, ro) => {
+                                try {
+                                  zl((L) =>
+                                    Array.isArray(L)
+                                      ? L.map((r) =>
+                                          r && r.id === e.id
+                                            ? { ...r, jd_company: co, jd_role: ro }
+                                            : r,
+                                        )
+                                      : L,
+                                  );
+                                } catch (_) {}
+                                try {
+                                  if (Fl && e.id === Fl) {
+                                    const __mm = { ...(io || {}), company: co, role: ro };
+                                    try { lo(__mm); } catch (_) {}
+                                    try { u.set("meta", __mm); } catch (_) {}
+                                    try {
+                                      localStorage.setItem(
+                                        "antcv:activeAppCompany",
+                                        String(co || ""),
+                                      );
+                                    } catch (_) {}
+                                    try {
+                                      window.dispatchEvent(
+                                        new CustomEvent("antcv:sections-updated", {
+                                          detail: { reason: "applist-meta-edit" },
+                                        }),
+                                      );
+                                    } catch (_) {}
+                                  }
+                                } catch (_) {}
+                                try {
+                                  await oo.update(e.id, {
+                                    jd_company: co,
+                                    jd_role: ro,
+                                  });
+                                } catch (err) {
+                                  try { Gl((err && err.message) || String(err)); } catch (_) {}
+                                }
+                              };
+                              const __mkEdit = (field, val, label) =>
+                                React.createElement("span", {
+                                  key: field,
+                                  contentEditable: true,
+                                  suppressContentEditableWarning: true,
+                                  spellCheck: false,
+                                  title: "Click to edit the " + label,
+                                  ref: (el) => {
+                                    if (!el) return;
+                                    const sv = String(val == null ? "" : val);
+                                    if (el.__antcvAV === sv) return;
+                                    if (document.activeElement === el) return;
+                                    el.__antcvAV = sv;
+                                    if (el.textContent !== sv) el.textContent = sv;
+                                  },
+                                  onClick: (ev) => { try { ev.stopPropagation(); } catch (_) {} },
+                                  onMouseDown: (ev) => { try { ev.stopPropagation(); } catch (_) {} },
+                                  onKeyDown: (ev) => {
+                                    try {
+                                      if ("Enter" === ev.key) {
+                                        ev.preventDefault();
+                                        ev.currentTarget.blur();
+                                      }
+                                    } catch (_) {}
+                                  },
+                                  onFocus: (ev) => {
+                                    try {
+                                      ev.stopPropagation();
+                                      ev.currentTarget.style.outline =
+                                        "1px dashed rgba(126,255,212,0.8)";
+                                      ev.currentTarget.style.outlineOffset = "1px";
+                                    } catch (_) {}
+                                  },
+                                  onBlur: (ev) => {
+                                    try {
+                                      ev.currentTarget.style.outline = "none";
+                                      const v = String(ev.currentTarget.textContent || "")
+                                        .replace(/\s+/g, " ")
+                                        .trim();
+                                      const cur = String(
+                                        ("jd_company" === field ? e.jd_company : e.jd_role) || "",
+                                      );
+                                      if (v === cur) return;
+                                      const co = "jd_company" === field ? v : String(e.jd_company || "");
+                                      const ro = "jd_role" === field ? v : String(e.jd_role || "");
+                                      __persist(co, ro);
+                                    } catch (_) {}
+                                  },
+                                  style: {
+                                    cursor: "text",
+                                    outline: "none",
+                                    color: "jd_company" === field ? "#fff" : "rgba(255,255,255,0.82)",
+                                    minWidth: 24,
+                                    display: "inline-block",
+                                    borderBottom: "1px dotted rgba(255,255,255,0.25)",
+                                    padding: "0 1px",
+                                  },
+                                });
+                              return React.createElement(
+                                "div",
+                                {
+                                  style: {
+                                    color: "#fff",
+                                    fontSize: 11,
+                                    fontWeight: 600,
+                                    display: "flex",
+                                    flexWrap: "wrap",
+                                    alignItems: "baseline",
+                                    gap: 3,
+                                    lineHeight: 1.3,
+                                  },
                                 },
-                              },
-                              "#" + e.id + "  " +
-                                ((e.jd_company || "") +
-                                (e.jd_company && e.jd_role ? " - " : "") +
-                                (e.jd_role || "") || "(untitled)"),
-                            ),
+                                React.createElement(
+                                  "span",
+                                  {
+                                    key: "id",
+                                    style: {
+                                      color: "rgba(255,255,255,0.45)",
+                                      flexShrink: 0,
+                                    },
+                                  },
+                                  "#" + e.id,
+                                ),
+                                __mkEdit("jd_company", e.jd_company, "company"),
+                                React.createElement(
+                                  "span",
+                                  { key: "sep", style: { color: "rgba(255,255,255,0.3)" } },
+                                  "·",
+                                ),
+                                __mkEdit("jd_role", e.jd_role, "position"),
+                              );
+                            })(),
                             React.createElement(
                               "div",
                               {
@@ -50026,19 +50712,46 @@
                           userSelect: "none",
                         },
                       },
-                      "Font sizes (pt) — tap to expand",
+                      "Font sizes (pt) + letter spacing — tap to expand",
                     ),
                     [
-                      ["Name", "nameSize", null != (r = Yr.nameSize) ? r : 16],
+                      // HDR-TYPE-CONTROLS-001: Specialisation and Application
+                      // used to share ONE row (both driving "specialisation").
+                      // They are separate controls now because they are no
+                      // longer in the same place — CL-APP-SUBTITLE-HEADING-
+                      // SWAP-001 moved the application line out of the header
+                      // and under the slogan, leaving the specialisation in the
+                      // band on both documents. The Slogan had no control at
+                      // all. 4th tuple slot = the letter-spacing key.
                       [
-                        "Specialisation / Application",
+                        "Name",
+                        "nameSize",
+                        null != (r = Yr.nameSize) ? r : 16,
+                        "nameTrack",
+                      ],
+                      [
+                        "Specialisation",
                         "specialisation",
                         null != (p = Yr.specialisation) ? p : 11,
+                        "specTrack",
+                      ],
+                      [
+                        "Application line",
+                        "applicationSize",
+                        null != Yr.applicationSize ? Yr.applicationSize : 10.5,
+                        "applicationTrack",
                       ],
                       [
                         "Contact line",
                         "contactSize",
                         null != (y = Yr.contactSize) ? y : 10,
+                        "contactTrack",
+                      ],
+                      [
+                        "Slogan",
+                        "sloganSize",
+                        null != Yr.sloganSize ? Yr.sloganSize : 11,
+                        "sloganTrack",
                       ],
                       [
                         "Sidebar headings",
@@ -50089,7 +50802,7 @@
                             ? Yr.bulletContent
                             : 10.5,
                       ],
-                    ].map(([e, t, n]) =>
+                    ].map(([e, t, n, __tk]) =>
                       React.createElement(
                         "div",
                         {
@@ -50098,12 +50811,27 @@
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "space-between",
+                            // HDR-TYPE-CONTROLS-001: the row now carries two
+                            // control groups, so the label has to be allowed to
+                            // ellipsise (minWidth:0) rather than push them out.
+                            gap: 3,
                             marginBottom: 3,
                           },
                         },
                         React.createElement(
                           "span",
-                          { style: { color: "#555", flex: 1, fontSize: 9 } },
+                          {
+                            title: e,
+                            style: {
+                              color: "#555",
+                              flex: 1,
+                              minWidth: 0,
+                              fontSize: 9,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            },
+                          },
                           e,
                         ),
                         React.createElement(
@@ -50118,7 +50846,7 @@
                           React.createElement(
                             "button",
                             {
-                              onClick: () => qr(t, -0.5),
+                              onClick: () => qr(t, -0.5, n),
                               style: {
                                 width: 16,
                                 height: 16,
@@ -50151,7 +50879,7 @@
                           React.createElement(
                             "button",
                             {
-                              onClick: () => qr(t, 0.5),
+                              onClick: () => qr(t, 0.5, n),
                               style: {
                                 width: 16,
                                 height: 16,
@@ -50168,6 +50896,84 @@
                             "+",
                           ),
                         ),
+                        // HDR-TYPE-CONTROLS-001: letter spacing — + expands,
+                        // − compresses, 0.05pt a step. Only the five identity
+                        // rows carry it (they are the lines the owner types
+                        // to fit); the body/sidebar rows keep size only.
+                        __tk
+                          ? React.createElement(
+                              "div",
+                              {
+                                title:
+                                  "Letter spacing — + expands, − compresses, 0.05pt steps",
+                                style: {
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 2,
+                                  paddingLeft: 4,
+                                  marginLeft: 1,
+                                  borderLeft: `1px solid ${s}33`,
+                                },
+                              },
+                              React.createElement(
+                                "button",
+                                {
+                                  onClick: () => __antcvTrkStep(__tk, -0.05),
+                              style: {
+                                width: 16,
+                                height: 16,
+                                fontSize: 10,
+                                lineHeight: 1,
+                                border: `1px solid ${s}`,
+                                borderRadius: 3,
+                                background: "none",
+                                color: s,
+                                cursor: "pointer",
+                                padding: 0,
+                              },
+                                },
+                                "−",
+                              ),
+                              React.createElement(
+                                "span",
+                                {
+                                  style: {
+                                    fontSize: 9,
+                                    fontWeight: 600,
+                                    // inked only when the owner has moved it,
+                                    // so "untouched" reads at a glance
+                                    color: (Number(Yr[__tk]) || 0) ? s : "#aaa",
+                                    minWidth: 30,
+                                    textAlign: "center",
+                                  },
+                                },
+                                ((e) =>
+                                  (e > 0 ? "+" : e < 0 ? "−" : "±") +
+                                  Math.abs(e).toFixed(2))(
+                                  Number(Yr[__tk]) || 0,
+                                ),
+                              ),
+                              React.createElement(
+                                "button",
+                                {
+                                  onClick: () => __antcvTrkStep(__tk, 0.05),
+                              style: {
+                                width: 16,
+                                height: 16,
+                                fontSize: 10,
+                                lineHeight: 1,
+                                border: `1px solid ${s}`,
+                                borderRadius: 3,
+                                background: "none",
+                                color: s,
+                                cursor: "pointer",
+                                padding: 0,
+                              },
+                                },
+                                "+",
+                              ),
+                            )
+                          : null,
                       ),
                     ),
                     React.createElement(
@@ -50182,7 +50988,15 @@
                       [
                         [
                           "All Candidate Header ↕",
-                          ["nameSize", "specialisation", "contactSize"],
+                          // HDR-TYPE-CONTROLS-001: the bulk size row covers the
+                          // two new identity lines as well.
+                          [
+                            "nameSize",
+                            "specialisation",
+                            "applicationSize",
+                            "contactSize",
+                            "sloganSize",
+                          ],
                         ],
                         [
                           "All Main ↕",
@@ -50279,6 +51093,110 @@
                               },
                               "+",
                             ),
+                          ),
+                        ),
+                      ),
+                      // HDR-TYPE-CONTROLS-001: bulk letter spacing. The five
+                      // identity lines are usually tuned together (the owner is
+                      // fitting a header, not one word), so give them one pair
+                      // of buttons alongside the per-row controls.
+                      React.createElement(
+                        "div",
+                        {
+                          key: "__trk_all",
+                          title:
+                            "Letter spacing for all five identity lines — + expands, − compresses, 0.05pt steps",
+                          style: {
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            marginBottom: 2,
+                          },
+                        },
+                        React.createElement(
+                          "span",
+                          {
+                            style: {
+                              color: s,
+                              fontSize: 9,
+                              fontWeight: 600,
+                              flex: 1,
+                            },
+                          },
+                          "All Identity Lines ↔",
+                        ),
+                        React.createElement(
+                          "div",
+                          {
+                            style: {
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 3,
+                            },
+                          },
+                          React.createElement(
+                            "button",
+                            {
+                              onClick: () =>
+                                [
+                                  "nameTrack",
+                                  "specTrack",
+                                  "applicationTrack",
+                                  "contactTrack",
+                                  "sloganTrack",
+                                ].forEach((e) => __antcvTrkStep(e, -0.05)),
+                                  style: {
+                                    width: 16,
+                                    height: 16,
+                                    fontSize: 10,
+                                    lineHeight: 1,
+                                    border: `1px solid ${s}`,
+                                    borderRadius: 3,
+                                    background: "none",
+                                    color: s,
+                                    cursor: "pointer",
+                                    padding: 0,
+                                  },
+                            },
+                            "−",
+                          ),
+                          React.createElement(
+                            "span",
+                            {
+                              style: {
+                                fontSize: 9,
+                                color: "#888",
+                                minWidth: 22,
+                                textAlign: "center",
+                              },
+                            },
+                            "all",
+                          ),
+                          React.createElement(
+                            "button",
+                            {
+                              onClick: () =>
+                                [
+                                  "nameTrack",
+                                  "specTrack",
+                                  "applicationTrack",
+                                  "contactTrack",
+                                  "sloganTrack",
+                                ].forEach((e) => __antcvTrkStep(e, 0.05)),
+                                  style: {
+                                    width: 16,
+                                    height: 16,
+                                    fontSize: 10,
+                                    lineHeight: 1,
+                                    border: `1px solid ${s}`,
+                                    borderRadius: 3,
+                                    background: "none",
+                                    color: s,
+                                    cursor: "pointer",
+                                    padding: 0,
+                                  },
+                            },
+                            "+",
                           ),
                         ),
                       ),
@@ -51414,13 +52332,22 @@
                             position: "absolute",
                             right: 10,
                             bottom: 8,
-                            fontSize: 7,
+                            // CPH-RENDER-FLAGS-001 flag 11: the mockup sets the notice
+                            // ~7.5pt in grey #777777 rather than 7px teal - it is a
+                            // disclosure, not a third accent colour. Copenhagen only,
+                            // and a BRANDED app still wins (the brand var is checked
+                            // first, exactly as before).
+                            // 8px preview == the export's 7.5pt (the preview paper
+                            // runs ~1.077 px per pt: the old 7px paired with 6.5pt).
+                            fontSize: __antcvCphPkg() ? 8 : 7,
                             lineHeight: 1.15,
                             letterSpacing: 0.3,
                             fontWeight: 600,
                             // BRANDFIT: AI notice takes the fitted brand grey when a
                             // brand is active (var set on the paper wrapper), else teal.
-                            color: "var(--brand-ai-notice-color, rgba(0,116,110,.7))",
+                            color: __antcvCphPkg()
+                              ? "var(--brand-ai-notice-color, #777777)"
+                              : "var(--brand-ai-notice-color, rgba(0,116,110,.7))",
                             pointerEvents: "none",
                             userSelect: "none",
                             zIndex: 6,

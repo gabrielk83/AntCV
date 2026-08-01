@@ -496,11 +496,11 @@ CV_SECTIONS = [
 ]
 CL_SECTIONS = [
     ("cl_opening",          "Opening",           "Write the COVER LETTER OPENING line (1-2 first-person sentences): a specific, engaging hook that names the role and gives a genuine, concrete reason this candidate is drawn to it - NOT a flat 'I am applying for the X position at Y'. Calm professional register, no filler, no greeting line, no name."),
-    ("cl_who_i_am",         "WHO I AM",          "Write the COVER LETTER WHO I AM end-block (CL-V5-STRUCT-001 - it sits near the END of the letter, after HOW I WILL CONTRIBUTE) in FIVE lines, in this exact order and format: (1) ONE lead sentence on the conditions the candidate works best in; then four labelled lines, each starting with its label and a colon - (2) 'Professional summary:' years, disciplines and the environments the candidate has come from; (3) 'How I operate:' ONE sentence of work style; (4) 'Eligibility:' ONLY when the candidate's stored record CONFIRMS it AND the role makes it relevant (residence/citizenship, criminal-record status, family-tie declarations) - omit the whole line otherwise, and NEVER infer eligibility or clearance from residence or citizenship; (5) 'My goal:' the contribution the candidate wants to make, never unilateral control. Each line at most ~30 words."),
+    ("cl_who_i_am",         "WHO I AM",          "Write the COVER LETTER WHO I AM end-block (CL-V5-STRUCT-001 - it sits near the END of the letter, after HOW I WILL CONTRIBUTE) in FIVE lines, in this exact order and format: (1) ONE lead sentence on the conditions the candidate works best in; then four labelled lines, each starting with its label and a colon - (2) 'Professional summary:' years, disciplines and the environments the candidate has come from; (3) 'How I operate:' ONE sentence of work style; (4) 'Eligibility:' ONLY when the candidate's stored record CONFIRMS it AND the role makes it relevant (residence/citizenship, criminal-record status, family-tie declarations) - omit the whole line otherwise, and NEVER infer eligibility or clearance from residence or citizenship; (5) 'My goal:' the contribution the candidate wants to make, never unilateral control. Each line at most ~30 words. EVERY line must start with its exact label followed by a colon - an unlabelled line cannot be placed. The lead sentence and the 'My goal:' line are MANDATORY (CL-V5-WHO-GOAL-001); only the 'Eligibility:' line may be omitted."),
     ("cl_what_i_bring",     "WHAT I BRING",      "Write the COVER LETTER WHAT I BRING section (CL-V5-STRUCT-001) as: (1) ONE short linking line naming what the candidate brings, ending with a colon; then (2) EXACTLY THREE rows, one per line, each 'Label | Evidence' (evidence cell max ~110 chars): row 1 = the DECISION FOUNDATION (evidence, requirements, supplier input, risk, gates), row 2 = the STRONGEST hands-on cost or technical result with its real number, row 3 = PROJECT, TEAM AND STAKEHOLDER DIRECTION with real scope. Lead with the most role-critical metric; never invent a number. These are the candidate's EVIDENCE - do NOT restate the employer problems from HOW I SEE THE ROLE and do NOT propose what you would do (that is HOW I WILL CONTRIBUTE). Return the lead-in line first, then the three rows."),
     ("cl_why_this_position","WHY THIS POSITION", "Write the COVER LETTER WHY THIS POSITION section: 2-3 SHORT sentences specific to this role and company, at most ~50 words (3-4 lines). Tight and readable. WHY-JOINED-SENTENCE-001 (hard): EVERY sentence must JOIN the employer to the CANDIDATE inside that same sentence - the employer's activity or product is the SUBJECT and the sentence lands on the candidate's named territory (a domain, system, method or result). A sentence that only states a fact about the employer is a FAILURE: they already know their own founding year, size, location and product line, and at this word budget a recited fact eats the whole section. NEVER write a standalone heritage line ('X has built Y since 1975', 'founded in 1968', 'a leading supplier of Y') and NEVER an empty bridge ('This role aligns with my background', 'This position matches my experience'). GOOD: \"Aimpoint's red-dot sights sit exactly where my career has been: optical-systems architecture, sensor integration and verification across defence sighting, camera optics and automotive LiDAR.\" BAD: \"Aimpoint has built red dot sights in Sweden since 1975. This role aligns with my defence-optics work: ...\" - the fact carries no candidate content and the second sentence never connects back."),
     ("cl_how_i_see_role",   "HOW I SEE THE ROLE","Write the COVER LETTER HOW I SEE THE ROLE section (CL-V5-STRUCT-001, NEW in v5) as: (1) ONE lead sentence naming the connected priorities the work centres on, ENDING WITH A COLON (example shape: 'The work appears to centre on three connected priorities:'); then (2) EXACTLY THREE rows, one per line, each 'Short label | ONE sentence'. Each row states the EMPLOYER'S problem ONLY - what this role has to solve, drawn from the job description. NO candidate evidence, NO proposed solution, no 'I'. Return the lead-in line first, then the three rows."),
-    ("cl_how_i_would_contribute","HOW I WOULD CONTRIBUTE","Write the COVER LETTER HOW I WOULD CONTRIBUTE section in THREE parts, in this exact order and format: (1) ONE lead-in sentence (~12-18 words) that frames the first priorities and ENDS WITH A COLON; (2) 3-4 SHORT verb-led action bullets, one per line, each starting with '- '; (3) a FINAL line starting with 'Goal:' naming the concrete outcome the team gains. Return only those lines."),
+    ("cl_how_i_would_contribute","HOW I WOULD CONTRIBUTE","Write the COVER LETTER HOW I WOULD CONTRIBUTE section in THREE parts, in this exact order and format (CL-V5-CONTRIB-3-CLOSE-001, owner-locked: OPENING + 3 BULLETS + CLOSING - never more, never fewer): (1) ONE lead-in sentence (~12-18 words) that frames the first priorities and ENDS WITH A COLON; (2) EXACTLY THREE short verb-led action bullets, one per line, each starting with '- ' - a fourth bullet is a FAILURE, fold the team-trust angle into one of the three when people coordination matters; (3) a MANDATORY FINAL line starting with 'Goal:' naming the concrete outcome the team gains (about 100 characters). All three parts are required; omitting the Goal line is a failed generation. Return only those lines."),
     # CL-V5-STRUCT-001: cl_foundation retired - v5 carries this content in the WHO I AM
     # end-block (Professional summary / How I operate). Kept out of CL_SECTIONS so the
     # nightly stops paying for a section the v5 letter no longer renders.
@@ -528,8 +528,15 @@ def _user_turn(profile_json, meta, section_ask):
     if meta.get("support"):
         lines.append("=== ROLE INTEL (needs / bring / signals; subordinate) ===")
         lines.append(json.dumps(meta["support"])[:2500]); lines.append("")
+    _notes = meta.get("notes") or {}
+    if isinstance(_notes, dict) and (_notes.get("hm") or _notes.get("deadline") or _notes.get("why")):
+        lines.append("=== APPLICATION NOTES (owner-captured; subordinate framing, never a source of the candidate's facts) ===")
+        if _notes.get("hm"): lines.append("Hiring manager: " + str(_notes["hm"]).strip() + " — address the cover-letter greeting to this person by name.")
+        if _notes.get("deadline"): lines.append("Application deadline: " + str(_notes["deadline"]).strip() + ".")
+        if _notes.get("why"): lines.append("Why this role for the candidate (their OWN words — weave the genuine motivation into WHY-THIS-POSITION; do not quote verbatim): " + str(_notes["why"]).strip())
+        lines.append("")
     if meta.get("research"):
-        lines.append("=== RECENT WEB RESEARCH on the employer (Google CSE; SUBORDINATE — may be dated, verify; NEVER a source of the candidate's identity/history) ===")
+        lines.append("=== RECENT WEB RESEARCH on the employer (Brave web search; SUBORDINATE — may be dated, verify; NEVER a source of the candidate's identity/history) ===")
         lines.append(str(meta["research"])[:2500]); lines.append("")
     if meta.get("brand_brief"):
         # BRAND-DECIDES-RESEARCH-001: the employer's own brand voice (spirit/
@@ -716,6 +723,7 @@ def cmd_run(args):
         except Exception as _e:
             print(f"   [active-guard] could not read current active ({_e})")
     support = doc.get("support") or {}; signals = doc.get("signals") or {}
+    notes = doc.get("notes") or {}  # TARGET-FACTS-CAPTURE-001: per-row {hm, deadline, why}
     sigfiles = doc.get("sigfiles") or {}  # SIGNAL-MATERIALS-001: per-row attached materials (extracted text)
     def _signals_for(uk):
         """Typed signals + attached signal-material texts, composed the same way
@@ -751,7 +759,7 @@ def cmd_run(args):
         meta = {"company": r["company"], "role": r["role"], "jd": r["jd"],
                 "signals": _signals_for(uk), "support": support.get(uk),
                 "research": rsch, "language": language, "prior_app": prior,
-                "baseline": baseline,
+                "baseline": baseline, "notes": notes.get(uk),
                 "brand_brief": (brand or {}).get("slogan_brief") or None}
         sections, model = build_plan(profile, meta, r["tier"])
         print(f"\n== {uk} [{r['tier']}] {r['company']} / {r['role']} — {len(sections)} sections, model={model}")
@@ -1544,6 +1552,20 @@ def fit_to_pages(cv, cl, jd, pi, meta, language, max_pages=2, max_iters=4):
     if pages is None:
         return None, []
     steps = []
+    # CV-3P-UNDER-STAGE4-001: every lever below DELETES (sidebar rows, a whole
+    # role, bullets->2). Compression is always the cheaper way to buy a line, so
+    # the non-destructive fitter gets first refusal and the delete levers only
+    # run on a CV that compression could not bring under budget. Fail-open.
+    if pages > max_pages:
+        try:
+            import cv_fit
+            cv2, rep = cv_fit.fit_cv(cv, cl, pi, style_config, meta, language, max_pages=max_pages)
+            if rep.get("fitted") and cv2 is not cv:
+                cv[:] = cv2
+                pages = rep.get("pages") or pages
+                steps.append("compress -> %dpg" % pages)
+        except Exception as e:
+            print(f"   [cv-fit] skipped ({str(e)[:70]})")
     it = 0
     while pages and pages > max_pages and it < max_iters:
         it += 1
@@ -1554,7 +1576,7 @@ def fit_to_pages(cv, cl, jd, pi, meta, language, max_pages=2, max_iters=4):
         steps.append(f"{what} -> {pages}pg")
     return pages, steps
 
-def build_structured_sections(sk, sections, company, role, language="en"):
+def build_structured_sections(sk, sections, company, role, language="en", hm=""):
     """Overlay the 8 generated sections onto a copy of the me() skeleton,
     converting each into the app's native structured shape. Returns (cv, cl)."""
     cv = copy.deepcopy(sk["cv"]); cl = copy.deepcopy(sk["cl"])
@@ -1629,18 +1651,45 @@ def build_structured_sections(sk, sections, company, role, language="en"):
     # who: CL-V5-STRUCT-001 - the identity block moved to the END of the letter and became
     # a lead sentence + Professional summary / How I operate / Eligibility / My goal.
     # A model that still returns one paragraph falls back to the pre-v5 single lead row.
-    WHO_LABELS = ["Professional summary", "How I operate", "Eligibility", "My goal"]
+    # CL-V5-WHO-GOAL-001 (owner 2026-07-29: "Who I am should include the goal
+    # lead-in"). Saved app #2802 shipped WHO I AM as lead + Professional summary +
+    # How I operate + Eligibility and NO "My goal" row. Two parser holes caused it:
+    # (a) only the EXACT English label with a ':'/'-' separator matched, so "Goal:",
+    # an em-dash separator, or the Danish/Swedish label were dropped; (b) every
+    # UNLABELLED line after the first was discarded, so a goal sentence the model
+    # wrote without its label vanished. Widen the aliases and promote a trailing
+    # unlabelled line to the goal — recovery of real model output, never invention.
+    WHO_LABEL_ALIASES = [
+        ("Professional summary", ["professional summary", "summary", "professionel profil", "profil"]),
+        ("How I operate", ["how i operate", "how i work", "sådan arbejder jeg", "arbetssätt"]),
+        ("Eligibility", ["eligibility", "berettigelse", "behörighet"]),
+        ("My goal", ["my goal", "goal", "mit mål", "målet", "mitt mål"]),
+    ]
     wraw = gen("cl_who_i_am")
-    wlead, wrows = "", []
+    wlead, wrows, wloose = "", [], []
     for ln in (wraw or "").splitlines():
         t = ln.strip()
         if not t or _is_scaffold(t): continue
         hit = None
-        for lab in WHO_LABELS:
-            m = re.match(r"(?i)^\**\s*" + re.escape(lab) + r"\s*\**\s*[:\-]\s*(.+)$", t)
-            if m: hit = (lab, m.group(1)); break
-        if hit: wrows.append({"b": hit[0], "t": _cap_line(sanitize_text(hit[1]), 170), "mk": True})
-        elif not wlead: wlead = _cap_line(sanitize_text(t), 170)
+        for lab, aliases in WHO_LABEL_ALIASES:
+            for al in aliases:
+                m = re.match(r"(?i)^[*_\s]*" + re.escape(al) + r"[*_\s]*[:\-–—]\s*(.+)$", t)
+                if m: hit = (lab, m.group(1)); break
+            if hit: break
+        if hit:
+            if not any(r["b"] == hit[0] for r in wrows):
+                wrows.append({"b": hit[0], "t": _cap_line(sanitize_text(hit[1]), 170), "mk": True})
+        elif not wlead:
+            wlead = _cap_line(sanitize_text(t), 170)
+        else:
+            wloose.append(_cap_line(sanitize_text(t), 170))
+    if wrows and wloose and not any(r["b"] == "My goal" for r in wrows):
+        wrows.append({"b": "My goal", "t": wloose[-1], "mk": True})
+    if wrows and not any(r["b"] == "My goal" for r in wrows):
+        print("   [who-gate] 'My goal' row MISSING from cl_who_i_am - letter ships without it")
+    # Keep the v5 row order regardless of the order the model emitted them in.
+    _worder = [lab for lab, _al in WHO_LABEL_ALIASES]
+    wrows.sort(key=lambda r: _worder.index(r["b"]) if r["b"] in _worder else len(_worder))
     ws_ = _ov_find(cl, "who")
     if ws_ and wrows:
         ws_["items"] = [{"b": "Who I am", "t": wlead, "bullets": []}] + wrows
@@ -1697,29 +1746,45 @@ def build_structured_sections(sk, sections, company, role, language="en"):
     # how_i_would_contribute: LEAD-IN sentence (colon) + 3-4 action bullets + a
     # 'Goal:' line (owner: the intro line, the sentence after it, and the goal
     # lead-in were all missing). Parse each part out of the generated lines.
+    # CL-V5-CONTRIB-3-CLOSE-001 (owner 2026-07-29: "How will I contribute should
+    # include opening, 3 bullets and closing"). Saved app #2802 shipped a lead + TWO
+    # bullets and no closing: the 'Goal:' matcher only accepted the English label with
+    # a ':'/'-' separator, and any trailing prose line after the intro was discarded.
+    # Cap the bullets at THREE, widen the goal matcher, and promote a trailing prose
+    # line to the closing when the model wrote it without the label.
     craw = gen("cl_how_i_would_contribute")
     cs = _ov_find(cl, "contribute")
     if cs and craw:
-        cintro, goal, cbul = "", "", []
+        cintro, goal, cbul, cloose = "", "", [], []
         for ln in craw.split("\n"):
             t = ln.strip()
             if not t or t.startswith("|") or _is_scaffold(t): continue
-            mg = re.match(r"(?i)^\**\s*goal\s*\**\s*[:\-]\s*(.+)$", t)
+            mg = re.match(r"(?i)^[*_\s]*(?:my\s+)?(?:goal|mål|outcome|målet)[*_\s]*[:\-–—]\s*(.+)$", t)
             if mg: goal = _cap_line(sanitize_text(mg.group(1)), 130); continue
             if re.match(r"^[-*•]\s+", t):
                 cbul.append(_cap_line(sanitize_text(re.sub(r"^[-*•]\s+", "", t)), 150)); continue
             if not cintro: cintro = _cap_line(sanitize_text(t), 150)   # first prose line = the lead-in
+            else: cloose.append(_cap_line(sanitize_text(t), 130))
+        if not goal and cloose: goal = cloose[-1]
+        cbul = cbul[:3]                                   # owner-locked: EXACTLY three bullets
         if cbul:
             items = [{"b": "How I will contribute",
                       "t": cintro or "In the first months I would focus on a few concrete priorities:", "bullets": []}]
             items += [{"b": "", "t": b, "mk": True} for b in cbul]
-            if goal: items.append({"b": "Goal", "t": goal, "bullets": []})
+            # The closing is a PLAIN line (no bold label), matching the app skeleton.
+            if goal: items.append({"b": "", "t": goal, "bullets": []})
+            else: print("   [contrib-gate] closing 'Goal' line MISSING - letter ships without it")
             cs["items"] = items
 
-    # Greeting: clean, JOB-language furniture (no hiring-manager name captured;
-    # owner rule = greet only a named manager).
+    # Greeting: address a CAPTURED hiring manager by name (owner rule = greet only
+    # a NAMED manager, in the job language); else clean JOB-language furniture.
     g = _ov_find(cl, "greeting")
-    if g: g["content"] = _furn(language, "greeting", company, role)
+    if g:
+        _hm = str(hm or "").strip()
+        if _hm:
+            g["content"] = {"da": "Kære ", "sv": "Hej ", "en": "Dear "}.get(language, "Dear ") + _hm + ","
+        else:
+            g["content"] = _furn(language, "greeting", company, role)
     # Opening + closure are GENERATED; fall back to clean JOB-language furniture
     # (never the skeleton's bracket scaffolding).
     op = _ov_find(cl, "opening")
@@ -1865,7 +1930,8 @@ def persist_application(doc, r, res, category, language, kernel=None, measure=Fa
     company, role = str(r["company"]), str(r["role"])
     sk = load_skeleton()
     if sk:
-        cv, cl = build_structured_sections(sk, res["sections"], company, role, language=language)
+        cv, cl = build_structured_sections(sk, res["sections"], company, role, language=language,
+                                           hm=str(((doc.get("notes") or {}).get(uk) or {}).get("hm") or "").strip())
         # PERSIST-QUALITY-001 (owner 2026-07-13, generalized from the 808/797
         # review): certs relevance + no years + rugby-class last, FVU compress,
         # sidebar one-liner compressions, core_comp top-4 + clause-complete
@@ -1960,6 +2026,12 @@ def persist_application(doc, r, res, category, language, kernel=None, measure=Fa
     spec = _format_spec((res["sections"].get("cv_specialization") or {}).get("result"), language)
     slogan = _format_slogan((res["sections"].get("cl_slogan") or {}).get("result"))
     _meta = {"source": "gen-runner", "tier": r["tier"], "urlkey": uk}
+    # SUBTITLE-PI-FALLBACK-001 (owner 2026-07-29 "many times also the specialization
+    # line" goes missing on an Application-History load): the runner's meta was minimal
+    # and carried no subtitle, so an app whose `subtitle` COLUMN also came back empty
+    # (rows 2797-2800 on 2026-07-29) restored a blank specialisation line. Persist it in
+    # meta too, so the record describes itself on every load path.
+    if spec: _meta["subtitle"] = spec
     # SLOGAN-UNSOL-GENERIC-001: an unsolicited application keeps the GENERIC
     # standing default (the specialisation triad) — do NOT persist a tailored
     # slogan for it. The render/export side (window.__antcvResolveSlogan) then
@@ -1979,6 +2051,40 @@ def persist_application(doc, r, res, category, language, kernel=None, measure=Fa
         rsr = brand.get("research") or {}
         if rsr.get("spirit") or rsr.get("values") or rsr.get("tone"):
             _meta["brand_research"] = {k: rsr.get(k) for k in ("site", "spirit", "values", "tone")}
+        # BRAND-COLORS-PERSIST-001: project the AA-fitted brand palette (slots)
+        # onto the app's styleConfig keys so a runner-persisted app RENDERS in the
+        # employer's colours (header/sidebar band + heads + slogan/signature/
+        # AI-notice inks), mirroring the app's COMPANY-BRAND-FIT-SCOPE-001 and the
+        # island's BRAND-FIT-OPEN-001. The app applies meta.styleConfig on per-app
+        # restore. Was: brand only recorded in doc['brand'][uk] + described in
+        # text, so the persisted CV never actually rendered in brand colours.
+        slots = brand.get("slots") if isinstance(brand.get("slots"), dict) else None
+        # Gate on the row's brandfit toggle (same signal the island Open path uses,
+        # JobTracker.tsx:739) — a captured palette is only APPLIED when the owner
+        # flagged this row for employer branding; otherwise the app keeps the
+        # user's global/default style. A default-fallback palette (#1d2b45) never
+        # reaches styleConfig this way.
+        if slots and bool((doc.get("brandfit") or {}).get(uk)):
+            def _hx(v):
+                v = v.strip() if isinstance(v, str) else ""
+                return v if re.match(r"^#[0-9a-fA-F]{6}$", v) else None
+            _sc = {}
+            for _dst, _src in (
+                ("headerBg", "headerBg"), ("headerInk", "headerInk"),
+                ("sidebarBg", "sidebarBg"), ("sidebarInk", "sidebarInk"),
+                ("sidebarHeadColor", "sidebarHeadColor"),
+                ("mainHeadColor", "mainHeadColor"), ("mainSubHeadColor", "mainSubHeadColor"),
+                ("mainCompanyColor", "mainCompanyColor"), ("mainYearColor", "mainYearColor"),
+                ("mainTextColor", "mainTextColor"),
+                ("sloganColor", "sloganColor"), ("signatureColor", "signatureColor"),
+                ("aiNoticeColor", "aiNoticeColor"),
+                ("photoBorderColor", "photoContourColor"), ("sidebarLineColor", "accent"),
+            ):
+                _v = _hx(slots.get(_src))
+                if _v:
+                    _sc[_dst] = _v
+            if _sc:
+                _meta["styleConfig"] = _sc
     c, b = _req(RELAY, "/api/applications", "POST", {
         "jd_text": r["jd"], "jd_company": str(r["company"]), "jd_role": str(r["role"]),
         "category": category, "jd_language": language, "save_as_new": True,

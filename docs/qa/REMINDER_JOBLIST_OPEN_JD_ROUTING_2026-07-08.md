@@ -1,8 +1,20 @@
 # REMINDER — job-list "Open on AntCV" routes JD into the wrong field
 
+> **RESOLVED 2026-07-29.** Already fixed by `OPEN-JD-VISIBLE-001` (2026-07-12),
+> live across every layer (`app.src.js`, deployed `app.js`, `JobTracker.tsx`,
+> built `antcv-react-islands.js`). On Open, `jd_text` seeds the
+> uploaded-application drop-zone (`Ft`/`Dt`) and ONLY the owner-added
+> `ADDITIONAL SIGNALS` block is lifted into the signals textarea — no `Vt()`
+> call ever receives `jd_text`. Regression-guarded by
+> `pwa/test/unit/jobtracker-open-jd-routing.test.mjs` +
+> `src/islands/JobTracker/openRouting.ts` (PR #355, merged). The line numbers
+> cited below (15062 / 16282 / 21331) are the pre-07-12 source and are stale.
+> History kept for the record.
+
 **For:** active desktop session
 **Filed:** 2026-07-08 (owner, via cloud)
 **Area:** job tracker / job list
+**Status:** RESOLVED 2026-07-29 (fixed 2026-07-12, now regression-tested)
 
 ## Bug
 

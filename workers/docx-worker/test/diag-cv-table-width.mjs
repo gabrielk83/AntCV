@@ -118,7 +118,12 @@ const ratio = compGrid ? compGrid[0] / (compGrid[0] + compGrid[1]) : null;
 // TABLE-RATIO-PARITY-001 (1.14.67): worker default ratio now 0.25 to match the
 // live preview component default (app.src.js ~4281).
 const E = ratio != null && Math.abs(ratio - 0.25) < 0.005;
-const F = /<w:left w:type="dxa" w:w="90"\/>/.test(cvXml);
+// CORECOMP-TABLE-CELL-PAD-001 (owner 2026-07-03) superseded the 90 DXA this
+// asserted: text sat on the cell borders in the PDF, so L/R went 90 (6px) ->
+// 150 (10px) with the preview padding bumped to match. Verified against the
+// live bundle 2026-07-26; TABLE-WRAP-PARITY-001 (the intent - a real, matched
+// cell pad rather than none) is what is asserted now.
+const F = /<w:left w:type="dxa" w:w="150"\/>/.test(cvXml);
 const G = !/<w:jc w:val="both"\/>/.test(cvXml.slice(cvXml.indexOf('Strategic Expertise')));
 log(`CHECK E (Focus Area ratio 0.25, got ${ratio == null ? 'n/a' : ratio.toFixed(3)}): ${E ? 'PASS' : 'FAIL'}`);
 log(`CHECK F (cell margins 90 DXA = preview 6px): ${F ? 'PASS' : 'FAIL'}`);

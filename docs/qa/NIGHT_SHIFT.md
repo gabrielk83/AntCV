@@ -29,7 +29,6 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 ## ACTIVE CLAIMS
 
 <!-- SHIFT:BEGIN — one JSON object per line; managed by scripts/shift.mjs, safe to hand-edit a line if a session died without releasing -->
-{"id":"sh_msa5nucj_6ayc","started":"2026-08-01T09:14:47.783Z","host":"GabyPC2","worktree":null,"branch":"HEAD","range":"1.51.4086-1.51.4105","task":"demand-seed-weekly","beat":"2026-08-01T09:14:48.108Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

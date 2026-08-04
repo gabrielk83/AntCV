@@ -45,14 +45,25 @@ const result = await page.evaluate(async ()=>{
   for(let i=0;i<12;i++){ sc.scrollTop = (i%2? 60: 220); sc.dispatchEvent(new Event('scroll')); await new Promise(r=>setTimeout(r,80)); }
   await new Promise(r=>setTimeout(r,400));
   mo.disconnect();
-  const side2=document.querySelector(".antcv-document-sidebar")||side; const w1=side2.getBoundingClientRect().width, h1=side2.getBoundingClientRect().height;
-  return { writes, w0,w1,h0,h1, stable: Math.abs(w1-w0)<1 && Math.abs(h1-h0)<2 };
+  const side2=document.querySelector(".antcv-document-sidebar")||side; const w1=side2.getBoundingClientRect().width;
+  // Height must CONVERGE to a fixed point — it need not equal the pre-scroll baseline.
+  // The equalize sidecar sets the sidebar height asynchronously via LAYOUT (not an inline-
+  // style write on the sidebar — writes stays 0), so a raw before/after compare races a
+  // mount-time transient (~1000 un-equalized → ~985 settled) that swings ~15px between runs
+  // on IDENTICAL bytes and lands at an unpredictable time relative to a single re-read
+  // (DIAG-CPH-STORM-DRIFT-FLAKE-001 class, 08-01). Poll until two consecutive reads agree:
+  // a real reflow storm never reaches a fixed point (heightConverged=false → FAIL), a
+  // one-time equalize settle does. The writes<=2 bound below is the untouched decisive
+  // anti-storm signal; this only stops the raw-rect race from false-failing.
+  let hPrev=side2.getBoundingClientRect().height, h1=hPrev, heightConverged=false;
+  for(let i=0;i<12;i++){ await new Promise(r=>setTimeout(r,150)); h1=(document.querySelector(".antcv-document-sidebar")||side).getBoundingClientRect().height; if(Math.abs(h1-hPrev)<1){ heightConverged=true; break; } hPrev=h1; }
+  return { writes, w0,w1,h0,h1, heightConverged, stable: Math.abs(w1-w0)<1 && heightConverged };
 });
 const checks=[]; const check=(n,ok,d)=>{checks.push(ok);console.log(`${n}: ${ok?'OK':'FAIL'}${ok?'':' '+(d||'')}`)};
 console.log('result:', JSON.stringify(result));
 if(result.err){ check('sidebar present', false, result.err); }
 else {
-  check('sidebar width/height stable across 12 scrolls', result.stable, JSON.stringify(result));
+  check('sidebar width stable + height converged after 12 scrolls', result.stable, JSON.stringify(result));
   check('no runaway style writes on the sidebar during scroll (<=2)', result.writes<=2, 'writes='+result.writes);
 }
 check('no page errors', errs.length===0, errs.slice(0,2).join(' | '));

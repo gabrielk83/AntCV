@@ -1,13 +1,14 @@
 # Panel/preview button audit — 2026-08-04 (NIGHTLY-PREVIEW-BUTTON-AUDIT-001, register row 23)
 
 Harness: pwa/test/diag-panel-button-audit.mjs (real browser boot, network blocked, dialogs dismissed).
-Bundle: ?-era app.js; buttons enumerated: 211.
+Bundle: ?-era app.js; buttons enumerated: 227.
 
 ## Verdict counts
-- skipped-dangerous: 14
-- ui-only: 14
-- active: 139
-- not-visible-or-disabled: 44
+- skipped-dangerous: 20
+- ui-only: 20
+- active: 132
+- not-visible-or-disabled: 47
+- unclickable: 8
 
 ## THROWS (page errors on click) — fix first
 
@@ -22,7 +23,6 @@ Bundle: ?-era app.js; buttons enumerated: 211.
 - topbarOrder
 - antcv:docWriterTab
 - antcv:analytics:counts
-- antcv:unifiedPaginationProbe
 
 ## Skipped (dangerous labels — audited manually only)
 - "Unregister the service worker, delete all caches, and reload. Use this if you de"
@@ -31,6 +31,13 @@ Bundle: ?-era app.js; buttons enumerated: 211.
 - "↩ Restore"
 - "↩ Restore"
 - "Enrich this section — make content more specific, senior-toned, and concrete. Sa"
+- "↩ Restore"
+- "Enrich this section — make content more specific, senior-toned, and concrete. Sa"
+- "Page 1. Tap to advance (1→2→3→4→1). Long-press / right-click to reset to page 1."
+- "Enrich this section — make content more specific, senior-toned, and concrete. Sa"
+- "Enrich this section — make content more specific, senior-toned, and concrete. Sa"
+- "Page 1. Tap to advance (1→2→3→4→1). Long-press / right-click to reset to page 1."
+- "Enrich this section — make content more specific, senior-toned, and concrete. Sa"
 - "Enrich this section — make content more specific, senior-toned, and concrete. Sa"
 - "Page 1. Tap to advance (1→2→3→4→1). Long-press / right-click to reset to page 1."
 - "Enrich this section — make content more specific, senior-toned, and concrete. Sa"
@@ -38,6 +45,5 @@ Bundle: ?-era app.js; buttons enumerated: 211.
 - "⬆ Upload JD"
 - "Analyse JD"
 - "⬇ Download analysis (PDF)"
-- "Reset the rule colour to the brand / visual-style default"
 
 Raw JSON: PANEL_BUTTON_AUDIT_2026-08-04.json

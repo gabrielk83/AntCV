@@ -24383,6 +24383,12 @@ var __fsPt = /* @__PURE__ */ __name((raw, k, d) => {
   return typeof v === "number" && isFinite(v) && v > 0 ? v : d;
 }, "__fsPt");
 var hex = /* @__PURE__ */ __name((s) => (s || "").toString().replace(/^#/, "").toUpperCase(), "hex");
+// SIGNOFF-BRAND-COLOR-001: strict 6-digit-hex gate for the optional sign-off brand
+// tokens. Returns "" for absent/garbage so the caller falls back to its constant.
+var __sgnHex = /* @__PURE__ */ __name((s) => {
+  const h = hex(s);
+  return /^[0-9A-F]{6}$/.test(h) ? h : "";
+}, "__sgnHex");
 function alignType(a) {
   switch ((a || "").toLowerCase()) {
     case "center":
@@ -25786,10 +25792,17 @@ function buildLinearDocument(ctx) {
       // COPENHAGEN-STAGE4 / SIGNOFF-UNDERLINE-001 parity: sign-off teal,
       // non-bold, with a CYAN single underline (w:u color) — the tuned
       // preview's "At your service," treatment.
-      color: style._cph ? "00746E" : style.mainTextColor,
+      // SIGNOFF-BRAND-COLOR-001 (owner 2026-08-04, Terma): the Copenhagen teal/cyan
+      // pair was HARDCODED, so a brand-fitted letter (Terma blue + yellow) still
+      // printed a teal sign-off with a cyan underline. Explicit style tokens now
+      // win; absent tokens keep the Copenhagen constants byte-for-byte, so every
+      // existing caller renders unchanged.
+      color: __sgnHex(style.signoffColor) || (style._cph ? "00746E" : style.mainTextColor),
       size: pt2hp(fs.mainBody),
       font: style.mainBodyFont,
-      ...(style._cph ? { underline: { type: "single", color: "01B9BD" } } : {})
+      ...(style._cph || __sgnHex(style.signoffUnderlineColor)
+        ? { underline: { type: "single", color: __sgnHex(style.signoffUnderlineColor) || "01B9BD" } }
+        : {})
     })]
   }));
   // CL sign-off order: "Kind regards," -> optional signature image -> typed name.

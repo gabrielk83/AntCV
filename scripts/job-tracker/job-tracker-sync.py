@@ -78,7 +78,19 @@ def _load(p, default=None):
     return json.load(open(p, "r", encoding="utf-8")) if os.path.exists(p) else default
 
 def _save(p, obj):
-    os.makedirs(os.path.dirname(os.path.abspath(p)), exist_ok=True)
+    d = os.path.dirname(os.path.abspath(p))
+    try:
+        os.makedirs(d, exist_ok=True)
+    except OSError as e:
+        # JOBTRACKER-DRIVE-UNMOUNTED-001: a raw WinError 3 here means the drive
+        # root itself doesn't exist (e.g. a mapped/virtual drive like Google
+        # Drive for Desktop isn't mounted in this session) — not a normal
+        # missing-subfolder case makedirs would otherwise handle. Surface that
+        # plainly instead of an opaque traceback so an unattended run's log
+        # says what's actually wrong.
+        sys.exit(f"cannot write {p}: {d} is unreachable ({e}). "
+                  f"Is the drive mounted (e.g. Google Drive for Desktop running "
+                  f"and signed in in this session)?")
     json.dump(obj, open(p, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 
 def _rows_by_id(doc):

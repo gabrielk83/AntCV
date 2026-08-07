@@ -1,0 +1,2937 @@
+{
+ "date": "2026-08-07",
+ "counts": {
+  "skipped-dangerous": 14,
+  "ui-only": 13,
+  "active": 140,
+  "not-visible-or-disabled": 45
+ },
+ "results": [
+  {
+   "sig": "Unregister the service worker, delete all caches, and reload. Use this if you de#1",
+   "tag": "button",
+   "label": "Unregister the service worker, delete all caches, and reload. Use this if you de",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "skipped-dangerous"
+  },
+  {
+   "sig": "✕ Close#1",
+   "tag": "button",
+   "label": "✕ Close",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "ui-only",
+   "writes": [],
+   "domDelta": 564,
+   "errors": []
+  },
+  {
+   "sig": "EN▾#1",
+   "tag": "button",
+   "label": "EN▾",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "ui-only",
+   "writes": [],
+   "domDelta": 32,
+   "errors": []
+  },
+  {
+   "sig": "DA#1",
+   "tag": "button",
+   "label": "DA",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:coreCompGuard"
+   ],
+   "domDelta": 32,
+   "errors": []
+  },
+  {
+   "sig": "Switch between saved applications. Each generation can be saved as a separate ap#1",
+   "tag": "button",
+   "label": "Switch between saved applications. Each generation can be saved as a separate ap",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "ui-only",
+   "writes": [],
+   "domDelta": 599,
+   "errors": []
+  },
+  {
+   "sig": "↻#1",
+   "tag": "button",
+   "label": "↻",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "ui-only",
+   "writes": [],
+   "domDelta": 1105,
+   "errors": []
+  },
+  {
+   "sig": "Save the current CV/Cover Letter as a new application entry.#1",
+   "tag": "button",
+   "label": "Save the current CV/Cover Letter as a new application entry.",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "ui-only",
+   "writes": [],
+   "domDelta": 997,
+   "errors": []
+  },
+  {
+   "sig": "Refresh the saved-applications list.#1",
+   "tag": "button",
+   "label": "Refresh the saved-applications list.",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "ui-only",
+   "writes": [],
+   "domDelta": 1100,
+   "errors": []
+  },
+  {
+   "sig": "Privacy status#1",
+   "tag": "button",
+   "label": "Privacy status",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "ui-only",
+   "writes": [],
+   "domDelta": 595,
+   "errors": []
+  },
+  {
+   "sig": "Privacy Status#1",
+   "tag": "button",
+   "label": "Privacy Status",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "Undo last change#1",
+   "tag": "button",
+   "label": "Undo last change",
+   "visible": true,
+   "inPreview": false,
+   "disabled": true,
+   "verdict": "ui-only",
+   "writes": [],
+   "domDelta": 1,
+   "errors": []
+  },
+  {
+   "sig": "Open Settings#1",
+   "tag": "button",
+   "label": "Open Settings",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "settingsTab",
+    "settingsSubTab",
+    "antcv:coreCompGuard",
+    "antcv:mainOverflow"
+   ],
+   "domDelta": 735,
+   "errors": []
+  },
+  {
+   "sig": "Export — preview and save as PDF or DOCX. Drag to move.#1",
+   "tag": "button",
+   "label": "Export — preview and save as PDF or DOCX. Drag to move.",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "skipped-dangerous"
+  },
+  {
+   "sig": "Back to opening menu#1",
+   "tag": "button",
+   "label": "Back to opening menu",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "step",
+    "antcv:mainOverflow"
+   ],
+   "domDelta": 44,
+   "errors": []
+  },
+  {
+   "sig": "⚙#1",
+   "tag": "button",
+   "label": "⚙",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "settingsTab",
+    "settingsSubTab"
+   ],
+   "domDelta": 108,
+   "errors": []
+  },
+  {
+   "sig": "Editor#1",
+   "tag": "button",
+   "label": "Editor",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "step",
+    "antcv:coreCompGuard",
+    "antcv:mainOverflow"
+   ],
+   "domDelta": 807,
+   "errors": []
+  },
+  {
+   "sig": "☰ Sections#1",
+   "tag": "button",
+   "label": "☰ Sections",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "📊 Analysis#1",
+   "tag": "button",
+   "label": "📊 Analysis",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "👁 Preview#1",
+   "tag": "button",
+   "label": "👁 Preview",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "JD Analysis#1",
+   "tag": "button",
+   "label": "JD Analysis",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "Fuse CV/CL#1",
+   "tag": "button",
+   "label": "Fuse CV/CL",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "Export as PDF. v1.40.96+: if the docx-worker is configured with CLOUDCONVERT_API#1",
+   "tag": "button",
+   "label": "Export as PDF. v1.40.96+: if the docx-worker is configured with CLOUDCONVERT_API",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "Export as .docx — RECOMMENDED for job applications. Real Office Open XML with st#1",
+   "tag": "button",
+   "label": "Export as .docx — RECOMMENDED for job applications. Real Office Open XML with st",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "¶ Section#1",
+   "tag": "button",
+   "label": "¶ Section",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "ui-only",
+   "writes": [],
+   "domDelta": 1765,
+   "errors": []
+  },
+  {
+   "sig": "Undo the last change to any candidate / sidebar / main field. The stack persists#1",
+   "tag": "button",
+   "label": "Undo the last change to any candidate / sidebar / main field. The stack persists",
+   "visible": true,
+   "inPreview": false,
+   "disabled": true,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta",
+    "antcv:nameLineAlign"
+   ],
+   "domDelta": 1271,
+   "errors": []
+  },
+  {
+   "sig": "Fit CAND. items#1",
+   "tag": "button",
+   "label": "Fit CAND. items",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:coreCompGuard",
+    "antcv:mainOverflow",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 2147,
+   "errors": []
+  },
+  {
+   "sig": "Fit the specialisation / application line so it fits on one line in the navy hea#1",
+   "tag": "button",
+   "label": "Fit the specialisation / application line so it fits on one line in the navy hea",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1197,
+   "errors": []
+  },
+  {
+   "sig": "Expand the long-form Background field used as AI context. Pulls more detail out #1",
+   "tag": "button",
+   "label": "Expand the long-form Background field used as AI context. Pulls more detail out ",
+   "visible": true,
+   "inPreview": false,
+   "disabled": true,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1038,
+   "errors": []
+  },
+  {
+   "sig": "CAND. headline alignment: center (click to cycle)#1",
+   "tag": "button",
+   "label": "CAND. headline alignment: center (click to cycle)",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv.sectionHeadlineAlignment.userTouched.v1",
+    "antcv.sectionHeadlineAlignment.v1",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1215,
+   "errors": []
+  },
+  {
+   "sig": "CAND. headline alignment: justify (click to cycle)#1",
+   "tag": "button",
+   "label": "CAND. headline alignment: justify (click to cycle)",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv.sectionHeadlineAlignment.userTouched.v1",
+    "antcv.sectionHeadlineAlignment.v1",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1082,
+   "errors": []
+  },
+  {
+   "sig": "CAND. headline alignment: left (click to cycle)#1",
+   "tag": "button",
+   "label": "CAND. headline alignment: left (click to cycle)",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv.sectionHeadlineAlignment.userTouched.v1",
+    "antcv.sectionHeadlineAlignment.v1",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1437,
+   "errors": []
+  },
+  {
+   "sig": "CAND. headline alignment: right (click to cycle)#1",
+   "tag": "button",
+   "label": "CAND. headline alignment: right (click to cycle)",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv.sectionHeadlineAlignment.userTouched.v1",
+    "antcv.sectionHeadlineAlignment.v1",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1178,
+   "errors": []
+  },
+  {
+   "sig": "Add a candidate-level field (custom field, e.g. patent, side-project, certifying#1",
+   "tag": "button",
+   "label": "Add a candidate-level field (custom field, e.g. patent, side-project, certifying",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1639,
+   "errors": []
+  },
+  {
+   "sig": "CJLR for this added field#1",
+   "tag": "button",
+   "label": "CJLR for this added field",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:coreCompGuard"
+   ],
+   "domDelta": 1754,
+   "errors": []
+  },
+  {
+   "sig": "Add field#1",
+   "tag": "button",
+   "label": "Add field",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1113,
+   "errors": []
+  },
+  {
+   "sig": "Cancel#1",
+   "tag": "button",
+   "label": "Cancel",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1885,
+   "errors": []
+  },
+  {
+   "sig": "▲#1",
+   "tag": "button",
+   "label": "▲",
+   "visible": true,
+   "inPreview": false,
+   "disabled": true,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta",
+    "antcv:coreCompGuard"
+   ],
+   "domDelta": 1161,
+   "errors": []
+  },
+  {
+   "sig": "▼#1",
+   "tag": "button",
+   "label": "▼",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "topbarOrder",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1582,
+   "errors": []
+  },
+  {
+   "sig": "CJLR for Specialisation line#1",
+   "tag": "button",
+   "label": "CJLR for Specialisation line",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "headerItemAlign",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1811,
+   "errors": []
+  },
+  {
+   "sig": "Move out of the top bar (into main column)#1",
+   "tag": "button",
+   "label": "Move out of the top bar (into main column)",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "headerItemLoc",
+    "antcv:mainOverflow",
+    "antcv:coreCompGuard",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1632,
+   "errors": []
+  },
+  {
+   "sig": "CJLR for Name line#1",
+   "tag": "button",
+   "label": "CJLR for Name line",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "headerItemAlign",
+    "antcv:nameLineAlign",
+    "antcv:mainOverflow",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1791,
+   "errors": []
+  },
+  {
+   "sig": "Edit#1",
+   "tag": "button",
+   "label": "Edit",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1120,
+   "errors": []
+  },
+  {
+   "sig": "Reset the name colour to the brand / visual-style default#1",
+   "tag": "button",
+   "label": "Reset the name colour to the brand / visual-style default",
+   "visible": true,
+   "inPreview": false,
+   "disabled": true,
+   "verdict": "skipped-dangerous"
+  },
+  {
+   "sig": "← Back#1",
+   "tag": "button",
+   "label": "← Back",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:coreCompGuard"
+   ],
+   "domDelta": 1199,
+   "errors": []
+  },
+  {
+   "sig": "▲#2",
+   "tag": "button",
+   "label": "▲",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "topbarOrder",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1816,
+   "errors": []
+  },
+  {
+   "sig": "CJLR for Contact line#1",
+   "tag": "button",
+   "label": "CJLR for Contact line",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "headerItemAlign",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1773,
+   "errors": []
+  },
+  {
+   "sig": "Move out of the top bar (into sidebar)#1",
+   "tag": "button",
+   "label": "Move out of the top bar (into sidebar)",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:coreCompGuard",
+    "headerItemLoc",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1887,
+   "errors": []
+  },
+  {
+   "sig": "↩ Restore#1",
+   "tag": "button",
+   "label": "↩ Restore",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "skipped-dangerous"
+  },
+  {
+   "sig": "↩ Restore#2",
+   "tag": "button",
+   "label": "↩ Restore",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "skipped-dangerous"
+  },
+  {
+   "sig": "↶ (1)#1",
+   "tag": "button",
+   "label": "↶ (1)",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "antcv:docWriterTab",
+    "meta",
+    "antcv:coreCompGuard"
+   ],
+   "domDelta": 1915,
+   "errors": []
+  },
+  {
+   "sig": "↶#1",
+   "tag": "button",
+   "label": "↶",
+   "visible": true,
+   "inPreview": false,
+   "disabled": true,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta",
+    "antcv:coreCompGuard"
+   ],
+   "domDelta": 1111,
+   "errors": []
+  },
+  {
+   "sig": "Make It Fit (sidebar) — fites every sidebar section, then fixes orphan lines. Us#1",
+   "tag": "button",
+   "label": "Make It Fit (sidebar) — fites every sidebar section, then fixes orphan lines. Us",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1898,
+   "errors": []
+  },
+  {
+   "sig": "⇥ Comp.#1",
+   "tag": "button",
+   "label": "⇥ Comp.",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1762,
+   "errors": []
+  },
+  {
+   "sig": "↶ (2)#1",
+   "tag": "button",
+   "label": "↶ (2)",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "antcv:docWriterTab",
+    "antcv:coreCompGuard",
+    "meta"
+   ],
+   "domDelta": 1821,
+   "errors": []
+  },
+  {
+   "sig": "✨ Enr.#1",
+   "tag": "button",
+   "label": "✨ Enr.",
+   "visible": true,
+   "inPreview": false,
+   "disabled": true,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1199,
+   "errors": []
+  },
+  {
+   "sig": "+ Add#1",
+   "tag": "button",
+   "label": "+ Add",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1593,
+   "errors": []
+  },
+  {
+   "sig": "SIDEBAR headline alignment: center (click to cycle)#1",
+   "tag": "button",
+   "label": "SIDEBAR headline alignment: center (click to cycle)",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv.sectionHeadlineAlignment.userTouched.v1",
+    "antcv.sectionHeadlineAlignment.v1",
+    "antcv:coreCompGuard"
+   ],
+   "domDelta": 1183,
+   "errors": []
+  },
+  {
+   "sig": "SIDEBAR headline alignment: justify (click to cycle)#1",
+   "tag": "button",
+   "label": "SIDEBAR headline alignment: justify (click to cycle)",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv.sectionHeadlineAlignment.userTouched.v1",
+    "antcv.sectionHeadlineAlignment.v1",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1084,
+   "errors": []
+  },
+  {
+   "sig": "SIDEBAR headline alignment: left (click to cycle)#1",
+   "tag": "button",
+   "label": "SIDEBAR headline alignment: left (click to cycle)",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv.sectionHeadlineAlignment.userTouched.v1",
+    "antcv.sectionHeadlineAlignment.v1",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1350,
+   "errors": []
+  },
+  {
+   "sig": "SIDEBAR headline alignment: right (click to cycle)#1",
+   "tag": "button",
+   "label": "SIDEBAR headline alignment: right (click to cycle)",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv.sectionHeadlineAlignment.userTouched.v1",
+    "antcv.sectionHeadlineAlignment.v1",
+    "antcv:coreCompGuard",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1407,
+   "errors": []
+  },
+  {
+   "sig": "textbulletstablelabeled_listlisteducation#1",
+   "tag": "select",
+   "label": "textbulletstablelabeled_listlisteducation",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1100,
+   "errors": []
+  },
+  {
+   "sig": "Add to sidebar#1",
+   "tag": "button",
+   "label": "Add to sidebar",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "ui-only",
+   "writes": [],
+   "domDelta": 836,
+   "errors": []
+  },
+  {
+   "sig": "▼#2",
+   "tag": "button",
+   "label": "▼",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:coreCompGuard",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1651,
+   "errors": []
+  },
+  {
+   "sig": "◀#1",
+   "tag": "button",
+   "label": "◀",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:mainOverflow",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1746,
+   "errors": []
+  },
+  {
+   "sig": "Page 1. Tap to advance (1→2→3→4→1). Long-press / right-click to reset to page 1.#1",
+   "tag": "button",
+   "label": "Page 1. Tap to advance (1→2→3→4→1). Long-press / right-click to reset to page 1.",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "Enrich this section — make content more specific, senior-toned, and concrete. Sa#1",
+   "tag": "button",
+   "label": "Enrich this section — make content more specific, senior-toned, and concrete. Sa",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "skipped-dangerous"
+  },
+  {
+   "sig": "Fit this section 15–25% tighter — picks the sharpest pass that keeps numbers and#1",
+   "tag": "button",
+   "label": "Fit this section 15–25% tighter — picks the sharpest pass that keeps numbers and",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "OFF#1",
+   "tag": "button",
+   "label": "OFF",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:analytics:counts",
+    "antcv:mainOverflow",
+    "sections",
+    "meta",
+    "antcv:coreCompGuard"
+   ],
+   "domDelta": 1678,
+   "errors": []
+  },
+  {
+   "sig": "✕#1",
+   "tag": "button",
+   "label": "✕",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:analytics:counts",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1752,
+   "errors": []
+  },
+  {
+   "sig": "▲#3",
+   "tag": "button",
+   "label": "▲",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1593,
+   "errors": []
+  },
+  {
+   "sig": "ON#1",
+   "tag": "button",
+   "label": "ON",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:analytics:counts",
+    "antcv:coreCompGuard",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1715,
+   "errors": []
+  },
+  {
+   "sig": "▼#3",
+   "tag": "button",
+   "label": "▼",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1825,
+   "errors": []
+  },
+  {
+   "sig": "CJLR: cycle left / center / right / justify#1",
+   "tag": "button",
+   "label": "CJLR: cycle left / center / right / justify",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "◀#2",
+   "tag": "button",
+   "label": "◀",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:mainOverflow",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1546,
+   "errors": []
+  },
+  {
+   "sig": "Page 1. Tap to advance (1→2→3→4→1). Long-press / right-click to reset to page 1.#2",
+   "tag": "button",
+   "label": "Page 1. Tap to advance (1→2→3→4→1). Long-press / right-click to reset to page 1.",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "Enrich this section — make content more specific, senior-toned, and concrete. Sa#2",
+   "tag": "button",
+   "label": "Enrich this section — make content more specific, senior-toned, and concrete. Sa",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "skipped-dangerous"
+  },
+  {
+   "sig": "Fit this section 15–25% tighter — picks the sharpest pass that keeps numbers and#2",
+   "tag": "button",
+   "label": "Fit this section 15–25% tighter — picks the sharpest pass that keeps numbers and",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "OFF#2",
+   "tag": "button",
+   "label": "OFF",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:analytics:counts",
+    "antcv:coreCompGuard",
+    "antcv:mainOverflow",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1521,
+   "errors": []
+  },
+  {
+   "sig": "✕#2",
+   "tag": "button",
+   "label": "✕",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:analytics:counts",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1542,
+   "errors": []
+  },
+  {
+   "sig": "▲#4",
+   "tag": "button",
+   "label": "▲",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta",
+    "antcv:coreCompGuard"
+   ],
+   "domDelta": 1616,
+   "errors": []
+  },
+  {
+   "sig": "▼#4",
+   "tag": "button",
+   "label": "▼",
+   "visible": true,
+   "inPreview": false,
+   "disabled": true,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1110,
+   "errors": []
+  },
+  {
+   "sig": "◀#3",
+   "tag": "button",
+   "label": "◀",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1390,
+   "errors": []
+  },
+  {
+   "sig": "Undo last change#2",
+   "tag": "button",
+   "label": "Undo last change",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "antcv:mainOverflow",
+    "antcv:docWriterTab",
+    "meta",
+    "antcv:coreCompGuard"
+   ],
+   "domDelta": 1445,
+   "errors": []
+  },
+  {
+   "sig": "Fit main sections#1",
+   "tag": "button",
+   "label": "Fit main sections",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "Make It Fit — runs Fit on every eligible section, then Fix to tighten orphan lin#1",
+   "tag": "button",
+   "label": "Make It Fit — runs Fit on every eligible section, then Fix to tighten orphan lin",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "Enrich main sections#1",
+   "tag": "button",
+   "label": "Enrich main sections",
+   "visible": false,
+   "inPreview": false,
+   "disabled": true,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "Add a main section#1",
+   "tag": "button",
+   "label": "Add a main section",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1265,
+   "errors": []
+  },
+  {
+   "sig": "MAIN headline alignment: justify (click to cycle)#1",
+   "tag": "button",
+   "label": "MAIN headline alignment: justify (click to cycle)",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "texttext_bulletsbulletstablelabeled_listfoundationexperience#1",
+   "tag": "select",
+   "label": "texttext_bulletsbulletstablelabeled_listfoundationexperience",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:mainOverflow"
+   ],
+   "domDelta": 664,
+   "errors": []
+  },
+  {
+   "sig": "Add to main#1",
+   "tag": "button",
+   "label": "Add to main",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:coreCompGuard"
+   ],
+   "domDelta": 853,
+   "errors": []
+  },
+  {
+   "sig": "▶#1",
+   "tag": "button",
+   "label": "▶",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:mainOverflow",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1471,
+   "errors": []
+  },
+  {
+   "sig": "Enrich this section — make content more specific, senior-toned, and concrete. Sa#3",
+   "tag": "button",
+   "label": "Enrich this section — make content more specific, senior-toned, and concrete. Sa",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "Fit this section 15–25% tighter — picks the sharpest pass that keeps numbers and#3",
+   "tag": "button",
+   "label": "Fit this section 15–25% tighter — picks the sharpest pass that keeps numbers and",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "ON#2",
+   "tag": "button",
+   "label": "ON",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:analytics:counts",
+    "antcv:mainOverflow",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1463,
+   "errors": []
+  },
+  {
+   "sig": "✕#3",
+   "tag": "button",
+   "label": "✕",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "▲#5",
+   "tag": "button",
+   "label": "▲",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:coreCompGuard",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1345,
+   "errors": []
+  },
+  {
+   "sig": "▼#5",
+   "tag": "button",
+   "label": "▼",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:mainOverflow",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1308,
+   "errors": []
+  },
+  {
+   "sig": "▶#2",
+   "tag": "button",
+   "label": "▶",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:mainOverflow",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1475,
+   "errors": []
+  },
+  {
+   "sig": "Page 1. Tap to advance (1→2→3→4→1). Long-press / right-click to reset to page 1.#3",
+   "tag": "button",
+   "label": "Page 1. Tap to advance (1→2→3→4→1). Long-press / right-click to reset to page 1.",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "Enrich this section — make content more specific, senior-toned, and concrete. Sa#4",
+   "tag": "button",
+   "label": "Enrich this section — make content more specific, senior-toned, and concrete. Sa",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "Fit this section 15–25% tighter — picks the sharpest pass that keeps numbers and#4",
+   "tag": "button",
+   "label": "Fit this section 15–25% tighter — picks the sharpest pass that keeps numbers and",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "✕#4",
+   "tag": "button",
+   "label": "✕",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "▲#6",
+   "tag": "button",
+   "label": "▲",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:mainOverflow",
+    "antcv:coreCompGuard",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1337,
+   "errors": []
+  },
+  {
+   "sig": "▼#6",
+   "tag": "button",
+   "label": "▼",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1325,
+   "errors": []
+  },
+  {
+   "sig": "Enrich this section — make content more specific, senior-toned, and concrete. Sa#5",
+   "tag": "button",
+   "label": "Enrich this section — make content more specific, senior-toned, and concrete. Sa",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "Fit this section 15–25% tighter — picks the sharpest pass that keeps numbers and#5",
+   "tag": "button",
+   "label": "Fit this section 15–25% tighter — picks the sharpest pass that keeps numbers and",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "OFF#3",
+   "tag": "button",
+   "label": "OFF",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:analytics:counts",
+    "antcv:mainOverflow",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1414,
+   "errors": []
+  },
+  {
+   "sig": "CJLR: cycle left / center / right / justify#2",
+   "tag": "button",
+   "label": "CJLR: cycle left / center / right / justify",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "ON#3",
+   "tag": "button",
+   "label": "ON",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:analytics:counts",
+    "antcv:mainOverflow",
+    "antcv:coreCompGuard",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1361,
+   "errors": []
+  },
+  {
+   "sig": "✕#5",
+   "tag": "button",
+   "label": "✕",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "▲#7",
+   "tag": "button",
+   "label": "▲",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:mainOverflow",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1492,
+   "errors": []
+  },
+  {
+   "sig": "▼#7",
+   "tag": "button",
+   "label": "▼",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:mainOverflow",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1244,
+   "errors": []
+  },
+  {
+   "sig": "▶#3",
+   "tag": "button",
+   "label": "▶",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:mainOverflow",
+    "antcv:coreCompGuard",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1474,
+   "errors": []
+  },
+  {
+   "sig": "◀#4",
+   "tag": "button",
+   "label": "◀",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:mainOverflow",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1352,
+   "errors": []
+  },
+  {
+   "sig": "Enrich this section — make content more specific, senior-toned, and concrete. Sa#6",
+   "tag": "button",
+   "label": "Enrich this section — make content more specific, senior-toned, and concrete. Sa",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "Fit this section 15–25% tighter — picks the sharpest pass that keeps numbers and#6",
+   "tag": "button",
+   "label": "Fit this section 15–25% tighter — picks the sharpest pass that keeps numbers and",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "✕#6",
+   "tag": "button",
+   "label": "✕",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "▲#8",
+   "tag": "button",
+   "label": "▲",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:mainOverflow",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1424,
+   "errors": []
+  },
+  {
+   "sig": "▼#8",
+   "tag": "button",
+   "label": "▼",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1315,
+   "errors": []
+  },
+  {
+   "sig": "▶#4",
+   "tag": "button",
+   "label": "▶",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1413,
+   "errors": []
+  },
+  {
+   "sig": "Page 1. Tap to advance (1→2→3→4→1). Long-press / right-click to reset to page 1.#4",
+   "tag": "button",
+   "label": "Page 1. Tap to advance (1→2→3→4→1). Long-press / right-click to reset to page 1.",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "skipped-dangerous"
+  },
+  {
+   "sig": "Enrich this section — make content more specific, senior-toned, and concrete. Sa#7",
+   "tag": "button",
+   "label": "Enrich this section — make content more specific, senior-toned, and concrete. Sa",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "Fit this section 15–25% tighter — picks the sharpest pass that keeps numbers and#7",
+   "tag": "button",
+   "label": "Fit this section 15–25% tighter — picks the sharpest pass that keeps numbers and",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "OFF#4",
+   "tag": "button",
+   "label": "OFF",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:analytics:counts",
+    "antcv:mainOverflow",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1403,
+   "errors": []
+  },
+  {
+   "sig": "ON#4",
+   "tag": "button",
+   "label": "ON",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:coreCompGuard",
+    "antcv:analytics:counts",
+    "antcv:mainOverflow",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1424,
+   "errors": []
+  },
+  {
+   "sig": "✕#7",
+   "tag": "button",
+   "label": "✕",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "▲#9",
+   "tag": "button",
+   "label": "▲",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:mainOverflow",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1531,
+   "errors": []
+  },
+  {
+   "sig": "▼#9",
+   "tag": "button",
+   "label": "▼",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1333,
+   "errors": []
+  },
+  {
+   "sig": "Enrich this section — make content more specific, senior-toned, and concrete. Sa#8",
+   "tag": "button",
+   "label": "Enrich this section — make content more specific, senior-toned, and concrete. Sa",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "Fit this section 15–25% tighter — picks the sharpest pass that keeps numbers and#8",
+   "tag": "button",
+   "label": "Fit this section 15–25% tighter — picks the sharpest pass that keeps numbers and",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "✕#8",
+   "tag": "button",
+   "label": "✕",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "▲#10",
+   "tag": "button",
+   "label": "▲",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1489,
+   "errors": []
+  },
+  {
+   "sig": "▼#10",
+   "tag": "button",
+   "label": "▼",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1365,
+   "errors": []
+  },
+  {
+   "sig": "▶#5",
+   "tag": "button",
+   "label": "▶",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta",
+    "antcv:coreCompGuard"
+   ],
+   "domDelta": 1527,
+   "errors": []
+  },
+  {
+   "sig": "◀#5",
+   "tag": "button",
+   "label": "◀",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1485,
+   "errors": []
+  },
+  {
+   "sig": "Enrich this section — make content more specific, senior-toned, and concrete. Sa#9",
+   "tag": "button",
+   "label": "Enrich this section — make content more specific, senior-toned, and concrete. Sa",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "skipped-dangerous"
+  },
+  {
+   "sig": "Fit this section 15–25% tighter — picks the sharpest pass that keeps numbers and#9",
+   "tag": "button",
+   "label": "Fit this section 15–25% tighter — picks the sharpest pass that keeps numbers and",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1553,
+   "errors": []
+  },
+  {
+   "sig": "OFF#5",
+   "tag": "button",
+   "label": "OFF",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:analytics:counts",
+    "antcv:mainOverflow",
+    "antcv:coreCompGuard",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1547,
+   "errors": []
+  },
+  {
+   "sig": "ON#5",
+   "tag": "button",
+   "label": "ON",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:analytics:counts",
+    "antcv:mainOverflow",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1479,
+   "errors": []
+  },
+  {
+   "sig": "✕#9",
+   "tag": "button",
+   "label": "✕",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:analytics:counts",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1374,
+   "errors": []
+  },
+  {
+   "sig": "▲#11",
+   "tag": "button",
+   "label": "▲",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:mainOverflow",
+    "antcv:coreCompGuard",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1509,
+   "errors": []
+  },
+  {
+   "sig": "▼#11",
+   "tag": "button",
+   "label": "▼",
+   "visible": true,
+   "inPreview": false,
+   "disabled": true,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 980,
+   "errors": []
+  },
+  {
+   "sig": "▶#6",
+   "tag": "button",
+   "label": "▶",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1737,
+   "errors": []
+  },
+  {
+   "sig": "Page 1. Tap to advance (1→2→3→4→1). Long-press / right-click to reset to page 1.#5",
+   "tag": "button",
+   "label": "Page 1. Tap to advance (1→2→3→4→1). Long-press / right-click to reset to page 1.",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "Enrich this section — make content more specific, senior-toned, and concrete. Sa#10",
+   "tag": "button",
+   "label": "Enrich this section — make content more specific, senior-toned, and concrete. Sa",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "CJLR: cycle left / center / right / justify#3",
+   "tag": "button",
+   "label": "CJLR: cycle left / center / right / justify",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "Fit this section 15–25% tighter — picks the sharpest pass that keeps numbers and#10",
+   "tag": "button",
+   "label": "Fit this section 15–25% tighter — picks the sharpest pass that keeps numbers and",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "✕#10",
+   "tag": "button",
+   "label": "✕",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "−#1",
+   "tag": "button",
+   "label": "−",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:coreCompGuard",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1166,
+   "errors": []
+  },
+  {
+   "sig": "+#1",
+   "tag": "button",
+   "label": "+",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1091,
+   "errors": []
+  },
+  {
+   "sig": "−#2",
+   "tag": "button",
+   "label": "−",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1093,
+   "errors": []
+  },
+  {
+   "sig": "+#2",
+   "tag": "button",
+   "label": "+",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta",
+    "antcv:coreCompGuard"
+   ],
+   "domDelta": 1198,
+   "errors": []
+  },
+  {
+   "sig": "−#3",
+   "tag": "button",
+   "label": "−",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1172,
+   "errors": []
+  },
+  {
+   "sig": "+#3",
+   "tag": "button",
+   "label": "+",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1201,
+   "errors": []
+  },
+  {
+   "sig": "−#4",
+   "tag": "button",
+   "label": "−",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta",
+    "antcv:coreCompGuard"
+   ],
+   "domDelta": 1031,
+   "errors": []
+  },
+  {
+   "sig": "CJLR: cycle left / center / right / justify#4",
+   "tag": "button",
+   "label": "CJLR: cycle left / center / right / justify",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "+#4",
+   "tag": "button",
+   "label": "+",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1142,
+   "errors": []
+  },
+  {
+   "sig": "−#5",
+   "tag": "button",
+   "label": "−",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1140,
+   "errors": []
+  },
+  {
+   "sig": "+#5",
+   "tag": "button",
+   "label": "+",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta",
+    "antcv:coreCompGuard"
+   ],
+   "domDelta": 881,
+   "errors": []
+  },
+  {
+   "sig": "−#6",
+   "tag": "button",
+   "label": "−",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1202,
+   "errors": []
+  },
+  {
+   "sig": "+#6",
+   "tag": "button",
+   "label": "+",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1188,
+   "errors": []
+  },
+  {
+   "sig": "−#7",
+   "tag": "button",
+   "label": "−",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1133,
+   "errors": []
+  },
+  {
+   "sig": "+#7",
+   "tag": "button",
+   "label": "+",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1102,
+   "errors": []
+  },
+  {
+   "sig": "−#8",
+   "tag": "button",
+   "label": "−",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1231,
+   "errors": []
+  },
+  {
+   "sig": "+#8",
+   "tag": "button",
+   "label": "+",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 971,
+   "errors": []
+  },
+  {
+   "sig": "−#9",
+   "tag": "button",
+   "label": "−",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1262,
+   "errors": []
+  },
+  {
+   "sig": "+#9",
+   "tag": "button",
+   "label": "+",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1021,
+   "errors": []
+  },
+  {
+   "sig": "−#10",
+   "tag": "button",
+   "label": "−",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1301,
+   "errors": []
+  },
+  {
+   "sig": "+#10",
+   "tag": "button",
+   "label": "+",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:coreCompGuard",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1111,
+   "errors": []
+  },
+  {
+   "sig": "−#11",
+   "tag": "button",
+   "label": "−",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1242,
+   "errors": []
+  },
+  {
+   "sig": "+#11",
+   "tag": "button",
+   "label": "+",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1154,
+   "errors": []
+  },
+  {
+   "sig": "−#12",
+   "tag": "button",
+   "label": "−",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:coreCompGuard",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1070,
+   "errors": []
+  },
+  {
+   "sig": "+#12",
+   "tag": "button",
+   "label": "+",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1403,
+   "errors": []
+  },
+  {
+   "sig": "−#13",
+   "tag": "button",
+   "label": "−",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1116,
+   "errors": []
+  },
+  {
+   "sig": "+#13",
+   "tag": "button",
+   "label": "+",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:coreCompGuard",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1175,
+   "errors": []
+  },
+  {
+   "sig": "−#14",
+   "tag": "button",
+   "label": "−",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1059,
+   "errors": []
+  },
+  {
+   "sig": "+#14",
+   "tag": "button",
+   "label": "+",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1244,
+   "errors": []
+  },
+  {
+   "sig": "−#15",
+   "tag": "button",
+   "label": "−",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:coreCompGuard",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1020,
+   "errors": []
+  },
+  {
+   "sig": "+#15",
+   "tag": "button",
+   "label": "+",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1353,
+   "errors": []
+  },
+  {
+   "sig": "−#16",
+   "tag": "button",
+   "label": "−",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 991,
+   "errors": []
+  },
+  {
+   "sig": "+#16",
+   "tag": "button",
+   "label": "+",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta",
+    "antcv:coreCompGuard"
+   ],
+   "domDelta": 1086,
+   "errors": []
+  },
+  {
+   "sig": "−#17",
+   "tag": "button",
+   "label": "−",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1177,
+   "errors": []
+  },
+  {
+   "sig": "+#17",
+   "tag": "button",
+   "label": "+",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1077,
+   "errors": []
+  },
+  {
+   "sig": "−#18",
+   "tag": "button",
+   "label": "−",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta",
+    "antcv:coreCompGuard"
+   ],
+   "domDelta": 1094,
+   "errors": []
+  },
+  {
+   "sig": "+#18",
+   "tag": "button",
+   "label": "+",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1112,
+   "errors": []
+  },
+  {
+   "sig": "−#19",
+   "tag": "button",
+   "label": "−",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1095,
+   "errors": []
+  },
+  {
+   "sig": "+#19",
+   "tag": "button",
+   "label": "+",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1057,
+   "errors": []
+  },
+  {
+   "sig": "−#20",
+   "tag": "button",
+   "label": "−",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 992,
+   "errors": []
+  },
+  {
+   "sig": "+#20",
+   "tag": "button",
+   "label": "+",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1174,
+   "errors": []
+  },
+  {
+   "sig": "−#21",
+   "tag": "button",
+   "label": "−",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1203,
+   "errors": []
+  },
+  {
+   "sig": "+#21",
+   "tag": "button",
+   "label": "+",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1097,
+   "errors": []
+  },
+  {
+   "sig": "−#22",
+   "tag": "button",
+   "label": "−",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1076,
+   "errors": []
+  },
+  {
+   "sig": "+#22",
+   "tag": "button",
+   "label": "+",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1071,
+   "errors": []
+  },
+  {
+   "sig": "−#23",
+   "tag": "button",
+   "label": "−",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:coreCompGuard",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1163,
+   "errors": []
+  },
+  {
+   "sig": "+#23",
+   "tag": "button",
+   "label": "+",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 1160,
+   "errors": []
+  },
+  {
+   "sig": "Reset to defaults#1",
+   "tag": "button",
+   "label": "Reset to defaults",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "skipped-dangerous"
+  },
+  {
+   "sig": "🎯 Analysis#1",
+   "tag": "button",
+   "label": "🎯 Analysis",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "sections",
+    "meta"
+   ],
+   "domDelta": 455,
+   "errors": []
+  },
+  {
+   "sig": "⬆ Upload JD#1",
+   "tag": "button",
+   "label": "⬆ Upload JD",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "skipped-dangerous"
+  },
+  {
+   "sig": "Analyse JD#1",
+   "tag": "button",
+   "label": "Analyse JD",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "Analyse JD#2",
+   "tag": "button",
+   "label": "Analyse JD",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "skipped-dangerous"
+  },
+  {
+   "sig": "⬇ Download analysis (PDF)#1",
+   "tag": "button",
+   "label": "⬇ Download analysis (PDF)",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "skipped-dangerous"
+  },
+  {
+   "sig": "👁 Preview#1",
+   "tag": "button",
+   "label": "👁 Preview",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:coreCompGuard"
+   ],
+   "domDelta": 384,
+   "errors": []
+  },
+  {
+   "sig": "Privacy Status#2",
+   "tag": "button",
+   "label": "Privacy Status",
+   "visible": false,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "not-visible-or-disabled"
+  },
+  {
+   "sig": "100%#1",
+   "tag": "button",
+   "label": "100%",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "ui-only",
+   "writes": [],
+   "domDelta": 7,
+   "errors": []
+  },
+  {
+   "sig": "Switch CV or CL#1",
+   "tag": "button",
+   "label": "Switch CV or CL",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "doc",
+    "antcv:mainOverflow",
+    "antcv:unifiedPaginationProbe"
+   ],
+   "domDelta": 107,
+   "errors": []
+  },
+  {
+   "sig": "Fuse cover letter signals into CV#1",
+   "tag": "button",
+   "label": "Fuse cover letter signals into CV",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "antcv:coreCompGuard"
+   ],
+   "domDelta": 53,
+   "errors": []
+  },
+  {
+   "sig": "Rule under the application line: shown — click to hide#1",
+   "tag": "button",
+   "label": "Rule under the application line: shown — click to hide",
+   "visible": true,
+   "inPreview": true,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "headerItemRule",
+    "antcv:docWriterTab",
+    "antcv:coreCompGuard",
+    "sections",
+    "meta"
+   ],
+   "domDelta": 127,
+   "errors": []
+  },
+  {
+   "sig": "Rule under the application line: hidden — click to show#1",
+   "tag": "button",
+   "label": "Rule under the application line: hidden — click to show",
+   "visible": true,
+   "inPreview": true,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "headerItemRule",
+    "antcv:docWriterTab",
+    "antcv:coreCompGuard"
+   ],
+   "domDelta": 32,
+   "errors": []
+  },
+  {
+   "sig": "Rule thickness — click to cycle#1",
+   "tag": "button",
+   "label": "Rule thickness — click to cycle",
+   "visible": true,
+   "inPreview": true,
+   "disabled": false,
+   "verdict": "active",
+   "writes": [
+    "headerItemRule",
+    "antcv:docWriterTab",
+    "antcv:coreCompGuard"
+   ],
+   "domDelta": 29,
+   "errors": []
+  },
+  {
+   "sig": "Reset the rule colour to the brand / visual-style default#1",
+   "tag": "button",
+   "label": "Reset the rule colour to the brand / visual-style default",
+   "visible": true,
+   "inPreview": true,
+   "disabled": false,
+   "verdict": "skipped-dangerous"
+  },
+  {
+   "sig": "Chat about your document — drag to move#1",
+   "tag": "button",
+   "label": "Chat about your document — drag to move",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "ui-only",
+   "writes": [],
+   "domDelta": 32,
+   "errors": []
+  },
+  {
+   "sig": "×#1",
+   "tag": "button",
+   "label": "×",
+   "visible": true,
+   "inPreview": false,
+   "disabled": false,
+   "verdict": "ui-only",
+   "writes": [],
+   "domDelta": 24,
+   "errors": []
+  }
+ ],
+ "suspects": [
+  {
+   "key": "antcv:coreCompGuard",
+   "exportReads": false
+  },
+  {
+   "key": "settingsTab",
+   "exportReads": false
+  },
+  {
+   "key": "settingsSubTab",
+   "exportReads": false
+  },
+  {
+   "key": "antcv:mainOverflow",
+   "exportReads": false
+  },
+  {
+   "key": "antcv.sectionHeadlineAlignment.userTouched.v1",
+   "exportReads": false
+  },
+  {
+   "key": "topbarOrder",
+   "exportReads": false
+  },
+  {
+   "key": "antcv:docWriterTab",
+   "exportReads": false
+  },
+  {
+   "key": "antcv:analytics:counts",
+   "exportReads": false
+  },
+  {
+   "key": "antcv:unifiedPaginationProbe",
+   "exportReads": false
+  }
+ ]
+}

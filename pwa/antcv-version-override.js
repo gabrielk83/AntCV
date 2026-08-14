@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.4086-demand-seed-refresh';
+  const TARGET_VERSION = '1.51.4126-demand-seed-refresh';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.4086-demand-seed-refresh',
     '1.51.4046-company-retry',
     '1.51.4045-cl-opening-mandatory',
     '1.51.4025-jt-identity-edit',

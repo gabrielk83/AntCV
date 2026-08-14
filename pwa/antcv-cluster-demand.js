@@ -11,12 +11,16 @@
  * data_analytics / consulting / executive / finance / people_soft) are stage-4
  * research-derived from current market postings, refreshed weekly per
  * docs/deployment/google-cse-setup.md (docs/analysis/
- * cluster_top20_research_2026-08-01.json, latest — supersedes the 2026-07-24
- * revision; on-cadence weekly run (8 days, no missed-fire gap), mostly reorders:
- * AI-output evaluation/verification emerged as a skill distinct from AI-tool
- * fluency in software + consulting, Excel re-promoted in finance + data_analytics
- * on fresh posting-frequency evidence) — together the 9 clusters the 12
- * categories fold into. This is the
+ * cluster_top20_research_2026-08-14.json, latest — supersedes the 2026-08-01
+ * revision; 13-day missed-fire catch-up (the 08-08 scheduled fire produced no
+ * run), 6 of 9 clusters changed: consulting's AI-augmented-delivery item moved
+ * #2->#1 (56% wage premium, ~7x growth in postings citing it), photonics_eng's
+ * silicon-photonics-test item broadened to cover co-packaged optics for AI
+ * interconnects, executive swapped "Market & competitive strategy" for
+ * "Customer & client centricity" (82% C-suite JD prevalence) plus a reorder
+ * toward commercial/operational items, engineering_software/research_phd/
+ * photonics_eng got minor tool-list wording updates (RAG, MATLAB, git)) —
+ * together the 9 clusters the 12 categories fold into. This is the
  * cold-start fallback; the live D1 path (antcv-cluster-demand-live.js) overtakes
  * it once real-JD data accumulates.
  * The demand score is wired alongside the numeric-first rule as a secondary key.
@@ -35,7 +39,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.4086';
+  var VERSION = '1.51.4126';
   if (window.AntcvClusterDemand && window.AntcvClusterDemand.version === VERSION) return;
 
   // Embedded seed (verbatim ranks/share from the analyst-reviewed JSON). Keeping it
@@ -70,11 +74,11 @@
       [3, "Device & sensor / EO characterization", "BC"],
       [4, "Optical measurement setups, calibration & instrumentation", "BC"],
       [5, "Laser systems (seed lasers, amplifiers, stabilization)", "none"],
-      [6, "Semiconductor / silicon-photonics test programs", "none"],
+      [6, "Silicon-photonics test programs & co-packaged optics for AI interconnects", "none"],
       [7, "Test concept development, yield & test-time improvement", "AB"],
       [8, "Quantum technology / QPU context awareness", "BC"],
       [9, "Foundry PDKs & simulation tools (COMSOL, Zemax, FDTD/Lumerical)", "BC"],
-      [10, "Data acquisition, automation & analysis (Python, LabVIEW)", "BC"],
+      [10, "Data acquisition, automation & analysis (Python, LabVIEW, MATLAB)", "BC"],
       [11, "Requirements capture from customer applications (application engineering)", "AB"],
       [12, "Patent & IP generation (invention disclosures, patent filings)", "AB"],
       [13, "IP strategy, patent portfolio & licensing frameworks", "none"],
@@ -102,7 +106,7 @@
       [13, "Methodological rigour & critical analysis", "BC"],
       [14, "Curiosity, initiative & self-ownership of research", "none"],
       [15, "Domain expertise in a specified subfield (depth)", "none"],
-      [16, "Reproducible documentation (LaTeX / Jupyter)", "none"],
+      [16, "Reproducible documentation & version control (LaTeX/Jupyter/git)", "none"],
       [17, "Teaching / knowledge dissemination", "none"],
       [18, "International research mobility / collaboration", "none"],
       [19, "English fluency (+ language test if non-native)", "ABC"],
@@ -111,7 +115,7 @@
     // ── CLUSTER-QUAL-001 stage 4 (spec 7.6, owner 2026-07-05): the 6 remaining
     // clusters, research-derived from current (2025-2026) market postings +
     // skills reports (Robert Half, LinkedIn, Coursera, CFI, AIHR, Pluralsight,
-    // BLS et al.; sources in docs/analysis/cluster_top20_research_2026-08-01.json).
+    // BLS et al.; sources in docs/analysis/cluster_top20_research_2026-08-14.json).
     // These extend the COLD-START classifier/weighting to all 9 clusters so a
     // targeted JD in software / data / consulting / executive / finance / HR
     // gets real demand weighting from the seed before the user accumulates
@@ -122,7 +126,7 @@
     // onto the same SHARE_MULT tiers, so no scoring-code change is needed.
     engineering_software: { label: "Software Engineering", top20: [
       [1, "Proficiency in a core language (Python / Java / Go / TypeScript)", "none"],
-      [2, "AI-assisted & agentic coding tools (Copilot / Cursor / Claude Code) and LLM/prompt integration", "ABC"],
+      [2, "AI-assisted & agentic coding tools (Copilot / Cursor / Claude Code), LLM/RAG integration", "ABC"],
       [3, "System design & scalable architecture", "none"],
       [4, "Evaluating & reviewing AI-generated code / agent output", "AB"],
       [5, "Cloud platforms & deployment (AWS / GCP / Azure)", "none"],
@@ -165,8 +169,8 @@
       [20, "English fluency (Danish an advantage)", "ABC"]
     ] },
     consulting: { label: "Consulting", top20: [
-      [1, "Structured problem-solving (hypothesis-driven, 80/20)", "AC"],
-      [2, "AI-augmented delivery & GenAI tool fluency (prompt engineering, AI oversight)", "ABC"],
+      [1, "AI-augmented delivery & agentic-AI/GenAI tool fluency (prompt engineering, AI oversight)", "ABC"],
+      [2, "Structured problem-solving (hypothesis-driven, 80/20)", "AC"],
       [3, "Quantitative & financial analysis / modelling", "AB"],
       [4, "Client relationship, stakeholder management & trust-building", "ABC"],
       [5, "Executive communication & storytelling (slides)", "AB"],
@@ -188,24 +192,24 @@
     ] },
     executive: { label: "Executive / Senior Leadership", top20: [
       [1, "Strategic vision & execution", "AB"],
-      [2, "AI & digital strategy fluency (incl. AI governance)", "AB"],
+      [2, "AI & digital strategy fluency (incl. AI governance, agentic workflow leadership)", "AB"],
       [3, "Stakeholder, board & investor communication", "none"],
       [4, "Emotional intelligence & people leadership", "ABC"],
       [5, "Building & leading high-performing teams", "AB"],
-      [6, "P&L ownership & financial stewardship", "none"],
-      [7, "Organisational change & transformation leadership", "AB"],
-      [8, "Coaching, culture & talent development", "AB"],
-      [9, "Commercial growth & revenue architecture", "none"],
-      [10, "Financial acumen (EBITDA, balance sheet, ROI)", "none"],
-      [11, "Governance, risk, cybersecurity & ESG/CSRD compliance oversight", "none"],
-      [12, "Judgment & decision-making under ambiguity", "ABC"],
-      [13, "Cross-functional & enterprise-wide alignment", "AB"],
-      [14, "Operational excellence & execution", "AB"],
-      [15, "Resilience, adaptability & learning agility", "ABC"],
-      [16, "Negotiation & partnership building", "AB"],
-      [17, "Vision communication & influence", "AB"],
-      [18, "Global / multi-market & cross-cultural leadership", "none"],
-      [19, "Market & competitive strategy", "none"],
+      [6, "Commercial growth & revenue architecture", "none"],
+      [7, "P&L ownership & financial stewardship", "none"],
+      [8, "Organisational change & transformation leadership", "AB"],
+      [9, "Operational excellence & execution", "AB"],
+      [10, "Coaching, culture & talent development", "AB"],
+      [11, "Customer & client centricity / experience ownership", "none"],
+      [12, "Financial acumen (EBITDA, balance sheet, ROI)", "none"],
+      [13, "Governance, risk, cybersecurity & ESG/CSRD compliance oversight", "none"],
+      [14, "Judgment & decision-making under ambiguity", "ABC"],
+      [15, "Cross-functional & enterprise-wide alignment", "AB"],
+      [16, "Resilience, adaptability & learning agility", "ABC"],
+      [17, "Negotiation & partnership building", "AB"],
+      [18, "Vision communication & influence", "AB"],
+      [19, "Global / multi-market & cross-cultural leadership", "none"],
       [20, "English fluency (Danish an advantage)", "ABC"]
     ] },
     finance: { label: "Finance", top20: [

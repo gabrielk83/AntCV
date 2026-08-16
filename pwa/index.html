@@ -367,9 +367,9 @@
   })();
 </script>
 <script type="module">
-  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.4046-company-retry';
+  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.4146-appload-fixes';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.4046-company-retry';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.4146-appload-fixes';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -408,10 +408,10 @@
         auth.src = 'antcv-auth.js?v=1.51.92-analytics-401-scope';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.51.4046-company-retry';
+          app.src = 'app.js?v=1.51.4146-appload-fixes';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.4126-demand-seed-refresh';
+            vo.src = 'antcv-version-override.js?v=1.51.4146-appload-fixes';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -736,7 +736,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <!-- DOC-WIDE-CHATBOT-001 (1.50.440): always-visible "🤖 Ask AI" launcher +
      document-wide chat with cross-section apply. Fixes the mobile long-press /
      invisible-pill problem (no text selection needed). Demo-aware LLM. -->
-<script src="antcv-doc-chatbot-440.js?v=1.51.47" defer></script>
+<script src="antcv-doc-chatbot-440.js?v=1.51.4146-appload-fixes" defer></script>
 <!-- LLM-ONBOARD-001: add a new LLM, audit it (instruction/JSON/banned/latency/
      cost battery), approve it into the routing ladder. Anchors into the
      Settings API-keys form. -->
@@ -786,13 +786,13 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      Sidecar-owned DOM. Kill: antcv:disable-style-kernels-table. -->
 <script src="antcv-app-history-style-kernels.js?v=1.51.349-kernel-table-time" defer></script>
 <script src="antcv-preview-header-tokens.js?v=1.50.41" defer></script>
-<script src="antcv-copenhagen-v2-001.js?v=1.51.4046-company-retry" defer></script>
+<script src="antcv-copenhagen-v2-001.js?v=1.51.4146-appload-fixes" defer></script>
 <!-- CL-NO-PHOTO-001 (preview): hide the candidate headshot inside the band on the cover letter (export already suppresses it) -->
 <script src="antcv-cl-no-photo-001.js?v=1.51.2561-cl-spec-center" defer></script>
 <!-- HEADER-ELEM-COLORS-001: per-element BRAND colours (name/spec/contact/slogan/application) from brandV2 -->
-<script src="antcv-header-elem-colors.js?v=1.51.3121-header-defects" defer></script>
+<script src="antcv-header-elem-colors.js?v=1.51.4146-appload-fixes" defer></script>
 <!-- EXPORT-HEADER-COLORS-001: inject per-element header colours + app-line rule into the DOCX export payload (1:1 parity) -->
-<script src="antcv-export-header-colors.js?v=1.51.3622-stage4-docx" defer></script>
+<script src="antcv-export-header-colors.js?v=1.51.4146-appload-fixes" defer></script>
 <!-- SIG-BRAND-TINT-001: tint the signature to the brand signature colour when a brand is on -->
 <script src="antcv-sig-brand-tint.js?v=1.51.3181-rules-sig-brand" defer></script>
 <!-- HEADER-COLOR-CONTROLS-001: per-element colour swatch in each candidate row's control cluster -->
@@ -803,7 +803,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      style (var(--package-base) cascade), matching the DOCX. Companion to
      preview-header-tokens (which deliberately skips the sidebar). -->
 <script src="antcv-sidebar-bg-token.js?v=1.51.883-editable-marks" defer></script>
-<script src="antcv-pdf-preview-gate.js?v=1.51.4046-company-retry" defer></script>
+<script src="antcv-pdf-preview-gate.js?v=1.51.4146-appload-fixes" defer></script>
 <!-- EXPORT-SETTLED-001: defer the FIRST export until the doc is settled (cloud-restore + migrations
      converged) so it isn't stale — the real fix for "refresh twice for a good PDF". -->
 <script src="antcv-export-settled-gate.js?v=1.51.14" defer></script>
@@ -967,7 +967,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-foundation-to-rich-block-758.js?v=1.51.345-foundation-loop-fix" defer></script>
 <!-- CV-SUBTITLE-PIN-001: keep Gabriel's unsolicited specialization line "Processes • Products • People"
      from reverting to the template on kernel-showcase restore. Name-guarded, restore-proof, CV-only. -->
-<script src="antcv-cv-subtitle-pin-760.js?v=1.50.954" defer></script>
+<script src="antcv-cv-subtitle-pin-760.js?v=1.51.4146-appload-fixes" defer></script>
 <!-- RICH-BLOCK-001 Phase C: convert the six named single-paragraph sections (opening, who, why,
      closure, profile, work_style) into rich_block so they gain the full controls. Idempotent. -->
 <script src="antcv-text-sections-to-rich-block-759.js?v=1.50.822" defer></script>
@@ -1114,8 +1114,8 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      open and merges recruiter + red_flags into the rationale so the tab
      renders them; retires the JD-analysis FAB once the matching app.js
      release is detected live. Companion app.js render blocks ship via deploy. -->
-<script src="antcv-analysis-merge-344.js?v=1.51.54-upper-reorg" defer></script>
-<script src="antcv-analysis-panel-jd-block-356.js?v=1.51.1768-analysis-on-load" defer></script>
+<script src="antcv-analysis-merge-344.js?v=1.51.4146-appload-fixes" defer></script>
+<script src="antcv-analysis-panel-jd-block-356.js?v=1.51.4146-appload-fixes" defer></script>
 <!-- v1.50.146: Analysis report — enhances the panel with assumptions /
      confidence review / recommendations, and exports the analysis as a
      branded, AI-watermarked PDF (client-side print). Reads `rationale`
@@ -1198,7 +1198,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      SettingsRouter, wizardState). See docs/plan/AntCV_Plan_v2_LockedSources.md
      §7 Pass 1. -->
       <script src="antcv-357-loader.js?v=1.50.400" defer></script>
-      <script src="antcv-react-islands.js?v=1.51.4045-cl-opening-mandatory" defer></script>
+      <script src="antcv-react-islands.js?v=1.51.4146-appload-fixes" defer></script>
       <!-- v1.50.164: auto-apply the correct palette when the stored package is the
            legacy orphan default ("scandinavian"), by pressing the Copenhagen Modern
            button — fixes the permanent palette mix on load without a manual click. -->

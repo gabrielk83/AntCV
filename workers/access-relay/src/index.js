@@ -1,6 +1,6 @@
 import { insertLlmCall, aggregateHealth, getLatestHealth, pruneOld, insertQualitySignal } from './telemetry.js';
 
-const VERSION='1.3.12';
+const VERSION='1.3.13';
 // antcv-access-relay — auth + hardening
 // =====================================
 // Public-facing relay with built-in user authentication.
@@ -35,7 +35,7 @@ const VERSION='1.3.12';
 // Required binding (declare in wrangler.toml):
 //   KV_BINDING        KV namespace (stores OTPs, rate counters, prefs, signals)
 
-const RELAY_VERSION = 'auth-37-cap-disposable-only';
+const RELAY_VERSION = 'auth-38-subtitle-guard-qual-put';
 const SESSION_TTL_SECONDS    = 7 * 24 * 60 * 60;       // 7 days
 // Refresh whenever the token has < 6 days left (i.e. it's more than 1 day old),
 // so ANY request past the first day rotates it to a fresh 7-day token via the
@@ -3337,7 +3337,12 @@ async function handleApiApplications(request, env) {
       : await jdHashFromText(jdText);
     const jdCompany        = typeof body.jd_company === 'string' ? body.jd_company.trim() : '';
     const jdRole           = typeof body.jd_role    === 'string' ? body.jd_role.trim()    : '';
-    const subtitle         = typeof body.subtitle   === 'string' ? body.subtitle.trim()   : '';
+    // SUBTITLE-CLOBBER-GUARD-001 (2026-08-16): a POST without a subtitle (the
+    // tracker "Open on AntCV" seed, auto-saves before meta hydrates) must never
+    // null out a stored per-app subtitle — same family as the meta COALESCE
+    // below. Empty/absent -> null -> COALESCE keeps the existing column value.
+    // Explicit clearing still works through the PUT handler (conditional set).
+    const subtitle         = (typeof body.subtitle === 'string' && body.subtitle.trim()) ? body.subtitle.trim() : null;
     const jdLanguage       = typeof body.jd_language === 'string' && body.jd_language.trim() ? body.jd_language.trim().slice(0, 5) : 'en';
     const incomingCategory = normalizeCategory(body.category);
     // DEDUP-BY-EMPLOYER-ROLE-001: for a real targeted job (not "save as new"), find the
@@ -3430,7 +3435,7 @@ async function handleApiApplications(request, env) {
         await d1RunWithRetry(env.DB.prepare(
           'UPDATE application SET ' +
           '  jd_text = ?, supporting_context = ?, jd_language = ?, jd_company = ?, ' +
-          '  jd_role = ?, subtitle = ?, meta = COALESCE(?, meta), category = ?, ' +
+          '  jd_role = ?, subtitle = COALESCE(?, subtitle), meta = COALESCE(?, meta), category = ?, ' +
           '  rationale = COALESCE(?, rationale), updated_at = ? ' +
           'WHERE id = ?'
         ).bind(
@@ -3448,7 +3453,7 @@ async function handleApiApplications(request, env) {
           'ON CONFLICT(user_hash, jd_hash) DO UPDATE SET ' +
           '  jd_company = excluded.jd_company, ' +
           '  jd_role = excluded.jd_role, ' +
-          '  subtitle = excluded.subtitle, ' +
+          '  subtitle = COALESCE(excluded.subtitle, application.subtitle), ' + // SUBTITLE-CLOBBER-GUARD-001
           '  meta = COALESCE(excluded.meta, application.meta), ' + // JD-CROSS-APP-GUARD-001(b)
 
           '  jd_language = excluded.jd_language, ' +
@@ -3778,6 +3783,23 @@ async function handleApiApplicationById(request, env, idStr) {
       const row = await env.DB.prepare(
         'SELECT * FROM application WHERE id = ?'
       ).bind(appId).first();
+      // CLUSTER-QUAL-PUT-001 (2026-08-16): the analysis panel persists its merged
+      // rationale via THIS partial PUT (OPEN-ANALYSIS-AUTORUN-001), which never
+      // reached persistQualifications — the POST-only hook is why jd_count stayed
+      // 0 platform-wide ("Based on 0 jobs in this category"). Same best-effort
+      // contract as the POST hook: never blocks or fails the save.
+      if (row && body.rationale && typeof body.rationale === 'object'
+          && Array.isArray(body.rationale.qualifications)) {
+        try {
+          await persistQualifications(env, {
+            userHash,
+            applicationId: row.id,
+            category: row.category,
+            qualifications: body.rationale.qualifications,
+          });
+          await computeApplicationFit(env, userHash, row.id, row.category);
+        } catch (_) { /* best-effort */ }
+      }
       return jsonResponse(
         overCap
           ? { ok: true, application: shapeApplicationRow(row), history_over_cap: overCap }

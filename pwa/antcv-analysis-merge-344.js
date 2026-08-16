@@ -207,6 +207,12 @@
       if (merged.gaps === undefined && a.gaps !== undefined) merged.gaps = a.gaps;
       if (merged.tailoring_decisions === undefined && a.tailoring_decisions !== undefined) merged.tailoring_decisions = a.tailoring_decisions;
       if (merged.cover_letter_strategy === undefined && a.cover_letter_strategy !== undefined) merged.cover_letter_strategy = a.cover_letter_strategy;
+      // MARKET-FIT-QUAL-BRIDGE-001 (2026-08-16): carry the cluster-pipeline
+      // fields (relay persistQualifications reads rationale.qualifications,
+      // the app.js category resolver reads rationale.category). This list
+      // dropping them is why "Based on N jobs in this category" stayed 0.
+      if (merged.qualifications === undefined && Array.isArray(a.qualifications) && a.qualifications.length) merged.qualifications = a.qualifications;
+      if (merged.category === undefined && typeof a.category === 'string' && a.category.trim() && a.category !== 'unsolicited') merged.category = a.category.trim();
       merged._jdAnalysisMergedAt = Date.now();
       if (writeRationale(merged)) fireMerge();
     } catch (_) {

@@ -680,6 +680,14 @@
           if (jdA.assumptions !== undefined) merged.assumptions = jdA.assumptions;
           if (jdA.recommendations !== undefined) merged.recommendations = jdA.recommendations;
           if (jdA.confidence_notes !== undefined) merged.confidence_notes = jdA.confidence_notes;
+          // MARKET-FIT-QUAL-BRIDGE-001 (2026-08-16): carry the two fields the
+          // relay's cluster pipeline consumes — persistQualifications reads
+          // rationale.qualifications, the app.js category resolver reads
+          // rationale.category. jd-analysis.js has produced both since 935f220,
+          // but this hand-written field list dropped them, which is why
+          // jd_count ("Based on N jobs in this category") stayed 0 everywhere.
+          if (Array.isArray(jdA.qualifications) && jdA.qualifications.length) merged.qualifications = jdA.qualifications;
+          if (typeof jdA.category === 'string' && jdA.category.trim() && jdA.category !== 'unsolicited') merged.category = jdA.category.trim();
         }
         merged._jdAnalysisMergedAt = Date.now();
         if (writeRationale(merged)) fireMerge();
@@ -830,9 +838,28 @@
       if (jdA.assumptions !== undefined) merged.assumptions = jdA.assumptions;
       if (jdA.recommendations !== undefined) merged.recommendations = jdA.recommendations;
       if (jdA.confidence_notes !== undefined) merged.confidence_notes = jdA.confidence_notes;
+      // MARKET-FIT-QUAL-BRIDGE-001: same carry as the in-panel merge above.
+      if (Array.isArray(jdA.qualifications) && jdA.qualifications.length) merged.qualifications = jdA.qualifications;
+      if (typeof jdA.category === 'string' && jdA.category.trim() && jdA.category !== 'unsolicited') merged.category = jdA.category.trim();
     }
     merged._jdAnalysisMergedAt = Date.now();
     if (writeRationale(merged)) fireMerge();
+    // ANALYSIS-ROW-PERSIST-HEADLESS-001 (2026-08-16): the in-panel Run button
+    // PUTs the merged rationale onto the application ROW (OPEN-ANALYSIS-
+    // AUTORUN-001) but this headless clone never did — and since AUTO-ANALYSE-
+    // ON-JD-LOAD-001 made headless the NORMAL path, the analysis lived only in
+    // device-local storage and every reopen came up empty. Same partial PUT,
+    // same best-effort contract.
+    try {
+      var hAppId = window.AntcvJdScope && window.AntcvJdScope.getCurrentAppId && window.AntcvJdScope.getCurrentAppId();
+      if (hAppId && /^\d+$/.test(String(hAppId))) {
+        fetch(proxyUrl + '/api/applications/' + hAppId, {
+          method: 'PUT', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rationale: merged }),
+        }).catch(function () {});
+      }
+    } catch (_) {}
     return true;
   }
   function maybeAutoRunOnJdLoad() {

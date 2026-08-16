@@ -239,9 +239,23 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
   // (ranking-stability, OPEN_REGISTER row 76). No busy timers / per-minute polls.
   const clusterHashRef = useRef('');
   const clusterFetchedAtRef = useRef(0);
+  // CLUSTER-TOP20-CATEGORY-001 (1.51.4146): the bare fetch resolved to cluster
+  // null server-side (missing category -> 'unsolicited' -> no cluster), so the
+  // snapshot was ALWAYS empty and every Fit % was the raw band baseline. Fetch
+  // for the list's dominant category; refetch when that category changes.
+  const domCategory = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const r of (doc?.rows || [])) {
+      const c = categoryFor(asText(r[2]), asText(r[1]));
+      counts[c] = (counts[c] || 0) + 1;
+    }
+    let best = '', n = 0;
+    for (const k in counts) if (counts[k] > n) { best = k; n = counts[k]; }
+    return best;
+  }, [doc]);
   useEffect(() => {
     let alive = true;
-    const refresh = () => fetchClusterTop20().then((c) => {
+    const refresh = () => fetchClusterTop20(domCategory || undefined).then((c) => {
       if (!alive) return;
       clusterFetchedAtRef.current = Date.now();
       const next = c.top20 || [];
@@ -255,7 +269,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     const onFocus = () => { if (shouldRefetchOnFocus(clusterFetchedAtRef.current, Date.now())) void refresh(); };
     window.addEventListener('focus', onFocus);
     return () => { alive = false; clearInterval(iv); window.removeEventListener('focus', onFocus); };
-  }, []);
+  }, [domCategory]);
 
   const rows = useMemo<Row[]>(() => {
     const r = (doc?.rows || []).slice();

@@ -17847,11 +17847,17 @@
                         if (e.jd_company || e.jd_role)
                           try {
                             try{var __pg=JSON.parse(localStorage.getItem("antcv:clProseGuard")||"{}")||{};var __ak=(e.jd_company||"")+"|"+(e.jd_role||"")+"|"+String(e.jd_language||localStorage.getItem("language")||"en").replace(/["']/g,"").toLowerCase().slice(0,2);var __b=__pg[__ak]=__pg[__ak]||{};(Array.isArray(e.cl_sections)?e.cl_sections:[]).forEach(function(s){if(s&&["opening","why","who","foundation","contribute","closure","bring"].indexOf(s.id)>=0){var __t=(Array.isArray(s.items)&&s.items[0]&&s.items[0].t)||s.content||"";if(__t&&!/^\s*\[/.test(__t))__b[s.id]=JSON.parse(JSON.stringify(s))}});localStorage.setItem("antcv:clProseGuard",JSON.stringify(__pg))}catch(_){} /*CL-OPENING-SEED-985*/try{var __sc2=(e.meta&&e.meta.styleConfig)||null;if(__sc2&&Object.keys(__sc2).length){localStorage.setItem("antcv:brandV2",JSON.stringify({version:2,slots:{headerBg:__sc2.headerBg,headerInk:__sc2.headerInk||"#ffffff",sidebarBg:__sc2.sidebarBg,sidebarInk:__sc2.sidebarInk||"#1a1a1a",accent:__sc2.accent||__sc2.sidebarLineColor||__sc2.mainHeadColor}}))}else{localStorage.removeItem("antcv:brandV2")}}catch(_){} /*BRANDV2-FOLLOW-APP-001*/lo({
+                              // META-RESTORE-MERGE-001 (1.51.4146): restore the ROW's meta
+                              // (cl_slogan/brand/styleConfig survive) and honour the row's own
+                              // subtitle. The old 5-key rebuild kept the PREVIOUS app's subtitle
+                              // and dropped cl_slogan — blank CL positioning line on reopen.
+                              ...(e.meta && "object" == typeof e.meta ? e.meta : {}),
                               company: e.jd_company || "",
                               role: e.jd_role || "",
-                              subtitle: (io && io.subtitle) || "",
+                              subtitle: ("string" == typeof e.subtitle && e.subtitle.trim() ? e.subtitle : String((e.meta && e.meta.subtitle) || (io && io.subtitle) || "")),
                               greeting: ((Array.isArray(e.cl_sections)?((e.cl_sections.find(s=>s&&s.id==="greeting")||{}).content||""):"")||(io&&io.greeting)||""),
                               opening: (((cs=>{const o=cs.find(s=>s&&s.id==="opening")||{};return o.content||(Array.isArray(o.items)&&o.items[0]&&o.items[0].t)||"";})(Array.isArray(e.cl_sections)?e.cl_sections:[]))||(io&&io.opening)||""),
+                              ...(e.jd_company && window.__antcvUnsol && window.__antcvUnsol(e.jd_company) ? { cl_slogan: "" } : {}),
                             });
                           } catch (e) {}
                         if (
@@ -18801,8 +18807,25 @@
                       const co = String(a.jd_company || "").trim().toLowerCase();
                       return co === "" || co === "unsolicited";
                     };
-                    const unsol = apps.find(isUnsol);
-                    if (unsol && unsol.id) __chosenId = unsol.id;
+                    // ACTIVE-PTR-HONOR-001 (1.51.4146): the tab's own claim
+                    // (tracker Open writes sessionStorage antcv:currentAppId)
+                    // then the SERVER's active pointer OUTRANK the 1.50.246
+                    // prefer-unsolicited rule, which is now the FALLBACK. The
+                    // unconditional yank re-targeted the JD scope, the analysis
+                    // row-PUT and the auto-sync onto the kernel row, so a
+                    // reopened application's analysis was written to (and read
+                    // from) the wrong row — the "analysis panel empty on Open"
+                    // symptom (owner 2026-08-16).
+                    let __claim = null;
+                    try { __claim = sessionStorage.getItem("antcv:currentAppId"); } catch (e) {}
+                    if (__claim && /^\d+$/.test(String(__claim)) && apps.some((a) => a && String(a.id) === String(__claim)))
+                      __chosenId = Number(__claim);
+                    if (!__chosenId && t && t.application_id && apps.some((a) => a && a.id === t.application_id))
+                      __chosenId = t.application_id;
+                    if (!__chosenId) {
+                      const unsol = apps.find(isUnsol);
+                      if (unsol && unsol.id) __chosenId = unsol.id;
+                    }
                     // 1.50.253: if no genuinely-unsolicited row exists,
                     // leave __chosenId null so the user lands on a fresh
                     // template state (no Ml, no setActive, no hydrate, no
@@ -20309,6 +20332,10 @@
             return o;
           });
         },
+        // ASKAI-STYLE-OPS-001 (1.51.4146): expose the React fontSizes setters for
+        // the doc-chatbot's visual ops — a sidecar writing localStorage.fontSizes
+        // never repaints (state initialised once), these do.
+        __antcvFontOpsExposed = ((window._antcvSetFontSizes = Kr), (window._antcvStepFontSize = qr), 1),
         [Xr, Zr] = e(() => u.get("cvTableRatio", 0.25)),
         [Qr, ea] = e(() => u.get("clTableRatio", 0.25)),
         [ta, na] = e(() => {
@@ -20530,6 +20557,9 @@
       // antcv-tense-control-422.js) updates styleConfig.expTense immediately —
       // persisted + cloud-synced — WITHOUT flipping the package to "custom"
       // the way saveStyleConfig (wa) does.
+      // ASKAI-STYLE-OPS-001 (1.51.4146): React-connected styleConfig patcher
+      // (persist + cloud-sync + custom flip) for the doc-chatbot's visual ops.
+      window._antcvPatchStyleConfig = wa;
       window._antcvSetExpTense = (v) => {
         try {
           ba((p) => {
@@ -23572,11 +23602,14 @@
                   if (e.jd_company || e.jd_role)
                     try {
                       try{var __pg=JSON.parse(localStorage.getItem("antcv:clProseGuard")||"{}")||{};var __ak=(e.jd_company||"")+"|"+(e.jd_role||"")+"|"+String(e.jd_language||localStorage.getItem("language")||"en").replace(/["']/g,"").toLowerCase().slice(0,2);var __b=__pg[__ak]=__pg[__ak]||{};(Array.isArray(e.cl_sections)?e.cl_sections:[]).forEach(function(s){if(s&&["opening","why","who","foundation","contribute","closure","bring"].indexOf(s.id)>=0){var __t=(Array.isArray(s.items)&&s.items[0]&&s.items[0].t)||s.content||"";if(__t&&!/^\s*\[/.test(__t))__b[s.id]=JSON.parse(JSON.stringify(s))}});localStorage.setItem("antcv:clProseGuard",JSON.stringify(__pg))}catch(_){} /*CL-OPENING-SEED-985*/try{var __sc2=(e.meta&&e.meta.styleConfig)||null;if(__sc2&&Object.keys(__sc2).length){localStorage.setItem("antcv:brandV2",JSON.stringify({version:2,slots:{headerBg:__sc2.headerBg,headerInk:__sc2.headerInk||"#ffffff",sidebarBg:__sc2.sidebarBg,sidebarInk:__sc2.sidebarInk||"#1a1a1a",accent:__sc2.accent||__sc2.sidebarLineColor||__sc2.mainHeadColor}}))}else{localStorage.removeItem("antcv:brandV2")}}catch(_){} /*BRANDV2-FOLLOW-APP-001*/lo({
+                        // META-RESTORE-MERGE-001 (1.51.4146): see the cold-restore mirror above.
+                        ...(e.meta && "object" == typeof e.meta ? e.meta : {}),
                         company: e.jd_company || "",
                         role: e.jd_role || "",
-                        subtitle: (io && io.subtitle) || "",
+                        subtitle: ("string" == typeof e.subtitle && e.subtitle.trim() ? e.subtitle : String((e.meta && e.meta.subtitle) || (io && io.subtitle) || "")),
                         greeting: ((Array.isArray(e.cl_sections)?((e.cl_sections.find(s=>s&&s.id==="greeting")||{}).content||""):"")||(io&&io.greeting)||""),
                         opening: (((cs=>{const o=cs.find(s=>s&&s.id==="opening")||{};return o.content||(Array.isArray(o.items)&&o.items[0]&&o.items[0].t)||"";})(Array.isArray(e.cl_sections)?e.cl_sections:[]))||(io&&io.opening)||""),
+                        ...(e.jd_company && window.__antcvUnsol && window.__antcvUnsol(e.jd_company) ? { cl_slogan: "" } : {}),
                       });
                     } catch (e) {}
                   if (
@@ -42023,7 +42056,11 @@
                                                           // minimal gen-runner meta + an empty `subtitle` column left the
                                                           // specialisation line blank on load. personalInfo.specialization is
                                                           // global to the candidate, so it cannot leak the previous app.
-                                                          subtitle: n.subtitle || n.meta.subtitle || (window.__antcvPiSpec ? window.__antcvPiSpec() : "") || "",
+                                                          // SUBTITLE-TARGETED-NO-PISPEC-001 (1.51.4146): …but the global spec IS
+                                                          // the unsolicited pillar, so a TARGETED app (named, non-unsolicited
+                                                          // company) must NOT inherit it — leave the placeholder for the row's
+                                                          // own subtitle instead (Nvidia symptom, owner 2026-08-16).
+                                                          subtitle: n.subtitle || n.meta.subtitle || (((c) => { if (c && !/^open application$/i.test(c)) { var u = "function" == typeof window.__antcvUnsol ? window.__antcvUnsol(c) : (window.__ANTCV_UNSOL_RE || /^unsolicited$/i).test(c); if (!u) return ""; } return window.__antcvPiSpec ? window.__antcvPiSpec() : ""; })(String(n.meta.company || n.jd_company || "").trim())) || "",
                                                           // SLOGAN-UNSOL-GENERIC-001: unsolicited keeps the generic standing default — never carry a tailored slogan in meta.
                                                           cl_slogan: (window.__antcvUnsol && window.__antcvUnsol(n.meta.company || n.jd_company || "")) ? "" : (n.meta.cl_slogan || n.meta.slogan || (io && io.cl_slogan) || ""),
                                                         }
@@ -48643,7 +48680,8 @@
                                         // `subtitle` column, so __su resolved to "" and the CL/CV specialisation
                                         // line disappeared on load. personalInfo.specialization is the global
                                         // candidate property the header already renders — safe last resort.
-                                        var __co = (n.meta && n.meta.company) || n.jd_company || "", __ro = (n.meta && n.meta.role) || n.jd_role || "", __su = n.subtitle || (n.meta && n.meta.subtitle) || (window.__antcvPiSpec ? window.__antcvPiSpec() : "") || "", __sl = (n.meta && (n.meta.cl_slogan || n.meta.slogan)) || "";
+                                        /* SUBTITLE-TARGETED-NO-PISPEC-001 (1.51.4146): targeted apps must not inherit the global unsolicited specialization line */
+                                        var __co = (n.meta && n.meta.company) || n.jd_company || "", __ro = (n.meta && n.meta.role) || n.jd_role || "", __su = n.subtitle || (n.meta && n.meta.subtitle) || (function () { var c = String(__co || "").trim(); if (c && !/^open application$/i.test(c)) { var u = "function" == typeof window.__antcvUnsol ? window.__antcvUnsol(c) : (window.__ANTCV_UNSOL_RE || /^unsolicited$/i).test(c); if (!u) return ""; } return window.__antcvPiSpec ? window.__antcvPiSpec() : ""; })() || "", __sl = (n.meta && (n.meta.cl_slogan || n.meta.slogan)) || "";
                                         // SLOGAN-UNSOL-GENERIC-001: an unsolicited app keeps the generic standing default — do not seed a tailored slogan into meta.cl_slogan or the override.
                                         var __unsL = !!(__co && window.__antcvUnsol && window.__antcvUnsol(__co)); if (__unsL) __sl = "";
                                         var __mm = { ...(io || {}), ...(n.meta && "object" == typeof n.meta ? n.meta : {}), company: __co, role: __ro, subtitle: __su, cl_slogan: __sl };

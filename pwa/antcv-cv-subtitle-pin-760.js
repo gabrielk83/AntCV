@@ -17,7 +17,7 @@
  */
 (function () {
   'use strict';
-  var V = '1.50.954';
+  var V = '1.51.4146';
   if (window.__antcvCvSubtitlePin760 === V) return;
   window.__antcvCvSubtitlePin760 = V;
   try { if (localStorage.getItem('antcv:disable-cv-subtitle-pin') === '1') return; } catch (_) {}
@@ -33,6 +33,17 @@
       if (!isGabriel()) return;
       var m = rd('meta');
       if (!m || typeof m !== 'object') return;
+      // SUBTITLE-UNSOL-PIN-GATE-001 (1.51.4146): the pillar is the UNSOLICITED
+      // standing line. A TARGETED app (named, non-unsolicited company in meta)
+      // must never receive it — leave the placeholder for the row's own subtitle
+      // (mirrors appIsTargeted() in antcv-subtitle-sequence-368.js, which this
+      // pin was defeating by loading later and filling the placeholder).
+      var co = String(m.company || '').trim();
+      if (co && !/^open application$/i.test(co)) {
+        var re = window.__ANTCV_UNSOL_RE || /^unsolicited$/i;
+        var isUnsol = (typeof window.__antcvUnsol === 'function') ? window.__antcvUnsol(co) : re.test(co);
+        if (!isUnsol) return;
+      }
       if (!isTemplate(m.subtitle)) return;   // owner-edited / already good -> leave
       if (m.subtitle === GOOD) return;
       m.subtitle = GOOD;

@@ -29,8 +29,39 @@
   function readJSON(k) { try { var r = localStorage.getItem(k); return r ? JSON.parse(r) : null; } catch (_) { return null; } }
   function hex6(c) { c = String(c || '').replace('#', '').trim(); return /^[0-9a-fA-F]{6}$/.test(c) ? c.toUpperCase() : ''; }
 
-  function brand() { var m = readJSON('meta') || {}; return (m && m.brandV2) || readJSON('antcv:brandV2') || null; }
+  // BRANDV2-SLOTS-UNWRAP-001 (1.51.4146): v2 brand objects nest colours under
+  // .slots — reading them at the top level made every colorFor() return ''
+  // (same defect as the preview engine; both patched in lockstep).
+  function brand() {
+    var m = readJSON('meta') || {};
+    var b = (m && m.brandV2) || readJSON('antcv:brandV2') || null;
+    if (b && b.slots && typeof b.slots === 'object') return Object.assign({}, b, b.slots);
+    return b;
+  }
   function ov(elem) { var o = readJSON('antcv:headerElemColors') || {}; return hex6(o[elem]); }
+  // SPEC-CONTRAST-GUARD-001 (1.51.4146): mirror of the preview engine's guard —
+  // brand inks below the 3:1 AA large-text floor against the band fall back to
+  // headerInk so DOCX/PDF match the (guarded) screen. Overrides not guarded.
+  function lum(c) {
+    c = String(c || '').replace('#', '');
+    if (!/^[0-9a-fA-F]{6}$/.test(c)) return null;
+    var f = function (v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    return 0.2126 * f(parseInt(c.slice(0, 2), 16)) + 0.7152 * f(parseInt(c.slice(2, 4), 16)) + 0.0722 * f(parseInt(c.slice(4, 6), 16));
+  }
+  function contrastOk(ink, bg) {
+    var a = lum(ink), b = lum(bg);
+    if (a == null || b == null) return true;
+    var hi = Math.max(a, b), lo = Math.min(a, b);
+    return (hi + 0.05) / (lo + 0.05) >= 3;
+  }
+  function guard(color, b) {
+    if (!color || !b) return color;
+    var bg = hex6(b.headerBg); if (!bg) return color;
+    if (contrastOk(color, bg)) return color;
+    var ink = hex6(b.headerInk) || hex6(b.headerNameColor);
+    if (ink && contrastOk(ink, bg)) return ink;
+    return (lum(bg) != null && lum(bg) > 0.4) ? '1A1A1A' : 'FFFFFF';
+  }
   // Mirror the engine's per-element mapping (colorFor).
   function colorFor(elem) {
     var o = ov(elem); if (o) return o;
@@ -41,9 +72,9 @@
     var b = brand(); if (!b) return '';
     switch (elem) {
       case 'name':
-      case 'contact': return hex6(b.headerInk) || hex6(b.headerNameColor) || '';
-      case 'spec': return hex6(b.accent) || '';
-      case 'slogan': return hex6(b.sloganColor) || hex6(b.accent) || '';
+      case 'contact': return guard(hex6(b.headerInk) || hex6(b.headerNameColor) || '', b);
+      case 'spec': return guard(hex6(b.accent) || '', b);
+      case 'slogan': return guard(hex6(b.sloganColor) || hex6(b.accent) || '', b);
       default: return '';
     }
   }

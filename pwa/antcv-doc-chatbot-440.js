@@ -15,9 +15,22 @@
  * that section, so apply is schema-agnostic and safe (locate-then-replace, with
  * a per-edit snapshot for undo). No fetch wrap.
  */
+/* ASKAI-EXPAND-001 (owner 2026-08-16, v1.51.4146): the assistant now also
+ * (a) grounds content suggestions in the CANDIDATE PROFILE (personalInfo work
+ *     style / personality / staged kernel) and the APPLICATION HISTORY
+ *     (relay GET /api/applications, cached, best-effort),
+ * (b) proposes VISUAL STYLE changes — header element colors
+ *     (AntcvHeaderColors), header band (AntcvQuickDocColor), styleConfig
+ *     colors/fonts (window._antcvPatchStyleConfig) and font sizes
+ *     (window._antcvStepFontSize) — via a "style":[...] op list in the same
+ *     STRICT-JSON contract, each rendered as an Apply/Undo card exactly like
+ *     text edits, and
+ * (c) buffers text/event-stream responses (the cv-proxy forces stream:true for
+ *     BYOK/owner accounts — ASKAI-SSE-001 pattern from JobTracker/api.ts).
+ */
 (function () {
   'use strict';
-  var VERSION = '1.50.440';
+  var VERSION = '1.51.4146';
   if (window.__antcvDocChatbot440 === VERSION) return;
   window.__antcvDocChatbot440 = VERSION;
 
@@ -80,9 +93,62 @@
     r.push('Do not invent facts, employers, dates, numbers, titles, or credentials.');
     return r;
   }
+  // ── ASKAI-EXPAND-001: candidate profile + application history + visual state ─
+  function kernelContext() {
+    try {
+      var pi = readJSON('personalInfo') || {};
+      var bits = [];
+      if (pi.name) bits.push('Name: ' + pi.name);
+      if (pi.specialization) bits.push('Specialization: ' + pi.specialization);
+      var ws = pi.workStyle || {};
+      if (ws.summary) bits.push('Work style: ' + String(ws.summary).slice(0, 300));
+      else if (Array.isArray(ws.keywords) && ws.keywords.length) bits.push('Work style: ' + ws.keywords.slice(0, 8).join(', '));
+      var p = pi.personality;
+      if (p && typeof p === 'object') {
+        var ps = p.summary || p.kernel || '';
+        if (ps) bits.push('Personality: ' + String(ps).slice(0, 300));
+      }
+      var mk = readJSON('antcv:ingestedKernel');
+      if (mk && mk.identity && mk.identity.headline) bits.push('Headline: ' + String(mk.identity.headline).slice(0, 200));
+      return bits.join('\n').slice(0, 1200);
+    } catch (_) { return ''; }
+  }
+  var histCache = '', histAt = 0;
+  function refreshHistory() {
+    var base = proxyBase(); if (!base) return;
+    var now = Date.now();
+    if (now - histAt < 120000) return;   // 2 min cache
+    histAt = now;
+    var hdrs = {};
+    try { var tok = String(localStorage.getItem('antcv:auth:token') || '').replace(/"/g, ''); if (tok) hdrs.Authorization = 'Bearer ' + tok; } catch (_) {}
+    window.fetch(base + '/api/applications', { credentials: 'include', headers: hdrs })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        var rows = (j && Array.isArray(j.applications)) ? j.applications : [];
+        histCache = rows.slice(0, 15).map(function (a) {
+          return '- #' + a.id + ' ' + (a.jd_company || 'Unsolicited') + ' — ' + (a.jd_role || '') + (a.category ? ' [' + a.category + ']' : '');
+        }).join('\n').slice(0, 1500);
+      }).catch(function () { /* best-effort — the prompt just omits history */ });
+  }
+  function historyContext() { return histCache; }
+  function styleContext() {
+    try {
+      var sc = readJSON('styleConfig') || {};
+      var fs = readJSON('fontSizes') || {};
+      var hb = '';
+      try { hb = (window.AntcvQuickDocColor && window.AntcvQuickDocColor.get()) || ''; } catch (_) {}
+      var ov = {};
+      try { ov = (window.AntcvHeaderColors && window.AntcvHeaderColors.get()) || {}; } catch (_) {}
+      return ('headerBg=' + (hb || sc.headerBg || 'default') +
+        '; fonts: head=' + (sc.mainHeadFont || 'default') + ', body=' + (sc.mainBodyFont || 'default') +
+        '; mainHeadColor=' + (sc.mainHeadColor || 'default') + '; sidebarBg=' + (sc.sidebarBg || 'default') +
+        '; header element overrides=' + JSON.stringify(ov) +
+        '; fontSizes=' + JSON.stringify(fs).slice(0, 300)).slice(0, 700);
+    } catch (_) { return '(unknown)'; }
+  }
   function buildSystem() {
     return [
-      'You are an editing assistant for a job-application document (CV / cover letter) inside AntCV. You can answer questions about the document AND propose concrete edits to specific sections.',
+      'You are an editing assistant for a job-application document (CV / cover letter) inside AntCV. You can answer questions about the document, propose concrete TEXT EDITS to specific sections, AND propose VISUAL STYLE changes (colors, fonts, font sizes).',
       '',
       'RULES (must follow):',
       rules().map(function (x) { return '- ' + x; }).join('\n'),
@@ -90,9 +156,23 @@
       'THE DOCUMENT (one line per section, prefixed with its [sid]):',
       docContext(),
       '',
+      'CANDIDATE PROFILE (ground truth about the candidate — use it to ground content suggestions; never invent beyond it):',
+      kernelContext() || '(none stored)',
+      '',
+      'APPLICATION HISTORY (the candidate\'s other applications — use for consistency and cross-application advice):',
+      historyContext() || '(not loaded)',
+      '',
+      'CURRENT VISUAL STATE:',
+      styleContext(),
+      '',
       'Return STRICT JSON only (no markdown fences):',
-      '{"reply":"<a short conversational answer to the user>","edits":[{"sid":"<the section id>","find":"<an EXACT substring copied verbatim from that section to replace>","replace":"<the new text>","why":"<one short reason, citing the rule or the user\'s intent>"}]}',
-      'Only include an edit when the user asked you to change something or you are confident it improves the document within the rules. `find` MUST be copied verbatim from the section so it can be located. If you have no edits, return "edits":[]. Keep replacements within the same length range unless asked to shorten/expand.',
+      '{"reply":"<a short conversational answer to the user>","edits":[{"sid":"<the section id>","find":"<an EXACT substring copied verbatim from that section to replace>","replace":"<the new text>","why":"<one short reason, citing the rule or the user\'s intent>"}],"style":[<zero or more style operations>]}',
+      'Style operations (ONLY when the user asks for a visual change):',
+      '- {"op":"headerElemColor","elem":"name|spec|contact|slogan|application","value":"#RRGGBB","why":"…"} — recolor one header element (spec = the specialization line under the name).',
+      '- {"op":"headerBg","value":"#RRGGBB","why":"…"} — the header band + table-header background.',
+      '- {"op":"styleConfig","patch":{"<key>":"<value>"},"why":"…"} — document style keys (colors as #RRGGBB, fonts as CSS family names): mainHeadColor, mainSubHeadColor, mainTextColor, mainLineColor, mainBulletColor, sidebarBg, sidebarHeadColor, sidebarTextColor, headerNameColor, headerSpecColor, headerContactColor, mainHeadFont, mainBodyFont, headerFont, sidebarFont.',
+      '- {"op":"fontSize","key":"mainBody|mainHead|sbBody|sbHead|nameSize|contactSize|mainExp|bulletContent","delta":<pt, ±0.5 steps>,"why":"…"} — nudge a font size.',
+      'Colors must keep readable contrast against their background. Only include an edit or a style op when the user asked you to change something or you are confident it improves the document within the rules. `find` MUST be copied verbatim from the section so it can be located. If you have none, return "edits":[] and "style":[]. Keep replacements within the same length range unless asked to shorten/expand.',
     ].join('\n');
   }
 
@@ -131,6 +211,61 @@
     };
   }
 
+  // ─── ASKAI-EXPAND-001: visual style ops (Apply/Undo, same contract as edits) ─
+  var HEX_RE = /^#?[0-9a-fA-F]{6}$/;
+  function normHex(v) { v = String(v || '').trim(); if (!HEX_RE.test(v)) return ''; return v.charAt(0) === '#' ? v : '#' + v; }
+  function applyStyleOp(op) {
+    try {
+      if (!op || typeof op !== 'object') return null;
+      if (op.op === 'headerElemColor') {
+        var elems = { name: 1, spec: 1, contact: 1, slogan: 1, application: 1 };
+        var c = normHex(op.value);
+        if (!elems[op.elem] || !c || !window.AntcvHeaderColors) return null;
+        var prev = String((window.AntcvHeaderColors.get() || {})[op.elem] || '');
+        window.AntcvHeaderColors.set(op.elem, c);
+        return function () { try { window.AntcvHeaderColors.set(op.elem, prev); return true; } catch (_) { return false; } };
+      }
+      if (op.op === 'headerBg') {
+        var c2 = normHex(op.value);
+        if (!c2 || !window.AntcvQuickDocColor) return null;
+        var prev2 = '';
+        try { prev2 = window.AntcvQuickDocColor.get() || (readJSON('styleConfig') || {}).headerBg || ''; } catch (_) {}
+        window.AntcvQuickDocColor.set(c2);
+        return function () { try { if (prev2) { window.AntcvQuickDocColor.set(prev2); return true; } return false; } catch (_) { return false; } };
+      }
+      if (op.op === 'styleConfig') {
+        if (!op.patch || typeof op.patch !== 'object' || typeof window._antcvPatchStyleConfig !== 'function') return null;
+        var patch = {}, prevSc = readJSON('styleConfig') || {}, prev3 = {}, n = 0;
+        for (var k in op.patch) {
+          if (!Object.prototype.hasOwnProperty.call(op.patch, k)) continue;
+          if (!/^(main|sidebar|header|table|photo)[A-Za-z0-9]*$/.test(k)) continue; // key whitelist by region prefix
+          var v = op.patch[k];
+          if (typeof v !== 'string' && typeof v !== 'number') continue;
+          if (/(Color|Bg)$/.test(k)) { v = normHex(v); if (!v) continue; }
+          patch[k] = v; prev3[k] = prevSc[k]; n++;
+        }
+        if (!n) return null;
+        window._antcvPatchStyleConfig(patch);
+        return function () { try { window._antcvPatchStyleConfig(prev3); return true; } catch (_) { return false; } };
+      }
+      if (op.op === 'fontSize') {
+        var d = Number(op.delta);
+        if (!op.key || !isFinite(d) || d === 0 || typeof window._antcvStepFontSize !== 'function') return null;
+        d = Math.max(-3, Math.min(3, d));
+        window._antcvStepFontSize(String(op.key), d);
+        return function () { try { window._antcvStepFontSize(String(op.key), -d); return true; } catch (_) { return false; } };
+      }
+      return null;
+    } catch (_) { return null; }
+  }
+  function styleLabel(op) {
+    if (op.op === 'headerElemColor') return 'Color · ' + op.elem + ' → ' + op.value;
+    if (op.op === 'headerBg') return 'Header band → ' + op.value;
+    if (op.op === 'styleConfig') return 'Style · ' + JSON.stringify(op.patch || {}).slice(0, 140);
+    if (op.op === 'fontSize') return 'Font size · ' + op.key + ' ' + (Number(op.delta) > 0 ? '+' : '') + op.delta + 'pt';
+    return String(op.op || '');
+  }
+
   // ─── LLM ────────────────────────────────────────────────────────────────────
   var turns = []; // {role, content}
   function ask(userText) {
@@ -140,14 +275,31 @@
     return window.fetch(base + '/', {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json', 'x-provider': 'anthropic' },
-      body: JSON.stringify({ model: MODEL, max_tokens: 1100, stream: false, system: buildSystem(), messages: msgs }),
-    }).then(function (res) { return res.json().catch(function () { return null; }); }).then(function (j) {
-      var raw = (j && j.content && j.content[0] && j.content[0].text) || '';
-      var parsed; try { parsed = JSON.parse(String(raw).replace(/```json|```/g, '').trim()); } catch (_) { parsed = { reply: String(raw || '').trim(), edits: [] }; }
+      body: JSON.stringify({ model: MODEL, max_tokens: 1600, stream: false, system: buildSystem(), messages: msgs }),
+    }).then(function (res) {
+      return res.text().then(function (raw) { return { res: res, raw: raw }; });
+    }).then(function (rr) {
+      var raw = String(rr.raw || ''), txt = '', ct = '';
+      try { ct = rr.res.headers.get('content-type') || ''; } catch (_) {}
+      // ASKAI-SSE-001: the cv-proxy FORCES stream:true for BYOK/owner accounts,
+      // so the answer can arrive as text/event-stream — buffer and join the
+      // content_block_delta text (same pattern as JobTracker/api.ts askAI).
+      if (/^event:|^data:/m.test(raw.slice(0, 400)) || ct.indexOf('event-stream') >= 0) {
+        raw.split('\n').forEach(function (line) {
+          if (line.indexOf('data:') !== 0) return;
+          var d; try { d = JSON.parse(line.slice(5).trim()); } catch (_) { d = null; }
+          if (d && d.type === 'content_block_delta' && d.delta && typeof d.delta.text === 'string') txt += d.delta.text;
+        });
+      } else {
+        var j; try { j = JSON.parse(raw); } catch (_) { j = null; }
+        txt = (j && j.content && j.content[0] && j.content[0].text) || '';
+      }
+      var parsed; try { parsed = JSON.parse(String(txt).replace(/```json|```/g, '').trim()); } catch (_) { parsed = { reply: String(txt || '').trim(), edits: [] }; }
       if (!parsed || typeof parsed !== 'object') parsed = { reply: '', edits: [] };
       if (!Array.isArray(parsed.edits)) parsed.edits = [];
+      if (!Array.isArray(parsed.style)) parsed.style = [];
       turns.push({ role: 'user', content: userText });
-      turns.push({ role: 'assistant', content: JSON.stringify({ reply: parsed.reply || '', edits: parsed.edits }) });
+      turns.push({ role: 'assistant', content: JSON.stringify({ reply: parsed.reply || '', edits: parsed.edits, style: parsed.style }) });
       return parsed;
     }).catch(function (e) { return { error: String((e && e.message) || e) }; });
   }
@@ -158,6 +310,7 @@
 
   function openPanel() {
     if (document.getElementById(PANEL_ID)) return;
+    try { refreshHistory(); } catch (_) {}   // warm the history block before the first ask
     var panel = el('div', [
       'position:fixed', 'z-index:2147483601', 'right:14px', 'bottom:70px',
       'width:min(380px,calc(100vw - 28px))', 'max-height:min(560px,calc(100vh - 110px))',
@@ -176,7 +329,7 @@
 
     var log = el('div', 'flex:1;overflow:auto;padding:11px 13px;font-size:12.5px;');
     log.setAttribute('data-antcv-doc-chat-log', '1');
-    log.appendChild(el('div', 'color:rgba(255,255,255,0.6);line-height:1.5;', 'Ask me to review or change anything across your whole document — e.g. “tighten every bullet”, “make the profile more concrete”, “is this aligned with the JD?”. I’ll respect your banned words, length and language, and you approve each edit.'));
+    log.appendChild(el('div', 'color:rgba(255,255,255,0.6);line-height:1.5;', 'Ask me to review or change anything across your whole document — e.g. “tighten every bullet”, “make the profile more concrete”, “is this aligned with the JD?” — or ask for visual changes like “make the specialization line darker” or “use a serif heading font”. I know your profile and application history, and you approve each change.'));
     panel.appendChild(log);
 
     var foot = el('div', 'padding:10px 12px;border-top:1px solid rgba(255,255,255,0.1);');
@@ -230,6 +383,35 @@
       }
       log.scrollTop = log.scrollHeight;
     }
+    // ASKAI-EXPAND-001: visual style op cards — same Apply/Undo contract as
+    // text edits, amber accent so they read as a different kind of change.
+    function addStyleOps(bubble, ops) {
+      ops.forEach(function (op) {
+        if (!op || !op.op) return;
+        var card = el('div', 'margin:7px 0;background:rgba(255,193,7,0.08);border:1px solid rgba(255,193,7,0.35);border-radius:8px;padding:8px 9px;');
+        card.setAttribute('data-antcv-doc-style-op', String(op.op));
+        card.appendChild(el('div', 'font-size:10px;color:rgba(255,255,255,0.5);margin-bottom:3px;', 'STYLE'));
+        card.appendChild(el('div', 'font-size:12px;color:#fff;line-height:1.45;', styleLabel(op)));
+        if (op.why) card.appendChild(el('div', 'font-size:10.5px;color:rgba(255,255,255,0.55);margin-top:4px;', 'Why: ' + op.why));
+        var row = el('div', 'display:flex;gap:6px;justify-content:flex-end;margin-top:6px;');
+        var apply = el('button', 'padding:5px 11px;border-radius:6px;border:0;background:#FFC107;color:#3a2a06;font-weight:800;font-size:11px;cursor:pointer;', 'Apply');
+        apply.type = 'button'; apply.setAttribute('data-antcv-doc-style-apply', '1');
+        apply.onclick = function () {
+          var undo = applyStyleOp(op);
+          if (!undo) { apply.textContent = 'Not available'; apply.disabled = true; apply.style.opacity = '0.5'; return; }
+          row.innerHTML = '';
+          row.appendChild(el('div', 'flex:1;font-size:11px;color:#FFC107;font-weight:700;', '✓ Applied'));
+          var u = el('button', 'padding:5px 11px;border-radius:6px;border:1px solid rgba(255,193,7,0.6);background:transparent;color:#FFC107;font-weight:800;font-size:11px;cursor:pointer;', 'Undo');
+          u.type = 'button'; u.setAttribute('data-antcv-doc-style-undo', '1');
+          u.onclick = function () { if (undo()) { u.textContent = 'Undone'; u.disabled = true; } };
+          row.appendChild(u);
+        };
+        row.appendChild(apply);
+        card.appendChild(row);
+        bubble.appendChild(card);
+      });
+      log.scrollTop = log.scrollHeight;
+    }
 
     function run() {
       var text = (ta.value || '').trim();
@@ -239,8 +421,9 @@
       ask(text).then(function (res) {
         send.disabled = false; send.style.opacity = '1'; status.textContent = '';
         if (!res || res.error) { addBubble('ai', 'Sorry — ' + ((res && res.error) || 'no response') + '.'); return; }
-        var bub = addBubble('ai', res.reply || (res.edits.length ? 'Here are the changes:' : '(no reply)'));
+        var bub = addBubble('ai', res.reply || ((res.edits.length || (res.style && res.style.length)) ? 'Here are the changes:' : '(no reply)'));
         if (res.edits && res.edits.length) addEdits(bub, res.edits);
+        if (res.style && res.style.length) addStyleOps(bub, res.style);
       });
     }
     send.onclick = run;
@@ -321,6 +504,6 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
   else boot();
 
-  window.AntcvDocChatbot = { version: VERSION, open: openPanel, close: closePanel, _ask: ask, _applyEdit: applyEdit, _docContext: docContext, _buildSystem: buildSystem };
+  window.AntcvDocChatbot = { version: VERSION, open: openPanel, close: closePanel, _ask: ask, _applyEdit: applyEdit, _docContext: docContext, _buildSystem: buildSystem, _applyStyleOp: applyStyleOp, _kernelContext: kernelContext, _historyContext: historyContext, _refreshHistory: refreshHistory, _styleContext: styleContext };
   try { console.debug('[doc-chatbot-440] installed v' + VERSION); } catch (_) {}
 })();

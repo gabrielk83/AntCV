@@ -309,10 +309,14 @@ export async function fetchBrandColors(jdUrl: string, companyName: string): Prom
 }
 
 // Cluster top-20 most-demanded qualifications for the user's cluster.
+// CLUSTER-TOP20-CATEGORY-001 (1.51.4146): the relay coerces a MISSING category
+// param to 'unsolicited' -> cluster null -> {top20: []} — so calling this bare
+// made fitPercent's demand nudge dead code. Callers must pass a real category.
 export interface ClusterTop { cluster_id: string | null; top20: { rank: number; qual: string; weight_sum: number }[]; }
-export async function fetchClusterTop20(): Promise<ClusterTop> {
+export async function fetchClusterTop20(category?: string): Promise<ClusterTop> {
   try {
-    const res = await call('/api/cluster-top20', { method: 'GET' });
+    const qs = category ? '?category=' + encodeURIComponent(category) : '';
+    const res = await call('/api/cluster-top20' + qs, { method: 'GET' });
     const j = await res.json().catch(() => ({}));
     return { cluster_id: j.cluster_id ?? null, top20: Array.isArray(j.top20) ? j.top20 : [] };
   } catch { return { cluster_id: null, top20: [] }; }

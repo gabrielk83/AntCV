@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.4126-demand-seed-refresh';
+const CACHE = 'antcv-1.51.4146-appload-fixes';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

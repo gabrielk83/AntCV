@@ -43,9 +43,40 @@
 
   // The per-app brand object (published by COMPANY-BRAND-FIT-001). meta.brandV2
   // mirrors the active app's brand; antcv:brandV2 is the global fallback.
+  // BRANDV2-SLOTS-UNWRAP-001 (1.51.4146): v2 brand objects nest the colours
+  // under .slots ({version:2, slots:{accent,…}}). This read the slots at the
+  // TOP level, so every colorFor() returned '' and the paint silently no-op'd —
+  // the Copenhagen cyan CSS fallback then stood (invisible on a light band).
   function brand() {
     var meta = readJSON('meta') || {};
-    return (meta && meta.brandV2) || readJSON('antcv:brandV2') || null;
+    var b = (meta && meta.brandV2) || readJSON('antcv:brandV2') || null;
+    if (b && b.slots && typeof b.slots === 'object') return Object.assign({}, b, b.slots);
+    return b;
+  }
+  // SPEC-CONTRAST-GUARD-001 (1.51.4146): WCAG relative luminance + contrast
+  // ratio. Brand-derived inks that cannot be read on the band (ratio < 3:1,
+  // the AA large-text floor) fall back to the brand headerInk — the standing
+  // "sampled brand colours keep vision-safe contrast" rule. Manual overrides
+  // are NOT guarded (an explicit user choice wins).
+  function lum(c) {
+    c = String(c || '').replace('#', '');
+    if (!/^[0-9a-fA-F]{6}$/.test(c)) return null;
+    var f = function (v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    return 0.2126 * f(parseInt(c.slice(0, 2), 16)) + 0.7152 * f(parseInt(c.slice(2, 4), 16)) + 0.0722 * f(parseInt(c.slice(4, 6), 16));
+  }
+  function contrastOk(ink, bg) {
+    var a = lum(ink), b = lum(bg);
+    if (a == null || b == null) return true; // unknown -> don't block
+    var hi = Math.max(a, b), lo = Math.min(a, b);
+    return (hi + 0.05) / (lo + 0.05) >= 3;
+  }
+  function guard(color, b) {
+    if (!color || !b) return color;
+    var bg = hex(b.headerBg); if (!bg) return color;
+    if (contrastOk(color, bg)) return color;
+    var ink = hex(b.headerInk) || hex(b.headerNameColor);
+    if (ink && contrastOk(ink, bg)) return ink;
+    return (lum(bg) != null && lum(bg) > 0.4) ? '#1a1a1a' : '#ffffff';
   }
   // Resolve the target colour for one element: manual override > brand slot.
   function colorFor(elem) {
@@ -54,9 +85,9 @@
     var b = brand(); if (!b) return '';
     switch (elem) {
       case 'name':
-      case 'contact': return hex(b.headerInk) || hex(b.headerNameColor) || '';
-      case 'spec':    return hex(b.accent) || '';
-      case 'slogan':  return hex(b.sloganColor) || hex(b.accent) || '';
+      case 'contact': return guard(hex(b.headerInk) || hex(b.headerNameColor) || '', b);
+      case 'spec':    return guard(hex(b.accent) || '', b);
+      case 'slogan':  return guard(hex(b.sloganColor) || hex(b.accent) || '', b);
       case 'application': return APP_GRAY;
       default: return '';
     }

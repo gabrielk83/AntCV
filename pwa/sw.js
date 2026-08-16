@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.4206-profile-dedup';
+const CACHE = 'antcv-1.51.4226-globalise-v3';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

@@ -189,7 +189,11 @@
     " - SOURCE-BACKED PHRASES (COMPOUND-BACKED-001): every technical noun-compound (\"thermal packaging\", \"test correlation\", \"sign-off gates\") must appear as a CONNECTED concept in the candidate source; never synthesise a new competency because its words occur separately in the kernel. When in doubt, use the kernel's own wording verbatim.",
     " - METRIC MEANING (METRIC-SEMANTIC-001): keep every metric bound to what it measured, in the source's own terms - a \"change cycle cut from roughly 250 days to about 10\" must never become \"late-stage rework reduced 95%\"; prefer the source's raw numbers over derived percentages.",
     " - CONSISTENCY (CONTRADICTION-QA-001): stated years of experience, team sizes and scale figures must match the kernel exactly and be identical everywhere they appear across the CV and cover letter.",
-    " - COVER LETTER LENGTH (CL-LENGTH-001): 350-450 words total on one page - a compact opening tied to THIS role, three evidence paragraphs, a short close. Never assume the employer has gaps or problems; never open with a generic \"roles where...\" line."
+    " - COVER LETTER LENGTH (CL-LENGTH-001): 350-450 words total on one page - a compact opening tied to THIS role, three evidence paragraphs, a short close. Never assume the employer has gaps or problems; never open with a generic \"roles where...\" line.",
+    " - EVERY experience role carries its own Results line (ROLE-RESULTS-MANDATORY-001): the role's strongest REAL outcome in the source's own terms; a role without a Results line is an incomplete generation.",
+    " - HOUSE SECTIONS ARE MANDATORY (HOUSE-SECTIONS-001): a commercial CV always carries Profile, 'Work style:' line, the Core Competencies table (Focus Area | Strategic Expertise), Experience, Education, and the sidebar set (Tools & Methods, Certificates, Languages, Interests - all six items - and Accessibility). Never drop a house section to hit a length target; compress WITHIN sections instead.",
+    " - ACCESSIBILITY LINE (owner 2026-08-16): 'Hearing impaired (cochlear implant); written follow-up works well.' - the full line, never a bare 'Hearing impaired.'",
+    " - SLOGAN FUSION (SLOGAN-PERSONALITY-IMPACT-001): the positioning line fuses IMPACT with the candidate's PERSONALITY - prefer a word that carries both the temperament and the craft (gold: 'AN ELECTRO-OPTICS ENGINEER WHO TURNS MEASURED LIGHT INTO SHIPPED PRODUCT' - 'measured' is both the work style and the metrology)."
   ],
   "banned_words": [
     "spearhead",
@@ -372,5 +376,6 @@
     "words_max": 450,
     "evidence_paragraphs": 3,
     "_doc": "CL-LENGTH-001 (owner 2026-08-16, Nvidia critique): 350-450 words, one page, exactly three evidence paragraphs; enforced in cl_fit + prompt_block."
-  }
+  },
+  "accessibility_line": "Hearing impaired (cochlear implant); written follow-up works well."
 }

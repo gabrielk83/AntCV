@@ -184,7 +184,12 @@
     " - Every bullet and sentence ends COMPLETE with terminal punctuation - never a dangling connector or preposition (\"...traceable from\"), never a cut enumeration (\"...optics, electronics, mechanical.\").",
     " - Name partner/client companies only when the job description itself signals them; otherwise describe the relationship (\"an ODM partner\").",
     " - Certificates carry no years; order them by relevance to this job.",
-    " - Interests and sidebar one-liners stay compact (drop filler words); keep personality lines intact but never pad them."
+    " - Interests and sidebar one-liners stay compact (drop filler words); keep personality lines intact but never pad them.",
+    " - EVIDENCE RANKING (EVIDENCE-RANK-002): with a JD present, JD-exact evidence is the PRIMARY sort key, not a tie-breaker; a rare, specific JD requirement the candidate genuinely covers (an automated optical test setup, a named lab technique) outranks generic transferable evidence (project management, stakeholder communication) regardless of impact. Impact orders items only within the same relevance tier.",
+    " - SOURCE-BACKED PHRASES (COMPOUND-BACKED-001): every technical noun-compound (\"thermal packaging\", \"test correlation\", \"sign-off gates\") must appear as a CONNECTED concept in the candidate source; never synthesise a new competency because its words occur separately in the kernel. When in doubt, use the kernel's own wording verbatim.",
+    " - METRIC MEANING (METRIC-SEMANTIC-001): keep every metric bound to what it measured, in the source's own terms - a \"change cycle cut from roughly 250 days to about 10\" must never become \"late-stage rework reduced 95%\"; prefer the source's raw numbers over derived percentages.",
+    " - CONSISTENCY (CONTRADICTION-QA-001): stated years of experience, team sizes and scale figures must match the kernel exactly and be identical everywhere they appear across the CV and cover letter.",
+    " - COVER LETTER LENGTH (CL-LENGTH-001): 350-450 words total on one page - a compact opening tied to THIS role, three evidence paragraphs, a short close. Never assume the employer has gaps or problems; never open with a generic \"roles where...\" line."
   ],
   "banned_words": [
     "spearhead",
@@ -342,16 +347,30 @@
   },
   "sidebar_compact": {
     "_doc": "TOOLS-SIDEBAR-COMPRESS-001 (register row 26, owner 2026-07-03, gold from the unsolicited export screenshot). ITEM-LEVEL synonym/trim for the TOOLS & METHODS sidebar Instruments / Lab & fabrication comma-lists ONLY - scoped by the item's lead label so main-column prose (e.g. the 'confocal microscopy' Characterisation bullet) is never touched. The block is rich_block: apply to the item VALUE, do NOT convert the block. Acceptance = the sidebar renders the gold text in preview AND PDF. Deterministic consumer belt: pwa/antcv-sidebar-compact-001.js rewrites the stored sections.cv TOOLS rich_block value once (parity: preview + export both read stored sections), idempotent + text-verified. All three rules apply deterministically to the scoped lines (which are inherently long - the owner's 'when tight' justification): token_subs are unconditional phrase swaps; drop_token_when_sibling drops standalone SEM when HRSEM is a sibling and collapses HRSEM/SEM->HRSEM; trim_trailing_word strips a redundant trailing word (label already carries it). Reordering to the exact gold token order is the SEPARATE packing belt (rule 40, antcv-orphan-export-preflight.js).",
-    "scope_labels": ["Instruments", "Lab & fabrication", "Lab and fabrication"],
+    "scope_labels": [
+      "Instruments",
+      "Lab & fabrication",
+      "Lab and fabrication"
+    ],
     "token_subs": {
       "confocal microscopy": "confocal imaging",
       "electrical probe stations": "probe stations"
     },
-    "drop_token_when_sibling": { "SEM": "HRSEM" },
-    "trim_trailing_word": ["fabrication"],
+    "drop_token_when_sibling": {
+      "SEM": "HRSEM"
+    },
+    "trim_trailing_word": [
+      "fabrication"
+    ],
     "gold": {
       "Instruments": "Optical benches, HRSEM, confocal imaging, interferometry, Raman spectroscopy, probe stations",
       "Lab & fabrication_ends_with": "SOI MEMS/NEMS"
     }
+  },
+  "cl": {
+    "words_min": 350,
+    "words_max": 450,
+    "evidence_paragraphs": 3,
+    "_doc": "CL-LENGTH-001 (owner 2026-08-16, Nvidia critique): 350-450 words, one page, exactly three evidence paragraphs; enforced in cl_fit + prompt_block."
   }
 }

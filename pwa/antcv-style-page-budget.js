@@ -28,7 +28,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.0.0-style-page-budget';
+  var VERSION = '1.1.0-targeted-page-budget';
   if (window.__antcvStylePageBudget === VERSION) return;
   window.__antcvStylePageBudget = VERSION;
 
@@ -131,22 +131,49 @@
     } catch (_) { /* self-disable */ }
   }
 
+  // TARGETED-PAGE-BUDGET-001 (1.51.4166, owner Nvidia critique item 9 /
+  // generator rule 7): a TARGETED application (named, non-unsolicited company)
+  // resolves to ~2 pages (gold-rules page_budgets.default) even when the
+  // style's own default is shorter - the 4-page Nvidia CV class. Unsolicited
+  // keeps the per-style value.
+  var LAST_TGT_KEY = 'antcv:stylePBLastTargeted';
+  function isTargeted() {
+    try {
+      var m = JSON.parse(localStorage.getItem('meta') || '{}') || {};
+      var co = String(m.company || '').trim();
+      if (!co || /^open application$/i.test(co)) return false;
+      var re = window.__ANTCV_UNSOL_RE || /^unsolicited$/i;
+      return !((typeof window.__antcvUnsol === 'function') ? window.__antcvUnsol(co) : re.test(co));
+    } catch (_) { return false; }
+  }
+  function budgetFor(style, targeted) {
+    var pb = STYLE_PAGE_BUDGET[style];
+    if (targeted) pb = Math.max(typeof pb === 'number' ? pb : 0, 2);
+    return pb;
+  }
   function apply() {
     if (disabled()) return;
     var style = normStyle(currentStyle());
     if (!style) return;
-    var last = '';
+    var tgt = isTargeted();
+    var last = '', lastTgt = '';
     try { last = localStorage.getItem(LAST_KEY) || ''; } catch (_) {}
-    if (style === last) return;            // unchanged → respect any manual tuning
+    try { lastTgt = localStorage.getItem(LAST_TGT_KEY) || ''; } catch (_) {}
+    var tgtChanged = lastTgt !== '' && lastTgt !== String(tgt);
+    if (style === last && !tgtChanged) {
+      if (lastTgt === '') { try { localStorage.setItem(LAST_TGT_KEY, String(tgt)); } catch (_) {} }
+      return;                              // unchanged → respect any manual tuning
+    }
     var firstSight = !last;
     try { localStorage.setItem(LAST_KEY, style); } catch (_) {}
+    try { localStorage.setItem(LAST_TGT_KEY, String(tgt)); } catch (_) {}
     if (firstSight) return;                // seed only — never clobber existing manual settings on load
-    // style genuinely CHANGED → apply that style's defaults
-    var pb = STYLE_PAGE_BUDGET[style];
+    // style (or targeted-ness) genuinely CHANGED → apply the resolved default
+    var pb = budgetFor(style, tgt);
     if (typeof pb === 'number') setPageBudget(pb);
     var ord = STYLE_SECTION_ORDER[style] || DEFAULT_ORDER;
     applyOrder(ord);
-    try { console.info('[style-page-budget] style "' + style + '" → ' + (pb || '?') + 'pp, commercial order applied'); } catch (_) {}
+    try { console.info('[style-page-budget] style "' + style + '" (targeted=' + tgt + ') → ' + (pb || '?') + 'pp, commercial order applied'); } catch (_) {}
   }
 
   var pending = false;
@@ -161,6 +188,8 @@
     version: VERSION,
     _apply: apply,
     _budgetFor: function (s) { return STYLE_PAGE_BUDGET[normStyle(s)]; },
+    _resolvedBudgetFor: function (s) { return budgetFor(normStyle(s), isTargeted()); },
+    _isTargeted: isTargeted,
     _orderFor: function (s) { return STYLE_SECTION_ORDER[normStyle(s)] || DEFAULT_ORDER; },
     _budgets: STYLE_PAGE_BUDGET,
     _orders: STYLE_SECTION_ORDER

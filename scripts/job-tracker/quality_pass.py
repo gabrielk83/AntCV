@@ -749,10 +749,113 @@ def rule_pubs(cv, report):
                 items[i] = fixed
                 report.append(f"pubs: journal-first citation reordered -> '{fixed[:60]}'")
 
+# ---------------------------------------------------------------------------
+# CONTRADICTION-QA-001 (owner 2026-08-16, Nvidia critique item 1 / generator
+# rule 5): an output claiming "33+ years" while the kernel says "15+ years" is
+# a hard QA failure. Deterministic: collect every years-of-experience figure
+# the KERNEL itself states; any output claim outside that set is rewritten to
+# the kernel's maximum figure (keeping the original's "+" and unit wording).
+_YEARS_RE = re.compile(r"\b(\d{1,2})(\s*\+?)\s*(years?|år)\b", re.IGNORECASE)
+
+
+def _kernel_years(kernel):
+    """The set of years-of-experience integers the kernel states anywhere."""
+    try:
+        blob = json.dumps(kernel, ensure_ascii=False)
+    except Exception:
+        blob = str(kernel)
+    return {int(m.group(1)) for m in _YEARS_RE.finditer(blob)}
+
+
+def rule_kernel_contradiction(cv, cl, kernel, report):
+    allowed = _kernel_years(kernel)
+    if not allowed:
+        return                      # kernel states no years figure -> nothing to check against
+    canon = max(allowed)
+    for root in (cv or [], cl or []):
+        for _path, holder, key, text in _txt_fields(root):
+            def _fix(m):
+                n = int(m.group(1))
+                if n in allowed:
+                    return m.group(0)
+                report.append(
+                    f"contradiction: '{n}{m.group(2).strip()} {m.group(3)}' vs kernel "
+                    f"{canon}+ -> rewritten (CONTRADICTION-QA-001)")
+                return f"{canon}+ {m.group(3)}"
+            fixed = _YEARS_RE.sub(_fix, text)
+            if fixed != text:
+                holder[key] = fixed
+
+
+# ---------------------------------------------------------------------------
+# COMPOUND-BACKED-001 (owner 2026-08-16, Nvidia critique item 5 / generator
+# rule 2): the generator synthesised "thermal packaging", "sign-off gates" and
+# "test correlation" from adjacent-but-separate kernel words. Report (do not
+# auto-rewrite - precision over recall) every technical bigram in the output
+# whose two content words BOTH exist in the kernel but never co-occur inside
+# any single kernel string, and which the JD does not itself contain - the
+# signature of a synthesised competency.
+_CW = re.compile(r"[^\W\d_]{5,}", re.UNICODE)
+_COMPOUND_STOP = {
+    "experience", "engineering", "engineer", "systems", "system", "product",
+    "products", "development", "management", "technical", "professional",
+    "requirements", "process", "processes", "structured", "measured",
+}
+
+
+def _kernel_strings(kernel):
+    out = []
+
+    def walk(node):
+        if isinstance(node, str):
+            out.append(node.lower())
+        elif isinstance(node, dict):
+            for v in node.values():
+                walk(v)
+        elif isinstance(node, list):
+            for v in node:
+                walk(v)
+    walk(kernel)
+    return out
+
+
+def rule_compound_backed(cv, cl, kernel, jd, report):
+    strings = _kernel_strings(kernel)
+    blob = "\n".join(strings)
+    jd_low = (jd or "").lower()
+    stems_in_kernel = {w[:4] for s in strings for w in _CW.findall(s)}
+    seen = set()
+    for root in (cv or [], cl or []):
+        for _path, _holder, _key, text in _txt_fields(root):
+            words = [w.lower() for w in _CW.findall(text)]
+            for a, b in zip(words, words[1:]):
+                if a in _COMPOUND_STOP or b in _COMPOUND_STOP:
+                    continue
+                pair = f"{a} {b}"
+                if pair in seen:
+                    continue
+                seen.add(pair)
+                if pair in jd_low:
+                    continue            # the JD itself uses the compound -> quoting the ask is fine
+                if a[:4] not in stems_in_kernel or b[:4] not in stems_in_kernel:
+                    continue            # a fully new word is _invented()'s job, not ours
+                # both words known to the kernel: does ANY single kernel string
+                # carry both (any distance, any order)? If yes it is backed.
+                if any(a[:4] in s and b[:4] in s for s in strings):
+                    continue
+                if pair in blob:
+                    continue
+                report.append(
+                    f"compound-unbacked: '{pair}' - both words exist in the kernel "
+                    f"but never together in one statement (COMPOUND-BACKED-001)")
+
+
 def apply_all(cv, cl, jd, kernel, language="en", use_llm=True):
     """Run every rule in place. Returns the report list."""
     report = []
     kernel_facts = DF.kernel_digest(kernel)
+    rule_kernel_contradiction(cv, cl, kernel, report)
+    rule_compound_backed(cv, cl, kernel, jd, report)
     rule_certs(cv, jd, report)
     rule_education(cv, language, report)
     rule_line_compress({"cv": cv, "cl": cl}, report)

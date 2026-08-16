@@ -264,9 +264,39 @@ def _invented(new, original):
     return None
 
 
+def _num_context_drift(new, original):
+    """METRIC-SEMANTIC-001 (owner 2026-08-16): a number that survives a rewrite
+    must keep the noun phrase it measured. '250 -> 10 days' bound to 'change
+    cycle' must not resurface bound to 'late-stage rework'. For every number,
+    compare the content-word stems in a +/-5-token window between original and
+    rewrite; ZERO overlap means the metric was re-bound to a different claim."""
+    def contexts(text):
+        toks = text.split()
+        out = {}
+        for i, t in enumerate(toks):
+            if not re.search(r"\d", t):
+                continue
+            key = re.sub(r"[^\d.,%]", "", t)
+            if not key:
+                continue
+            win = " ".join(toks[max(0, i - 5):i + 6])
+            # content words only (>=5 chars): units and function words
+            # ('days', 'from', 'about') must not count as semantic binding.
+            stems = {w.lower()[:4] for w in _WORD.findall(win) if len(w) >= 5}
+            out.setdefault(key, set()).update(stems)
+        return out
+    oc, nc = contexts(original), contexts(new)
+    for num, stems in nc.items():
+        prior = oc.get(num)
+        if prior and stems and not (stems & prior):
+            return num
+    return None
+
+
 def _gate(new, original, language, log):
     """cl_fit's gates - actually shorter, no em/en dash, numbers verbatim,
-    acronyms verbatim, no dangling connector - plus the no-abbreviation rule.
+    acronyms verbatim, no dangling connector - plus the no-abbreviation rule
+    and the metric-binding rule (METRIC-SEMANTIC-001).
     Returns the text or None."""
     reason = None
     abbr = None
@@ -282,8 +312,14 @@ def _gate(new, original, language, log):
         reason = "dangling connector"
     else:
         abbr = _abbreviated(new, original)
+        drift = _num_context_drift(new, original)
         if abbr:
             reason = "abbreviated '%s'" % abbr
+        elif drift:
+            # METRIC-SEMANTIC-001: the more specific reason - the number was
+            # re-bound to a different claim - outranks the generic invented-word
+            # reason for the same rewrite.
+            reason = "metric rebound near '%s'" % drift
         else:
             inv = _invented(new, original)
             if inv:

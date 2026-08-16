@@ -190,7 +190,7 @@ This is DIFFERENT from a cover-letter "What I Bring" section. Do not conflate th
 - Core Competencies (CV)   = the candidate's PROVEN CAPABILITIES — technical/methodological domains and tools they've demonstrated across their career.
 - What I Bring (CL)        = how those strengths MAP TO A SPECIFIC ROLE'S NEEDS, drawn from the job description.
 
-Core Competencies is BACKWARD-looking and ROLE-INDEPENDENT. It inventories what the candidate brings to ANY position, not this one.
+Core Competencies is BACKWARD-looking and EVIDENCE-ONLY: every row is a capability the candidate has demonstrated. When a job description is present, SELECT and ORDER the rows by that JD's ranked priorities (V5-FOCUS-PRIORITIES-001 wins over any role-independent framing); never invent or stretch a competency to match a priority.
 
 OUTPUT: a 6-row table. Each row: { Focus Area: 1-3 words, Strategic Expertise: 1-2 sentences }.
 - Focus Area = a technical or methodological domain the candidate has demonstrated ("Camera architecture", "Image quality optimization", "Hardware/software co-design", "Supplier coordination", "Optoelectronic validation", "Production readiness").

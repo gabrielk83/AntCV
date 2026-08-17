@@ -193,7 +193,8 @@
     " - EVERY experience role carries its own Results line (ROLE-RESULTS-MANDATORY-001): the role's strongest REAL outcome in the source's own terms; a role without a Results line is an incomplete generation.",
     " - HOUSE SECTIONS ARE MANDATORY (HOUSE-SECTIONS-001): a commercial CV always carries Profile, 'Work style:' line, the Core Competencies table (Focus Area | Strategic Expertise), Experience, Education, and the sidebar set (Tools & Methods, Certificates, Languages, Interests - all six items - and Accessibility). Never drop a house section to hit a length target; compress WITHIN sections instead.",
     " - ACCESSIBILITY LINE (owner 2026-08-16): 'Hearing impaired (cochlear implant); written follow-up works well.' - the full line, never a bare 'Hearing impaired.'",
-    " - SLOGAN FUSION (SLOGAN-PERSONALITY-IMPACT-001): the positioning line fuses IMPACT with the candidate's PERSONALITY - prefer a word that carries both the temperament and the craft (gold: 'AN ELECTRO-OPTICS ENGINEER WHO TURNS MEASURED LIGHT INTO SHIPPED PRODUCT' - 'measured' is both the work style and the metrology)."
+    " - SLOGAN FUSION (SLOGAN-PERSONALITY-IMPACT-001): the positioning line fuses IMPACT with the candidate's PERSONALITY - prefer a word that carries both the temperament and the craft (gold: 'AN ELECTRO-OPTICS ENGINEER WHO TURNS MEASURED LIGHT INTO SHIPPED PRODUCT' - 'measured' is both the work style and the metrology).",
+    " - GREETING (CL-GREETING-001): the cover letter ALWAYS opens with a greeting to the hiring manager - BY NAME when the JD, the recruiter search or the application notes provide one ('Dear Firstname Lastname,'), else 'Dear Hiring Team,' (localised). A letter without a greeting is an incomplete generation."
   ],
   "banned_words": [
     "spearhead",

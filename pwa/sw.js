@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.4226-globalise-v3';
+const CACHE = 'antcv-1.51.4246-template-floor';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

@@ -4324,7 +4324,10 @@
   });
   const ue =
       'DANSK SPROGGUIDE — brug dette som primær sprogkilde og vocabularium:\nTONE OG STIL:\nSkriv som en erfaren dansker skriver til en kollega — direkte, konkret, rolig.\nKendsgerninger taler for sig selv. Ingen selvros. Korte sætninger. Aktive verber.\nFORETRUKNE VERBER (brug disse frem for passive/bureaukratiske konstruktioner):\nReducerede · udviklede · ledte · opbyggede · definerede · koordinerede · bidrog ·\nunderstøttede · arbejdede · udarbejdede · samarbejdede · etablerede · forenklede ·\nkortlagde · analyserede · dokumenterede · validerede · styrede · implementerede ·\ntestede · sikrede · tilpassede · udbyggede · afklarede · prioriterede · forankrede\nAFSNITSOVERSKRIFTER (brug disse eksakte danske betegnelser):\nPROFIL · NØGLEKOMPETENCER · UDVALGTE RESULTATER · ERFARING ·\nSUPPLERENDE OPLYSNINGER · UDDANNELSE · CERTIFIKATER ·\nVÆRKTØJER OG METODER · STANDARDER OG COMPLIANCE\nHVAD DER SKAL UNDGÅS:\n- Anglicismer: "stakeholders"→"interessenter", "deliverables"→"leverancer",\n "alignment"→"fælles forståelse", "track record"→brug konkrete eksempler\n- Passive/bureaukratiske verber: "forestod", "medvirkede til", "varetog",\n "var ansvarlig for" → erstat med direkte handlingsverber\n- Selvpromovering: "jeg er passioneret", "jeg trives", "jeg er drevet af"\n- Tunge substantivkæder: "kvalitetssikringsprocessoptimering" → splittes\nEKSEMPLER PÅ GOD DANSK (fra reference-CV, brug som model):\nProfil: "Ingeniør med mere end 15 års erfaring i komplekse tekniske miljøer med høje\nkrav til kvalitet, målinger, validering og dokumentation."\nArbejdsstil: "Struktureret, analytisk og praktisk. Klare kriterier, tidlig validering, korte veje."\nResultat: "Reducerede change-cycle fra ca. 250 til 10 dage gennem struktureret analyse\nog tydelige beslutningskriterier."\nBullet: "Opbyggede laboratorier til elektrooptisk test med automatiserede testbænke."\nBullet: "Ledte validering af kamera- og displaysystemer til produktion."\nBullet: "Udviklede analyseværktøjer til eksperimenter, loganalyse og data i Python."\nBullet: "Samarbejdede med R&D, leverandører og produktion i et internationalt miljø."\nBullet: "Udarbejdede feasibility- og systemanalyser for hardwarebeslutninger, inkl. risici,\nantagelser og målbare acceptkriterier."\nSupplerende: "Sprog: Dansk på arbejdsniveau, engelsk, hebraisk og spansk."\nVolunteer: "Frivilligt arbejde: Team Operations Manager, Copenhagen Wolves RFC.\nPlanlægning og koordinering af teamdrift med struktur og overblik."\nBREVSTRUKTUR PÅ DANSK (ansøgningsbrev):\nOverskrifter: HVEM ER JEG · HVAD BRINGER JEG · HVORFOR DENNE STILLING ·\nHVORDAN JEG VILLE BIDRAGE · GRUNDLAG\nAfslutning: "Med venlig hilsen," (ikke "Jeg ser frem til at høre fra jer")',
-    me = (e) => {
+    // SECTIONS-EMPTY-TEMPLATE-FLOOR-001 (1.51.4246): me() is the template-
+    // skeleton builder; exposed as window.__antcvTemplateSections so every
+    // restore path can floor a missing sections side to the template.
+    me = (window.__antcvTemplateSections = (e) => {
       const t = ie(),
         n = (t.publications || []).slice();
       return (
@@ -4750,7 +4753,7 @@
           ],
         }
       );
-    };
+    });
   const _antcvTemplatePlaceholder = (s) => "[" + s + "]";
   const _antcvBlankTemplateSection = (sec) => {
     const ph = _antcvTemplatePlaceholder;
@@ -17866,12 +17869,13 @@
                         )
                           try {
                             ao({
-                              cv: Array.isArray(e.cv_sections)
+                              // SECTIONS-EMPTY-TEMPLATE-FLOOR-001: template, never blank
+                              cv: Array.isArray(e.cv_sections) && e.cv_sections.length
                                 ? e.cv_sections
-                                : [],
-                              cl: Array.isArray(e.cl_sections)
+                                : me().cv,
+                              cl: Array.isArray(e.cl_sections) && e.cl_sections.length
                                 ? e.cl_sections
-                                : [],
+                                : me().cl,
                             });
                           } catch (e) {}
                         // BRAND-FIT-OPEN-001: apply the tracker-sampled employer brand
@@ -18917,14 +18921,14 @@
                           const n = detail.application;
                           try {
                             ao({
-                              cv: n.cv_sections || [],
-                              cl: n.cl_sections || [],
+                              cv: (n.cv_sections && n.cv_sections.length) ? n.cv_sections : me().cv, // SECTIONS-EMPTY-TEMPLATE-FLOOR-001
+                              cl: (n.cl_sections && n.cl_sections.length) ? n.cl_sections : me().cl,
                             });
                           } catch (e) {}
                           try {
                             u.set("sections", {
-                              cv: n.cv_sections || [],
-                              cl: n.cl_sections || [],
+                              cv: (n.cv_sections && n.cv_sections.length) ? n.cv_sections : me().cv, // SECTIONS-EMPTY-TEMPLATE-FLOOR-001
+                              cl: (n.cl_sections && n.cl_sections.length) ? n.cl_sections : me().cl,
                             });
                           } catch (e) {}
                           try {
@@ -23626,12 +23630,12 @@
                       // application's letter.
                       const __sameApp = String(window.__antcvContentAppId || "") === String(e.id);
                       ao({
-                        cv: Array.isArray(e.cv_sections)
+                        cv: Array.isArray(e.cv_sections) && e.cv_sections.length
                           ? e.cv_sections
-                          : (__sameApp ? (ro && ro.cv) || [] : []),
-                        cl: Array.isArray(e.cl_sections)
+                          : (__sameApp ? (ro && ro.cv) || [] : me().cv), // SECTIONS-EMPTY-TEMPLATE-FLOOR-001
+                        cl: Array.isArray(e.cl_sections) && e.cl_sections.length
                           ? e.cl_sections
-                          : (__sameApp ? (ro && ro.cl) || [] : []),
+                          : (__sameApp ? (ro && ro.cl) || [] : me().cl),
                       });
                     } catch (e) {}
                 }
@@ -42035,8 +42039,8 @@
                                                 // Surface the loaded CV: switch to the
                                                 // editor and close the Settings panel.
                                                 (__hasReal ? (ao({
-                                                  cv: n.cv_sections || [],
-                                                  cl: n.cl_sections || [],
+                                                  cv: (n.cv_sections && n.cv_sections.length) ? n.cv_sections : me().cv, // SECTIONS-EMPTY-TEMPLATE-FLOOR-001
+                                                  cl: (n.cl_sections && n.cl_sections.length) ? n.cl_sections : me().cl,
                                                 }),
                                                   lo(
                                                     // 1.50.239: restore the FULL
@@ -43350,14 +43354,14 @@
                                 const n = detail.application;
                                 try {
                                   ao({
-                                    cv: n.cv_sections || [],
-                                    cl: n.cl_sections || [],
+                                    cv: (n.cv_sections && n.cv_sections.length) ? n.cv_sections : me().cv, // SECTIONS-EMPTY-TEMPLATE-FLOOR-001
+                                    cl: (n.cl_sections && n.cl_sections.length) ? n.cl_sections : me().cl,
                                   });
                                 } catch (e) {}
                                 try {
                                   u.set("sections", {
-                                    cv: n.cv_sections || [],
-                                    cl: n.cl_sections || [],
+                                    cv: (n.cv_sections && n.cv_sections.length) ? n.cv_sections : me().cv, // SECTIONS-EMPTY-TEMPLATE-FLOOR-001
+                                    cl: (n.cl_sections && n.cl_sections.length) ? n.cl_sections : me().cl,
                                   });
                                 } catch (e) {}
                                 try {
@@ -48626,8 +48630,8 @@
                                     // editor view and hydrate sections + meta
                                     // (incl. subtitle) from the saved record.
                                     (__hasReal ? (ao({
-                                      cv: n.cv_sections || [],
-                                      cl: n.cl_sections || [],
+                                      cv: (n.cv_sections && n.cv_sections.length) ? n.cv_sections : me().cv, // SECTIONS-EMPTY-TEMPLATE-FLOOR-001
+                                      cl: (n.cl_sections && n.cl_sections.length) ? n.cl_sections : me().cl,
                                     }),
                                       // Also write through to localStorage so
                                       // a subsequent autosave doesn't roll back
@@ -48636,8 +48640,8 @@
                                       (() => {
                                         try {
                                           u.set("sections", {
-                                            cv: n.cv_sections || [],
-                                            cl: n.cl_sections || [],
+                                            cv: (n.cv_sections && n.cv_sections.length) ? n.cv_sections : me().cv, // SECTIONS-EMPTY-TEMPLATE-FLOOR-001
+                                            cl: (n.cl_sections && n.cl_sections.length) ? n.cl_sections : me().cl,
                                           });
                                         } catch (e) {}
                                       })(),

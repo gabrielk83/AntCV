@@ -11,15 +11,20 @@
  * data_analytics / consulting / executive / finance / people_soft) are stage-4
  * research-derived from current market postings, refreshed weekly per
  * docs/deployment/google-cse-setup.md (docs/analysis/
- * cluster_top20_research_2026-08-14.json, latest — supersedes the 2026-08-01
- * revision; 13-day missed-fire catch-up (the 08-08 scheduled fire produced no
- * run), 6 of 9 clusters changed: consulting's AI-augmented-delivery item moved
- * #2->#1 (56% wage premium, ~7x growth in postings citing it), photonics_eng's
- * silicon-photonics-test item broadened to cover co-packaged optics for AI
- * interconnects, executive swapped "Market & competitive strategy" for
- * "Customer & client centricity" (82% C-suite JD prevalence) plus a reorder
- * toward commercial/operational items, engineering_software/research_phd/
- * photonics_eng got minor tool-list wording updates (RAG, MATLAB, git)) —
+ * cluster_top20_research_2026-08-18.json, latest - supersedes the 2026-08-14
+ * revision; ad-hoc dispatch only 4 days after it, so this run is a GAP-FILL from
+ * sources earlier runs had not reached, not a week-over-week market move. 6 of 9
+ * clusters changed, 3 re-confirmed unchanged (research_phd, data_analytics,
+ * executive). Theme: hard posting-share data beats AI-hype in rank order -
+ * IT-Branchen's Jobindex analysis (security 18.8% of Danish IT postings > cloud
+ * 14.5% > AI/ML 12.3%) moved engineering_software's secure-coding item 7->5, and
+ * two HR datasets (data analysis 36% vs AI 31% of new-skill postings; AI named in
+ * only ~9% of HR postings) moved people_soft's people-analytics item 6->3. The EU
+ * regulatory calendar moved consulting: the AI Act high-risk deadline (2026-08-02)
+ * added "AI governance, risk & EU AI Act conformity advisory" at r16, and Omnibus I
+ * (~85% fewer companies in CSRD scope) dropped the ESG advisory item out of the
+ * top 20. Wording broadenings: pm_process r3 names emotional intelligence,
+ * photonics_eng r15 names photonic packaging & assembly, finance r17 adds MBA) -
  * together the 9 clusters the 12 categories fold into. This is the
  * cold-start fallback; the live D1 path (antcv-cluster-demand-live.js) overtakes
  * it once real-JD data accumulates.
@@ -39,7 +44,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.4126';
+  var VERSION = '1.51.4306';
   if (window.AntcvClusterDemand && window.AntcvClusterDemand.version === VERSION) return;
 
   // Embedded seed (verbatim ranks/share from the analyst-reviewed JSON). Keeping it
@@ -49,7 +54,7 @@
     pm_process: { label: "PM / Product / Process Management", top20: [
       [1, "Project management methodology (PMP / Agile / lifecycle)", "none"],
       [2, "AI/GenAI tool fluency, agentic workflows & EU AI Act awareness", "ABC"],
-      [3, "Stakeholder management, cross-functional coordination & conflict resolution", "ABC"],
+      [3, "Stakeholder management, cross-functional coordination, emotional intelligence & conflict resolution", "ABC"],
       [4, "Business/commercial acumen, go-to-market & financial understanding", "ABC"],
       [5, "Risk identification, assessment & mitigation (risk register)", "ABC"],
       [6, "Change & governance control (incl. compliance)", "AB"],
@@ -83,7 +88,7 @@
       [12, "Patent & IP generation (invention disclosures, patent filings)", "AB"],
       [13, "IP strategy, patent portfolio & licensing frameworks", "none"],
       [14, "Multivariate analysis / spectrometer technology", "none"],
-      [15, "Manufacturability & production scalability", "AB"],
+      [15, "Manufacturability, photonic packaging & assembly (fiber attach, cleanroom, IPC/ISO)", "AB"],
       [16, "Technical leadership & mentoring engineers", "ABC"],
       [17, "Cross-disciplinary R&D collaboration", "ABC"],
       [18, "Supplier coordination & quality issues", "AB"],
@@ -115,7 +120,7 @@
     // ── CLUSTER-QUAL-001 stage 4 (spec 7.6, owner 2026-07-05): the 6 remaining
     // clusters, research-derived from current (2025-2026) market postings +
     // skills reports (Robert Half, LinkedIn, Coursera, CFI, AIHR, Pluralsight,
-    // BLS et al.; sources in docs/analysis/cluster_top20_research_2026-08-14.json).
+    // BLS et al.; sources in docs/analysis/cluster_top20_research_2026-08-18.json).
     // These extend the COLD-START classifier/weighting to all 9 clusters so a
     // targeted JD in software / data / consulting / executive / finance / HR
     // gets real demand weighting from the seed before the user accumulates
@@ -129,9 +134,9 @@
       [2, "AI-assisted & agentic coding tools (Copilot / Cursor / Claude Code), LLM/RAG integration", "ABC"],
       [3, "System design & scalable architecture", "none"],
       [4, "Evaluating & reviewing AI-generated code / agent output", "AB"],
-      [5, "Cloud platforms & deployment (AWS / GCP / Azure)", "none"],
-      [6, "CI/CD pipelines & automated testing", "none"],
-      [7, "Secure coding & application security (NIS2 compliance)", "none"],
+      [5, "Secure coding & application security (NIS2 compliance)", "none"],
+      [6, "Cloud platforms & deployment (AWS / GCP / Azure)", "none"],
+      [7, "CI/CD pipelines & automated testing", "none"],
       [8, "Agile / Scrum delivery & iteration", "AB"],
       [9, "Data structures, algorithms & problem-solving", "none"],
       [10, "Version control & collaborative workflows (Git)", "AB"],
@@ -184,10 +189,10 @@
       [13, "Analytical rigour & attention to detail", "ABC"],
       [14, "Market research & competitive analysis", "AB"],
       [15, "Change management & implementation", "AC"],
-      [16, "Data visualisation & dashboards (Power BI / Tableau)", "AB"],
-      [17, "AI output verification & critical judgement (bias, hallucination checks)", "AB"],
-      [18, "Teamwork & collaboration under pressure", "ABC"],
-      [19, "ESG & sustainability advisory (CSRD, narrower post-Omnibus scope)", "none"],
+      [16, "AI governance, risk & EU AI Act conformity advisory", "AB"],
+      [17, "Data visualisation & dashboards (Power BI / Tableau)", "AB"],
+      [18, "AI output verification & critical judgement (bias, hallucination checks)", "AB"],
+      [19, "Teamwork & collaboration under pressure", "ABC"],
       [20, "English fluency (Danish an advantage)", "ABC"]
     ] },
     executive: { label: "Executive / Senior Leadership", top20: [
@@ -229,7 +234,7 @@
       [14, "Commercial & business acumen", "ABC"],
       [15, "Cash flow & working-capital management", "none"],
       [16, "Cost analysis & profitability management", "none"],
-      [17, "Professional qualification (CPA / ACCA / CFA / CIMA)", "none"],
+      [17, "Professional qualification (CPA / ACCA / CFA / CIMA) or MBA", "none"],
       [18, "Attention to detail & accuracy", "ABC"],
       [19, "Cross-functional collaboration", "ABC"],
       [20, "English fluency (Danish an advantage)", "ABC"]
@@ -237,10 +242,10 @@
     people_soft: { label: "People / HR", top20: [
       [1, "HR business partnering & stakeholder advisory", "none"],
       [2, "Business acumen & commercial understanding", "ABC"],
-      [3, "AI literacy & AI-fluency in HR / recruiting automation", "AB"],
-      [4, "Critical thinking, complex problem-solving & judgment", "ABC"],
-      [5, "Talent acquisition & full-cycle recruiting, incl. skills-based hiring", "none"],
-      [6, "People analytics, data storytelling & data-driven HR", "AB"],
+      [3, "People analytics, data storytelling & data-driven HR", "AB"],
+      [4, "AI literacy & AI-fluency in HR / recruiting automation", "AB"],
+      [5, "Critical thinking, complex problem-solving & judgment", "ABC"],
+      [6, "Talent acquisition & full-cycle recruiting, incl. skills-based hiring", "none"],
       [7, "Employee relations & labour-law compliance", "none"],
       [8, "HRIS & people systems (Workday / SuccessFactors / Power BI)", "none"],
       [9, "Strategic workforce planning & succession planning", "none"],

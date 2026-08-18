@@ -82,11 +82,49 @@ machine is off" path for those is a **claude.ai cloud routine**, created from th
 | `antcv-position-discovery` | bi-weekly (Sun + Tue 22:00) | data only (Excel/D1 PROPOSED rows) | no (data-only) — SYNC FIRST | Finds NEW openings vs the Dream Envelope, propose-only. `scripts/job-tracker/discover-positions.py`; memory position-discovery-task. |
 | antcv-job-tracker-nightly | nightly | yes (gen-runner may commit; may bump islands/app) | **yes** | Generates/persists tracked applications. `scripts/job-tracker/gen-runner.py`. |
 | antcv-nightly | nightly | yes (PWA/worker fixes) | **yes** | Verify-first backlog work; ships cache-busted PWA changes → always claim. |
-| weekly demand-seed (CLUSTER-QUAL) | weekly | yes (worker + D1 top-20 refresh) | **yes** (if it ships code) | Cluster demand model refresh. Partly unbuilt. LIVE TRIGGER since 2026-07-13: scheduled task `antcv-demand-seed-weekly` (Fri 22:00) — before that the routine existed only on paper (one manual run 2026-07-10). |
+| weekly demand-seed (CLUSTER-QUAL) | weekly | yes (worker + D1 top-20 refresh) | **yes** (if it ships code) | Cluster demand model refresh. Partly unbuilt. LIVE TRIGGER since 2026-07-13: scheduled task `antcv-demand-seed-weekly` (Fri 22:00) — before that the routine existed only on paper (one manual run 2026-07-10). ⚠ **Its stored prompt's step 4 is WRONG — see "Demand-seed step 4" below before running it.** |
 | **relay cost-quality tune** (RELAY-COST-QUALITY-TUNE-001) | **weekly** | **yes (proxy `MODEL_ROLES` + deploy)** | **yes** | See the procedure below. Reviews the week's router telemetry AND modifies the routing function so it improves over time. LIVE TRIGGER since 2026-07-13: scheduled task `antcv-relay-cost-quality-tune` (Wed 22:00); 'gen'-role flips stay owner-gated. |
 | weekly security audit | weekly | report only | no | Read-only audit → report. |
 | relay health probe | ~5-min | none (alert only) | no | Liveness. |
 | model-freshness check | daily | none/report | no | Flags stale model ids. |
+
+### Demand-seed step 4 — the stored task prompt is WRONG (found 2026-08-18)
+
+The `antcv-demand-seed-weekly` scheduled task's stored prompt tells the run to hand-write D1
+rows with a **flat** `weight = 0.4` and a plain `DELETE` + `INSERT` + hand-rolled recompute.
+**Do not follow it.** It is wrong on three counts, and the flat weight silently corrupts
+production ranking rather than failing loudly:
+
+1. **Flat weight destroys the researched order.** `recomputeClusterTop20` orders purely by
+   `ORDER BY weight_sum DESC`, so 20 rows all at 0.4 tie, and the researched rank — which
+   `__clusterRule` in `app.js` reads back as "most-demanded first" — collapses to whatever
+   order the group-by happens to emit. The shipped writer rank-scales instead:
+   `RESEARCH_WEIGHT * (21 - rank) / 20` (0.4 → 0.02). 0.4 is the CEILING, not the value.
+2. **A plain delete+insert is lossy.** `insertResearchQualifications` re-inserts any prior
+   research qual dropped from the new top-20 at `RETAINED_RESEARCH_WEIGHT` (0.01, below
+   rank-20's 0.02), so a curated-out qual can resurface in a later week. A raw delete
+   throws it away permanently.
+3. **It bypasses a writer that already exists.** Hand-written SQL was the 2026-07-10 stopgap
+   that OPEN_REGISTER row 9 tracked; the writer shipped 2026-07-13.
+
+**Correct step 4** — write the dated research JSON first, then:
+
+```
+ANTCV_RELAY_URL=https://antcv-access-relay.karp-gabriel-a.workers.dev \
+CLUSTER_RESEARCH_TOKEN=<token> \
+  node scripts/cluster-demand-research-push.mjs --dry-run   # inspect payload
+# then re-run without --dry-run to apply
+```
+
+It defaults to the newest `docs/analysis/cluster_top20_research_<date>.json`, forwards the
+`clusters` map to `POST /api/cluster-demand-research`, and the relay does the rank-scaled
+insert, the union retention, and the per-cluster recompute. It exits non-zero on failure, so
+the run can detect a bad push. Direct D1 MCP writes are a fallback for when the relay is
+down — and if used, they must replicate all three behaviours above.
+
+**Owner action:** the stored prompt itself lives in the account-level scheduled task, which a
+run cannot edit. Replace its step 4 with the block above so the next run does not have to
+re-derive this. Until then, this section is the authority and the prompt is not.
 
 ### JD-list-updating routines — the ⏰ queue flag is now USER-VISIBLE (JD-MENU-QUEUED-TAB-001, 2026-07-22, PWA `1.51.3081-queued-filter`)
 

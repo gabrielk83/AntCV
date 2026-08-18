@@ -177,8 +177,10 @@ generation prompt as a **priority signal list**. The generator must:
 Until a user has enough JDs per cluster, top-20s are sparse. Seed the three clusters with the analyst-
 reviewed top-20s from the 16-role sample as `source='seed'` rows in `application_qualification` (with a
 sentinel `application_id` of a synthetic seed application, or a nullable seed mechanism). Seed rows carry
-lower weight (0.4) so real JD signals overtake them as data accumulates, and are excluded from
-`jd_count`. The three seed lists (A/B/C) and their shared-qualification colour map are in
+lower weight so real JD signals overtake them as data accumulates, and are excluded from
+`jd_count`. **0.4 is the CEILING (`RESEARCH_WEIGHT`), not a flat per-row value** — the shipped writer
+rank-scales it, `RESEARCH_WEIGHT * (21 - rank) / 20`; see 7.6. Writing a flat 0.4 across a top-20 ties
+every row under `recomputeClusterTop20`'s `ORDER BY weight_sum DESC` and destroys the researched order. The three seed lists (A/B/C) and their shared-qualification colour map are in
 `docs/analysis/cluster_top20_seed_2026-06.json` (see 6).
 
 ---

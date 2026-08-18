@@ -1,0 +1,1188 @@
+{
+  "source": "Market research (2025-2026 postings + skills/hiring reports) — CLUSTER-QUAL-001 stage 4 (spec 7.6), weekly refresh",
+  "generated": "2026-08-18",
+  "supersedes": "docs/analysis/cluster_top20_research_2026-08-14.json",
+  "method": "Nine cluster research passes run inline with the built-in WebSearch/WebFetch (13 searches plus one direct page fetch), each pass given the currently-shipped top-20 as its baseline and constrained to evidence-backed keep/reorder/merge/add/drop, never fabrication. Google CSE proxy not attempted, per this routine standing instruction (known persistent 403, docs/deployment/google-cse-setup.md section 6, open since 2026-07-10). SHORT INTERVAL: this run is only 4 days after the 2026-08-14 refresh (an ad-hoc dispatch, not the Friday 22:00 cron), so no genuine week-over-week market movement is expected at this cadence and none is claimed - every change below is a GAP-FILL from a source earlier runs had not reached, not a market shift. Two such sources drove most of it: the IT-Branchen quantitative Jobindex analysis (the first Danish site-scoped posting data available to this model since the CSE proxy died) and the EU regulatory calendar (AI Act high-risk deadline 2026-08-02, Omnibus I adoption).",
+  "note": "6 of 9 clusters changed, 3 re-confirmed unchanged (research_phd, data_analytics, executive) with no forced churn. The changes are 2 reorders (engineering_software, people_soft), 3 wording broadenings (pm_process, photonics_eng, finance) and 1 add+drop pair (consulting). Theme of this run: DATA BEATS AI-HYPE IN POSTING COUNTS. Where a cluster has hard posting-share numbers they place security and analytics above AI - Danish IT postings run security 18.8% > cloud 14.5% > AI/ML 12.3%, and HR postings mention AI in only about 9% of cases against data analysis as the single most-demanded new skill at 36%. No AI item was demoted below the top 5 in any cluster, since the growth evidence (LinkedIn Skills on the Rise 2026, Datarails finance 25%->31%) stays strong, but this run stops the model drifting toward AI-first ranking in clusters where posting data does not support it. Second theme: the EU regulatory calendar moved consulting - the AI Act high-risk deadline created an operational AI-governance advisory line while Omnibus I cut roughly 85% of companies out of CSRD scope and pushed ESG advisory out of the top 20. Untargeted (unsolicited) scoring spans ALL 9 clusters (owner 2026-07-05). The live D1 path (antcv-cluster-demand-live.js) overtakes this per-user once real-JD data accumulates.",
+  "changes_this_run": [
+    "pm_process",
+    "photonics_eng",
+    "engineering_software",
+    "consulting",
+    "finance",
+    "people_soft"
+  ],
+  "unchanged_confirmed": [
+    "research_phd",
+    "data_analytics",
+    "executive"
+  ],
+  "share_legend": "ABC=universal transferable skill; AB/AC/BC=shared across two of the three original A/B/C clusters (pm_process/photonics_eng/research_phd) or, for the 6 stage-4 clusters, a demand-universality tier; none=cluster-specific",
+  "sources": [
+    "https://www.novelvista.com/blogs/project-management/top-ai-skills-for-project-managers",
+    "https://www.smartsheet.com/project-management-guide/future-of-project-management",
+    "https://www.icertglobal.com/blog/top-10-project-management-trends-shaping-2026",
+    "https://www.epicflow.com/blog/ai-agents-for-project-management/",
+    "https://www.aakashg.com/product-manager-requirements/",
+    "https://uxcel.com/blog/top-product-manager-skills-2026",
+    "https://www.pmi.org/learning/thought-leadership/global-project-management-talent-gap",
+    "https://www.roberthalf.com/us/en/insights/salary-hiring-trends/demand-for-skilled-talent",
+    "https://www.scoperecruiting.com/blog/lean-six-sigma-project-manager-guide",
+    "https://www.jobindex.dk/jobannonce/r13904184/project-manager",
+    "https://thehub.io/jobs/location/denmark",
+    "https://www.acceler8talent.com/resources/blog/how-ai-is-transforming-hiring-demand-in-silicon-photonics/",
+    "https://www.idtechex.com/en/research-article/the-rise-of-co-packaged-optics-in-ai-data-centers-video/34476",
+    "https://blogs.sw.siemens.com/semiconductor-packaging/2026/02/05/five-key-trends-of-co-packaged-optics-cpo-in-2026/",
+    "https://www.edn.com/where-co-packaged-optics-cpo-technology-stands-in-2026/",
+    "https://www.onetonline.org/link/summary/17-2199.07",
+    "https://spie.org/news/photonics-focus/marchapril-2026/ongoing-strength-for-the-photonics-industry",
+    "https://www.imec-int.com/en/work-at-imec/job-opportunities/senior-silicon-photonics-test-development-engineer",
+    "https://www.nktphotonics.com/careers/",
+    "https://www.phdportal.com/studies/467897/electrical-and-photonics-engineering.html",
+    "https://www.phdportal.com/studies/467904/physics.html",
+    "https://research.com/online-degrees/physics/physics-skills-employers-want-more",
+    "https://academicpositions.com/jobs/field/photonics",
+    "https://www.nature.com/naturecareers/job/postdoc-in-experimental-analysis-of-photonichardware-for-machine-learning-technical-university-of-denmark-dtu-741159",
+    "https://www.naceweb.org/research/reports/job-outlook/2026/",
+    "https://research.com/advice/what-job-postings-reveal-about-higher-education-careers-skills-degrees-experience-employers-want",
+    "https://newsletter.pragmaticengineer.com/p/state-of-the-job-market-2026",
+    "https://github.blog/news-insights/octoverse/octoverse-a-new-developer-joins-github-every-second-as-ai-leads-typescript-to-1/",
+    "https://www.edstellar.com/blog/skills-in-demand-in-denmark",
+    "https://news.linkedin.com/2026/Skills-on-the-rise-2026",
+    "https://www.finalroundai.com/blog/software-engineering-job-market-2026",
+    "https://www.secondtalent.com/resources/how-ai-is-changing-engineering-talent-demand/",
+    "https://acciojob.com/blogs/latest/most-in-demand-data-analytics-skills-in-2026-based-on-328-real-job-descriptions",
+    "https://blog.coursera.org/introducing-courseras-job-skills-report-2026-the-most-critical-skills-the-worlds-learners-need-this-year/",
+    "https://www.dataquest.io/blog/data-analyst-skills/",
+    "https://www.coursera.org/articles/in-demand-data-analyst-skills-to-get-hired",
+    "https://www.jobindex.dk/jobsoegning?q=data+analytiker&lang=en",
+    "https://loen.dk/data-analyst",
+    "https://www.linkedin.com/pulse/linkedin-jobs-rise-2026-25-fastest-growing-roles-us-linkedin-news-dlb1c",
+    "https://www.big4events.com/blog/how-ai-is-reshaping-big-4-careers-skills",
+    "https://amjid.au/insights/ai-impact-on-consulting-industry-2026/",
+    "https://whitehat-seo.co.uk/blog/ai-impact-on-consulting",
+    "https://www.herohunt.ai/blog/hiring-for-ai-era-skills-2026/",
+    "https://theaicareerlab.com/blog/agentic-ai-jobs-guide-2026",
+    "https://managementconsulted.com/management-consulting-industry-report/",
+    "https://www.mbaandbeyond.com/blog/the-mbb-landscape-in-2026-rankings-realities-the-road-ahead",
+    "https://talentfoot.com/top-csuite-skills-2026/",
+    "https://www.christianandtimbers.com/insights/11-executive-search-and-talent-acquisition-trends-shaping-2026",
+    "https://www.kornferry.com/insights/featured-topics/talent-recruitment-articles/ai-in-recruitment-trends",
+    "https://www.heidrick.com/en/perspectives/on-demand-talent/2026-skills-index",
+    "https://nordicexecutivelist.com/executive-jobs-nordics/",
+    "https://www.nigelwright.com/dk/ceo-executive-search-firm-denmark",
+    "https://research.com/online-degrees/finance/finance-skills-most-commonly-mentioned-in-job-postings",
+    "https://www.hirelabour.ca/finance-skills-in-demand/",
+    "https://www.roberthalf.com/us/en/insights/research/finance-and-accounting-salary-trends",
+    "https://www.roberthalf.com/us/en/insights/salary-hiring-trends/demand-for-skilled-talent/accounting-finance",
+    "https://www.roberthalf.com/us/en/insights/research/data-reveals-which-finance-and-accounting-roles-are-in-highest-demand",
+    "https://talentfoot.com/fpa-hiring-profiles-and-recruiting/",
+    "https://www.rothstaffing.com/what-finance-and-accounting-talent-wants-2026/",
+    "https://www.morganmckinley.com/article/top-accounting-finance-skills-in-demand",
+    "https://kerryconsulting.com/insights/all-articles/finance-business-partner-skills/",
+    "https://www.gibsondunn.com/omnibus-simplification-of-eu-sustainability-rules-csrd-and-csddd-enacted/",
+    "https://www.consilium.europa.eu/en/press/press-releases/2026/02/24/council-signs-off-simplification-of-sustainability-reporting-and-due-diligence-requirements-to-boost-eu-competitiveness/",
+    "https://www.glassdoor.com/Job/denmark-financial-controller-jobs-SRCH_IL.0,7_IN63_KO8,28.htm",
+    "https://www.aihr.com/hr-resources/hr-priorities-report/",
+    "https://www.aihr.com/blog/hr-skills/",
+    "https://www.aihr.com/blog/hr-trends/",
+    "https://www.peoplehr.com/en-gb/resources/blog/hiring-trends-for-recruiting-new-talent/",
+    "https://www.edoxi.com/studyhub-detail/top-hr-analytics-roles",
+    "https://www.shrm.org/topics-tools/research/2026-talent-trends",
+    "https://www.shrm.org/content/dam/en/shrm/credentials/shrm-certification/bask/shrm-bask.pdf",
+    "https://5app.com/resources/5-must-know-statistics-from-the-2026-linkedin-talent-report",
+    "https://www.jobindex.dk/vis-job/h1679327?lang=en",
+    "https://www.jobindex.dk/jobsoegning?q=hr-konsulent&lang=en",
+    "https://www.prnewswire.com/news-releases/ceipals-2026-in-demand-jobs-report-finds-project-managers-lead-hiring-demand-as-enterprises-focus-on-modernization-302680225.html",
+    "https://finansforbundet.dk/dk/nyheder/2026/se-tallene-disse-it-kompetencer-er-i-vaekst/",
+    "https://www.mynewsdesk.com/dk/it-branchen/pressreleases/ai-aendrer-arbejdsmarkedet-nye-tal-viser-en-markant-stigende-efterspoergsel-efter-it-kompetencer-i-hele-danmark-3450642",
+    "https://lawflex.com/navigating-the-eu-ai-act-in-2026-a-general-counsels-guide-to-cross-border-compliance-and-ai-governance/",
+    "https://knowledge.dlapiper.com/dlapiperknowledge/globalemploymentlatestdevelopments/2026/eu-council-approves-omnibus-i-directive",
+    "https://kpmg.com/xx/en/our-insights/ifrg/2025/esrs-eu-omnibus.html",
+    "https://www.prnewswire.com/news-releases/new-datarails-research-one-in-three-finance-jobs-now-requires-ai-skills-up-from-one-in-four-just-a-year-ago-302723202.html",
+    "https://www.cfo.com/news/more-finance-job-listings-seek-ai-expertise-but-pay-offers-are-mostly-down-controller-cfo-pay/815737/",
+    "https://www.aihr.com/blog/workforce-analytics-trends/",
+    "https://campus.edu/blog/artificial-intelligence/ai-skills-employers-want-2026",
+    "https://www.dice.com/hiring/recruitment/reports/dice-tech-job-report",
+    "https://365datascience.com/career-advice/the-data-analyst-job-market/",
+    "https://academicpositions.com/jobs/position/phd/field/photonics"
+  ],
+  "clusters": {
+    "pm_process": {
+      "label": "PM / Product / Process Management",
+      "changed": true,
+      "changes_summary": "r3 broadened to name emotional intelligence explicitly - Ceipal 2026 In-Demand Jobs Report (PMs the #1 in-demand role, 2.2M new PM roles/yr through 2027) reports soft skills now outweigh technical expertise in PM shortlisting, with hiring managers prioritising emotional intelligence, empathy and adaptability; no rank changes, rest of the list re-confirmed",
+      "top20": [
+        {
+          "r": 1,
+          "q": "Project management methodology (PMP / Agile / lifecycle)",
+          "share": "none"
+        },
+        {
+          "r": 2,
+          "q": "AI/GenAI tool fluency, agentic workflows & EU AI Act awareness",
+          "share": "ABC"
+        },
+        {
+          "r": 3,
+          "q": "Stakeholder management, cross-functional coordination, emotional intelligence & conflict resolution",
+          "share": "ABC"
+        },
+        {
+          "r": 4,
+          "q": "Business/commercial acumen, go-to-market & financial understanding",
+          "share": "ABC"
+        },
+        {
+          "r": 5,
+          "q": "Risk identification, assessment & mitigation (risk register)",
+          "share": "ABC"
+        },
+        {
+          "r": 6,
+          "q": "Change & governance control (incl. compliance)",
+          "share": "AB"
+        },
+        {
+          "r": 7,
+          "q": "Requirements management & translating needs into specs",
+          "share": "AB"
+        },
+        {
+          "r": 8,
+          "q": "Process design, modelling & documentation (BPM / BABOK / BPMN)",
+          "share": "none"
+        },
+        {
+          "r": 9,
+          "q": "Process / continuous improvement (Lean / Six Sigma)",
+          "share": "none"
+        },
+        {
+          "r": 10,
+          "q": "Project planning, time plans & milestone tracking",
+          "share": "none"
+        },
+        {
+          "r": 11,
+          "q": "Product lifecycle management (concept to field)",
+          "share": "none"
+        },
+        {
+          "r": 12,
+          "q": "Supplier / vendor collaboration & spec management",
+          "share": "AB"
+        },
+        {
+          "r": 13,
+          "q": "ERP / CRM or system-implementation experience",
+          "share": "AB"
+        },
+        {
+          "r": 14,
+          "q": "Hardware product development (mechanics/electronics/RF)",
+          "share": "AB"
+        },
+        {
+          "r": 15,
+          "q": "Design verification & validation vs specifications",
+          "share": "AB"
+        },
+        {
+          "r": 16,
+          "q": "International product certification (CE / FCC / UL / EASA-145)",
+          "share": "AB"
+        },
+        {
+          "r": 17,
+          "q": "Audit / compliance & CAPA handling",
+          "share": "AB"
+        },
+        {
+          "r": 18,
+          "q": "Status communication to senior management / board",
+          "share": "ABC"
+        },
+        {
+          "r": 19,
+          "q": "Systems-level thinking & managing complexity in matrix/multi-project environments",
+          "share": "ABC"
+        },
+        {
+          "r": 20,
+          "q": "English fluency (Danish an advantage)",
+          "share": "ABC"
+        }
+      ],
+      "sources": [
+        "https://www.novelvista.com/blogs/project-management/top-ai-skills-for-project-managers",
+        "https://www.smartsheet.com/project-management-guide/future-of-project-management",
+        "https://www.icertglobal.com/blog/top-10-project-management-trends-shaping-2026",
+        "https://www.epicflow.com/blog/ai-agents-for-project-management/",
+        "https://www.aakashg.com/product-manager-requirements/",
+        "https://uxcel.com/blog/top-product-manager-skills-2026",
+        "https://www.pmi.org/learning/thought-leadership/global-project-management-talent-gap",
+        "https://www.roberthalf.com/us/en/insights/salary-hiring-trends/demand-for-skilled-talent",
+        "https://www.scoperecruiting.com/blog/lean-six-sigma-project-manager-guide",
+        "https://www.jobindex.dk/jobannonce/r13904184/project-manager",
+        "https://thehub.io/jobs/location/denmark",
+        "https://www.prnewswire.com/news-releases/ceipals-2026-in-demand-jobs-report-finds-project-managers-lead-hiring-demand-as-enterprises-focus-on-modernization-302680225.html",
+        "https://www.ceipal.com/resources/ceipal-2026-report-project-managers-lead-hiring-demand-press-release",
+        "https://productive.io/blog/project-management-skills/"
+      ]
+    },
+    "photonics_eng": {
+      "label": "Photonics / Optical / Test Engineering",
+      "changed": true,
+      "changes_summary": "r15 broadened from \"Manufacturability & production scalability\" to name photonic packaging & assembly (fiber attach, cleanroom process, IPC/ISO standards) - packaging engineer is now a distinct high-volume posting family on the aggregators, and Acceler8 names co-packaged-optics packaging engineers as one of three roles in strongest AI-driven demand alongside PIC designers and test/reliability engineers, both already covered at r2/r6/r7; no rank changes",
+      "top20": [
+        {
+          "r": 1,
+          "q": "Optical / photonics systems engineering (free-space & fiber)",
+          "share": "BC"
+        },
+        {
+          "r": 2,
+          "q": "Photonic integrated circuit (PIC) design / sim / tape-out",
+          "share": "none"
+        },
+        {
+          "r": 3,
+          "q": "Device & sensor / EO characterization",
+          "share": "BC"
+        },
+        {
+          "r": 4,
+          "q": "Optical measurement setups, calibration & instrumentation",
+          "share": "BC"
+        },
+        {
+          "r": 5,
+          "q": "Laser systems (seed lasers, amplifiers, stabilization)",
+          "share": "none"
+        },
+        {
+          "r": 6,
+          "q": "Silicon-photonics test programs & co-packaged optics for AI interconnects",
+          "share": "none"
+        },
+        {
+          "r": 7,
+          "q": "Test concept development, yield & test-time improvement",
+          "share": "AB"
+        },
+        {
+          "r": 8,
+          "q": "Quantum technology / QPU context awareness",
+          "share": "BC"
+        },
+        {
+          "r": 9,
+          "q": "Foundry PDKs & simulation tools (COMSOL, Zemax, FDTD/Lumerical)",
+          "share": "BC"
+        },
+        {
+          "r": 10,
+          "q": "Data acquisition, automation & analysis (Python, LabVIEW, MATLAB)",
+          "share": "BC"
+        },
+        {
+          "r": 11,
+          "q": "Requirements capture from customer applications (application engineering)",
+          "share": "AB"
+        },
+        {
+          "r": 12,
+          "q": "Patent & IP generation (invention disclosures, patent filings)",
+          "share": "AB"
+        },
+        {
+          "r": 13,
+          "q": "IP strategy, patent portfolio & licensing frameworks",
+          "share": "none"
+        },
+        {
+          "r": 14,
+          "q": "Multivariate analysis / spectrometer technology",
+          "share": "none"
+        },
+        {
+          "r": 15,
+          "q": "Manufacturability, photonic packaging & assembly (fiber attach, cleanroom, IPC/ISO)",
+          "share": "AB"
+        },
+        {
+          "r": 16,
+          "q": "Technical leadership & mentoring engineers",
+          "share": "ABC"
+        },
+        {
+          "r": 17,
+          "q": "Cross-disciplinary R&D collaboration",
+          "share": "ABC"
+        },
+        {
+          "r": 18,
+          "q": "Supplier coordination & quality issues",
+          "share": "AB"
+        },
+        {
+          "r": 19,
+          "q": "Medtech / healthtech / deep-tech domain exposure",
+          "share": "none"
+        },
+        {
+          "r": 20,
+          "q": "English fluency; ~10% travel willingness",
+          "share": "ABC"
+        }
+      ],
+      "sources": [
+        "https://www.acceler8talent.com/resources/blog/how-ai-is-transforming-hiring-demand-in-silicon-photonics/",
+        "https://www.idtechex.com/en/research-article/the-rise-of-co-packaged-optics-in-ai-data-centers-video/34476",
+        "https://blogs.sw.siemens.com/semiconductor-packaging/2026/02/05/five-key-trends-of-co-packaged-optics-cpo-in-2026/",
+        "https://www.edn.com/where-co-packaged-optics-cpo-technology-stands-in-2026/",
+        "https://www.onetonline.org/link/summary/17-2199.07",
+        "https://spie.org/news/photonics-focus/marchapril-2026/ongoing-strength-for-the-photonics-industry",
+        "https://www.imec-int.com/en/work-at-imec/job-opportunities/senior-silicon-photonics-test-development-engineer",
+        "https://www.nktphotonics.com/careers/",
+        "https://www.ziprecruiter.com/Jobs/Photonics-Packaging-Engineer",
+        "https://www.simplyhired.com/search?q=silicon+photonics+packaging+engineer"
+      ]
+    },
+    "research_phd": {
+      "label": "PhD / Research positions",
+      "changed": false,
+      "changes_summary": "no material change - fresh sweep of 2026 PhD/postdoc photonics postings (Academic Positions, ScholarshipDb, Indeed PhD-photonics boards) returns the profile already ranked: MSc eligibility, independent research, publication record, experimental optics/spectroscopy, scientific computing in Python/MATLAB, physics-based modelling in Lumerical/COMSOL/Tidy3D (covered at r4/r5), English proficiency. Nothing new cleared the bar for a swap and no evidence supported reordering",
+      "top20": [
+        {
+          "r": 1,
+          "q": "Completed M.Sc. (physics / EE / engineering) eligibility",
+          "share": "AC"
+        },
+        {
+          "r": 2,
+          "q": "Independent, structured research-project management",
+          "share": "AC"
+        },
+        {
+          "r": 3,
+          "q": "Peer-reviewed publication record",
+          "share": "none"
+        },
+        {
+          "r": 4,
+          "q": "Experimental design & lab work (optics / spectroscopy)",
+          "share": "BC"
+        },
+        {
+          "r": 5,
+          "q": "Scientific computing & AI/ML tooling (Python/MATLAB, GenAI-assisted workflows)",
+          "share": "BC"
+        },
+        {
+          "r": 6,
+          "q": "Data acquisition, processing & visualisation (large sets)",
+          "share": "BC"
+        },
+        {
+          "r": 7,
+          "q": "Hyperspectral / spectroscopic measurement techniques",
+          "share": "BC"
+        },
+        {
+          "r": 8,
+          "q": "Quantum optics / light-source characterization",
+          "share": "BC"
+        },
+        {
+          "r": 9,
+          "q": "Nanofabrication / cleanroom & hands-on device fabrication",
+          "share": "none"
+        },
+        {
+          "r": 10,
+          "q": "Conference presentation & dissemination",
+          "share": "ABC"
+        },
+        {
+          "r": 11,
+          "q": "Interdisciplinary collaboration with external partners",
+          "share": "ABC"
+        },
+        {
+          "r": 12,
+          "q": "Clear technical communication, clarity & precision",
+          "share": "ABC"
+        },
+        {
+          "r": 13,
+          "q": "Methodological rigour & critical analysis",
+          "share": "BC"
+        },
+        {
+          "r": 14,
+          "q": "Curiosity, initiative & self-ownership of research",
+          "share": "none"
+        },
+        {
+          "r": 15,
+          "q": "Domain expertise in a specified subfield (depth)",
+          "share": "none"
+        },
+        {
+          "r": 16,
+          "q": "Reproducible documentation & version control (LaTeX/Jupyter/git)",
+          "share": "none"
+        },
+        {
+          "r": 17,
+          "q": "Teaching / knowledge dissemination",
+          "share": "none"
+        },
+        {
+          "r": 18,
+          "q": "International research mobility / collaboration",
+          "share": "none"
+        },
+        {
+          "r": 19,
+          "q": "English fluency (+ language test if non-native)",
+          "share": "ABC"
+        },
+        {
+          "r": 20,
+          "q": "Innovation systems / STI policy & technology transfer",
+          "share": "none"
+        }
+      ],
+      "sources": [
+        "https://www.phdportal.com/studies/467897/electrical-and-photonics-engineering.html",
+        "https://www.phdportal.com/studies/467904/physics.html",
+        "https://research.com/online-degrees/physics/physics-skills-employers-want-more",
+        "https://academicpositions.com/jobs/field/photonics",
+        "https://www.nature.com/naturecareers/job/postdoc-in-experimental-analysis-of-photonichardware-for-machine-learning-technical-university-of-denmark-dtu-741159",
+        "https://www.naceweb.org/research/reports/job-outlook/2026/",
+        "https://research.com/advice/what-job-postings-reveal-about-higher-education-careers-skills-degrees-experience-employers-want"
+      ]
+    },
+    "engineering_software": {
+      "label": "Software Engineering",
+      "changed": true,
+      "changes_summary": "Reorder only: secure coding & application security 7->5, cloud 5->6, CI/CD 6->7. First quantitative DANISH posting data available to this model since the Google CSE proxy died - IT-Branchen analysis of Jobindex postings (Q1 2007-Q4 2025, 10 IT profile categories) puts security at 18.8% of all Danish IT postings, the single largest profile, ahead of cloud at 14.5% and AI/ML at 12.3%. This cluster carries \"Danish an advantage\" so the local mix is the right tiebreak; the AI items at r2/r4 stay above all three on separate growth evidence (LinkedIn Skills on the Rise 2026: AI engineering, prompt engineering and model tuning the fastest-growing skills of the year)",
+      "top20": [
+        {
+          "r": 1,
+          "q": "Proficiency in a core language (Python / Java / Go / TypeScript)",
+          "share": "none"
+        },
+        {
+          "r": 2,
+          "q": "AI-assisted & agentic coding tools (Copilot / Cursor / Claude Code), LLM/RAG integration",
+          "share": "ABC"
+        },
+        {
+          "r": 3,
+          "q": "System design & scalable architecture",
+          "share": "none"
+        },
+        {
+          "r": 4,
+          "q": "Evaluating & reviewing AI-generated code / agent output",
+          "share": "AB"
+        },
+        {
+          "r": 5,
+          "q": "Secure coding & application security (NIS2 compliance)",
+          "share": "none"
+        },
+        {
+          "r": 6,
+          "q": "Cloud platforms & deployment (AWS / GCP / Azure)",
+          "share": "none"
+        },
+        {
+          "r": 7,
+          "q": "CI/CD pipelines & automated testing",
+          "share": "none"
+        },
+        {
+          "r": 8,
+          "q": "Agile / Scrum delivery & iteration",
+          "share": "AB"
+        },
+        {
+          "r": 9,
+          "q": "Data structures, algorithms & problem-solving",
+          "share": "none"
+        },
+        {
+          "r": 10,
+          "q": "Version control & collaborative workflows (Git)",
+          "share": "AB"
+        },
+        {
+          "r": 11,
+          "q": "Observability, monitoring & debugging",
+          "share": "none"
+        },
+        {
+          "r": 12,
+          "q": "Databases, SQL & data modelling (SQL / NoSQL)",
+          "share": "AB"
+        },
+        {
+          "r": 13,
+          "q": "Containerisation & orchestration (Docker / Kubernetes)",
+          "share": "none"
+        },
+        {
+          "r": 14,
+          "q": "API design & microservices (REST / gRPC)",
+          "share": "none"
+        },
+        {
+          "r": 15,
+          "q": "Infrastructure as code & platform engineering (Terraform / developer portals)",
+          "share": "none"
+        },
+        {
+          "r": 16,
+          "q": "Frontend frameworks (React / TypeScript)",
+          "share": "none"
+        },
+        {
+          "r": 17,
+          "q": "Code review & mentoring engineers",
+          "share": "none"
+        },
+        {
+          "r": 18,
+          "q": "Performance optimisation & profiling",
+          "share": "none"
+        },
+        {
+          "r": 19,
+          "q": "Cross-functional collaboration & clear technical communication (product, design, docs)",
+          "share": "ABC"
+        },
+        {
+          "r": 20,
+          "q": "English fluency (Danish an advantage)",
+          "share": "ABC"
+        }
+      ],
+      "sources": [
+        "https://newsletter.pragmaticengineer.com/p/state-of-the-job-market-2026",
+        "https://github.blog/news-insights/octoverse/octoverse-a-new-developer-joins-github-every-second-as-ai-leads-typescript-to-1/",
+        "https://www.edstellar.com/blog/skills-in-demand-in-denmark",
+        "https://news.linkedin.com/2026/Skills-on-the-rise-2026",
+        "https://www.finalroundai.com/blog/software-engineering-job-market-2026",
+        "https://www.secondtalent.com/resources/how-ai-is-changing-engineering-talent-demand/",
+        "https://finansforbundet.dk/dk/nyheder/2026/se-tallene-disse-it-kompetencer-er-i-vaekst/",
+        "https://www.mynewsdesk.com/dk/it-branchen/pressreleases/ai-aendrer-arbejdsmarkedet-nye-tal-viser-en-markant-stigende-efterspoergsel-efter-it-kompetencer-i-hele-danmark-3450642",
+        "https://www.dice.com/hiring/recruitment/reports/dice-tech-job-report"
+      ]
+    },
+    "data_analytics": {
+      "label": "Data & Analytics",
+      "changed": false,
+      "changes_summary": "no material change - 2026 posting analyses re-confirm the existing order rather than move it: SQL in about 78% of data-analyst postings (r1), Excel 41.3% (r2), Tableau 28.1% and Power BI 24.7% (r4), Python the most-demanded language (r3). GenAI is described as a baseline expectation rather than a differentiator in analyst roles, with emphasis staying on core analytical skills, so the AI item holds at r7 and is not promoted this run",
+      "top20": [
+        {
+          "r": 1,
+          "q": "SQL & data querying",
+          "share": "ABC"
+        },
+        {
+          "r": 2,
+          "q": "Excel / spreadsheet modelling",
+          "share": "ABC"
+        },
+        {
+          "r": 3,
+          "q": "Python / R for analysis",
+          "share": "AB"
+        },
+        {
+          "r": 4,
+          "q": "Data visualisation & BI (Power BI / Tableau / Looker)",
+          "share": "AC"
+        },
+        {
+          "r": 5,
+          "q": "Statistics & probability (hypothesis testing)",
+          "share": "AB"
+        },
+        {
+          "r": 6,
+          "q": "Data cleaning, wrangling & quality",
+          "share": "none"
+        },
+        {
+          "r": 7,
+          "q": "AI/agentic tools & prompt engineering for analytics workflows",
+          "share": "ABC"
+        },
+        {
+          "r": 8,
+          "q": "Data pipelines & warehousing (dbt / Snowflake / Spark)",
+          "share": "none"
+        },
+        {
+          "r": 9,
+          "q": "Machine learning & predictive modelling",
+          "share": "AB"
+        },
+        {
+          "r": 10,
+          "q": "Business acumen & translating data to decisions",
+          "share": "ABC"
+        },
+        {
+          "r": 11,
+          "q": "Data storytelling & stakeholder communication",
+          "share": "ABC"
+        },
+        {
+          "r": 12,
+          "q": "ETL / data engineering fundamentals",
+          "share": "none"
+        },
+        {
+          "r": 13,
+          "q": "Cloud data platforms (BigQuery / Databricks / Azure)",
+          "share": "AB"
+        },
+        {
+          "r": 14,
+          "q": "Dashboard & KPI reporting",
+          "share": "none"
+        },
+        {
+          "r": 15,
+          "q": "Critical thinking & problem-solving",
+          "share": "ABC"
+        },
+        {
+          "r": 16,
+          "q": "Experiment design & A/B testing",
+          "share": "AB"
+        },
+        {
+          "r": 17,
+          "q": "Domain / industry knowledge",
+          "share": "ABC"
+        },
+        {
+          "r": 18,
+          "q": "Version control & reproducible analysis (Git)",
+          "share": "AB"
+        },
+        {
+          "r": 19,
+          "q": "Data governance, privacy & ethics",
+          "share": "AB"
+        },
+        {
+          "r": 20,
+          "q": "English fluency (Danish an advantage)",
+          "share": "ABC"
+        }
+      ],
+      "sources": [
+        "https://acciojob.com/blogs/latest/most-in-demand-data-analytics-skills-in-2026-based-on-328-real-job-descriptions",
+        "https://blog.coursera.org/introducing-courseras-job-skills-report-2026-the-most-critical-skills-the-worlds-learners-need-this-year/",
+        "https://www.dataquest.io/blog/data-analyst-skills/",
+        "https://www.coursera.org/articles/in-demand-data-analyst-skills-to-get-hired",
+        "https://www.jobindex.dk/jobsoegning?q=data+analytiker&lang=en",
+        "https://loen.dk/data-analyst",
+        "https://www.linkedin.com/pulse/linkedin-jobs-rise-2026-25-fastest-growing-roles-us-linkedin-news-dlb1c"
+      ]
+    },
+    "consulting": {
+      "label": "Consulting",
+      "changed": true,
+      "changes_summary": "One add + one drop. ADDED r16 \"AI governance, risk & EU AI Act conformity advisory\" - the AI Act high-risk obligations deadline fell on 2026-08-02, 16 days before this run, moving that advisory line from theoretical to operational; a dedicated EU-AI-Act consulting market has formed around conformity assessment, internal AI policy drafting and AI procurement clauses, and BCG-tier firms name AI governance and risk as one of five prioritised capability lanes. DROPPED \"ESG & sustainability advisory (CSRD, narrower post-Omnibus scope)\" - Omnibus I is finalised and Council-approved: ESRS scope cut to entities above 1000 employees and EUR 450M turnover, sector standards removed, roughly 85% fewer companies in scope, so the line no longer clears the top-20 bar even though buy-side demand persists. Items formerly r16-r18 shift down one",
+      "top20": [
+        {
+          "r": 1,
+          "q": "AI-augmented delivery & agentic-AI/GenAI tool fluency (prompt engineering, AI oversight)",
+          "share": "ABC"
+        },
+        {
+          "r": 2,
+          "q": "Structured problem-solving (hypothesis-driven, 80/20)",
+          "share": "AC"
+        },
+        {
+          "r": 3,
+          "q": "Quantitative & financial analysis / modelling",
+          "share": "AB"
+        },
+        {
+          "r": 4,
+          "q": "Client relationship, stakeholder management & trust-building",
+          "share": "ABC"
+        },
+        {
+          "r": 5,
+          "q": "Executive communication & storytelling (slides)",
+          "share": "AB"
+        },
+        {
+          "r": 6,
+          "q": "Data analysis & synthesis (Excel)",
+          "share": "ABC"
+        },
+        {
+          "r": 7,
+          "q": "Project / workstream management",
+          "share": "ABC"
+        },
+        {
+          "r": 8,
+          "q": "Business & commercial judgement",
+          "share": "AC"
+        },
+        {
+          "r": 9,
+          "q": "Presentation & facilitation skills",
+          "share": "ABC"
+        },
+        {
+          "r": 10,
+          "q": "Adaptability & fast learning",
+          "share": "ABC"
+        },
+        {
+          "r": 11,
+          "q": "Industry / domain expertise",
+          "share": "none"
+        },
+        {
+          "r": 12,
+          "q": "Strategic thinking & framing",
+          "share": "AC"
+        },
+        {
+          "r": 13,
+          "q": "Analytical rigour & attention to detail",
+          "share": "ABC"
+        },
+        {
+          "r": 14,
+          "q": "Market research & competitive analysis",
+          "share": "AB"
+        },
+        {
+          "r": 15,
+          "q": "Change management & implementation",
+          "share": "AC"
+        },
+        {
+          "r": 16,
+          "q": "AI governance, risk & EU AI Act conformity advisory",
+          "share": "AB"
+        },
+        {
+          "r": 17,
+          "q": "Data visualisation & dashboards (Power BI / Tableau)",
+          "share": "AB"
+        },
+        {
+          "r": 18,
+          "q": "AI output verification & critical judgement (bias, hallucination checks)",
+          "share": "AB"
+        },
+        {
+          "r": 19,
+          "q": "Teamwork & collaboration under pressure",
+          "share": "ABC"
+        },
+        {
+          "r": 20,
+          "q": "English fluency (Danish an advantage)",
+          "share": "ABC"
+        }
+      ],
+      "sources": [
+        "https://www.big4events.com/blog/how-ai-is-reshaping-big-4-careers-skills",
+        "https://amjid.au/insights/ai-impact-on-consulting-industry-2026/",
+        "https://whitehat-seo.co.uk/blog/ai-impact-on-consulting",
+        "https://www.herohunt.ai/blog/hiring-for-ai-era-skills-2026/",
+        "https://theaicareerlab.com/blog/agentic-ai-jobs-guide-2026",
+        "https://managementconsulted.com/management-consulting-industry-report/",
+        "https://www.mbaandbeyond.com/blog/the-mbb-landscape-in-2026-rankings-realities-the-road-ahead",
+        "https://lawflex.com/navigating-the-eu-ai-act-in-2026-a-general-counsels-guide-to-cross-border-compliance-and-ai-governance/",
+        "https://groath.ai/blog/do-you-need-consulting-firm-eu-ai-act",
+        "https://knowledge.dlapiper.com/dlapiperknowledge/globalemploymentlatestdevelopments/2026/eu-council-approves-omnibus-i-directive",
+        "https://kpmg.com/xx/en/our-insights/ifrg/2025/esrs-eu-omnibus.html",
+        "https://www.metaintro.com/blog/bcg-25-percent-ai-revenue-consulting-jobs-2026"
+      ]
+    },
+    "executive": {
+      "label": "Executive / Senior Leadership",
+      "changed": false,
+      "changes_summary": "no material change - this run fresh sweep surfaced the same Talentfoot 2026 C-suite dataset that already drove the 2026-08-14 revision (AI-enabled leadership, revenue architecture, organisational scaling, customer centricity, placed at r2/r6/r11), plus generic strategy, EQ and adaptability content that maps onto r1/r4/r16. No independent new evidence, so the list is left exactly as shipped rather than churned",
+      "top20": [
+        {
+          "r": 1,
+          "q": "Strategic vision & execution",
+          "share": "AB"
+        },
+        {
+          "r": 2,
+          "q": "AI & digital strategy fluency (incl. AI governance, agentic workflow leadership)",
+          "share": "AB"
+        },
+        {
+          "r": 3,
+          "q": "Stakeholder, board & investor communication",
+          "share": "none"
+        },
+        {
+          "r": 4,
+          "q": "Emotional intelligence & people leadership",
+          "share": "ABC"
+        },
+        {
+          "r": 5,
+          "q": "Building & leading high-performing teams",
+          "share": "AB"
+        },
+        {
+          "r": 6,
+          "q": "Commercial growth & revenue architecture",
+          "share": "none"
+        },
+        {
+          "r": 7,
+          "q": "P&L ownership & financial stewardship",
+          "share": "none"
+        },
+        {
+          "r": 8,
+          "q": "Organisational change & transformation leadership",
+          "share": "AB"
+        },
+        {
+          "r": 9,
+          "q": "Operational excellence & execution",
+          "share": "AB"
+        },
+        {
+          "r": 10,
+          "q": "Coaching, culture & talent development",
+          "share": "AB"
+        },
+        {
+          "r": 11,
+          "q": "Customer & client centricity / experience ownership",
+          "share": "none"
+        },
+        {
+          "r": 12,
+          "q": "Financial acumen (EBITDA, balance sheet, ROI)",
+          "share": "none"
+        },
+        {
+          "r": 13,
+          "q": "Governance, risk, cybersecurity & ESG/CSRD compliance oversight",
+          "share": "none"
+        },
+        {
+          "r": 14,
+          "q": "Judgment & decision-making under ambiguity",
+          "share": "ABC"
+        },
+        {
+          "r": 15,
+          "q": "Cross-functional & enterprise-wide alignment",
+          "share": "AB"
+        },
+        {
+          "r": 16,
+          "q": "Resilience, adaptability & learning agility",
+          "share": "ABC"
+        },
+        {
+          "r": 17,
+          "q": "Negotiation & partnership building",
+          "share": "AB"
+        },
+        {
+          "r": 18,
+          "q": "Vision communication & influence",
+          "share": "AB"
+        },
+        {
+          "r": 19,
+          "q": "Global / multi-market & cross-cultural leadership",
+          "share": "none"
+        },
+        {
+          "r": 20,
+          "q": "English fluency (Danish an advantage)",
+          "share": "ABC"
+        }
+      ],
+      "sources": [
+        "https://talentfoot.com/top-csuite-skills-2026/",
+        "https://www.christianandtimbers.com/insights/11-executive-search-and-talent-acquisition-trends-shaping-2026",
+        "https://www.kornferry.com/insights/featured-topics/talent-recruitment-articles/ai-in-recruitment-trends",
+        "https://www.heidrick.com/en/perspectives/on-demand-talent/2026-skills-index",
+        "https://nordicexecutivelist.com/executive-jobs-nordics/",
+        "https://www.nigelwright.com/dk/ceo-executive-search-firm-denmark"
+      ]
+    },
+    "finance": {
+      "label": "Finance",
+      "changed": true,
+      "changes_summary": "r17 broadened to include MBA - Datarails 2026 research: MBA requirements in FP&A postings jumped 13 percentage points to 39%, alongside AI/ML now referenced in 31% of all finance postings (up from 25% a year earlier) and 43% of FP&A postings, which re-confirms the existing r2 placement of the AI item rather than moving it; no rank changes",
+      "top20": [
+        {
+          "r": 1,
+          "q": "Advanced Excel & spreadsheet analysis",
+          "share": "ABC"
+        },
+        {
+          "r": 2,
+          "q": "AI & automation in finance",
+          "share": "ABC"
+        },
+        {
+          "r": 3,
+          "q": "Financial modelling & forecasting (FP&A)",
+          "share": "none"
+        },
+        {
+          "r": 4,
+          "q": "Data analysis, SQL & Python fundamentals",
+          "share": "AB"
+        },
+        {
+          "r": 5,
+          "q": "Financial reporting & month-end close",
+          "share": "none"
+        },
+        {
+          "r": 6,
+          "q": "BI & data visualisation (Power BI / Tableau)",
+          "share": "AB"
+        },
+        {
+          "r": 7,
+          "q": "ERP & finance systems (SAP / Oracle / NetSuite / Tagetik)",
+          "share": "none"
+        },
+        {
+          "r": 8,
+          "q": "Business partnering & stakeholder communication",
+          "share": "BC"
+        },
+        {
+          "r": 9,
+          "q": "Budgeting, planning & variance analysis",
+          "share": "none"
+        },
+        {
+          "r": 10,
+          "q": "Scenario modelling & sensitivity analysis",
+          "share": "none"
+        },
+        {
+          "r": 11,
+          "q": "Accounting standards (IFRS / GAAP)",
+          "share": "none"
+        },
+        {
+          "r": 12,
+          "q": "Internal controls, audit & compliance (SOX)",
+          "share": "none"
+        },
+        {
+          "r": 13,
+          "q": "Regulatory, ESG & sustainability reporting (CSRD)",
+          "share": "BC"
+        },
+        {
+          "r": 14,
+          "q": "Commercial & business acumen",
+          "share": "ABC"
+        },
+        {
+          "r": 15,
+          "q": "Cash flow & working-capital management",
+          "share": "none"
+        },
+        {
+          "r": 16,
+          "q": "Cost analysis & profitability management",
+          "share": "none"
+        },
+        {
+          "r": 17,
+          "q": "Professional qualification (CPA / ACCA / CFA / CIMA) or MBA",
+          "share": "none"
+        },
+        {
+          "r": 18,
+          "q": "Attention to detail & accuracy",
+          "share": "ABC"
+        },
+        {
+          "r": 19,
+          "q": "Cross-functional collaboration",
+          "share": "ABC"
+        },
+        {
+          "r": 20,
+          "q": "English fluency (Danish an advantage)",
+          "share": "ABC"
+        }
+      ],
+      "sources": [
+        "https://research.com/online-degrees/finance/finance-skills-most-commonly-mentioned-in-job-postings",
+        "https://www.hirelabour.ca/finance-skills-in-demand/",
+        "https://www.roberthalf.com/us/en/insights/research/finance-and-accounting-salary-trends",
+        "https://www.roberthalf.com/us/en/insights/salary-hiring-trends/demand-for-skilled-talent/accounting-finance",
+        "https://www.roberthalf.com/us/en/insights/research/data-reveals-which-finance-and-accounting-roles-are-in-highest-demand",
+        "https://talentfoot.com/fpa-hiring-profiles-and-recruiting/",
+        "https://www.rothstaffing.com/what-finance-and-accounting-talent-wants-2026/",
+        "https://www.morganmckinley.com/article/top-accounting-finance-skills-in-demand",
+        "https://kerryconsulting.com/insights/all-articles/finance-business-partner-skills/",
+        "https://www.gibsondunn.com/omnibus-simplification-of-eu-sustainability-rules-csrd-and-csddd-enacted/",
+        "https://www.consilium.europa.eu/en/press/press-releases/2026/02/24/council-signs-off-simplification-of-sustainability-reporting-and-due-diligence-requirements-to-boost-eu-competitiveness/",
+        "https://www.glassdoor.com/Job/denmark-financial-controller-jobs-SRCH_IL.0,7_IN63_KO8,28.htm",
+        "https://www.prnewswire.com/news-releases/new-datarails-research-one-in-three-finance-jobs-now-requires-ai-skills-up-from-one-in-four-just-a-year-ago-302723202.html",
+        "https://www.cfo.com/news/more-finance-job-listings-seek-ai-expertise-but-pay-offers-are-mostly-down-controller-cfo-pay/815737/",
+        "https://controllerscouncil.org/2026-corporate-finance-accounting-talent-research-study/"
+      ]
+    },
+    "people_soft": {
+      "label": "People / HR",
+      "changed": true,
+      "changes_summary": "Reorder only: people analytics / data-driven HR 6->3, AI literacy 3->4, critical thinking 4->5, talent acquisition 5->6. Two independent 2026 datasets put data ahead of AI in HR POSTING demand specifically: among organisations posting roles that required new skills the top three were data analysis 36%, AI 31%, cybersecurity 21%; and only about 9% of HR postings mention AI at all, against roughly 45% in data and analytics roles. 86% of HR leaders pay a premium for specialised data-analytics and workforce-planning skills and 85% of CHROs call data essential to HR strategy. AI stays in the top 5 (CHRO AI-adoption forecasts rose 83%->87%, AI-skilled HR staff command a 20-35% premium) - this corrects rank order, not presence",
+      "top20": [
+        {
+          "r": 1,
+          "q": "HR business partnering & stakeholder advisory",
+          "share": "none"
+        },
+        {
+          "r": 2,
+          "q": "Business acumen & commercial understanding",
+          "share": "ABC"
+        },
+        {
+          "r": 3,
+          "q": "People analytics, data storytelling & data-driven HR",
+          "share": "AB"
+        },
+        {
+          "r": 4,
+          "q": "AI literacy & AI-fluency in HR / recruiting automation",
+          "share": "AB"
+        },
+        {
+          "r": 5,
+          "q": "Critical thinking, complex problem-solving & judgment",
+          "share": "ABC"
+        },
+        {
+          "r": 6,
+          "q": "Talent acquisition & full-cycle recruiting, incl. skills-based hiring",
+          "share": "none"
+        },
+        {
+          "r": 7,
+          "q": "Employee relations & labour-law compliance",
+          "share": "none"
+        },
+        {
+          "r": 8,
+          "q": "HRIS & people systems (Workday / SuccessFactors / Power BI)",
+          "share": "none"
+        },
+        {
+          "r": 9,
+          "q": "Strategic workforce planning & succession planning",
+          "share": "none"
+        },
+        {
+          "r": 10,
+          "q": "Coaching, influencing, emotional intelligence & learning agility",
+          "share": "AB"
+        },
+        {
+          "r": 11,
+          "q": "Change management & organisational development",
+          "share": "AB"
+        },
+        {
+          "r": 12,
+          "q": "Cross-functional stakeholder management & collaboration",
+          "share": "ABC"
+        },
+        {
+          "r": 13,
+          "q": "Performance management & development",
+          "share": "none"
+        },
+        {
+          "r": 14,
+          "q": "Learning & development (L&D), incl. AI-enabled learning",
+          "share": "none"
+        },
+        {
+          "r": 15,
+          "q": "Compensation, benefits & total rewards",
+          "share": "none"
+        },
+        {
+          "r": 16,
+          "q": "Culture, employee experience & belonging",
+          "share": "none"
+        },
+        {
+          "r": 17,
+          "q": "Employer branding & candidate experience",
+          "share": "none"
+        },
+        {
+          "r": 18,
+          "q": "Diversity, equity, inclusion & belonging",
+          "share": "none"
+        },
+        {
+          "r": 19,
+          "q": "HR policy & governance",
+          "share": "none"
+        },
+        {
+          "r": 20,
+          "q": "English fluency (Danish an advantage)",
+          "share": "ABC"
+        }
+      ],
+      "sources": [
+        "https://www.aihr.com/hr-resources/hr-priorities-report/",
+        "https://www.aihr.com/blog/hr-skills/",
+        "https://www.aihr.com/blog/hr-trends/",
+        "https://www.peoplehr.com/en-gb/resources/blog/hiring-trends-for-recruiting-new-talent/",
+        "https://www.edoxi.com/studyhub-detail/top-hr-analytics-roles",
+        "https://www.shrm.org/topics-tools/research/2026-talent-trends",
+        "https://www.shrm.org/content/dam/en/shrm/credentials/shrm-certification/bask/shrm-bask.pdf",
+        "https://5app.com/resources/5-must-know-statistics-from-the-2026-linkedin-talent-report",
+        "https://www.jobindex.dk/vis-job/h1679327?lang=en",
+        "https://www.jobindex.dk/jobsoegning?q=hr-konsulent&lang=en",
+        "https://www.aihr.com/blog/workforce-analytics-trends/",
+        "https://gloat.com/blog/hr-skills/",
+        "https://campus.edu/blog/artificial-intelligence/ai-skills-employers-want-2026",
+        "https://www.roberthalf.com/us/en/insights/research/data-reveals-which-hr-roles-are-in-highest-demand",
+        "https://murrayresources.com/25-top-ai-human-resources-jobs/"
+      ]
+    }
+  }
+}

@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.4286-years-guard';
+  const TARGET_VERSION = '1.51.4306-demand-seed-refresh';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.4286-years-guard',
     '1.51.4266-cl-greeting',
     '1.51.4246-template-floor',
     '1.51.4226-globalise-v3',

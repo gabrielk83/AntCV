@@ -115,22 +115,39 @@ def _save_token(t):
         open(p, "w", encoding="utf-8").write(t.strip())
     except Exception: pass
 
-def _req(base, path, method="GET", body=None, timeout=120):
+# GENRUNNER-TRANSPORT-RETRY-001 (nightly 2026-08-18): a TRANSPORT failure
+# (socket read timeout, dropped connection, DNS blip) used to propagate out of
+# urlopen and kill the whole run with a traceback - losing an in-flight, fully
+# resumable gen-job and every row after it. A slow /job/step is normal: one step
+# can be a flagship section or the cross-section coherence repair. Transport
+# errors are now converted to a synthetic 599 so every existing "code != 200"
+# path handles them, and idempotent polls simply step the SAME job again.
+_TRANSPORT_ERRORS = (TimeoutError, urllib.error.URLError, ConnectionError, OSError)
+
+def _req(base, path, method="GET", body=None, timeout=120, retries=2):
     data = json.dumps(body).encode() if body is not None else None
-    r = urllib.request.Request(base + path, data=data, method=method, headers={
-        "Authorization": "Bearer " + _token(),
-        "Content-Type": "application/json",
-        "Origin": ORIGIN,
-        "User-Agent": UA,
-    })
-    try:
-        with urllib.request.urlopen(r, timeout=timeout) as resp:
-            _save_token(resp.headers.get("X-Auth-Refresh"))
-            return resp.status, json.loads(resp.read().decode() or "{}")
-    except urllib.error.HTTPError as e:
-        try: payload = json.loads(e.read().decode() or "{}")
-        except Exception: payload = {"raw": "unparseable"}
-        return e.code, payload
+    last = "unknown"
+    for attempt in range(retries + 1):
+        r = urllib.request.Request(base + path, data=data, method=method, headers={
+            "Authorization": "Bearer " + _token(),
+            "Content-Type": "application/json",
+            "Origin": ORIGIN,
+            "User-Agent": UA,
+        })
+        try:
+            with urllib.request.urlopen(r, timeout=timeout) as resp:
+                _save_token(resp.headers.get("X-Auth-Refresh"))
+                return resp.status, json.loads(resp.read().decode() or "{}")
+        except urllib.error.HTTPError as e:
+            try: payload = json.loads(e.read().decode() or "{}")
+            except Exception: payload = {"raw": "unparseable"}
+            return e.code, payload
+        except _TRANSPORT_ERRORS as e:
+            last = "%s: %s" % (type(e).__name__, e)
+            if attempt < retries:
+                print("   [transport] %s %s -> %s; retry %d/%d" % (method, path, last, attempt + 1, retries))
+                time.sleep(2.0 * (attempt + 1))
+    return 599, {"error": "transport_failed", "detail": last}
 
 # ── kernel + doc ───────────────────────────────────────────────────
 def load_kernel(kernel_file=None):
@@ -598,11 +615,15 @@ def drive(sections, provider, model, source_cv, jd_text, max_steps=80, skip_cohe
     if c != 200 or not b.get("job_id"):
         return {"error": f"create_failed {c} {str(b)[:200]}"}
     jid = b["job_id"]
+    print("   [job] %s" % jid)
     view = None
     skipped_coh = False
     for _ in range(max_steps):
-        c, view = _req(PROXY, "/job/step", "POST", {"job_id": jid})
+        # A single step streams a whole flagship section (or runs the coherence
+        # repair) synchronously, so 120s is too tight for opus-tier rows.
+        c, view = _req(PROXY, "/job/step", "POST", {"job_id": jid}, timeout=300)
         if c != 200:
+            if c == 599: print("   [job] step transport-failed, re-stepping %s" % jid)
             time.sleep(1.5); continue
         st = view.get("status")
         if st in ("done", "error", "cancelled"):
@@ -1002,14 +1023,25 @@ def _rel(text, jdkw):
 _DANGLING_WORDS = {"and", "or", "with", "for", "of", "to", "in", "on", "via", "the",
                    "a", "an", "plus", "from", "into", "under", "across", "while",
                    "og", "eller", "med", "til", "i", "på", "samt", "en", "et", "fra", "af"}
-def _clean_cut(win):
-    """Trim a hard-capped window back to a clean end: strip separators, walk
-    back dangling connectors/prepositions, close with a period."""
-    t = win.rstrip(" ,;:-")
+def _walk_back_dangling(t):
     words = t.split(" ")
     while len(words) > 3 and words[-1].strip(".,;:()").lower() in _DANGLING_WORDS:
         words.pop()
-    t = " ".join(words).rstrip(" ,;:-")
+    return " ".join(words).rstrip(" ,;:-")
+def _clean_cut(win):
+    """Trim a hard-capped window back to a clean end: strip separators, walk
+    back dangling connectors/prepositions, close with a period.
+
+    CAP-AMPUTATED-PARENTHETICAL-001 (nightly 2026-08-18, shipped live in the
+    CIP letter of app 3488): when the cap landed INSIDE a parenthetical the cut
+    kept the opening bracket and the first token of its contents, then closed
+    with a period - 'reduced LiDAR unit cost by 90% (a 10x.' - an unbalanced
+    bracket around a number amputated from its unit. Drop any parenthetical the
+    cut could not complete, then re-walk the dangling connectors it exposes.
+    """
+    t = _walk_back_dangling(win.rstrip(" ,;:-"))
+    while t.count("(") > t.count(")"):
+        t = _walk_back_dangling(t[:t.rfind("(")].rstrip(" ,;:-"))
     if t and t[-1] not in ".!?:)":
         t += "."
     return t

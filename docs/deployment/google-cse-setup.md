@@ -139,7 +139,7 @@ nothing changes production without a human merge.
 
 ---
 
-## 6. KNOWN ISSUE (opened 2026-07-10, still OPEN) — persistent 403 despite fully-correct setup
+## 6. KNOWN ISSUE (opened 2026-07-10; UNBLOCKED 2026-08-18 via Brave — see update at end) — persistent 403 despite fully-correct setup
 
 The weekly run on 2026-07-10 hit `/api/cse-search` returning `502` with a wrapped
 Google `403 PERMISSION_DENIED: "This project does not have the access to Custom
@@ -186,6 +186,34 @@ back as `{title, link, snippet}`. The `CSE_PROXY_TOKEN` gate is unchanged.
 workflow_dispatch, mode=deploy, confirm=access-relay. Until that deploy runs,
 production still serves the Google-only handler and still 403s. The Google
 Support case stays open — it now only affects the fallback path.
+
+**Update 2026-08-18 — the Brave-backed proxy is LIVE and answers 200; the
+Google 403 no longer blocks this routine.** Verified by the weekly demand-tuning
+run: `GET /api/cse-search?q=software+engineer&siteSearch=jobindex.dk&dateRestrict=m3`
+with the `x-antcv-cse-token` gate returns **HTTP 200** and
+`{"ok":true,"source":"brave",...}` with real Jobindex items. The manual
+access-relay deploy the paragraph above was waiting on has therefore happened.
+Two consequences, both worth knowing before the next run:
+
+1. **Stop treating the proxy as dead.** The 2026-08-18 refresh skipped it
+   entirely on the strength of the "still OPEN / persistent 403" framing above
+   and recorded "Google CSE proxy not attempted" in its artefact `method`. That
+   was accurate to this doc but not to production. Re-test first, as §6 already
+   says — the test now passes.
+2. **A 200 is not the same as usable rank evidence.** `siteSearch` maps to a
+   Brave `site:` prefix, so results are site-scoped *web* results, not a postings
+   API. In practice the top hits are Jobindex/it-jobbank **listing and navigation
+   pages**, and the snippets are frequently browser-upgrade or cookie-consent
+   boilerplate rather than a posting's requirement list; `it-jobbank.dk` returned
+   no items at all for several probes. That is enough to confirm a role exists in
+   the Danish market, and **not** enough to move an item's rank in a cluster
+   top-20. Rank changes still need analytical sources with actual posting-share
+   numbers (e.g. the IT-Branchen Jobindex analysis the 2026-08-14/18 runs used).
+   Treat the proxy as a corroboration channel, not a primary ranking source, and
+   do not manufacture a reorder just because the proxy now answers.
+
+`POST /api/research` remains **401** for this routine's narrow-scope token (it
+expects the owner JWT), so `/api/cse-search` is the endpoint this job can reach.
 
 ## 7. FIXED BUG (found 2026-07-10, fixed 2026-07-13) — `GOOGLE_CSE_ID` secret was dead code
 

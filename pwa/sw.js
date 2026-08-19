@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.4306-demand-seed-refresh';
+const CACHE = 'antcv-1.51.4326-claude-rate';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

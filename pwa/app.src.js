@@ -1205,7 +1205,17 @@
       },
     },
     C = {
+      // LLM-COST-CLAUDE-RATE-001 (2026-08-19): the cascade + telemetry provider
+      // id is "claude" (see the task ladders below), but this map was keyed only
+      // "anthropic" — so C[a] missed for every claude call and the cost fell
+      // through to the {10,30} default: 3.04x too high. Proof, D1 llm_calls 7d
+      // compress/claude-sonnet-5 (411,230 in + 22,964 out): logged $4.8012, which
+      // is exactly 10/30 pricing; the true $3/$15 cost is $1.578. Cost-based
+      // routing (RELAY-COST-TIEBREAK-001) and the weekly tune both read this
+      // number, so the skew demoted anthropic on a phantom price. Keep BOTH keys —
+      // "anthropic" is still the id used by MODEL_ROLES and the settings panel.
       anthropic: { inputPer1M: 3, outputPer1M: 15 },
+      claude: { inputPer1M: 3, outputPer1M: 15 },
       openai: { inputPer1M: 0.75, outputPer1M: 4.5 }, // gpt-5.4-mini (was gpt-5.5 30/60)
       mistral: { inputPer1M: 3, outputPer1M: 9 },
       gemini: { inputPer1M: 0.15, outputPer1M: 0.6 },

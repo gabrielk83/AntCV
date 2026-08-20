@@ -79,3 +79,44 @@ test('the cost meter still falls back to 10/30 for genuinely unknown providers',
   // the fallback must survive — a custom/BYOK provider with no pricing still needs a number.
   assert.equal(app.split('inputPer1M:10,outputPer1M:30').length - 1, 1, 'app.js keeps exactly one 10/30 fallback');
 });
+
+/* ------------------------------------------------------------------
+ * COST-SOURCE-AUDIT-GAP-001 (2026-08-20): presence + a hardcoded anthropic
+ * number was not enough. mistral sat at {3,9} against a real Mistral Large 3
+ * price of $0.5/$1.5 and gemini at {0.15,0.6} against a real Gemini 2.5 Flash
+ * price of $0.30/$2.50 — both wrong, both feeding RELAY-COST-TIEBREAK-001 and
+ * the weekly cost-quality tune, which demote a provider on price. The claude
+ * guard above could not see either, because it only checked that a key existed.
+ *
+ * This is the real invariant: the client meter and the worker RATES table must
+ * price the SAME model at the SAME rate. The provider->model mapping is read out
+ * of the bundle (`S` config, `model: "..."`), so re-pinning a provider to a new
+ * model automatically forces its rate to be re-verified here instead of silently
+ * carrying the old one.
+ */
+import { rateFor } from '../../workers/proxy/src/demo-enforcement.js';
+
+function modelOf(bundle, provider) {
+  // pretty:  anthropic: { ...comments... model: "claude-sonnet-5",
+  // minified: anthropic:{model:"claude-sonnet-5",quality:9,...}
+  const re = new RegExp(provider + '\\s*:\\s*\\{[\\s\\S]{0,2000}?model\\s*:\\s*"([^"]+)"');
+  const m = bundle.match(re);
+  return m ? m[1] : null;
+}
+
+for (const [name, bundle] of [['app.src.js', src], ['app.js', app]]) {
+  for (const provider of ['anthropic', 'openai', 'mistral', 'gemini']) {
+    test(`${name}: "${provider}" meter rate matches the worker RATES for its pinned model`, () => {
+      const model = modelOf(bundle, provider);
+      assert.ok(model, `could not read the pinned model for ${provider}`);
+      const meter = rateOf(bundle, provider);
+      assert.ok(meter, `${provider} missing from the cost rate map`);
+      assert.deepEqual(meter, rateFor(model),
+        `${provider} (${model}): client meter says ${JSON.stringify(meter)} but the worker RATES table says ${JSON.stringify(rateFor(model))} — one of them is stale, and the cost router reads the client one`);
+    });
+  }
+
+  test(`${name}: "claude" prices identically to the anthropic pinned model`, () => {
+    assert.deepEqual(rateOf(bundle, 'claude'), rateFor(modelOf(bundle, 'anthropic')));
+  });
+}

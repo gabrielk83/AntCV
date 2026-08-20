@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.4326-claude-rate';
+const CACHE = 'antcv-1.51.4346-cost-rates';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

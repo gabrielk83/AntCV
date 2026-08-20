@@ -188,6 +188,22 @@ this routine changes the *starting* choice based on the week's evidence.
    and extend the test in the SAME run — this is a required modification the routine executes, not
    an optional check. Prices carry an inline date comment; re-verify against the provider's public
    pricing page when you touch one. A wrong rate here is a silent, compounding tuning error.
+1a-bis. **CORRECTIONS from the 2026-08-20 fix pass — read these before executing 1a.**
+   (i) There are **THREE** `RATES` mirrors, not two: `workers/proxy/src/demo-enforcement.js`,
+   `workers/demo-proxy/src/demo-enforcement.js`, and **`workers/access-relay/src/model-rates.js`**
+   — the last is the copy the telemetry recompute actually calls (`rateForStrict`), and
+   `pwa/test/relay-model-rates-mirror.test.mjs` fails the suite if they drift. Edit all three.
+   (ii) "Present in the `PROVIDER_MODELS` cascade" does **NOT** apply to `gpt-5.5`. That object is
+   the DEFAULT chain; heading it with a $30/$60 model makes it the default for every openai cascade
+   call (~40x the pinned `gpt-5.4-mini`), and tailing it lets a cheap call land there on a fallback.
+   `gpt-5.5` is reached only via an explicit `opts.models` override, which is correct, and is now
+   pinned as an invariant in `model-table-freshness.test.mjs`. Do not "fix" it.
+   (iii) **Verify prices against the vendor's own pricing page, not against the neighbouring table.**
+   The 2026-08-20 pass found `mistral-large` at Large-2-era [2,6] (real Large 3: [0.5,1.5]) and
+   `gemini-2.5-flash` carrying **Flash-LITE's** [0.1,0.4] (real Flash: [0.30,2.50], 6.25x on output)
+   — both had survived every prior freshness pass because the test only checked the four pins.
+   (iv) A wrong price here is not just a demo-cap error: RELAY-COST-TIEBREAK-001 and this tune both
+   DEMOTE on price, so a stale rate silently steers the router.
 1b. **COST-SOURCE AUDIT (added 2026-08-20 — COST-SOURCE-AUDIT-GAP-001).** Step 1a audits the
    `demo-enforcement.js` `RATES` tables, which govern the **demo budget cap**. They do NOT produce
    `llm_calls.estimated_cost_usd` — the number every score in step 3 divides by. That number comes

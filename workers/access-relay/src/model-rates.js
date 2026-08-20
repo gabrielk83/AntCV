@@ -51,14 +51,15 @@ const RATES = {
   'gpt-4.1-nano':        [0.10,  0.40],
   'gpt-4.1':             [2.00,  8.00],
   // Mistral
-  'mistral-small':       [0.20,  0.60],
-  'mistral-medium':      [0.40,  2.00],
-  'mistral-large':       [2.00,  6.00],
+  'mistral-small':       [0.15,  0.60],   // Mistral Small 4, verified 2026-08-20 mistral.ai/pricing/api
+  'mistral-medium':      [1.50,  7.50],   // Mistral Medium 3.5, verified 2026-08-20 mistral.ai/pricing/api
+  'mistral-large':       [0.50,  1.50],   // Mistral Large 3, verified 2026-08-20 mistral.ai/pricing/api. Was [2,6] (Large 2 era) - 4x over. Substring-matches the live `mistral-large-latest`. LLM-COST-MISTRAL-RATE-001.
   // Gemini
   'gemini-1.5-flash':    [0.075, 0.30],
   'gemini-1.5-pro':      [1.25,  5.00],
   'gemini-2.0-flash':    [0.10,  0.40],
-  'gemini-2.5-flash':    [0.10,  0.40],
+  'gemini-2.5-flash-lite': [0.10, 0.40], // verified 2026-08-20 ai.google.dev/gemini-api/docs/pricing. MUST stay longer than the 2.5-flash key below - longest-key-wins is what keeps Flash-Lite off the Flash rate.
+  'gemini-2.5-flash':    [0.30,  2.50],   // verified 2026-08-20 ai.google.dev/gemini-api/docs/pricing. Was [0.10,0.40], which is Flash-LITE's rate - 3x under in, 6.25x under out. LLM-COST-GEMINI-RECONCILE-001.
   'gemini-2.5-pro':      [1.25, 10.00],
   // xAI Grok — added 2026-07-05 (BYOK-COST-AUDIT-001, owner: the byok-qualify
   // audit never priced a BYOK provider whose model id fell through to

@@ -192,3 +192,113 @@ before any client-router move (cost-quality-benchmark detection gap).
    one table governs. Today it silently overrides a corrected PWA map for exactly one provider.
 4. **Owner call on `--min-calls` for low-traffic roles** (see the `analysis` note above).
 5. Re-read the tune once post-2026-08-19 claude traffic accumulates, per LLM-COST-CLAUDE-RATE-001.
+
+---
+
+# ADDENDUM — same day, owner said "fix observed issues now"
+
+Everything the run above **registered but did not fix** is now fixed, on lane **1.51.4346-4365**,
+shipped as `1.51.4346-cost-rates`. Prices were verified against the vendors' own pricing pages
+rather than carried from the tables, and two of the four turned out to be wrong.
+
+## Verified public prices (2026-08-20)
+
+| model | source | verified rate | what the repo said |
+|---|---|---|---|
+| `claude-sonnet-5` | claude-api skill model table | [3.00, 15.00] | [3, 15] — **correct** |
+| `claude-opus-4-8` | claude-api skill model table | [5.00, 25.00] | [5, 25] — **correct** |
+| `mistral-large-latest` (Large 3) | mistral.ai/pricing/api | **[0.50, 1.50]** | worker [2, 6] (4x over), PWA {3, 9} (**6x over**) |
+| `gemini-2.5-flash` | ai.google.dev/gemini-api/docs/pricing | **[0.30, 2.50]** | worker [0.10, 0.40] (that is **Flash-Lite's** rate), D1 [0.075, 0.30] (Gemini 1.5 era), PWA [0.15, 0.60] |
+
+The gemini finding is the sharper one: `[0.10, 0.40]` is not a stale Flash price, it is the price of a
+**different model** (Flash-Lite). Flash is 3x that on input and **6.25x** on output.
+
+## Fixed
+
+1. **PWA cost meter** (`pwa/app.src.js` + `pwa/app.js`, occurrence-guarded, byte-delta asserted
+   +3, `node --check` clean, head `(()=>{`, zero `"use strict"`): mistral `{3,9}` → `{0.5,1.5}`,
+   gemini `{0.15,0.6}` → `{0.3,2.5}`. This is the map RELAY-COST-TIEBREAK-001 reads.
+2. **All three worker `RATES` mirrors** (`workers/proxy`, `workers/demo-proxy`,
+   `workers/access-relay/src/model-rates.js` — the mirror guard caught the third one, which the
+   original run had not noticed): `mistral-large` [2,6] → [0.5,1.5], `mistral-medium` [0.4,2] →
+   [1.5,7.5], `mistral-small` [0.2,0.6] → [0.15,0.6], `gemini-2.5-flash` [0.1,0.4] → [0.3,2.5],
+   plus a **new explicit `gemini-2.5-flash-lite` [0.1,0.4] key** — it must stay the longer key or
+   longest-key-wins silently charges Flash-Lite at the Flash rate.
+3. **D1 `llm_provider_costs`** — 19 rows inserted at `effective_from = 1787184000`, covering every
+   model in live traffic plus the neighbours (`claude-sonnet-5`, `claude-opus-4-8/4-7/4-6`,
+   `claude-haiku-4-5`, `gpt-5.4-mini`, `gpt-5.5`, `gpt-5.4`, `gpt-5`, `gpt-5-mini`,
+   `mistral-large{,-latest}`, `mistral-medium{,-latest}`, `mistral-small{,-latest}`,
+   `gemini-2.5-flash`, `gemini-2.5-flash-lite`, `gemini-2.5-pro`). Before this the table held **no
+   row for any model in production**. Rows are additive on a new `effective_from`, so
+   **ROLLBACK = `DELETE FROM llm_provider_costs WHERE effective_from = 1787184000;`** — the prior
+   rows are untouched and would take over again.
+4. **Cross-table parity guard** (`pwa/test/llm-cost-provider-rates.test.mjs`, +9 cases → 27):
+   the client meter's rate for each provider must equal the worker `RATES` rate for **the model
+   that provider is actually pinned to**, with the provider→model mapping read out of the bundle so
+   re-pinning a provider forces its rate to be re-verified. Proved by mutation: reverting mistral to
+   `{3,9}` turns the guard red, restoring it turns it green. The pre-existing guard could not see
+   either defect — it only checked that a key existed.
+5. **Freshness tests extended** (`model-table-freshness.test.mjs` ×2, 10 → 20): mistral-large at
+   Large 3 pricing, `mistral-large-latest` resolving through the shorter key, gemini Flash vs
+   Flash-Lite, and the longest-key-wins ordering.
+
+## Corrections to the run above
+
+- **`LLM-COST-D1-REFERENCE-STALE-001` landed in parallel** (nightly 2026-08-20, already on `main`)
+  and restructured `estimateCostUsd` to **D1 row → the relay's own `RATES` → client value**, so D1
+  is now an override rather than a prerequisite. The structural half of COST-SOURCE-AUDIT-GAP-001 is
+  therefore already closed upstream; what remained — and what this addendum fixes — is that the
+  *values* in every one of those tables were wrong.
+- **There are three `RATES` mirrors, not two.** `workers/access-relay/src/model-rates.js` is the
+  copy the telemetry path actually calls (`rateForStrict`), and it is pinned by
+  `pwa/test/relay-model-rates-mirror.test.mjs`. The original run's table only listed two.
+- **The unscoped `node scripts/run-tests.mjs` exit-1 was not a runner defect.** It was a fresh
+  worktree with no `node_modules`. With the dependency tree present the full repo suite is
+  **1939/1939, exit 0**. Withdrawn.
+- **`gpt-5.5` missing from the openai cascade is not a gap** — it is correct. `PROVIDER_MODELS` is
+  the *default* chain; heading it with a $30/$60 model would make it the default for every openai
+  cascade call (~40x the pinned `gpt-5.4-mini`), and tailing it would let a cheap call land there on
+  a fallback. It is reachable only via an explicit `opts.models` override. Now pinned as an
+  explicit invariant so a future freshness pass does not "fix" it and regress the default cost.
+
+## Re-scored on the verified rates — decision unchanged
+
+| | logged | run above (partly-corrected) | **verified rates** |
+|---|---|---|---|
+| week total | $6.6573 | $2.9542 | **$2.2825** (−65.7% vs logged) |
+| `compress` (the client lever) | — | $2.43/wk | **$2.07/wk** |
+| mistral `compress` leg | $0.8276 | $0.5517 | **$0.1379** |
+| gemini `compress` leg | $0.0089 | $0.0118 | **$0.0597** |
+| mistral `parse_jd` | $0.5598 | $0.3732 | **$0.0933** |
+
+`MODEL_ROLES` proposal is **still NO FLIP** — `{"writer":"anthropic","supervisor":"mistral","coherence":"openai"}`,
+unchanged, no deploy. The sample floor still blocks every addressable role (n=4–5 < 20). What moved
+is the evidence quality, not the decision: mistral's `analysis` cost-quality rose 10.7 → 42.9 (still
+well behind openai's 362.3), and gemini is now correctly 5x more expensive per compress call than the
+old number implied, which weakens — not strengthens — the standing "switch compress to gemini"
+suggestion. That suggestion remains owner-gated and still needs a same-prompt benchmark, since
+gemini's mean input is 343 tokens against claude's 3,316.
+
+**Mistral now leads `supervisor` on a price that is 6x cheaper than the meter believed**, which is the
+opposite of the LLM-COST-CLAUDE-RATE-001 direction: mistral was being *over*-penalised, not favoured.
+
+## Gates
+
+- Suites: full repo **1939/1939**, PWA 1606 (0 fail), workers 303/303, scripts 30/30,
+  freshness 20/20, PWA rate guard 27/27, mirror guard 5/5.
+- boot-smoke `glDemo=function, errors=0`; `app.js` head `(()=>{`, zero `"use strict"`, `node --check` clean.
+- Cache-bust quintet at `1.51.4346-cost-rates` (index.html ×6 incl. the `ANTCV_VERSION` seed, sw.js
+  CACHE, version-override TARGET); previous `1.51.4326-claude-rate` added to `STALE_VERSIONS`,
+  current TARGET absent from it (invariant holds).
+- No `MODEL_ROLES` change, so no proxy deploy and no pre-deploy PushNotify. **The worker `RATES` +
+  relay `model-rates.js` changes DO need a worker deploy to take effect server-side** — see below.
+- No em dashes introduced in code comments (normalised to hyphens per the repo standard).
+
+## Still owed
+
+- **Deploy `proxy`, `demo-proxy`, and `access-relay`** so the corrected `RATES` reach production.
+  Until then the server-side recompute keeps using the old table and new rows keep logging the stale
+  mistral/gemini numbers. The PWA half auto-deploys from `main`; the workers do not.
+- Historical `llm_calls.estimated_cost_usd` rows stay overstated (no backfill). Raw token counts are
+  intact, so any re-scoring can recompute — as this addendum does.
+- Owner call on `--min-calls` for low-traffic roles (unchanged from the run above).

@@ -367,9 +367,9 @@
   })();
 </script>
 <script type="module">
-  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.4326-claude-rate';
+  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.4346-cost-rates';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.4326-claude-rate';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.4346-cost-rates';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -408,10 +408,10 @@
         auth.src = 'antcv-auth.js?v=1.51.92-analytics-401-scope';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.51.4326-claude-rate';
+          app.src = 'app.js?v=1.51.4346-cost-rates';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.4326-claude-rate';
+            vo.src = 'antcv-version-override.js?v=1.51.4346-cost-rates';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -786,7 +786,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      Sidecar-owned DOM. Kill: antcv:disable-style-kernels-table. -->
 <script src="antcv-app-history-style-kernels.js?v=1.51.349-kernel-table-time" defer></script>
 <script src="antcv-preview-header-tokens.js?v=1.50.41" defer></script>
-<script src="antcv-copenhagen-v2-001.js?v=1.51.4326-claude-rate" defer></script>
+<script src="antcv-copenhagen-v2-001.js?v=1.51.4346-cost-rates" defer></script>
 <!-- CL-NO-PHOTO-001 (preview): hide the candidate headshot inside the band on the cover letter (export already suppresses it) -->
 <script src="antcv-cl-no-photo-001.js?v=1.51.2561-cl-spec-center" defer></script>
 <!-- HEADER-ELEM-COLORS-001: per-element BRAND colours (name/spec/contact/slogan/application) from brandV2 -->
@@ -803,7 +803,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      style (var(--package-base) cascade), matching the DOCX. Companion to
      preview-header-tokens (which deliberately skips the sidebar). -->
 <script src="antcv-sidebar-bg-token.js?v=1.51.883-editable-marks" defer></script>
-<script src="antcv-pdf-preview-gate.js?v=1.51.4326-claude-rate" defer></script>
+<script src="antcv-pdf-preview-gate.js?v=1.51.4346-cost-rates" defer></script>
 <!-- EXPORT-SETTLED-001: defer the FIRST export until the doc is settled (cloud-restore + migrations
      converged) so it isn't stale — the real fix for "refresh twice for a good PDF". -->
 <script src="antcv-export-settled-gate.js?v=1.51.14" defer></script>

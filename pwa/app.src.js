@@ -1217,8 +1217,19 @@
       anthropic: { inputPer1M: 3, outputPer1M: 15 },
       claude: { inputPer1M: 3, outputPer1M: 15 },
       openai: { inputPer1M: 0.75, outputPer1M: 4.5 }, // gpt-5.4-mini (was gpt-5.5 30/60)
-      mistral: { inputPer1M: 3, outputPer1M: 9 },
-      gemini: { inputPer1M: 0.15, outputPer1M: 0.6 },
+      // LLM-COST-MISTRAL-RATE-001 + LLM-COST-GEMINI-RECONCILE-001 (2026-08-20):
+      // both of these were stale and both fed the cost router. mistral was
+      // {3,9} against a real Mistral Large 3 price of $0.5/$1.5 (6x over) and
+      // mistral LEADS the supervisor role, so it was being demoted on a
+      // phantom price exactly as claude was. gemini was {0.15,0.6} against a
+      // real Gemini 2.5 Flash price of $0.30/$2.50 (2x under in, 4.2x under
+      // out) - the cheap-looking number that makes gemini win cost tiebreaks.
+      // Verified 2026-08-20 against mistral.ai/pricing/api and
+      // ai.google.dev/gemini-api/docs/pricing. Keep in sync with the worker
+      // RATES tables + D1 llm_provider_costs (COST-SOURCE-AUDIT-GAP-001);
+      // pwa/test/llm-cost-provider-rates.test.mjs now pins them to each other.
+      mistral: { inputPer1M: 0.5, outputPer1M: 1.5 },
+      gemini: { inputPer1M: 0.3, outputPer1M: 2.5 },
     };
   let A = 0,
     I = 0,

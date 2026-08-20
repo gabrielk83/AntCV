@@ -1045,6 +1045,49 @@ def _clean_cut(win):
     if t and t[-1] not in ".!?:)":
         t += "."
     return t
+# CAP-AMPUTATED-ENUMERATION-002 (nightly 2026-08-18, shipped live in apps 3489
+# and 3487): the cap landing INSIDE a comma-list severed it before its closing
+# conjunction — "drawing on inputs from investment, legal." — dropping tax,
+# finance and ESG while reading as a finished sentence. Unlike the amputated
+# parenthetical of -001 the output is grammatical, so nothing flags it: the
+# letter simply asserts a shorter list than the source claimed. A cut may lose
+# a whole clause; it may never restate a list as complete after shortening it.
+_LIST_CONJ = (" and ", " or ", " as well as ", " og ", " eller ", " samt ",
+              " und ", " oder ", " y ", " e ")
+def _severs_enumeration(s, p):
+    """True when cutting source `s` at the comma at index `p` would leave a
+    comma-list that `s` went on to CLOSE with a conjunction.
+
+    Scoped by item length: a list closer joins SHORT items ("legal", "tax",
+    "finance and ESG"), so a long trailing clause ("…, and the team moved on")
+    is an ordinary compound sentence and stays a legal cut point.
+    """
+    tail = s[p + 1:]
+    end = len(tail)
+    for term in (". ", "; ", "! ", "? "):
+        q = tail.find(term)
+        if q != -1: end = min(end, q)
+    items = [x.strip() for x in tail[:end].split(",")]
+    items = [x for x in items if x]
+    if not items: return False
+    if not any(c in (" " + items[-1].lower() + " ") for c in _LIST_CONJ): return False
+    return all(len(x.split()) <= 4 for x in items)
+def _drop_open_list(t, s):
+    """Walk a word-boundary cut back OUT of an enumeration it left hanging open.
+
+    Cutting to the list's first comma is not enough — "…inputs from investment."
+    still asserts one input where the source named five. Drop the first item too
+    (items are short by construction) until the tail is a dangling connector,
+    which _clean_cut then walks back: "…drawing on inputs."
+    """
+    opens = [i for i, ch in enumerate(t) if ch == "," and _severs_enumeration(s, i)]
+    if not opens: return t
+    words = t[:opens[0]].split(" ")
+    for _ in range(4):
+        if len(words) <= 3: break
+        if words[-1].strip(".,;:()").lower() in _DANGLING_WORDS: break
+        words.pop()
+    return " ".join(words)
 def _cap_line(s, maxlen=None):
     """Limit a bullet/result to ~2 rendered lines, trimming at a clause or word
     boundary (owner: 'limit line lengths') — always a CLEAN, period-closed end."""
@@ -1054,8 +1097,10 @@ def _cap_line(s, maxlen=None):
     win = s[:maxlen]
     for sep in (". ", "; ", ", "):
         p = win.rfind(sep)
+        while sep == ", " and p != -1 and _severs_enumeration(s, p):
+            p = win.rfind(sep, 0, p)
         if p >= maxlen * 0.55: return _clean_cut(win[:p])
-    return _clean_cut(win.rsplit(" ", 1)[0])
+    return _clean_cut(_drop_open_list(win.rsplit(" ", 1)[0], s))
 def _cap_para(s, maxlen=None):
     """Keep a cover-letter PARAGRAPH readable (~3-4 lines): trim to the last full
     sentence under maxlen (owner: 'too long, >3-4 lines per paragraph')."""
@@ -1065,7 +1110,7 @@ def _cap_para(s, maxlen=None):
     win = s[:maxlen]
     p = max(win.rfind(". "), win.rfind("! "), win.rfind("? "))
     if p >= maxlen * 0.5: return win[:p + 1].strip()
-    return _clean_cut(win.rsplit(" ", 1)[0])
+    return _clean_cut(_drop_open_list(win.rsplit(" ", 1)[0], s))
 # WHY-JOINED-SENTENCE-001 (owner 2026-07-26, on a live Aimpoint letter: "how the f
 # this sentence makes sense?? 'Aimpoint has built red dot sights in Sweden since
 # 1975. This role aligns with my defence-optics work: ...'").

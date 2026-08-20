@@ -27,6 +27,8 @@
 //
 // Schema: see schema-telemetry.sql.
 
+import { rateForStrict } from './model-rates.js';
+
 // ---------------------------------------------------------------------
 // Sanitisation: only the 18 task strings and 4 providers from the spec
 // are accepted; everything else maps to "unknown" / drops the row.
@@ -114,16 +116,35 @@ async function userHashFromEmail(email) {
 
 // ---------------------------------------------------------------------
 // Cost computation. The PWA already calculates cost_usd per call from
-// its in-memory rate table, but we recompute server-side from
-// llm_provider_costs so a stale client doesn't bias the dashboard.
-// Falls back to the PWA-reported value when the model isn't in our
-// reference table (new model launches before we update prices).
+// its in-memory rate table, but we recompute server-side so a stale
+// client doesn't bias the dashboard.
+//
+// LLM-COST-D1-REFERENCE-STALE-001 (nightly 2026-08-20): that recompute
+// was inert. It priced only from D1's llm_provider_costs, and measured
+// over 30 days of real llm_calls the table holds no row for ANY model
+// in production — claude-sonnet-5, gpt-5.4-mini and mistral-large-latest
+// all miss (gemini-2.5-flash matched, at a price two years stale). So
+// ~98% of calls fell through to the client's own number, which is the
+// very thing this function exists to distrust: before 1.51.4326 that was
+// claude at the 10/30 fallback, logging $12.02 where $3.91 was true, and
+// the weekly cost-quality tune read those rows as ground truth.
+//
+// Order is now D1 row → the relay's own rate table → the client's value,
+// so D1 is an OVERRIDE (per-provider contract prices, discounts) rather
+// than a prerequisite. Reaching the client's value at all is a real gap
+// and says so in the log instead of passing silently.
 // ---------------------------------------------------------------------
 
 async function estimateCostUsd(env, provider, model, promptTokens, completionTokens, fallbackUsd) {
   if (provider == null || (promptTokens == null && completionTokens == null)) {
     return asFloat(fallbackUsd);
   }
+  const pt = Number(promptTokens) || 0;
+  const ct = Number(completionTokens) || 0;
+  const price = (perM, perMOut) => {
+    const cost = (pt / 1e6) * Number(perM) + (ct / 1e6) * Number(perMOut);
+    return Number.isFinite(cost) ? Number(cost.toFixed(6)) : null;
+  };
   try {
     const row = await env.DB
       .prepare(
@@ -135,14 +156,24 @@ async function estimateCostUsd(env, provider, model, promptTokens, completionTok
       .bind(provider, model || '')
       .first();
     if (row) {
-      const pt = Number(promptTokens) || 0;
-      const ct = Number(completionTokens) || 0;
-      const cost = (pt / 1e6) * Number(row.p) + (ct / 1e6) * Number(row.c);
-      return Number.isFinite(cost) ? Number(cost.toFixed(6)) : asFloat(fallbackUsd);
+      const cost = price(row.p, row.c);
+      if (cost != null) return cost;
     }
   } catch (e) {
-    // Fall through to PWA-reported value.
+    // Fall through to the local table.
   }
+  // No D1 row: price from the same public-price table the demo cap uses.
+  // Strict lookup — an unknown model must fall through to the warning, not
+  // be silently guessed at Sonnet rates and then recorded as measured cost.
+  const rate = rateForStrict(model);
+  if (rate) {
+    const cost = price(rate[0], rate[1]);
+    if (cost != null) return cost;
+  }
+  console.warn(
+    '[telemetry] no server-side rate for provider=' + provider +
+    ' model=' + (model || '(none)') + ' — logging the client-reported cost'
+  );
   return asFloat(fallbackUsd);
 }
 

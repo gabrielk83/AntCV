@@ -188,6 +188,22 @@ this routine changes the *starting* choice based on the week's evidence.
    and extend the test in the SAME run — this is a required modification the routine executes, not
    an optional check. Prices carry an inline date comment; re-verify against the provider's public
    pricing page when you touch one. A wrong rate here is a silent, compounding tuning error.
+1b. **COST-SOURCE AUDIT (added 2026-08-20 — COST-SOURCE-AUDIT-GAP-001).** Step 1a audits the
+   `demo-enforcement.js` `RATES` tables, which govern the **demo budget cap**. They do NOT produce
+   `llm_calls.estimated_cost_usd` — the number every score in step 3 divides by. That number comes
+   from `workers/access-relay/src/telemetry.js` `estimateCostUsd()`, which looks up D1
+   `llm_provider_costs` by **exact** `(provider, model)` and falls back to the PWA-reported
+   `cost_usd` (the `C` map in `pwa/app.src.js`) on a miss. So the real cost pipeline is a DIFFERENT
+   pair of tables. Each week, before scoring: (i) list `llm_provider_costs` and confirm every model
+   id appearing in the week's `llm_calls` either has a matching row at the audited rate or has no
+   row at all (a row at a WRONG rate silently wins over a corrected PWA map — this is what hid
+   LLM-COST-GEMINI-RECONCILE-001 for a month, and note `mistral-large` never matches the live
+   `mistral-large-latest`); (ii) confirm the `pwa/app.src.js` `C` map prices each provider at the
+   same rate as the audited worker `RATES` (a mismatch here is LLM-COST-CLAUDE-RATE-001 /
+   LLM-COST-MISTRAL-RATE-001); (iii) **recompute the week's cost from raw `prompt_tokens` /
+   `completion_tokens` at the audited rates and score on THAT**, never on the stored
+   `estimated_cost_usd`, unless (i) and (ii) both reconcile to the cent. A production D1 write to
+   `llm_provider_costs` is owner-gated — surface a mismatch, do not silently correct it.
 2. **Pull** the last 7 days from `llm_provider_health` + `llm_quality_signals` per role
    (extract / parse_jd / compress / gen / coherence / translate / analysis / supervisor).
 3. **Score** each provider per role: `costQuality = adequacy_pass_rate / cost_per_call`

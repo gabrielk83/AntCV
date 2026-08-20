@@ -141,7 +141,7 @@ export function blendedBaseline(ranked) {
 // low traffic number"). This stops a premature pin to a thin-data or no-gain provider, and
 // auto-activates the pin once a genuinely cheaper provider has proven out at low volume.
 export function proposeRoles(current, rows, opts = {}) {
-  const { margin = 0.10, activationMinCalls = 30 } = opts;
+  const { margin = 0.10, activationMinCalls = 30, floor = 0.9, minCalls = 20 } = opts;
   const proposed = { ...current };
   const rationale = [];
   // Score every tunable role, not only the ones already pinned in MODEL_ROLES —
@@ -156,7 +156,18 @@ export function proposeRoles(current, rows, opts = {}) {
     const best = ranked.find((r) => r.eligible);   // top eligible
     let decision = 'keep', to = curHead, why;
     if (!ranked.length) { why = 'no telemetry for this role — keep'; }
-    else if (!best) { why = 'no provider meets the adequacy floor — keep (fallback cascade still runs)'; }
+    else if (!best) {
+      // TUNE-BLOCKER-LABEL-001 (2026-08-20): `eligible` folds TWO independent gates
+      // (successRate >= floor AND calls >= minCalls), so this branch used to report
+      // every no-flip as an adequacy failure. On a quiet week that is the opposite
+      // diagnosis — the providers were at 100% success and merely under-sampled.
+      // Name the gate that actually blocked, so the weekly report is honest about
+      // whether quality failed or evidence is just thin.
+      const thin = ranked.filter((r) => r.successRate >= floor && r.calls < minCalls);
+      why = thin.length
+        ? `no provider clears the n>=${minCalls} sample floor (best: ${thin[0].provider} n=${thin[0].calls} at ok=${(thin[0].successRate * 100).toFixed(0)}%) — keep (fallback cascade still runs)`
+        : `no provider meets the adequacy floor ${floor} — keep (fallback cascade still runs)`;
+    }
     else if (!KNOWN_PROVIDERS.includes(best.provider)) { why = `best (${best.provider}) not a known provider — keep`; }
     else if (best.provider === curHead) { why = `current head is already best (cq=${best.costQuality.toFixed(3)})`; }
     else if (!pinned) {

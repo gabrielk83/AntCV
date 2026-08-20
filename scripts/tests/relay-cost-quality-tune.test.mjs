@@ -166,3 +166,24 @@ test('summarizeClientDispatch surfaces the compress lever (not MODEL_ROLES-tunab
   assert.ok(compress.potentialSave > 60);               // ~$70 spend → ~$0 on gemini
   assert.equal(levers.find((l) => l.task === 'parse_jd'), undefined);  // cascade task excluded
 });
+
+// TUNE-BLOCKER-LABEL-001 (2026-08-20): `eligible` folds the adequacy floor and the
+// sample floor into one boolean, so every no-flip week was reported as an adequacy
+// failure — even when the providers were at 100% success and merely under-sampled.
+// The rationale must name the gate that actually blocked.
+test('no-flip rationale names the SAMPLE floor when quality is fine but n is thin', () => {
+  const rows = [R('openai', { call_count: 4, success_rate: 1, success_count: 4, total_cost_usd: 0.06 })];
+  const { rationale } = proposeRoles({ writer: 'anthropic' }, rows, { floor: 0.9, minCalls: 20 });
+  const w = rationale.find((r) => r.role === 'writer');
+  assert.equal(w.decision, 'keep');
+  assert.match(w.why, /sample floor/);
+  assert.doesNotMatch(w.why, /adequacy floor/);
+});
+
+test('no-flip rationale still names the ADEQUACY floor when quality genuinely fails', () => {
+  const rows = [R('openai', { call_count: 100, success_rate: 0.4, success_count: 40, total_cost_usd: 0.06 })];
+  const { rationale } = proposeRoles({ writer: 'anthropic' }, rows, { floor: 0.9, minCalls: 20 });
+  const w = rationale.find((r) => r.role === 'writer');
+  assert.equal(w.decision, 'keep');
+  assert.match(w.why, /adequacy floor/);
+});

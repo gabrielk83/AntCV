@@ -269,9 +269,16 @@ def _brand_post(body):
     and returns (status, dict)."""
     return _req(PROXY, "/api/fetch-brand-colors", "POST", body, timeout=45)
 
+# Which ccTLDs to offer the brand resolver for a given JD language. Not a
+# country lookup - just "a Danish posting is most likely a .dk employer".
+_LANG_TLD = {"da": ["dk"], "sv": ["se"], "nb": ["no"], "no": ["no"],
+             "fi": ["fi"], "de": ["de", "at", "ch"], "nl": ["nl"], "fr": ["fr"],
+             "es": ["es"], "it": ["it"]}
+
 def capture_brand_for(row):
     """Return the v2 brand_record for a row (colours + spirit/values/tone +
     placement + slogan brief), or None on hard failure. Idempotent per company."""
+    tld_hints = []
     try:
         import brand_fit
     except Exception as e:
@@ -290,11 +297,22 @@ def capture_brand_for(row):
         toks = [t for t in re.sub(r"[^a-z0-9]+", " ", str(row.get("company") or "").lower()).split() if len(t) >= 4]
         if host and toks and not any(t in host for t in toks):
             print(f"   [brand] posting host {host} unrelated to employer - resolving canonical site by name")
+            # BRAND-CANONICAL-SITE-CCTLD-001: dropping the URL used to throw away
+            # its COUNTRY too, leaving the worker with a bare "<slug>.com" guess.
+            # Keep the ccTLD as a hint - an ATS host on .dk is decent evidence the
+            # employer is Danish, even when the host itself is not the employer.
+            _h = host.rsplit(".", 1)[-1]
+            if len(_h) == 2 and _h != "us":
+                tld_hints.append(_h)
             url = ""
     except Exception:
         pass
+    for _t in (_LANG_TLD.get(row.get("language")) or []):
+        if _t not in tld_hints:
+            tld_hints.append(_t)
     try:
-        rec = brand_fit.capture_brand(url, row.get("company") or "", _brand_post)
+        rec = brand_fit.capture_brand(url, row.get("company") or "", _brand_post,
+                                      tld_hints=tld_hints)
     except Exception as e:
         print(f"   [brand] capture failed ({str(e)[:80]})"); return None
     rsr = rec.get("research") or {}
@@ -353,6 +371,48 @@ def eligible_rows(doc, only=None, force=False):
                 "url": urls.get(uk) or "",
             })
     return out
+
+def unqueued_ready_rows(doc):
+    """Rows that WOULD generate except that `queue[uk]` is an explicit False:
+    a real JD, no artifact yet, but the owner's clock flag is off.
+
+    JT-DISCOVERY-SEEDS-UNQUEUED-001 (2026-08-20): this is NOT a defect to fix by
+    flipping them. `discover-positions.py` sets queue=False on every proposed row
+    as a HARD SAFETY INVARIANT - an auto-discovered lead must never generate an
+    application without the owner arming it. The defect was that the backlog was
+    INVISIBLE: 13 rows with real JDs (ranks 59-71) had been sitting unarmed with
+    nothing ever reporting them. So surface them, and let the owner decide.
+    """
+    rows = doc.get("rows") or []
+    jd = doc.get("jd") or {}; queue = doc.get("queue") or {}
+    gen = doc.get("gen") or {}; arts = doc.get("artifacts") or {}
+    out = []
+    for row in rows:
+        uk = row_uk(row)
+        a = arts.get(uk) or {}
+        if a.get("cv_export_url") or a.get("application_id"):
+            continue
+        if queue.get(uk) is not False:              # only an EXPLICIT False counts
+            continue
+        if jd_content_len(jd.get(uk)) <= 200:
+            continue
+        out.append({"uk": uk, "rank": row[0], "company": row[1], "role": row[2],
+                    "tier": gen.get(uk) or "quick", "jd_len": jd_content_len(jd.get(uk))})
+    out.sort(key=lambda r: r["rank"])
+    return out
+
+def print_unqueued_summary(doc):
+    """One legible block so an unarmed backlog can never go unnoticed again."""
+    pend = unqueued_ready_rows(doc)
+    if not pend:
+        return
+    print("")
+    print(f"NOT QUEUED but ready ({len(pend)}) - real JD, no application yet, "
+          "clock flag OFF. Auto-discovered rows start unarmed on purpose; flip the "
+          "clock in the tracker to include one in a nightly:")
+    for r in pend:
+        print(f"   {r['uk']:32} {r['tier']:6} rank {r['rank']:>3}  "
+              f"{str(r['company'])[:26]} / {str(r['role'])[:30]}  ({r['jd_len']} jd)")
 
 _DA_STOPWORDS = [" og ", " til ", " for ", " med ", " som ", " er ", " på ", " af ",
                  " ved ", " ikke ", " har ", " vil ", " skal ", " du ", " dig ",
@@ -736,10 +796,12 @@ def cmd_list(args):
     rows = eligible_rows(doc, set(args.row) if args.row else None)
     if not rows:
         print("no eligible rows (queue/jd/artifact gates).")
-        return
-    print(f"{'uk':16} {'tier':6} {'rank':>4}  company / role   (jd chars)")
-    for r in rows:
-        print(f"{r['uk']:16} {r['tier']:6} {r['rank']:>4}  {str(r['company'])[:22]} / {str(r['role'])[:26]}  ({len(r['jd'])})")
+    else:
+        print(f"{'uk':16} {'tier':6} {'rank':>4}  company / role   (jd chars)")
+        for r in rows:
+            print(f"{r['uk']:16} {r['tier']:6} {r['rank']:>4}  {str(r['company'])[:22]} / {str(r['role'])[:26]}  ({len(r['jd'])})")
+    if not args.row:
+        print_unqueued_summary(doc)
 
 def cmd_run(args):
     os.makedirs(args.out, exist_ok=True)
@@ -787,6 +849,7 @@ def cmd_run(args):
     for r in todo:
         uk = r["uk"]
         language = detect_language(r["jd"])
+        r["language"] = language   # BRAND-CANONICAL-SITE-CCTLD-001: seeds the ccTLD hints
         rsch = research(r["company"], r["role"]) if getattr(args, "research", True) else ""
         if rsch: print("   research: %d findings" % len(rsch.splitlines()))
         # CATEGORY-RECALL-001: category is decided BEFORE the plan is built so
@@ -877,6 +940,8 @@ def cmd_run(args):
             persist_application(doc, r, res, cat, language,
                                 kernel=kernel, measure=getattr(args, "measure", True) and not args.dry,
                                 max_pages=getattr(args, "max_pages", 2))
+    if not args.row:
+        print_unqueued_summary(doc)
     idx_path = os.path.join(args.out, "index.json")
     json.dump(results_index, open(idx_path, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     print(f"\nindex -> {idx_path}")

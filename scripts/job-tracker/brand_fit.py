@@ -334,13 +334,17 @@ def brand_record(raw, research=None, source=None):
 # worker already guards. brand_fit stays network-free: the caller injects a
 # `post_json(body) -> (status, dict)` closure aimed at the worker endpoint.
 
-def research_via_worker(jd_url, company, post_json):
+def research_via_worker(jd_url, company, post_json, tld_hints=None):
     """Crawl the company site via the worker and return
     {raw:{dark?,accent?}, research:{site,spirit,values,tone[,flag]}, source}.
     Deterministic + idempotent (same company URL -> same worker call, no random
     state). On any failure the research is empty + flagged; colours/values are
     NEVER fabricated locally."""
-    body = {"jdUrl": jd_url or "", "companyName": company or "", "research": True}
+    # BRAND-CANONICAL-SITE-CCTLD-001: the worker guesses "<slug>.com" first; the
+    # hints tell it which ccTLDs to try after that, so a Nordic employer is not
+    # left to a .com it does not own (kombit.dk -> a parked kombit.com).
+    body = {"jdUrl": jd_url or "", "companyName": company or "", "research": True,
+            "tldHints": list(tld_hints or [])}
     try:
         code, resp = post_json(body)
     except Exception as e:
@@ -360,13 +364,13 @@ def research_via_worker(jd_url, company, post_json):
     return {"raw": raw, "research": research, "source": source}
 
 
-def capture_brand(jd_url, company, post_json, source=None):
+def capture_brand(jd_url, company, post_json, source=None, tld_hints=None):
     """One-call brand capture used by the gen pipeline: crawl the company site
     (colours AND spirit/values/tone in the SAME round-trip) then build the full
     v2 brand record. research carries REAL spirit/values when the crawl+summary
     succeed, empty + flagged otherwise. Feeds doc['brand'][uk], the slogan
     placement (antcv:clSloganMode), and the slogan brief the LLM fuses to."""
-    crawl = research_via_worker(jd_url, company, post_json)
+    crawl = research_via_worker(jd_url, company, post_json, tld_hints=tld_hints)
     return brand_record(crawl["raw"], research=crawl["research"], source=source or crawl["source"])
 
 

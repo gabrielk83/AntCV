@@ -13,7 +13,9 @@
 #   or however you export your session key.
 #
 # Commands:
-#   pull            GET the cloud doc -> write local doc + snapshot; --render also rebuilds the .xlsx
+#   pull            GET the cloud doc, 3-way MERGE it into the local doc (local-only entries are
+#                   never dropped; --force takes the cloud wholesale) + write snapshot;
+#                   --render also rebuilds the .xlsx
 #   push            PUT the local doc with the snapshot's base_rev; on 409 do a row-level 3-way merge and retry
 #   import-xlsx      read the (edited) Weekly Tracker sheet back into the local doc, then run `push`
 #   status           show local rev vs cloud rev and whether they diverge
@@ -171,16 +173,44 @@ def _write_proposed_tab(xlsx_path, doc):
     wb.save(xlsx_path)
     return len(proposed)
 
-def cmd_pull(render=False):
+def cmd_pull(render=False, force=False):
     code, remote = _req("GET")
     if code != 200: sys.exit(f"pull failed: {code} {remote}")
     doc = remote.get("doc")
     if doc is None:
         print("cloud is empty — nothing to pull. (Run push to seed it.)")
         return
-    _save(DOC, doc)
+    # JOBTRACKER-PULL-CLOBBERS-LOCAL-SUPPORT-001 (2026-08-20): `pull` used to
+    # _save(DOC, doc) the cloud doc straight over the local file. `push` has a
+    # careful 3-way merge; `pull` had none, so anything local the cloud had not
+    # seen was silently deleted. Measured on 2026-08-20: the local doc held 34
+    # `support` blocks of role intel the cloud lacked - one nightly `pull
+    # --render` would have destroyed all of them. Pull now runs the SAME 3-way
+    # merge push does. `--force` restores the old take-the-cloud-wholesale
+    # behaviour for when that is genuinely what you want.
+    local = _load(DOC)
+    forced = force or not local
+    if forced:
+        merged, conflicts = doc, []
+    else:
+        merged, conflicts = _merge(_load(SNAP, {}).get("doc"), local, doc)
+    _save(DOC, merged)
+    # The SNAPSHOT stays a faithful record of what the CLOUD holds at this rev,
+    # so a later push sends the right base_rev and diffs against the right base.
     _save(SNAP, {"rev": remote.get("rev", 0), "doc": doc})
-    print(f"pulled rev {remote.get('rev')} -> {DOC}")
+    print(f"pulled rev {remote.get('rev')} -> {DOC}" + (" (--force: local overwritten)" if forced else ""))
+    if not forced:
+        kept = sum(1 for f in UK_DICT_FIELDS
+                   for k in ((local or {}).get(f) or {})
+                   if k not in ((doc or {}).get(f) or {}))
+        extra_rows = len(merged.get("rows") or []) - len(doc.get("rows") or [])
+        if kept or extra_rows > 0:
+            print(f"merged: kept {kept} local-only entr{'y' if kept == 1 else 'ies'}"
+                  + (f" + {extra_rows} local-only row(s)" if extra_rows > 0 else "")
+                  + " the cloud does not have - run `push` to upload them")
+        if conflicts:
+            print(f"conflicts (local kept): {', '.join(conflicts[:12])}"
+                  + (f" +{len(conflicts) - 12} more" if len(conflicts) > 12 else ""))
     if render:
         if not BUILD: sys.exit("--render needs JOB_BUILD (path to the doc-driven Excel build script)")
         env = dict(os.environ, JOB_DOC=DOC)
@@ -200,6 +230,36 @@ def cmd_pull(render=False):
                 print(f"proposed-tab skipped ({type(e).__name__}: {e})")
         else:
             print("proposed-tab skipped (set JOB_XLSX to enable)")
+
+# Every uk-keyed dict in the doc besides `rows`. These carry the JD text, the
+# role intel, the owner's typed signals and the generation state - i.e. most of
+# the doc's value - and until 2026-08-20 the sync merged NONE of them
+# (JOBTRACKER-PULL-CLOBBERS-LOCAL-SUPPORT-001).
+UK_DICT_FIELDS = ("urls", "jd", "support", "signals", "notes", "webintel", "gen",
+                  "queue", "brandfit", "brand", "artifacts", "sigfiles", "pin",
+                  "park", "discovered")
+
+def _merge_uk_dict(base, local, remote, field):
+    """Per-KEY 3-way for one uk-keyed dict. Union of both sides - a key present
+    on one side only is always kept, never deleted, because neither `pull` nor a
+    409 `push` can tell "the other side removed it" from "the other side has not
+    seen it yet". Where both sides changed the same key, LOCAL wins and the key
+    is reported. Returns (merged, conflict_labels)."""
+    b = (base or {}).get(field) or {}
+    l = (local or {}).get(field) or {}
+    r = (remote or {}).get(field) or {}
+    out, conflicts = dict(r), []
+    for k, lv in l.items():
+        if k not in r:
+            out[k] = lv                                     # local-only -> keep
+            continue
+        rv, bv = r[k], b.get(k)
+        if lv == rv: continue
+        lc, rc = (lv != bv), (rv != bv)
+        if lc and not rc: out[k] = lv
+        elif rc and not lc: out[k] = rv
+        else: out[k] = lv; conflicts.append(f"{field}[{k}](local-wins)")
+    return out, conflicts
 
 def _merge(base, local, remote):
     # Row-level 3-way by id. For each id: if only one side changed vs base, take
@@ -221,7 +281,11 @@ def _merge(base, local, remote):
     out["rows"] = merged
     # envelope: last-writer (local) wins whole-block; report if it differs from remote
     if remote.get("envelope") != local.get("envelope"): conflicts.append("envelope(local-wins)")
-    out["urls"] = {**(remote.get("urls") or {}), **(local.get("urls") or {})}
+    for _f in UK_DICT_FIELDS:
+        if _f in local or _f in remote or _f in (base or {}):
+            merged_f, cf = _merge_uk_dict(base, local, remote, _f)
+            out[_f] = merged_f
+            conflicts.extend(cf)
     return out, conflicts
 
 def cmd_push():
@@ -278,11 +342,11 @@ def cmd_import_xlsx():
 
 def main():
     cmd = sys.argv[1] if len(sys.argv) > 1 else "status"
-    if cmd == "pull": cmd_pull(render=("--render" in sys.argv))
+    if cmd == "pull": cmd_pull(render=("--render" in sys.argv), force=("--force" in sys.argv))
     elif cmd == "push": cmd_push()
     elif cmd == "import-xlsx": cmd_import_xlsx()
     elif cmd == "status": cmd_status()
-    else: sys.exit("usage: job-tracker-sync.py [pull [--render] | push | import-xlsx | status]")
+    else: sys.exit("usage: job-tracker-sync.py [pull [--render] [--force] | push | import-xlsx | status]")
 
 if __name__ == "__main__":
     main()

@@ -61,7 +61,16 @@ import { extractJSON } from './jd-analysis.js';
 
 const FETCH_TIMEOUT_MS = 8000;
 const MAX_HTML_BYTES = 700_000;
-const MAX_CSS_BYTES = 200_000;
+// BRAND-CANONICAL-SITE-CCTLD-001 (2026-08-20): stylesheets used to be read
+// through readCapped(MAX_CSS_BYTES = 200 KB), and that cap silently decided the
+// brand for large theme bundles.
+// KOMBIT's theme.min.css is 3.9 MB; its first 200 KB is reset/normalize
+// greyscale, so kombit.dk scored "no usable colors", lost the candidate loop,
+// and the sampler fell through to a parked squatter page at kombit.com. We now
+// SCAN far more bytes than we ever hold: the stream is read in chunks, each
+// chunk is tallied for hex colours and then discarded, so memory stays flat
+// regardless of stylesheet size.
+const MAX_CSS_SCAN_BYTES = 6_000_000;
 const MAX_STYLESHEETS = 3;
 // About/values/careers pages a company most often exposes its brand voice on.
 // Tried in order on the winning host, capped by MAX_RESEARCH_PAGES / attempts.
@@ -141,6 +150,58 @@ function registrableRoot(hostname) {
   return lastTwo;
 }
 
+// PARKED-DOMAIN-GUARD-001 (2026-08-20) - pages that are NOT the employer.
+// A squatter's holding page and a bot-challenge interstitial are both real HTML
+// with a saturated template colour, so both PASS isBrandWorthy and win the
+// candidate loop ahead of the employer's own site. `www.kombit.com` is the case
+// that found this, and it turned out to be BOTH: a "Coming Soon" parking page
+// from a normal browser, and from Cloudflare's own network a challenge page
+// ("Unable to verify your browser") whose Tailwind-slate #0f172a was being
+// returned as KOMBIT's brand while the real employer sits at kombit.dk.
+const BLOCK_PHRASES = [
+  // domain parking / holding
+  'coming soon', 'under construction', 'domain is for sale', 'buy this domain',
+  'this domain is parked', 'parked domain', 'domain parking', 'website coming soon',
+  'is for sale', 'inquire about this domain', 'godaddy.com/domainsearch',
+  'sedoparking', 'hugedomains', 'afternic', 'namecheap parking',
+  // bot-challenge / WAF interstitials
+  'unable to verify your browser', 'please refresh the page', 'checking your browser',
+  'verifying you are human', 'verify you are human', 'enable javascript and cookies',
+  'just a moment', 'attention required', 'ddos protection', 'cloudflare ray id',
+  'access denied', 'request blocked',
+];
+const BLOCK_MAX_TEXT = 1500;   // chars of visible text a real homepage clears easily
+
+function visibleTextLength(html) {
+  return String(html || '')
+    .replace(/<(script|style|noscript)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&[a-z]+;|&#\d+;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim().length;
+}
+
+function isNonEmployerPage(html) {
+  const lower = String(html || '').toLowerCase();
+  const t = /<title[^>]*>([\s\S]{0,200}?)<\/title>/i.exec(lower);
+  if (t && BLOCK_PHRASES.some((p) => t[1].includes(p))) return true;
+
+  const textLen = visibleTextLength(html);
+  // A phrase alone is not enough: a real employer site may legitimately say
+  // "coming soon" about a product. Require a near-contentless page with it.
+  if (textLen <= BLOCK_MAX_TEXT && BLOCK_PHRASES.some((p) => lower.includes(p))) return true;
+
+  // NOT doing a structural "thin page with no external stylesheet" fallback: it
+  // reads a deliberately minimal but REAL homepage the same as an interstitial,
+  // and refusing a real employer costs brand we could have had. The phrase list
+  // above is specific enough - a real company homepage does not say "unable to
+  // verify your browser" on a contentless page. An interstitial that words
+  // itself in some way not listed here still slips through; that residual is
+  // tracked with BRAND-CANONICAL-SITE-CCTLD-001.
+  return false;
+}
+
+
 function isThirdPartyBoard(hostname) {
   return THIRD_PARTY_BOARD_HOSTS.has(registrableRoot(hostname.replace(/^www\./, '')));
 }
@@ -167,6 +228,24 @@ async function timedFetch(url, opts) {
   } finally {
     clearTimeout(timer);
   }
+}
+
+// Tally hex colours over a STREAM without retaining it. A chunk boundary can
+// split a "#rrggbb" token, so each chunk's tail is carried into the next.
+async function tallyHexFromStream(response, counts, maxBytes) {
+  const reader = response.body && response.body.getReader();
+  if (!reader) { tallyHexInto(counts, await response.text()); return; }
+  const dec = new TextDecoder('utf-8', { fatal: false });
+  let total = 0, carry = '';
+  while (total < maxBytes) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    total += value.length;
+    const text = carry + dec.decode(value, { stream: true });
+    tallyHexInto(counts, text);
+    carry = text.slice(-8);          // a hex token is at most 7 chars
+  }
+  try { await reader.cancel(); } catch (_) { /* already drained */ }
 }
 
 async function readCapped(response, maxBytes) {
@@ -240,9 +319,8 @@ const KNOWN_WIDGET_COLORS = new Set([
   '#2c622c', '#2e7d32', '#4caf50', // generic consent-banner "accept" greens
 ]);
 
-function extractHexColors(text) {
+function tallyHexInto(counts, text) {
   const matches = text.match(/#[0-9a-fA-F]{6}\b/g) || [];
-  const counts = new Map();
   for (const raw of matches) {
     const h = raw.toLowerCase();
     if (KNOWN_WIDGET_COLORS.has(h)) continue; // third-party widget, not this company's brand
@@ -250,7 +328,15 @@ function extractHexColors(text) {
     if (l > 0.9 || l < 0.03) continue; // near-white / near-black chrome, never a brand accent
     counts.set(h, (counts.get(h) || 0) + 1);
   }
+  return counts;
+}
+
+function rankHexCounts(counts) {
   return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([h]) => h);
+}
+
+function extractHexColors(text) {
+  return rankHexCounts(tallyHexInto(new Map(), text));
 }
 
 function extractThemeColor(html) {
@@ -292,8 +378,15 @@ async function sampleColorsFromPage(pageUrl, collectSignals = false) {
   const html = await readCapped(resp, MAX_HTML_BYTES);
   const themeColor = extractThemeColor(html);
 
+  // PARKED-DOMAIN-GUARD-001 (2026-08-20, with BRAND-CANONICAL-SITE-CCTLD-001):
+  // a domain squatter's holding page is real HTML with a saturated template
+  // colour, so it PASSES isBrandWorthy and wins the candidate loop ahead of the
+  // employer's actual site. Returning a stranger's palette as `brandLike: true`
+  // is worse than returning nothing, so refuse to sample one.
+  if (isNonEmployerPage(html)) return null;
+
   const styleBlocks = (html.match(/<style\b[^>]*>[\s\S]*?<\/style>/gi) || []).join('\n');
-  let cssText = styleBlocks;
+  const counts = tallyHexInto(new Map(), styleBlocks + ' ' + html);
 
   const sheetUrls = extractStylesheetLinks(html, pageUrl);
   for (const su of sheetUrls) {
@@ -301,12 +394,14 @@ async function sampleColorsFromPage(pageUrl, collectSignals = false) {
       const sresp = await timedFetch(su, { method: 'GET' });
       if (sresp && sresp.ok) {
         const ct = (sresp.headers.get('content-type') || '').toLowerCase();
-        if (ct.includes('css') || ct === '') cssText += '\n' + (await readCapped(sresp, MAX_CSS_BYTES));
+        // Scanned, not retained — a 3.9 MB theme bundle is tallied in full
+        // without ever being held in memory (see MAX_CSS_SCAN_BYTES).
+        if (ct.includes('css') || ct === '') await tallyHexFromStream(sresp, counts, MAX_CSS_SCAN_BYTES);
       }
     } catch (_) { /* best-effort — one bad stylesheet must not sink the sample */ }
   }
 
-  const ranked = extractHexColors(cssText + ' ' + html);
+  const ranked = rankHexCounts(counts);
   if (!themeColor && !ranked.length) return null;
 
   // BRAND-WORTHY-PICK-001: choose the first REAL brand colour among
@@ -496,7 +591,27 @@ export { extractTextSignals, signalsToText };
 
 // ─── candidate URL list ───────────────────────────────────────────
 
-function buildCandidates(jdUrl, companyName) {
+// BRAND-CANONICAL-SITE-CCTLD-001 (2026-08-20): the name guess used to emit
+// `<slug>.com` and nothing else, so every non-.com employer — i.e. the whole
+// Nordic pipeline — had exactly one shot, at a TLD they do not own. KOMBIT
+// (kombit.dk) resolved to a parked squatter at kombit.com. The caller may now
+// pass `tldHints` (the JD's language/country, or the ccTLD of a posting host the
+// recruiter guard dropped); hints are tried right after .com and the total
+// candidate count is capped so the loop stays bounded.
+const MAX_CANDIDATES = 9;
+const TLD_HINT_RE = /^[a-z]{2,12}(\.[a-z]{2,3})?$/;
+
+function normalizeTldHints(hints) {
+  const out = [];
+  for (const raw of Array.isArray(hints) ? hints : []) {
+    const t = String(raw || '').trim().toLowerCase().replace(/^\./, '');
+    if (t && t !== 'com' && TLD_HINT_RE.test(t) && !out.includes(t)) out.push(t);
+    if (out.length >= 4) break;
+  }
+  return out;
+}
+
+function buildCandidates(jdUrl, companyName, tldHints) {
   const candidates = [];
 
   if (jdUrl) {
@@ -512,13 +627,17 @@ function buildCandidates(jdUrl, companyName) {
   if (companyName) {
     const slug = guessDomainFromCompanyName(companyName);
     if (slug) {
-      candidates.push(`https://www.${slug}.com/`);
-      candidates.push(`https://${slug}.com/`);
+      for (const tld of ['com', ...normalizeTldHints(tldHints)]) {
+        candidates.push(`https://www.${slug}.${tld}/`);
+        candidates.push(`https://${slug}.${tld}/`);
+      }
     }
   }
 
   const seen = new Set();
-  return candidates.filter((c) => (seen.has(c) ? false : (seen.add(c), true)));
+  return candidates
+    .filter((c) => (seen.has(c) ? false : (seen.add(c), true)))
+    .slice(0, MAX_CANDIDATES);
 }
 
 // ─── main handler ─────────────────────────────────────────────────
@@ -545,7 +664,8 @@ export async function handleFetchBrandColors(request, env, getCORS) {
   // same (no About-page fetches, no LLM call, no `research` key in the reply).
   const wantResearch = body.research === true || body.research === 'true';
 
-  const candidates = buildCandidates(jdUrl, companyName);
+  const tldHints = Array.isArray(body.tldHints) ? body.tldHints : [];
+  const candidates = buildCandidates(jdUrl, companyName, tldHints);
   if (!candidates.length) {
     const noSite = wantResearch
       ? { research: { site: null, spirit: '', values: [], tone: '', signals_used: false, flag: 'no_site' } }

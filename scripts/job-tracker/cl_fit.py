@@ -90,13 +90,25 @@ def _body_items(cl, include_leads=False):
     return out
 
 
+# Sections whose ITEMS are a structural feature of the v5 CL, not a relevance
+# tail — the drop levers must find their deficit somewhere else.
+#   role_view: ROLE-VIEW-3-BULLETS-001 (owner 2026-07-24 "most saved apps do not
+#     detail the How I see the role (3 bullets)"). The 2026-07-24 backfill's drop
+#     lever took its tail bullets on 17/19 apps; restored from the pre-fit exports
+#     the same day.
+#   who: CL-FIT-WHO-GOAL-DROP-001 (2026-08-20). CL-V5-WHO-GOAL-001 makes the WHO
+#     lead sentence and the "My goal" row MANDATORY and "Eligibility" the ONLY
+#     omittable one — and that omission is the GENERATOR's call, made when the
+#     stored record does not confirm eligibility, never a fit-time trim. LEVER A
+#     knew none of this: on app 3490 (KOMBIT) it dropped "How I operate" AND the
+#     mandatory "My goal" and kept the optional "Eligibility" — precisely
+#     inverted. Matching on the labels is not an option either: WHO-LANG-001 now
+#     renders them in the letter's language, so protection has to be structural.
+STRUCTURAL_IDS = {"role_view", "who"}
+
+
 def _droppable(s):
-    # ROLE-VIEW-3-BULLETS-001 (owner 2026-07-24 "most saved apps do not detail
-    # the How I see the role (3 bullets)"): role_view's 3 bullets are a
-    # STRUCTURAL feature of the v5 CL (cl-v5-structure) — never drop from it.
-    # The 2026-07-24 backfill's drop lever took its tail bullets on 17/19 apps;
-    # restored from the pre-fit exports the same day.
-    if (s.get("id") or "") == "role_view":
+    if (s.get("id") or "") in STRUCTURAL_IDS:
         return []
     out = []
     for it in (s.get("items") or []):

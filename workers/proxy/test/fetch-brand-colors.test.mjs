@@ -212,4 +212,100 @@ await withFreshMockFetch([], async () => {
   ok('research/no-site: values empty', json.research && json.research.values.length === 0);
 });
 
+// ── BRAND-CANONICAL-SITE-CCTLD-001 + PARKED-DOMAIN-GUARD-001 (2026-08-20) ──
+// KOMBIT (kombit.dk) resolved to a PARKED "Coming Soon" page at kombit.com whose
+// Tailwind-slate template colour passed isBrandWorthy — so the worker returned a
+// stranger's palette as `brandLike: true`. Three legs, one per test below.
+
+const PARKED_HTML =
+  '<html><head><title>www.kombit.com - Coming Soon</title>' +
+  '<style>body{background:#0f172a;color:#64748b}</style></head>' +
+  '<body><h1>Coming Soon</h1></body></html>';
+const REAL_DK_HTML =
+  '<html><head><title>KOMBIT - Kommunernes it-faellesskab</title>' +
+  '<link rel="stylesheet" href="https://cdn.kombit.dk/theme.min.css"></head>' +
+  '<body>' + 'Kommunernes faelles it-selskab. '.repeat(80) + '</body></html>';
+// withFreshMockFetch wraps every route body in htmlResponse(); these tests also
+// need a text/css route, so they use a factory-based mock of their own.
+function withTypedMockFetch(routes, fn) {
+  global.fetch = async (url) => {
+    const u = String(url);
+    for (const [pattern, make] of routes) {
+      if (u.includes(pattern)) return make();
+    }
+    return new Response('not found', { status: 404 });
+  };
+  return fn().finally(() => { global.fetch = originalFetch; });
+}
+const cssRoute = (css) => () => new Response(css, { status: 200, headers: { 'content-type': 'text/css' } });
+const htmlRoute = (html) => () => htmlResponse(html);
+
+// 10. A parked holding page is refused outright, even though its colour is
+//     "brand-worthy" — a wrong brand asserted as verified is worse than none.
+await withTypedMockFetch([['kombit.com', htmlRoute(PARKED_HTML)]], async () => {
+  const json = await post({ jdUrl: '', companyName: 'KOMBIT' });
+  ok('parked: refuses to sample a parked domain', json.ok === false);
+  ok('parked: never claims the squatter host', !/kombit\.com/.test(String(json.source || '')));
+});
+
+// 11. With the .com parked, a ccTLD hint reaches the real employer site.
+//     Pre-fix there was no .dk candidate at all, so this was unreachable.
+await withTypedMockFetch(
+  [['cdn.kombit.dk/theme.min.css', cssRoute('.a{color:#eb052f}.b{color:#eb052f}.c{color:#2e2e2e}')],
+   ['kombit.com', htmlRoute(PARKED_HTML)],
+   ['kombit.dk', htmlRoute(REAL_DK_HTML)]],
+  async () => {
+    const json = await post({ jdUrl: '', companyName: 'KOMBIT', tldHints: ['dk'] });
+    ok('cctld: falls through the parked .com to the .dk site', json.ok === true);
+    ok('cctld: sampled the employer host', /kombit\.dk/.test(json.sampledHost || ''));
+    ok('cctld: navy is the employer brand red', json.navy === '#eb052f');
+  },
+);
+
+// 12. A stylesheet larger than MAX_CSS_BYTES is SCANNED IN FULL. KOMBIT's real
+//     theme.min.css is 3.9 MB and its first 200 KB is reset greyscale, so the
+//     old readCapped(200 KB) truncation is exactly what made kombit.dk score
+//     "no usable colors" and lose to the squatter.
+const BIG_CSS = '.pad{color:#fdfdfd}'.repeat(20000) + '.brand{color:#eb052f}';
+await withTypedMockFetch(
+  [['cdn.kombit.dk/theme.min.css', cssRoute(BIG_CSS)],
+   ['kombit.dk', htmlRoute(REAL_DK_HTML)]],
+  async () => {
+    ok('big-css: fixture really is over the old 200 KB cap', BIG_CSS.length > 200000);
+    const json = await post({ jdUrl: 'https://kombit.dk/job/1', companyName: 'KOMBIT' });
+    ok('big-css: brand colour past the old cap is still found', json.ok === true && json.navy === '#eb052f');
+  },
+);
+
+// 12b. The page Cloudflare's own network actually gets for www.kombit.com is not
+//      the "Coming Soon" holding page a desktop browser sees - it is a bot
+//      CHALLENGE interstitial whose Tailwind-slate #0f172a was being returned as
+//      KOMBIT's brand. Verbatim text, observed live 2026-08-20 via the proxy.
+const CHALLENGE_HTML =
+  '<html><head><title>Just a moment...</title>' +
+  '<style>body{background:#0f172a;color:#64748b}</style></head>' +
+  '<body><h1>Unable to verify your browser</h1>' +
+  '<p>Please refresh the page to try again.</p><button>Refresh</button></body></html>';
+await withTypedMockFetch(
+  [['cdn.kombit.dk/theme.min.css', cssRoute('.a{color:#eb052f}.b{color:#eb052f}')],
+   ['kombit.com', htmlRoute(CHALLENGE_HTML)],
+   ['kombit.dk', htmlRoute(REAL_DK_HTML)]],
+  async () => {
+    const json = await post({ jdUrl: '', companyName: 'KOMBIT', tldHints: ['dk'] });
+    ok('challenge: a bot-challenge interstitial is not sampled as a brand',
+      json.ok === true && json.navy !== '#0f172a');
+    ok('challenge: resolves past it to the real employer host', /kombit\.dk/.test(json.sampledHost || ''));
+  },
+);
+
+// 13. A REAL page that merely mentions "coming soon" in its body is NOT parked —
+//     the guard must not start refusing ordinary employer sites.
+const CHATTY = '<html><head><title>Acme Robotics</title><style>a{color:#123456}</style></head><body>' +
+  '<p>Our next product is coming soon.</p>' + 'We build robots for industry. '.repeat(80) + '</body></html>';
+await withTypedMockFetch([['acmerobotics.com', htmlRoute(CHATTY)]], async () => {
+  const json = await post({ jdUrl: '', companyName: 'Acme Robotics' });
+  ok('parked-guard: a content-rich page saying "coming soon" is still sampled',
+    json.ok === true && json.navy === '#123456');
+});
+
 console.log(`\n${pass} assertions passed.`);

@@ -29,6 +29,7 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 ## ACTIVE CLAIMS
 
 <!-- SHIFT:BEGIN — one JSON object per line; managed by scripts/shift.mjs, safe to hand-edit a line if a session died without releasing -->
+{"id":"sh_mt170qy6_ev01","started":"2026-08-20T07:22:36.272Z","host":"GabyPC2","worktree":null,"branch":"HEAD","range":"1.51.4346-1.51.4365","task":"LLM-COST-MISTRAL-RATE-001 + gemini rate correction across all three price tables","beat":"2026-08-20T07:22:36.445Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

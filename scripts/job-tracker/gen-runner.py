@@ -1042,19 +1042,67 @@ def _flabel(language, key):
 # (seen live in the KOMBIT letter, 2026-08-20). Canonical keys stay English
 # (ordering + de-duplication key off them); only the DISPLAYED label follows the
 # letter's language, exactly as _flabel does for the foundation block.
-_WHO_FURNITURE = {
+# Covers EVERY visible CL lead-in label, not just the WHO rows: the `why` label
+# comes from the captured (English) skeleton and role_view/bring/contribute are
+# English literals in the builders below - all four render as bold lead-ins above
+# Danish prose. The generated sub-row labels ("Målt effekt", ...) are already in
+# the letter's language and pass through untouched.
+_CL_LABEL_FURNITURE = {
     "en": {"Who I am": "Who I am", "Professional summary": "Professional summary",
-           "How I operate": "How I operate", "Eligibility": "Eligibility", "My goal": "My goal"},
+           "How I operate": "How I operate", "Eligibility": "Eligibility", "My goal": "My goal",
+           "Why this company and role": "Why this company and role",
+           "How I see the role": "How I see the role", "What I bring": "What I bring",
+           "How I will contribute": "How I will contribute",
+           "Foundation": "Foundation", "Hands-on": "Hands-on",
+           "Professionally": "Professionally"},
     "da": {"Who I am": "Hvem jeg er", "Professional summary": "Professionel profil",
            "How I operate": "Sådan arbejder jeg", "Eligibility": "Berettigelse",
-           "My goal": "Mit mål"},
+           "My goal": "Mit mål",
+           "Why this company and role": "Hvorfor netop denne virksomhed og rolle",
+           "How I see the role": "Sådan ser jeg rollen", "What I bring": "Det, jeg bringer med",
+           "How I will contribute": "Sådan vil jeg bidrage",
+           "Foundation": "Grundlag", "Hands-on": "Praktisk",
+           "Professionally": "Fagligt"},
     "sv": {"Who I am": "Vem jag är", "Professional summary": "Professionell profil",
            "How I operate": "Så arbetar jag", "Eligibility": "Behörighet",
-           "My goal": "Mitt mål"},
+           "My goal": "Mitt mål",
+           "Why this company and role": "Varför just detta företag och denna roll",
+           "How I see the role": "Så ser jag rollen", "What I bring": "Det jag bidrar med",
+           "How I will contribute": "Så kommer jag att bidra",
+           "Foundation": "Grund", "Hands-on": "Praktiskt",
+           "Professionally": "Professionellt"},
 }
 def _wlabel(language, key):
-    w = _WHO_FURNITURE.get(language) or _WHO_FURNITURE["en"]
-    return w.get(key) or _WHO_FURNITURE["en"].get(key) or key
+    w = _CL_LABEL_FURNITURE.get(language) or _CL_LABEL_FURNITURE["en"]
+    return w.get(key) or _CL_LABEL_FURNITURE["en"].get(key) or key
+
+# Fallback intros used when the model omits the lead sentence. English literals
+# here leak a whole English SENTENCE into a Danish/Swedish letter, not just a label.
+_CL_FALLBACK_INTRO = {
+    "role_view": {"en": "The work appears to centre on three connected priorities:",
+                  "da": "Arbejdet ser ud til at samle sig om tre sammenhængende prioriteter:",
+                  "sv": "Arbetet verkar samlas kring tre sammanhängande prioriteringar:"},
+    "contribute": {"en": "In the first months I would focus on a few concrete priorities:",
+                   "da": "I de første måneder ville jeg fokusere på nogle få konkrete prioriteter:",
+                   "sv": "Under de första månaderna skulle jag fokusera på några konkreta prioriteringar:"},
+}
+def _cintro(sid, language):
+    f = _CL_FALLBACK_INTRO[sid]
+    return f.get(language) or f["en"]
+
+def _localise_cl_labels(cl, language):
+    """WHO-LANG-001 (widened): map every CANONICAL ENGLISH lead-in label to the
+    letter's language. Exact-match only, so a label the model already wrote in
+    the target language is never touched. One pass at the end catches the
+    skeleton-sourced labels too (the `why` lead-in is not built here at all)."""
+    if not language or language == "en":
+        return cl
+    for sec in cl or []:
+        for it in (sec.get("items") or []):
+            b = (it or {}).get("b")
+            if b and b in _CL_LABEL_FURNITURE["en"]:
+                it["b"] = _wlabel(language, b)
+    return cl
 
 # Nordic-Minimal compaction targets (~1.5-2 pages). Trims the verbose MAIN-column
 # blocks; leaves the short sidebar furniture intact. Tunable; logs what it cut
@@ -1861,7 +1909,7 @@ def build_structured_sections(sk, sections, company, role, language="en", hm="")
             wi = next((i for i, x in enumerate(cl) if x.get("id") == "why"), -1)
             cl.insert(wi + 1 if wi >= 0 else 0, rv)
         rv["items"] = ([{"b": "How I see the role",
-                         "t": rvintro or "The work appears to centre on three connected priorities:",
+                         "t": rvintro or _cintro("role_view", language),
                          "bullets": []}]
                        + [{"b": sanitize_text(rr[0]), "t": _cap_line(sanitize_text(rr[1]), 120), "mk": True}
                           for rr in rvrows])
@@ -1915,7 +1963,7 @@ def build_structured_sections(sk, sections, company, role, language="en", hm="")
         cbul = cbul[:3]                                   # owner-locked: EXACTLY three bullets
         if cbul:
             items = [{"b": "How I will contribute",
-                      "t": cintro or "In the first months I would focus on a few concrete priorities:", "bullets": []}]
+                      "t": cintro or _cintro("contribute", language), "bullets": []}]
             items += [{"b": "", "t": b, "mk": True} for b in cbul]
             # The closing is a PLAIN line (no bold label), matching the app skeleton.
             if goal: items.append({"b": "", "t": goal, "bullets": []})
@@ -1972,6 +2020,7 @@ def build_structured_sections(sk, sections, company, role, language="en", hm="")
                 "contribute", "who", "foundation", "closure"]
     known = [s for sid in V5_ORDER for s in cl if s.get("id") == sid]
     cl = known + [s for s in cl if s.get("id") not in V5_ORDER]
+    cl = _localise_cl_labels(cl, language)
     return cv, cl
 
 # Standing 3-concept specialisation line (SPEC-CATCHY-001) per language — the

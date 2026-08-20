@@ -76,6 +76,29 @@ MODEL_HIGH  = os.environ.get("ANTCV_MODEL_HIGH",  "claude-opus-4-8")
 # (see _prov_for), so a quick(openai)/high(anthropic) mix routes correctly.
 MODEL_QUICK = os.environ.get("ANTCV_MODEL_QUICK", "gpt-5-mini")
 
+# PROVIDER-FALLBACK-CHAIN-001 (2026-08-20): a provider running out of credit is
+# a PROVIDER outage, not a batch outage. On 2026-08-20 the nightly aborted its
+# whole queue on an Anthropic "credit balance is too low" 400 while OpenAI,
+# Gemini and Mistral were all healthy on the same proxy — one dead key cost the
+# night's only queued row. So a billing/quota signature now retires THAT
+# provider for the run and re-drives the row on the next model in its tier's
+# chain; the batch aborts only when every provider in the chain is exhausted.
+# Chains are ordered best-first per tier and every entry was probed live
+# (2026-08-20) against cv-proxy /v1/messages. The tier's configured model always
+# leads, so ANTCV_MODEL_HIGH/QUICK overrides keep working.
+MODEL_CHAIN_HIGH = [MODEL_HIGH, "claude-opus-4-8", "gpt-5", "gemini-2.5-pro", "mistral-large-latest"]
+MODEL_CHAIN_QUICK = [MODEL_QUICK, "gpt-5-mini", "gemini-2.5-flash", "mistral-small-latest"]
+
+def _chain_for(tier):
+    """Ordered (model, provider) fallbacks for a tier, first-listed first and
+    de-duplicated by PROVIDER (a second model on a dead key is still dead)."""
+    seen, out = set(), []
+    for m in (MODEL_CHAIN_HIGH if tier == "high" else MODEL_CHAIN_QUICK):
+        pv = _prov_for(m)
+        if not m or pv in seen: continue
+        seen.add(pv); out.append((m, pv))
+    return out
+
 def _prov_for(model):
     m = str(model or "").lower()
     if m.startswith("gpt") or m.startswith("o1") or m.startswith("o3"): return "openai"
@@ -760,6 +783,7 @@ def cmd_run(args):
                              % (f.get("name") or "file", str(f["text"])[:3000]))
         return "\n".join(parts) or None
     results_index = []
+    dead_provs = set()   # PROVIDER-FALLBACK-CHAIN-001: providers retired for this run
     for r in todo:
         uk = r["uk"]
         language = detect_language(r["jd"])
@@ -802,18 +826,36 @@ def cmd_run(args):
         # the HIGH tier only. Run it on EVERY gen now, so quick-tier apps also get the final
         # cross-section cleanup. Escape hatch for cost: ANTCV_COHERENCE=high-only reverts.
         _coh_mode = os.environ.get("ANTCV_COHERENCE", "all")
-        res = drive(sections, prov, model,
-                    source_cv=json.dumps(profile, ensure_ascii=False)[:38000], jd_text=r["jd"],
-                    skip_coherence=(_coh_mode == "high-only" and r["tier"] != "high"))
+        # PROVIDER-FALLBACK-CHAIN-001: drive on the tier's model, and on a
+        # billing/quota signature retire that provider for the rest of the run
+        # and re-drive on the next healthy one instead of killing the batch.
+        _tried_here = []
+        while True:
+            if prov in dead_provs:
+                nxt = next(((m, pv) for m, pv in _chain_for(r["tier"]) if pv not in dead_provs), None)
+                if not nxt: break
+                model, prov = nxt
+                print(f"   [provider-fallback] {'/'.join(sorted(dead_provs))} exhausted -> re-driving on {prov}:{model}")
+            _tried_here.append(prov)
+            res = drive(sections, prov, model,
+                        source_cv=json.dumps(profile, ensure_ascii=False)[:38000], jd_text=r["jd"],
+                        skip_coherence=(_coh_mode == "high-only" and r["tier"] != "high"))
+            pexh = provider_exhausted(res)
+            if not pexh: break
+            dead_provs.add(prov)
+            print(f"   PROVIDER OUT OF CREDIT/QUOTA ({prov}): {pexh}")
+            if not any(pv not in dead_provs for _m, pv in _chain_for(r["tier"])):
+                break
         dt = round(time.time() - t0, 1)
-        pexh = provider_exhausted(res)
         if pexh:
-            print(f"   PROVIDER OUT OF CREDIT/QUOTA: {pexh}")
-            print("   ABORTING BATCH — the shared server key is exhausted; every remaining "
-                  "row would fail the same way (each wastes a /job/create). Owner must top up "
-                  "billing (Anthropic credit / OpenAI quota) before this batch can run.")
-            results_index.append({"uk": uk, "error": pexh, "provider_blocked": True})
+            print("   ABORTING BATCH - every provider in the %s chain is out of credit/quota "
+                  "(%s). Each further row wastes a /job/create. Owner must top up billing "
+                  "before this batch can run." % (r["tier"], ", ".join(sorted(dead_provs))))
+            results_index.append({"uk": uk, "error": pexh, "provider_blocked": True,
+                                  "dead_providers": sorted(dead_provs)})
             break
+        if len(_tried_here) > 1:
+            print(f"   [provider-fallback] generated on {prov}:{model} after {' -> '.join(_tried_here[:-1])} exhausted")
         if res.get("error"):
             print(f"   FAILED: {res['error']}"); results_index.append({"uk": uk, "error": res["error"]}); continue
         # quality probe
@@ -991,6 +1033,28 @@ _FOUNDATION_FURNITURE = {
 def _flabel(language, key):
     f = _FOUNDATION_FURNITURE.get(language) or _FOUNDATION_FURNITURE["en"]
     return f.get(key) or _FOUNDATION_FURNITURE["en"][key]
+
+# WHO-LANG-001 (2026-08-20): same defect class, different block. The WHO I AM
+# parser recognises Danish/Swedish labels on INPUT ("profil", "sådan arbejder
+# jeg", "mit mål") and then canonicalises every row to the ENGLISH literal it
+# also DISPLAYS - so a Danish letter shipped "Who I am / Professional summary /
+# How I operate / Eligibility / My goal" as visible labels above Danish prose
+# (seen live in the KOMBIT letter, 2026-08-20). Canonical keys stay English
+# (ordering + de-duplication key off them); only the DISPLAYED label follows the
+# letter's language, exactly as _flabel does for the foundation block.
+_WHO_FURNITURE = {
+    "en": {"Who I am": "Who I am", "Professional summary": "Professional summary",
+           "How I operate": "How I operate", "Eligibility": "Eligibility", "My goal": "My goal"},
+    "da": {"Who I am": "Hvem jeg er", "Professional summary": "Professionel profil",
+           "How I operate": "Sådan arbejder jeg", "Eligibility": "Berettigelse",
+           "My goal": "Mit mål"},
+    "sv": {"Who I am": "Vem jag är", "Professional summary": "Professionell profil",
+           "How I operate": "Så arbetar jag", "Eligibility": "Behörighet",
+           "My goal": "Mitt mål"},
+}
+def _wlabel(language, key):
+    w = _WHO_FURNITURE.get(language) or _WHO_FURNITURE["en"]
+    return w.get(key) or _WHO_FURNITURE["en"].get(key) or key
 
 # Nordic-Minimal compaction targets (~1.5-2 pages). Trims the verbose MAIN-column
 # blocks; leaves the short sidebar furniture intact. Tunable; logs what it cut
@@ -1771,7 +1835,10 @@ def build_structured_sections(sk, sections, company, role, language="en", hm="")
     wrows.sort(key=lambda r: _worder.index(r["b"]) if r["b"] in _worder else len(_worder))
     ws_ = _ov_find(cl, "who")
     if ws_ and wrows:
-        ws_["items"] = [{"b": "Who I am", "t": wlead, "bullets": []}] + wrows
+        # WHO-LANG-001: display the labels in the LETTER's language (the canonical
+        # English keys above drive order + de-duplication only).
+        ws_["items"] = ([{"b": _wlabel(language, "Who I am"), "t": wlead, "bullets": []}]
+                        + [{**r, "b": _wlabel(language, r["b"])} for r in wrows])
         ws_["leadColon"] = True
     else:
         set_lead(cl, "who", _cap_para(wraw, 300))

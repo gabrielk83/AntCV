@@ -302,3 +302,41 @@ opposite of the LLM-COST-CLAUDE-RATE-001 direction: mistral was being *over*-pen
 - Historical `llm_calls.estimated_cost_usd` rows stay overstated (no backfill). Raw token counts are
   intact, so any re-scoring can recompute — as this addendum does.
 - Owner call on `--min-calls` for low-traffic roles (unchanged from the run above).
+
+## DEPLOYED — 2026-08-20 (owner: "deploy now")
+
+Desktop `npx wrangler deploy --env=""`, one deployer at a time, `/health` verified after each.
+CI worker deploys stay broken (expired Cloudflare token, since 2026-08-04), so the desktop path was used.
+Authenticated as the owner's OAuth token (account `17c026b6d08c3e0ba63425cb26a5a7d9`).
+
+| worker | version id | `/health` |
+|---|---|---|
+| `cv-proxy` | `7f8e0938-093e-4e4f-bf65-4f4f57d8a501` | 200 |
+| `antcv-demo-proxy` | `256f8397-58fa-4f46-94c3-02e5599850b6` | 200 |
+| `antcv-access-relay` | `63c58cca-a707-4eec-91bf-76e8cfe7cf15` | 200 |
+| `docx-worker` (untouched) | — | 200 |
+
+`MODEL_ROLES` read back unchanged on both proxies at deploy time
+(`{"writer":"anthropic","supervisor":"m...`), confirming NO FLIP shipped alongside the rate fix.
+
+Each deploy also carried its worker's already-landed backlog: proxy/demo-proxy picked up the
+`1.51.4167-evidence-qa` generator rules, access-relay picked up `LLM-COST-D1-REFERENCE-STALE-001`
+(`9c2c82a`) and the `1.51.4146-appload-fixes` batch. All were registered fixes already on `main`.
+
+### Live verification
+
+No LLM traffic has landed since 2026-08-19 11:26, so there is no post-deploy row to read yet.
+Verified instead by running the relay's **exact** lookup query against production D1 for every model
+in live traffic:
+
+| provider / model | D1 now returns |
+|---|---|
+| claude / claude-sonnet-5 | [3.00, 15.00] |
+| openai / gpt-5.4-mini | [0.75, 4.50] |
+| mistral / mistral-large-latest | **[0.50, 1.50]** |
+| gemini / gemini-2.5-flash | **[0.30, 2.50]** |
+
+All four now resolve, where before **none of them did**. Concretely, the last mistral row written
+(`llm_calls` id 9483, 3,787 in + 103 out) logged **$0.012288** — exactly the old `{3,9}` — and the
+same call priced through the live path today is **$0.002048**. Since D1 is the first branch, correct
+pricing is in force immediately; the deployed worker `RATES` is the correct second branch behind it.

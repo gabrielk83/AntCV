@@ -146,14 +146,26 @@ async function estimateCostUsd(env, provider, model, promptTokens, completionTok
     return Number.isFinite(cost) ? Number(cost.toFixed(6)) : null;
   };
   try {
+    // LLM-COST-EFFECTIVE-FROM-001 (nightly 2026-08-21): the lookup took the
+    // newest row unconditionally, so effective_from only ever meant "insert
+    // order" — a row dated in the FUTURE would price today's traffic from
+    // the moment it was inserted. That makes the column unusable for its one
+    // job: staging an announced price change ahead of its start date. The
+    // 2026-08-20 gemini correction happened to be back-dated to that same
+    // day, so nothing mispriced; the hazard is the next pre-staged change.
+    // Pick the newest row whose effective_from has actually ARRIVED (a NULL
+    // effective_from is treated as always-in-effect, matching the old
+    // behaviour for rows that never carried a date).
+    const nowSec = Math.floor(Date.now() / 1000);
     const row = await env.DB
       .prepare(
         `SELECT prompt_cost_per_1m_tokens AS p, completion_cost_per_1m_tokens AS c
          FROM llm_provider_costs
          WHERE provider = ? AND model = ?
+           AND (effective_from IS NULL OR effective_from <= ?)
          ORDER BY effective_from DESC LIMIT 1`
       )
-      .bind(provider, model || '')
+      .bind(provider, model || '', nowSec)
       .first();
     if (row) {
       const cost = price(row.p, row.c);

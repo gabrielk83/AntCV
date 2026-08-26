@@ -168,8 +168,12 @@ four — they archive on the next run that agrees, which is the point.
 next sweep", not live in the browser. An always-on client-side check was deliberately NOT added —
 see the sidecar-global-observer and island-rAF-freeze precedents.
 
-**Owner action:** add the sweep command to the `antcv-position-discovery` and
-`antcv-job-tracker-nightly` stored prompts, and point their source step at `job_sources.py`.
+**Stored prompts: DONE 2026-08-26 (owner-approved).** Both scheduled tasks were updated in
+`~/.claude/scheduled-tasks/`, so no run has to re-derive any of this:
+`antcv-position-discovery` gained a step 1a (`check-postings.py check --apply`) and its source
+step now routes jobindex + jobbank through `job_sources.py`; `antcv-job-tracker-nightly` gained a
+step 1b running the same sweep before it selects rows, so a dead posting cannot consume a model
+call. This section remains the authority if the prompts and the repo ever disagree.
 
 ### Demand-seed step 4 — the stored task prompt is WRONG (found 2026-08-18)
 

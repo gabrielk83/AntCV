@@ -147,9 +147,13 @@ never in the shared clone.
 
 ## OPEN (carry forward)
 
-- **Owner-owed: post-deploy live-verify** — confirm `antcv.pages.dev` serves
-  `antcv-cluster-demand.js?v=1.51.4386-demand-seed-refresh` and that a JD classify
-  still returns a sane cluster. PWA auto-deploys from `main`.
+- **Post-deploy live-verify — DONE this run, not owed.** After the merge,
+  `antcv.pages.dev` serves `sw.js` CACHE `antcv-1.51.4386-demand-seed-refresh`,
+  `index.html` references `antcv-cluster-demand.js?v=1.51.4386-demand-seed-refresh`,
+  and the deployed asset carries `var VERSION = '1.51.4386'` plus the new
+  `Enterprise platform & SaaS ecosystem engineering` item. Sidecar behaviour was
+  proved pre-merge in the sandbox load. **Not** exercised: an in-app JD classify
+  against a real posting — that needs a signed-in browser session.
 - **CSE-PROXY-GOOGLE-ENTITLEMENT-001** — Google CSE itself stays dead; not
   re-tested this run, per the routine's own instruction. Superseded in practice by
   the Brave backend, which is live — see the new row 102 for why the routine still

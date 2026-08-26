@@ -30,6 +30,10 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 
 <!-- SHIFT:BEGIN — one JSON object per line; managed by scripts/shift.mjs, safe to hand-edit a line if a session died without releasing -->
 {"id":"sh_mt9yl4uc_cddb","started":"2026-08-26T10:36:26.438Z","host":"GabyPC2","worktree":null,"branch":"claude/ecstatic-swirles-b27170","range":"1.51.4366-1.51.4385","task":"IMPORT-REWRAP-DROPS-PHOTO-001 + Anita persona photo (row 18)","beat":"2026-08-26T10:36:26.520Z"}
+<<<<<<< HEAD
+=======
+{"id":"sh_mt9yt5cy_for8","started":"2026-08-26T10:42:40.356Z","host":"GabyPC2","worktree":null,"branch":"HEAD","range":"1.51.4386-1.51.4405","task":"demand-seed-weekly","beat":"2026-08-26T10:42:40.548Z"}
+>>>>>>> b458d26 (chore(shift): claim 1.51.4386-1.51.4405 — demand-seed-weekly)
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

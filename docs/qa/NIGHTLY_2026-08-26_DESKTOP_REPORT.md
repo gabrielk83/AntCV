@@ -153,6 +153,32 @@ Zero references to the old version remain in `index.html`.
 - **CI-CF-TOKEN-EXPIRED-001** — rotate the Actions `CLOUDFLARE_API_TOKEN`; worker deploys stay
   desktop-only. Not exercised this run (no worker src change).
 
+
+## Version collision mid-run — shipped as `1.51.4406-import-photo`, not 4366
+
+The parallel `antcv-demand-seed-weekly` routine pushed `1.51.4386-demand-seed-refresh` while this
+fix was being written, putting the claimed lane (1.51.4366–1.51.4385) **below** the deployed
+high-water mark. Shipping under 4366 would have moved the deployed version backwards. Released that
+lane, claimed **1.51.4406–1.51.4425**, re-bumped the whole quintet, re-ran every gate, then released.
+The `fix(import): …` commit subject still carries the superseded 4366 label; the follow-up
+`chore(cache-bust): …` commit records the correction. **The shipped version is `1.51.4406-import-photo`.**
+
+Worth noting for the next run: `origin/main` carried a **split quintet** before this ship — the
+demand-seed change did not touch `app.js`, so it moved `sw.js` CACHE / `TARGET_VERSION` /
+version-override's own `?v` to 4386 but left `app.js?v`, the `ANTCV_VERSION` seed and the three
+assets `hdr-type-controls.test.mjs` pins at 4346. That is legal (bump the changed file's own `?v`)
+but it means a later app.js ship must reconcile two different starting numbers, not one.
+
+## Live attest after deploy — ALL GREEN
+
+- `antcv.pages.dev/sw.js` CACHE = **`antcv-1.51.4406-import-photo`** — matches repo HEAD, deploy is live.
+- `antcv.pages.dev/app.js?v=1.51.4406-import-photo` → HTTP **200**, and the served bundle contains
+  the fix byte-for-byte (`n=n.photo?{personalInfo:n,photo:n.photo}:{personalInfo:n}`, 1 occurrence).
+  This is a real ship, not a stale-`?v` phantom.
+- Worker `/health`: access-relay **200**, demo-proxy **200**, cv-proxy **200**, docx-worker **200**.
+- Repo quintet consistent: sw.js CACHE == TARGET_VERSION == ANTCV_VERSION seed == `app.js?v` ==
+  `1.51.4406-import-photo`; `STALE_VERSIONS` gained the previous target `1.51.4386-demand-seed-refresh`.
+
 ## Per-row status, this run
 
 | Row | Status this run |

@@ -1426,7 +1426,7 @@ _verified: 2026-08-26_
 **OPEN-queue row (verbatim):**
 
 ```
-| 105 | JOBSRC-FETCH-001 follow-through — teach the discovery routine to CALL `job_sources.py` instead of hand-fetching board search pages, and re-audit the other 3 mandatory sources (LinkedIn guest, TheHub, Google Jobs) for the same silent-dry failure mode | FIXED 2026-08-26 (fetchers shipped + live-verified against both boards; tests 15/15). OPEN leg: the routine prompt is an ACCOUNT-LEVEL scheduled task a run cannot edit — until its step 2 names `job_sources.py`, `docs/qa/SCHEDULED_ROUTINES.md` "Position-discovery sources" is the authority. LinkedIn guest search WAS verified working this run (it returned 54 + 60 + 20 + 12 rows across four queries); TheHub returned 15; Google Jobs not separately exercised. verified: 2026-08-26 |
+| 105 | JOBSRC-FETCH-001 follow-through — teach the discovery routine to CALL `job_sources.py` instead of hand-fetching board search pages, and re-audit the other 3 mandatory sources (LinkedIn guest, TheHub, Google Jobs) for the same silent-dry failure mode | FIXED 2026-08-26 (fetchers shipped + live-verified against both boards; tests 15/15). Prompt leg CLOSED same day (owner-approved): the account-level `antcv-position-discovery` task now routes jobindex + jobbank through `job_sources.py`. LinkedIn guest search WAS verified working this run (it returned 54 + 60 + 20 + 12 rows across four queries); TheHub returned 15; Google Jobs not separately exercised. verified: 2026-08-26 |
 ```
 
 ---
@@ -1440,7 +1440,7 @@ _verified: 2026-08-26_
 **OPEN-queue row (verbatim):**
 
 ```
-| 106 | POSTING-OBSOLETE-001 follow-through — wire `check-postings.py --apply` into the twice-weekly discovery run and the nightly, and settle the 4 rows sitting on strike 1 | FIXED 2026-08-26 (sweep + archive + generator belt shipped; 17 rows archived on the first live run). OPEN legs: (a) the scheduled-task prompts need the sweep step added (account-level, owner action — see SCHEDULED_ROUTINES.md); (b) Scarlet 410 / GEA 404 / Trackman 404 / spektr 404 hold at strike 1 and archive on the NEXT run that agrees — by design, do not force them; (c) the sweep is script-side only, so "as soon as" means "at the next sweep", not live in the browser — an on-open client check was deliberately NOT added (see the sidecar-observer and rAF-freeze precedents). verified: 2026-08-26 |
+| 106 | POSTING-OBSOLETE-001 follow-through — wire `check-postings.py --apply` into the twice-weekly discovery run and the nightly, and settle the 4 rows sitting on strike 1 | FIXED 2026-08-26 (sweep + archive + generator belt shipped; 17 rows archived on the first live run). Legs (a) and (b) CLOSED same day: (a) both scheduled-task prompts now run the sweep (discovery step 1a, nightly step 1b) — owner-approved; (b) a second sweep agreed on all four 404s, so Scarlet / GEA / Trackman / spektr archived through the normal two-strike path — **25 rows archived, 52 live**. Remaining: (c) the sweep is script-side only, so "as soon as" means "at the next sweep", not live in the browser — an on-open client check was deliberately NOT added (see the sidecar-observer and rAF-freeze precedents). verified: 2026-08-26 |
 ```
 
 ---

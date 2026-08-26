@@ -1,6 +1,6 @@
 # AntCV Desktop Nightly — 2026-08-26 (Opus 5)
 
-**Shipped `1.51.4366-import-photo`.** One fix, root-caused and locked, on the stalest open
+**Shipped `1.51.4406-import-photo`.** One fix, root-caused and locked, on the stalest open
 register row. No worker deploy needed (the worker change is a test-only diag).
 
 Model: Opus 5 ran every task in this run — diagnosis, both-bundle splice, tests, registers.
@@ -14,7 +14,7 @@ No subagents; the work was one serial chain and fan-out would have added content
   worktree `.claude/worktrees/vigilant-hopper-c2abaa`.
 - SYNC FIRST: `git fetch origin && git pull --rebase origin main` → fast-forwarded 5 commits to
   `3d26fcf` (the 08-26 CI nightly report). Baseline release `1.51.4346-cost-rates`.
-- Shift lane claimed: **1.51.4366 – 1.51.4385** (`sh_mt9yl4uc_cddb`). One number consumed.
+- Shift lane claimed: **1.51.4406 – 1.51.4385** (`sh_mt9yl4uc_cddb`). One number consumed.
 
 ## Baseline verification (before any edit) — all green
 
@@ -41,7 +41,7 @@ row 25 stays open and is now the stalest remaining row.
 Bands A / B / C were not re-opened: A1 and A2 legs 1-2 are shipped and their remaining verification is
 the same signed-in / real-device work that is blocked below, and nothing in B / C had a new signal.
 
-## SHIPPED — IMPORT-REWRAP-DROPS-PHOTO-001 + ANITA-PERSONA-NO-PHOTO-001 (`1.51.4366-import-photo`)
+## SHIPPED — IMPORT-REWRAP-DROPS-PHOTO-001 + ANITA-PERSONA-NO-PHOTO-001 (`1.51.4406-import-photo`)
 
 Register row 18 has carried two owner complaints against the Anita demo export since 2026-07-02 —
 "docx missing photo" and "PDF contact placement/size". The 2026-07-03 triage called them
@@ -127,7 +127,7 @@ Filed as **IMPORT-REWRAP-SIBLING-DROP-001** (row 102).
   within-tolerance mount-settle transient.
 - `node scripts/run-docx-diags.mjs`: **51 / 51**.
 
-### Cache-bust quintet → `1.51.4366-import-photo`
+### Cache-bust quintet → `1.51.4406-import-photo`
 
 `index.html` `app.js?v` + version-override's own `?v` + `ANTCV_VERSION` seed + `sw.js` CACHE +
 `TARGET_VERSION`; `STALE_VERSIONS` gained the **previous** target `1.51.4346-cost-rates` (never the
@@ -157,7 +157,7 @@ Zero references to the old version remain in `index.html`.
 
 | Row | Status this run |
 |---|---|
-| **18** | **ADVANCED + partly FIXED** — photo legs root-caused, fixed, locked (`1.51.4366`); CL foundation/bring/interests leg still owed to a live-model gen. Re-dated 2026-08-26. |
+| **18** | **ADVANCED + partly FIXED** — photo legs root-caused, fixed, locked (`1.51.4406`); CL foundation/bring/interests leg still owed to a live-model gen. Re-dated 2026-08-26. |
 | **102** (new) | **FILED** — IMPORT-REWRAP-SIBLING-DROP-001, the named residual. |
 | 1 / 11 / 16 / 17 / 23 | **VERIFIED today by the CI nightly** (`NIGHTLY_2026-08-26_CI_REPORT.md`); re-confirmed here indirectly by the green 1628 suite + copenhagen-storm PASS + docx 51/51. Not re-swept. |
 | 35 / 36 / 37 | **BLOCKED** — static anchors green in the suite; live regen-confirm needs the signed-in pane. |

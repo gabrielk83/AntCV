@@ -24,7 +24,7 @@ image, and the band-overlap contact bridge (which is correctly gated on `photo_b
 fired — the "docx missing photo" + "PDF contact placement" pair in `OPEN_REGISTER.md` row 18.
 Adding the field alone was not enough: the settings importer rewrapped an unwrapped
 personalInfo blob *before* reading its top-level `photo`, silently dropping it
-(IMPORT-REWRAP-DROPS-PHOTO-001, fixed 1.51.4366). Both halves are needed for a re-import to
+(IMPORT-REWRAP-DROPS-PHOTO-001, fixed 1.51.4406). Both halves are needed for a re-import to
 produce a photo. Locked by `pwa/test/unit/import-rewrap-keeps-photo.test.mjs` and
 `workers/docx-worker/test/diag-photo-absent-gating.mjs`.
 

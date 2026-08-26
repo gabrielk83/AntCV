@@ -37716,7 +37716,9 @@
                                           "[settings import] unwrapped personalInfo detected; rewrapping. Fields:",
                                           Object.keys(n),
                                         ),
-                                        (n = { personalInfo: n })),
+                                        (n = n.photo
+                                          ? { personalInfo: n, photo: n.photo }
+                                          : { personalInfo: n })),
                                       n.apiKey && vt(n.apiKey),
                                       n.proxyUrl && xt(n.proxyUrl),
                                       n.openaiKey && Et(n.openaiKey),

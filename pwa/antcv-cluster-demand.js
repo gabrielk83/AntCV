@@ -11,20 +11,25 @@
  * data_analytics / consulting / executive / finance / people_soft) are stage-4
  * research-derived from current market postings, refreshed weekly per
  * docs/deployment/google-cse-setup.md (docs/analysis/
- * cluster_top20_research_2026-08-18.json, latest - supersedes the 2026-08-14
- * revision; ad-hoc dispatch only 4 days after it, so this run is a GAP-FILL from
- * sources earlier runs had not reached, not a week-over-week market move. 6 of 9
- * clusters changed, 3 re-confirmed unchanged (research_phd, data_analytics,
- * executive). Theme: hard posting-share data beats AI-hype in rank order -
- * IT-Branchen's Jobindex analysis (security 18.8% of Danish IT postings > cloud
- * 14.5% > AI/ML 12.3%) moved engineering_software's secure-coding item 7->5, and
- * two HR datasets (data analysis 36% vs AI 31% of new-skill postings; AI named in
- * only ~9% of HR postings) moved people_soft's people-analytics item 6->3. The EU
- * regulatory calendar moved consulting: the AI Act high-risk deadline (2026-08-02)
- * added "AI governance, risk & EU AI Act conformity advisory" at r16, and Omnibus I
- * (~85% fewer companies in CSRD scope) dropped the ESG advisory item out of the
- * top 20. Wording broadenings: pm_process r3 names emotional intelligence,
- * photonics_eng r15 names photonic packaging & assembly, finance r17 adds MBA) -
+ * cluster_top20_research_2026-08-26.json, latest - supersedes the 2026-08-18
+ * revision; normal 8-day weekly cadence. 7 of 9 clusters changed, 2
+ * re-confirmed unchanged (research_phd, data_analytics). Theme: the DELIVERY
+ * and PLATFORM layers were under-weighted. Three promotions - photonic
+ * packaging & assembly 15->9 (2026 is the first year of large-scale silicon-
+ * photonics commercialisation; CPO postings make fiber attach and optical
+ * coupling hard requirements), consulting change-management 15->11 renamed to
+ * name value realisation (BCG booked ~25% of 2025 revenue from AI work and
+ * hires change-management/value-realisation leaders), and finance business-
+ * partnering 8->4 (57% of FP&A postings vs 43% for AI in the same 5,000-
+ * posting study). engineering_software gains r16 "Enterprise platform & SaaS
+ * ecosystem engineering (SAP / Oracle / Salesforce / Workday)" - four of the
+ * seven most-posted 2026 technology skills - and drops performance profiling.
+ * Wording broadenings: pm_process names hybrid delivery + the Jira/Asana/MS
+ * Project/Smartsheet tool stack, photonics_eng names DCA/OSA/BERT, executive
+ * names continuous succession management and leads r13 with AI-governance
+ * oversight, people_soft adds Oracle/Visier to the HRIS item. No AI item was
+ * demoted anywhere; executive AI was NOT promoted, because its evidence is a
+ * skills-gap survey rather than posting share) -
  * together the 9 clusters the 12 categories fold into. This is the
  * cold-start fallback; the live D1 path (antcv-cluster-demand-live.js) overtakes
  * it once real-JD data accumulates.
@@ -44,7 +49,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.4306';
+  var VERSION = '1.51.4386';
   if (window.AntcvClusterDemand && window.AntcvClusterDemand.version === VERSION) return;
 
   // Embedded seed (verbatim ranks/share from the analyst-reviewed JSON). Keeping it
@@ -52,7 +57,7 @@
   // recompute ships, this becomes the cold-start fallback only.
   var SEED = {
     pm_process: { label: "PM / Product / Process Management", top20: [
-      [1, "Project management methodology (PMP / Agile / lifecycle)", "none"],
+      [1, "Project management methodology (PMP / Agile / hybrid / lifecycle)", "none"],
       [2, "AI/GenAI tool fluency, agentic workflows & EU AI Act awareness", "ABC"],
       [3, "Stakeholder management, cross-functional coordination, emotional intelligence & conflict resolution", "ABC"],
       [4, "Business/commercial acumen, go-to-market & financial understanding", "ABC"],
@@ -61,7 +66,7 @@
       [7, "Requirements management & translating needs into specs", "AB"],
       [8, "Process design, modelling & documentation (BPM / BABOK / BPMN)", "none"],
       [9, "Process / continuous improvement (Lean / Six Sigma)", "none"],
-      [10, "Project planning, time plans & milestone tracking", "none"],
+      [10, "Project planning, time plans & milestone tracking (Jira / Asana / MS Project / Smartsheet)", "none"],
       [11, "Product lifecycle management (concept to field)", "none"],
       [12, "Supplier / vendor collaboration & spec management", "AB"],
       [13, "ERP / CRM or system-implementation experience", "AB"],
@@ -77,18 +82,18 @@
       [1, "Optical / photonics systems engineering (free-space & fiber)", "BC"],
       [2, "Photonic integrated circuit (PIC) design / sim / tape-out", "none"],
       [3, "Device & sensor / EO characterization", "BC"],
-      [4, "Optical measurement setups, calibration & instrumentation", "BC"],
+      [4, "Optical measurement setups, calibration & instrumentation (DCA / OSA / BERT)", "BC"],
       [5, "Laser systems (seed lasers, amplifiers, stabilization)", "none"],
       [6, "Silicon-photonics test programs & co-packaged optics for AI interconnects", "none"],
       [7, "Test concept development, yield & test-time improvement", "AB"],
       [8, "Quantum technology / QPU context awareness", "BC"],
-      [9, "Foundry PDKs & simulation tools (COMSOL, Zemax, FDTD/Lumerical)", "BC"],
-      [10, "Data acquisition, automation & analysis (Python, LabVIEW, MATLAB)", "BC"],
-      [11, "Requirements capture from customer applications (application engineering)", "AB"],
-      [12, "Patent & IP generation (invention disclosures, patent filings)", "AB"],
-      [13, "IP strategy, patent portfolio & licensing frameworks", "none"],
-      [14, "Multivariate analysis / spectrometer technology", "none"],
-      [15, "Manufacturability, photonic packaging & assembly (fiber attach, cleanroom, IPC/ISO)", "AB"],
+      [9, "Manufacturability, photonic packaging & assembly (fiber attach, cleanroom, IPC/ISO)", "AB"],
+      [10, "Foundry PDKs & simulation tools (COMSOL, Zemax, FDTD/Lumerical)", "BC"],
+      [11, "Data acquisition, automation & analysis (Python, LabVIEW, MATLAB)", "BC"],
+      [12, "Requirements capture from customer applications (application engineering)", "AB"],
+      [13, "Patent & IP generation (invention disclosures, patent filings)", "AB"],
+      [14, "IP strategy, patent portfolio & licensing frameworks", "none"],
+      [15, "Multivariate analysis / spectrometer technology", "none"],
       [16, "Technical leadership & mentoring engineers", "ABC"],
       [17, "Cross-disciplinary R&D collaboration", "ABC"],
       [18, "Supplier coordination & quality issues", "AB"],
@@ -120,7 +125,7 @@
     // ── CLUSTER-QUAL-001 stage 4 (spec 7.6, owner 2026-07-05): the 6 remaining
     // clusters, research-derived from current (2025-2026) market postings +
     // skills reports (Robert Half, LinkedIn, Coursera, CFI, AIHR, Pluralsight,
-    // BLS et al.; sources in docs/analysis/cluster_top20_research_2026-08-18.json).
+    // BLS et al.; sources in docs/analysis/cluster_top20_research_2026-08-26.json).
     // These extend the COLD-START classifier/weighting to all 9 clusters so a
     // targeted JD in software / data / consulting / executive / finance / HR
     // gets real demand weighting from the seed before the user accumulates
@@ -145,9 +150,9 @@
       [13, "Containerisation & orchestration (Docker / Kubernetes)", "none"],
       [14, "API design & microservices (REST / gRPC)", "none"],
       [15, "Infrastructure as code & platform engineering (Terraform / developer portals)", "none"],
-      [16, "Frontend frameworks (React / TypeScript)", "none"],
-      [17, "Code review & mentoring engineers", "none"],
-      [18, "Performance optimisation & profiling", "none"],
+      [16, "Enterprise platform & SaaS ecosystem engineering (SAP / Oracle / Salesforce / Workday)", "AB"],
+      [17, "Frontend frameworks (React / TypeScript)", "none"],
+      [18, "Code review & mentoring engineers", "none"],
       [19, "Cross-functional collaboration & clear technical communication (product, design, docs)", "ABC"],
       [20, "English fluency (Danish an advantage)", "ABC"]
     ] },
@@ -184,11 +189,11 @@
       [8, "Business & commercial judgement", "AC"],
       [9, "Presentation & facilitation skills", "ABC"],
       [10, "Adaptability & fast learning", "ABC"],
-      [11, "Industry / domain expertise", "none"],
-      [12, "Strategic thinking & framing", "AC"],
-      [13, "Analytical rigour & attention to detail", "ABC"],
-      [14, "Market research & competitive analysis", "AB"],
-      [15, "Change management & implementation", "AC"],
+      [11, "Change management, implementation & value realisation", "AC"],
+      [12, "Industry / domain expertise", "none"],
+      [13, "Strategic thinking & framing", "AC"],
+      [14, "Analytical rigour & attention to detail", "ABC"],
+      [15, "Market research & competitive analysis", "AB"],
       [16, "AI governance, risk & EU AI Act conformity advisory", "AB"],
       [17, "Data visualisation & dashboards (Power BI / Tableau)", "AB"],
       [18, "AI output verification & critical judgement (bias, hallucination checks)", "AB"],
@@ -205,10 +210,10 @@
       [7, "P&L ownership & financial stewardship", "none"],
       [8, "Organisational change & transformation leadership", "AB"],
       [9, "Operational excellence & execution", "AB"],
-      [10, "Coaching, culture & talent development", "AB"],
+      [10, "Coaching, culture, talent development & continuous succession management", "AB"],
       [11, "Customer & client centricity / experience ownership", "none"],
       [12, "Financial acumen (EBITDA, balance sheet, ROI)", "none"],
-      [13, "Governance, risk, cybersecurity & ESG/CSRD compliance oversight", "none"],
+      [13, "Governance, risk, cybersecurity & AI-governance oversight (ESG/CSRD where in scope)", "none"],
       [14, "Judgment & decision-making under ambiguity", "ABC"],
       [15, "Cross-functional & enterprise-wide alignment", "AB"],
       [16, "Resilience, adaptability & learning agility", "ABC"],
@@ -221,11 +226,11 @@
       [1, "Advanced Excel & spreadsheet analysis", "ABC"],
       [2, "AI & automation in finance", "ABC"],
       [3, "Financial modelling & forecasting (FP&A)", "none"],
-      [4, "Data analysis, SQL & Python fundamentals", "AB"],
-      [5, "Financial reporting & month-end close", "none"],
-      [6, "BI & data visualisation (Power BI / Tableau)", "AB"],
-      [7, "ERP & finance systems (SAP / Oracle / NetSuite / Tagetik)", "none"],
-      [8, "Business partnering & stakeholder communication", "BC"],
+      [4, "Business partnering & stakeholder communication", "BC"],
+      [5, "Data analysis, SQL & Python fundamentals", "AB"],
+      [6, "Financial reporting & month-end close", "none"],
+      [7, "BI & data visualisation (Power BI / Tableau)", "AB"],
+      [8, "ERP & finance systems (SAP / Oracle / NetSuite / Tagetik)", "none"],
       [9, "Budgeting, planning & variance analysis", "none"],
       [10, "Scenario modelling & sensitivity analysis", "none"],
       [11, "Accounting standards (IFRS / GAAP)", "none"],
@@ -247,7 +252,7 @@
       [5, "Critical thinking, complex problem-solving & judgment", "ABC"],
       [6, "Talent acquisition & full-cycle recruiting, incl. skills-based hiring", "none"],
       [7, "Employee relations & labour-law compliance", "none"],
-      [8, "HRIS & people systems (Workday / SuccessFactors / Power BI)", "none"],
+      [8, "HRIS & people-analytics systems (Workday / SuccessFactors / Oracle / Visier / Power BI)", "none"],
       [9, "Strategic workforce planning & succession planning", "none"],
       [10, "Coaching, influencing, emotional intelligence & learning agility", "AB"],
       [11, "Change management & organisational development", "AB"],

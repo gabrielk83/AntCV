@@ -116,7 +116,7 @@ citing an old number may mean either row — the ID disambiguates.
 | 100 | `GRAB-ZONE-DISMISS-THRESHOLD-001` | 2026-07-29 | + GRAB-ZONE-SCROLL-FORWARD-001 (2026-07-05, PR #332 + same-day follow-up, register-escape). Owner (Android): " |
 | 101 | `ZOOM-FLOOR-001` | 2026-07-29 | (2026-07-05, PR #334, register-escape). Owner: "allow Zoom out down to 10-20, currently it is down to 35%… tha |
 | 19 | `JD-SCOPE-OCC2-GUARD-001` | 2026-08-15 | JD-scope isolation — two-real-device test |
-| 103 | `RELAY-TUNE-COVERAGE-GAP-001` | 2026-08-20 | (found by weekly cost-quality tune 2026-07-13): the tune loop is blind to 100% of real traffic and can never f |
+| 103 | `RELAY-TUNE-COVERAGE-GAP-001` | 2026-08-26 | (found by weekly cost-quality tune 2026-07-13): the tune loop is blind to 100% of real traffic and can never f |
 | 45 | — | 2026-08-20 | PERF-001 — multi-second main-thread stalls on export/preview; profile → debounce/memoize. |
 | 40 | — | 2026-08-21 | SO-003 DATA LOSS — core-comp row-count change wipes Selected Outcomes (cloud-persisted). |
 | 35 | `OVERLAY-EARLY-HALT-001` | 2026-08-22 | NEW — OVERLAY-EARLY-HALT-001 regen-confirm. Shipped 1.51.41 (heartbeat-gated watchdog replacing the fixed 2-mi |

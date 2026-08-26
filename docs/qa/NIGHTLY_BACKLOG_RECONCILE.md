@@ -17,30 +17,53 @@ verify first).
 
 ## The slot (each nightly, ~30–60 min)
 
-1. Open `docs/qa/OPEN_REGISTER.md` (the rolling consolidated list this order
-   maintains). Take the **3–5 OLDEST rows with `verified: no`** (or `stale-check
-   due` dates in the past).
+1. Open `docs/qa/OPEN_REGISTER.md` — since the 2026-08-26 split it is a slim
+   INDEX (one line per open row: number, ticket ID, `verified:` date, scope).
+   The ACTIVE table is already sorted **stalest first**, so take the **3–5 rows
+   from the top**, skipping any tagged `_(STANDING)_` (those are regression
+   anchors the diag set re-runs every night, not unstarted work).
+   Rank on the index's `verified` column and nothing else — that column is now
+   the single date per row. Do NOT re-derive staleness from prose inside a row:
+   before the split each of two tables carried its own date in its own column,
+   and a scan for `verified:` missed the oldest rows entirely (18 and 25 sat 55
+   days stale behind the sweep).
 2. For each: VERIFY against the CURRENT code/version — repro or test, never trust
    the tag. Outcomes:
-   - already shipped → move to the register's CLOSED block with the closing
-     version/commit as evidence;
-   - still real → keep OPEN, refresh the row (current symptom, suspected file,
-     next concrete step), set `verified: <today>`;
+   - already shipped → move the index line AND its `## Row N` section from
+     `REGISTER_ACTIVE_DETAIL.md` into `REGISTER_CLOSED.md`, with the closing
+     version/commit as evidence. Both halves move together — an orphan on
+     either side fails `scripts/check-register.mjs`;
+   - still real → keep it ACTIVE, refresh the row text in
+     `REGISTER_ACTIVE_DETAIL.md` (current symptom, suspected file, next concrete
+     step) and set today's date in the index's `verified` column;
    - fixable inside the slot → fix it under the normal nightly rules (verify-
      first, quintet, suite green) and close it.
 3. Once per week (or when the chain looks out of sync): sweep NEW sources into
    the register — the newest `PROJECT_ISSUES_OPEN_CLOSED_*` "OPEN (carry
    forward)" block, "STILL OPEN" phrases in `ACTIVE_BUGS.md` blocks older than
    ~5 days, `MASTER_BACKLOG.md` OPEN/PARTIAL/VERIFYING tags, and
-   `FEATURES_REGISTRY.md` OPEN rows. Add anything missing as `verified: no`.
+   `FEATURES_REGISTRY.md` OPEN rows. Add anything missing as a new index line
+   with `verified: **never**` plus a matching `## Row N` detail section.
+   **Take the next number above the highest one already used across ALL FOUR
+   register files, and give the row a ticket ID.** Two routines filing on the
+   same day have both taken "the next number" before — on 2026-08-26 five row
+   numbers each meant two different things, and "row 40" was both SO-003 and
+   JOBSRC-FETCH-001. The ID is the real key; the checker now blocks a duplicate.
 4. Report: the nightly report lists which register rows were verified, closed,
    or refreshed. A nightly that ships nothing from its dated tasks but closes
    two stale register rows is a GOOD nightly.
 
 ## Rules
 
-- `OPEN_REGISTER.md` is a ROLL-UP, not a second source of truth — prose detail
-  stays in the linked docs; when it and the v4 .docx disagree, the .docx wins.
+- `OPEN_REGISTER.md` is an INDEX, not a second source of truth — prose detail
+  stays in `REGISTER_ACTIVE_DETAIL.md` and the linked docs; when it and the v4
+  .docx disagree, the .docx wins.
+- The register is four files since 2026-08-26: `OPEN_REGISTER.md` (index),
+  `REGISTER_ACTIVE_DETAIL.md` (verbatim row text + history),
+  `REGISTER_CLOSED.md` (finished rows + evidence), `REGISTER_RUNLOG.md` (run
+  summaries, newest first). **A nightly's run summary goes to the top of the
+  RUN-LOG, never into the index.** Run `node scripts/check-register.mjs` before
+  you push; it also runs in the PWA suite.
 - Never mark CLOSED without evidence (version/commit/test). "Probably shipped"
   → verify or leave open.
 - Owner priority order applies when picking fix candidates: CONTENT & EXPORT →

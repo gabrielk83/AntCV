@@ -14,7 +14,8 @@ No subagents; the work was one serial chain and fan-out would have added content
   worktree `.claude/worktrees/vigilant-hopper-c2abaa`.
 - SYNC FIRST: `git fetch origin && git pull --rebase origin main` → fast-forwarded 5 commits to
   `3d26fcf` (the 08-26 CI nightly report). Baseline release `1.51.4346-cost-rates`.
-- Shift lane claimed: **1.51.4406 – 1.51.4385** (`sh_mt9yl4uc_cddb`). One number consumed.
+- Shift lane claimed: **1.51.4366 – 1.51.4385** (`sh_mt9yl4uc_cddb`), later released and re-claimed
+  as **1.51.4406 – 1.51.4425** — see the collision section below. One number consumed.
 
 ## Baseline verification (before any edit) — all green
 
@@ -104,14 +105,14 @@ parse-gated, app.js head and 0-`"use strict"` re-asserted after the splice.
   600×600 JPEG q80 (~61 KB data URL, the shape the wizard produces on upload) + a `_photo_comment`
   recording provenance. README documents both halves.
 
-### Residual, named not fixed — new register row 102
+### Residual, named not fixed — new register row 107
 
 The same rewrap still drops every **other** top-level sibling an unwrapped blob may carry:
 `language`, `navyColor`, `profileDoc`, `skillsDoc`, `wordsDoc`, `danishDoc`, `memoryDigest`.
 (`apiKey` / `proxyUrl` are safe — they are disjuncts earlier in the guard, so a blob carrying them is
 never rewrapped.) Only `photo` had a reported user-visible symptom, so only `photo` was carried;
 widening the carry-set is a deliberate, separately-testable change and was not done blind.
-Filed as **IMPORT-REWRAP-SIBLING-DROP-001** (row 102).
+Filed as **IMPORT-REWRAP-SIBLING-DROP-001** (filed as row 102; renumbered to **107** later the same day — the weekly demand-seed run had taken 102 first).
 
 ### Tests + gates
 
@@ -184,7 +185,7 @@ but it means a later app.js ship must reconcile two different starting numbers, 
 | Row | Status this run |
 |---|---|
 | **18** | **ADVANCED + partly FIXED** — photo legs root-caused, fixed, locked (`1.51.4406`); CL foundation/bring/interests leg still owed to a live-model gen. Re-dated 2026-08-26. |
-| **102** (new) | **FILED** — IMPORT-REWRAP-SIBLING-DROP-001, the named residual. |
+| **107** (new) | **FILED** — IMPORT-REWRAP-SIBLING-DROP-001, the named residual (filed as 102, renumbered). |
 | 1 / 11 / 16 / 17 / 23 | **VERIFIED today by the CI nightly** (`NIGHTLY_2026-08-26_CI_REPORT.md`); re-confirmed here indirectly by the green 1628 suite + copenhagen-storm PASS + docx 51/51. Not re-swept. |
 | 35 / 36 / 37 | **BLOCKED** — static anchors green in the suite; live regen-confirm needs the signed-in pane. |
 | 25 | **UNCHANGED — now the stalest open row** (2026-07-02). Real-PDF-gated table geometry parity. Next desktop rotation should take it. |

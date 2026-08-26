@@ -9,10 +9,20 @@ Since dispatch: A2's client leg (same-device stale pointer) SHIPPED — see A2 b
 
 ## HOW TO WORK THIS (read once)
 
-- **Full coverage = the register.** `docs/qa/OPEN_REGISTER.md` is the single source of open work
-  (rows 1-45 + the TO-DO summary). Every band below maps to register rows. A nightly is "full
-  coverage" when it either advances a row or records a verify result for it — nothing is skipped
-  silently. Report per-row at the end.
+- **Full coverage = the register.** `docs/qa/OPEN_REGISTER.md` is the single source of open work.
+  **Since the 2026-08-26 split it is a slim INDEX** — one line per ACTIVE row (number, ticket ID,
+  a single `verified:` date, one line of scope), already sorted **stalest first**; the verbatim
+  row text lives in `REGISTER_ACTIVE_DETAIL.md`, finished rows in `REGISTER_CLOSED.md`, run
+  summaries in `REGISTER_RUNLOG.md`. The old "rows 1-45 + the TO-DO summary" phrasing is dead:
+  there is no second table, and the ACTIVE set is ~94 rows. Every band below maps to register
+  rows. A nightly is "full coverage" when it either advances a row or records a verify result for
+  it — nothing is skipped silently. Report per-row at the end.
+- **Rank staleness on the index's `verified` column and nothing else**, and skip rows tagged
+  `_(STANDING)_` (regression anchors the diag set re-runs every night). The pre-split file kept a
+  date in a different column in each of two tables, so a `verified:` scan missed the oldest rows
+  — 18 and 25 sat 55 days stale behind the sweep.
+- **The ticket ID is the key, not the row number.** Parallel routines have collided on numbers;
+  see the renumber map at the top of the index before trusting a row number in an older document.
 - **Bands are PRIORITY, not a to-do-all list.** Work Band A first, top-down; only drop to the next
   band when Band A is blocked (owner-decision / needs-real-device / needs-live-models). One SOLID
   verified fix beats five half-fixes — owner hard rule "an end result, not a brickable mid product."
@@ -43,7 +53,10 @@ Since dispatch: A2's client leg (same-device stale pointer) SHIPPED — see A2 b
    -f confirm=<w>`, ONE deployer at a time, `gh run watch --exit-status`.
 6. Flagship gen model stays **claude-opus-4-7** unless the owner approves a change (propose with D1
    evidence). Content fixes measured on FRESH generations (spec rule 38), not hand-guided exports.
-7. Register every fix in `docs/qa/ACTIVE_BUGS.md` + advance the `OPEN_REGISTER.md` row.
+7. Register every fix in `docs/qa/ACTIVE_BUGS.md` + advance the row: edit its `## Row N` section
+   in `REGISTER_ACTIVE_DETAIL.md` AND set today's date in the `OPEN_REGISTER.md` index. Put the
+   run summary at the TOP of `REGISTER_RUNLOG.md`, not in the index. Then
+   `node scripts/check-register.mjs` before pushing.
 
 ---
 

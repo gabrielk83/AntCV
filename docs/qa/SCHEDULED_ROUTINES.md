@@ -15,8 +15,18 @@ another routine. **They are all bound by the same discipline** (`CLAUDE.md` § S
 >
 > **(5) END-OF-RUN REGISTER REPORTING (owner 2026-07-13, mandatory for every agent-driven
 > routine).** Before the run ends, write its outcome into the repo registers and push:
-> advance/refresh every touched row in `docs/qa/OPEN_REGISTER.md` (bugs + tasks — add a row for
-> any NEW bug or task the run discovered); log every code fix in `docs/qa/ACTIVE_BUGS.md` (top
+> advance/refresh every touched row in the register (bugs + tasks — add a row for
+> any NEW bug or task the run discovered). **Since the 2026-08-26 split the register is FOUR
+> files:** `docs/qa/OPEN_REGISTER.md` is a slim INDEX (number, ticket ID, one `verified:` date,
+> one line of scope, stalest first); `REGISTER_ACTIVE_DETAIL.md` holds the verbatim row text and
+> history; `REGISTER_CLOSED.md` holds finished rows; `REGISTER_RUNLOG.md` holds the run
+> summaries. So: **your run summary goes to the TOP of `REGISTER_RUNLOG.md`, never into the
+> index** (the index is capped and a run blockquote there fails the check); advancing a row means
+> editing its `## Row N` section in the detail file AND setting today's date in the index's
+> `verified` column; a NEW row needs an index line, a matching detail section, a ticket ID, and
+> the next number above the highest already used across all four files — parallel routines have
+> collided on row numbers before. Run `node scripts/check-register.mjs` before pushing (it also
+> runs in the PWA suite). Then log every code fix in `docs/qa/ACTIVE_BUGS.md` (top
 > block); register any feature shipped or advanced in `docs/FEATURES_REGISTRY.md`; and update any
 > other register the run touched (dated NIGHTLY/SESSION report, COST_QUALITY log, etc.). Commit +
 > push the register edits with the work (docs-only edits need no shift claim, but SYNC FIRST). A

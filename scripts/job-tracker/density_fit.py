@@ -86,6 +86,17 @@ def _norm(s):
 def _numbers(s):
     return sorted(re.findall(r"\d+(?:[.,]\d+)?", s or ""))
 
+def _same_tokens(a, b):
+    """True when two texts carry the SAME word multiset - a pure permutation.
+
+    This is exactly the shape the `reorder` gate accepts (token-multiset
+    equality plus a [-8,8] length drift), so it identifies a rewrite that
+    cannot have changed the item's LENGTH, only where its words sit. Used by
+    DENSITY-REORDER-CHURN-001 to spend one of the item's two tries on it.
+    """
+    import collections
+    return collections.Counter(MD._tok(a or "")) == collections.Counter(MD._tok(b or ""))
+
 def _acronyms(s):
     return sorted(set(re.findall(r"\b[A-Z][A-Z0-9][A-Z0-9-]*\b", s or "")))
 
@@ -582,9 +593,25 @@ def fit_density(cv, cl, pi, style_config, meta, language, doc="cv",
             log.append("cell-cascade: ratio ladder exhausted - labels need harder compression")
     best = (copy.deepcopy(cv), copy.deepcopy(cl), rep)
     root = {"cv": cv, "cl": cl}
-    attempts = {}          # norm(text) -> {"n": tries, "feedback": last reason}
+    attempts = {}          # root(text) -> {"n": tries, "feedback": last reason}
     rewrites = []          # applied (sec, how, old, new) for review
     pending = {}           # norm(old) -> sec : applied last round, must vanish
+    # DENSITY-REORDER-CHURN-001 (job-tracker nightly 2026-08-26, live in the
+    # Kaleido run: the pubs line was re-asked in iters 1,2,3 and 4 and landed
+    # back where it started - one LLM call per iteration for zero progress).
+    # `attempts` caps an item at two tries, but it was keyed by the item's OWN
+    # text, and an ACCEPTED rewrite changes that text - so the cap only ever
+    # bound items whose rewrite was REJECTED. A `reorder` item can never be
+    # bound that way: its gate demands token-multiset equality and length drift
+    # in [-8,8], so every accepted reorder is a permutation of the same words, a
+    # brand-new key, and a fresh pair of tries. `chains` maps each rewritten
+    # text back to the ORIGINAL it descends from, so the cap follows the ITEM
+    # rather than the string.
+    chains = {}            # norm(rewritten) -> root key of the original
+    def _root(text):
+        return chains.get(_norm(text), _norm(text))
+    def _chain(old_text, new_text):
+        chains[_norm(new_text)] = _root(old_text)
     pinned = []            # items whose payload text survives a section write
                            # (buildPayload sources them from fixture pins /
                            # overrides — not fixable by editing cv_sections)
@@ -606,11 +633,12 @@ def fit_density(cv, cl, pi, style_config, meta, language, doc="cv",
                             print(f"   [density] pin-fix {info['sec']}: fixture source updated")
                         continue
                     pinned.append({"sec": info["sec"], "text": old_key[:80]})
-                    attempts[old_key] = {"n": 99, "feedback": "pinned upstream"}
+                    attempts[chains.get(old_key, old_key)] = {
+                        "n": 99, "feedback": "pinned upstream"}
             pending = {}
         if rep.get("quality_pct", 0) >= MD.QUALITY_TARGET:
             break
-        live = lambda r: attempts.get(_norm(r["text"]), {}).get("feedback") != "pinned upstream"
+        live = lambda r: attempts.get(_root(r["text"]), {}).get("feedback") != "pinned upstream"
         # owner-approved deterministic substitutions run FIRST — they also
         # apply to verbatim items (that is their point: pre-cleared rewordings)
         for r in rep["runts"]:
@@ -622,6 +650,7 @@ def fit_density(cv, cl, pi, style_config, meta, language, doc="cv",
                     if write_back(root, r["text"], new):
                         rewrites.append({"sec": r["sec"], "how": "sub", "old": r["text"], "new": new})
                         pending[_norm(r["text"])] = {"sec": r["sec"], "new": new}
+                        _chain(r["text"], new)
                     break
         targets = [r for r in rep["runts"]
                    if r["policy"] in ("rewrite", "listedit", "reorder") and live(r)
@@ -646,7 +675,7 @@ def fit_density(cv, cl, pi, style_config, meta, language, doc="cv",
         cpl_of = lambda r: max(20.0, (r["trim_chars"] + r["add_hi"]) / 0.97) if r["add_hi"] else 60.0
         trims, asks, applied = [], [], 0
         for i, r in enumerate(targets):
-            seen = attempts.get(_norm(r["text"]), {})
+            seen = attempts.get(_root(r["text"]), {})
             if seen.get("n", 0) >= 2:
                 continue   # two failed LLM rounds — leave it, report honestly
             # red/green split: a short dangling line pulls back deterministically;
@@ -714,6 +743,7 @@ def fit_density(cv, cl, pi, style_config, meta, language, doc="cv",
             if n:
                 rewrites.append({"sec": r["sec"], "how": "trim", "old": r["text"], "new": new})
                 pending[_norm(r["text"])] = {"sec": r["sec"], "new": new}
+                _chain(r["text"], new)
         if asks and prof["families"] > 0:
             got, failed = llm_refit(asks, language=language, facts=kernel_facts,
                                     n_families=prof["families"])
@@ -722,7 +752,20 @@ def fit_density(cv, cl, pi, style_config, meta, language, doc="cv",
                 if new and write_back(root, ask["text"], new):
                     applied += 1
                     rewrites.append({"sec": ask["sec"], "how": "llm", "old": ask["text"], "new": new})
+                    ckey = _root(ask["text"])
                     pending[_norm(ask["text"])] = {"sec": ask["sec"], "new": new}
+                    _chain(ask["text"], new)
+                    # A rewrite that only PERMUTES the same words spends a try.
+                    # If the shuffle fixes the wrap the item leaves `runts` and
+                    # this counter is never read; if it does not, two rounds is
+                    # the same honest budget every other item gets - instead of
+                    # one LLM call per iteration for the rest of the run.
+                    if _same_tokens(ask["text"], new):
+                        cprev = attempts.get(ckey, {"n": 0})
+                        attempts[ckey] = {"n": cprev["n"] + 1, "feedback":
+                                          "the previous rewrite only reordered the same "
+                                          "words and the line still wraps short - change "
+                                          "WHERE the break falls, not the order alone"}
                 elif new and fix_pins and write_back_fixture(_norm(ask["text"]), new):
                     # the text never existed in cv_sections — it is sourced from
                     # the fixture pins directly (owner-approved mild pin edit)
@@ -731,7 +774,7 @@ def fit_density(cv, cl, pi, style_config, meta, language, doc="cv",
                     if verbose:
                         print(f"   [density] pin-fix {ask['sec']}: fixture source updated")
                 else:
-                    key = _norm(ask["text"])
+                    key = _root(ask["text"])
                     prev = attempts.get(key, {"n": 0})
                     reason = failed.get(ask["id"]) or \
                         ("rewrite could not be located uniquely in the "
@@ -746,7 +789,7 @@ def fit_density(cv, cl, pi, style_config, meta, language, doc="cv",
         if applied == 0:
             # an all-rejected round still produced per-item feedback — retry
             # once more while any asked item has attempts left
-            retryable = any(attempts.get(_norm(a["text"]), {}).get("n", 0) < 2 for a in asks)
+            retryable = any(attempts.get(_root(a["text"]), {}).get("n", 0) < 2 for a in asks)
             if not (asks and retryable):
                 break
             continue

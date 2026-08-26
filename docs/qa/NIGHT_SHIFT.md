@@ -29,7 +29,6 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 ## ACTIVE CLAIMS
 
 <!-- SHIFT:BEGIN — one JSON object per line; managed by scripts/shift.mjs, safe to hand-edit a line if a session died without releasing -->
-{"id":"sh_mta9z6tl_ldin","started":"2026-08-26T15:55:17.963Z","host":"GabyPC2","worktree":null,"branch":"HEAD","range":"1.51.4426-1.51.4445","task":"JOBLIST-FILTER-002: Archive filter gates on tracked status not just band; add Rejected filter","beat":"2026-08-26T15:55:18.807Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

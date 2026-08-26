@@ -79,7 +79,7 @@ machine is off" path for those is a **claude.ai cloud routine**, created from th
 
 | Routine | Cadence | Pushes to main / deploys? | Claim required | Notes |
 |---|---|---|---|---|
-| `antcv-position-discovery` | bi-weekly (Sun + Tue 22:00) | data only (Excel/D1 PROPOSED rows) | no (data-only) — SYNC FIRST | Finds NEW openings vs the Dream Envelope, propose-only. `scripts/job-tracker/discover-positions.py`; memory position-discovery-task. |
+| `antcv-position-discovery` | bi-weekly (Sun + Tue 22:00) | data only (Excel/D1 PROPOSED rows) | no (data-only) — SYNC FIRST | Finds NEW openings vs the Dream Envelope, propose-only. `scripts/job-tracker/discover-positions.py`; memory position-discovery-task. ⚠ **Two of its five mandatory sources need `scripts/job-tracker/job_sources.py` — a hand-fetch of their search pages returns nothing. It should also run the obsolescence sweep. See "Position-discovery sources + the obsolescence sweep" below.** |
 | antcv-job-tracker-nightly | nightly | yes (gen-runner may commit; may bump islands/app) | **yes** | Generates/persists tracked applications. `scripts/job-tracker/gen-runner.py`. |
 | antcv-nightly | nightly | yes (PWA/worker fixes) | **yes** | Verify-first backlog work; ships cache-busted PWA changes → always claim. |
 | weekly demand-seed (CLUSTER-QUAL) | weekly | yes (worker + D1 top-20 refresh) | **yes** (if it ships code) | Cluster demand model refresh. Partly unbuilt. LIVE TRIGGER since 2026-07-13: scheduled task `antcv-demand-seed-weekly` (Fri 22:00) — before that the routine existed only on paper (one manual run 2026-07-10). ⚠ **Its stored prompt's step 4 is WRONG — see "Demand-seed step 4" below before running it.** |
@@ -87,6 +87,89 @@ machine is off" path for those is a **claude.ai cloud routine**, created from th
 | weekly security audit | weekly | report only | no | Read-only audit → report. |
 | relay health probe | ~5-min | none (alert only) | no | Liveness. |
 | model-freshness check | daily | none/report | no | Flags stale model ids. |
+
+### Position-discovery sources + the obsolescence sweep (found + fixed 2026-08-26)
+
+Two defects, both found by the 2026-08-26 discovery run. **This section is the authority; the
+stored task prompt is not** — like the demand-seed case below, the prompt is an account-level
+scheduled task that a run cannot edit.
+
+**JOBSRC-FETCH-001 — two mandatory sources were unreadable, and failed SILENTLY.**
+
+| Source | What the prompt implies | Reality | Use instead |
+|---|---|---|---|
+| `jobbank.dk` | a search endpoint | `/en/job-search?searchterm=` **404s** — that URL never existed | `https://www.jobbank.dk/job/?soegeord=<q>` |
+| `jobindex.dk` | read `/jobsoegning` | the result page paints its ads **client-side**; a fetch returns nav chrome and **zero ads** | `https://www.jobindex.dk/jobsoegning.rss?q=<q>` (same result set, server-rendered) |
+
+Both failure modes look identical to "the source was dry", which is why the weekly-target
+shortfall read as market conditions rather than a broken fetch. Two further traps, both handled
+in the shipped fetcher:
+
+- **jobbank ads carry no `<a href>` at all.** Each ad is a `div.job-item` whose destination lives
+  in an inline `onclick="document.location.href='/job/<id>/<company>/<title>/'"`. A link scrape
+  returns nothing, which is exactly the empty result the run saw.
+- **Both hosts mis-declare their charset.** jobindex is ISO-8859-1; jobbank sends a UTF-8
+  `Content-Type` while serving cp1252. Trusting the header mojibakes every Danish letter and
+  then breaks company-name matching downstream, so the fetcher sniffs.
+
+```
+python scripts/job-tracker/job_sources.py search --q "produktchef" --source all --json
+```
+
+Returns `{source,title,company,location,url,posted,deadline}` per ad and drops any ad whose
+stated `Frist:` has already passed. Tests: `scripts/job-tracker/test_job_sources.py`.
+
+**The other three mandatory sources were verified working on 2026-08-26** — LinkedIn guest
+search (`/jobs/search?keywords=&location=&f_TPR=`) is the strongest of the five and returned
+54/60/20/12 rows across four queries; TheHub returned 15. Google Jobs was not separately
+exercised that run.
+
+**POSTING-OBSOLETE-001 — obsolete postings were never detected, so dead roles never left the list.**
+
+Run this on every discovery run and every job-tracker nightly, BEFORE proposing or generating:
+
+```
+python scripts/job-tracker/check-postings.py check --apply
+```
+
+It probes each row's posting URL and archives the obsolete ones by reusing the mechanism the
+island already has — band → `D9D9D9` (Archive), tracked status → `Archive / closed`,
+`queue[uk]=false`. `defaultJLFilters()` in `JobTracker.tsx` leaves Archive unchecked, so an
+archived row disappears from the Job List on the next doc load and the owner can tick the
+Archive swatch to see it again. **Nothing is deleted** (hide over delete), and **no PWA asset is
+touched**, so this needs no cache-bust and no shift claim.
+
+Evidence is **graded**, because archiving a live role is worse than carrying a dead one for two
+days:
+
+| Verdict | Meaning | Effect |
+|---|---|---|
+| `CLOSED` | the page says so in words ("no longer accepting applications", "stillingen er besat") | archives on **first sight** |
+| `EXPIRED` | stated deadline has passed, or the board moved the ad to its own archive (jobindex 301s expired ads through `/arkiv/vis/` to `jobindexarkiv.dk`) | archives on **first sight** |
+| `GONE` | HTTP 404/410 — absence, not a statement | **two strikes** on separate runs |
+| `SUSPECT` | redirected off the posting onto a page with no job identity | **two strikes** |
+| `WALLED` | 401/403/429/999/Cloudflare challenge | **never counts** |
+| `ERROR` | timeout / DNS / TLS / 5xx | **never counts** |
+| `LIVE` | reachable, nothing says otherwise | resets the strike count |
+
+Strikes live per-row in `doc.postingcheck[uk]` — substructure-keyed, so two routines sweeping in
+parallel cannot clobber each other's counts through one shared blob. Drop `--apply` for a dry run.
+
+Belt on the generator: `gen-runner.eligible_rows` skips `is_closed_row(row)`. `queue=false` alone
+was not enough — the `q is None and not has_art` clause would still elect a hand-archived row that
+never carried an explicit queue flag, and that row has a stored JD, so the nightly would spend a
+full generation on it.
+
+**First live run 2026-08-26:** 73 rows probed → 52 LIVE, 17 archived (15 `CLOSED`, 2 `EXPIRED`),
+4 `GONE` held at strike 1 (Scarlet 410, GEA 404, Trackman 404, spektr 404). Do not force those
+four — they archive on the next run that agrees, which is the point.
+
+**Known limit:** the sweep is script-side, so "hidden as soon as it goes obsolete" means "at the
+next sweep", not live in the browser. An always-on client-side check was deliberately NOT added —
+see the sidecar-global-observer and island-rAF-freeze precedents.
+
+**Owner action:** add the sweep command to the `antcv-position-discovery` and
+`antcv-job-tracker-nightly` stored prompts, and point their source step at `job_sources.py`.
 
 ### Demand-seed step 4 — the stored task prompt is WRONG (found 2026-08-18)
 

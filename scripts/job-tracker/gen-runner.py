@@ -329,6 +329,19 @@ def capture_brand_for(row):
 # ── row eligibility ────────────────────────────────────────────────
 def row_uk(row):  return row[11] if len(row) > 11 and row[11] else (str(row[1]) + "|" + str(row[2]))
 
+def is_closed_row(row):
+    """POSTING-OBSOLETE-001: server-side twin of JobTracker.tsx isClosedRow().
+    Closed = the D9D9D9 Archive band, an archived/rejected/withdrawn tracked
+    status, or a "Dropped (...)" flag. Keep the three clauses in step with the
+    island's - the JD list hides exactly these rows, and the nightly must not
+    generate for anything the owner can no longer see."""
+    import re as _re
+    return (str(row[12] if len(row) > 12 else "").upper() == "D9D9D9"
+            or bool(_re.search(r"rejected|archive|closed|withdrawn",
+                               str(row[8] if len(row) > 8 else ""), _re.I))
+            or bool(_re.match(r"^\s*dropped\b",
+                              str(row[10] if len(row) > 10 else ""), _re.I)))
+
 def jd_content_len(jd):
     """Meaningful JD length = whitespace-collapsed content, NOT raw chars.
     Scraped 'Career Opportunities:' listing headers are a bare title + a
@@ -353,6 +366,14 @@ def eligible_rows(doc, only=None, force=False):
     for row in rows:
         uk = row_uk(row)
         if only and uk not in only:
+            continue
+        # POSTING-OBSOLETE-001: never draft for a role that is closed. The
+        # check-postings sweep archives a row whose posting is gone (Archive band
+        # + closed status + queue=False), but queue=False alone is not enough of a
+        # belt: `q is None and not has_art` would still elect a manually-archived
+        # row that never had an explicit queue flag. Mirrors the island's
+        # isClosedRow() so the UI and the nightly agree on what "closed" means.
+        if is_closed_row(row):
             continue
         a = arts.get(uk) or {}
         has_art = bool(a.get("cv_export_url") or a.get("application_id"))

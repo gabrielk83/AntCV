@@ -8,6 +8,7 @@ import {
   fetchClusterTop20, askAI, fitPercent, fetchBrandColors, research, claimTabAppId, TRACKED_STATUSES, asText, type TrackerDoc, type Row,
 } from './api';
 import { computeTier, orderTop5 } from './rank';
+import { isClosedRow, passesTierFilter } from './rowVisibility';
 import { top5ClickAction } from './top5controls';
 import { CLUSTER_REFRESH_MS, reconcileSnapshot, shouldRefetchOnFocus } from './clusterRefresh';
 
@@ -55,15 +56,16 @@ const tierOf = (band: string): Tier => TIERS[(band || '').toUpperCase()] || { ke
 // to the default the next time the app is started (new tab/session).
 const BAND_KEYS = ['DDEBF7', 'E2EFDA', 'FCE4D6', 'FFF2CC', 'D9D9D9'];
 const FILTER_STORAGE_KEY = 'antcv:jobtracker:legendFilter';
-interface JLFilters { bands: string[]; top5Only: boolean; jdOnly: boolean; queuedOnly: boolean; }
-function defaultJLFilters(): JLFilters { return { bands: BAND_KEYS.filter((b) => b !== 'D9D9D9'), top5Only: false, jdOnly: false, queuedOnly: false }; }
+interface JLFilters { bands: string[]; top5Only: boolean; jdOnly: boolean; queuedOnly: boolean; showRejected: boolean; }
+function defaultJLFilters(): JLFilters { return { bands: BAND_KEYS.filter((b) => b !== 'D9D9D9'), top5Only: false, jdOnly: false, queuedOnly: false, showRejected: false }; }
 function loadJLFilters(): JLFilters {
   try {
     const raw = sessionStorage.getItem(FILTER_STORAGE_KEY);
     if (!raw) return defaultJLFilters();
     const p = JSON.parse(raw);
     if (!p || !Array.isArray(p.bands)) return defaultJLFilters();
-    return { bands: p.bands.filter((b: string) => BAND_KEYS.includes(b)), top5Only: !!p.top5Only, jdOnly: !!p.jdOnly, queuedOnly: !!p.queuedOnly };
+    // showRejected is absent from any payload saved before JOBLIST-FILTER-002 -> false = hidden, the intended default.
+    return { bands: p.bands.filter((b: string) => BAND_KEYS.includes(b)), top5Only: !!p.top5Only, jdOnly: !!p.jdOnly, queuedOnly: !!p.queuedOnly, showRejected: !!p.showRejected };
   } catch { return defaultJLFilters(); }
 }
 function saveJLFilters(f: JLFilters): void { try { sessionStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(f)); } catch { /* best-effort */ } }
@@ -78,15 +80,11 @@ function rowQueued(doc: TrackerDoc | null, uk: string): boolean {
   return q === undefined ? !doc?.artifacts?.[uk]?.application_id : !!q;
 }
 
-// TOP5-REFILL-001: a dropped/closed/rejected row must LEAVE the Top-5 panel and
-// the next-best live row (by rank) takes its place, so the panel always shows 5
-// live candidates. "Closed" = the archive band, an archived/rejected/withdrawn
-// tracked status, or a "Dropped (…)" flag written by dropFromTop5. Rank alone
-// (the old `rank <= 5`) kept dropped rows pinned in the panel forever.
-const isClosedRow = (r: Row): boolean =>
-  String(r[12] || '').toUpperCase() === 'D9D9D9'
-  || /rejected|archive|closed|withdrawn/i.test(String(r[8] || ''))
-  || /^dropped\b/i.test(String(r[10] || ''));
+// TOP5-REFILL-001 / JOBLIST-FILTER-002: isClosedRow now lives in rowVisibility.ts
+// so the Top-5 panel and the Job List filter share ONE definition of "closed".
+// They used to disagree: Top-5 tested band OR tracked status, the list filter
+// tested the band ONLY, which is why an "Archive / closed" row that kept its T1
+// band stayed visible with the Archive swatch unchecked.
 
 // Extract plain text from an uploaded file. Plain-text reads directly; PDFs and
 // images/scans go through the app's multi-tier extractor (window.AntcvExtractPDFText:
@@ -203,7 +201,8 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
   const [filterTop5, setFilterTop5] = useState<boolean>(() => initJLFilters.current!.top5Only);
   const [filterJd, setFilterJd] = useState<boolean>(() => initJLFilters.current!.jdOnly);
   const [filterQueued, setFilterQueued] = useState<boolean>(() => initJLFilters.current!.queuedOnly);
-  useEffect(() => { saveJLFilters({ bands: Array.from(filterBands), top5Only: filterTop5, jdOnly: filterJd, queuedOnly: filterQueued }); }, [filterBands, filterTop5, filterJd, filterQueued]);
+  const [filterRejected, setFilterRejected] = useState<boolean>(() => initJLFilters.current!.showRejected);
+  useEffect(() => { saveJLFilters({ bands: Array.from(filterBands), top5Only: filterTop5, jdOnly: filterJd, queuedOnly: filterQueued, showRejected: filterRejected }); }, [filterBands, filterTop5, filterJd, filterQueued, filterRejected]);
   function toggleBandFilter(b: string): void { setFilterBands((s) => { const n = new Set(s); if (n.has(b)) n.delete(b); else n.add(b); return n; }); }
 
   // Narrow viewports get a stacked card list — a wide fixed table pushes the
@@ -286,14 +285,16 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
   // A row whose tier band isn't one of the 5 known swatches always shows —
   // there's no legend item to hide it by.
   const filteredRows = useMemo(() => rows.filter((r) => {
-    const band = String(r[12] || '').toUpperCase();
-    if (BAND_KEYS.includes(band) && !filterBands.has(band)) return false;
+    // JOBLIST-FILTER-002: closed-ness FIRST, and decided by isClosedRow() rather
+    // than by the band alone — a row can be closed via its TRACKED STATUS while
+    // keeping its tier band, which is exactly what left archived rows on screen.
+    if (!passesTierFilter(r, filterBands, filterRejected, BAND_KEYS)) return false;
     const uk = r[11];
     if (filterTop5 && !top5Keys.has(uk)) return false;
     if (filterJd && !(((doc?.jd || {})[uk] || '').length > 200)) return false;
     if (filterQueued && !rowQueued(doc, uk)) return false;
     return true;
-  }), [rows, filterBands, filterTop5, filterJd, filterQueued, top5Keys, doc]);
+  }), [rows, filterBands, filterRejected, filterTop5, filterJd, filterQueued, top5Keys, doc]);
 
   function editRow(uk: string, idx: number, value: string): void {
     if (!doc) return;
@@ -931,7 +932,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
           </div>
         )}
 
-        <Legend bands={filterBands} onToggleBand={toggleBandFilter} top5Only={filterTop5} onToggleTop5={() => setFilterTop5((v) => !v)} jdOnly={filterJd} onToggleJd={() => setFilterJd((v) => !v)} queuedOnly={filterQueued} onToggleQueued={() => setFilterQueued((v) => !v)} />
+        <Legend bands={filterBands} onToggleBand={toggleBandFilter} top5Only={filterTop5} onToggleTop5={() => setFilterTop5((v) => !v)} jdOnly={filterJd} onToggleJd={() => setFilterJd((v) => !v)} queuedOnly={filterQueued} onToggleQueued={() => setFilterQueued((v) => !v)} showRejected={filterRejected} onToggleRejected={() => setFilterRejected((v) => !v)} />
 
         {(err || note) && <div style={{ padding: '6px 16px', fontSize: 12, color: err ? '#b3261e' : '#2e7d32', background: err ? '#fdecea' : '#eaf5ea' }}>{err || note}</div>}
 
@@ -1090,10 +1091,11 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
 // JOBLIST-FILTER-001: the legend IS the Job List filter — every swatch/icon is
 // a checkbox. Unchecking a tier hides those rows from the table below;
 // unchecking ★/✅ has no effect until CHECKED (they narrow, they don't widen).
-function Legend({ bands, onToggleBand, top5Only, onToggleTop5, jdOnly, onToggleJd, queuedOnly, onToggleQueued }: {
+function Legend({ bands, onToggleBand, top5Only, onToggleTop5, jdOnly, onToggleJd, queuedOnly, onToggleQueued, showRejected, onToggleRejected }: {
   bands: Set<string>; onToggleBand: (b: string) => void;
   top5Only: boolean; onToggleTop5: () => void; jdOnly: boolean; onToggleJd: () => void;
   queuedOnly: boolean; onToggleQueued: () => void;
+  showRejected: boolean; onToggleRejected: () => void;
 }): JSX.Element {
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, padding: '7px 16px', borderBottom: '1px solid #e3e8f0', background: '#fbfcfe', fontSize: 11, color: '#445', alignItems: 'center' }}>
@@ -1109,6 +1111,12 @@ function Legend({ bands, onToggleBand, top5Only, onToggleTop5, jdOnly, onToggleJ
           </label>
         );
       })}
+      <label title={showRejected ? 'Shown — click to hide rejected rows' : 'Hidden — click to show rejected rows'}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 5, cursor: 'pointer', opacity: showRejected ? 1 : 0.45 }}>
+        <input type="checkbox" checked={showRejected} onChange={onToggleRejected} style={{ width: 13, height: 13, margin: 0 }} />
+        <span style={{ width: 13, height: 13, borderRadius: 3, background: '#F2D0D0', border: '1px solid #B23A3A', display: 'inline-block' }} />
+        <b style={{ color: '#B23A3A' }}>⛔ Rejected</b> Rejected / declined
+      </label>
       <label title={top5Only ? 'Showing only Top-5 rows — click to show all tiers again' : 'Click to show ONLY Top-5 rows'}
         style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', opacity: top5Only ? 1 : 0.75 }}>
         <input type="checkbox" checked={top5Only} onChange={onToggleTop5} style={{ width: 13, height: 13, margin: 0 }} /><b>★</b> Top 5

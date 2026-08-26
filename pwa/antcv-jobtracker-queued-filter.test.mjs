@@ -34,8 +34,13 @@ test('source: rowQueued is the single shared queue predicate (⏰ toggle + filte
 
 test('source: the list filter honours the Queued checkbox', () => {
   assert.match(SRC, /if \(filterQueued && !rowQueued\(doc, uk\)\) return false;/);
-  // filterQueued is a dependency of the filteredRows memo (re-filters on toggle).
-  assert.match(SRC, /\}\), \[rows, filterBands, filterTop5, filterJd, filterQueued, top5Keys, doc\]\);/);
+  // filterQueued must be a dependency of the filteredRows memo, or toggling the
+  // checkbox would not re-filter. Asserted as MEMBERSHIP, not as the exact
+  // literal list: JOBLIST-FILTER-002 added filterRejected, and pinning the whole
+  // array turns every future filter into a false failure in this file.
+  const deps = SRC.match(/\}\), \[rows, filterBands[^\]]*\]\);/);
+  assert.ok(deps, 'filteredRows memo dependency array not found');
+  assert.match(deps[0], /\bfilterQueued\b/);
 });
 
 test('source: the Legend renders a ⏰ Queued checkbox wired to the toggle', () => {

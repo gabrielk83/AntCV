@@ -2303,6 +2303,18 @@ function shapeApplicationRow(row) {
     jd_text:            row.jd_text,
     supporting_context: row.supporting_context || '',
     jd_language:        row.jd_language,
+    // CONTENT-LANG-STAMP-001 (register row 94, 2026-08-27): jd_language is the
+    // JOB DESCRIPTION's language. The language the CV/CL CONTENT is actually
+    // written in is a different thing, and until now it was persisted nowhere —
+    // three separate consumers (the app-switch/boot language selector, the
+    // babel-relang heal, and export) each re-derived it by script-sniffing the
+    // sections, and a Latin (da/es/en) document falls outside the wide-script
+    // detector, so the selector fell back to jd_language and could pin a ribbon
+    // the content is NOT in — which drove babel-relang to LLM-re-translate a
+    // correctly-written document. This column carries the authoritative value,
+    // stamped by the client on every write that carries sections. NULL on rows
+    // written before the stamp existed — consumers keep the old sniff as fallback.
+    content_language:   row.content_language || null,
     jd_company:         row.jd_company || '',
     jd_role:            row.jd_role || '',
     subtitle:           row.subtitle || '',
@@ -3693,6 +3705,20 @@ async function handleApiApplicationById(request, env, idStr) {
     }
     if (typeof body.jd_language === 'string' && body.jd_language.trim()) {
       sets.push('jd_language = ?'); vals.push(body.jd_language.trim().slice(0, 5));
+    }
+    // CONTENT-LANG-STAMP-001: the language the persisted cv/cl sections are
+    // written in (see shapeApplicationRow). Same undefined-skip convention as
+    // every field here, so a partial write never clears it; an explicit null
+    // clears it deliberately. Only the six languages the app renders are
+    // accepted — anything else is dropped rather than stored as garbage the
+    // selector would later act on.
+    if (body.content_language !== undefined) {
+      const __cl = body.content_language === null
+        ? null
+        : String(body.content_language || '').trim().toLowerCase().slice(0, 2);
+      if (__cl === null || ['en', 'da', 'es', 'zh', 'he', 'am'].indexOf(__cl) >= 0) {
+        sets.push('content_language = ?'); vals.push(__cl);
+      }
     }
     if (typeof body.supporting_context === 'string') {
       sets.push('supporting_context = ?'); vals.push(body.supporting_context);

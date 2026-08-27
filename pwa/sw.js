@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.4426-joblist-closed-filter';
+const CACHE = 'antcv-1.51.4446-content-lang-stamp';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

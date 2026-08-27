@@ -99,27 +99,65 @@ check("a company slug containing 'arkiv' is not an archive redirect",
                   "https://careers.example.com/job/rigsarkivet-pm", JD, TODAY)[0], "LIVE")
 
 # ---- the two-strike rule ----------------------------------------------------
-# Only GONE/SUSPECT accumulate; a LIVE resets; WALLED/ERROR hold steady. This
-# mirrors the loop in cmd_check.
-def run(verdicts, start=0):
-    misses = start
-    for v in verdicts:
-        if v == "LIVE":
-            misses = 0
-        elif v in cp.SOFT_VERDICTS:
-            misses += 1
-    return misses
+# Only GONE/SUSPECT accumulate; a LIVE resets; WALLED/ERROR hold steady; and a
+# soft verdict strikes at most ONCE PER DAY. This drives the REAL cp.next_misses
+# - never a mirror of it, or a change to the rule would leave the test green.
+DAY1 = datetime.date(2026, 8, 26)
+DAY2 = datetime.date(2026, 8, 27)
 
 
-check("one 404 alone is below the archive threshold", run(["GONE"]) >= cp.STRIKES_TO_ARCHIVE, False)
-check("two 404s reach the threshold", run(["GONE", "GONE"]) >= cp.STRIKES_TO_ARCHIVE, True)
+def run(steps, start=0):
+    """steps = [(verdict, day), ...] -> final miss count."""
+    ent = {"misses": start}
+    for v, day in steps:
+        misses, struck = cp.next_misses(ent, v, day)
+        ent = {"misses": misses, "last_strike": struck}
+    return ent["misses"]
+
+
+def archives(steps, start=0):
+    return run(steps, start) >= cp.STRIKES_TO_ARCHIVE
+
+
+check("one 404 alone is below the archive threshold", archives([("GONE", DAY1)]), False)
+check("two 404s on SEPARATE days reach the threshold",
+      archives([("GONE", DAY1), ("GONE", DAY2)]), True)
 check("a LIVE between two 404s resets the count",
-      run(["GONE", "LIVE", "GONE"]) >= cp.STRIKES_TO_ARCHIVE, False)
+      archives([("GONE", DAY1), ("LIVE", DAY1), ("GONE", DAY2)]), False)
 check("a wall after a 404 does NOT push the row over the line",
-      run(["GONE", "WALLED"]) >= cp.STRIKES_TO_ARCHIVE, False)
+      archives([("GONE", DAY1), ("WALLED", DAY2)]), False)
 check("an error after a 404 does NOT push the row over the line",
-      run(["GONE", "ERROR"]) >= cp.STRIKES_TO_ARCHIVE, False)
-check("mixed GONE then SUSPECT still corroborates", run(["GONE", "SUSPECT"]) >= cp.STRIKES_TO_ARCHIVE, True)
+      archives([("GONE", DAY1), ("ERROR", DAY2)]), False)
+check("mixed GONE then SUSPECT still corroborates",
+      archives([("GONE", DAY1), ("SUSPECT", DAY2)]), True)
+
+# The regression this gate exists for: the discovery run and the nightly both
+# sweep on the days they overlap, so ONE blip is probed twice within the hour.
+check("two 404s on the SAME day are one strike, not two",
+      run([("GONE", DAY1), ("GONE", DAY1)]), 1)
+check("and therefore do NOT archive a live role",
+      archives([("GONE", DAY1), ("GONE", DAY1)]), False)
+check("a third same-day probe still does not stack",
+      run([("GONE", DAY1), ("GONE", DAY1), ("SUSPECT", DAY1)]), 1)
+check("the next day's 404 does corroborate and archive",
+      archives([("GONE", DAY1), ("GONE", DAY1), ("GONE", DAY2)]), True)
+
+# last_strike must stay distinct from `last` (the probe date): a WALLED probe
+# later the same day is not a strike and must not hold the count back a day.
+check("a wall on day 1 does not consume day 2's strike slot",
+      archives([("GONE", DAY1), ("WALLED", DAY2), ("GONE", DAY2)]), True)
+check("a LIVE clears the strike stamp so a later 404 can still count",
+      run([("GONE", DAY1), ("LIVE", DAY1), ("GONE", DAY1)]), 1)
+
+# Legacy entries (written before last_strike existed) must not be trusted as
+# 'already struck today' - a missing stamp counts normally.
+check("an entry with no last_strike still increments",
+      cp.next_misses({"misses": 1, "last": DAY1.isoformat()}, "GONE", DAY1)[0], 2)
+check("LIVE clears the stamp", cp.next_misses({"misses": 3, "last_strike": "2026-08-26"},
+                                              "LIVE", DAY1), (0, ""))
+check("WALLED carries the stamp forward untouched",
+      cp.next_misses({"misses": 1, "last_strike": "2026-08-26"}, "WALLED", DAY2),
+      (1, "2026-08-26"))
 
 # ---- the archive edit -------------------------------------------------------
 def fresh():
@@ -157,4 +195,4 @@ if fails:
     for f in fails:
         print("  - " + f)
     sys.exit(1)
-print("PASS - check-postings classifier + archive edit (45 checks)")
+print("PASS - check-postings classifier + per-day strike gate + archive edit")

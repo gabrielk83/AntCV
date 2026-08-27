@@ -1499,7 +1499,28 @@ _verified: 2026-08-26_
 
 > **Renumbered 2026-08-26: was row 41.** A document written before that date citing "row 41" may mean this row or SO-004. The ID is the key.
 
-_verified: 2026-08-26_
+_verified: 2026-08-27_
+
+**ADVANCED 2026-08-27 (job-tracker nightly) — POSTING-STRIKE-SAMEDAY-001, the false-positive path
+leg (a) opened.** Closing leg (a) on 2026-08-26 put the sweep in TWO routines — the twice-weekly
+discovery run (step 1a) and this nightly (step 1b) — so on the days they overlap a row is probed
+twice within the hour. The two-strike rule counted strikes with a bare `misses += 1` and consulted
+no date, so those two probes of ONE CDN blip corroborated each other and archived a LIVE role on a
+single day. That is the exact false positive the graded-evidence design exists to prevent, and it
+was created by the fix that closed leg (a) — the rule's own docstring said "TWO strikes on separate
+runs", which stopped being a meaningful bound the moment a second routine started sweeping.
+**Fix:** a soft verdict now strikes AT MOST ONCE PER CALENDAR DAY. Strike counting moved out of the
+`cmd_check` loop into `next_misses(prev, verdict, today)`, which stamps `last_strike` — kept
+separate from `last` (the probe date) so a WALLED/ERROR probe later the same day is not mistaken
+for a strike and does not hold the count back a day. Entries written before this change carry no
+stamp and count normally, so no stored state is invalidated. Hard verdicts (CLOSED/EXPIRED) are
+untouched — a page that STATES the ad is over still archives on first sight. **Script-side only:
+no PWA asset, no cache-bust, no shift lane, no deploy.** Tests: `test_check_postings.py` now drives
+the REAL `next_misses` instead of a hand-mirrored copy of the loop (a mirror would have stayed green
+through this exact change), +8 checks covering the same-day gate, the legacy no-stamp entry, and the
+`last_strike`/`last` split; negative-controlled by disabling the guard BY LINE INDEX — sabotage
+confirmed landed, 3 checks go red. All 14 job-tracker python tests green. Live-verified end to end:
+`check --limit 3 --apply` against the real doc wrote `last_strike` into `postingcheck` (rev 222).
 
 **OPEN-queue row (verbatim):**
 
@@ -1517,6 +1538,18 @@ _verified: 2026-08-26_
 
 ```
 | **102** | **DEMAND-SEED-SEARCH-TOKEN-MISSING-001 (found by the weekly demand-seed run 2026-08-26, first run to PROBE rather than assume).** the routine's prescribed search backend is unreachable from an unattended run. `POST /api/research` gates on an owner session JWT (`identityFromRequest`) → 401 `unauthenticated` headless. `GET /api/cse-search` gates on the machine token `CSE_PROXY_TOKEN` (`x-antcv-cse-token` header) → 401 `unauthorized`, because that token is NOT provisioned on this machine (only `CLUSTER_RESEARCH_TOKEN` is, which is the WRITE token and does not open the search leg). So the Brave-backed **site-scoped** search (`siteSearch=jobindex.dk`, Glassdoor) has been silently unavailable to every run of this routine since the Brave switch, and Danish evidence keeps arriving second-hand via plain WebSearch (this run: the IT-Branchen/Jobindex analysis) instead of from Jobindex postings directly. NOT a code bug — the headless-friendly route already exists and works by design. **OWNER-OWED one-line fix:** set `CSE_PROXY_TOKEN` as a Windows User env var on the desktop, same value as the relay secret, exactly as `CLUSTER_RESEARCH_TOKEN` already is; then the routine regains Nordic site-scoped coverage with no code change. Note this supersedes the optimistic framing in `docs/deployment/google-cse-setup.md` §6 ("UNBLOCKED 2026-08-18 via Brave") — the backend is unblocked, the routine's access to it is not. | OPEN — filed 2026-08-26, verified: 2026-08-26 |
+```
+
+---
+
+## Row 108 — JOBTRACKER-PYTEST-UNWIRED-001
+
+_verified: 2026-08-27_
+
+**OPEN-queue row (verbatim):**
+
+```
+| 108 | JOBTRACKER-PYTEST-UNWIRED-001 (found by the job-tracker nightly 2026-08-27) — the 14 network-free python tests under `scripts/job-tracker/` are run by HAND only. `scripts/run-tests.mjs` has no python leg and no workflow invokes them, so `test_check_postings.py`, `test_closed_row_gate.py`, `test_job_sources.py`, `test_gold_residue.py`, `test_cl_v5_structure.py` and the other nine are green-by-nobody-looking between the runs that happen to touch that directory. They are cheap (all 14 finish in seconds, zero network) and they guard the belts that decide whether a model call gets spent — the closed-row gate, the obsolescence classifier, the board parsers. Filed, NOT fixed blind: wiring python into the node suite is a separate change with its own failure mode (a missing interpreter on a CI runner turning the whole PWA suite red), so it wants a deliberate design — most likely an OPTIONAL python leg that SKIPS loudly when no interpreter is present rather than failing, plus the same treatment in the nightly. verified: 2026-08-27 |
 ```
 
 ---

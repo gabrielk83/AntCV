@@ -133,8 +133,9 @@ citing an old number may mean either row — the ID disambiguates.
 | 18 | `ANITA-PERSONA-NO-PHOTO-001` | 2026-08-26 | Anita demo residuals — docx-photo + PDF-contact legs ROOT-CAUSED + FIXED 2026-08-26 (desktop nightly, PWA 1.51 |
 | 23 | `NIGHTLY-PREVIEW-BUTTON-AUDIT-001` | 2026-08-26 _(STANDING)_ | Preview-button audit pass 2 (65 not-visible, 23 overlay-obstructed) + live dangerous-button audit |
 | 105 | `JOBSRC-FETCH-001` | 2026-08-26 | follow-through — teach the discovery routine to CALL job_sources.py instead of hand-fetching board search page |
-| 106 | `POSTING-OBSOLETE-001` | 2026-08-26 | follow-through — wire check-postings.py --apply into the twice-weekly discovery run and the nightly, and settl |
+| 106 | `POSTING-OBSOLETE-001` | 2026-08-27 | ADVANCED 2026-08-27 (job-tracker nightly): the two-strike rule gained the missing per-DAY gate — POSTING-STRIK |
 | 102 | `DEMAND-SEED-SEARCH-TOKEN-MISSING-001` | 2026-08-26 | (found by the weekly demand-seed run 2026-08-26, first run to PROBE rather than assume). the routine's prescri |
+| 108 | `JOBTRACKER-PYTEST-UNWIRED-001` | 2026-08-27 | (found by the job-tracker nightly 2026-08-27) — the 14 network-free python tests under scripts/job-tracker/ ar |
 | 107 | `IMPORT-REWRAP-SIBLING-DROP-001` | 2026-08-26 | (2026-08-26 desktop nightly, residual of row 18). The settings-import rewrap now carries photo across (1.51.44 |
 
 ---

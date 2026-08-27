@@ -27,7 +27,7 @@ ABSENT (which a CDN edge, a redirect race or a routing blip also produces):
            jobbank.dk / jobindex.dk, where the field is structured), or the board
            has moved the ad to its own archive.
 
-  soft evidence -> needs TWO strikes on separate runs
+  soft evidence -> needs TWO strikes on separate DAYS
   GONE     HTTP 404/410. Absence, not a statement.
   SUSPECT  redirected off the posting onto something with no job identity.
 
@@ -37,7 +37,9 @@ ABSENT (which a CDN edge, a redirect race or a routing blip also produces):
   ERROR    timeout/DNS/TLS/5xx.
   LIVE     resets the strike count to zero.
 Strikes live per-row in doc["postingcheck"][uk] (substructure-keyed, so parallel
-routines cannot clobber each other's counts through one shared blob).
+routines cannot clobber each other's counts through one shared blob), and a soft
+verdict may strike AT MOST ONCE PER CALENDAR DAY — two routines sweeping the same
+day must not turn one CDN blip into two corroborating strikes (see next_misses).
 
 Usage:
   python scripts/job-tracker/check-postings.py check              # dry run
@@ -235,6 +237,34 @@ def archive_row(row, verdict, detail, today):
     return row
 
 
+# ------------------------------------------------------------- strike counting
+
+def next_misses(prev, verdict, today):
+    """Strike count for one row after one probe. Returns (misses, last_strike).
+
+    A soft verdict counts AT MOST ONCE PER CALENDAR DAY. The sweep is wired into
+    two routines now — the twice-weekly discovery run and the nightly — so on the
+    days they overlap a row is probed twice within the hour. Without this gate the
+    two probes of a single CDN blip corroborate each other and archive a LIVE role,
+    which is the exact false positive the graded-evidence design exists to prevent.
+    Corroboration has to come from a DIFFERENT day, not a different process.
+
+    `last_strike` is the date of the last increment, kept separate from `last`
+    (the date of the last probe) so a WALLED/ERROR probe later the same day cannot
+    be mistaken for a strike and hold the count back a day.
+    """
+    prev = prev or {}
+    misses = int(prev.get("misses") or 0)
+    struck = str(prev.get("last_strike") or "")
+    if verdict == "LIVE":
+        return 0, ""
+    if verdict in SOFT_VERDICTS:
+        if struck == today.isoformat():
+            return misses, struck                    # already struck today
+        return misses + 1, today.isoformat()
+    return misses, struck                            # WALLED / ERROR hold steady
+
+
 # ---------------------------------------------------------------------- main
 
 def cmd_check(args):
@@ -272,13 +302,9 @@ def cmd_check(args):
                 verdict, detail = classify(status, final_url, url, text, today)
 
             ent = dict(doc["postingcheck"].get(uk) or {})
-            misses = int(ent.get("misses") or 0)
-            if verdict == "LIVE":
-                misses = 0
-            elif verdict in SOFT_VERDICTS:
-                misses += 1
-            # WALLED / ERROR: leave the count exactly as it was.
+            misses, struck = next_misses(ent, verdict, today)
             ent.update({"misses": misses, "last": today.isoformat(),
+                        "last_strike": struck,
                         "status": verdict, "detail": detail[:200]})
             doc["postingcheck"][uk] = ent
 

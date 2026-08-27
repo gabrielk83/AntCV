@@ -15,7 +15,17 @@ When you finish it: move it to `REGISTER_CLOSED.md`.
 
 ## Row 38 — GEN-BACKGROUND-001
 
-_verified: never_
+_verified: 2026-08-27_
+
+**Verify sweep 2026-08-27 (CI nightly, code-presence — E1 stalest-row slot, was `never`):** the
+client engine is present and loaded — `pwa/antcv-gen-memo.js` + `pwa/antcv-gen-job-client.js` both on
+disk, both referenced in `pwa/index.html`; their tests (`pwa/test/unit/gen-memo.test.mjs`,
+`pwa/test/unit/gen-job-client.test.mjs`) run inside the green PWA suite (1662/0). The SERVER `/job/*`
+dispatch exists in BOTH proxies (`workers/{proxy,demo-proxy}/src/gen-job.js` + `index.js`). So the
+code half is confirmed intact. REMAINING is unchanged and NOT verifiable in CI: (1) live `/job/*`
+curl against a deployed proxy, (2) the owner A/B on a real mobile gen with `antcv:gen-resume=1`, and
+(3) the owner's decompose-approach decision (A full per-section vs B resume-on-reload). Owner-gated +
+needs-live-env — carry forward.
 
 **OPEN-queue row (verbatim):**
 
@@ -33,7 +43,13 @@ _verified: never_
 
 ## Row 76 — JOBTRACKER-LLM-REFIT-BUTTON-001
 
-_verified: never_
+_verified: 2026-08-27_
+
+**Verify sweep 2026-08-27 (CI nightly — E1 stalest-row slot, was `never`):** confirmed this remains a
+DEFERRED OPTIONAL enhancement by design, not stalled work. The Top-5 fit score is deterministic on
+purpose (ranking stability), and the on-add async refine already upgrades a row's tier once. An
+explicit on-demand "re-judge fit" LLM button is only worth building if the deterministic tier proves
+too coarse on real edge JDs — no such evidence has surfaced. No code owed; keep deferred.
 
 **OPEN-queue row (verbatim):**
 
@@ -45,7 +61,20 @@ _verified: never_
 
 ## Row 82 — ROLE-CANON-AUDIT-LEG-001
 
-_verified: never_
+_verified: 2026-08-27_
+
+**Verify sweep 2026-08-27 (CI nightly — E1 stalest-row slot, was `never`): CODE LEG NOW DONE.** The
+row was filed as "the PERSIST/EXPORT audit leg is NOT yet wired because gold_audit.py carries another
+session's uncommitted WIP" — that WIP has since landed. `scripts/job-tracker/gold_audit.py` now carries
+`role_canon_issues(cv, lang, gold)` implementing both audit rules (rendered role title == the
+doc-language canon `roles.canon_titles[base][lang]`; no two visible roles share one canonical id,
+with the merged-title exemption), wired into `run()` as `checks["role_canon"]` (commit `70c6cd59`
+"fix(gold): rows 82/86 residue — role-canon export audit"). It is negative-controlled by
+`scripts/job-tracker/test_gold_residue.py` — **18/18 checks pass**, covering en/da/es/zh clean cases,
+the -N suffix twin, the merged-title exemption, the duplicate-canonical-id flag, and the he
+title-check skip. REMAINING is now ONLY owner-gated: an eyeball pass over the es/zh canon wordings
+(es titles were new; zh are owner pins + established forms). Kept ACTIVE for that owner eyeball; the
+agent/code work is complete.
 
 **OPEN-queue row (verbatim):**
 
@@ -57,7 +86,18 @@ _verified: never_
 
 ## Row 94 — CONTENT-LANG-STAMP-001
 
-_verified: never_
+_verified: 2026-08-27_
+
+**Verify sweep 2026-08-27 (CI nightly, code trace — E1 stalest-row slot, was `never`): STILL OPEN,
+row is accurate.** Confirmed the LOAD half is fixed — both app-load sites in `pwa/app.src.js`
+(APP-LOAD-NO-RETRANSLATE-001) derive the selector from `window.__antcvContentLang(...)` (content
+script-sniff) and only fall back to `jd_language`. Confirmed the GAP is real: a grep of `app.src.js`
+finds NO persisted `content_language` / `contentLang` field anywhere — every persist path stamps only
+`jd_language` (the JD's language), and the content language is re-derived by script-sniffing at three
+sites (selector, babel relang heal, export). So the prevention leg is unbuilt: add an explicit
+per-app content-language field (or stamp it on the translate-persist) so all three read one
+authoritative value. Coordinate with BABEL-LATIN-BLIND-001. Needs an app.js/app.src.js change (PR-gated
+in CI) + a live translate-persist cycle to verify — carry forward.
 
 **OPEN-queue row (verbatim):**
 

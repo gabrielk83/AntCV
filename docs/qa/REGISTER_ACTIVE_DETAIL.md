@@ -88,6 +88,30 @@ agent/code work is complete.
 
 _verified: 2026-08-27_
 
+**SHIPPED 2026-08-27 (desktop nightly, Opus 5; PWA `1.51.4446-content-lang-stamp`, access-relay
+`676918b5`, D1 column added). The code leg the CI run deferred is DONE; the row stays ACTIVE only for
+the owner's signed-in live verify.** Four parts: D1 `ALTER TABLE application ADD COLUMN
+content_language TEXT` (additive — the 76 existing rows carry NULL and use the old chain);
+`access-relay` returns the field from `shapeApplicationRow` and whitelists it on
+`PUT /api/applications/:id` (undefined-skip / explicit-null-clears, only the six rendered languages
+accepted); `app.js`/`app.src.js` **leg 1** stamps it at `oo.update()` — the ONE method every
+`cv_sections`/`cl_sections` writer reaches the server through — from the sections being written,
+non-mutating, confident detections only, and never on a sectionless partial write (so it cannot clear
+a stored value); **leg 2** reads it at both app-load sites, ranked BELOW the certain wide-script detect
+(`__cl`) and ABOVE the fuzzy Latin sniff, so a stale stamp can never re-pin a document since
+translated into zh/he/am. `meta` was rejected as the home: it is rewritten wholesale from React state
+each auto-sync and META-DOWNGRADE-GUARD-003 withholds it exactly on the mid-restore path that matters.
+15 tests in `pwa/test/unit/content-lang-stamp.test.mjs`, run against the SHIPPED bytes and
+negative-controlled (removing leg 2 → 2 red, un-wiring leg 1 → 1 red); suite 1677/1677; boot-smoke OK;
+`diag-rerender-storm` 0 app errors; `app.js` proved byte-identical to HEAD apart from the three
+intended insertions. Live-verified as far as headless reaches: relay bundle re-read from Cloudflare
+carries both legs, the relay's exact UPDATE SQL validated against the live schema, and the PWA serves
+`1.51.4446-content-lang-stamp` across the whole quintet with no JS errors.
+**REMAINING (owner, needs a signed-in session):** translate a da/es application, reload, switch away
+and back — the language button must hold the CONTENT's language and `[babel-relang] content not in …`
+must NOT appear. Also still open by design: BABEL-LATIN-BLIND-001 keeps its own sniff for the heal;
+pointing it at the stored stamp is a separate, separately-testable change.
+
 **Verify sweep 2026-08-27 (CI nightly, code trace — E1 stalest-row slot, was `never`): STILL OPEN,
 row is accurate.** Confirmed the LOAD half is fixed — both app-load sites in `pwa/app.src.js`
 (APP-LOAD-NO-RETRANSLATE-001) derive the selector from `window.__antcvContentLang(...)` (content

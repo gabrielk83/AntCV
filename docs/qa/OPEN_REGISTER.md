@@ -45,7 +45,7 @@ citing an old number may mean either row — the ID disambiguates.
 | 38 | `GEN-BACKGROUND-001` | 2026-08-27 | CLIENT — ENGINE SHIPPED 1.51.132 (antcv-gen-job-client.js, window.AntcvGenJob, 8 tests, ine |
 | 76 | `JOBTRACKER-LLM-REFIT-BUTTON-001` | 2026-08-27 | (deferred enhancement) — the fit SCORE that orders the Top-5 is deterministic by design (ranking stability). O |
 | 82 | `ROLE-CANON-AUDIT-LEG-001` | 2026-08-27 | (follow-up) — the golden gating matrix now carries roles.canon_titles (en/da/es/zh) and the CLIENT enforces it |
-| 94 | `CONTENT-LANG-STAMP-001` | 2026-08-27 | (prevention leg of APP-SWITCH-CONTENT-LANG-001) — the LOAD half is fixed (1.51.1800: the selector is derived f |
+| 94 | `CONTENT-LANG-STAMP-001` | 2026-08-27 | CODE SHIPPED 1.51.4446-content-lang-stamp (D1 content_language column + relay whitelist + both app.js legs). R |
 | 25 | `TABLE-GEOMETRY-PARITY-001` | 2026-07-02 | Table geometry parity — diagnose real CloudConvert PDF vs preview measurement |
 | 6 | `BANNED-WORDS-MERGE-001` | 2026-07-03 | Wizard/Settings UX — owner eyeball gate on merged banned-words UI + 6-file loader test |
 | 8 | `KERNEL-V2-READER-001` | 2026-07-03 | Kernel v2 — bullets-path v2 migration, es/zh tier, §6 regression pass on uploaded docx |

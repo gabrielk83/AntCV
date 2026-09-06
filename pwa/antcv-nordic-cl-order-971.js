@@ -25,7 +25,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.2661-cl-v5-rerender-force';
+  var VERSION = '1.51.4506-foundation-fold';
   if (window.__antcvNordicClOrder971 === VERSION) return;
   window.__antcvNordicClOrder971 = VERSION;
 
@@ -173,6 +173,7 @@
     var real = 0, summary = false;
     w.items.forEach(function (r, i) {
       if (i === 0 || !r) return;                       // row 0 is the lead-in
+      if (r.fnd) return;                               // CL-V5-FOUNDATION-FOLD-001: folded rows are not v5 content
       var t = String(r.t || '').trim();
       if (!t || /^\[/.test(t)) return;
       real++;
@@ -181,16 +182,62 @@
     return summary && real >= 2;
   }
 
+  //
+  // CL-V5-FOUNDATION-FOLD-001 (owner 2026-09-06, supersedes the KEEP rule above): "the
+  // foundation section is supposed to be embedded inside who I am". KEEP re-enabled the
+  // STANDALONE foundation section whenever who was still placeholder, so the letter rendered
+  // a separate FOUNDATION block at the tail - exactly the v4 shape v5 retired. Now, when a
+  // who block exists, foundation's real rows (the opener + Hands-on + Professionally) are
+  // MOVED INTO who as rows (before 'My goal' when present, else at the end) and the
+  // standalone section goes OFF. Once a v5 regen fills who (whoCarriesFoundation) nothing is
+  // folded - the v5 rows supersede it - and foundation just stays off. Idempotent: rows are
+  // de-duplicated on their text, so a second pass is a no-op. No who block at all (a foreign
+  // or pre-skeleton CL) falls back to the KEEP behaviour so no prose is ever dropped.
+  function realRowText(r) {
+    var t = String((r && r.t) || '').trim();
+    return (t && !/^\[/.test(t)) ? t : '';
+  }
+  function foundationRealRows(f) {
+    if (!f || !Array.isArray(f.items)) return [];
+    return f.items.filter(function (r, i) { return r && typeof r === 'object' && realRowText(r) && !(f.hidden && f.hidden[i]); });
+  }
   function foundationKeep(list) {
     var f = null, w = null;
     list.forEach(function (s) { if (!s) return; if (s.id === 'foundation') f = s; if (s.id === 'who') w = s; });
-    if (!f || f.on !== false) return { changed: false, list: list };
-    if (!hasRealBody(f)) return { changed: false, list: list };   // nothing would be lost
-    if (whoCarriesFoundation(w)) return { changed: false, list: list };
+    if (!f) return { changed: false, list: list };
+    var realRows = foundationRealRows(f);
+    if (!w || !Array.isArray(w.items) || !w.items.length) {
+      // no who block to fold into: legacy KEEP - a hidden foundation with real prose stays visible
+      if (f.on !== false || !hasRealBody(f)) return { changed: false, list: list };
+      return { changed: true, list: list.map(function (s) { return (s && s.id === 'foundation') ? Object.assign({}, s, { on: true }) : s; }) };
+    }
+    var whoItems = w.items;
+    var toAdd = [];
+    if (!whoCarriesFoundation(w)) {
+      var have = {};
+      whoItems.forEach(function (r) { var t = realRowText(r); if (t) have[t.toLowerCase()] = 1; });
+      realRows.forEach(function (r) {
+        var t = realRowText(r);
+        if (have[t.toLowerCase()]) return;
+        have[t.toLowerCase()] = 1;
+        toAdd.push({ b: String(r.b == null ? '' : r.b), t: t, mk: true, fnd: true });
+      });
+    }
+    if (!toAdd.length && f.on === false) return { changed: false, list: list };
+    if (toAdd.length) {
+      whoItems = w.items.slice();
+      var goalAt = -1;
+      for (var i = 1; i < whoItems.length; i++) { if (whoItems[i] && /^my goal$/i.test(String(whoItems[i].b || '').trim())) { goalAt = i; break; } }
+      var at = goalAt >= 0 ? goalAt : whoItems.length;
+      Array.prototype.splice.apply(whoItems, [at, 0].concat(toAdd));
+    }
     return {
       changed: true,
       list: list.map(function (s) {
-        return (s && s.id === 'foundation') ? Object.assign({}, s, { on: true }) : s;
+        if (!s) return s;
+        if (s.id === 'foundation') return Object.assign({}, s, { on: false });
+        if (s.id === 'who' && toAdd.length) return Object.assign({}, s, { items: whoItems });
+        return s;
       })
     };
   }

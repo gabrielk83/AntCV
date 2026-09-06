@@ -250,33 +250,93 @@ const halfWho = () => ({ id: 'who', type: 'rich_block', items: [
   { b: 'My goal', t: '[The contribution wanted]', mk: true },
 ] });
 
-test('a hidden foundation with REAL prose is kept visible while who is still placeholder', () => {
+// CL-V5-FOUNDATION-FOLD-001 (owner 2026-09-06) SUPERSEDES KEEP: "the foundation section is
+// supposed to be embedded inside who I am". KEEP re-enabled the STANDALONE section, which is
+// what put a separate FOUNDATION block on the owner's letter. Now foundation's real rows are
+// MOVED INTO the who block and the standalone section goes off.
+const fnd = (list) => list.find((s) => s.id === 'foundation');
+const who = (list) => list.find((s) => s.id === 'who');
+const rowText = (list) => who(list).items.map((r) => r.b + '|' + r.t).join('\n');
+
+test('THE BUG: a VISIBLE foundation next to a placeholder who is folded into who and switched off', () => {
+  const api = loadSidecar({});
+  const f = Object.assign(realFoundation(), { on: true });
+  const out = api.foundationKeep([f, phWho()]);
+  assert.equal(out.changed, true);
+  assert.equal(fnd(out.list).on, false, 'standalone foundation is OFF');
+  const w = who(out.list);
+  const labels = w.items.map((r) => r.b);
+  assert.equal(labels.join('|'), 'Who I am|Professional summary|Foundation|Hands-on|Professionally|My goal', 'rows land before My goal');
+  assert.ok(w.items.slice(2, 5).every((r) => r.fnd === true && r.mk === true), 'folded rows are flagged + bulleted');
+  assert.match(rowText(out.list), /ALM tooling, FMEA/);
+});
+
+test('a HIDDEN foundation with real prose is folded too (it is no longer un-hidden)', () => {
   const api = loadSidecar({});
   const out = api.foundationKeep([realFoundation(), phWho()]);
-  assert.equal(out.changed, true, 'un-hidden');
-  assert.equal(out.list.find((s) => s.id === 'foundation').on, true);
-  assert.equal(api.foundationKeep(out.list).changed, false, 'idempotent — no write storm');
+  assert.equal(out.changed, true);
+  assert.equal(fnd(out.list).on, false);
+  assert.equal(who(out.list).items.length, 6);
 });
 
-test('once the v5 who carries REAL content, foundation stays hidden as v5 intends', () => {
+test('idempotent: a second pass over the folded letter changes nothing (no write storm)', () => {
+  const api = loadSidecar({});
+  const once = api.foundationKeep([realFoundation(), phWho()]);
+  const twice = api.foundationKeep(once.list);
+  assert.equal(twice.changed, false);
+  assert.equal(who(once.list).items.length, 6, 'no duplicate rows');
+});
+
+test('folded rows do not count as v5 who content, so foundation is never re-enabled later', () => {
+  const api = loadSidecar({});
+  const once = api.foundationKeep([Object.assign(realFoundation(), { on: true }), phWho()]);
+  // simulate a hydration that re-emits foundation ON with the same prose
+  const again = api.foundationKeep([Object.assign(realFoundation(), { on: true }), who(once.list)]);
+  assert.equal(fnd(again.list).on, false);
+  assert.equal(who(again.list).items.length, 6, 'de-duplicated on text');
+});
+
+test('a HALF-filled who (Professional summary still placeholder) gets the fold as well', () => {
+  const api = loadSidecar({});
+  const out = api.foundationKeep([realFoundation(), halfWho()]);
+  assert.equal(out.changed, true);
+  assert.equal(fnd(out.list).on, false);
+  assert.equal(who(out.list).items.map((r) => r.b).join('|'), 'Who I am|Professional summary|How I operate|Foundation|Hands-on|Professionally|My goal');
+});
+
+test('once the v5 who carries REAL content nothing is folded and foundation stays hidden', () => {
   const api = loadSidecar({});
   assert.equal(api.foundationKeep([realFoundation(), realWho()]).changed, false);
+  const out = api.foundationKeep([Object.assign(realFoundation(), { on: true }), realWho()]);
+  assert.equal(out.changed, true, 'a visible foundation is switched off');
+  assert.equal(fnd(out.list).on, false);
+  assert.equal(who(out.list).items.length, 3, 'v5 rows supersede it: no fold');
 });
 
-test('a foundation that is only placeholders stays hidden — nothing would be lost', () => {
+test('a foundation that is only placeholders: hidden stays put, visible is switched off, nothing folded', () => {
   const api = loadSidecar({});
   const empty = { id: 'foundation', type: 'rich_block', on: false, items: [
     { b: 'Foundation', t: '[Legacy pre-v5 section]' },
     { b: 'Hands-on', t: '[Select only skills that match]', mk: true },
   ] };
   assert.equal(api.foundationKeep([empty, phWho()]).changed, false);
+  const out = api.foundationKeep([Object.assign({}, empty, { on: true }), phWho()]);
+  assert.equal(fnd(out.list).on, false);
+  assert.equal(who(out.list).items.length, 3);
 });
 
-test('a HALF-filled who does not release foundation — no flip-flop between loads', () => {
+test('no who block at all: legacy KEEP still applies so real prose is never dropped', () => {
   const api = loadSidecar({});
-  const out = api.foundationKeep([realFoundation(), halfWho()]);
-  assert.equal(out.changed, true, 'kept visible: Professional summary is still a placeholder');
-  assert.equal(out.list.find((s) => s.id === 'foundation').on, true);
+  const out = api.foundationKeep([realFoundation(), { id: 'bring', type: 'rich_block', items: [{ b: 'What I bring', t: 'x' }] }]);
+  assert.equal(out.changed, true);
+  assert.equal(fnd(out.list).on, true);
+});
+
+test('a foundation row the owner hid in the editor is not folded', () => {
+  const api = loadSidecar({});
+  const f = Object.assign(realFoundation(), { on: true, hidden: { 1: true } });
+  const out = api.foundationKeep([f, phWho()]);
+  assert.equal(who(out.list).items.map((r) => r.b).join('|'), 'Who I am|Professional summary|Foundation|Professionally|My goal');
 });
 
 // ---------------------------------------- CL-V5-WHY-LEADIN-001 + ROLEVIEW-VISIBLE-001

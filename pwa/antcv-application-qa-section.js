@@ -22,7 +22,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.111-qa-header-trim';
+  var VERSION = '1.51.4506-qa-empty-page';
   if (window.__antcvApplicationQa === VERSION) return;
   window.__antcvApplicationQa = VERSION;
 
@@ -80,11 +80,36 @@
   }
   function isHeaderRow(it) { return it && it.grp && /responses to your application questions/i.test(String(it.t || '')); }
 
+  // QA-EMPTY-PAGE-001 (owner 2026-09-06): "a call for response to application questions is
+  // generated even if there are no application questions" - the rendered page held ONLY the
+  // closing line. Two holes: (a) the durable guard counted ANY non-group row over 20 chars as
+  // "real Q&A", and the closing line is 70 chars, so a section whose question rows had been
+  // hidden, stripped or never answered could never auto-hide; (b) a detected question with an
+  // EMPTY or bracketed answer built a page anyway. A Q&A row is real only when it has BOTH a
+  // question and a renderable answer and is not hidden; the page exists only while at least
+  // one such row is visible. Unanswered detections are dropped, not rendered.
+  var CLOSING_RE = /look forward to expanding on any of these answers/i;
+  function renderableAnswer(t) { var s = String(t == null ? '' : t).trim(); return !!s && !/^\[[\s\S]*\]$/.test(s); }
+  function answeredQuestion(qa) { return !!(qa && String(qa.question || '').trim() && renderableAnswer(qa.answer)); }
+  function answeredRows(sec) {
+    if (!sec || !Array.isArray(sec.items)) return 0;
+    var n = 0;
+    sec.items.forEach(function (it, i) {
+      if (!it || it.grp || it.tOff) return;
+      if (sec.hidden && sec.hidden[i]) return;
+      if (!String(it.b || '').trim()) return;
+      if (!renderableAnswer(it.t)) return;
+      if (CLOSING_RE.test(String(it.t))) return;
+      n++;
+    });
+    return n;
+  }
+
   function run() {
     try {
       var secs = readSections();
       if (!Array.isArray(secs.cl)) return;
-      var qs = readQuestions();
+      var qs = readQuestions().filter(answeredQuestion);   // QA-EMPTY-PAGE-001: unanswered = no page
       var idx = secs.cl.findIndex(function (s) { return s && s.id === 'application_qa'; });
       var changed = false;
 
@@ -100,8 +125,9 @@
         // scaffold). Stale-page risk is handled where it belongs: a new
         // generation replaces sections wholesale, and the owner can toggle
         // the section off in the editor.
-        var hasRealQa = idx >= 0 && Array.isArray(secs.cl[idx].items) &&
-          secs.cl[idx].items.some(function (it) { return it && !it.grp && typeof it.t === 'string' && it.t.trim().length > 20; });
+        // QA-EMPTY-PAGE-001: "real" = a visible row with a question AND a renderable answer;
+        // the closing line alone (or hidden / unanswered question rows) is not a page.
+        var hasRealQa = idx >= 0 && answeredRows(secs.cl[idx]) > 0;
         if (hasRealQa) return;
         if (idx >= 0 && secs.cl[idx].on !== false) { secs.cl[idx] = Object.assign({}, secs.cl[idx], { on: false }); changed = true; }
         if (!changed) return;
@@ -125,8 +151,11 @@
             var n = nextItems[i];
             return !!it && !!n && (it.grp ? (n.grp && it.t === n.t) : (it.b === n.b && it.t === n.t));
           });
-          if (!same || cur.on === false || cur.type !== 'rich_block' || !cur.pageBreakBefore || cur.title !== QA_TITLE) {
-            secs.cl[idx] = Object.assign({}, cur, { type: 'rich_block', on: true, leadBold: true, pageBreakBefore: true, title: QA_TITLE, items: nextItems });
+          // QA-EMPTY-PAGE-001: the owner may have hidden every question row in the editor;
+          // then the page would carry only the closing line - keep it OFF instead.
+          var wantOn = answeredRows({ items: nextItems, hidden: cur.hidden }) > 0;
+          if (!same || (cur.on !== false) !== wantOn || cur.type !== 'rich_block' || !cur.pageBreakBefore || cur.title !== QA_TITLE) {
+            secs.cl[idx] = Object.assign({}, cur, { type: 'rich_block', on: wantOn, leadBold: true, pageBreakBefore: true, title: QA_TITLE, items: nextItems });
             changed = true;
           }
           // QA-STANDALONE-PAGE-001: keep the Q&A page LAST (after the
@@ -155,5 +184,5 @@
     if (e.key === qk) run();
   });
   [0, 300, 900, 2000, 3500, 6000].forEach(function (ms) { setTimeout(run, ms); });
-  window.AntcvApplicationQa = { version: VERSION, run: run, _header: candidateHeader };
+  window.AntcvApplicationQa = { version: VERSION, run: run, _header: candidateHeader, _answeredRows: answeredRows, _answeredQuestion: answeredQuestion };
 })();

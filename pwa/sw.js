@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.4486-anthropic-rates';
+const CACHE = 'antcv-1.51.4506-qa-page-foundation-fold';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

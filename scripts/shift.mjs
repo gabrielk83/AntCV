@@ -13,13 +13,19 @@
 //   release                      drop this session's claim
 //   reap    [--hours 6]          drop claims whose heartbeat is older than N hours
 //
-// This session's id is stored in .git/shift-session-id so beat/release find the same row.
+// This session's id is stored in <gitdir>/shift-session-id so beat/release find the same row.
+// The gitdir is per clone/worktree (main clone → .git; worktree → .git/worktrees/<name>), so
+// ONE GITDIR HOLDS AT MOST ONE CLAIM. `claim` refuses when this gitdir's id already owns a live
+// row on origin (SHIFT-SHARED-ID-001, 2026-09-06): two sessions claiming from the same main
+// clone shared one id, the second claim silently REPLACED the first row, and the first
+// session's `release` then deleted the second session's claim. To run two claims from one
+// machine, claim the second one from its own worktree (`git worktree add`, then `claim` there).
 // It is a plain node script (not a workflow) — Date/Math.random are fine here.
 
 import { execSync } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve, basename } from 'node:path';
 import os from 'node:os';
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -35,6 +41,12 @@ function resolveGitDir() {
   catch { return join(REPO, '.git'); }
 }
 const IDFILE = join(resolveGitDir(), 'shift-session-id');
+// Main clone: absolute-git-dir === git-common-dir. Linked worktree: they differ.
+function commonGitDir() {
+  try { return resolve(REPO, execSync('git rev-parse --git-common-dir', { cwd: REPO, encoding: 'utf8' }).trim()); }
+  catch { return join(REPO, '.git'); }
+}
+function inWorktree() { return resolve(dirname(IDFILE)) !== commonGitDir(); }
 const BEGIN = '<!-- SHIFT:BEGIN';
 const END = '<!-- SHIFT:END -->';
 
@@ -150,19 +162,64 @@ function printTable(claims) {
   rows.forEach((r) => console.log(fmt(r)));
 }
 
-function commitPush(msg, noPush) {
-  git('add docs/qa/NIGHT_SHIFT.md', { quiet: true });
+const LEDGER_REL = 'docs/qa/NIGHT_SHIFT.md';
+// Commit the ledger and push to origin/main. Returns true when origin has the change.
+// `reapply(freshClaims)` re-derives this command's intended claim set from a fresh origin read;
+// it is used when the push is rejected because origin moved: the `pull --rebase` then CONFLICTS
+// on the ledger block (every command rewrites the whole block), and before 2026-09-06 that
+// conflict was swallowed — the command printed success, nothing reached origin, and the clone
+// was left mid-rebase with <<<<<<< markers in NIGHT_SHIFT.md. Now the block is rebuilt from
+// origin's current rows (so a row another session pushed meanwhile survives) and the rebase
+// continues; any conflict outside the ledger aborts the rebase and reports loudly.
+function commitPush(msg, noPush, reapply) {
+  git('add ' + LEDGER_REL, { quiet: true });
   const committed = git(`commit -m ${JSON.stringify(msg)}`, { quiet: true });
-  if (committed === null) return; // nothing staged / hook — leave the working-tree edit in place
-  if (noPush) return;
-  let pushed = git('push origin HEAD:main', { quiet: true });
-  if (pushed === null) { sync(); git('push origin HEAD:main', { quiet: true }); } // one retry after rebase
+  if (committed === null) return false; // nothing staged / hook — leave the working-tree edit in place
+  if (noPush) return true;
+  if (git('push origin HEAD:main', { quiet: true }) !== null) return true;
+  if (!sync()) {
+    const conflicts = (git('diff --name-only --diff-filter=U', { quiet: true }) || '').split('\n').map((s) => s.trim()).filter(Boolean);
+    const onlyLedger = conflicts.length === 1 && conflicts[0] === LEDGER_REL && typeof reapply === 'function';
+    if (onlyLedger) {
+      writeLedger(reapply(originLedgerClaims()));
+      if (readFileSync(LEDGER, 'utf8').includes('<<<<<<<')) { git('rebase --abort', { quiet: true }); return pushFailed('conflict markers straddle the ledger block'); }
+      git('add ' + LEDGER_REL, { quiet: true });
+      if (git('-c core.editor=true rebase --continue', { quiet: true }) === null) { git('rebase --abort', { quiet: true }); return pushFailed('rebase --continue failed'); }
+    } else {
+      git('rebase --abort', { quiet: true });
+      const dirty = (git('status --porcelain', { quiet: true }) || '').trim();
+      return pushFailed(conflicts.length ? 'rebase conflicts in ' + conflicts.join(', ') : dirty ? 'pull --rebase refused (uncommitted changes in this tree)' : 'pull --rebase failed');
+    }
+  }
+  if (git('push origin HEAD:main', { quiet: true }) !== null) return true;
+  return pushFailed('push rejected again');
+}
+function pushFailed(why) {
+  console.error(`NOT PUSHED: ${why}. The ledger change is committed locally only — origin/main does NOT have it.`);
+  console.error(`Fix: git pull --rebase origin main (resolve ${LEDGER_REL} by keeping YOUR block), then git push origin HEAD:main.`);
+  return false;
 }
 
 // ---- commands --------------------------------------------------------------
 function cmdClaim() {
   const size = parseInt(arg('size', '20'), 10) || 20;
-  const active = originLedgerClaims().filter((c) => c.id !== sessionId());
+  const active = originLedgerClaims();
+  // ONE CLAIM PER GITDIR (SHIFT-SHARED-ID-001, 2026-09-06). sessionId() reuses whatever id
+  // this gitdir's file holds, so every `claim` run from the same clone gets the SAME id. The
+  // old code filtered "my" row out and appended a new one — a silent REPLACE — so a second
+  // session claiming from the shared main clone overwrote the first session's row under the
+  // shared id, and the first session's `release` then deleted the second session's claim
+  // (1.51.4466 / 1.51.4486 wipe, restored by hand in 4cfde995). Refuse instead: the id file
+  // cannot tell two sessions apart, so the second session must claim from its own worktree.
+  const myId = sessionId();
+  const held = myId ? active.find((c) => c.id === myId) : null;
+  if (held) {
+    console.error(`this clone already holds ${held.range}${held.task ? ' (' + held.task.slice(0, 60) + ')' : ''} — id ${myId} from ${IDFILE}.`);
+    console.error('Release it here first (node scripts/shift.mjs release) or claim from your OWN worktree, which has its own id file:');
+    console.error('  git worktree add ../AntCV-<name> -b <name>');
+    console.error('  cd ../AntCV-<name> && node scripts/shift.mjs claim --task "<what>"');
+    process.exit(1);
+  }
   let range = arg('range', null);
   if (range) {
     if (!/^1\.51\.\d+-1\.51\.\d+$/.test(range)) { console.error('range must look like 1.51.260-1.51.279'); process.exit(1); }
@@ -172,21 +229,30 @@ function cmdClaim() {
     range = nextFreeRange(active, size);
   }
   const id = sessionId(true);
-  const claims = active.concat([{
+  const wt = inWorktree();
+  const row = {
     id, started: nowIso(), host: os.hostname(),
-    worktree: arg('worktree', null) || null,
+    worktree: arg('worktree', null) || (wt ? basename(REPO) : null),
     branch: git('rev-parse --abbrev-ref HEAD', { quiet: true }) || null,
     range, task: arg('task', '') || '', beat: nowIso(),
-  }]);
-  writeLedger(claims);
-  commitPush(`chore(shift): claim ${range} — ${arg('task', '') || 'work'}`, arg('no-push', false));
+  };
+  writeLedger(active.concat([row]));
+  const pushed = commitPush(`chore(shift): claim ${range} — ${arg('task', '') || 'work'}`, arg('no-push', false),
+    (fresh) => fresh.filter((c) => c.id !== id).concat([row]));
   const start = range.split('-')[0];
   const wtName = (arg('worktree', null)) || ('shift-' + start.replace(/\./g, '-'));
-  console.log(`\nCLAIMED ${range}  (session ${id})`);
+  console.log(`\nCLAIMED ${range}  (session ${id}, id file ${IDFILE})${pushed ? '' : '  [LOCAL ONLY — not on origin, see above]'}`);
   console.log(`Use version numbers only inside ${range}. First: ${start}.`);
-  console.log(`\nWork in your own worktree so you never touch the shared clone:`);
-  console.log(`  git worktree add ../AntCV-${wtName} -b ${wtName}`);
-  console.log(`  cd ../AntCV-${wtName}`);
+  if (wt) {
+    console.log(`\nYou are in worktree ${REPO} — work here. The claim is bound to this worktree's id file.`);
+  } else {
+    console.log(`\nWork in your own worktree so you never touch the shared clone:`);
+    console.log(`  git worktree add ../AntCV-${wtName} -b ${wtName}`);
+    console.log(`  cd ../AntCV-${wtName}`);
+    console.log(`\nThis clone now holds ONE claim (id file ${IDFILE}); a second claim from here is refused until`);
+    console.log(`release — another session on this machine claims from inside its own worktree instead.`);
+    console.log(`Run beat/release from this clone, or copy the id file into ${join(commonGitDir(), 'worktrees', 'AntCV-' + wtName)} to run them from the worktree.`);
+  }
   console.log(`\nHeartbeat: node scripts/shift.mjs beat   ·   Release: node scripts/shift.mjs release`);
 }
 
@@ -207,8 +273,9 @@ function cmdBeat() {
   if (!mine) { console.error('no active claim for this session'); process.exit(1); }
   mine.beat = nowIso();
   writeLedger(claims);
-  commitPush(`chore(shift): heartbeat ${mine.range}`, arg('no-push', false));
-  console.log(`beat ${mine.range} @ ${mine.beat}`);
+  const pushed = commitPush(`chore(shift): heartbeat ${mine.range}`, arg('no-push', false),
+    (fresh) => fresh.map((c) => (c.id === id ? { ...c, beat: mine.beat } : c)));
+  console.log(`beat ${mine.range} @ ${mine.beat}${pushed ? '' : '  [LOCAL ONLY]'}`);
 }
 
 function cmdRelease() {
@@ -217,7 +284,9 @@ function cmdRelease() {
   const mine = all.find((c) => c.id === id);
   const claims = all.filter((c) => c.id !== id);
   writeLedger(claims);
-  commitPush(`chore(shift): release ${mine ? mine.range : id}`, arg('no-push', false));
+  const pushed = commitPush(`chore(shift): release ${mine ? mine.range : id}`, arg('no-push', false),
+    (fresh) => fresh.filter((c) => c.id !== id));
+  if (!pushed && mine && !arg('no-push', false)) { console.error(`keeping ${IDFILE} so a retry can still find ${mine.range}`); process.exit(1); }
   try { if (existsSync(IDFILE)) unlinkSync(IDFILE); } catch {}   // delete, don't blank — see sessionId()
   console.log(mine ? `released ${mine.range}` : 'no claim for this session (cleaned id)');
 }
@@ -229,10 +298,10 @@ function cmdReap() {
   const all = originLedgerClaims();
   const dead = all.filter((c) => new Date(c.beat || c.started).getTime() < cutoff);
   if (!dead.length) { console.log('nothing to reap'); return; }
-  const claims = all.filter((c) => new Date(c.beat || c.started).getTime() >= cutoff);
-  writeLedger(claims);
-  commitPush(`chore(shift): reap ${dead.length} stale claim(s)`, arg('no-push', false));
-  console.log('reaped: ' + dead.map((c) => c.range).join(', '));
+  const alive = (list) => list.filter((c) => new Date(c.beat || c.started).getTime() >= cutoff);
+  writeLedger(alive(all));
+  const pushed = commitPush(`chore(shift): reap ${dead.length} stale claim(s)`, arg('no-push', false), alive);
+  console.log('reaped: ' + dead.map((c) => c.range).join(', ') + (pushed ? '' : '  [LOCAL ONLY]'));
 }
 
 const table = { claim: cmdClaim, status: cmdStatus, 'next-version': cmdNextVersion, beat: cmdBeat, release: cmdRelease, reap: cmdReap };

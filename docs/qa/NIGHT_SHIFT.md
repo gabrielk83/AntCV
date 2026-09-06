@@ -16,6 +16,14 @@ There is no dispatcher and no manager process. The rule set IS the coordination:
 3. **WORK IN A WORKTREE** — run the printed `git worktree add` so your edits live in your
    OWN working tree, never the shared clone. This is what kills the "other session's
    uncommitted `app.js` under my commits" class.
+   **One claim per checkout.** The session id is stored in the gitdir of the checkout you
+   ran `claim` from (`.git/shift-session-id`, or `.git/worktrees/<name>/shift-session-id`), so
+   `claim` refuses when that checkout already holds a live row. If the shared main clone is
+   already claimed by another session, create your worktree FIRST and run `claim` from inside
+   it; it gets its own id file. `beat`/`release` must run from the checkout whose id file made
+   the claim (or copy that file into your worktree's gitdir). SHIFT-SHARED-ID-001, 2026-09-06:
+   two claims from one clone shared one id, the second silently replaced the first row, and
+   the first session's release deleted the second's claim.
 4. **HEARTBEAT** — `node scripts/shift.mjs beat` every so often (optional; marks you alive
    so a crashed claim can be reaped).
 5. **RELEASE** — `node scripts/shift.mjs release` when done (or when you abandon the range).
@@ -45,6 +53,11 @@ _No active claims when the block above is empty. Each line is
 - **Reads are origin-authoritative** — `status`/`next-version`/`claim` read the ledger from
   `origin/main` (fetch + `git show`), NOT the local working copy, so a session with uncommitted
   WIP (which can't `pull --rebase`) still sees every active claim and can't double-claim a range.
+- **Writes are re-applied on conflict** — every command rewrites the whole block, so when a
+  push is rejected because `origin/main` moved, the `pull --rebase` conflicts on the block. The tool
+  rebuilds the block from origin's CURRENT rows plus its own change and continues the rebase
+  (a row another session pushed meanwhile survives). A conflict anywhere else aborts the rebase
+  and prints `NOT PUSHED`: your change is then committed locally only — fix before continuing.
 - **Released ranges are not reused** — the high-water mark advances past every claimed range
   (release/claim commit subjects carry the range end), so numbers are burned rather than recycled.
   This is deliberate: a never-reused number can never collide with an in-flight deploy of the old one.

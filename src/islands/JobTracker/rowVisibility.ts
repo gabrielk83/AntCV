@@ -24,6 +24,15 @@
 // Precedence matters: isClosedRow() matches "rejected" too, so 'rejected' is
 // tested FIRST or a rejected row would be swallowed by the Archive box and the
 // ⛔ checkbox would appear to do nothing.
+//
+// JOBLIST-FILTER-003 (owner, 2026-09-06): the SAME bug on the "In progress"
+// swatch. It gated on the FFF2CC band only, but a row marked Submitted /
+// Interview / Offer from the tracked-status dropdown keeps its T1/T2/T3 band, so
+// unticking "In progress" hid nothing. A live row is now bucketed 'progress'
+// when its band is FFF2CC OR its tracked status says it has been sent off, and
+// that bucket answers ONLY to the In-progress swatch (not to its tier band).
+// Pre-submission statuses (CV/CL drafting, drafted) stay tier-governed: nothing
+// has left the building yet.
 
 export type VisRow = readonly (string | number | null | undefined)[];
 
@@ -34,6 +43,7 @@ const BAND = 12;     // tier band hex
 const cell = (r: VisRow, i: number): string => String((r && r[i]) || '');
 
 export const ARCHIVE_BAND = 'D9D9D9';
+export const PROGRESS_BAND = 'FFF2CC';
 
 /** Tracked status reads as a rejection. */
 export function isRejectedRow(r: VisRow): boolean {
@@ -58,6 +68,23 @@ export function closedBucket(r: VisRow): 'rejected' | 'archive' | null {
 }
 
 /**
+ * JOBLIST-FILTER-003: the application has been sent off — the FFF2CC band, or a
+ * tracked status of Submitted / Applied / Interview / Offer. Closed-ness is NOT
+ * tested here; callers go through visBucket(), which tests closed first.
+ */
+export function isInProgressRow(r: VisRow): boolean {
+  return cell(r, BAND).toUpperCase() === PROGRESS_BAND
+    || /\b(submitted|applied|interview(ing|s)?|offer(ed)?)\b/i.test(cell(r, TRACKED));
+}
+
+/** Every legend bucket, closed ones first; null = governed by its tier band. */
+export function visBucket(r: VisRow): 'rejected' | 'archive' | 'progress' | null {
+  const closed = closedBucket(r);
+  if (closed) return closed;
+  return isInProgressRow(r) ? 'progress' : null;
+}
+
+/**
  * The tier/closed half of the legend filter — the half that was broken. The
  * ★/✅/⏰ narrowing toggles stay in the island; they only ever subtract, and
  * they were already correct.
@@ -73,9 +100,10 @@ export function passesTierFilter(
 ): boolean {
   const has = (b: string): boolean =>
     Array.isArray(bands) ? bands.indexOf(b) !== -1 : (bands as ReadonlySet<string>).has(b);
-  const bucket = closedBucket(r);
+  const bucket = visBucket(r);
   if (bucket === 'rejected') return !!showRejected;
   if (bucket === 'archive') return has(ARCHIVE_BAND);
+  if (bucket === 'progress') return has(PROGRESS_BAND);
   const band = cell(r, BAND).toUpperCase();
   if (knownBands.indexOf(band) !== -1 && !has(band)) return false;
   return true;

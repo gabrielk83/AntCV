@@ -29,7 +29,6 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 ## ACTIVE CLAIMS
 
 <!-- SHIFT:BEGIN — one JSON object per line; managed by scripts/shift.mjs, safe to hand-edit a line if a session died without releasing -->
-{"id":"sh_mtprhkph_7sjp","started":"2026-09-06T12:02:01.878Z","host":"Gabo-PC","worktree":null,"branch":"main","range":"1.51.4506-1.51.4525","task":"QA-EMPTY-PAGE-001 + CL-V5-FOUNDATION-FOLD-001: hide Q&A page with no answered questions; fold foundation rows into WHO I AM instead of re-enabling the section","beat":"2026-09-06T12:02:01.938Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

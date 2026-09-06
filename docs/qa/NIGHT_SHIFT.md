@@ -30,6 +30,7 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 
 <!-- SHIFT:BEGIN — one JSON object per line; managed by scripts/shift.mjs, safe to hand-edit a line if a session died without releasing -->
 {"id":"sh_mtpqgpzt_4l89","started":"2026-09-06T11:43:10.236Z","host":"Gabo-PC","worktree":"anthropic-rates","branch":"main","range":"1.51.4486-1.51.4505","task":"ANTHROPIC-RATES-2026-09-001: new Anthropic models (opus-5, fable-5, fable-5-1) + Sonnet 5 $2/$10 in 3 RATES mirrors + PWA C map; desktop cost-quality-tune trigger","beat":"2026-09-06T11:43:10.296Z"}
+{"id":"sh_mtprhkph_7sjp","started":"2026-09-06T12:02:01.878Z","host":"Gabo-PC","worktree":null,"branch":"main","range":"1.51.4506-1.51.4525","task":"QA-EMPTY-PAGE-001 + CL-V5-FOUNDATION-FOLD-001: hide Q&A page with no answered questions; fold foundation rows into WHO I AM instead of re-enabling the section","beat":"2026-09-06T12:02:01.938Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

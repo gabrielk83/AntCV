@@ -37,6 +37,7 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 ## ACTIVE CLAIMS
 
 <!-- SHIFT:BEGIN — one JSON object per line; managed by scripts/shift.mjs, safe to hand-edit a line if a session died without releasing -->
+{"id":"sh_mtq6jorr_haqg","started":"2026-09-06T19:03:34.754Z","host":"Gabo-PC","worktree":"interesting-bell-a5b8bd","branch":"claude/interesting-bell-a5b8bd","range":"1.51.4526-1.51.4545","task":"SLOGAN-PAPER-CONTRAST-001: CL slogan contrast-guarded against the header band, not the white paper -> white/hidden slogan on dark-band brands (preview + export sidecars)","beat":"2026-09-06T19:03:34.816Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

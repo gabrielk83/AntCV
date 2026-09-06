@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.4506-qa-page-foundation-fold';
+const CACHE = 'antcv-1.51.4526-slogan-paper-contrast';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

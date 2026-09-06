@@ -20,7 +20,7 @@
 (function () {
   'use strict';
   if (window.__antcvExportHeaderColors) return;
-  window.__antcvExportHeaderColors = '1.1';
+  window.__antcvExportHeaderColors = '1.2';
   var origFetch = window.fetch;
   if (typeof origFetch !== 'function') return;
 
@@ -62,6 +62,15 @@
     if (ink && contrastOk(ink, bg)) return ink;
     return (lum(bg) != null && lum(bg) > 0.4) ? '1A1A1A' : 'FFFFFF';
   }
+  // SLOGAN-PAPER-CONTRAST-001 (1.51.4526): mirror of the preview engine — the
+  // slogan sits on the WHITE paper, so it is guarded against white, never the
+  // band. The band guard sent FFFFFF for every dark-band brand; the worker's
+  // sloganColorOnWhite then darkened that white to a mid-grey, so DOCX/PDF lost
+  // the brand slogan colour too. Chain: sloganColor, accent, headerBg, near-black.
+  function guardOnPaper(cands) {
+    for (var i = 0; i < cands.length; i++) { var c = hex6(cands[i]); if (c && contrastOk(c, 'FFFFFF')) return c; }
+    return '1A1A1A';
+  }
   // Mirror the engine's per-element mapping (colorFor).
   function colorFor(elem) {
     var o = ov(elem); if (o) return o;
@@ -74,7 +83,7 @@
       case 'name':
       case 'contact': return guard(hex6(b.headerInk) || hex6(b.headerNameColor) || '', b);
       case 'spec': return guard(hex6(b.accent) || '', b);
-      case 'slogan': return guard(hex6(b.sloganColor) || hex6(b.accent) || '', b);
+      case 'slogan': return (hex6(b.sloganColor) || hex6(b.accent)) ? guardOnPaper([b.sloganColor, b.accent, b.headerBg]) : '';
       default: return '';
     }
   }
@@ -135,6 +144,6 @@
     return origFetch.call(window, url, init);
   };
 
-  window.AntcvExportHeaderColors = { version: '1.1', _colorFor: colorFor, _patch: patch };
+  window.AntcvExportHeaderColors = { version: '1.2', _colorFor: colorFor, _patch: patch };
   try { console.debug('[export-header-colors] installed'); } catch (_) {}
 })();

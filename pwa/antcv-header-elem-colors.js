@@ -27,11 +27,12 @@
 (function () {
   'use strict';
   if (window.__antcvHeaderElemColorsInstalled) return;
-  window.__antcvHeaderElemColorsInstalled = '1.0';
+  window.__antcvHeaderElemColorsInstalled = '1.1';
 
   var KILL = 'antcv:disable-header-elem-colors';
   var OVERRIDE_KEY = 'antcv:headerElemColors';
   var APP_GRAY = '#595959';
+  var PAPER_BG = '#ffffff';   // the CL body paper the slogan sits on (not the band)
   var STAMP = 'data-antcv-elem-colored';
 
   function killed() { try { return localStorage.getItem(KILL) === '1'; } catch (_) { return false; } }
@@ -78,6 +79,19 @@
     if (ink && contrastOk(ink, bg)) return ink;
     return (lum(bg) != null && lum(bg) > 0.4) ? '#1a1a1a' : '#ffffff';
   }
+  // SLOGAN-PAPER-CONTRAST-001 (1.51.4526): the slogan is NOT on the band — it
+  // mounts before the first CL row, on the WHITE paper. Running it through the
+  // band guard above inverted the rule for every dark-band brand: a deep slogan
+  // colour "failed" 3:1 against the dark band, fell back to headerInk — which is
+  // WHITE on a dark band — and painted white text on white paper (the owner's
+  // "slogan is in a hidden colour"). Guard it against the paper instead. The
+  // fallback chain stays brand-first: accent, then the band colour (dark on
+  // exactly the brands that hit this), then near-black. Same chain in the
+  // export sidecar so DOCX/PDF match the screen.
+  function guardOnPaper(cands) {
+    for (var i = 0; i < cands.length; i++) { var c = hex(cands[i]); if (c && contrastOk(c, PAPER_BG)) return c; }
+    return '#1a1a1a';
+  }
   // Resolve the target colour for one element: manual override > brand slot.
   function colorFor(elem) {
     var ov = readJSON(OVERRIDE_KEY) || {};
@@ -87,7 +101,7 @@
       case 'name':
       case 'contact': return guard(hex(b.headerInk) || hex(b.headerNameColor) || '', b);
       case 'spec':    return guard(hex(b.accent) || '', b);
-      case 'slogan':  return guard(hex(b.sloganColor) || hex(b.accent) || '', b);
+      case 'slogan':  return (hex(b.sloganColor) || hex(b.accent)) ? guardOnPaper([b.sloganColor, b.accent, b.headerBg]) : '';
       case 'application': return APP_GRAY;
       default: return '';
     }
@@ -152,8 +166,9 @@
   apply();
 
   window.AntcvHeaderColors = {
-    version: '1.0',
+    version: '1.1',
     apply: apply,
+    _colorFor: colorFor,
     // set a manual per-element override (wins over brand); '' clears it.
     set: function (elem, color) {
       var ov = readJSON(OVERRIDE_KEY) || {};

@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.4466-joblist-progress-filter';
+  const TARGET_VERSION = '1.51.4486-anthropic-rates';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.4466-joblist-progress-filter',
     '1.51.4446-content-lang-stamp',
     '1.51.4406-import-photo',
     '1.51.4386-demand-seed-refresh',

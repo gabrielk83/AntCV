@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.4466-joblist-progress-filter';
+const CACHE = 'antcv-1.51.4486-anthropic-rates';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

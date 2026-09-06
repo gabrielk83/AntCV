@@ -71,7 +71,16 @@ test('the pins that a substring match would misprice keep their own entries', as
   // key at [15,75], and "gpt-5.5" must not fall through to "gpt-5" at [1.25,10].
   assert.deepEqual(rateForStrict('claude-opus-4-8'), [5, 25]);
   assert.deepEqual(rateForStrict('gpt-5.5'), [30, 60]);
-  assert.deepEqual(rateForStrict('claude-sonnet-5'), [3, 15]);
+  assert.deepEqual(rateForStrict('claude-sonnet-5'), [2, 10]);   // ANTHROPIC-RATES-2026-09-001: launch price made standard
+});
+
+test('the Anthropic 5-generation ids are priced ahead of adoption (ANTHROPIC-RATES-2026-09-001)', async () => {
+  const { rateForStrict } = await import(pathToFileURL(MIRROR).href);
+  // Not in production traffic yet (2026-09-06), so the LIVE list above does not cover
+  // them — but the first BYOK or override call would otherwise log the client's guess.
+  assert.deepEqual(rateForStrict('claude-opus-5'), [5, 25]);
+  assert.deepEqual(rateForStrict('claude-fable-5-1'), [10, 50]);
+  assert.deepEqual(rateForStrict('claude-fable-5'), [10, 50]);
 });
 
 test('the strict lookup refuses to guess an unknown model', async () => {

@@ -104,7 +104,7 @@ citing an old number may mean either row — the ID disambiguates.
 | 88 | — | 2026-07-13 | OWNER-ROUND-3-BACKLOG (Aimpoint-810 deep review close-out, 2026-07-13; full detail in the ACTIVE_BUGS OWNER-RO |
 | 87 | `OWNER-ROUND-2-RESIDUE-001` | 2026-07-13 | (Aimpoint app-810 review, 2026-07-13, commit 73264c6) — the golden/detection/label/slogan/Scholar fixes landed |
 | 86 | `GOLD-SESSION-FOLLOWUPS-001` | 2026-07-13 | (density/gold session residue, 2026-07-13) — the marathon closed its main arc (see the ACTIVE_BUGS 2026-07-13  |
-| 89 | `MODEL-TABLE-FRESHNESS-001` | 2026-07-13 | CODE FIXED 2026-07-13 (shift lane 1.51.518-1.51.537, isolated worktree; DEPLOY OWED) — the proxy cost tables n |
+| 89 | `MODEL-TABLE-FRESHNESS-001` | 2026-09-06 | ADVANCED 2026-09-06 (ANTHROPIC-RATES-2026-09-001: opus-5 / fable-5 / fable-5-1 priced, sonnet-5 → [2,10] in all 3 mirrors + PWA C map, `1.51.4486-anthropic-rates`; deploy ×3 + D1 INSERT OWED) · CODE FIXED 2026-07-13 (shift lane 1.51.518-1.51.537, isolated worktree; DEPLOY OWED) — the proxy cost tables n |
 | 96 | `CV-HEADER-BOX-001` | 2026-07-17 | CV header redesign (plan §5), not started. Target (owner's hand-fixed 1017_Ibsen_Photonics_CV_FINAL_v4.docx):  |
 | 97 | `DELIVERABLES-3CO-001` | 2026-07-18 | the three brand-correct deliverable sets (Ibsen / Aimpoint / Demant). Owner ask 2026-07-17: regenerate CV+CL f |
 | 95 | `CV-POLISH-BATCH-001` | 2026-07-19 | (owner CV review, desktop session 2026-07-19 — Ibsen 1017 regen). Five CV-quality defects reported against a l |

@@ -56,8 +56,16 @@
 // Any value updated below carries an inline date comment; values
 // without one are unchanged from the last audit.
 const RATES = {
-  // Anthropic — current generation
-  'claude-sonnet-5':     [3.00, 15.00],   // 2026-07 (standard $3/$15; intro $2/$10 through 2026-08-31 — use standard so the demo budget is conservatively capped)
+  // Anthropic — current generation. Verified 2026-09-06 against platform.claude.com/docs/en/about-claude/pricing
+  // (ANTHROPIC-RATES-2026-09-001). Three ids were missing and each fell through to a WRONG neighbour:
+  //   'claude-opus-5'     matched no key   -> FALLBACK_RATE [3,15]  => 1.67x UNDER-price (and rateForStrict -> null)
+  //   'claude-fable-5-1'  matched no key   -> FALLBACK_RATE [3,15]  => 3.3x UNDER-price
+  // Longest-key-wins: 'claude-fable-5-1' MUST stay longer than 'claude-fable-5' (same rate today, but the
+  // 5.1 cache-read rate differs and a future price split would silently land on the shorter key).
+  'claude-fable-5-1':    [10.00, 50.00],  // 2026-09-06 most capable widely released tier; not an AntCV pin — priced so a BYOK/override call meters correctly
+  'claude-fable-5':      [10.00, 50.00],  // 2026-09-06 previous Fable release, still served
+  'claude-opus-5':       [5.00, 25.00],   // 2026-09-06 drop-in successor to opus-4-8 at the same price; the natural next flagship/thorough gen pin (owner-gated swap)
+  'claude-sonnet-5':     [2.00, 10.00],   // 2026-09-06 the launch $2/$10 is now the STANDARD price — Anthropic cancelled the scheduled 2026-09-01 rise to $3/$15 (pricing page note 'claude-sonnet-5-introductory-pricing'). Was [3,15] here = 1.5x OVER-price on every sonnet-5 call and on the demo cap.
   'claude-opus-4-8':     [5.00, 25.00],   // 2026-07 flagship (AntCV gen pin since 1.51.332). Explicit entry: without it the string "claude-opus-4-8" falls through to the legacy `claude-opus-4` key at [15,75] and over-prices the cap 3x — the exact v1.40.167 bug this comment block documents.
   'claude-opus-4-7':     [5.00, 25.00],   // released 2026-04-16
   'claude-opus-4-6':     [5.00, 25.00],

@@ -93,7 +93,7 @@ machine is off" path for those is a **claude.ai cloud routine**, created from th
 | antcv-job-tracker-nightly | nightly | yes (gen-runner may commit; may bump islands/app) | **yes** | Generates/persists tracked applications. `scripts/job-tracker/gen-runner.py`. |
 | antcv-nightly | nightly | yes (PWA/worker fixes) | **yes** | Verify-first backlog work; ships cache-busted PWA changes → always claim. |
 | weekly demand-seed (CLUSTER-QUAL) | weekly | yes (worker + D1 top-20 refresh) | **yes** (if it ships code) | Cluster demand model refresh. Partly unbuilt. LIVE TRIGGER since 2026-07-13: scheduled task `antcv-demand-seed-weekly` (Fri 22:00) — before that the routine existed only on paper (one manual run 2026-07-10). ⚠ **Its stored prompt's step 4 is WRONG — see "Demand-seed step 4" below before running it.** |
-| **relay cost-quality tune** (RELAY-COST-QUALITY-TUNE-001) | **weekly** | **yes (proxy `MODEL_ROLES` + deploy)** | **yes** | See the procedure below. Reviews the week's router telemetry AND modifies the routing function so it improves over time. LIVE TRIGGER since 2026-07-13: scheduled task `antcv-relay-cost-quality-tune` (Wed 22:00); 'gen'-role flips stay owner-gated. |
+| **relay cost-quality tune** (RELAY-COST-QUALITY-TUNE-001) | **weekly** | **yes (proxy `MODEL_ROLES` + deploy)** | **yes** | See the procedure below. Reviews the week's router telemetry AND modifies the routing function so it improves over time. LIVE TRIGGER since 2026-07-13: scheduled task `antcv-relay-cost-quality-tune` (Wed 22:00); 'gen'-role flips stay owner-gated. **Second trigger since 2026-09-06: the same task on the owner's desktop (Gabo-PC), Wed 22:00 local; its prompt runs a same-week-report check and degrades to a 1a+1b cross-check if the other trigger already wrote the report.** |
 | weekly security audit | weekly | report only | no | Read-only audit → report. |
 | relay health probe | ~5-min | none (alert only) | no | Liveness. |
 | model-freshness check | daily | none/report | no | Flags stale model ids. |
@@ -280,7 +280,7 @@ this routine changes the *starting* choice based on the week's evidence.
    `gpt-5.4-mini` + thorough-tier `gpt-5.5`; preferred cascade `claude-sonnet-5` (see the model-pins
    note in this routine's scheduled prompt + `docs/qa/LLM_ROUTER_PROPOSAL_2026-07-11.md`). Cross-check
    the new head you intend to flip TO is also priced. `node --test workers/proxy/test/model-table-freshness.test.mjs`
-   (mirrored in demo-proxy) pins opus-4-8 + gpt-5.5 + gpt-5.4-mini + sonnet-5; if a pin changed and the
+   (mirrored in demo-proxy) pins opus-4-8 + gpt-5.5 + gpt-5.4-mini + sonnet-5 [2,10] + opus-5 + fable-5 + fable-5-1 (1a-ter); if a pin changed and the
    test is red, FIX the table (add/correct the explicit key at the verified public rate, longest-key-wins)
    and extend the test in the SAME run — this is a required modification the routine executes, not
    an optional check. Prices carry an inline date comment; re-verify against the provider's public
@@ -301,6 +301,21 @@ this routine changes the *starting* choice based on the week's evidence.
    — both had survived every prior freshness pass because the test only checked the four pins.
    (iv) A wrong price here is not just a demo-cap error: RELAY-COST-TIEBREAK-001 and this tune both
    DEMOTE on price, so a stale rate silently steers the router.
+1a-ter. **CORRECTIONS from the 2026-09-06 desktop pass (ANTHROPIC-RATES-2026-09-001) — the Anthropic
+   5-generation.** (i) The pins to verify now include `claude-opus-5` [5,25], `claude-fable-5` [10,50]
+   and `claude-fable-5-1` [10,50]. None had a key; unlike `opus-4-8` they share no prefix with a legacy
+   entry, so they fell all the way to `FALLBACK_RATE` [3,15] (1.67x / 3.3x UNDER) and `rateForStrict()`
+   answered `null`. (ii) `claude-sonnet-5` is **[2,10]**, not [3,15]: the launch price became the
+   standard price — Anthropic cancelled the scheduled 2026-09-01 rise (pricing-page note
+   `claude-sonnet-5-introductory-pricing`). A table that still says [3,15] is 1.5x OVER on the cascade
+   model AND on the PWA `C` map the cost router reads. (iii) **Fetch the vendor page every run** —
+   `https://platform.claude.com/docs/en/about-claude/pricing.md` — and diff it against the mirrors; the
+   sonnet-5 error survived three freshness passes because the comment *sounded* verified. (iv) Pricing a
+   model is not adopting it: `PROVIDER_MODELS` stays as is (see the `gpt-5.5` rule in 1a-bis(ii)); an
+   opus-5 / fable pin swap is an owner call. (v) After a rate change, check D1 `llm_provider_costs` for an
+   exact-match row at the OLD rate (step 1b) — on 2026-09-06 the 08-20 sonnet-5 row at [3,15] was still
+   winning over the corrected table; the superseding INSERT is owner-gated and is written out in
+   `COST_QUALITY_WEEKLY_2026-09-06.md`.
 1b. **COST-SOURCE AUDIT (added 2026-08-20 — COST-SOURCE-AUDIT-GAP-001).** Step 1a audits the
    `demo-enforcement.js` `RATES` tables, which govern the **demo budget cap**. They do NOT produce
    `llm_calls.estimated_cost_usd` — the number every score in step 3 divides by. That number comes

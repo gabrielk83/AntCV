@@ -16,6 +16,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { rateFor } from '../src/demo-enforcement.js';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+// The RATES literal is module-private; read the keys off the source text for the
+// presence guard below (no export added — the mirror region must stay byte-identical).
+function RATES_KEYS() {
+  const src = readFileSync(new URL('../src/demo-enforcement.js', import.meta.url), 'utf8');
+  const out = {};
+  for (const m of src.matchAll(/^\s*'([a-z0-9.\-]+)':\s*\[/gm)) out[m[1]] = true;
+  return out;
+}
 import { PROVIDER_MODELS } from '../src/multi-llm.js';
 
 test('claude-opus-4-8 prices at opus-tier [5,25], not the legacy claude-opus-4 [15,75]', () => {
@@ -30,8 +40,37 @@ test('gpt-5.4-mini (the default openai gen model) prices at [0.75,4.5]', () => {
   assert.deepEqual(rateFor('gpt-5.4-mini'), [0.75, 4.50]);
 });
 
-test('claude-sonnet-5 (preferred cascade) prices at [3,15]', () => {
-  assert.deepEqual(rateFor('claude-sonnet-5'), [3.00, 15.00]);
+test('claude-sonnet-5 (preferred cascade) prices at [2,10] — the launch price became the standard price', () => {
+  // ANTHROPIC-RATES-2026-09-001: the table carried [3,15] as the "standard" rate on the
+  // assumption the introductory $2/$10 would end 2026-08-31. Anthropic cancelled the rise
+  // (pricing page note "claude-sonnet-5-introductory-pricing"), so [3,15] was a 1.5x
+  // OVER-price on the demo cap and on every cost-quality score for the cascade model.
+  assert.deepEqual(rateFor('claude-sonnet-5'), [2.00, 10.00]);
+});
+
+// ------------------------------------------------------------
+// ANTHROPIC-RATES-2026-09-001 (2026-09-06) — the 5-generation ids Anthropic
+// shipped after the last audit. None had a key, and unlike opus-4-8 they do
+// not share a prefix with any legacy entry, so they fell all the way through
+// to FALLBACK_RATE [3,15] (and rateForStrict() to null in the relay):
+//   - "claude-opus-5"    -> [3,15] => 1.67x UNDER-price (real: [5,25])
+//   - "claude-fable-5-1" -> [3,15] => 3.3x UNDER-price  (real: [10,50])
+// Verified 2026-09-06 platform.claude.com/docs/en/about-claude/pricing.
+
+test('claude-opus-5 prices at opus-tier [5,25], not the Sonnet fallback', () => {
+  assert.deepEqual(rateFor('claude-opus-5'), [5.00, 25.00]);
+});
+
+test('claude-fable-5-1 prices at the Fable tier [10,50], not the Sonnet fallback', () => {
+  assert.deepEqual(rateFor('claude-fable-5-1'), [10.00, 50.00]);
+});
+
+test('claude-fable-5 keeps its own entry (longest-key-wins: 5-1 must stay the longer key)', () => {
+  assert.deepEqual(rateFor('claude-fable-5'), [10.00, 50.00]);
+  // Regression guard for the ordering itself: if someone drops the 5-1 key, 5.1 silently
+  // inherits whatever 5 costs. Both are [10,50] today; the guard is the presence, not the value.
+  assert.ok(Object.prototype.hasOwnProperty.call(RATES_KEYS(), 'claude-fable-5-1'),
+    'claude-fable-5-1 needs its own key so a future price split cannot land on claude-fable-5');
 });
 
 test('claude-opus-4-8 is present in the anthropic fallback cascade', () => {

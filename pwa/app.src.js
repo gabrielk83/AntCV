@@ -1214,8 +1214,11 @@
       // routing (RELAY-COST-TIEBREAK-001) and the weekly tune both read this
       // number, so the skew demoted anthropic on a phantom price. Keep BOTH keys —
       // "anthropic" is still the id used by MODEL_ROLES and the settings panel.
-      anthropic: { inputPer1M: 3, outputPer1M: 15 },
-      claude: { inputPer1M: 3, outputPer1M: 15 },
+      // ANTHROPIC-RATES-2026-09-001 (2026-09-06): claude-sonnet-5 is $2/$10 — the launch
+      // price became the standard price (Anthropic cancelled the 2026-09-01 rise to $3/$15).
+      // Was 3/15 here = 1.5x over on every claude call the cost router scored.
+      anthropic: { inputPer1M: 2, outputPer1M: 10 },
+      claude: { inputPer1M: 2, outputPer1M: 10 },
       openai: { inputPer1M: 0.75, outputPer1M: 4.5 }, // gpt-5.4-mini (was gpt-5.5 30/60)
       // LLM-COST-MISTRAL-RATE-001 + LLM-COST-GEMINI-RECONCILE-001 (2026-08-20):
       // both of these were stale and both fed the cost router. mistral was

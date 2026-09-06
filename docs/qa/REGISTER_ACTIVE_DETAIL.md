@@ -1045,13 +1045,23 @@ _verified: 2026-07-13_
 
 ## Row 89 — MODEL-TABLE-FRESHNESS-001
 
-_verified: 2026-07-13_
+_verified: 2026-09-06_
 
 **OPEN-queue row (verbatim):**
 
 ```
 | **89** | ~~MODEL-TABLE-FRESHNESS-001~~ **CODE FIXED 2026-07-13 (shift lane 1.51.518-1.51.537, isolated worktree; DEPLOY OWED)** — the proxy cost tables never learned AntCV's current gen pins (`claude-opus-4-8` flagship since 1.51.332, `gpt-5.5` thorough-tier openai). `demo-enforcement.js` `rateFor()` matches the LONGEST substring key, so the missing entries silently resolved to shorter neighbours: `claude-opus-4-8`→legacy `claude-opus-4` [15,75] = **3× over-price** (v1.40.167 bug class, fixed for 4.5/4.6/4.7 but not 4.8), `gpt-5.5`→`gpt-5` [1.25,10] = **~24× under-price**. Fixed: explicit `opus-4-8 [5,25]` + `gpt-5.5 [30,60]` in RATES of both `workers/{proxy,demo-proxy}/src/demo-enforcement.js`, and `opus-4-8` added to `PROVIDER_MODELS.anthropic` in both `multi-llm.js`. NEW `model-table-freshness.test.mjs` (both workers) pins the 4 current models + cascade presence, 5/5; proxy suite 94/94, demo-proxy 25/25. Not a runtime breakage (pass-through honours explicit model ids) — a demo-budget-meter accuracy fix. **REMAINING: deploy `proxy` + `demo-proxy` via deploy.yml (owed — a desktop/gh run), then verify each `/health`.** Routine side of the ask done: SCHEDULED_ROUTINES RELAY-COST-QUALITY-TUNE-001 step 1a (model-table freshness audit) now makes the weekly tune re-verify+fix the price table before scoring. | this session (2026-07-13, owner ask "fix tables + make the tune routine execute the needed modifications") | CODE DONE 2026-07-13; worker deploy owed |
 ```
+
+**2026-09-06 (desktop, Fable 5.1) — ANTHROPIC-RATES-2026-09-001.** Same defect class, next generation:
+`claude-opus-5`, `claude-fable-5`, `claude-fable-5-1` had no key in any of the THREE mirrors (the
+access-relay copy included) and — having no legacy prefix — fell to `FALLBACK_RATE` [3,15] rather
+than to a neighbour; `claude-sonnet-5` sat at [3,15] against a live [2,10] (Anthropic cancelled the
+2026-09-01 rise). Fixed in all three mirrors + the PWA `C` map (`1.51.4486-anthropic-rates`), tests
+extended (freshness 13/13 ×2, mirror +1, PWA meter re-pinned), cascade untouched. Still owed: the
+three worker deploys and the owner-gated D1 `llm_provider_costs` INSERT (the 08-20 sonnet-5 row at
+[3,15] wins over the corrected table until superseded). Report:
+`docs/qa/COST_QUALITY_WEEKLY_2026-09-06.md`.
 
 ---
 

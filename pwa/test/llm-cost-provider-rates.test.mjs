@@ -32,10 +32,12 @@ const app = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
  * "anthropic" is the id MODEL_ROLES and the settings panel use. Both must price. */
 const REQUIRED = ['anthropic', 'claude', 'openai', 'mistral', 'gemini'];
 
-// Public list prices, 2026-08. Keep in step with the worker demo-enforcement.js RATES tables.
+// Public list prices, 2026-09. Keep in step with the worker demo-enforcement.js RATES tables.
+// ANTHROPIC-RATES-2026-09-001: Sonnet 5's launch $2/$10 became the standard price
+// (the scheduled 2026-09-01 rise to $3/$15 was cancelled) — the old [3,15] here was 1.5x over.
 const EXPECTED = {
-  anthropic: [3, 15],   // claude-sonnet-5
-  claude: [3, 15],      // same model, the other id
+  anthropic: [2, 10],   // claude-sonnet-5
+  claude: [2, 10],      // same model, the other id
 };
 
 function rateOf(bundle, provider) {
@@ -59,7 +61,7 @@ for (const [name, bundle] of [['app.src.js', src], ['app.js', app]]) {
     assert.deepEqual(rateOf(bundle, 'claude'), rateOf(bundle, 'anthropic'));
   });
 
-  test(`${name}: anthropic is priced at the real $3/$15, not the 10/30 fallback`, () => {
+  test(`${name}: anthropic is priced at the real $2/$10, not the 10/30 fallback`, () => {
     assert.deepEqual(rateOf(bundle, 'anthropic'), EXPECTED.anthropic);
     assert.deepEqual(rateOf(bundle, 'claude'), EXPECTED.claude);
   });

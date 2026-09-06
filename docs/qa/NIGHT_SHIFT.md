@@ -29,6 +29,7 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 ## ACTIVE CLAIMS
 
 <!-- SHIFT:BEGIN — one JSON object per line; managed by scripts/shift.mjs, safe to hand-edit a line if a session died without releasing -->
+{"id":"sh_mtpqgpzt_4l89","started":"2026-09-06T11:33:22.458Z","host":"Gabo-PC","worktree":null,"branch":"main","range":"1.51.4466-1.51.4485","task":"JOBLIST-FILTER-003: In progress swatch gates on tracked status (Submitted/Interview/Offer) not just FFF2CC band","beat":"2026-09-06T11:33:22.509Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

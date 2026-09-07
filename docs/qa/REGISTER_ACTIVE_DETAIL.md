@@ -133,7 +133,9 @@ in CI) + a live translate-persist cycle to verify — carry forward.
 
 ## Row 25 — TABLE-GEOMETRY-PARITY-001
 
-_verified: 2026-07-02_
+_verified: 2026-09-07_
+
+_reconcile 2026-09-07 (CI nightly, E1): WIB-TABLE-DIMS-001 forwarding pipeline INTACT — `diag-cl-table-dims-export.mjs` GREEN on HEAD `2cc4ba4f` (width set in standalone key after drag: OK; width SURVIVES export: OK; payload width correct: OK → CL-TABLE-DIMS-EXPORT OK). The plumbing (antcv:tableWidthPct → s.tableWidth/tableRatio → worker renderCompetencyTable) is confirmed. STILL OPEN: the FIDELITY gap in the REAL CloudConvert PDF (Carlito advance widths vs preview, 7px/10px↔3pt/7.5pt padding, 2-vs-3 line-clamp glyph clipping) — needs a real render diff, not possible in CI (no CloudConvert). Owner-gated / desktop real-PDF pass owed._
 
 **OPEN-queue row (verbatim):**
 
@@ -151,7 +153,9 @@ _verified: 2026-07-02_
 
 ## Row 6 — BANNED-WORDS-MERGE-001
 
-_verified: 2026-07-03_
+_verified: 2026-09-07_
+
+_reconcile 2026-09-07 (CI nightly, E1): code-complete state CONFIRMED against HEAD `2cc4ba4f` — the island writes `stylePrefs.banned_*` (antcv-react-islands.js), the native-banned collapse kill-switch `antcv:keep-native-banned` and the KERNEL-CHAIN `antcv:no-kernel-chain` + .txt-union path are present (antcv-data-importer.js). Full suite 1714/1714 green. STILL OWED (owner-gated, not verifiable in CI): the owner eyeball of the merged banned-words UI + running one file of each of the 6 loader types through the unified loader._
 
 **OPEN-queue row (verbatim):**
 
@@ -169,7 +173,9 @@ _verified: 2026-07-03_
 
 ## Row 8 — KERNEL-V2-READER-001
 
-_verified: 2026-07-03_
+_verified: 2026-09-07_
+
+_reconcile 2026-09-07 (CI nightly, E1): `pwa/test/unit/kernel-v2-reader.test.mjs` GREEN (5/5) on HEAD `2cc4ba4f` — the STORED WORK-HISTORY builder reading the staged v2 kernel (antcv:ingestedKernel) + capped DO-NOT-TRANSLATE per-role remains intact. STILL OPEN (unchanged, all need inputs CI lacks): (a) bullets-path v2-direct migration (safe while autoSync projects v2→workHistory); (c) es/zh + lazy language_view tier — needs real models; (d) §6 P/DOCX/PDF regression parity on an uploaded docx — owner-gated._
 
 **OPEN-queue row (verbatim):**
 
@@ -187,7 +193,9 @@ _verified: 2026-07-03_
 
 ## Row 12 — AI-NOTICE-LEFT-CLOUDCONVERT-001
 
-_verified: 2026-07-03_
+_verified: 2026-09-07_
+
+_reconcile 2026-09-07 (CI nightly, E1): the shipped page-relative margin-left encoding (0pt/275pt + jc, replacing the LibreOffice-ignored mso-position-horizontal keyword) is CONFIRMED in `workers/docx-worker/src/index.js`; `pwa/test/unit/ai-notice-position.test.mjs` GREEN (3/3) on HEAD `2cc4ba4f`. The AI-NOTICE-LEFT bug itself is effectively resolved; this row stays ACTIVE only because its text still carries the docx-baseline "remaining 3" (cjlr-table-export, pageflow-export, spacing-linkedin-export) — those are SEPARATE tests, not this anchor. Recommend the owner move this row to REGISTER_CLOSED and re-file the 3 baseline gaps under their own IDs if still open._
 
 **OPEN-queue row (verbatim):**
 
@@ -199,7 +207,9 @@ _verified: 2026-07-03_
 
 ## Row 21 — SETTINGS-ROLLER-RESET-001
 
-_verified: 2026-07-03_
+_verified: 2026-09-07_
+
+_reconcile 2026-09-07 (CI nightly, E1): `diag-settings-history-guard.mjs` GREEN on HEAD `2cc4ba4f` (headless, real browser) — guarded run: openBefore {open:true,sentinel:true} → after {marker:"alive", url:/index.html, open:false, sentinel:true} (Back consumed the sentinel, panel closed, NO reload, sentinel re-armed); kill-switch control: navigated away to /manifest.json, marker GONE (the reset, reproduced). `antcv-settings-history-guard.js` + kill-switch `antcv:no-settings-history-guard` present. STILL OWED (owner live-verify, real roller-side hardware button): hard refresh → open Settings → press the roller-side Back button → panel closes with NO Loading gate._
 
 **OPEN-queue row (verbatim):**
 
@@ -1443,7 +1453,9 @@ _verified: 2026-08-26_
 
 > **STANDING regression anchor** — re-run by the nightly diag set every time, not unstarted work.
 
-_verified: 2026-08-26_
+_verified: 2026-09-07_
+
+_reconcile 2026-09-07 (CI nightly, E2): `diag-settings-panels-probe.mjs` RE-RUN on HEAD `2cc4ba4f` — Personal 0 mut/6s, Account 0 mut/6s, Layout 0 mut/6s, rootFound=true, 0 page errors → DIAG PASS (all standard settings panels at rest). Also `diag-personal-panel-probe.mjs`: 0 mutations/8s, 0 page errors. No regression._
 
 **OPEN-queue row (verbatim):**
 
@@ -1475,7 +1487,9 @@ _verified: 2026-08-26_
 
 > **STANDING regression anchor** — re-run by the nightly diag set every time, not unstarted work.
 
-_verified: 2026-08-26_
+_verified: 2026-09-07_
+
+_reconcile 2026-09-07 (CI nightly, E3): `diag-panel-button-audit.mjs` RE-RUN on HEAD `2cc4ba4f` — 215 buttons enumerated, {skipped-dangerous:14, ui-only:13, active:140, not-visible-or-disabled:48}, 0 page errors during audit, THROWS section EMPTY (no button throws on click), no DEAD candidates flagged. Report: `docs/qa/PANEL_BUTTON_AUDIT_2026-09-07.{json,md}`. Diff vs prior 2026-08-20 (211 buttons, {14,15,134,48}, 0 THROWS): +4 buttons enumerated, active 134→140, ui-only 15→13, still 0 THROWS / 0 page errors — NO REGRESSION._
 
 **OPEN-queue row (verbatim):**
 

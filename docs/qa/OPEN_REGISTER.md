@@ -46,11 +46,11 @@ citing an old number may mean either row — the ID disambiguates.
 | 76 | `JOBTRACKER-LLM-REFIT-BUTTON-001` | 2026-08-27 | (deferred enhancement) — the fit SCORE that orders the Top-5 is deterministic by design (ranking stability). O |
 | 82 | `ROLE-CANON-AUDIT-LEG-001` | 2026-08-27 | (follow-up) — the golden gating matrix now carries roles.canon_titles (en/da/es/zh) and the CLIENT enforces it |
 | 94 | `CONTENT-LANG-STAMP-001` | 2026-08-27 | CODE SHIPPED 1.51.4446-content-lang-stamp (D1 content_language column + relay whitelist + both app.js legs). R |
-| 25 | `TABLE-GEOMETRY-PARITY-001` | 2026-07-02 | Table geometry parity — diagnose real CloudConvert PDF vs preview measurement |
-| 6 | `BANNED-WORDS-MERGE-001` | 2026-07-03 | Wizard/Settings UX — owner eyeball gate on merged banned-words UI + 6-file loader test |
-| 8 | `KERNEL-V2-READER-001` | 2026-07-03 | Kernel v2 — bullets-path v2 migration, es/zh tier, §6 regression pass on uploaded docx |
-| 12 | `AI-NOTICE-LEFT-CLOUDCONVERT-001` | 2026-07-03 | diag-ai-notice-anchor RED CLOSED (2026-07-03): the WORKER was right — AI-NOTICE-LEFT-CLOUDCONVERT-001 (owner 2 |
-| 21 | `SETTINGS-ROLLER-RESET-001` | 2026-07-03 | FIXED (1.51.90): mechanism CONFIRMED live — history.back() with Settings open was a REAL navigation (side/tilt |
+| 25 | `TABLE-GEOMETRY-PARITY-001` | 2026-09-07 | Table geometry parity — diagnose real CloudConvert PDF vs preview measurement |
+| 6 | `BANNED-WORDS-MERGE-001` | 2026-09-07 | Wizard/Settings UX — owner eyeball gate on merged banned-words UI + 6-file loader test |
+| 8 | `KERNEL-V2-READER-001` | 2026-09-07 | Kernel v2 — bullets-path v2 migration, es/zh tier, §6 regression pass on uploaded docx |
+| 12 | `AI-NOTICE-LEFT-CLOUDCONVERT-001` | 2026-09-07 | diag-ai-notice-anchor RED CLOSED (2026-07-03): the WORKER was right — AI-NOTICE-LEFT-CLOUDCONVERT-001 (owner 2 |
+| 21 | `SETTINGS-ROLLER-RESET-001` | 2026-09-07 | FIXED (1.51.90): mechanism CONFIRMED live — history.back() with Settings open was a REAL navigation (side/tilt |
 | 22 | `CL-SLOGAN-RICHCONTENT-001` | 2026-07-03 | CL slogan rich-content phase 2 — real sections.cl rich_block object, dedupe render sites |
 | 33 | `WHY-RULE-EXPORT-PARITY-001` | 2026-07-03 | Export align parity — name-line + section-headline alignment lost on PDF/DOCX export |
 | 24 | `ANALYTICS-BUTTONS-SESSION-TIMEOUT-001` | 2026-07-03 | Analytics buttons — both sides fixed, needs owner click-through confirm |
@@ -129,9 +129,9 @@ citing an old number may mean either row — the ID disambiguates.
 | 1 | — | 2026-08-26 _(STANDING)_ | Quick-gen page convergence + CV 3-page convergence, export-only pagination parity |
 | 11 | `SIDEBAR-PROMOTE-MARGIN-001` | 2026-08-26 _(STANDING)_ | SIDEBAR-PAGE23-DANCE CLOSED (verified 2026-07-03, headless): diag-sidebar-promote-margin (owner-scale sidebar  |
 | 16 | `SID-FALLBACK-HARDEN-001` | 2026-08-26 _(STANDING)_ | Sidebar TOOLS/REGULATORY justify↔left flap — re-check after hard refresh, diagnose if persists |
-| 17 | `SETTINGS-PERSONAL-STABILIZE-001` | 2026-08-26 _(STANDING)_ | Settings sweep-army cost on Layout/Account/Advanced panels (Personal panel already fixed) |
+| 17 | `SETTINGS-PERSONAL-STABILIZE-001` | 2026-09-07 _(STANDING)_ | Settings sweep-army cost on Layout/Account/Advanced panels (Personal panel already fixed) |
 | 18 | `ANITA-PERSONA-NO-PHOTO-001` | 2026-08-26 | Anita demo residuals — docx-photo + PDF-contact legs ROOT-CAUSED + FIXED 2026-08-26 (desktop nightly, PWA 1.51 |
-| 23 | `NIGHTLY-PREVIEW-BUTTON-AUDIT-001` | 2026-08-26 _(STANDING)_ | Preview-button audit pass 2 (65 not-visible, 23 overlay-obstructed) + live dangerous-button audit |
+| 23 | `NIGHTLY-PREVIEW-BUTTON-AUDIT-001` | 2026-09-07 _(STANDING)_ | Preview-button audit pass 2 (65 not-visible, 23 overlay-obstructed) + live dangerous-button audit |
 | 105 | `JOBSRC-FETCH-001` | 2026-08-26 | follow-through — teach the discovery routine to CALL job_sources.py instead of hand-fetching board search page |
 | 106 | `POSTING-OBSOLETE-001` | 2026-08-27 | ADVANCED 2026-08-27 (job-tracker nightly): the two-strike rule gained the missing per-DAY gate — POSTING-STRIK |
 | 102 | `DEMAND-SEED-SEARCH-TOKEN-MISSING-001` | 2026-08-26 | (found by the weekly demand-seed run 2026-08-26, first run to PROBE rather than assume). the routine's prescri |

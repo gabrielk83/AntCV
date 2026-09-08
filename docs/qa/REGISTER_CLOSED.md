@@ -4,6 +4,15 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## REGISTER-HYGIENE-FIXTURE-DRIFT-001 — CLOSED 2026-09-08 (CI nightly, same run)
+
+`main` was RED (`register-hygiene.test.mjs:83` failing, `fixture drift: row 25 verified cell not
+found`). The negative control hardcoded row 25's verified date `2026-07-02` in its sabotage regex;
+the 2026-09-07 E1 sweep re-dated row 25 to `2026-09-07`, so the `replace()` missed and the case's
+own guard tripped. Fixed by matching the date agnostically (captured ID prefix + `\d{4}-\d{2}-\d{2}`),
+matching the sibling sabotage cases. Suite restored to **1714/1714**. Test-only change, no cache-bust.
+Full detail in `ACTIVE_BUGS.md` top block + `REGISTER_RUNLOG.md` 2026-09-08 CI entry.
+
 ## REGISTER-HYGIENE-001 — the split itself (2026-08-26, owner-approved)
 
 One 524 KB file became four. 155 source rows in, 155 placed, 0 dropped, 0 duplicated (round-trip

@@ -83,8 +83,12 @@ test('catches the same ticket ID on two rows', () => {
 test('catches an unrankable verified cell — the "no" that hid 55 days of staleness', () => {
   const r = sabotage((f) => {
     const before = f['OPEN_REGISTER.md'];
-    f['OPEN_REGISTER.md'] = before.replace(/^\| 25 \| `TABLE-GEOMETRY-PARITY-001` \| 2026-07-02 \|/m,
-      '| 25 | `TABLE-GEOMETRY-PARITY-001` | no |');
+    // Match row 25's verified cell DATE-AGNOSTICALLY (capture the ID prefix, drop the date) — a
+    // hardcoded date here rots the moment the row is legitimately re-dated by a staleness sweep,
+    // which is exactly what broke this negative control after the 2026-09-07 sweep re-dated row 25.
+    f['OPEN_REGISTER.md'] = before.replace(
+      /^(\| 25 \| `TABLE-GEOMETRY-PARITY-001` \|) [0-9]{4}-[0-9]{2}-[0-9]{2} \|/m,
+      '$1 no |');
     assert.notEqual(f['OPEN_REGISTER.md'], before, 'fixture drift: row 25 verified cell not found');
   });
   assert.equal(r.ok, false, 'a non-date verified cell must fail');

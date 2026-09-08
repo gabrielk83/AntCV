@@ -221,7 +221,9 @@ _reconcile 2026-09-07 (CI nightly, E1): `diag-settings-history-guard.mjs` GREEN 
 
 ## Row 22 — CL-SLOGAN-RICHCONTENT-001
 
-_verified: 2026-07-03_
+_verified: 2026-09-08_
+
+_E1 sweep 2026-09-08 (CI nightly): phase 1 (`antcv-cl-slogan-element.js`) confirmed loaded in `index.html`; phase 2 (real `sections.cl` rich_block object + dedupe at the 3 render sites + worker) is GENUINE OPEN WORK — kept ACTIVE, spec-before-splice per the row's own design constraint._
 
 **OPEN-queue row (verbatim):**
 
@@ -239,7 +241,9 @@ _verified: 2026-07-03_
 
 ## Row 33 — WHY-RULE-EXPORT-PARITY-001
 
-_verified: 2026-07-03_
+_verified: 2026-09-08_
+
+_E1 sweep 2026-09-08 (CI nightly): all three legs confirmed in CURRENT code — `antcv-docx-client.js` reads `antcv:nameLineAlign` + emits `headline_align`; `docx-worker/src/index.js` honours `headlineAlign`; `export-align-parity.test.mjs` GREEN. Detail reads DONE (worker deployed). CODE-COMPLETE → **recommended to owner for CLOSED** (only remaining step is a signed-in export eyeball, not a code gap)._
 
 **OPEN-queue row (verbatim):**
 
@@ -257,7 +261,9 @@ _verified: 2026-07-03_
 
 ## Row 24 — ANALYTICS-BUTTONS-SESSION-TIMEOUT-001
 
-_verified: 2026-07-03_
+_verified: 2026-09-08_
+
+_E1 sweep 2026-09-08 (CI nightly): client 401-wipe scope guard (`auth-401-wipe-scope.test.mjs`) present + server secret-pair fix recorded as live-verified. Remaining is the owner three-button click-through (owner-gated live check) — kept ACTIVE._
 
 **OPEN-queue row (verbatim):**
 
@@ -275,7 +281,9 @@ _verified: 2026-07-03_
 
 ## Row 26 — TOOLS-SIDEBAR-COMPRESS-001
 
-_verified: 2026-07-03_
+_verified: 2026-09-08_
+
+_E1 sweep 2026-09-08 (CI nightly): belt present in CURRENT code — `antcv-sidebar-compact-001.js` loaded in `index.html`, `sidebar_compact` block present in `gold-rules.json`, `sidebar-compact.test.mjs` GREEN. Remaining = owner visual verify of the gold Instruments/Lab strings + the separate SIDEBAR-PACKING token-order belt — kept ACTIVE (owner gate)._
 
 **OPEN-queue row (verbatim):**
 
@@ -293,7 +301,9 @@ _verified: 2026-07-03_
 
 ## Row 30 — LLM-IMAGE-ROUTING-001
 
-_verified: 2026-07-03_
+_verified: 2026-09-08_
+
+_E1 sweep 2026-09-08 (CI nightly): all legs confirmed in CURRENT code — `filterVisionBlind`/`VISION_BLIND` in BOTH `workers/proxy/src/multi-llm.js` + `workers/demo-proxy/src/multi-llm.js`; PWA `ee()` ladder drops `mistral` on image messages (mirror in both bundles); `image-routing-ee.test.mjs` GREEN. Both proxies deployed. Only remainder is the explicitly-optional adequacy-gate extension to vision calls → CODE-COMPLETE, **recommended to owner for CLOSED**._
 
 **OPEN-queue row (verbatim):**
 
@@ -311,7 +321,9 @@ _verified: 2026-07-03_
 
 ## Row 32 — CL-PLATFORM-SIGNALS-001
 
-_verified: 2026-07-03_
+_verified: 2026-09-08_
+
+_E1 sweep 2026-09-08 (CI nightly): confirmed in CURRENT code — `__platformRule` in `app.src.js` / minified `__pr` in `app.js` (both-bundle mirror), `cl-platform-signals.test.mjs` GREEN (asserts the rule fragment + no em/en dash). Detail reads DONE 1.51.x → CODE-COMPLETE, **recommended to owner for CLOSED**. REMAINING (owner-gated, non-code): a live gen tone-check on a hardware-platform JD before the row moves to CLOSED._
 
 **OPEN-queue row (verbatim):**
 

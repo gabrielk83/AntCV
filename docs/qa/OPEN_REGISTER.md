@@ -51,12 +51,12 @@ citing an old number may mean either row — the ID disambiguates.
 | 8 | `KERNEL-V2-READER-001` | 2026-09-07 | Kernel v2 — bullets-path v2 migration, es/zh tier, §6 regression pass on uploaded docx |
 | 12 | `AI-NOTICE-LEFT-CLOUDCONVERT-001` | 2026-09-07 | diag-ai-notice-anchor RED CLOSED (2026-07-03): the WORKER was right — AI-NOTICE-LEFT-CLOUDCONVERT-001 (owner 2 |
 | 21 | `SETTINGS-ROLLER-RESET-001` | 2026-09-07 | FIXED (1.51.90): mechanism CONFIRMED live — history.back() with Settings open was a REAL navigation (side/tilt |
-| 22 | `CL-SLOGAN-RICHCONTENT-001` | 2026-07-03 | CL slogan rich-content phase 2 — real sections.cl rich_block object, dedupe render sites |
-| 33 | `WHY-RULE-EXPORT-PARITY-001` | 2026-07-03 | Export align parity — name-line + section-headline alignment lost on PDF/DOCX export |
-| 24 | `ANALYTICS-BUTTONS-SESSION-TIMEOUT-001` | 2026-07-03 | Analytics buttons — both sides fixed, needs owner click-through confirm |
-| 26 | `TOOLS-SIDEBAR-COMPRESS-001` | 2026-07-03 | Tools sidebar compress — exact owner gold-text (Instruments/Lab strings) as deterministic rule |
-| 30 | `LLM-IMAGE-ROUTING-001` | 2026-07-03 | LLM image routing — make provider selection image-aware, filter vision-blind providers |
-| 32 | `CL-PLATFORM-SIGNALS-001` | 2026-07-03 | CL platform-signals — hardware-platform JD tone/positioning gen-prompt rule |
+| 22 | `CL-SLOGAN-RICHCONTENT-001` | 2026-09-08 | CL slogan rich-content phase 2 — real sections.cl rich_block object, dedupe render sites |
+| 33 | `WHY-RULE-EXPORT-PARITY-001` | 2026-09-08 | Export align parity — name-line + section-headline alignment lost on PDF/DOCX export |
+| 24 | `ANALYTICS-BUTTONS-SESSION-TIMEOUT-001` | 2026-09-08 | Analytics buttons — both sides fixed, needs owner click-through confirm |
+| 26 | `TOOLS-SIDEBAR-COMPRESS-001` | 2026-09-08 | Tools sidebar compress — exact owner gold-text (Instruments/Lab strings) as deterministic rule |
+| 30 | `LLM-IMAGE-ROUTING-001` | 2026-09-08 | LLM image routing — make provider selection image-aware, filter vision-blind providers |
+| 32 | `CL-PLATFORM-SIGNALS-001` | 2026-09-08 | CL platform-signals — hardware-platform JD tone/positioning gen-prompt rule |
 | 34 | `ROLE-MERGE-STORED-001` | 2026-07-04 | Export/preview parity sweep — role-merge parity is the owner-escalated top item (rules 46/47 belts SHIPPED 1.5 |
 | 27 | `MAIN-RUNT-ORPHAN-SWEEP-001` | 2026-07-04 | Orphan sweep v3 — work-style tail truncation, page-3 ghost, real-PDF 1.5-page verify |
 | 28 | `NIL-GEN-ADAPTATION-001` | 2026-07-04 | NIL gen adaptation — CV ~1.5-page gen-level target (current export still 5pp) |

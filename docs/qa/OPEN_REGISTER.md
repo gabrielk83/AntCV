@@ -57,10 +57,10 @@ citing an old number may mean either row — the ID disambiguates.
 | 26 | `TOOLS-SIDEBAR-COMPRESS-001` | 2026-09-08 | Tools sidebar compress — exact owner gold-text (Instruments/Lab strings) as deterministic rule |
 | 30 | `LLM-IMAGE-ROUTING-001` | 2026-09-08 | LLM image routing — make provider selection image-aware, filter vision-blind providers |
 | 32 | `CL-PLATFORM-SIGNALS-001` | 2026-09-08 | CL platform-signals — hardware-platform JD tone/positioning gen-prompt rule |
-| 34 | `ROLE-MERGE-STORED-001` | 2026-07-04 | Export/preview parity sweep — role-merge parity is the owner-escalated top item (rules 46/47 belts SHIPPED 1.5 |
-| 27 | `MAIN-RUNT-ORPHAN-SWEEP-001` | 2026-07-04 | Orphan sweep v3 — work-style tail truncation, page-3 ghost, real-PDF 1.5-page verify |
-| 28 | `NIL-GEN-ADAPTATION-001` | 2026-07-04 | NIL gen adaptation — CV ~1.5-page gen-level target (current export still 5pp) |
-| 29 | `NIL-TARGETED-STATE-STICK-001` | 2026-07-04 | NIL state-stick — leg C: stale-row snapshot restore + auto-save downgraded-meta belt |
+| 34 | `ROLE-MERGE-STORED-001` | 2026-09-09 | Export/preview parity sweep — role-merge parity is the owner-escalated top item (rules 46/47 belts SHIPPED 1.5 |
+| 27 | `MAIN-RUNT-ORPHAN-SWEEP-001` | 2026-09-09 | Orphan sweep v3 — work-style tail truncation, page-3 ghost, real-PDF 1.5-page verify |
+| 28 | `NIL-GEN-ADAPTATION-001` | 2026-09-09 | NIL gen adaptation — CV ~1.5-page gen-level target (current export still 5pp) |
+| 29 | `NIL-TARGETED-STATE-STICK-001` | 2026-09-09 | NIL state-stick — leg C: stale-row snapshot restore + auto-save downgraded-meta belt |
 | 2 | `LINKIFY-EXPORT-001` | 2026-07-05 | SW-projects line-end overflow leg (hyperlink half already closed) |
 | 39a | `AUTOSAVE-NO-DOWNGRADE-001` | 2026-07-05 | TAB/DEVICE ISOLATION residuals — auto-save poison-writer CLOSED (AUTOSAVE-NO-DOWNGRADE-001) + same-device stal |
 | 41 | — | 2026-07-05 | SO-004 CRASH — React #185 on editor field commits, shared renderer. |

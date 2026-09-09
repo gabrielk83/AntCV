@@ -341,7 +341,9 @@ _E1 sweep 2026-09-08 (CI nightly): confirmed in CURRENT code — `__platformRule
 
 ## Row 34 — ROLE-MERGE-STORED-001
 
-_verified: 2026-07-04_
+_verified: 2026-09-09_
+
+_E1 sweep 2026-09-09 (CI nightly, Opus 4.8): shipped code INTACT against HEAD `39f2a1f8` — `antcv-role-merge-stored.js` loaded in `index.html` (`?v=1.51.3482-sections-storm`); `window.AntcvMergeSameCompanyRoles` is exposed by `antcv-docx-client.js` and consumed by the sidecar (docx-client's export merge is the idempotent belt); `role-merge-stored.test.mjs` + `merged-results-union.test.mjs` GREEN in the full 1714/1714 suite. STILL OWED (owner-gated, not possible in CI — no signed-in Browser pane / real render): the live preview==export byte-for-byte eyeball on a targeted regen._
 
 **OPEN-queue row (verbatim):**
 
@@ -359,7 +361,9 @@ _verified: 2026-07-04_
 
 ## Row 27 — MAIN-RUNT-ORPHAN-SWEEP-001
 
-_verified: 2026-07-04_
+_verified: 2026-09-09_
+
+_E1 sweep 2026-09-09 (CI nightly, Opus 4.8): ORPHAN-PREFLIGHT-V3 sidecars INTACT + all loaded by `index.html` — `antcv-orphan-export-preflight.js`, `antcv-orphan-measure-bind.js`, `antcv-package-orphan-apply.js`, `antcv-orphan-cloud-persist-385.js`; full suite 1714/1714 GREEN on HEAD `39f2a1f8`. STILL OPEN (unchanged, all need a real render/regen CI lacks): (a) work-style tail truncation against the owner's stored kernel, (b) page-3 ghost, (c) ~1.5-page real-PDF verify on a FRESH NIL-targeted export._
 
 **OPEN-queue row (verbatim):**
 
@@ -377,7 +381,9 @@ _verified: 2026-07-04_
 
 ## Row 28 — NIL-GEN-ADAPTATION-001
 
-_verified: 2026-07-04_
+_verified: 2026-09-09_
+
+_E1 sweep 2026-09-09 (CI nightly, Opus 4.8): belts INTACT + loaded — `antcv-profile-access-scrub.js` (PROFILE-ACCESS-SCRUB-001) + `antcv-sidebar-relevance-cut.js` (JD-relevance cut) both present in `index.html`; full suite 1714/1714 GREEN on HEAD `39f2a1f8`. REMAINING is unchanged: the CV ~1.5pp GEN-LEVEL target (rides row 27's orphan work) is regen-gated — it needs a fresh live NIL-targeted generation + real export, which this CI environment cannot run (no models, no signed-in render)._
 
 **OPEN-queue row (verbatim):**
 
@@ -395,7 +401,9 @@ _verified: 2026-07-04_
 
 ## Row 29 — NIL-TARGETED-STATE-STICK-001
 
-_verified: 2026-07-04_
+_verified: 2026-09-09_
+
+_E1 sweep 2026-09-09 (CI nightly, Opus 4.8): closed legs CONFIRMED in current code — `277-SEQUENCE-GUARD-001` / `META-DRIFT-GUARD-002` / `CL-HYDRATE-EXPORT-GATE-001` present in `app.js`; full suite 1714/1714 GREEN on HEAD `39f2a1f8`. Leg C (the writer hunt — a live setItem probe on 'sections'/'meta' during ONE row selection to catch the pre-gen auto-save that also defeats the 277 staleness guard, + the auto-save downgrade belt) is unchanged OPEN — it needs a live signed-in session, not possible in CI._
 
 **OPEN-queue row (verbatim):**
 

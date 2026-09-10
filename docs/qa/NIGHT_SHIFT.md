@@ -37,7 +37,6 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 ## ACTIVE CLAIMS
 
 <!-- SHIFT:BEGIN — one JSON object per line; managed by scripts/shift.mjs, safe to hand-edit a line if a session died without releasing -->
-{"id":"sh_mtvkf3ti_963u","started":"2026-09-10T13:30:46.494Z","host":"Gabo-PC","worktree":"antcv-routine-antcv-relay-cost-quality-tune-mtvjyv4o","branch":"tune-2026-09-10-rates","range":"1.51.4546-1.51.4565","task":"RELAY-COST-QUALITY-TUNE 2026-09-10 desktop cross-check: model-table freshness — Mythos 5/5.1, GPT-6/5.6 line, Gemini 3 line priced; gpt-5.5 corrected [30,60]->[5,30] in all three RATES mirrors + 3 test sites (no pwa asset, no version consumed)","beat":"2026-09-10T13:30:46.591Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

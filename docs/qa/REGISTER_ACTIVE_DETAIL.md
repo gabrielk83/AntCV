@@ -15,7 +15,13 @@ When you finish it: move it to `REGISTER_CLOSED.md`.
 
 ## Row 38 — GEN-BACKGROUND-001
 
-_verified: 2026-08-27_
+_verified: 2026-09-10_
+
+**Re-verify 2026-09-10 (CI nightly — E1 stalest slot, code-presence):** `antcv-gen-memo.js?v=1.51.134`
++ `antcv-gen-job-client.js?v=1.51.132` still loaded in `index.html`; `window.AntcvGenJob` still exposed
+by the client engine; suite 1714/1714 green on HEAD `6f9ff8ee`. Engine INTACT. REMAINING unchanged:
+owner A/B on a real mobile gen + the per-section decompose approach decision — both need a live
+signed-in mobile gen CI cannot drive. Kept ACTIVE, owner-gated.
 
 **Verify sweep 2026-08-27 (CI nightly, code-presence — E1 stalest-row slot, was `never`):** the
 client engine is present and loaded — `pwa/antcv-gen-memo.js` + `pwa/antcv-gen-job-client.js` both on
@@ -43,7 +49,12 @@ needs-live-env — carry forward.
 
 ## Row 76 — JOBTRACKER-LLM-REFIT-BUTTON-001
 
-_verified: 2026-08-27_
+_verified: 2026-09-10_
+
+**Re-verify 2026-09-10 (CI nightly — E1 stalest slot):** unchanged — this remains a deferred OPTIONAL
+enhancement, not a defect. The Top-5 fit score is deterministic by design (ranking stability); an
+on-demand "re-judge fit" LLM button is only worth building if the deterministic tier proves too coarse
+on real edge JDs. No code owed; nothing regressed. Kept ACTIVE (optional, low priority).
 
 **Verify sweep 2026-08-27 (CI nightly — E1 stalest-row slot, was `never`):** confirmed this remains a
 DEFERRED OPTIONAL enhancement by design, not stalled work. The Top-5 fit score is deterministic on
@@ -61,7 +72,12 @@ too coarse on real edge JDs — no such evidence has surfaced. No code owed; kee
 
 ## Row 82 — ROLE-CANON-AUDIT-LEG-001
 
-_verified: 2026-08-27_
+_verified: 2026-09-10_
+
+**Re-verify 2026-09-10 (CI nightly — E1 stalest slot): CODE LEG STILL DONE.** Re-ran
+`scripts/job-tracker/test_gold_residue.py` on HEAD `6f9ff8ee` — **18/18 checks pass**;
+`role_canon_issues` still wired into `run()`. Unchanged since 2026-08-27; only the owner-gated
+es/zh eyeball remains. Kept ACTIVE for that owner pass.
 
 **Verify sweep 2026-08-27 (CI nightly — E1 stalest-row slot, was `never`): CODE LEG NOW DONE.** The
 row was filed as "the PERSIST/EXPORT audit leg is NOT yet wired because gold_audit.py carries another
@@ -86,7 +102,13 @@ agent/code work is complete.
 
 ## Row 94 — CONTENT-LANG-STAMP-001
 
-_verified: 2026-08-27_
+_verified: 2026-09-10_
+
+**Re-verify 2026-09-10 (CI nightly — E1 stalest slot, code-presence):** the `content_language` field
+is still present in `pwa/app.js` (4 references); the `1.51.4446-content-lang-stamp` code leg is INTACT
+on HEAD `6f9ff8ee`, suite 1714/1714 green. REMAINING unchanged: a live generate/translate-persist regen
+confirming the stamp is written and read authoritatively (needs real models — CI cannot drive). Kept
+ACTIVE, model-gated.
 
 **SHIPPED 2026-08-27 (desktop nightly, Opus 5; PWA `1.51.4446-content-lang-stamp`, access-relay
 `676918b5`, D1 column added). The code leg the CI run deferred is DONE; the row stays ACTIVE only for

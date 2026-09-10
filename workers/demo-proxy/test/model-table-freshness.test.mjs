@@ -32,8 +32,13 @@ test('claude-opus-4-8 prices at opus-tier [5,25], not the legacy claude-opus-4 [
   assert.deepEqual(rateFor('claude-opus-4-8'), [5.00, 25.00]);
 });
 
-test('gpt-5.5 prices at flagship [30,60], not the shorter gpt-5 [1.25,10]', () => {
-  assert.deepEqual(rateFor('gpt-5.5'), [30.00, 60.00]);
+test('gpt-5.5 prices at [5,30] — the vendor number, not the shorter gpt-5 [1.25,10]', () => {
+  // GPT55-RATE-2026-09-001 (2026-09-10): this pin asserted [30,60] from 2026-07 onward, and the
+  // table asserted the same, so the test could never catch it — 1a-bis(iii) exists for exactly
+  // this ("verify against the vendor's page, not the neighbouring table"). The real standard rate
+  // on developers.openai.com/api/docs/pricing is $5 in / $30 out (<272K context); [30,60] was a
+  // 6x OVER-price on input against the demo cap.
+  assert.deepEqual(rateFor('gpt-5.5'), [5.00, 30.00]);
 });
 
 test('gpt-5.4-mini (the default openai gen model) prices at [0.75,4.5]', () => {
@@ -119,9 +124,73 @@ test('gemini-2.5-flash-lite keeps its own cheaper rate (longest-key-wins)', () =
 // invariant so a future freshness pass does not "fix" the non-gap and regress
 // the default cost. Audited 2026-08-20.
 test('gpt-5.5 is priced but deliberately NOT in the default openai cascade', () => {
-  assert.deepEqual(rateFor('gpt-5.5'), [30.00, 60.00]);
+  assert.deepEqual(rateFor('gpt-5.5'), [5.00, 30.00]);
   assert.ok(!PROVIDER_MODELS.openai.includes('gpt-5.5'),
     'gpt-5.5 must stay out of the default chain - it is reached only via an explicit opts.models override');
   assert.ok(PROVIDER_MODELS.openai.includes('gpt-5.4-mini'),
     'the cheap default gen model must be in the cascade');
+});
+
+// ------------------------------------------------------------
+// 2026-09-10 (weekly cost-quality tune, desktop cross-check) — the model ids
+// each vendor shipped since the 09-06 pass. Every one of them was missing, and
+// because rateFor() takes the LONGEST substring match, "missing" is never inert:
+//   - "claude-mythos-5"/"-5-1" -> no key at all -> FALLBACK_RATE [3,15]  (real [10,50], 3.3x UNDER)
+//   - "gpt-6-astra"            -> no key at all -> FALLBACK_RATE [3,15]  (real [10,50], 3.3x UNDER)
+//   - "gpt-5.6-sol"            -> the shorter "gpt-5" [1.25,10]          (real [4,20],  3.2x UNDER in)
+//   - "gpt-5.6-luna"           -> the shorter "gpt-5" [1.25,10]          (real [0.20,1.20], 6.25x OVER in)
+//   - "gemini-3.8-flash"       -> no key at all -> FALLBACK_RATE [3,15]  (real [0.75,3.75], 4x OVER)
+// An OVER-price demotes a provider in the weekly tune and an UNDER-price hides
+// demo-cap burn, so both directions steer the router (1a-bis(iv)). Verified
+// 2026-09-10 against platform.claude.com, developers.openai.com and ai.google.dev.
+
+test('claude-mythos-5-1 prices at the Mythos/Fable tier [10,50], not the Sonnet fallback', () => {
+  assert.deepEqual(rateFor('claude-mythos-5-1'), [10.00, 50.00]);
+});
+
+test('claude-mythos-5 keeps its own entry (longest-key-wins: 5-1 must stay the longer key)', () => {
+  assert.deepEqual(rateFor('claude-mythos-5'), [10.00, 50.00]);
+  assert.ok(Object.prototype.hasOwnProperty.call(RATES_KEYS(), 'claude-mythos-5-1'),
+    'claude-mythos-5-1 needs its own key so a future price split cannot land on claude-mythos-5');
+});
+
+test('gpt-6-astra prices at [10,50] instead of falling through to FALLBACK_RATE', () => {
+  assert.deepEqual(rateFor('gpt-6-astra'), [10.00, 50.00]);
+});
+
+test('the gpt-5.6 line lifts off the shorter gpt-5 key in BOTH directions', () => {
+  assert.deepEqual(rateFor('gpt-5.6-sol'), [4.00, 20.00]);
+  assert.deepEqual(rateFor('gpt-5.6-terra'), [2.00, 12.00]);
+  // luna is the one that was OVER-priced by the gpt-5 fallback, not under.
+  assert.deepEqual(rateFor('gpt-5.6-luna'), [0.20, 1.20]);
+  // The shorter key must still answer for plain gpt-5 — the new keys are additive.
+  assert.deepEqual(rateFor('gpt-5'), [1.25, 10.00]);
+});
+
+test('the gpt-5.6 / gpt-6 ids are priced but stay OUT of the default openai cascade', () => {
+  // Same rule as gpt-5.5 (1a-bis(ii)): pricing a model is not adopting it. Heading or
+  // tailing the default chain with a $10/$50 model is a cost regression, not a fix.
+  for (const id of ['gpt-6-astra', 'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna']) {
+    assert.ok(!PROVIDER_MODELS.openai.includes(id),
+      `${id} must stay out of the default chain — it is reached only via an explicit opts.models override`);
+  }
+});
+
+test('the Gemini 3 line is priced instead of inheriting the [3,15] Sonnet fallback', () => {
+  assert.deepEqual(rateFor('gemini-3.8-flash'), [0.75, 3.75]);
+  assert.deepEqual(rateFor('gemini-3.5-flash'), [1.50, 9.00]);
+  // The 2.5 line must be untouched by the additions.
+  assert.deepEqual(rateFor('gemini-2.5-flash'), [0.30, 2.50]);
+  assert.deepEqual(rateFor('gemini-2.5-flash-lite'), [0.10, 0.40]);
+});
+
+test('gemini-3.8-flash carries its promotional-expiry note (re-verify from 2027-01-01)', () => {
+  // The [0.75,3.75] rate is promotional through 2026-12-31 and doubles to [1.50,7.50] on
+  // 2027-01-01. A dated comment is the only thing that will make the first tune of 2027
+  // re-check it, so pin the comment's presence, not just the number.
+  const src = readFileSync(new URL('../src/demo-enforcement.js', import.meta.url), 'utf8');
+  const i = src.indexOf("'gemini-3.8-flash'");
+  assert.ok(i > 0, 'the gemini-3.8-flash RATES entry is missing');
+  assert.ok(src.slice(i, i + 240).includes('2027-01-01'),
+    'the gemini-3.8-flash entry must keep its 2027-01-01 price-rise note');
 });

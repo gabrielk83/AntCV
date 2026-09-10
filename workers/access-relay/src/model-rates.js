@@ -25,6 +25,12 @@ const RATES = {
   //   'claude-fable-5-1'  matched no key   -> FALLBACK_RATE [3,15]  => 3.3x UNDER-price
   // Longest-key-wins: 'claude-fable-5-1' MUST stay longer than 'claude-fable-5' (same rate today, but the
   // 5.1 cache-read rate differs and a future price split would silently land on the shorter key).
+  // MYTHOS-RATES-2026-09-001 (2026-09-10): Claude Mythos 5 + 5.1 are on the pricing page at the Fable tier
+  // [10,50] (limited availability, anthropic.com/glasswing). Neither had a key and neither shares a prefix
+  // with an existing entry, so both fell to FALLBACK_RATE [3,15] = 3.3x UNDER-price (rateForStrict -> null).
+  // Same longest-key-wins rule as the Fable pair: 'claude-mythos-5-1' MUST stay longer than 'claude-mythos-5'.
+  'claude-mythos-5-1':   [10.00, 50.00],  // 2026-09-10 limited availability; not an AntCV pin — priced so a BYOK/override call meters correctly
+  'claude-mythos-5':     [10.00, 50.00],  // 2026-09-10 limited availability
   'claude-fable-5-1':    [10.00, 50.00],  // 2026-09-06 most capable widely released tier; not an AntCV pin — priced so a BYOK/override call meters correctly
   'claude-fable-5':      [10.00, 50.00],  // 2026-09-06 previous Fable release, still served
   'claude-opus-5':       [5.00, 25.00],   // 2026-09-06 drop-in successor to opus-4-8 at the same price; the natural next flagship/thorough gen pin (owner-gated swap)
@@ -46,7 +52,24 @@ const RATES = {
   'claude-opus-4-1':     [15.00, 75.00],
   'claude-opus-4':       [15.00, 75.00],   // legacy Opus 4 base — superseded by 4.5+
   // OpenAI — GPT-5 family (added 2026-05-18 audit; launched 2025)
-  'gpt-5.5':             [30.00, 60.00],  // 2026-07 top flagship, reserved for AntCV's thorough/max gen tier (default openai gen is gpt-5.4-mini — LLM_ROUTER_PROPOSAL_2026-07-11). Explicit entry: without it "gpt-5.5" falls through to the shorter `gpt-5` key at [1.25,10] and under-prices the cap ~24x.
+  // OpenAI — GPT-6 / GPT-5.6 generation. Verified 2026-09-10 against developers.openai.com/api/docs/pricing
+  // (GPT56-ASTRA-RATES-2026-09-001). Four ids shipped since the last audit; none had a key:
+  //   'gpt-6-astra'   matched no key   -> FALLBACK_RATE [3,15]  => 3.3x UNDER-price (real [10,50])
+  //   'gpt-5.6-sol'   matched 'gpt-5'  -> [1.25,10]             => 3.2x UNDER on input (real [4,20])
+  //   'gpt-5.6-luna'  matched 'gpt-5'  -> [1.25,10]             => 6.25x OVER on input (real [0.20,1.20])
+  // Longest-key-wins is what lifts each of these off the shorter 'gpt-5' key — keep them explicit.
+  // Pricing a model is not adopting it (1a-bis(ii)): PROVIDER_MODELS stays as is; these are priced so a
+  // BYOK / explicit opts.models override meters correctly.
+  'gpt-6-astra':         [10.00, 50.00],  // 2026-09-10 OpenAI flagship; not an AntCV pin
+  'gpt-5.6-sol':         [4.00, 20.00],  // 2026-09-10
+  'gpt-5.6-terra':       [2.00, 12.00],  // 2026-09-10
+  'gpt-5.6-luna':        [0.20, 1.20],  // 2026-09-10 cheapest of the 5.6 line; the 'gpt-5' fallback OVER-priced it 6.25x
+  // GPT55-RATE-2026-09-001 (2026-09-10): gpt-5.5 is [5,30], NOT [30,60]. The [30,60] entry has been in the
+  // table since 2026-07 and survived every freshness pass because the test pinned the table's own number
+  // instead of the vendor's (1a-bis(iii)). developers.openai.com/api/docs/pricing lists gpt-5.5 (<272K
+  // context) at $5.00 in / $30.00 out standard. The old value over-priced the demo cap 6x on input.
+  // Still not in the openai cascade — reached only via an explicit opts.models override.
+  'gpt-5.5':             [5.00, 30.00],  // 2026-09-10 thorough/max gen tier (default openai gen is gpt-5.4-mini — LLM_ROUTER_PROPOSAL_2026-07-11). Explicit entry: without it "gpt-5.5" falls through to the shorter `gpt-5` key at [1.25,10].
   'gpt-5.4-nano':        [0.20,  1.25],
   'gpt-5.4-mini':        [0.75,  4.50],
   'gpt-5.4':             [2.50, 15.00],   // current flagship as of 2026-04
@@ -66,6 +89,12 @@ const RATES = {
   'gemini-1.5-flash':    [0.075, 0.30],
   'gemini-1.5-pro':      [1.25,  5.00],
   'gemini-2.0-flash':    [0.10,  0.40],
+  // GEMINI3-RATES-2026-09-001 (2026-09-10): the Gemini 3 line is on ai.google.dev/gemini-api/docs/pricing and
+  // had no keys — neither id contains an existing key, so both fell to FALLBACK_RATE [3,15]: 4x OVER-price on
+  // 3.8-flash and 2x OVER on 3.5-flash. An OVER-price demotes the provider in the weekly tune, so a missing
+  // key here steers the router just as a wrong one does (1a-bis(iv)).
+  'gemini-3.8-flash':    [0.75, 3.75],  // 2026-09-10 promotional through 2026-12-31; RISES to [1.50, 7.50] on 2027-01-01 — re-verify at the first tune of 2027
+  'gemini-3.5-flash':    [1.50, 9.00],  // 2026-09-10
   'gemini-2.5-flash-lite': [0.10, 0.40], // verified 2026-08-20 ai.google.dev/gemini-api/docs/pricing. MUST stay longer than the 2.5-flash key below - longest-key-wins is what keeps Flash-Lite off the Flash rate.
   'gemini-2.5-flash':    [0.30,  2.50],   // verified 2026-08-20 ai.google.dev/gemini-api/docs/pricing. Was [0.10,0.40], which is Flash-LITE's rate - 3x under in, 6.25x under out. LLM-COST-GEMINI-RECONCILE-001.
   'gemini-2.5-pro':      [1.25, 10.00],

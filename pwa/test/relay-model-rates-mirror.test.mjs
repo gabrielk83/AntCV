@@ -70,7 +70,7 @@ test('the pins that a substring match would misprice keep their own entries', as
   // "claude-opus-4-8" must not fall through to the legacy "claude-opus-4"
   // key at [15,75], and "gpt-5.5" must not fall through to "gpt-5" at [1.25,10].
   assert.deepEqual(rateForStrict('claude-opus-4-8'), [5, 25]);
-  assert.deepEqual(rateForStrict('gpt-5.5'), [30, 60]);
+  assert.deepEqual(rateForStrict('gpt-5.5'), [5, 30]);   // GPT55-RATE-2026-09-001: vendor page says $5/$30, not the [30,60] this pinned since 2026-07
   assert.deepEqual(rateForStrict('claude-sonnet-5'), [2, 10]);   // ANTHROPIC-RATES-2026-09-001: launch price made standard
 });
 
@@ -81,6 +81,24 @@ test('the Anthropic 5-generation ids are priced ahead of adoption (ANTHROPIC-RAT
   assert.deepEqual(rateForStrict('claude-opus-5'), [5, 25]);
   assert.deepEqual(rateForStrict('claude-fable-5-1'), [10, 50]);
   assert.deepEqual(rateForStrict('claude-fable-5'), [10, 50]);
+});
+
+test('the ids shipped since the 09-06 pass are priced ahead of adoption (2026-09-10 tune)', async () => {
+  const { rateForStrict } = await import(pathToFileURL(MIRROR).href);
+  // Same argument as the block above: none of these is in AntCV's traffic, but rateForStrict()
+  // answering null is what makes telemetry fall back to the client's self-reported number —
+  // the exact defect LLM-COST-D1-REFERENCE-STALE-001 exists to stop. Pricing is not adoption.
+  assert.deepEqual(rateForStrict('claude-mythos-5-1'), [10, 50]);  // MYTHOS-RATES-2026-09-001
+  assert.deepEqual(rateForStrict('claude-mythos-5'), [10, 50]);
+  assert.deepEqual(rateForStrict('gpt-6-astra'), [10, 50]);        // GPT56-ASTRA-RATES-2026-09-001
+  assert.deepEqual(rateForStrict('gpt-5.6-sol'), [4, 20]);
+  assert.deepEqual(rateForStrict('gpt-5.6-terra'), [2, 12]);
+  assert.deepEqual(rateForStrict('gpt-5.6-luna'), [0.2, 1.2]);     // the one the 'gpt-5' key OVER-priced 6.25x
+  assert.deepEqual(rateForStrict('gemini-3.8-flash'), [0.75, 3.75]); // GEMINI3-RATES-2026-09-001
+  assert.deepEqual(rateForStrict('gemini-3.5-flash'), [1.5, 9]);
+  // The additions must not disturb the shorter keys they sit above.
+  assert.deepEqual(rateForStrict('gpt-5'), [1.25, 10]);
+  assert.deepEqual(rateForStrict('gemini-2.5-flash'), [0.3, 2.5]);
 });
 
 test('the strict lookup refuses to guess an unknown model', async () => {

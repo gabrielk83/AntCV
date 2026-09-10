@@ -1097,7 +1097,7 @@ _verified: 2026-07-13_
 
 ## Row 89 — MODEL-TABLE-FRESHNESS-001
 
-_verified: 2026-09-06_
+_verified: 2026-09-10_
 
 **OPEN-queue row (verbatim):**
 
@@ -1114,6 +1114,25 @@ extended (freshness 13/13 ×2, mirror +1, PWA meter re-pinned), cascade untouche
 three worker deploys and the owner-gated D1 `llm_provider_costs` INSERT (the 08-20 sonnet-5 row at
 [3,15] wins over the corrected table until superseded). Report:
 `docs/qa/COST_QUALITY_WEEKLY_2026-09-06.md`.
+
+**2026-09-10 (desktop, scheduled weekly tune, cross-check run) — GPT55-RATE-2026-09-001 + MYTHOS-RATES-2026-09-001 + GPT56-ASTRA-RATES-2026-09-001 + GEMINI3-RATES-2026-09-001.** Every 09-06 fix
+still verifies against the vendor pages. Nine OTHER ids were wrong. **One wrong value:** `gpt-5.5` had
+carried [30,60] since 2026-07 against a real [5,30] — a 6x OVER-price on input, invisible to the freshness
+test because that test asserted the table's own literal. **Eight missing ids**, five falling to
+`FALLBACK_RATE` [3,15] and three to the shorter `gpt-5` key: `claude-mythos-5`/`-5-1` [10,50],
+`gpt-6-astra` [10,50], `gpt-5.6-sol` [4,20], `gpt-5.6-terra` [2,12], `gpt-5.6-luna` [0.20,1.20],
+`gemini-3.8-flash` [0.75,3.75], `gemini-3.5-flash` [1.50,9.00]. Both error directions matter: an
+UNDER-price hides demo-cap burn, an OVER-price demotes the provider inside the weekly tune —
+`gemini-3.8-flash` was 4x OVER on the provider that leads the cheap tasks. Fixed in all three mirrors with
+longest-key ordering guards, plus THREE test sites (`model-table-freshness.test.mjs` ×2 — the rate pin and
+the cascade invariant — and `pwa/test/relay-model-rates-mirror.test.mjs`, which is what caught the third
+`gpt-5.5` pin the worker suites do not cover). Freshness suites 20/20 each (was 15); full suite
+**2073 tests / 2066 pass / 0 fail**. `PROVIDER_MODELS` untouched — pricing is not adoption. No `pwa/`
+asset changed, so no cache-bust and no version number consumed (lane `1.51.4546-1.51.4565` released
+unused). Still owed, unchanged: the three worker deploys (now covering both passes) and the owner-gated
+D1 `llm_provider_costs` INSERTs — re-listing D1 this run showed the 09-06 SQL was never applied, the
+08-20 sonnet-5 row at [3,15] still winning and still inflating claude's cost by exactly 1.5x. Report:
+`docs/qa/COST_QUALITY_WEEKLY_2026-09-06.md` (§ Desktop cross-check 2026-09-10).
 
 ---
 

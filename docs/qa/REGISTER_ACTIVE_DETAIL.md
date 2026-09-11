@@ -443,7 +443,7 @@ _E1 sweep 2026-09-09 (CI nightly, Opus 4.8): closed legs CONFIRMED in current co
 
 ## Row 2 — LINKIFY-EXPORT-001
 
-_verified: 2026-07-05_
+_verified: 2026-09-11_
 
 **OPEN-queue row (verbatim):**
 
@@ -461,7 +461,7 @@ _verified: 2026-07-05_
 
 ## Row 39a — AUTOSAVE-NO-DOWNGRADE-001
 
-_verified: 2026-07-05_
+_verified: 2026-09-11_
 
 **OPEN-queue row (verbatim):**
 
@@ -479,7 +479,7 @@ _verified: 2026-07-05_
 
 ## Row 41
 
-_verified: 2026-07-05_
+_verified: 2026-09-11_
 
 **OPEN-queue row (verbatim):**
 
@@ -497,7 +497,7 @@ _verified: 2026-07-05_
 
 ## Row 42 — GEN-LANGFAB-001
 
-_verified: 2026-07-05_
+_verified: 2026-09-11_
 
 **OPEN-queue row (verbatim):**
 
@@ -515,7 +515,7 @@ _verified: 2026-07-05_
 
 ## Row 43
 
-_verified: 2026-07-05_
+_verified: 2026-09-11_
 
 **OPEN-queue row (verbatim):**
 
@@ -533,7 +533,7 @@ _verified: 2026-07-05_
 
 ## Row 44 — JD-ANALYSIS-PRINT-001
 
-_verified: 2026-07-05_
+_verified: 2026-09-11_
 
 **OPEN-queue row (verbatim):**
 
@@ -549,27 +549,9 @@ _verified: 2026-07-05_
 
 ---
 
-## Row 46 — MOBILE-PANEL-ZOOM-001
-
-_verified: 2026-07-05_
-
-**OPEN-queue row (verbatim):**
-
-```
-| **46** | **MOBILE-PANEL-ZOOM-001 (owner, mobile P0 — reported live from phone 2026-07-05):** on a phone browser (antcv.pages.dev, Chrome, portrait) at DEFAULT zoom the main-page control cluster below "Generate CV & Cover Letter" is clipped — the Speed segmented control + "Cap $" + the "Brand fit" checkbox row fall off the bottom of the viewport; the owner must set the browser to ~90% zoom to bring all controls into view (evidenced by two screenshots: 90%-zoom = Quick-gen/Speed/Brand-fit all visible; 100% = Brand-fit row cut off). This is a mobile VIEWPORT-FIT / overflow bug, not a scroll issue (the cluster should fit or scroll cleanly at 100%). Band A mobile priority. VERIFY-FIRST: reproduce at a 380px viewport (headless resize or mcp preview mobile preset), inspect whether a fixed-height container / min-height / non-wrapping flex row on the options cluster clips at small heights; likely `antcv-mobile-ui-418.js` or the options-row layout. Fix = let the cluster wrap/scroll within the viewport; do NOT force a meta-viewport zoom hack. **SHIPPED 1.51.140** — headless repro at 380x780 confirmed the Brand-fit row at y=857 (below the 780 fold) and UNREACHABLE. Root cause was NOT antcv-mobile-ui-418 or the options row: it is the UPLOAD screen's outer `.fade` container in app.src.js (`"upload"===Nt`) which centers its content (`minHeight:100dvh; justifyContent:center`) but has NO internal scroll, while on mobile `#root`/`body` are viewport-locked (`height:100dvh; overflow:hidden`), so the 945px form overflowed the locked 780px root and was clipped. Fix (surgical app.src.js + minified app.js mirror, node-patch + vm.Script parse-gate, occurrence-guarded on the fade-through-`maxWidth:480` span): the `.fade` becomes its own scroll container (`height:100dvh; overflowY:auto`) and its inner max-width:480 column gets `margin:auto 0` — auto margins override justify-content in flexbox, so it stays centred when it fits and scrolls from the top (no top-clip) when it does not. Verified: diag-mobile-panel-zoom.mjs — before: CLIP SUSPECT (#root overflow:hidden, sh 945 > 780); after: no clip, `.fade` is an overflowY:auto scroller, scrolling brings Brand-fit fully into view (top 692/bottom 707 < 780) — DIAG PASS, 0 errors. Suite 992/992; boot-smoke OK (glDemo=function); render-past-sign-in clean. **OWNER-VERIFIED LIVE 2026-07-05** on the owner's real Galaxy S24 Ultra (Chrome, physical device via scripts/phone-qa.mjs `chromium.connectOverCDP`, actual viewport 411×750): Speed/Cap $/Brand fit all render fully visible with zero scrolling needed (Brand fit boundingBox y=702-718, within the 750px viewport) — screenshot confirms. **CLOSED** | owner 2026-07-05 mobile report; 2 screenshots; live phone verify 2026-07-05 | 2026-07-05 SHIPPED + LIVE-VERIFIED |
-```
-
-**TO-DO SUMMARY twin (verbatim):**
-
-```
-| **46** | **MOBILE-PANEL-ZOOM-001** (owner, mobile P0) — on a phone browser at default zoom the main/Settings panel controls are clipped (the Speed/Brand-fit row falls off the viewport bottom); owner must zoom the browser to ~90% to see all controls. Viewport/overflow fit bug — panel content must fit the mobile viewport at 100%. | **CLOSED 2026-07-05** — shipped 1.51.140, live-verified on the owner's real S24 Ultra via scripts/phone-qa.mjs (real viewport 411×750, Speed/Cap $/Brand fit all fully visible, no scroll needed) |
-```
-
----
-
 ## Row 47 — MOBILE-TOPBAR-SAFEAREA-001
 
-_verified: 2026-07-05_
+_verified: 2026-09-11_
 
 **OPEN-queue row (verbatim):**
 
@@ -585,27 +567,9 @@ _verified: 2026-07-05_
 
 ---
 
-## Row 48 — TOPBAR-UNDO-UNIFY-001
-
-_verified: 2026-07-05_
-
-**OPEN-queue row (verbatim):**
-
-```
-| **48** | **TOPBAR-UNDO-UNIFY-001 (owner 2026-07-05, same session):** two follow-up asks after row 47: (a) the new purple floating Export FAB didn't open the print preview the green pill already provides once it floats naturally — redundant, remove it; (b) the topbar already has an undo (`.antcv-top-undo`, EDITOR-GEAR-UNDO-001) — no need for a second dedicated undo surface for sidebar/table resizing (antcv-sidebar-visibility-ux.js's own toast-based undo stack), make the ONE topbar button cover both. | **SHIPPED 1.51.181.** (a) Deleted antcv-mobile-export-fab.js + its index.html script tag entirely (1.51.179). (b) Wired `.antcv-top-undo` to also reach the resize-undo stack: whichever action is more recent (a normal sections/meta edit, inferred from the button's own undo-count in its title "(N)"; or a resize, timestamped in the sidecar's stack) wins on click; forces the button clickable when a resize-undo is pending and the app's own history (`dr`) is empty (it renders disabled otherwise). Sidecar-only, no app.js edit to the undo logic itself. **TWO REAL BUGS FOUND DURING LIVE-VERIFY (not guessed, not speculative):** (1) `driveRoller()` (the pre-existing helper that drives the real slider to make React notice a programmatic change) dispatched a plain `new Event('input')` — React's synthetic ChangeEventPlugin doesn't recognize that, so the DOM value visibly moved but the app's real onChange (and its localStorage persist) never fired; the "undo" appeared to work (no error, button enabled, click succeeded) but silently did nothing. This bug predates this session — it affected the ORIGINAL toast-based resize-undo too, not just the new topbar path. Fixed: dispatch a real `InputEvent` (1.51.180). (2) The click-listener attach was gated on a bare module-level boolean (`topbarUndoWired`), not a per-node marker — if the app ever replaces the button element (e.g. on its disabled→enabled transition) rather than updating it in place, the flag stayed `true` from a previous sight and the fresh node got no listener at all; clicks silently did nothing. Fixed: mark wired-state via `data-antcv-undo-unify-wired` on the node itself, the same pattern antcv-topbar-tools-347.js already uses for its own re-parenting hazard (1.51.181). **LIVE-VERIFIED end-to-end 2026-07-05** on the real S24 Ultra via scripts/phone-qa.mjs, through a REAL click (not a direct API call): resized sidebar 0.25→0.28, topbar undo button activated, clicked, value correctly reverted to 0.25. Full suite 1135/1135 green at every step (1.51.179/180/181) | owner 2026-07-05 (same live session as row 47) | 2026-07-05 SHIPPED + LIVE-VERIFIED (1.51.181) |
-```
-
-**TO-DO SUMMARY twin (verbatim):**
-
-```
-| **48** | **TOPBAR-UNDO-UNIFY-001** (owner, mobile) — remove the redundant purple Export FAB (green pill already floats naturally post-row-47); unify the topbar's undo with the sidebar/table resize-undo instead of a second dedicated surface. | **SHIPPED 1.51.181 + LIVE-VERIFIED** — FAB deleted; `.antcv-top-undo` now also reaches the resize-undo stack (most-recent-action-wins). Found + fixed TWO real pre-existing bugs along the way: `driveRoller` dispatched a plain `Event` instead of `InputEvent` (React never saw the change, undo silently no-op'd — predates this session, affected the original toast-undo too) and the click-listener attach used a global flag instead of a per-node marker (a replaced button got no listener). Verified via a real click: resize → revert, confirmed correct |
-```
-
----
-
 ## Row 49 — SIDEBAR-GROUP-PAGE-BREAK-001
 
-_verified: 2026-07-05_
+_verified: 2026-09-11_
 
 **OPEN-queue row (verbatim):**
 
@@ -623,7 +587,7 @@ _verified: 2026-07-05_
 
 ## Row 50 — UPLOAD-SCREEN-TOP-CLIP-001
 
-_verified: 2026-07-05_
+_verified: 2026-09-11_
 
 **OPEN-queue row (verbatim):**
 
@@ -635,7 +599,7 @@ _verified: 2026-07-05_
 
 ## Row 51 — PREVIEW-SCROLL-JITTER-001
 
-_verified: 2026-07-05_
+_verified: 2026-09-11_
 
 **OPEN-queue row (verbatim):**
 

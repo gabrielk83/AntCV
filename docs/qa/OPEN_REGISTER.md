@@ -61,18 +61,16 @@ citing an old number may mean either row — the ID disambiguates.
 | 27 | `MAIN-RUNT-ORPHAN-SWEEP-001` | 2026-09-09 | Orphan sweep v3 — work-style tail truncation, page-3 ghost, real-PDF 1.5-page verify |
 | 28 | `NIL-GEN-ADAPTATION-001` | 2026-09-09 | NIL gen adaptation — CV ~1.5-page gen-level target (current export still 5pp) |
 | 29 | `NIL-TARGETED-STATE-STICK-001` | 2026-09-09 | NIL state-stick — leg C: stale-row snapshot restore + auto-save downgraded-meta belt |
-| 2 | `LINKIFY-EXPORT-001` | 2026-07-05 | SW-projects line-end overflow leg (hyperlink half already closed) |
-| 39a | `AUTOSAVE-NO-DOWNGRADE-001` | 2026-07-05 | TAB/DEVICE ISOLATION residuals — auto-save poison-writer CLOSED (AUTOSAVE-NO-DOWNGRADE-001) + same-device stal |
-| 41 | — | 2026-07-05 | SO-004 CRASH — React #185 on editor field commits, shared renderer. |
-| 42 | `GEN-LANGFAB-001` | 2026-07-05 | fabricated languages (invented German, wrong Danish); deterministic language-fact belt vs ke |
-| 43 | — | 2026-07-05 | CA-006 — Application label bleeds into first role title; guard the write site. |
-| 44 | `JD-ANALYSIS-PRINT-001` | 2026-07-05 | analysis PDF button exports the CV; fix the export doc-type. |
-| 46 | `MOBILE-PANEL-ZOOM-001` | 2026-07-05 | (owner, mobile P0) — on a phone browser at default zoom the main/Settings panel controls |
-| 47 | `MOBILE-TOPBAR-SAFEAREA-001` | 2026-07-05 | + MOBILE-TOPBAR-EXPORT-FAB-001 (owner, mobile P0) — top bar unreachable at 100% zoo |
-| 48 | `TOPBAR-UNDO-UNIFY-001` | 2026-07-05 | (owner, mobile) — remove the redundant purple Export FAB (green pill already floats natu |
-| 49 | `SIDEBAR-GROUP-PAGE-BREAK-001` | 2026-07-05 | (owner, design guidance) — a very long TOOLS & METHODS group (e.g. "Project & del |
-| 50 | `UPLOAD-SCREEN-TOP-CLIP-001` | 2026-07-05 | (owner 2026-07-05, same live session as rows 46-49): the upload screen's EN/gear/Editor header row was still c |
-| 51 | `PREVIEW-SCROLL-JITTER-001` | 2026-07-05 | (owner 2026-07-05, live session, reported as two symptoms: "application analysis panel is stuck again, does no |
+| 2 | `LINKIFY-EXPORT-001` | 2026-09-11 | SW-projects line-end overflow leg (hyperlink half already closed) |
+| 39a | `AUTOSAVE-NO-DOWNGRADE-001` | 2026-09-11 | TAB/DEVICE ISOLATION residuals — auto-save poison-writer CLOSED (AUTOSAVE-NO-DOWNGRADE-001) + same-device stal |
+| 41 | — | 2026-09-11 | SO-004 CRASH — React #185 on editor field commits, shared renderer. |
+| 42 | `GEN-LANGFAB-001` | 2026-09-11 | fabricated languages (invented German, wrong Danish); deterministic language-fact belt vs ke |
+| 43 | — | 2026-09-11 | CA-006 — Application label bleeds into first role title; guard the write site. |
+| 44 | `JD-ANALYSIS-PRINT-001` | 2026-09-11 | analysis PDF button exports the CV; fix the export doc-type. |
+| 47 | `MOBILE-TOPBAR-SAFEAREA-001` | 2026-09-11 | + MOBILE-TOPBAR-EXPORT-FAB-001 (owner, mobile P0) — top bar unreachable at 100% zoo |
+| 49 | `SIDEBAR-GROUP-PAGE-BREAK-001` | 2026-09-11 | (owner, design guidance) — a very long TOOLS & METHODS group (e.g. "Project & del |
+| 50 | `UPLOAD-SCREEN-TOP-CLIP-001` | 2026-09-11 | (owner 2026-07-05, same live session as rows 46-49): the upload screen's EN/gear/Editor header row was still c |
+| 51 | `PREVIEW-SCROLL-JITTER-001` | 2026-09-11 | (owner 2026-07-05, live session, reported as two symptoms: "application analysis panel is stuck again, does no |
 | 39 | `GEN-MODELROLE-001` | 2026-07-06 | code shipped AND MODEL_ROLES set in both wrangler.toml (owner map). Remaining = live-deplo |
 | 53 | `CROSS-APP-EXPORT-CONTAMINATION-001` | 2026-07-07 | (owner 2026-07-06, P0 — real export) — target was the KOMBIT "AI-udvikler"  |
 | 54 | `GEN-JD-TAILOR-KERNEL-RECALL-001` | 2026-07-07 | (owner 2026-07-07) — targeted tailoring narrows/compresses to the JD but does  |

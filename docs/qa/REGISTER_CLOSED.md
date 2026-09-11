@@ -4,6 +4,26 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Rows 46 + 48 — mobile 07-05 batch — CLOSED 2026-09-11 (CI nightly, Band-E E1 sweep)
+
+Two rows from the 2026-07-05 mobile live-session batch were already SHIPPED + LIVE-VERIFIED in
+their own text but still sat in the ACTIVE queue (they passed `check-register.mjs` only because
+the `CLOSED` marker sits past the first-400-char head window). Verify-first confirmed the code is
+intact on HEAD, then both were moved here.
+
+- **Row 46 — MOBILE-PANEL-ZOOM-001 — CLOSED.** Shipped 1.51.140; the upload-screen `.fade`
+  container is a scroll box (`height:"100dvh", overflowY:"auto"`, inner wrapper `margin:"auto 0"`)
+  in `pwa/app.src.js` + the minified `app.js` mirror — CONFIRMED present on HEAD. Diag
+  `pwa/test/diag-mobile-panel-zoom.mjs` present. LIVE-VERIFIED 2026-07-05 on the owner's real
+  Galaxy S24 Ultra (`scripts/phone-qa.mjs`, viewport 411×750, Speed/Cap $/Brand-fit all visible,
+  no scroll). No open leg. (Later extended by row 50 / UPLOAD-SCREEN-TOP-CLIP-001, still ACTIVE.)
+- **Row 48 — TOPBAR-UNDO-UNIFY-001 — CLOSED.** Shipped 1.51.181; `antcv-mobile-export-fab.js`
+  DELETED (confirmed absent + 0 refs in `index.html`); `.antcv-top-undo` unified with the
+  resize-undo stack (`data-antcv-undo-unify-wired` marker present in
+  `pwa/antcv-sidebar-visibility-ux.js`). Found + fixed two real pre-existing bugs en route
+  (`driveRoller` plain `Event`→`InputEvent`; global flag→per-node marker). LIVE-VERIFIED
+  2026-07-05 on the real S24 Ultra via a real click (resize 0.25→0.28→undo→0.25). No open leg.
+
 ## REGISTER-HYGIENE-FIXTURE-DRIFT-001 — CLOSED 2026-09-08 (CI nightly, same run)
 
 `main` was RED (`register-hygiene.test.mjs:83` failing, `fixture drift: row 25 verified cell not

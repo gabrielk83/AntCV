@@ -71,18 +71,18 @@ citing an old number may mean either row — the ID disambiguates.
 | 49 | `SIDEBAR-GROUP-PAGE-BREAK-001` | 2026-09-11 | (owner, design guidance) — a very long TOOLS & METHODS group (e.g. "Project & del |
 | 50 | `UPLOAD-SCREEN-TOP-CLIP-001` | 2026-09-11 | (owner 2026-07-05, same live session as rows 46-49): the upload screen's EN/gear/Editor header row was still c |
 | 51 | `PREVIEW-SCROLL-JITTER-001` | 2026-09-11 | (owner 2026-07-05, live session, reported as two symptoms: "application analysis panel is stuck again, does no |
-| 39 | `GEN-MODELROLE-001` | 2026-07-06 | code shipped AND MODEL_ROLES set in both wrangler.toml (owner map). Remaining = live-deplo |
-| 53 | `CROSS-APP-EXPORT-CONTAMINATION-001` | 2026-07-07 | (owner 2026-07-06, P0 — real export) — target was the KOMBIT "AI-udvikler"  |
-| 54 | `GEN-JD-TAILOR-KERNEL-RECALL-001` | 2026-07-07 | (owner 2026-07-07) — targeted tailoring narrows/compresses to the JD but does  |
-| 55 | `TARGETED-OUTPUT-FURNITURE-001` | 2026-07-07 | (owner 2026-07-07) — targeted-output furniture/personalization defects on the KO |
-| 56 | `GEN-JD-RELEVANCE-TRIM-001` | 2026-07-07 | (owner 2026-07-07) — sibling of row 54: row 54 RECALLS relevant items the narrow set |
-| 60 | — | 2026-07-07 | PANEL-CONTROLS-2026-07-07 (owner, editor/preview panel controls — 6 legs, diagnostic-first, auto-deploy prod s |
-| 61 | `LINE-DISTRIBUTION-GUIDELINES-001` | 2026-07-07 | (KOMBIT lessons v1→v7, owner asked to crystallize) — conclusions on line-fill / orphan control, the single mos |
-| 57 | `TARGETED-CV-POLISH-RULES-001` | 2026-07-07 | (owner 2026-07-07, universal rules from a full CV review) — CONTENT: (1) each bul |
-| 59 | `GENERATOR-BASELINE-001` | 2026-07-07 | (owner 2026-07-07, "make the lessons enter the generator baseline") — two things the GE |
-| 63 | `ANALYSIS-STALE-ON-APP-LOAD-001` | 2026-07-07 | / NEW-1 (owner 2026-07-07) — loading a saved application does NOT load ITS JD a |
-| 64 | `ANALYSIS-EXPORT-DROPS-FILLED-ANSWERS-001` | 2026-07-07 | / NEW-2 (owner 2026-07-07) — exporting the JD-analysis PDF omits the  |
-| 58 | `EXPORT-SETTLED-001` | 2026-07-07 | MOBILE-BUGS-2026-07 (owner "Mobile App Bug Findings Report", 2026-07-07) — 9 findings: MOB-001 Danish UI shows |
+| 39 | `GEN-MODELROLE-001` | 2026-09-12 | code shipped AND MODEL_ROLES set in both wrangler.toml (owner map; coherence now `openai`). Remaining = live-deplo |
+| 53 | `CROSS-APP-EXPORT-CONTAMINATION-001` | 2026-09-12 | leg (a) P0 SHIPPED (1.51.639 scope-guard → reworked MIRROR-LOAD-001 1.51.680); legs b-f open — (owner 2026-07-06, P0 — real export) — target was the KOMBIT "AI-udvikler"  |
+| 54 | `GEN-JD-TAILOR-KERNEL-RECALL-001` | 2026-09-12 | (owner 2026-07-07) — targeted tailoring narrows/compresses to the JD but does  |
+| 55 | `TARGETED-OUTPUT-FURNITURE-001` | 2026-09-12 | (owner 2026-07-07) — targeted-output furniture/personalization defects on the KO |
+| 56 | `GEN-JD-RELEVANCE-TRIM-001` | 2026-09-12 | (owner 2026-07-07) — sibling of row 54: row 54 RECALLS relevant items the narrow set |
+| 60 | — | 2026-09-12 | PANEL-CONTROLS-2026-07-07 (owner, editor/preview panel controls — 6 legs, diagnostic-first, auto-deploy prod s |
+| 61 | `LINE-DISTRIBUTION-GUIDELINES-001` | 2026-09-12 | gen leg + bidirectional Fit-it SHIPPED (LINE-DISTRIBUTION-001, 1.51.2921/2980) — (KOMBIT lessons v1→v7, owner asked to crystallize) — conclusions on line-fill / orphan control, the single mos |
+| 57 | `TARGETED-CV-POLISH-RULES-001` | 2026-09-12 | (owner 2026-07-07, universal rules from a full CV review) — CONTENT: (1) each bul |
+| 59 | `GENERATOR-BASELINE-001` | 2026-09-12 | (owner 2026-07-07, "make the lessons enter the generator baseline") — two things the GE |
+| 63 | `ANALYSIS-STALE-ON-APP-LOAD-001` | 2026-09-12 | / NEW-1 (owner 2026-07-07) — loading a saved application does NOT load ITS JD a |
+| 64 | `ANALYSIS-EXPORT-DROPS-FILLED-ANSWERS-001` | 2026-09-12 | / NEW-2 (owner 2026-07-07) — exporting the JD-analysis PDF omits the  |
+| 58 | `EXPORT-SETTLED-001` | 2026-09-12 | MOBILE-BUGS-2026-07 (owner "Mobile App Bug Findings Report", 2026-07-07) — 9 findings: MOB-001 Danish UI shows |
 | 62 | `HEADER-BANNER-DESIGN-RULES-001` | 2026-07-08 | (owner 2026-07-07, KOMBIT gold) — bake the correct CV/CL header-banner design i |
 | 74 | `JD-SWAP-STALE-RATIONALE-001` | 2026-07-08 | LIVE-APP DRIVE (owner 2026-07-08: estimator calibration → generate 4 via the app). Three outcomes: (A) PARITY- |
 | 73 | — | 2026-07-08 | CV REVIEW-4 — LINE-FILL DEEP PASS + accessibility/competency (owner 2026-07-08: "lines are very very uneven",  |

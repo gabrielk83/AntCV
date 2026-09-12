@@ -611,7 +611,9 @@ _verified: 2026-09-11_
 
 ## Row 39 — GEN-MODELROLE-001
 
-_verified: 2026-07-06_
+_verified: 2026-09-12_
+
+**2026-09-12 (CI nightly, verify-first):** `MODEL_ROLES` still SET in BOTH `workers/proxy/wrangler.toml:50` and `workers/demo-proxy/wrangler.toml:50` — current live map is `{"writer":"anthropic","supervisor":"mistral","coherence":"openai"}` (coherence has moved `anthropic`→`openai` since the 2026-07-06 note; the deliberate change matches the `app.src.js:1384` "fit rationale is quality-sensitive… led with openai" decision). Both proxy sources still parse `env.MODEL_ROLES` (multi-llm.js `roleHeadOrder`, index.js; `workers/proxy/test/model-roles.test.mjs` present). Deploy-verify + role-split telemetry remain unconfirmable in CI (no `gh`/D1) — unchanged remaining ask. Kept ACTIVE.
 
 **OPEN-queue row (verbatim):**
 
@@ -629,7 +631,9 @@ _verified: 2026-07-06_
 
 ## Row 53 — CROSS-APP-EXPORT-CONTAMINATION-001
 
-_verified: 2026-07-07_
+_verified: 2026-09-12_
+
+**2026-09-12 (CI nightly, verify-first — ADVANCE):** leg (a) (the P0 cross-app CV/filename/header content leak) is SHIPPED. First landed as sidecar `antcv-export-app-scope-guard.js` (1.51.639, commit e8e77577 — payload-boundary interceptor reconciling filename/header company to the authoritative active app, block-on-two-real-companies). It was then REWORKED into **MIRROR-LOAD-001** (1.51.680, commit 42a1d853): loading an app is now a byte-faithful mirror copy in preview AND print (marker present 3× in `pwa/app.src.js`), and the scope-guard sidecar was removed from `index.html` (the `.js` file survives on disk as a RETIRED dead file — do not re-wire it). So leg (a) is handled by MIRROR-LOAD-001, not a regression. **Legs (b)–(f) remain OPEN:** (b) CL English lead-ins untranslated to target lang, (c) unrendered `[Company/team]`/`[Action…]` placeholders, (d) Danish diacritics stripped in CL prose, (e) CV partial-lang residue (Results/skill-labels/PROFIL/interests/SPROG), (f) brand-fit-per-app leak. Kept ACTIVE for legs b–f.
 
 **OPEN-queue row (verbatim):**
 
@@ -647,7 +651,9 @@ _verified: 2026-07-07_
 
 ## Row 54 — GEN-JD-TAILOR-KERNEL-RECALL-001
 
-_verified: 2026-07-07_
+_verified: 2026-09-12_
+
+**2026-09-12 (CI nightly, verify-first):** still NOT started — no `KERNEL-RECALL` markers in `pwa/`/`workers/`, no commits since 2026-07-08 touching the ID. Targeted gen still narrows/re-ranks the selected set without recalling JD-relevant items from the unsolicited kernel. Scope unchanged. Content-quality; needs a real gen to verify a fix (owner/live-gated). Kept ACTIVE.
 
 **OPEN-queue row (verbatim):**
 
@@ -665,7 +671,9 @@ _verified: 2026-07-07_
 
 ## Row 55 — TARGETED-OUTPUT-FURNITURE-001
 
-_verified: 2026-07-07_
+_verified: 2026-09-12_
+
+**2026-09-12 (CI nightly, verify-first):** still NOT started — no `TARGETED-OUTPUT-FURNITURE` markers, no commits on the ID. All six furniture legs (a CV header specialization-vs-application line, b fixed-label localization, c named-contact greeting, d employer brand-fit, e merged-role title order, f AI-notice localization) remain hand-fixed only. Scope unchanged. Content/gen-quality; owner/live-gated. Kept ACTIVE.
 
 **OPEN-queue row (verbatim):**
 
@@ -683,7 +691,9 @@ _verified: 2026-07-07_
 
 ## Row 56 — GEN-JD-RELEVANCE-TRIM-001
 
-_verified: 2026-07-07_
+_verified: 2026-09-12_
+
+**2026-09-12 (CI nightly, verify-first):** still NOT started — no `RELEVANCE-TRIM` markers, no commits on the ID. Targeted CV still doesn't relevance-gate per-role bullets / hide irrelevant tools. Scope unchanged. Content-quality, sibling of row 54; owner/live-gated. Kept ACTIVE.
 
 **OPEN-queue row (verbatim):**
 
@@ -701,7 +711,9 @@ _verified: 2026-07-07_
 
 ## Row 60
 
-_verified: 2026-07-07_
+_verified: 2026-09-12_
+
+**2026-09-12 (CI nightly, verify-first):** the two control sidecars are still on disk — `pwa/antcv-header-rule-control.js` (leg a) and `pwa/antcv-cl-slogan-control.js` (legs c/d/e/f). Status unchanged: diagnosed (code-map done, the CL slogan/signature/sign-off render the clSlogan*/signature* keys, not section items, so generic panel controls write keys the render never reads); leg (d) clClosingHidden/clSignNameHidden confirmed a genuine gap. All six legs still need live-DOM capture + patch and, because these are auto-deploy-to-prod app changes, a live repro before ship — not doable in CI. Kept ACTIVE.
 
 **OPEN-queue row (verbatim):**
 
@@ -713,7 +725,9 @@ _verified: 2026-07-07_
 
 ## Row 61 — LINE-DISTRIBUTION-GUIDELINES-001
 
-_verified: 2026-07-07_
+_verified: 2026-09-12_
+
+**2026-09-12 (CI nightly, verify-first — ADVANCE):** the guidelines are now partly BAKED INTO CODE under ticket `LINE-DISTRIBUTION-001` (the implementation of these guidelines; not a separate register row): (1) generation-side fill-band unified to `pwa/gold-rules.json` density via `antcv-bullet-targets.js goldDensity()` — SHIPPED 1.51.2921 (commit 210fdce3); (2) measure-based BIDIRECTIONAL per-row Fit-it — `window.__antcvRowFit`, canvas greedy-wrap on live geometry, trim runts + enrich shorts — SHIPPED 1.51.2980 (commit dfa3fa55). These realize guideline points 2/3/4/7 (bidirectional, last-line fill ratio, layout-before-fill re-fit, generator-owned). Remaining guideline points (clean-cut floor pt 10, result-line one-line budget pt 5, multi-language render-measure) still feed the ongoing generator orphan-measure work (rows 27/49/59A). Kept ACTIVE as the standing guidelines anchor.
 
 **OPEN-queue row (verbatim):**
 
@@ -728,7 +742,9 @@ _verified: 2026-07-07_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-07-07_
+_verified: 2026-09-12_
+
+**2026-09-12 (CI nightly, verify-first):** still a set of universal polish rules applied by hand, NOT baked into the generator — except the line-fill/orphan points (4, 14, 19, 22, 28, 29) which overlap row 61 and are now partly served by LINE-DISTRIBUTION-001 (gen fill-band 1.51.2921 + Fit-it 1.51.2980). The content/furniture rules (one-sentence bullets, dedup, generic-descriptor, banned em-dash, bold-red scope, interest-joke reveal, AI-notice-at-sidebar-bottom, sidebar tint/width) remain generator-baseline TODOs. Scope unchanged. Kept ACTIVE.
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -743,7 +759,9 @@ _verified: 2026-07-07_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-07-07_
+_verified: 2026-09-12_
+
+**2026-09-12 (CI nightly, verify-first):** leg (A) generator pagination + orphan/enhance is ADVANCED — the measure-based generator fill-band + bidirectional Fit-it shipped under LINE-DISTRIBUTION-001 (1.51.2921/2980, see row 61) is exactly the generator-owned orphan-measure home this leg called for; still open for the clean-cut floor + mid-unit-cut / blank-lower-sidebar cases (rows 27/49). Leg (B) docx integrity = FIXED in the hand-edit tooling (unchanged). Leg (C) renderer = Word-COM available on desktop only (not CI). Scope unchanged; kept ACTIVE.
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -758,7 +776,9 @@ _verified: 2026-07-07_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-07-07_
+_verified: 2026-09-12_
+
+**2026-09-12 (CI nightly, verify-first):** shipped 1.51.196 (rationale overwrite on load) still present in `pwa/app.src.js`. NOTE for the desktop live-verify: the active-application mount-hydrate at `app.src.js:18763` now reads `if (t.rationale && !(t.meta && t.meta.company && !window.__antcvUnsol(t.meta.company)))` — a later unsolicited-guard refinement layered over the 1.51.196 "overwrite value-or-null" note. Confirm on a real targeted→targeted app switch that stale rationale is still cleared (the unsol-guard skips the set only when loading into an unsolicited context). Owner live-verify still owed (saved-app switch needs the relay — no headless repro in CI). Kept ACTIVE.
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -773,7 +793,9 @@ _verified: 2026-07-07_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-07-07_
+_verified: 2026-09-12_
+
+**2026-09-12 (CI nightly, verify-first):** shipped 1.51.196 + hardened 1.51.198 both intact — `pwa/antcv-analysis-report-pdf-360.js` still carries the `gapStateKey`/`readGapState` helpers (content-based scan, newest-ts wins; 6 refs) and the guard `pwa/test/diag-new2-gap-detail-export.mjs` is present. Suite green. Owner live-verify still owed (fill a gap detail live → confirm it exports). Kept ACTIVE.
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -788,7 +810,9 @@ _verified: 2026-07-07_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-07-07_
+_verified: 2026-09-12_
+
+**2026-09-12 (CI nightly, verify-first):** MOB-008 fix intact — `pwa/antcv-mobile-controls.css` still carries the `overflow-y:auto; -webkit-overflow-scrolling:touch !important` panel rules and the guard `pwa/test/diag-mob008-panel-overflow.mjs` is present. MOB-009 remains folded into row 59A (generator pagination). Remaining mobile findings (MOB-001/002/003/004/005/006/007, MOB-GAP-OPEN) still open — headless-repro-blocked, owner live-gated. Scope unchanged; kept ACTIVE.
 
 **TO-DO SUMMARY row (verbatim):**
 

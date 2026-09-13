@@ -827,7 +827,7 @@ _verified: 2026-09-12_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-07-08_
+_verified: 2026-09-13_ — CI E1 sweep: verify-first against HEAD. Header-banner generator rules SHIPPED remain intact (`bodyTopBorder` + ✉ icon-separated contact confirmed in `workers/docx-worker/src/index.js`, 5 markers). REMAINING = the render-measure loop vs KOMBIT gold + the two Track-C follow-ups (CL `meta.subtitle` double-render; page-2 column-balance → row 61) — all need a real docx-worker render CI cannot do. Kept ACTIVE.
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -842,7 +842,7 @@ _verified: 2026-07-08_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-07-08_
+_verified: 2026-09-13_ — CI E1 sweep: verify-first against HEAD. (A) estimator left as-is (autofit finding) — DONE. (B) JD-swap stale-rationale clear SHIPPED (1.51.216) confirmed: `JD-SWAP-STALE-RATIONALE`/`CL-GHOST-COMPANY` markers present in `app.src.js` (7), covered by `pwa/test/unit/cl-ghost-hunt.test.mjs` (suite green). (C) BACKGROUND-STALL still OPEN — the SSE-stream throttle on a backgrounded tab is the real mobile first-gen blocker; needs a live foreground gen CI cannot drive. Kept ACTIVE for C + owner's one-gen validation of B.
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -857,7 +857,7 @@ _verified: 2026-07-08_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-07-08_
+_verified: 2026-09-13_ — CI E1 sweep: verify-first. The 2026-07-08 CV REVIEW-4 line-fill pass delivered (0 runts, 2 pages, even columns); the word-method + 2-full-line-fill rules are captured in checklist §2 + memory. REMAINING residual = page-2 lower dead-space, which is the float-spine job tracked to row 61 and owed to a real render CI cannot do. Kept ACTIVE as the residual pointer.
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -872,7 +872,7 @@ _verified: 2026-07-08_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-07-08_
+_verified: 2026-09-13_ — CI E1 sweep: verify-first against HEAD. Worker fix SHIPPED (1.14.136) confirmed: `__mt = bodyLevel ? 822 : 806` in `workers/docx-worker/src/index.js` (the page-anchored notice lift to pin at the page bottom) intact; HEADING-TABLE-GAP-001 content rules captured in checklist. DEFERRED page-2+ sidebar dead-space needs the FLOAT-SPINE (row 61) + a real CloudConvert render CI cannot do. Kept ACTIVE.
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -887,7 +887,7 @@ _verified: 2026-07-08_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-07-08_
+_verified: 2026-09-13_ — CI E1 sweep: verify-first against HEAD. Worker fix SHIPPED (1.14.135) confirmed: `ai_wm_side` + `mainTint` tokens present in `workers/docx-worker/src/index.js` (3 markers). CV content rules (9 issues) delivered + captured in checklist §1/§2. RESIDUAL = page-2 sidebar bottom slack (inline notice sits after content, not pinned — acceptable; float-spine/row 61 would pin it). Kept ACTIVE as residual pointer.
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -902,7 +902,7 @@ _verified: 2026-07-08_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-07-08_
+_verified: 2026-09-13_ — CI E1 sweep: verify-first. Delivered CV REBUILD v2 (2 pages, all mandatory sections, gold header) — DONE 2026-07-08; slogan (both-placement, one-visible) + softened-closure rules captured. Of the surfaced worker-feature gaps: (i) main light-brand-TINT is now SHIPPED (row 71 `mainTint`); (ii) body active-hyperlinks tie to row 66 LINKEDIN-CLICK-001; (iii) page-2 sidebar slack → row 61. Kept ACTIVE as pointer to those legs.
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -917,7 +917,7 @@ _verified: 2026-07-08_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-07-08_
+_verified: 2026-09-13_ — CI E1 sweep: verify-first against HEAD. Systemic em-dash→hyphen SHIPPED (worker 1.14.134) re-confirmed: the `__AINOTICE` footer map in `workers/docx-worker/src/index.js` uses a HYPHEN in all 7 languages (da/es/zh/he/ar/am + the EN default "AI-assisted - author retains responsibility…") — no em-dash in the AI-notice/citation/doc-title path. The three standing CL rules (slogan / centered-signature-brand-ink / mixed-closure) are captured in checklist §3 + memory. Kept ACTIVE as the standing-rule anchor.
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -932,7 +932,7 @@ _verified: 2026-07-08_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-07-08_
+_verified: 2026-09-13_ — CI E1 sweep: verify-first against HEAD. (B) editable CL slogan SHIPPED — `antcv-cl-slogan-control.js` still loaded by `index.html` (1 ref). (A) convergence verify (CV-CORECOMP-BLANK / CL-BLANK / CV-ACCESS-DROP, 1.51.29, 22 vm tests) still needs a signed-in 2nd-generation regen; (C) preview-dance/perf + (D) regen-gated content + (E) unsolicited-gen quality all need a live desktop browser / real LLM CI lacks. Kept ACTIVE (owner/desktop/regen-gated).
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -947,7 +947,7 @@ _verified: 2026-07-08_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-07-08_
+_verified: 2026-09-13_ — CI E1 sweep: verify-first. TRACKMAN-DELIVERABLE-REVIEW batch of GENERATOR-BASELINE gaps (CV items a–i, CL items j–o) — root cause was a lossy-export payload bypassing the app belts; prevention doc `DELIVERABLE_PREFLIGHT_CHECKLIST.md` in place. Each item is a generator-baseline requirement that ties rows 57/59/61/54 and can only be closed by a re-deliver from the master kernel through the app belts + a real render — CI cannot regen. Kept ACTIVE (regen/deliverable-gated).
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -962,7 +962,7 @@ _verified: 2026-07-08_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-07-08_
+_verified: 2026-09-13_ — CI E1 sweep: verify-first against HEAD. (E) CROSS-DEVICE-GEN-LEAK-GUARD SHIPPED (1.51.201) re-confirmed: `CROSS-DEVICE-GEN-LEAK` markers in `app.src.js` (4) + the `__fahA`/`__fahB` app.js mirror (2) present, `pwa/test/diag-cross-device-gen-leak-guard.mjs` on disk (suite green). (A) LANG-SWITCH-MOBILE + (B) analysis-export-unsolicited-gate + (C) market-fit/salary JD wiring + (D) panel-upload OCR all need live-mobile / live-repro CI cannot do. Kept ACTIVE for A–D.
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -977,7 +977,7 @@ _verified: 2026-07-08_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-07-09_
+_verified: 2026-09-13_ — CI E1 sweep: verify-first against HEAD. (A) brandfit WIP PRESERVED re-confirmed: `origin/brandfit-per-app-scope` still exists at `fc2477c` (durable backup survives worktree prune) — NOT merged (behind main, needs rebase+review), live D1 `ALTER TABLE` NOT run (owner fresh-confirm required). (B) content-gen missing fields [regen-gated], (C) coordinator sidebar-inflate watermark, (D) PackagePicker→Layout merge, (E) cluster-demand worker pipeline, (F) cloud/mobile live-verify backlog — all owner/desktop/regen-gated. Kept ACTIVE.
 
 **TO-DO SUMMARY row (verbatim):**
 

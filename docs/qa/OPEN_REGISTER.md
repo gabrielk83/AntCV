@@ -83,17 +83,17 @@ citing an old number may mean either row — the ID disambiguates.
 | 63 | `ANALYSIS-STALE-ON-APP-LOAD-001` | 2026-09-12 | / NEW-1 (owner 2026-07-07) — loading a saved application does NOT load ITS JD a |
 | 64 | `ANALYSIS-EXPORT-DROPS-FILLED-ANSWERS-001` | 2026-09-12 | / NEW-2 (owner 2026-07-07) — exporting the JD-analysis PDF omits the  |
 | 58 | `EXPORT-SETTLED-001` | 2026-09-12 | MOBILE-BUGS-2026-07 (owner "Mobile App Bug Findings Report", 2026-07-07) — 9 findings: MOB-001 Danish UI shows |
-| 62 | `HEADER-BANNER-DESIGN-RULES-001` | 2026-07-08 | (owner 2026-07-07, KOMBIT gold) — bake the correct CV/CL header-banner design i |
-| 74 | `JD-SWAP-STALE-RATIONALE-001` | 2026-07-08 | LIVE-APP DRIVE (owner 2026-07-08: estimator calibration → generate 4 via the app). Three outcomes: (A) PARITY- |
-| 73 | — | 2026-07-08 | CV REVIEW-4 — LINE-FILL DEEP PASS + accessibility/competency (owner 2026-07-08: "lines are very very uneven",  |
-| 72 | `AI-NOTICE-ANCHOR-FIX-001` | 2026-07-08 | CV REVIEW-3 + worker 1.14.136 (owner 2026-07-08) — "handle as UNIVERSAL for gen/enhance/fix". WORKER (universa |
-| 71 | `AI-NOTICE-INLINE-001` | 2026-07-08 | CV REVIEW-2 FIXES + worker 1.14.135 (owner 2026-07-08, 9 issues). All applied + verified on the Trackman CV: ( |
-| 70 | — | 2026-07-08 | CV REBUILD v2 (owner 2026-07-08: "do the CV for my review") + slogan/closure rule refinements. Trackman CV re- |
-| 69 | — | 2026-07-08 | CL POLISH v2 + SYSTEMIC EM-DASH (owner 2026-07-08 CL review). Three standing CL rules, applied to the Trackman |
-| 67 | `CV-CORECOMP-BLANK-001` | 2026-07-08 | DESKTOP-RUN OPEN QUEUE (owner reconcile 2026-07-08 — these were NOT in the register and would have aged out; m |
-| 66 | `LINKEDIN-CLICK-001` | 2026-07-08 | TRACKMAN-DELIVERABLE-REVIEW-2026-07-08 (owner, on the generated Trackman CV+CL) — a batch of GENERATOR-BASELIN |
-| 65 | `PTR-STALE-GUARD-001` | 2026-07-08 | ANALYSIS+SYNC-BATCH-2026-07-08 (owner report, 5 issues; gap-export CONFIRMED FIXED by NEW-2/row 64): (A) LANG- |
-| 68 | `JD-SYNC-001` | 2026-07-09 | REGISTER-ESCAPE SWEEP (owner 2026-07-08: "look for all scopes of work that escaped the register, incl. incomin |
+| 62 | `HEADER-BANNER-DESIGN-RULES-001` | 2026-09-13 | (owner 2026-07-07, KOMBIT gold) — bake the correct CV/CL header-banner design i |
+| 74 | `JD-SWAP-STALE-RATIONALE-001` | 2026-09-13 | LIVE-APP DRIVE (owner 2026-07-08: estimator calibration → generate 4 via the app). Three outcomes: (A) PARITY- |
+| 73 | — | 2026-09-13 | CV REVIEW-4 — LINE-FILL DEEP PASS + accessibility/competency (owner 2026-07-08: "lines are very very uneven",  |
+| 72 | `AI-NOTICE-ANCHOR-FIX-001` | 2026-09-13 | CV REVIEW-3 + worker 1.14.136 (owner 2026-07-08) — "handle as UNIVERSAL for gen/enhance/fix". WORKER (universa |
+| 71 | `AI-NOTICE-INLINE-001` | 2026-09-13 | CV REVIEW-2 FIXES + worker 1.14.135 (owner 2026-07-08, 9 issues). All applied + verified on the Trackman CV: ( |
+| 70 | — | 2026-09-13 | CV REBUILD v2 (owner 2026-07-08: "do the CV for my review") + slogan/closure rule refinements. Trackman CV re- |
+| 69 | — | 2026-09-13 | CL POLISH v2 + SYSTEMIC EM-DASH (owner 2026-07-08 CL review). Three standing CL rules, applied to the Trackman |
+| 67 | `CV-CORECOMP-BLANK-001` | 2026-09-13 | DESKTOP-RUN OPEN QUEUE (owner reconcile 2026-07-08 — these were NOT in the register and would have aged out; m |
+| 66 | `LINKEDIN-CLICK-001` | 2026-09-13 | TRACKMAN-DELIVERABLE-REVIEW-2026-07-08 (owner, on the generated Trackman CV+CL) — a batch of GENERATOR-BASELIN |
+| 65 | `PTR-STALE-GUARD-001` | 2026-09-13 | ANALYSIS+SYNC-BATCH-2026-07-08 (owner report, 5 issues; gap-export CONFIRMED FIXED by NEW-2/row 64): (A) LANG- |
+| 68 | `JD-SYNC-001` | 2026-09-13 | REGISTER-ESCAPE SWEEP (owner 2026-07-08: "look for all scopes of work that escaped the register, incl. incomin |
 | 75 | `JOBTRACKER-AUTOFILL-ADDFLOW-VERIFY-001` | 2026-07-13 | (owner-gated live test) — the manual-add auto-fill flow (deterministic tier on add + async LLM refine: tier up |
 | 77 | `JOBTRACKER-TOP5-PERIODIC-RESCORE-001` | 2026-07-13 | (optional) — Top-5 is re-evaluated on every add/edit (the fit-ranked useMemo). Owner asked whether a PERIODIC  |
 | 78 | `JOBTRACKER-OPEN-DESKTOP-REVERIFY-001` | 2026-07-13 | CLOSED 2026-07-13 — live-verified end-to-end on the deployed 1.51.392 via Browser pane on a FRESH device (the  |

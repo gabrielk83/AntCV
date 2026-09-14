@@ -989,7 +989,7 @@ _verified: 2026-09-13_ — CI E1 sweep: verify-first against HEAD. (A) brandfit 
 
 ## Row 75 — JOBTRACKER-AUTOFILL-ADDFLOW-VERIFY-001
 
-_verified: 2026-07-13_
+_verified: 2026-09-14_
 
 **OPEN-queue row (verbatim):**
 
@@ -1001,7 +1001,7 @@ _verified: 2026-07-13_
 
 ## Row 77 — JOBTRACKER-TOP5-PERIODIC-RESCORE-001
 
-_verified: 2026-07-13_
+_verified: 2026-09-14_
 
 **OPEN-queue row (verbatim):**
 
@@ -1011,21 +1011,9 @@ _verified: 2026-07-13_
 
 ---
 
-## Row 78 — JOBTRACKER-OPEN-DESKTOP-REVERIFY-001
-
-_verified: 2026-07-13_
-
-**OPEN-queue row (verbatim):**
-
-```
-| **78** | ~~JOBTRACKER-OPEN-DESKTOP-REVERIFY-001~~ **CLOSED 2026-07-13** — live-verified end-to-end on the deployed 1.51.392 via Browser pane on a FRESH device (the exact stale-pointer scenario): tracker Open on the brand-fitted NVIDIA row → after reload the panel shows the NVIDIA JD (4840 chars, byte-match to D1), `window.__antcvBrandFit=true` + the 🎨 checkbox TICKED, the 📋 button OPENS the tracker (pure delegated path — makeButton no longer attaches an element listener at all), and D1 `active_application_device` gained a row for the pane device → 724 (island-stamped). Owner desktop spot-check now optional. Original scope: — 1.51.365 fixed the stale-JD Open (device-stamped active pointer), the brand-fit checkbox arming, and the dead tracker button; served-code + Browser-pane verified (Open UI, 22 rows with signal 📎). Owed: re-test on the OWNER'S DESKTOP device after one hard refresh — (a) tracker Open switches the upload panel to the chosen row's JD (the desktop device row `c4493b70…` was the one that went stale on 724/NVIDIA), (b) a brand-fitted row arrives with the panel's 🎨 Brand-fit checkbox ticked and the palette applied, (c) 📋 Job Tracker button still opens after the Open-reload. | this session (2026-07-12) | no |
-```
-
----
-
 ## Row 81 — PHOTO-FUSE-OWNER-VERIFY-001
 
-_verified: 2026-07-13_
+_verified: 2026-09-14_
 
 **OPEN-queue row (verbatim):**
 
@@ -1037,7 +1025,7 @@ _verified: 2026-07-13_
 
 ## Row 83 — JD-REMOVE-OWNER-VERIFY-001
 
-_verified: 2026-07-13_
+_verified: 2026-09-14_
 
 **OPEN-queue row (verbatim):**
 
@@ -1049,7 +1037,7 @@ _verified: 2026-07-13_
 
 ## Row 88
 
-_verified: 2026-07-13_
+_verified: 2026-09-14_
 
 **OPEN-queue row (verbatim):**
 
@@ -1061,7 +1049,7 @@ _verified: 2026-07-13_
 
 ## Row 87 — OWNER-ROUND-2-RESIDUE-001
 
-_verified: 2026-07-13_
+_verified: 2026-09-14_
 
 **OPEN-queue row (verbatim):**
 
@@ -1073,7 +1061,7 @@ _verified: 2026-07-13_
 
 ## Row 86 — GOLD-SESSION-FOLLOWUPS-001
 
-_verified: 2026-07-13_
+_verified: 2026-09-14_
 
 **OPEN-queue row (verbatim):**
 

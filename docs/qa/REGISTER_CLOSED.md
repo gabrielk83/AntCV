@@ -4,6 +4,26 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 78 — JOBTRACKER-OPEN-DESKTOP-REVERIFY-001 — CLOSED 2026-09-14 (CI nightly, Band-E E1 sweep)
+
+Row from the 2026-07-13 job-tracker batch that was already **owner live-verified end-to-end** in its
+own text (its head reads `CLOSED 2026-07-13`) but still sat in the ACTIVE queue — it passed
+`check-register.mjs` only because the detail body carries OPEN_MARKER words (`Owed`, `re-test`) that
+now describe an **optional** owner spot-check, not open work. Verify-first confirmed the shipped code
+is intact on HEAD before the move.
+
+- **Row 78 — JOBTRACKER-OPEN-DESKTOP-REVERIFY-001 — CLOSED.** Shipped 1.51.365/392. Live-verified
+  end-to-end on the deployed **1.51.392** via the Browser pane on a FRESH device (the exact
+  stale-pointer scenario): tracker Open on the brand-fitted NVIDIA row → after reload the panel shows
+  the NVIDIA JD (4840 chars, byte-match to D1), `window.__antcvBrandFit=true` + the 🎨 checkbox
+  TICKED, the 📋 button OPENS the tracker (pure delegated path — makeButton no longer attaches an
+  element listener), and D1 `active_application_device` gained a row for the pane device → 724.
+  The device-stamped active pointer (`active_application_device`) lands via the per-device sync model
+  (PARALLEL-GEN-POINTER-002); confirmed still in place on HEAD (`antcv:jdRemoved` tombstone + pointer
+  guards mirrored in both bundles). Remaining "re-test on the owner's desktop device" is explicitly
+  **now optional** per the row's own CLOSED block — no open leg. (Same close class as rows 46/48
+  below: shipped + owner-live-verified, only an optional owner spot-check outstanding.)
+
 ## Rows 46 + 48 — mobile 07-05 batch — CLOSED 2026-09-11 (CI nightly, Band-E E1 sweep)
 
 Two rows from the 2026-07-05 mobile live-session batch were already SHIPPED + LIVE-VERIFIED in

@@ -94,14 +94,13 @@ citing an old number may mean either row — the ID disambiguates.
 | 66 | `LINKEDIN-CLICK-001` | 2026-09-13 | TRACKMAN-DELIVERABLE-REVIEW-2026-07-08 (owner, on the generated Trackman CV+CL) — a batch of GENERATOR-BASELIN |
 | 65 | `PTR-STALE-GUARD-001` | 2026-09-13 | ANALYSIS+SYNC-BATCH-2026-07-08 (owner report, 5 issues; gap-export CONFIRMED FIXED by NEW-2/row 64): (A) LANG- |
 | 68 | `JD-SYNC-001` | 2026-09-13 | REGISTER-ESCAPE SWEEP (owner 2026-07-08: "look for all scopes of work that escaped the register, incl. incomin |
-| 75 | `JOBTRACKER-AUTOFILL-ADDFLOW-VERIFY-001` | 2026-07-13 | (owner-gated live test) — the manual-add auto-fill flow (deterministic tier on add + async LLM refine: tier up |
-| 77 | `JOBTRACKER-TOP5-PERIODIC-RESCORE-001` | 2026-07-13 | (optional) — Top-5 is re-evaluated on every add/edit (the fit-ranked useMemo). Owner asked whether a PERIODIC  |
-| 78 | `JOBTRACKER-OPEN-DESKTOP-REVERIFY-001` | 2026-07-13 | CLOSED 2026-07-13 — live-verified end-to-end on the deployed 1.51.392 via Browser pane on a FRESH device (the  |
-| 81 | `PHOTO-FUSE-OWNER-VERIFY-001` | 2026-07-13 | (owner-gated visual check) — the 1.51.390-393 photo-panel rework (PW-CJLR-PHOTO-LEAK-002 guard + PHOTO-BTN-FUS |
-| 83 | `JD-REMOVE-OWNER-VERIFY-001` | 2026-07-13 | (owner-gated live check) — JD-REMOVE-STICKY-001 (1.51.395, see the 2026-07-13 CLOSED block) is suite- and pred |
-| 88 | — | 2026-07-13 | OWNER-ROUND-3-BACKLOG (Aimpoint-810 deep review close-out, 2026-07-13; full detail in the ACTIVE_BUGS OWNER-RO |
-| 87 | `OWNER-ROUND-2-RESIDUE-001` | 2026-07-13 | (Aimpoint app-810 review, 2026-07-13, commit 73264c6) — the golden/detection/label/slogan/Scholar fixes landed |
-| 86 | `GOLD-SESSION-FOLLOWUPS-001` | 2026-07-13 | (density/gold session residue, 2026-07-13) — the marathon closed its main arc (see the ACTIVE_BUGS 2026-07-13  |
+| 75 | `JOBTRACKER-AUTOFILL-ADDFLOW-VERIFY-001` | 2026-09-14 | (owner-gated live test) — the manual-add auto-fill flow (deterministic tier on add + async LLM refine: tier up |
+| 77 | `JOBTRACKER-TOP5-PERIODIC-RESCORE-001` | 2026-09-14 | (optional) — Top-5 is re-evaluated on every add/edit (the fit-ranked useMemo). Owner asked whether a PERIODIC  |
+| 81 | `PHOTO-FUSE-OWNER-VERIFY-001` | 2026-09-14 | (owner-gated visual check) — the 1.51.390-393 photo-panel rework (PW-CJLR-PHOTO-LEAK-002 guard + PHOTO-BTN-FUS |
+| 83 | `JD-REMOVE-OWNER-VERIFY-001` | 2026-09-14 | (owner-gated live check) — JD-REMOVE-STICKY-001 (1.51.395, see the 2026-07-13 CLOSED block) is suite- and pred |
+| 88 | — | 2026-09-14 | OWNER-ROUND-3-BACKLOG (Aimpoint-810 deep review close-out, 2026-07-13; full detail in the ACTIVE_BUGS OWNER-RO |
+| 87 | `OWNER-ROUND-2-RESIDUE-001` | 2026-09-14 | (Aimpoint app-810 review, 2026-07-13, commit 73264c6) — the golden/detection/label/slogan/Scholar fixes landed |
+| 86 | `GOLD-SESSION-FOLLOWUPS-001` | 2026-09-14 | (density/gold session residue, 2026-07-13) — the marathon closed its main arc (see the ACTIVE_BUGS 2026-07-13  |
 | 89 | `MODEL-TABLE-FRESHNESS-001` | 2026-09-10 | ADVANCED 2026-09-10 (weekly-tune cross-check: `gpt-5.5` [30,60]→**[5,30]** GPT55-RATE-2026-09-001 + 8 new ids priced — mythos-5/-5-1, gpt-6-astra, gpt-5.6-sol/terra/luna, gemini-3.8/3.5-flash; 3 mirrors + 3 test sites, suite 2066/0; deploy ×3 + D1 INSERTs still OWED) · ADVANCED 2026-09-06 (ANTHROPIC-RATES-2026-09-001: opus-5 / fable-5 / fable-5-1 priced, sonnet-5 → [2,10] in all 3 mirrors + PWA C map, `1.51.4486-anthropic-rates`; deploy ×3 + D1 INSERT OWED) · CODE FIXED 2026-07-13 (shift lane 1.51.518-1.51.537, isolated worktree; DEPLOY OWED) — the proxy cost tables n |
 | 96 | `CV-HEADER-BOX-001` | 2026-07-17 | CV header redesign (plan §5), not started. Target (owner's hand-fixed 1017_Ibsen_Photonics_CV_FINAL_v4.docx):  |
 | 97 | `DELIVERABLES-3CO-001` | 2026-07-18 | the three brand-correct deliverable sets (Ibsen / Aimpoint / Demant). Owner ask 2026-07-17: regenerate CV+CL f |

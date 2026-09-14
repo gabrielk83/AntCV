@@ -80,6 +80,21 @@
 > **Consequence.** The Brave-backed **site-scoped** leg (`siteSearch=jobindex.dk`, Glassdoor) has been silently unavailable to every run of this routine since the Brave switch, so Danish evidence keeps arriving second-hand via plain WebSearch — this run reached the IT-Branchen/Jobindex *analysis*, not Jobindex *postings*. It also corrects `docs/deployment/google-cse-setup.md` §6 ("UNBLOCKED 2026-08-18 via Brave"): the backend is unblocked, the routine's access to it is not.
 >
 > **Fix is one line and OWNER-OWED** (no code change): set `CSE_PROXY_TOKEN` as a Windows User env var on the desktop, same value as the relay secret, exactly as `CLUSTER_RESEARCH_TOKEN` already is. Register row 102; detail in `docs/qa/SESSION_LOG_2026-08-26_DEMAND_SEED.md`.
+>
+> **ESCALATED 2026-09-14 (weekly demand-seed run, cloud routine, Opus 5) — now BLOCKS THE WRITE LEG TOO, so the routine produced nothing this week.** `CSE_PROXY_TOKEN` IS provisioned in the cloud routine's environment now (39 chars, well-formed), but the relay still refuses it — and the WRITE token has regressed alongside it. Both machine routes were probed live:
+>
+> - `GET /api/cse-search` (`x-antcv-cse-token`) -> 401 `{"error":"unauthorized"}`
+> - `POST /api/cluster-demand-research` (`x-antcv-cluster-research-token`) -> 401 `{"error":"unauthorized"}`
+>
+> The write leg is a REGRESSION: the same route accepted the same-named token on 2026-08-26 (`{"ok":true,"clusters_updated":9,"total_inserted":226}`).
+>
+> **Not an outage and not a code bug.** The relay is up and both requests reach the token-comparison branch: an unknown path returns a DIFFERENT body (`{"error":"unauthenticated"}`, the JWT fallthrough gate), so routing and auth execute normally and the 401s come from the `tok !== env.<TOKEN>` comparison itself. Both env values are present and well-formed — 39 and 51 chars, no placeholder markers, no wrapping quotes or stray whitespace; re-probed after stripping quotes/whitespace, identical 401. The values simply do not match the deployed Worker's secrets.
+>
+> **Likely cause:** Worker-secret / routine-env drift. The 2026-08-26 push that worked ran from the DESKTOP; this run is the cloud routine, whose env vars are configured separately.
+>
+> **Fix, still OWNER-OWED and still no code change:** re-sync the two values in both places — `wrangler secret put CSE_PROXY_TOKEN` and `wrangler secret put CLUSTER_RESEARCH_TOKEN` on `antcv-access-relay`, or correct the cloud routine's env vars to the current secret values — then re-run the routine.
+>
+> **State left behind: clean.** No D1 writes were attempted. A read-only `SELECT` confirmed all 9 clusters still hold complete 20-row `__global_market__` rollups (ranks 1..20), so no cluster is mid-edit. Per the routine spec ("if it 401s or 503s, STOP and report the exact error rather than guessing around it"), no research pass was run, no seed change was made, and the hand-rolled-SQL fallback was NOT used — that fallback is authorised only when the relay is DOWN, and a credential refusal from a healthy relay is not that.
 
 > **DENSITY-REORDER-CHURN-001 — FIXED (2026-08-26, job-tracker nightly, Opus 5; `scripts/job-tracker/density_fit.py`, python-only, no PWA asset, no cache-bust).** The density fit loop caps an item at two LLM tries — `attempts[key].n >= 2` → "leave it, report honestly". The key was `_norm(item.text)`, the item's OWN text. An ACCEPTED rewrite changes that text, so the cap only ever bound items whose rewrite was REJECTED; an accepted-but-useless rewrite minted a brand-new key with a fresh pair of tries.
 >

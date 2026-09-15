@@ -1174,7 +1174,9 @@ _verified: 2026-07-21_
 
 ## Row 31 — META-STATE-CORRUPTION-002
 
-_verified: 2026-07-29_
+_verified: 2026-09-15_
+
+_CI nightly 2026-09-15 (E1 sweep): both shipped guards confirmed present on `main` — `META-DRIFT-GUARD-002` ×2 (both bundles) and `META-DOWNGRADE-GUARD-003` ×2; `meta-drift-guard-both-blocks.test.mjs` + `meta-downgrade-guard-autosave.test.mjs` green in the 1715/1715 suite. Remaining leg (repair an already-poisoned server row from its own display name) is owner-gated — needs a live poisoned row, not fakeable in CI._
 
 **OPEN-queue row (verbatim):**
 
@@ -1192,7 +1194,9 @@ _verified: 2026-07-29_
 
 ## Row 98 — BYOK-COST-AUDIT-001
 
-_verified: 2026-07-29_
+_verified: 2026-09-15_
+
+_CI nightly 2026-09-15 (E1 sweep): `total_cost_usd_est` still present in BOTH `workers/proxy/src/byok-qualify.js` and the `workers/demo-proxy` mirror; the two src copies are byte-identical (`diff -q` clean); `byok-cost-audit.test.mjs` present in both worker test dirs and green in the suite. Unreverted, no regression._
 
 **OPEN-queue row (verbatim):**
 
@@ -1204,7 +1208,9 @@ _verified: 2026-07-29_
 
 ## Row 99 — REG-GROUP-FOLD-NAMED-001
 
-_verified: 2026-07-29_
+_verified: 2026-09-15_
+
+_CI nightly 2026-09-15 (E1 sweep): `NAMED_FOLD` still present in `pwa/antcv-dup-group-merge.js`; `dup-group-merge.test.mjs` green in the suite. Code leg unreverted. The owner "sidebar dancing" investigation-thread resolution remains unconfirmed — owner-check item, not a code regression (no CI capability to reproduce the live symptom)._
 
 **OPEN-queue row (verbatim):**
 
@@ -1216,7 +1222,9 @@ _verified: 2026-07-29_
 
 ## Row 100 — GRAB-ZONE-DISMISS-THRESHOLD-001
 
-_verified: 2026-07-29_
+_verified: 2026-09-15_
+
+_CI nightly 2026-09-15 (E1 sweep): both legs test-locked and green — `grab-zone-dismiss-threshold.test.mjs` asserts the old 28px threshold no longer dismisses and a ~40-60px scroll-start graze does not dismiss (80px threshold + scroll-forward behaviour). `antcv-panel-grab-zone` present in both `app.src.js` and the `app.js` mirror; the `GRAB-ZONE-SCROLL-FORWARD-001` comment is expected to be stripped from minified `app.js` (behaviour, not comment, is locked). Live-device confirm still owner-owed._
 
 **OPEN-queue row (verbatim):**
 
@@ -1228,7 +1236,9 @@ _verified: 2026-07-29_
 
 ## Row 101 — ZOOM-FLOOR-001
 
-_verified: 2026-07-29_
+_verified: 2026-09-15_
+
+_CI nightly 2026-09-15 (E1 sweep): `0.1` floor present in both `app.src.js` and the `app.js` mirror (button + pinch); `zoom-floor.test.mjs` green (6 assertions). Zoom-in ceiling unchanged. Unreverted._
 
 **OPEN-queue row (verbatim):**
 
@@ -1240,7 +1250,9 @@ _verified: 2026-07-29_
 
 ## Row 19 — JD-SCOPE-OCC2-GUARD-001
 
-_verified: 2026-08-15_
+_verified: 2026-09-15_
+
+_CI nightly 2026-09-15 (E1 sweep): `shouldAdoptCloudPointer` present 4× across the pwa sidecars; `jd-scope-isolation.test.mjs` green in the suite (occ-2 guard behaviour string-locked). Remaining two-real-device leg is owner-gated (physical devices, not fakeable headlessly)._
 
 **OPEN-queue row (verbatim):**
 

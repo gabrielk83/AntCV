@@ -107,12 +107,12 @@ citing an old number may mean either row — the ID disambiguates.
 | 95 | `CV-POLISH-BATCH-001` | 2026-07-19 | (owner CV review, desktop session 2026-07-19 — Ibsen 1017 regen). Five CV-quality defects reported against a l |
 | 92 | `EXPORT-PREVIEW-PAGINATION-DIVERGENCE-001` | 2026-07-21 | (owner 2026-07-20; NOT reproduced on current content) — owner's Ibsen PDF: the EXPORT main column breaks after |
 | 93 | `AUTO-ANALYSE-ON-JD-LOAD-ERROR-001` | 2026-07-21 | (owner 2026-07-21, transient — NOT captured) — owner repeatedly hit an "auto-run analysis on JD load" error th |
-| 31 | `META-STATE-CORRUPTION-002` | 2026-07-29 | Poisoned NIL row repair — set row meta from its own display name, guard auto-save |
-| 98 | `BYOK-COST-AUDIT-001` | 2026-07-29 | (2026-07-05, PR #331, register-escape — never given a row). byok-qualify.js's own docstring documented total_c |
-| 99 | `REG-GROUP-FOLD-NAMED-001` | 2026-07-29 | (2026-07-05, PR #331, register-escape). REGULATORY CONTEXT rendered two near-duplicate group headers side by s |
-| 100 | `GRAB-ZONE-DISMISS-THRESHOLD-001` | 2026-07-29 | + GRAB-ZONE-SCROLL-FORWARD-001 (2026-07-05, PR #332 + same-day follow-up, register-escape). Owner (Android): " |
-| 101 | `ZOOM-FLOOR-001` | 2026-07-29 | (2026-07-05, PR #334, register-escape). Owner: "allow Zoom out down to 10-20, currently it is down to 35%… tha |
-| 19 | `JD-SCOPE-OCC2-GUARD-001` | 2026-08-15 | JD-scope isolation — two-real-device test |
+| 31 | `META-STATE-CORRUPTION-002` | 2026-09-15 | Poisoned NIL row repair — set row meta from its own display name, guard auto-save |
+| 98 | `BYOK-COST-AUDIT-001` | 2026-09-15 | (2026-07-05, PR #331, register-escape — never given a row). byok-qualify.js's own docstring documented total_c |
+| 99 | `REG-GROUP-FOLD-NAMED-001` | 2026-09-15 | (2026-07-05, PR #331, register-escape). REGULATORY CONTEXT rendered two near-duplicate group headers side by s |
+| 100 | `GRAB-ZONE-DISMISS-THRESHOLD-001` | 2026-09-15 | + GRAB-ZONE-SCROLL-FORWARD-001 (2026-07-05, PR #332 + same-day follow-up, register-escape). Owner (Android): " |
+| 101 | `ZOOM-FLOOR-001` | 2026-09-15 | (2026-07-05, PR #334, register-escape). Owner: "allow Zoom out down to 10-20, currently it is down to 35%… tha |
+| 19 | `JD-SCOPE-OCC2-GUARD-001` | 2026-09-15 | JD-scope isolation — two-real-device test |
 | 103 | `RELAY-TUNE-COVERAGE-GAP-001` | 2026-08-26 | (found by weekly cost-quality tune 2026-07-13): the tune loop is blind to 100% of real traffic and can never f |
 | 45 | — | 2026-08-20 | PERF-001 — multi-second main-thread stalls on export/preview; profile → debounce/memoize. |
 | 40 | — | 2026-08-21 | SO-003 DATA LOSS — core-comp row-count change wipes Selected Outcomes (cloud-persisted). |

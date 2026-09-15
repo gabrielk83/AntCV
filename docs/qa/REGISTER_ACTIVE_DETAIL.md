@@ -1073,7 +1073,7 @@ _verified: 2026-09-14_
 
 ## Row 89 — MODEL-TABLE-FRESHNESS-001
 
-_verified: 2026-09-10_
+_verified: 2026-09-15_
 
 **OPEN-queue row (verbatim):**
 
@@ -1109,6 +1109,18 @@ unused). Still owed, unchanged: the three worker deploys (now covering both pass
 D1 `llm_provider_costs` INSERTs — re-listing D1 this run showed the 09-06 SQL was never applied, the
 08-20 sonnet-5 row at [3,15] still winning and still inflating claude's cost by exactly 1.5x. Report:
 `docs/qa/COST_QUALITY_WEEKLY_2026-09-06.md` (§ Desktop cross-check 2026-09-10).
+
+**2026-09-15 (desktop, owner "deploy") — the three worker deploys DONE.** `gh workflow run deploy.yml` was
+not usable: the workflow has failed on every push since 2026-08-01 on Cloudflare auth (row 109). Deployed
+instead with local `wrangler deploy` (OAuth, `workers (write)`) from a CLEAN `origin/main` worktree at
+`8ce85e0c` — not the shared clone, which held the owner's uncommitted `access-relay/src/index.js`. Dry-run
+first for all three (bindings, vars incl. `MODEL_ROLES`, D1, service bindings all listed), then one at a
+time with `/health` after each: cv-proxy `02e93051-…`, antcv-demo-proxy `ba3496be-…`, antcv-access-relay
+`cbac842a-…`. Version strings do not move with a rate change, so proof came from the deployed source
+(`get_worker_code antcv-access-relay`): `"gpt-5.5": [5, 30]`, `"gpt-6-astra": [10, 50]`,
+`"claude-mythos-5-1": [10, 50]`, `"gemini-3.8-flash": [0.75, 3.75]` all present. This closes the deploy
+debt from BOTH the 09-06 and 09-10 passes. **Remaining on this row: the owner-gated D1 `llm_provider_costs`
+INSERTs** (sonnet-5 [2,10] + gpt-5.5 [5,30]; SQL in the 09-06 report § B).
 
 ---
 
@@ -1623,6 +1635,18 @@ _verified: 2026-08-27_
 
 ```
 | 108 | JOBTRACKER-PYTEST-UNWIRED-001 (found by the job-tracker nightly 2026-08-27) — the 14 network-free python tests under `scripts/job-tracker/` are run by HAND only. `scripts/run-tests.mjs` has no python leg and no workflow invokes them, so `test_check_postings.py`, `test_closed_row_gate.py`, `test_job_sources.py`, `test_gold_residue.py`, `test_cl_v5_structure.py` and the other nine are green-by-nobody-looking between the runs that happen to touch that directory. They are cheap (all 14 finish in seconds, zero network) and they guard the belts that decide whether a model call gets spent — the closed-row gate, the obsolescence classifier, the board parsers. Filed, NOT fixed blind: wiring python into the node suite is a separate change with its own failure mode (a missing interpreter on a CI runner turning the whole PWA suite red), so it wants a deliberate design — most likely an OPTIONAL python leg that SKIPS loudly when no interpreter is present rather than failing, plus the same treatment in the nightly. verified: 2026-08-27 |
+```
+
+---
+
+## Row 109 — DEPLOY-YML-CF-AUTH-BROKEN-001
+
+_verified: 2026-09-15_
+
+**OPEN-queue row (verbatim):**
+
+```
+| **109** | **DEPLOY-YML-CF-AUTH-BROKEN-001 (found 2026-09-15 while deploying the rate fixes).** `.github/workflows/deploy.yml` has failed on every push to `main` since 2026-08-01 (last green: run `30697485564`, "Merge pull request #358"). Every run since dies in ~35 s at the same step: wrangler `✘ [ERROR] Failed to automatically retrieve account IDs for the logged in user. You may have incorrect permissions on your API token, or your authentication may have expired.` The workflow reads `secrets.CLOUDFLARE_API_TOKEN` + `secrets.CLOUDFLARE_ACCOUNT_ID` (deploy.yml lines 127/177/186) and no `wrangler.toml` carries an `account_id`, so an expired/under-scoped token or a missing account id both produce exactly this. NOT a production outage: `antcv.pages.dev` served `1.51.4526-slogan-paper-contrast` = repo `TARGET_VERSION` on 09-15 (Pages deploys via its own Git integration, not this job), and the relay was redeployed 08-16 (`auth-38-subtitle-guard-qual-put`, after the last green run) by another path. It IS the reason the 09-06 + 09-10 worker rate fixes sat undeployed for 9 days — every routine that says "deploy via `gh workflow run deploy.yml`" has been silently no-op'ing. Worked around 09-15 with local `wrangler deploy` (row 89). **OWNER:** rotate `CLOUDFLARE_API_TOKEN` (Account→Workers→Edit, Account→Pages→Edit) and set `CLOUDFLARE_ACCOUNT_ID` = `17c026b6d08c3e0ba63425cb26a5a7d9`; then re-run `deploy.yml` with `mode=dry-run` on any worker to confirm green. Credentials are owner-only — an agent cannot do this step. | desktop 2026-09-15, `gh run list --workflow=deploy.yml` + `gh run view 34483645567 --log-failed` | no — OWNER (secret rotation) |
 ```
 
 ---

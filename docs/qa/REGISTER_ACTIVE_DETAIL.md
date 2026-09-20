@@ -15,7 +15,15 @@ When you finish it: move it to `REGISTER_CLOSED.md`.
 
 ## Row 38 — GEN-BACKGROUND-001
 
-_verified: 2026-09-10_
+_verified: 2026-09-20_
+
+**Re-verify 2026-09-20 (CI nightly — E1 stalest slot, code-presence):** on HEAD `bbc5f534`
+`antcv-gen-memo.js` + `antcv-gen-job-client.js` both still loaded in `index.html` (2 refs);
+`window.AntcvGenJob` / `window.AntcvGenMemo` / `window.__antcvGenTrigger` still exposed across the
+sidecars + `app.js` mirror (3 refs); their tests (`pwa/test/unit/gen-memo.test.mjs`,
+`gen-job-client.test.mjs`) run inside the green PWA suite (1715/1715). Engine INTACT, unchanged.
+REMAINING unchanged: owner A/B on a real mobile gen + the per-section decompose approach decision —
+both need a live signed-in mobile gen CI cannot drive. Kept ACTIVE, owner-gated.
 
 **Re-verify 2026-09-10 (CI nightly — E1 stalest slot, code-presence):** `antcv-gen-memo.js?v=1.51.134`
 + `antcv-gen-job-client.js?v=1.51.132` still loaded in `index.html`; `window.AntcvGenJob` still exposed
@@ -49,7 +57,12 @@ needs-live-env — carry forward.
 
 ## Row 76 — JOBTRACKER-LLM-REFIT-BUTTON-001
 
-_verified: 2026-09-10_
+_verified: 2026-09-20_
+
+**Re-verify 2026-09-20 (CI nightly — E1 stalest slot):** unchanged on HEAD `bbc5f534` — still a
+deferred OPTIONAL enhancement, not a defect. Deterministic Top-5 fit ranking is by design; the
+on-demand "re-judge fit" LLM button is only worth building if the deterministic tier proves too
+coarse on real edge JDs. No code owed; nothing regressed. Kept ACTIVE (optional, low priority).
 
 **Re-verify 2026-09-10 (CI nightly — E1 stalest slot):** unchanged — this remains a deferred OPTIONAL
 enhancement, not a defect. The Top-5 fit score is deterministic by design (ranking stability); an
@@ -72,7 +85,14 @@ too coarse on real edge JDs — no such evidence has surfaced. No code owed; kee
 
 ## Row 82 — ROLE-CANON-AUDIT-LEG-001
 
-_verified: 2026-09-10_
+_verified: 2026-09-20_
+
+**Re-verify 2026-09-20 (CI nightly — E1 stalest slot): CODE LEG STILL DONE.** Re-ran
+`scripts/job-tracker/test_gold_residue.py` on HEAD `bbc5f534` — **18/18 checks pass**;
+`role_canon_issues(cv, lang, gold)` still wired into `run()` as `checks["role_canon"]`
+(`gold_audit.py:22,91-92`). The stale "NOT yet wired (uncommitted WIP)" wording survives only in the
+verbatim OPEN-queue snapshot below; the leg itself is confirmed wired + green. REMAINING is ONLY the
+owner-gated es/zh canon-wording eyeball. Kept ACTIVE for that owner pass.
 
 **Re-verify 2026-09-10 (CI nightly — E1 stalest slot): CODE LEG STILL DONE.** Re-ran
 `scripts/job-tracker/test_gold_residue.py` on HEAD `6f9ff8ee` — **18/18 checks pass**;
@@ -102,7 +122,14 @@ agent/code work is complete.
 
 ## Row 94 — CONTENT-LANG-STAMP-001
 
-_verified: 2026-09-10_
+_verified: 2026-09-20_
+
+**Re-verify 2026-09-20 (CI nightly — E1 stalest slot, code-presence):** the `content_language` field
+is still present in `pwa/app.js` (2 references) AND in the access-relay whitelist
+(`workers/access-relay/src/index.js:2317` read-back + `3715-3720` write-set); the
+`1.51.4446-content-lang-stamp` code leg is INTACT on HEAD `bbc5f534`, suite 1715/1715 green.
+REMAINING unchanged: a live generate/translate-persist regen confirming the stamp is written and
+read authoritatively (needs real models — CI cannot drive). Kept ACTIVE, model-gated.
 
 **Re-verify 2026-09-10 (CI nightly — E1 stalest slot, code-presence):** the `content_language` field
 is still present in `pwa/app.js` (4 references); the `1.51.4446-content-lang-stamp` code leg is INTACT

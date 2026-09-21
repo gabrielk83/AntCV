@@ -500,7 +500,9 @@ _E1 sweep 2026-09-09 (CI nightly, Opus 4.8): closed legs CONFIRMED in current co
 
 ## Row 2 — LINKIFY-EXPORT-001
 
-_verified: 2026-09-11_
+_verified: 2026-09-21_
+
+**2026-09-21 (CI nightly, verify-first):** worker sidebar-ratio fix intact — `sidebar_ratio` derivation present in `workers/docx-worker/src/index.js` [2 refs]; the regression lock `workers/docx-worker/test/main-column-ratio-width.test.mjs` still present. Content+bullets/hyperlink legs remain CLOSED-and-locked; the only residual (per-line font-metric fidelity) still folds into row 25 (real-PDF-gated, a render CI lacks). No regression. Kept ACTIVE.
 
 **OPEN-queue row (verbatim):**
 
@@ -518,7 +520,9 @@ _verified: 2026-09-11_
 
 ## Row 39a — AUTOSAVE-NO-DOWNGRADE-001
 
-_verified: 2026-09-11_
+_verified: 2026-09-21_
+
+**2026-09-21 (CI nightly, verify-first):** both shipped legs intact — client `antcv-pointer-stale-guard.js` still loaded in `pwa/index.html`; the relay downgrade/blank-overwrite guard code still present; `jd-scope-isolation.test.mjs` (both-bundle mirror-lock) green in the 1715/1715 suite. REMAINING unchanged and owner-gated: row 19 two-real-device test + live authed downgrade-PUT / same-device stale-pointer A/B (need a signed-in session + a real second device — CI cannot fake either). Kept ACTIVE (2 of 3 legs shipped).
 
 **OPEN-queue row (verbatim):**
 
@@ -536,7 +540,9 @@ _verified: 2026-09-11_
 
 ## Row 41
 
-_verified: 2026-09-11_
+_verified: 2026-09-21_
+
+**2026-09-21 (CI nightly, verify-first):** the shipped #185 capture PROBE is intact — `antcv-debug-logger.js` still loaded in `pwa/index.html` (widened error capture: open panel, field-editor reached, pre-crash input/change breadcrumbs, step/doc state). No headless repro is reproducible in CI (React-18 #185 here = "Maximum update depth exceeded", proven to need a real Android reflow oscillation the stable headless layout can't produce). Suite green. NEXT unchanged: waiting on the next live Android crash to populate a capture — a desktop/owner-device leg. Kept ACTIVE (instrumented, no repro).
 
 **OPEN-queue row (verbatim):**
 
@@ -554,7 +560,9 @@ _verified: 2026-09-11_
 
 ## Row 42 — GEN-LANGFAB-001
 
-_verified: 2026-09-11_
+_verified: 2026-09-21_
+
+**2026-09-21 (CI nightly, verify-first):** fix intact — `antcv-lang-fabrication-guard.js` still loaded in `pwa/index.html`; `pwa/test/unit/lang-fabrication-guard.test.mjs` green in the 1715/1715 suite (reconciles CV languages vs kernel `personalInfo.languages`: drop non-kernel, correct levels, name-neutral, both item shapes). No regression. REMAINING unchanged: owner-verify on a FRESH targeted gen (German omitted + Danish B1) — regen-gated, needs a real LLM generation CI cannot run. Kept ACTIVE.
 
 **OPEN-queue row (verbatim):**
 
@@ -572,7 +580,9 @@ _verified: 2026-09-11_
 
 ## Row 43
 
-_verified: 2026-09-11_
+_verified: 2026-09-21_
+
+**2026-09-21 (CI nightly, verify-first):** fix intact — `antcv-candidate-preview-editor-341.js` still loaded in `pwa/index.html`; `pwa/test/unit/ca006-pathc-header-guard.test.mjs` green in the 1715/1715 suite (Path-C-only header-whitelist on both anchor loops, strictly additive). Sidecar-only, no app.js edit. No regression. Owner click-through eyeball on a targeted gen preview remains the only owed verify (live). Kept ACTIVE.
 
 **OPEN-queue row (verbatim):**
 
@@ -590,7 +600,9 @@ _verified: 2026-09-11_
 
 ## Row 44 — JD-ANALYSIS-PRINT-001
 
-_verified: 2026-09-11_
+_verified: 2026-09-21_
+
+**2026-09-21 (CI nightly, verify-first):** fix intact — `antcv-analysis-report-pdf-360.js` still loaded in `pwa/index.html`; `pwa/test/unit/analysis-print-surface.test.mjs` green in the 1715/1715 suite (render-present offscreen iframe, `left:-99999px;794×1123;opacity:0`, so `contentWindow.print()` no longer falls back to the top-level CV preview). No regression. REMAINING: owner click-through of "Download analysis (PDF)" (live). Kept ACTIVE.
 
 **OPEN-queue row (verbatim):**
 
@@ -608,7 +620,9 @@ _verified: 2026-09-11_
 
 ## Row 47 — MOBILE-TOPBAR-SAFEAREA-001
 
-_verified: 2026-09-11_
+_verified: 2026-09-21_
+
+**2026-09-21 (CI nightly, verify-first):** fix intact — `.antcv-topbar` top safe-area padding (`env(safe-area-inset-top)) 12px 8px 12px`) present in the `pwa/app.js` mirror [1 ref]; `antcv-topbar-tools-347.js` still loaded (skips relocating `#antcv-pdf-preview-fab` into the topbar ≤900px). The redundant `antcv-mobile-export-fab.js` is correctly ABSENT (removed same-session as redundant — see row 48). Suite green. REMAINING: live phone re-verify of the FAB-relocation on a real device (owner-gated). Kept ACTIVE.
 
 **OPEN-queue row (verbatim):**
 
@@ -626,7 +640,9 @@ _verified: 2026-09-11_
 
 ## Row 49 — SIDEBAR-GROUP-PAGE-BREAK-001
 
-_verified: 2026-09-11_
+_verified: 2026-09-21_
+
+**2026-09-21 (CI nightly, verify-first):** genuinely NOT-STARTED and still applicable — the docx-worker page-DISTRIBUTION algorithm (`cantSplit` / per-page Table objects, `sidebar_ratio` split) in `workers/docx-worker/src/index.js` is unchanged, so a long focus-area group can still be orphaned/truncated rather than carried under "(CONT.)". This is owner-authorized design work that touches the highest-risk area in the project's history — it needs a dedicated diagnostic-first session with a real long-group export (a render CI lacks), NOT a speculative nightly patch. Kept ACTIVE (scoped, not started).
 
 **OPEN-queue row (verbatim):**
 
@@ -644,7 +660,9 @@ _verified: 2026-09-11_
 
 ## Row 50 — UPLOAD-SCREEN-TOP-CLIP-001
 
-_verified: 2026-09-11_
+_verified: 2026-09-21_
+
+**2026-09-21 (CI nightly, verify-first):** fix intact — the upload-screen `.fade` block carries `justifyContent:"flex-start"` (the old centering value gone) in both bundles, and `pwa/test/unit/upload-screen-top-clip.test.mjs` (scoped block match + dead-`scrollTop`-ref removal, both app.src.js and the app.js mirror) is green in the 1715/1715 suite. No regression. REMAINING: owner live re-verify (with and without an active background generation). Kept ACTIVE.
 
 **OPEN-queue row (verbatim):**
 
@@ -656,7 +674,9 @@ _verified: 2026-09-11_
 
 ## Row 51 — PREVIEW-SCROLL-JITTER-001
 
-_verified: 2026-09-11_
+_verified: 2026-09-21_
+
+**2026-09-21 (CI nightly, verify-first):** fix intact — `pwa/test/unit/preview-scroll-jitter.test.mjs` green in the 1715/1715 suite (the cosmetic deps `Ke, ya` / navyColor+styleConfig removed from the fit-recompute effect's dependency array in both bundles, so a silent brand/font change no longer snaps the reader's scroll position; doc/language resets preserved). No regression. REMAINING: owner live re-verify. Kept ACTIVE.
 
 **OPEN-queue row (verbatim):**
 

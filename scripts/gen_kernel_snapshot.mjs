@@ -42,6 +42,13 @@ function md(history) {
   const tools = (history.tools||[]).map(t=>`- **${t.l}:** ${t.v}`).join('\n');
   const certs = (history.certifications||[]).map(c=>`- ${c}`).join('\n');
   const langs = (history.languages||[]).map(l=>`${l.name} (${l.level})`).join(', ');
+  // education entries are plain strings in the kernel; tolerate the object shape too.
+  const edu = (history.education||[]).map(e =>
+    typeof e === 'string'
+      ? `- ${e}`
+      : `- ${[e.degree, e.field].filter(Boolean).join(', ')}${e.institution?` - ${e.institution}`:''}${e.year?` (${e.year})`:''}`
+  ).join('\n');
+  const education = edu ? `## Education\n${edu}\n\n` : '';
   const clearance = (history.additional||[]).find(a=>/clearance/i.test(a.l||''));
   const eligibility = clearance ? `\n## Eligibility\n- **${clearance.l}:** ${clearance.v}\n` : '';
   const work = (history.workHistory||[]).map(w =>
@@ -53,7 +60,7 @@ function md(history) {
 > Source of truth: \`ant_memory\` D1 \`user_kernel\` (user_hash \`${USER}\`).
 > Regenerate with \`node scripts/gen_kernel_snapshot.mjs\`. Any manual change here will be overwritten.
 
-## Tools
+${education}## Tools
 ${tools}
 
 ## Certifications

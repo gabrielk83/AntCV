@@ -1090,7 +1090,7 @@ _verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited mark
 
 ## Row 75 — JOBTRACKER-AUTOFILL-ADDFLOW-VERIFY-001
 
-_verified: 2026-09-14_
+_verified: 2026-09-24_ — CI E1 re-verify against HEAD 88f89001 (cited markers intact, remaining work unchanged & CI-ungated): the deterministic-tier + async-enrich autofill flow is present in `pwa/antcv-react-islands.js` (AUTOFILL-TOP5/tier/enrich/refine, 7 refs) and the jobtracker unit set (`jobtracker-top5-*`, `jobtracker-open-jd-routing`, etc.) is green in the suite (1715/1715). REMAINING = one real URL/PDF add-test end-to-end (reject after) with the owner or a throwaway account — CI cannot drive a live LLM add without writing a junk row to the owner's live tracker. Kept ACTIVE, owner-gated.
 
 **OPEN-queue row (verbatim):**
 
@@ -1102,7 +1102,7 @@ _verified: 2026-09-14_
 
 ## Row 77 — JOBTRACKER-TOP5-PERIODIC-RESCORE-001
 
-_verified: 2026-09-14_
+_verified: 2026-09-24_ — CI E1 re-verify against HEAD 88f89001: the on-add/on-change fit-ranked Top-5 re-rank is present and covered by `pwa/test/unit/jobtracker-top5-rescore.test.mjs` (suite green). The PERIODIC recompute (drift Top-5 with cluster-demand refreshes, not just on add) is deliberately NOT built — it is an OWNER-DECISION gate, not code owed. Kept ACTIVE awaiting owner confirm.
 
 **OPEN-queue row (verbatim):**
 
@@ -1114,7 +1114,7 @@ _verified: 2026-09-14_
 
 ## Row 81 — PHOTO-FUSE-OWNER-VERIFY-001
 
-_verified: 2026-09-14_
+_verified: 2026-09-24_ — CI E1 re-verify against HEAD 88f89001 (cited markers intact): the 1.51.390-393 photo-panel rework is present — PHOTO-BTN-FUSE-001 + the single "＋ Add photos…" upload control in `pwa/antcv-photo-library.js` (4 refs) and the PW-CJLR-PHOTO-LEAK guard in `pwa/antcv-profile-workstyle-cjlr-238.js` + `pwa/test/diag-pw-cjlr-photo-leak.mjs`; suite green. REMAINING = one on-device visual pass after a hard refresh (legs a–e of the row) — needs a signed-in browser CI lacks. Kept ACTIVE, owner-gated visual check.
 
 **OPEN-queue row (verbatim):**
 
@@ -1126,7 +1126,7 @@ _verified: 2026-09-14_
 
 ## Row 83 — JD-REMOVE-OWNER-VERIFY-001
 
-_verified: 2026-09-14_
+_verified: 2026-09-24_ — CI E1 re-verify against HEAD 88f89001 (cited markers intact): JD-REMOVE-STICKY-001 (1.51.395) present — JD-REMOVE-STICKY/tombstone markers in `pwa/app.src.js` (6 refs) + `pwa/test/unit/jd-remove-tombstone.test.mjs` green in the suite. REMAINING = one live 4-step pass (remove→refresh stays removed / reopen re-stages the tombstone / read-from-cloud returns JD / a different JD seeds normally) — needs the live app + relay CI cannot drive. Kept ACTIVE, owner live-verify owed.
 
 **OPEN-queue row (verbatim):**
 
@@ -1138,7 +1138,7 @@ _verified: 2026-09-14_
 
 ## Row 88
 
-_verified: 2026-09-14_
+_verified: 2026-09-24_ — CI E1 re-verify against HEAD 88f89001 (round-3 ship intact, owner-deferred legs unchanged): the round-3 worker/gen markers are present — docx-worker `VERSION = "1.14.174-appline-edit"` (past the 1.14.154 of the ship), ROLE-SPLIT-CONT-001 in `workers/docx-worker/src/index.js` (~26918), and `fit_page_flow` wired in both `scripts/job-tracker/gen-runner.py` and `scripts/job-tracker/density_fit.py`. OWNER-DEFERRED / OPEN (all owner-gated / regen / real-render): (a) 19-app rollout, (b) fit-page-flow y-alignment (backlog #49), (c) table-geometry 6630→7689 (backlog #1), (d) client-half bullet_pages forwarding (backlog #2), (e) orphan misdetection + density grow, (f) rows 54/56/59A/62/22. Kept ACTIVE.
 
 **OPEN-queue row (verbatim):**
 
@@ -1150,7 +1150,7 @@ _verified: 2026-09-14_
 
 ## Row 87 — OWNER-ROUND-2-RESIDUE-001
 
-_verified: 2026-09-14_
+_verified: 2026-09-24_ — CI E1 re-verify against HEAD 88f89001 (all 5 legs remain diagnosed-not-fixed, gates unchanged): (a) CORE-COMP 3-4 ROWS — grounded per-app table regen, owner-gated, no fabrication; (b) BRAND COLORS — `origin/brandfit-per-app-scope` branch still at `fc2477c`, NOT merged (git ls-remote confirmed); (c) SIGNATURE — needs an actual signature upload (signatureB64 empty); (d) ROLE-SPLIT "(cont.)" — worker ROLE-SPLIT-CONT-001 present (docx-worker index.js ~26918) but the LibreOffice natural-flow cont. header still needs a deploy + CloudConvert test; (e) RUNT LINES — density frontier. Each needs live/regen/deploy CI lacks. Kept ACTIVE.
 
 **OPEN-queue row (verbatim):**
 
@@ -1162,7 +1162,7 @@ _verified: 2026-09-14_
 
 ## Row 86 — GOLD-SESSION-FOLLOWUPS-001
 
-_verified: 2026-09-14_
+_verified: 2026-09-24_ — CI E1 re-verify against HEAD 88f89001: leg (f) ROW-82 UNBLOCKED confirmed — the role-canon export audit is wired in `scripts/job-tracker/gold_audit.py` (`role_canon`, 3 refs). Remaining legs are gated: (a) PUBS-AUTHORS-FIRST cosmetic (deterministic sub-rule or hand-edit), (b) RESULTS-NEEDS-TRANSLATION app 792 (translated swaps), (c) PROXY-GOLD-RULES-FETCH (fetch served /gold-rules.json), (d) CORE-COMP-FLOOR backfill (per-app content regen, owner call), (e) STALE-LOCKED-PDFS (owner deletes at leisure). Content/regen/owner-gated — CI cannot regen. Kept ACTIVE.
 
 **OPEN-queue row (verbatim):**
 

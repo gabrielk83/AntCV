@@ -1174,7 +1174,9 @@ _verified: 2026-09-24_ — CI E1 re-verify against HEAD 88f89001: leg (f) ROW-82
 
 ## Row 89 — MODEL-TABLE-FRESHNESS-001
 
-_verified: 2026-09-15_
+_verified: 2026-09-25_
+
+_CI nightly 2026-09-25 (E1 sweep, HEAD `ab2a43c7`): the deployed rate corrections still hold in source across all THREE mirrors — `workers/access-relay/src/model-rates.js` carries `claude-sonnet-5 [2,10]`, `gpt-5.5 [5,30]`, `gpt-6-astra [10,50]`, `gemini-3.8-flash [0.75,3.75]`, longest-key ordering intact; `gpt-5.5` also present in both `demo-enforcement.js` mirrors; freshness + mirror tests green in the 1715/1715 suite. Only remaining: the owner-gated D1 `llm_provider_costs` INSERTs (sonnet-5 [2,10] + gpt-5.5 [5,30]; SQL in the 09-06 report § B) — not fakeable in CI._
 
 **OPEN-queue row (verbatim):**
 
@@ -1287,9 +1289,10 @@ _verified: 2026-07-21_
 
 ## Row 31 — META-STATE-CORRUPTION-002
 
-_verified: 2026-09-15_
+_verified: 2026-09-25_
 
-_CI nightly 2026-09-15 (E1 sweep): both shipped guards confirmed present on `main` — `META-DRIFT-GUARD-002` ×2 (both bundles) and `META-DOWNGRADE-GUARD-003` ×2; `meta-drift-guard-both-blocks.test.mjs` + `meta-downgrade-guard-autosave.test.mjs` green in the 1715/1715 suite. Remaining leg (repair an already-poisoned server row from its own display name) is owner-gated — needs a live poisoned row, not fakeable in CI._
+_CI nightly 2026-09-25 (E1 sweep, HEAD `ab2a43c7`): re-confirmed — `META-DRIFT-GUARD-002` (2× in `app.src.js`, present in the `app.js` mirror) and `META-DOWNGRADE-GUARD-003` (same) both live; `meta-drift-guard-both-blocks.test.mjs` + `meta-downgrade-guard-autosave.test.mjs` green in the 1715/1715 suite. Remaining leg (repair an already-poisoned server row from its own display name) stays owner-gated — needs a live poisoned row, not fakeable in CI._
+_CI nightly 2026-09-15 (E1 sweep): both shipped guards confirmed present on `main`; tests green._
 
 **OPEN-queue row (verbatim):**
 
@@ -1307,9 +1310,10 @@ _CI nightly 2026-09-15 (E1 sweep): both shipped guards confirmed present on `mai
 
 ## Row 98 — BYOK-COST-AUDIT-001
 
-_verified: 2026-09-15_
+_verified: 2026-09-25_
 
-_CI nightly 2026-09-15 (E1 sweep): `total_cost_usd_est` still present in BOTH `workers/proxy/src/byok-qualify.js` and the `workers/demo-proxy` mirror; the two src copies are byte-identical (`diff -q` clean); `byok-cost-audit.test.mjs` present in both worker test dirs and green in the suite. Unreverted, no regression._
+_CI nightly 2026-09-25 (E1 sweep, HEAD `ab2a43c7`): `total_cost_usd_est` present ×7 in BOTH `workers/proxy/src/byok-qualify.js` and the `workers/demo-proxy` mirror; the two src copies remain byte-identical (`diff -q` clean); `byok-cost-audit.test.mjs` green in the 1715/1715 suite. Unreverted, no regression._
+_CI nightly 2026-09-15 (E1 sweep): same, confirmed present + byte-identical._
 
 **OPEN-queue row (verbatim):**
 
@@ -1321,9 +1325,10 @@ _CI nightly 2026-09-15 (E1 sweep): `total_cost_usd_est` still present in BOTH `w
 
 ## Row 99 — REG-GROUP-FOLD-NAMED-001
 
-_verified: 2026-09-15_
+_verified: 2026-09-25_
 
-_CI nightly 2026-09-15 (E1 sweep): `NAMED_FOLD` still present in `pwa/antcv-dup-group-merge.js`; `dup-group-merge.test.mjs` green in the suite. Code leg unreverted. The owner "sidebar dancing" investigation-thread resolution remains unconfirmed — owner-check item, not a code regression (no CI capability to reproduce the live symptom)._
+_CI nightly 2026-09-25 (E1 sweep, HEAD `ab2a43c7`): `NAMED_FOLD` present ×2 in `pwa/antcv-dup-group-merge.js`; `dup-group-merge.test.mjs` green in the 1715/1715 suite. Code leg unreverted. The owner "sidebar dancing" investigation-thread resolution remains unconfirmed — owner-check item, not a code regression (no CI capability to reproduce the live symptom)._
+_CI nightly 2026-09-15 (E1 sweep): `NAMED_FOLD` present; test green._
 
 **OPEN-queue row (verbatim):**
 
@@ -1335,9 +1340,10 @@ _CI nightly 2026-09-15 (E1 sweep): `NAMED_FOLD` still present in `pwa/antcv-dup-
 
 ## Row 100 — GRAB-ZONE-DISMISS-THRESHOLD-001
 
-_verified: 2026-09-15_
+_verified: 2026-09-25_
 
-_CI nightly 2026-09-15 (E1 sweep): both legs test-locked and green — `grab-zone-dismiss-threshold.test.mjs` asserts the old 28px threshold no longer dismisses and a ~40-60px scroll-start graze does not dismiss (80px threshold + scroll-forward behaviour). `antcv-panel-grab-zone` present in both `app.src.js` and the `app.js` mirror; the `GRAB-ZONE-SCROLL-FORWARD-001` comment is expected to be stripped from minified `app.js` (behaviour, not comment, is locked). Live-device confirm still owner-owed._
+_CI nightly 2026-09-25 (E1 sweep, HEAD `ab2a43c7`): both legs still test-locked and green — `grab-zone-dismiss-threshold.test.mjs` in the 1715/1715 suite. `antcv-panel-grab-zone` present in both `app.src.js` and the `app.js` mirror; `GRAB-ZONE-SCROLL-FORWARD-001` present in `app.src.js` (behaviour, not the comment, is locked in the minified `app.js`). Live-device confirm still owner-owed._
+_CI nightly 2026-09-15 (E1 sweep): both legs test-locked and green; grab-zone present in both bundles._
 
 **OPEN-queue row (verbatim):**
 
@@ -1349,9 +1355,10 @@ _CI nightly 2026-09-15 (E1 sweep): both legs test-locked and green — `grab-zon
 
 ## Row 101 — ZOOM-FLOOR-001
 
-_verified: 2026-09-15_
+_verified: 2026-09-25_
 
-_CI nightly 2026-09-15 (E1 sweep): `0.1` floor present in both `app.src.js` and the `app.js` mirror (button + pinch); `zoom-floor.test.mjs` green (6 assertions). Zoom-in ceiling unchanged. Unreverted._
+_CI nightly 2026-09-25 (E1 sweep, HEAD `ab2a43c7`): `0.1` floor still present in both `app.src.js` and the `app.js` mirror (button + pinch); `zoom-floor.test.mjs` green (6 assertions) in the 1715/1715 suite. Zoom-in ceiling unchanged. Unreverted._
+_CI nightly 2026-09-15 (E1 sweep): `0.1` floor present in both bundles; test green._
 
 **OPEN-queue row (verbatim):**
 
@@ -1363,9 +1370,10 @@ _CI nightly 2026-09-15 (E1 sweep): `0.1` floor present in both `app.src.js` and 
 
 ## Row 19 — JD-SCOPE-OCC2-GUARD-001
 
-_verified: 2026-09-15_
+_verified: 2026-09-25_
 
-_CI nightly 2026-09-15 (E1 sweep): `shouldAdoptCloudPointer` present 4× across the pwa sidecars; `jd-scope-isolation.test.mjs` green in the suite (occ-2 guard behaviour string-locked). Remaining two-real-device leg is owner-gated (physical devices, not fakeable headlessly)._
+_CI nightly 2026-09-25 (E1 sweep, HEAD `ab2a43c7`): `shouldAdoptCloudPointer` present across the pwa sidecars (`antcv-jd-scope.js` ×2 + `app.src.js` ×1; the `app.js` mirror carries the minified equivalent); `jd-scope-isolation.test.mjs` green in the 1715/1715 suite (occ-2 guard behaviour string-locked). Remaining two-real-device leg is owner-gated (physical devices, not fakeable headlessly)._
+_CI nightly 2026-09-15 (E1 sweep): `shouldAdoptCloudPointer` present; test green._
 
 **OPEN-queue row (verbatim):**
 
@@ -1766,7 +1774,9 @@ _verified: 2026-08-27_
 
 ## Row 109 — DEPLOY-YML-CF-AUTH-BROKEN-001
 
-_verified: 2026-09-15_
+_verified: 2026-09-25_
+
+_CI nightly 2026-09-25 (E1 sweep, HEAD `ab2a43c7`): STILL BROKEN — `gh run list --workflow=deploy.yml` shows every `push`-to-main run failing, last at 2026-09-10 (`push`, failure); the only `success` runs since (09-14/09-21/09-23) are `pull_request` events, which the workflow gates to lint + unit-tests and NEVER deploy (deploy.yml header comment + push/dispatch gate confirm this). No push-triggered deploy run has succeeded since 2026-08-01. Owner secret rotation (`CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID = 17c026b6d08c3e0ba63425cb26a5a7d9`) still owed — credentials are owner-only, an agent cannot rotate them._
 
 **OPEN-queue row (verbatim):**
 

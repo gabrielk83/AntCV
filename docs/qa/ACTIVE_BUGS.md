@@ -97,6 +97,35 @@
 > **Fix, still OWNER-OWED and still no code change:** re-sync the two values in both places — `wrangler secret put CSE_PROXY_TOKEN` and `wrangler secret put CLUSTER_RESEARCH_TOKEN` on `antcv-access-relay`, or correct the cloud routine's env vars to the current secret values — then re-run the routine.
 >
 > **State left behind: clean.** No D1 writes were attempted. A read-only `SELECT` confirmed all 9 clusters still hold complete 20-row `__global_market__` rollups (ranks 1..20), so no cluster is mid-edit. Per the routine spec ("if it 401s or 503s, STOP and report the exact error rather than guessing around it"), no research pass was run, no seed change was made, and the hand-rolled-SQL fallback was NOT used — that fallback is authorised only when the relay is DOWN, and a credential refusal from a healthy relay is not that.
+>
+> **ROOT-CAUSED 2026-09-21 (weekly demand-seed run, cloud routine, Opus 5) — SECOND consecutive blocked week; the read token is not merely drifted, it is the WRONG KIND OF VALUE.** Both machine routes were re-probed live and returned exactly the 2026-09-14 result:
+>
+> - `GET /api/cse-search` (`x-antcv-cse-token`) -> 401 `{"error":"unauthorized"}`
+> - `POST /api/cluster-demand-research` (`x-antcv-cluster-research-token`) -> 401 `{"error":"unauthorized"}` (probed with a deliberately empty `{"clusters":{}}` body, which would return **400** `no_known_clusters` if the token were accepted — so this isolates auth from payload and writes nothing)
+> - unknown-path control -> 401 `{"error":"unauthenticated"}` (the JWT fallthrough), confirming routing and both handlers are reached and the relay is UP
+>
+> **What 2026-09-14 missed.** That run measured the env values as "well-formed, 39 and 51 chars" and concluded Worker-secret/routine-env *drift*. Length is not the test — **kind** is. `docs/deployment/google-cse-setup.md` specifies the two values precisely:
+>
+> - §2 line 72: "Copy the key (`AIza…`). **That is your `GOOGLE_CSE_KEY`**" — the billable Google credential, a 39-char `AIza`-prefixed string.
+> - §4 line 113: `npx wrangler secret put CSE_PROXY_TOKEN` — "**a fresh random token, e.g.: `openssl rand -hex 32`**" — i.e. 64 hex chars, no prefix.
+>
+> The cloud routine's `CSE_PROXY_TOKEN` env var is **39 characters long and begins `AIza`**. It matches the `GOOGLE_CSE_KEY` shape exactly and cannot match `openssl rand -hex 32` under any rotation. So the 401 is not drift between two correct-but-stale random tokens — the wrong secret was pasted into the slot when row 102's "one-line owner fix" was applied after 2026-08-26. No rotation of the relay secret can make this value work.
+>
+> **Two consequences, one of them a credential-handling issue.**
+>
+> 1. *Functional.* The read leg has never worked for this routine, and now two consecutive weekly runs (2026-09-14, 2026-09-21) have produced no research pass, no seed change and no D1 write. The static seed and the `__global_market__` rollup are both last refreshed **2026-08-26** — 26 days stale as of this run.
+> 2. *Credential hygiene — OWNER ACTION.* `google-cse-setup.md` §4 carries the explicit warning "Never paste `GOOGLE_CSE_KEY` into a commit, PR body, screenshot, **or a scheduled-trigger prompt** — it goes directly into a Cloudflare secret only." A value of exactly that shape is currently sitting in this scheduled routine's environment, which is the case that warning names. It was never printed, logged or committed by this run (shape was read, value never emitted). Note also that the endpoint's backend switched to **Brave** (`env.BRAVE_API_KEY`) under `CSE-PROXY-GOOGLE-ENTITLEMENT-001`, so `GOOGLE_CSE_KEY` is not even the live upstream key any more — this value buys nothing here while carrying billable exposure. **Rotate the Google API key in Google Cloud and remove it from the routine env.**
+>
+> **Fix (owner-owed, still no code change), in this order:**
+>
+> 1. Rotate the `AIza…` key in Google Cloud Console (Credentials) — it has been sitting in a scheduled-trigger environment.
+> 2. Put the correct values in the routine's env: `CSE_PROXY_TOKEN` = the relay's *self-issued random* proxy token (the `openssl rand -hex 32` value, **not** an `AIza…` key), and re-sync `CLUSTER_RESEARCH_TOKEN` (51 chars in the routine env, also refused; its shape isn't specified in the docs, so verify it against the deployed secret rather than assuming).
+> 3. If the relay-side values are themselves unknown, reissue both: `npx wrangler secret put CSE_PROXY_TOKEN` and `npx wrangler secret put CLUSTER_RESEARCH_TOKEN` on `antcv-access-relay`, then paste the same two into the routine config.
+> 4. A 30-second verification that does not need a full run: `GET /api/cse-search?q=test` should return `{"ok":true,"source":"brave",...}`, and `POST /api/cluster-demand-research` with body `{"clusters":{}}` should return **400** `no_known_clusters` (400 = token accepted; 401 = still wrong).
+>
+> **State left behind: clean.** No D1 writes attempted or made, so the rollup is untouched and remains as 2026-09-14 verified it (all 9 clusters, 20 rows, ranks 1..20, nothing mid-edit). This run could not re-run that `SELECT` itself — the Cloudflare D1 MCP server requires an interactive OAuth authorisation that a non-interactive routine cannot perform, and the relay exposes no token-gated read route for `cluster_top_qualifications` — but with zero writes there is nothing for it to have disturbed. Per the routine spec ("if it 401s or 503s, STOP and report the exact error rather than guessing around it") no research pass was run and no seed was touched; the hand-rolled-SQL fallback stays unused, since it is authorised only when the relay is DOWN and the relay is healthy.
+>
+> **Gap worth closing separately:** the routine has no way to verify D1 state when the MCP server is unauthorised. A token-gated `GET /api/cluster-demand-research` returning the current per-cluster rollup (same `CLUSTER_RESEARCH_TOKEN`, read-only) would let every future run confirm "9 clusters × 20 rows, nothing mid-edit" without an interactive login.
 
 > **DENSITY-REORDER-CHURN-001 — FIXED (2026-08-26, job-tracker nightly, Opus 5; `scripts/job-tracker/density_fit.py`, python-only, no PWA asset, no cache-bust).** The density fit loop caps an item at two LLM tries — `attempts[key].n >= 2` → "leave it, report honestly". The key was `_norm(item.text)`, the item's OWN text. An ACCEPTED rewrite changes that text, so the cap only ever bound items whose rewrite was REJECTED; an accepted-but-useless rewrite minted a brand-new key with a fresh pair of tries.
 >

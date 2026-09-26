@@ -1393,7 +1393,9 @@ _CI nightly 2026-09-15 (E1 sweep): `shouldAdoptCloudPointer` present; test green
 
 > **Renumbered 2026-08-26: was row 38.** A document written before that date citing "row 38" may mean this row or GEN-BACKGROUND-001. The ID is the key.
 
-_verified: 2026-09-16_
+_verified: 2026-09-26_
+
+**Re-verify 2026-09-26 (CI nightly — E1 stalest slot, code-presence on HEAD `fe4b8f7f`):** `workers/proxy/src/multi-llm.js` `ROLE_KEYS`/`roleHeadOrder` present (4 refs); `scripts/relay-cost-quality-tune.mjs` present. Both halves (compress client-lever + analysis addressability) remain owner-gated on real traffic + a same-prompt benchmark; no code owed. Full PWA suite 1715/1715 green.
 
 **Re-verify 2026-09-16 (CI nightly — E1 stalest slot, code-presence on HEAD `3f595acf`):** multi-llm.js ROLE_KEYS/roleHeadOrder present; scripts/relay-cost-quality-tune.mjs present. Both halves (compress client-lever + analysis addressability) remain owner-gated on real traffic + a same-prompt benchmark; no code owed. Full PWA suite 1715/1715 green.
 
@@ -1407,7 +1409,9 @@ _verified: 2026-09-16_
 
 ## Row 45
 
-_verified: 2026-09-16_
+_verified: 2026-09-26_
+
+**Re-verify 2026-09-26 (CI nightly — E1 stalest slot, code-presence on HEAD `fe4b8f7f`):** `pwa/antcv-pdf-preview-gate.js` openModal loading-shell leg present; `pwa/test/diag-generate-click-profile.mjs` present. PARTIAL 1.51.158 intact; setTimeout leg still needs a live-model profile (BLOCKED in CI). Full PWA suite 1715/1715 green.
 
 **Re-verify 2026-09-16 (CI nightly — E1 stalest slot, code-presence on HEAD `3f595acf`):** antcv-pdf-preview-gate.js openModal loading-shell leg present (11 markers); diag-generate-click-profile.mjs present. PARTIAL 1.51.158 intact; setTimeout leg still needs a live-model profile (BLOCKED in CI). Full PWA suite 1715/1715 green.
 
@@ -1427,7 +1431,9 @@ _verified: 2026-09-16_
 
 ## Row 40
 
-_verified: 2026-09-16_
+_verified: 2026-09-26_
+
+**Re-verify 2026-09-26 (CI nightly — E1 stalest slot, code-presence on HEAD `fe4b8f7f`):** `pwa/antcv-outcomes-loss-guard.js` present; trigger-side test `pwa/test/unit/core-comp-format-preserves-outcomes.test.mjs` green in the full suite. SHIPPED 1.51.138 intact; owner-verify (change row count, confirm outcomes survive) still owed. Full PWA suite 1715/1715 green.
 
 **Re-verify 2026-09-16 (CI nightly — E1 stalest slot, code-presence on HEAD `3f595acf`):** antcv-outcomes-loss-guard.js present; trigger-side test core-comp-format-preserves-outcomes.test.mjs green. SHIPPED 1.51.138 intact; owner-verify (change row count, confirm outcomes survive) still owed. Full PWA suite 1715/1715 green.
 
@@ -1447,7 +1453,9 @@ _verified: 2026-09-16_
 
 ## Row 35 — OVERLAY-EARLY-HALT-001
 
-_verified: 2026-09-16_
+_verified: 2026-09-26_
+
+**Re-verify 2026-09-26 (CI nightly — E1 stalest slot, code-presence on HEAD `fe4b8f7f`):** `__antcvGenCost` heartbeat gate present in both bundles (app.src.js ×10, app.js ×4). Shipped 1.51.41 intact; live regen-confirm still owed, BLOCKED in CI. Full PWA suite 1715/1715 green.
 
 **Re-verify 2026-09-16 (CI nightly — E1 stalest slot, code-presence on HEAD `3f595acf`):** __antcvGenCost heartbeat gate present app.js x4 + app.src.js x10 (both bundles). Shipped 1.51.41 intact; live regen-confirm still owed, BLOCKED in CI. Full PWA suite 1715/1715 green.
 
@@ -1467,7 +1475,9 @@ _verified: 2026-09-16_
 
 ## Row 36 — GEN-CORECOMP-BROAD-001
 
-_verified: 2026-09-16_
+_verified: 2026-09-26_
+
+**Re-verify 2026-09-26 (CI nightly — E1 stalest slot, code-presence on HEAD `fe4b8f7f`):** broad core_comp rule inside `__neutralCo` present (app.src.js ×5); `pwa/test/unsolicited-corecomp-broad.test.mjs` green in the full suite (both-bundle guard validates the app.js minified name). Shipped 1.51.41 intact; live regen-confirm still owed, BLOCKED in CI. Full PWA suite 1715/1715 green.
 
 **Re-verify 2026-09-16 (CI nightly — E1 stalest slot, code-presence on HEAD `3f595acf`):** broad core_comp rule inside __neutralCo present app.src.js x5; unsolicited-corecomp-broad.test.mjs green. Shipped 1.51.41 intact; live regen-confirm still owed, BLOCKED in CI. Full PWA suite 1715/1715 green.
 
@@ -1487,7 +1497,9 @@ _verified: 2026-09-16_
 
 ## Row 37 — FOCUS-LABEL-EO-001
 
-_verified: 2026-09-16_
+_verified: 2026-09-26_
+
+**Re-verify 2026-09-26 (CI nightly — E1 stalest slot, code-presence on HEAD `fe4b8f7f`):** `FOCUS-LABEL` prompt rule present (app.src.js ×2); `pwa/antcv-core-comp-compress.js` present + `pwa/test/unit/core-comp-compress-eo.test.mjs` green in the full suite. Shipped 1.51.42/43 intact; live regen-confirm still owed. Full PWA suite 1715/1715 green.
 
 **Re-verify 2026-09-16 (CI nightly — E1 stalest slot, code-presence on HEAD `3f595acf`):** FOCUS-LABEL prompt rule present app.src.js x2; antcv-core-comp-compress.js + core-comp-compress-eo.test.mjs green. Shipped 1.51.42/43 intact; live regen-confirm still owed. Full PWA suite 1715/1715 green.
 
@@ -1507,7 +1519,9 @@ _verified: 2026-09-16_
 
 ## Row 3 — FLOAT-SPINE-001
 
-_verified: 2026-09-16_
+_verified: 2026-09-26_
+
+**Re-verify 2026-09-26 (CI nightly — E1 stalest slot, code-presence on HEAD `fe4b8f7f`):** `floatSpine`/`float_spine` gate present `workers/docx-worker/src/index.js` ×6 + `pwa/antcv-docx-client.js` ×2, default-OFF unchanged; owner-visual re-export gate (no reference docx in CI) still owed. Full PWA suite 1715/1715 green.
 
 **Re-verify 2026-09-16 (CI nightly — E1 stalest slot, code-presence on HEAD `3f595acf`):** floatSpine gate present workers/docx-worker/src/index.js x6 + antcv-docx-client.js x2, default-OFF unchanged; owner-visual re-export gate (no reference docx in CI) still owed. Full PWA suite 1715/1715 green.
 
@@ -1527,7 +1541,9 @@ _verified: 2026-09-16_
 
 ## Row 14 — JD-SCAN-HALLUCINATION-001
 
-_verified: 2026-09-16_
+_verified: 2026-09-26_
+
+**Re-verify 2026-09-26 (CI nightly — E1 stalest slot, code-presence on HEAD `fe4b8f7f`):** JD-scan-hallucination anchors present in `pwa/app.src.js` (`filename_mismatch` / `garbled_skip_llm_for_vision`, 3 refs). Code CLOSED; live model-behaviour leg still owner/live-gated. Full PWA suite 1715/1715 green.
 
 **Re-verify 2026-09-16 (CI nightly — E1 stalest slot, code-presence on HEAD `3f595acf`):** JD-scan-hallucination anchors present pwa/app.src.js (charset hardening / filename echo / garbled->vision route). Code CLOSED; live model-behaviour leg still owner/live-gated. Full PWA suite 1715/1715 green.
 
@@ -1547,7 +1563,9 @@ _verified: 2026-09-16_
 
 ## Row 20 — CONTACT-TRACK-TIGHT-001
 
-_verified: 2026-09-16_
+_verified: 2026-09-26_
+
+**Re-verify 2026-09-26 (CI nightly — E1 stalest slot, code-presence on HEAD `fe4b8f7f`):** docx-worker anchors present (`headlineAlign` / `fix_orphans` / `SIRIN-SEMANTICS-001` / `CONTACT-TRACK-TIGHT-001`, 4 refs in `workers/docx-worker/src/index.js`). Stays OWNER-GATED: acceptance needs a real CloudConvert PDF eyeball CI cannot do. Full PWA suite 1715/1715 green.
 
 **Re-verify 2026-09-16 (CI nightly — E1 stalest slot, code-presence on HEAD `3f595acf`):** docx-worker anchors present (headlineAlign / fix_orphans / SIRIN-SEMANTICS-001 / CONTACT-TRACK-TIGHT-001). Stays OWNER-GATED: acceptance needs a real CloudConvert PDF eyeball CI cannot do. Full PWA suite 1715/1715 green.
 
@@ -1567,7 +1585,9 @@ _verified: 2026-09-16_
 
 ## Row 52 — GROUP-EMPTY-HIDE-001
 
-_verified: 2026-09-16_
+_verified: 2026-09-26_
+
+**Re-verify 2026-09-26 (CI nightly — E1 stalest slot, code-presence on HEAD `fe4b8f7f`):** `__grpHasChild` ×3 app.src.js + minified mirror `__gc` ×3 app.js (occurrence count) + `renderRichBlock` ×7 docx-worker; `pwa/test/unit/group-empty-hide.test.mjs` green in the full suite. Shipped 1.51.194 intact. Full PWA suite 1715/1715 green.
 
 **Re-verify 2026-09-16 (CI nightly — E1 stalest slot, code-presence on HEAD `3f595acf`):** __grpHasChild x3 app.src.js + minified mirror __gc x3 app.js + renderRichBlock x7 docx-worker; group-empty-hide.test.mjs 29/29 green. Shipped 1.51.194 intact. Full PWA suite 1715/1715 green.
 

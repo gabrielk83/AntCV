@@ -113,16 +113,16 @@ citing an old number may mean either row — the ID disambiguates.
 | 100 | `GRAB-ZONE-DISMISS-THRESHOLD-001` | 2026-09-25 | + GRAB-ZONE-SCROLL-FORWARD-001 (2026-07-05, PR #332 + same-day follow-up, register-escape). Owner (Android): " |
 | 101 | `ZOOM-FLOOR-001` | 2026-09-25 | (2026-07-05, PR #334, register-escape). Owner: "allow Zoom out down to 10-20, currently it is down to 35%… tha |
 | 19 | `JD-SCOPE-OCC2-GUARD-001` | 2026-09-25 | JD-scope isolation — two-real-device test |
-| 103 | `RELAY-TUNE-COVERAGE-GAP-001` | 2026-09-16 | (found by weekly cost-quality tune 2026-07-13): the tune loop is blind to 100% of real traffic and can never f |
-| 45 | — | 2026-09-16 | PERF-001 — multi-second main-thread stalls on export/preview; profile → debounce/memoize. |
-| 40 | — | 2026-09-16 | SO-003 DATA LOSS — core-comp row-count change wipes Selected Outcomes (cloud-persisted). |
-| 35 | `OVERLAY-EARLY-HALT-001` | 2026-09-16 | NEW — OVERLAY-EARLY-HALT-001 regen-confirm. Shipped 1.51.41 (heartbeat-gated watchdog replacing the fixed 2-mi |
-| 36 | `GEN-CORECOMP-BROAD-001` | 2026-09-16 | NEW — GEN-CORECOMP-BROAD-001 regen-confirm. Shipped 1.51.41 (unsolicited CORE COMPETENCIES broadened to PdM/BA |
-| 37 | `FOCUS-LABEL-EO-001` | 2026-09-16 | NEW — FOCUS-LABEL-EO-001 regen-confirm. Shipped 1.51.42/43 (canonicalised EO focus-area label post-process). N |
-| 3 | `FLOAT-SPINE-001` | 2026-09-16 | Floating spine: byte-diff flag-on doc vs reference, add grid equalization + spacer anchor |
-| 14 | `JD-SCAN-HALLUCINATION-001` | 2026-09-16 | JD-scan-hallucination ingest reorder — needs real models + owner present |
-| 20 | `CONTACT-TRACK-TIGHT-001` | 2026-09-16 | Owner verify list — 6 sub-items (alignment, sidebar runts, CL spacing, Sirin result, abbreviation, contact tra |
-| 52 | `GROUP-EMPTY-HIDE-001` | 2026-09-16 | (owner 2026-07-06, screenshot) — a labeled-list group (TOOLS & METHODS) with a heading bu |
+| 103 | `RELAY-TUNE-COVERAGE-GAP-001` | 2026-09-26 | (found by weekly cost-quality tune 2026-07-13): the tune loop is blind to 100% of real traffic and can never f |
+| 45 | — | 2026-09-26 | PERF-001 — multi-second main-thread stalls on export/preview; profile → debounce/memoize. |
+| 40 | — | 2026-09-26 | SO-003 DATA LOSS — core-comp row-count change wipes Selected Outcomes (cloud-persisted). |
+| 35 | `OVERLAY-EARLY-HALT-001` | 2026-09-26 | NEW — OVERLAY-EARLY-HALT-001 regen-confirm. Shipped 1.51.41 (heartbeat-gated watchdog replacing the fixed 2-mi |
+| 36 | `GEN-CORECOMP-BROAD-001` | 2026-09-26 | NEW — GEN-CORECOMP-BROAD-001 regen-confirm. Shipped 1.51.41 (unsolicited CORE COMPETENCIES broadened to PdM/BA |
+| 37 | `FOCUS-LABEL-EO-001` | 2026-09-26 | NEW — FOCUS-LABEL-EO-001 regen-confirm. Shipped 1.51.42/43 (canonicalised EO focus-area label post-process). N |
+| 3 | `FLOAT-SPINE-001` | 2026-09-26 | Floating spine: byte-diff flag-on doc vs reference, add grid equalization + spacer anchor |
+| 14 | `JD-SCAN-HALLUCINATION-001` | 2026-09-26 | JD-scan-hallucination ingest reorder — needs real models + owner present |
+| 20 | `CONTACT-TRACK-TIGHT-001` | 2026-09-26 | Owner verify list — 6 sub-items (alignment, sidebar runts, CL spacing, Sirin result, abbreviation, contact tra |
+| 52 | `GROUP-EMPTY-HIDE-001` | 2026-09-26 | (owner 2026-07-06, screenshot) — a labeled-list group (TOOLS & METHODS) with a heading bu |
 | 1 | — | 2026-08-26 _(STANDING)_ | Quick-gen page convergence + CV 3-page convergence, export-only pagination parity |
 | 11 | `SIDEBAR-PROMOTE-MARGIN-001` | 2026-08-26 _(STANDING)_ | SIDEBAR-PAGE23-DANCE CLOSED (verified 2026-07-03, headless): diag-sidebar-promote-margin (owner-scale sidebar  |
 | 16 | `SID-FALLBACK-HARDEN-001` | 2026-08-26 _(STANDING)_ | Sidebar TOOLS/REGULATORY justify↔left flap — re-check after hard refresh, diagnose if persists |

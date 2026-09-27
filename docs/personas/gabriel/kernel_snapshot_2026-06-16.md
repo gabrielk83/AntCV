@@ -47,7 +47,7 @@ English (Native), Hebrew (Native), Spanish (Professional), Danish (B1)
 ### Project Manager, Hardware Development & Supply — Trackman A/S, Hørsholm (2026 – present)
 > Hand-mirrored 2026-09-27 (owner); D1 write PENDING. Wording follows Trackman's own case description as corrected by the sponsor (Charlotte Doyle, VP Hardware Development & Supply, 2026-09-24): "Project Management Assistant (PMA)", not "MDA"; "hardware projects", not "modules"; "supplier selection" + "supplier agreements"; 2–4 phases.
 - Own the PMA template that gives supplier-developed and off-the-shelf hardware projects the same structure and quality as in-house development: scope and linked requirements, critical-points checklists of the documents, data and results a project manager delivers before, during and after development, verification and acceptance.
-- 2–4 phases with the classic hardware reviews as gates (define & source → design PDR/CDR → verify DV/PV → industrialise & release); requirement coverage measured per gate on a pilot project; audit trail against ISO 9001 §8.3 (design) and §8.4 (external providers).
+- 2–4 phases with the classic hardware reviews as gates (define & source → design PDR/CDR → verify DV/PV → industrialise & release); requirement coverage measured per gate on a pilot project; audit trail against ISO 9001.
 - Supplier-selection one-pager with the questions a project manager asks a supplier; supplier-agreement template that gives project managers input to product specifications and test plans.
 - Closed-corpus AI assistant (Copilot / Claude API on Trackman documents only) that drafts, compares and checks agreements; every output engineer-approved. Sponsor ~1 h/week; hand-over guide and training by 20 Nov 2026.
 

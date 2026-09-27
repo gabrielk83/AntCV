@@ -46,11 +46,11 @@ citing an old number may mean either row — the ID disambiguates.
 | 76 | `JOBTRACKER-LLM-REFIT-BUTTON-001` | 2026-09-20 | (deferred enhancement) — the fit SCORE that orders the Top-5 is deterministic by design (ranking stability). O |
 | 82 | `ROLE-CANON-AUDIT-LEG-001` | 2026-09-20 | (follow-up) — export-audit leg NOW WIRED + green (gold_audit.py role_canon_issues, test_gold_residue 18/18); only es/zh eyeball owner-gated |
 | 94 | `CONTENT-LANG-STAMP-001` | 2026-09-20 | CODE SHIPPED 1.51.4446-content-lang-stamp (D1 content_language column + relay whitelist + both app.js legs). R |
-| 25 | `TABLE-GEOMETRY-PARITY-001` | 2026-09-17 | Table geometry parity — diagnose real CloudConvert PDF vs preview measurement |
-| 6 | `BANNED-WORDS-MERGE-001` | 2026-09-17 | Wizard/Settings UX — owner eyeball gate on merged banned-words UI + 6-file loader test |
-| 8 | `KERNEL-V2-READER-001` | 2026-09-17 | Kernel v2 — bullets-path v2 migration, es/zh tier, §6 regression pass on uploaded docx |
-| 12 | `AI-NOTICE-LEFT-CLOUDCONVERT-001` | 2026-09-17 | diag-ai-notice-anchor RED CLOSED (2026-07-03): the WORKER was right — AI-NOTICE-LEFT-CLOUDCONVERT-001 (owner 2 |
-| 21 | `SETTINGS-ROLLER-RESET-001` | 2026-09-17 | FIXED (1.51.90): mechanism CONFIRMED live — history.back() with Settings open was a REAL navigation (side/tilt |
+| 25 | `TABLE-GEOMETRY-PARITY-001` | 2026-09-27 | Table geometry parity — diagnose real CloudConvert PDF vs preview measurement |
+| 6 | `BANNED-WORDS-MERGE-001` | 2026-09-27 | Wizard/Settings UX — owner eyeball gate on merged banned-words UI + 6-file loader test |
+| 8 | `KERNEL-V2-READER-001` | 2026-09-27 | Kernel v2 — bullets-path v2 migration, es/zh tier, §6 regression pass on uploaded docx |
+| 12 | `AI-NOTICE-LEFT-CLOUDCONVERT-001` | 2026-09-27 | diag-ai-notice-anchor RED CLOSED (2026-07-03): the WORKER was right — AI-NOTICE-LEFT-CLOUDCONVERT-001 (owner 2 |
+| 21 | `SETTINGS-ROLLER-RESET-001` | 2026-09-27 | FIXED (1.51.90): mechanism CONFIRMED live — history.back() with Settings open was a REAL navigation (side/tilt |
 | 22 | `CL-SLOGAN-RICHCONTENT-001` | 2026-09-18 | CL slogan rich-content phase 2 — real sections.cl rich_block object, dedupe render sites |
 | 33 | `WHY-RULE-EXPORT-PARITY-001` | 2026-09-18 | Export align parity — name-line + section-headline alignment lost on PDF/DOCX export |
 | 24 | `ANALYTICS-BUTTONS-SESSION-TIMEOUT-001` | 2026-09-18 | Analytics buttons — both sides fixed, needs owner click-through confirm |

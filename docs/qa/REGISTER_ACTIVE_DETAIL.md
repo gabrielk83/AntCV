@@ -182,7 +182,9 @@ in CI) + a live translate-persist cycle to verify — carry forward.
 
 ## Row 25 — TABLE-GEOMETRY-PARITY-001
 
-_verified: 2026-09-17_
+_verified: 2026-09-27_
+
+_reconcile 2026-09-27 (CI nightly, E1): forwarding pipeline STILL INTACT on HEAD `0537eb7b` — `renderCompetencyTable` + `tableWidthPct`/`tableRatio` confirmed present across all five sites (`antcv-docx-client.js`, `antcv-table-headers-editable-341.js`, `antcv-section-align.js`, `antcv-auto-pagebreak-block-001.js`, `workers/docx-worker/src/index.js`); full suite 1715/1715 green. Unchanged: the FIDELITY gap is a REAL-CloudConvert-PDF render diff (Carlito advance widths, 3pt/7.5pt padding, 2-vs-3 line clamp) that CI cannot produce — owner/desktop real-PDF pass still owed._
 
 _reconcile 2026-09-17 (CI nightly, E1): forwarding pipeline STILL INTACT on HEAD `d8e041ea` — `renderCompetencyTable` + `tableWidthPct`/`tableRatio` present across `antcv-docx-client.js`, `antcv-table-headers-editable-341.js`, `antcv-section-align.js`, `antcv-auto-pagebreak-block-001.js` and `workers/docx-worker/src/index.js`; full suite 1715/1715 green. Unchanged from the 09-07 finding: the FIDELITY gap is a REAL-CloudConvert-PDF render diff (Carlito advance widths, 3pt/7.5pt padding, 2-vs-3 line clamp) that CI cannot produce — owner/desktop real-PDF pass still owed._
 
@@ -204,7 +206,9 @@ _reconcile 2026-09-07 (CI nightly, E1): WIB-TABLE-DIMS-001 forwarding pipeline I
 
 ## Row 6 — BANNED-WORDS-MERGE-001
 
-_verified: 2026-09-17_
+_verified: 2026-09-27_
+
+_reconcile 2026-09-27 (CI nightly, E1): code-complete state STILL HOLDS on HEAD `0537eb7b` — `antcv:keep-native-banned` + `antcv:no-kernel-chain` kill-switches present in `antcv-data-importer.js`, island `banned_*` writer present in `antcv-react-islands.js`; full suite 1715/1715 green. Unchanged: OWNER eyeball of the merged banned-words UI + one file of each of the 6 loader types — owner-gated, not verifiable in CI._
 
 _reconcile 2026-09-17 (CI nightly, E1): code-complete state STILL HOLDS on HEAD `d8e041ea` — `antcv:keep-native-banned` + `antcv:no-kernel-chain` kill-switches present (`antcv-data-importer.js`), island writes `stylePrefs.banned_*` (`antcv-react-islands.js`); full suite 1715/1715 green. Unchanged: OWNER eyeball of the merged banned-words UI + one file of each of the 6 loader types — owner-gated, not verifiable in CI._
 
@@ -226,7 +230,9 @@ _reconcile 2026-09-07 (CI nightly, E1): code-complete state CONFIRMED against HE
 
 ## Row 8 — KERNEL-V2-READER-001
 
-_verified: 2026-09-17_
+_verified: 2026-09-27_
+
+_reconcile 2026-09-27 (CI nightly, E1): `pwa/test/unit/kernel-v2-reader.test.mjs` RE-RUN GREEN (5/5) on HEAD `0537eb7b`; `antcv:ingestedKernel` staged-kernel reader intact in `antcv-kernel-import.js` (both bundles). Unchanged: (a) bullets-path v2-direct migration (safe while autoSync projects v2→workHistory), (c) es/zh + lazy language_view tier (needs real models), (d) §6 P/DOCX/PDF regression parity on an uploaded docx (owner-gated) — none doable in CI._
 
 _reconcile 2026-09-17 (CI nightly, E1): `pwa/test/unit/kernel-v2-reader.test.mjs` RE-RUN GREEN on HEAD `d8e041ea` (part of the 8/8 pass with ai-notice-position); `antcv:ingestedKernel` staged-kernel reader intact (`antcv-kernel-import.js`, both bundles). Unchanged: (a) bullets-path v2-direct migration (safe while autoSync projects v2→workHistory), (c) es/zh + lazy language_view tier (needs real models), (d) §6 P/DOCX/PDF regression parity on an uploaded docx (owner-gated) — none doable in CI._
 
@@ -248,7 +254,9 @@ _reconcile 2026-09-07 (CI nightly, E1): `pwa/test/unit/kernel-v2-reader.test.mjs
 
 ## Row 12 — AI-NOTICE-LEFT-CLOUDCONVERT-001
 
-_verified: 2026-09-17_
+_verified: 2026-09-27_
+
+_reconcile 2026-09-27 (CI nightly, E1): `pwa/test/unit/ai-notice-position.test.mjs` RE-RUN GREEN (3/3) on HEAD `0537eb7b`; the page-relative margin-left encoding (0pt/275pt + jc) in `workers/docx-worker/src/index.js` is unchanged. The AI-NOTICE-LEFT anchor bug stays effectively resolved; row lingers only on the docx-baseline "remaining 3" (cjlr-table-export, pageflow-export, spacing-linkedin-export), which are SEPARATE tests. Recommendation stands: owner move to CLOSED and re-file the 3 baseline gaps under their own IDs if still open._
 
 _reconcile 2026-09-17 (CI nightly, E1): `pwa/test/unit/ai-notice-position.test.mjs` RE-RUN GREEN on HEAD `d8e041ea` (3/3, in the 8/8 pass); the page-relative margin-left encoding (0pt/275pt + jc) in `workers/docx-worker/src/index.js` is unchanged. The AI-NOTICE-LEFT anchor bug itself stays effectively resolved; row lingers only on the docx-baseline "remaining 3" (cjlr-table-export, pageflow-export, spacing-linkedin-export), which are SEPARATE tests. Recommendation stands: owner move to CLOSED and re-file the 3 baseline gaps under their own IDs if still open._
 
@@ -264,7 +272,9 @@ _reconcile 2026-09-07 (CI nightly, E1): the shipped page-relative margin-left en
 
 ## Row 21 — SETTINGS-ROLLER-RESET-001
 
-_verified: 2026-09-17_
+_verified: 2026-09-27_
+
+_reconcile 2026-09-27 (CI nightly, E1): the fix code is INTACT on HEAD `0537eb7b` — `antcv-settings-history-guard.js` present with kill-switch `antcv:no-settings-history-guard`; full suite 1715/1715 green. NOTE: this env has no chromium (`~/.cache/ms-playwright` absent), so `diag-settings-history-guard.mjs` (headless real browser) could NOT be launched this run — the 2026-09-17 headless GREEN result stands as the last live confirmation. Unchanged: OWNER live-verify on real roller-side hardware Back button still owed._
 
 _reconcile 2026-09-17 (CI nightly, E1): `diag-settings-history-guard.mjs` RE-RUN GREEN on HEAD `d8e041ea` (headless, real browser) — guarded run: openBefore {open:true,sentinel:true} → after {marker:"alive", url:/index.html, open:false, sentinel:true} (Back consumed the sentinel, panel closed, NO reload, sentinel re-armed); kill-switch control: navigated away to /manifest.json, marker GONE (the reset reproduced). `antcv-settings-history-guard.js` + kill-switch present. Unchanged: OWNER live-verify on real roller-side hardware Back button still owed._
 

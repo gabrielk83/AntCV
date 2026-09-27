@@ -111,3 +111,20 @@ UX rules:
 6. Fix the five preview/export drift items.
 
 Each step is a hotfix bundle with its own shift claim; steps 3–5 touch `app.js` and go through the diagnostic-first protocol.
+
+## 5. Lessons from the 2026-09-27 package batch — requirements for the AntCV implementation
+
+Seven packages (Terma ×5, Hamamatsu, UL) were produced with the house-style generator in this layout. The owner's corrections during that batch are requirements for steps 3–5, not suggestions. Persona-specific content rules live in `docs/personas/gabriel/CONTENT_RULES_2026-09-27.md`; the layout rules that belong in the app:
+
+| Requirement | Where it lands in AntCV |
+|---|---|
+| **Whole lines only** — a paragraph is 1 or 2 full lines, never 1.5. The preview must show a per-paragraph fill indicator (last-line fill < 55 % or < 85 %) so the writer/editor can extend or cut. | Preview: `antcv-rich-block-editor.js` row badge; writer prompt: target lengths per bullet in characters derived from the column width. |
+| **Line-fill post-process** — compress (character spacing to −0.4 pt, then −0.5 pt font) or extend (≤ +0.2 pt). Never Distribute. Needs a real layout engine → DOCX worker post-process (`postProcessDocx`), mirrored as CSS `letter-spacing` in the preview. | `workers/docx-worker/src/index.js` post-process + a `lineFill` style flag; preview approximation via `text-wrap: pretty` + measured last line. |
+| **One-line header elements** — `TITLE \| slogan • location`, the CL application line, and short details rows are nowrap; the generator shortens the slogan instead of wrapping. | Header render: nowrap + auto-condense; slogan length budget in the writer (`specialisation` ≤ ~55 chars in linear layout). |
+| **Certifications = full-width row** under the two education columns. | `education` section option `cols: 2` + `certsRow: true` (step 4). |
+| **Details table**: label \| content rows with a 3-column interests strip on its own full-width row; per-row condense. | `details` block primitive (§3.1) with `strip` and `condense`. |
+| **Photo**: circular with ring on the CV; letter has no photo and centred header text. | `photoPosition` per document type; CL default `none`. |
+| **Running header + watermark** on page 2+ only; hard page breaks forbidden (content flows). | `repeatHeader` default on in linear; `titlePage` semantics in the worker; auto page break only. |
+| **Budgets**: CV = 2 pages, CL = 1 page with signature visible. Edge/Chromium print clips rather than reflows — verify by text extraction, not page count. | Export preflight: extract text, assert sign-off present and char budget. |
+| **Banned-word scrub is case-preserving**; extra pairs: collaborative→team-based, cross-functional→multi-disciplinary, end-to-end→from start to finish, leading→running. | `workers/proxy/src/writing-style-engine.js` replacement map (currently detection only). |
+| **Content rules are data, not prose**: "team player" once, Russia clause opt-in, ISO 9001 without clauses, two parallel B.Sc., two papers. | Kernel/persona constraints (`v2-semantic-constraints.md` + the new content-rules file) consumed by the writer prompt. |

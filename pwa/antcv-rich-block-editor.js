@@ -143,9 +143,12 @@
         // the wrapped update (itemsToRoles reads seg[]/hr). reorder/delete reuse the
         // shared row ops so a role moves/deletes as one unit.
         if (ev.grp && ev.roleHead) {
-          var seg = Array.isArray(ev.seg) ? ev.seg : [{}, {}, {}];
+          // ROLE-LOCATION-001: 4 segments (role/company/years/location). Patch by index over
+          // the FULL segment list so a style edit on seg 0-2 never drops seg 3 (was [0,1,2]).
+          var seg = Array.isArray(ev.seg) ? ev.seg : [{}, {}, {}, {}];
+          var __segN = Math.max(4, seg.length);
           var setSeg = function (idx, patch2) {
-            var ns = [0, 1, 2].map(function (j) { return Object.assign({}, seg[j] || {}, j === idx ? patch2 : null); });
+            var ns = []; for (var j = 0; j < __segN; j++) ns.push(Object.assign({}, seg[j] || {}, j === idx ? patch2 : null));
             updateRow(i, { seg: ns });
           };
           // Owner 2026-07-14: effective per-segment defaults — seg0 (role) BOLD,
@@ -173,6 +176,7 @@
             segInput(0, "Role title", { flex: "2 1 160px" }),
             segInput(1, "Company", { flex: "1 1 110px" }),
             segInput(2, "Years", { flex: "0 1 90px" }),
+            segInput(3, "Location", { flex: "0 1 110px" }),   // ROLE-LOCATION-001
             h("button", { onClick: function () { updateRow(i, { hr: ev.hr === false ? true : false }); }, title: ev.hr === false ? "Horizontal line OFF — click to show a line under the role" : "Horizontal line ON — click to hide", style: btn({ border: "1px solid " + (ev.hr === false ? "#bbb" : "#0a8"), color: ev.hr === false ? "#bbb" : "#0a8", fontWeight: 700, minWidth: 24 }) }, "—"),
             h("button", { onClick: function () { var end = i + 1; while (end < rows.length && !(rows[end] && rows[end].grp)) end++; d({ items: rows.filter(function (x, j) { return j < i || j >= end; }) }); }, title: "Delete this role (and its bullets below)", style: btn({ border: "1px solid #e55", color: "#e55", fontSize: 10 }) }, "✕")
           );

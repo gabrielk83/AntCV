@@ -24847,6 +24847,11 @@ function mergeStyle(input, packageId, legacyAtsTier) {
       if (v === "top-right" || v === "bottom-right") s[k] = v;
       continue;
     }
+    // ROLE-LOCATION-001: role-line format enum (classic | meta). Never hex-coerced.
+    if (k === "roleLineFormat") {
+      if (v === "meta") s[k] = "meta";
+      continue;
+    }
     if (typeof v === "string") {
       s[k] = PASSTHROUGH.has(k) ? v : hex(v);
     }
@@ -27954,6 +27959,13 @@ function renderExperience(s, ctx) {
     const __hex = (c) => (c ? String(c).replace(/^#/, "").trim() : null);
     const __seg = (kind) => (__rls && __rls[kind] && typeof __rls[kind] === "object" ? __rls[kind] : null);
     const __tSeg = __seg("role"), __cSeg = __seg("company"), __ySeg = __seg("years");
+    // ROLE-LOCATION-001 (EXEC-LINEAR step 2): optional role.location + two role-line formats,
+    // mirroring the preview adapter renderRoleHead:
+    //   classic (default)  title | company ........ years[ | location]
+    //   meta               title — company ........ (years | location)   company upright, years bold
+    // location absent + classic => byte-identical to the pre-change export.
+    const __meta = style && style.roleLineFormat === "meta";
+    const __loc = typeof role.location === "string" ? role.location.trim() : "";
     if (role.title) {
       left.push(new TextRun({
         text: role.title,
@@ -27967,8 +27979,8 @@ function renderExperience(s, ctx) {
     }
     if (role.company) {
       left.push(new TextRun({
-        text: (left.length ? " | " : "") + role.company,
-        italics: __cSeg && __cSeg.italic != null ? !!__cSeg.italic : true,
+        text: (left.length ? (__meta ? " — " : " | ") : "") + role.company,
+        italics: __cSeg && __cSeg.italic != null ? !!__cSeg.italic : !__meta,
         bold: __cSeg && __cSeg.bold != null ? !!__cSeg.bold : false,
         // Spec: role title in main head colour, COMPANY in BLACK, year in gray.
         color: (__cSeg && __hex(__cSeg.color)) || style.mainTextColor,
@@ -27991,7 +28003,11 @@ function renderExperience(s, ctx) {
         .replace(/\b(?:present|nuv[æa]rende|nutid|ongoing|currently|current|now|p[åa]g[åa]ende)\b/gi, Y)
         .replace(/\s{2,}/g, " ").trim();
     };
-    const __yrs = __scrubYears(role.years);
+    const __yrsRaw = __scrubYears(role.years);
+    // ROLE-LOCATION-001: compose the right-hand meta text.
+    const __yrs = __meta
+      ? ((__yrsRaw || __loc) ? "(" + [__yrsRaw, __loc].filter(Boolean).join(" | ") + ")" : "")
+      : [__yrsRaw, __loc].filter(Boolean).join(" | ");
     // GROUP-CJLR-ROLES-001 (owner 2026-07-14): the role line honours the group/per-role
     // align (roles.R.title / roles.R / __group__), mirroring the preview renderRoleHead
     // (antcv-roles-richblock-adapter.js) + antcv-item-align.js. The preview role line is
@@ -28009,7 +28025,7 @@ function renderExperience(s, ctx) {
       // L/C/R → a small inline gap so the year stays WITH the grouped line.
       text: (__roleLCR ? "  " : "	") + __yrs,
       italics: __ySeg && __ySeg.italic != null ? !!__ySeg.italic : false,
-      bold: __ySeg && __ySeg.bold != null ? !!__ySeg.bold : false,
+      bold: __ySeg && __ySeg.bold != null ? !!__ySeg.bold : __meta,
       color: (__ySeg && __hex(__ySeg.color)) || "595959",
       size: pt2hp(fs.expSubHead),
       font: style.mainBodyFont

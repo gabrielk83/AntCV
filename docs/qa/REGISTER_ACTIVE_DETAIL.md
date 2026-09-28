@@ -290,7 +290,9 @@ _reconcile 2026-09-07 (CI nightly, E1): `diag-settings-history-guard.mjs` GREEN 
 
 ## Row 22 — CL-SLOGAN-RICHCONTENT-001
 
-_verified: 2026-09-18_
+_verified: 2026-09-28_
+
+_E1 re-verify 2026-09-28 (CI nightly, HEAD c9c60887): phase-1 sidecar `antcv-cl-slogan-element.js` loaded in index.html (1 ref) + kill-switch `antcv:disable-cl-slogan-element` present in the sidecar; suite 1721/1721. Phase 2 (real sections.cl rich_block) remains GENUINE OPEN WORK — spec-before-splice, owner-gated._
 
 _E1 re-verify 2026-09-18 (CI nightly, HEAD 8c94775c): phase-1 sidecar `antcv-cl-slogan-element.js` + kill-switch `antcv:disable-cl-slogan-element` still present and loaded; suite 1715/1715. Phase 2 (real sections.cl rich_block) remains GENUINE OPEN WORK — spec-before-splice, owner-gated._
 
@@ -312,7 +314,9 @@ _E1 sweep 2026-09-08 (CI nightly): phase 1 (`antcv-cl-slogan-element.js`) confir
 
 ## Row 33 — WHY-RULE-EXPORT-PARITY-001
 
-_verified: 2026-09-18_
+_verified: 2026-09-28_
+
+_E1 re-verify 2026-09-28 (CI nightly, HEAD c9c60887): `antcv:nameLineAlign`/`headline_align`/`headlineAlign` markers intact in `antcv-docx-client.js` (3 hits); `pwa/test/unit/export-align-parity.test.mjs` present + GREEN (suite 1721/1721). CODE-COMPLETE — only remaining step is a signed-in export eyeball; **recommended to owner for CLOSED**._
 
 _E1 re-verify 2026-09-18 (CI nightly, HEAD 8c94775c): `antcv:nameLineAlign`/`headline_align`/`headlineAlign` markers intact in `antcv-docx-client.js`; `export-align-parity.test.mjs` GREEN (suite 1715/1715). CODE-COMPLETE — only remaining step is a signed-in export eyeball; **recommended to owner for CLOSED**._
 
@@ -334,7 +338,9 @@ _E1 sweep 2026-09-08 (CI nightly): all three legs confirmed in CURRENT code — 
 
 ## Row 24 — ANALYTICS-BUTTONS-SESSION-TIMEOUT-001
 
-_verified: 2026-09-18_
+_verified: 2026-09-28_
+
+_E1 re-verify 2026-09-28 (CI nightly, HEAD c9c60887): client 401-wipe scope guard `pwa/test/unit/auth-401-wipe-scope.test.mjs` present + GREEN (suite 1721/1721); server secret-pair fix recorded live-verified. Owner three-button click-through (live) is the only remainder — kept ACTIVE (owner gate)._
 
 _E1 re-verify 2026-09-18 (CI nightly, HEAD 8c94775c): client 401-wipe scope guard `auth-401-wipe-scope.test.mjs` present + GREEN (suite 1715/1715); server secret-pair fix recorded live-verified. Owner three-button click-through (live) is the only remainder — kept ACTIVE (owner gate)._
 
@@ -356,7 +362,9 @@ _E1 sweep 2026-09-08 (CI nightly): client 401-wipe scope guard (`auth-401-wipe-s
 
 ## Row 26 — TOOLS-SIDEBAR-COMPRESS-001
 
-_verified: 2026-09-18_
+_verified: 2026-09-28_
+
+_E1 re-verify 2026-09-28 (CI nightly, HEAD c9c60887): belt `antcv-sidebar-compact-001.js` loaded in index.html (1 ref), `sidebar_compact` block present in `pwa/gold-rules.json`, `pwa/test/unit/sidebar-compact.test.mjs` GREEN (suite 1721/1721). Owner visual verify of the gold Instruments/Lab strings + the separate SIDEBAR-PACKING token-order belt remain — kept ACTIVE (owner gate)._
 
 _E1 re-verify 2026-09-18 (CI nightly, HEAD 8c94775c): belt `antcv-sidebar-compact-001.js` loaded, `sidebar_compact` block in `gold-rules.json`, `sidebar-compact.test.mjs` GREEN (suite 1715/1715). Owner visual verify of the gold Instruments/Lab strings + the separate SIDEBAR-PACKING token-order belt remain — kept ACTIVE (owner gate)._
 
@@ -378,7 +386,9 @@ _E1 sweep 2026-09-08 (CI nightly): belt present in CURRENT code — `antcv-sideb
 
 ## Row 30 — LLM-IMAGE-ROUTING-001
 
-_verified: 2026-09-18_
+_verified: 2026-09-28_
+
+_E1 re-verify 2026-09-28 (CI nightly, HEAD c9c60887): `filterVisionBlind`/`VISION_BLIND` intact in BOTH `workers/proxy/src/multi-llm.js` + `workers/demo-proxy/src/multi-llm.js` (5 hits each); `pwa/test/unit/image-routing-ee.test.mjs` present + GREEN (suite 1721/1721). Only remainder is the optional adequacy-gate extension → CODE-COMPLETE, **recommended to owner for CLOSED**._
 
 _E1 re-verify 2026-09-18 (CI nightly, HEAD 8c94775c): `filterVisionBlind`/`VISION_BLIND` intact in BOTH proxy + demo-proxy `multi-llm.js`; PWA `ee()` ladder mistral-drop mirrored in both bundles (`l.filter((p) => p !== "mistral")` src + `l.filter(p=>"mistral"!==p)` minified); `image-routing-ee.test.mjs` GREEN (suite 1715/1715). Only remainder is the optional adequacy-gate extension → CODE-COMPLETE, **recommended to owner for CLOSED**._
 
@@ -400,7 +410,9 @@ _E1 sweep 2026-09-08 (CI nightly): all legs confirmed in CURRENT code — `filte
 
 ## Row 32 — CL-PLATFORM-SIGNALS-001
 
-_verified: 2026-09-18_
+_verified: 2026-09-28_
+
+_E1 re-verify 2026-09-28 (CI nightly, HEAD c9c60887): `__platformRule` in `app.src.js` (2 hits) / minified `__pr` in `app.js` both-bundle mirror intact; `pwa/test/unit/cl-platform-signals.test.mjs` present + GREEN (suite 1721/1721). CODE-COMPLETE, **recommended to owner for CLOSED**; remaining is a live gen tone-check on a hardware-platform JD (owner, non-code)._
 
 _E1 re-verify 2026-09-18 (CI nightly, HEAD 8c94775c): `__platformRule` (src) / minified `__pr` (app.js) both-bundle mirror intact; `cl-platform-signals.test.mjs` GREEN (suite 1715/1715). CODE-COMPLETE, **recommended to owner for CLOSED**; remaining is a live gen tone-check on a hardware-platform JD (owner, non-code)._
 

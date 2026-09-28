@@ -2262,6 +2262,10 @@ export function buildStyle(styleConfig, navyColor) {
   // untouched users see no change.
   if (styleConfig.contHeadlines === false) out.contHeadlines = false;
   if (styleConfig.repeatHeader === true) out.repeatHeader = true;
+  // ROLE-LOCATION-001: role-line format lives in its OWN localStorage key (set by the
+  // antcv-role-line-format.js control, read by the roles adapter) — not in styleConfig
+  // React state. Forward only the non-default value.
+  try { if (localStorage.getItem('antcv:roleLineFormat') === 'meta') out.roleLineFormat = 'meta'; } catch (_) {}
   if (styleConfig.pageNumbers === 'top-right' || styleConfig.pageNumbers === 'bottom-right') {
     out.pageNumbers = styleConfig.pageNumbers;
   }
@@ -2883,6 +2887,8 @@ function normalizeSections(raw) {
             title: r.title || '',
             company: r.company || '',
             years: r.years || '',
+            // ROLE-LOCATION-001: optional; omitted when empty so older workers see no change.
+            ...(typeof r.location === 'string' && r.location.trim() ? { location: r.location.trim() } : {}),
             bullets: Array.isArray(r.bullets) ? r.bullets.map(String).filter(Boolean) : [],
             ...(pg >= 2 ? { page: pg } : {}),
             // OUTCOMES-MODE-001: per-role results line (set by

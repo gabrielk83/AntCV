@@ -46,17 +46,17 @@ citing an old number may mean either row — the ID disambiguates.
 | 76 | `JOBTRACKER-LLM-REFIT-BUTTON-001` | 2026-09-20 | (deferred enhancement) — the fit SCORE that orders the Top-5 is deterministic by design (ranking stability). O |
 | 82 | `ROLE-CANON-AUDIT-LEG-001` | 2026-09-20 | (follow-up) — export-audit leg NOW WIRED + green (gold_audit.py role_canon_issues, test_gold_residue 18/18); only es/zh eyeball owner-gated |
 | 94 | `CONTENT-LANG-STAMP-001` | 2026-09-20 | CODE SHIPPED 1.51.4446-content-lang-stamp (D1 content_language column + relay whitelist + both app.js legs). R |
-| 25 | `TABLE-GEOMETRY-PARITY-001` | 2026-09-17 | Table geometry parity — diagnose real CloudConvert PDF vs preview measurement |
-| 6 | `BANNED-WORDS-MERGE-001` | 2026-09-17 | Wizard/Settings UX — owner eyeball gate on merged banned-words UI + 6-file loader test |
-| 8 | `KERNEL-V2-READER-001` | 2026-09-17 | Kernel v2 — bullets-path v2 migration, es/zh tier, §6 regression pass on uploaded docx |
-| 12 | `AI-NOTICE-LEFT-CLOUDCONVERT-001` | 2026-09-17 | diag-ai-notice-anchor RED CLOSED (2026-07-03): the WORKER was right — AI-NOTICE-LEFT-CLOUDCONVERT-001 (owner 2 |
-| 21 | `SETTINGS-ROLLER-RESET-001` | 2026-09-17 | FIXED (1.51.90): mechanism CONFIRMED live — history.back() with Settings open was a REAL navigation (side/tilt |
-| 22 | `CL-SLOGAN-RICHCONTENT-001` | 2026-09-18 | CL slogan rich-content phase 2 — real sections.cl rich_block object, dedupe render sites |
-| 33 | `WHY-RULE-EXPORT-PARITY-001` | 2026-09-18 | Export align parity — name-line + section-headline alignment lost on PDF/DOCX export |
-| 24 | `ANALYTICS-BUTTONS-SESSION-TIMEOUT-001` | 2026-09-18 | Analytics buttons — both sides fixed, needs owner click-through confirm |
-| 26 | `TOOLS-SIDEBAR-COMPRESS-001` | 2026-09-18 | Tools sidebar compress — exact owner gold-text (Instruments/Lab strings) as deterministic rule |
-| 30 | `LLM-IMAGE-ROUTING-001` | 2026-09-18 | LLM image routing — make provider selection image-aware, filter vision-blind providers |
-| 32 | `CL-PLATFORM-SIGNALS-001` | 2026-09-18 | CL platform-signals — hardware-platform JD tone/positioning gen-prompt rule |
+| 25 | `TABLE-GEOMETRY-PARITY-001` | 2026-09-27 | Table geometry parity — diagnose real CloudConvert PDF vs preview measurement |
+| 6 | `BANNED-WORDS-MERGE-001` | 2026-09-27 | Wizard/Settings UX — owner eyeball gate on merged banned-words UI + 6-file loader test |
+| 8 | `KERNEL-V2-READER-001` | 2026-09-27 | Kernel v2 — bullets-path v2 migration, es/zh tier, §6 regression pass on uploaded docx |
+| 12 | `AI-NOTICE-LEFT-CLOUDCONVERT-001` | 2026-09-27 | diag-ai-notice-anchor RED CLOSED (2026-07-03): the WORKER was right — AI-NOTICE-LEFT-CLOUDCONVERT-001 (owner 2 |
+| 21 | `SETTINGS-ROLLER-RESET-001` | 2026-09-27 | FIXED (1.51.90): mechanism CONFIRMED live — history.back() with Settings open was a REAL navigation (side/tilt |
+| 22 | `CL-SLOGAN-RICHCONTENT-001` | 2026-09-28 | CL slogan rich-content phase 2 — real sections.cl rich_block object, dedupe render sites |
+| 33 | `WHY-RULE-EXPORT-PARITY-001` | 2026-09-28 | Export align parity — name-line + section-headline alignment lost on PDF/DOCX export |
+| 24 | `ANALYTICS-BUTTONS-SESSION-TIMEOUT-001` | 2026-09-28 | Analytics buttons — both sides fixed, needs owner click-through confirm |
+| 26 | `TOOLS-SIDEBAR-COMPRESS-001` | 2026-09-28 | Tools sidebar compress — exact owner gold-text (Instruments/Lab strings) as deterministic rule |
+| 30 | `LLM-IMAGE-ROUTING-001` | 2026-09-28 | LLM image routing — make provider selection image-aware, filter vision-blind providers |
+| 32 | `CL-PLATFORM-SIGNALS-001` | 2026-09-28 | CL platform-signals — hardware-platform JD tone/positioning gen-prompt rule |
 | 34 | `ROLE-MERGE-STORED-001` | 2026-09-19 | Export/preview parity sweep — role-merge parity is the owner-escalated top item (rules 46/47 belts SHIPPED 1.5 |
 | 27 | `MAIN-RUNT-ORPHAN-SWEEP-001` | 2026-09-19 | Orphan sweep v3 — work-style tail truncation, page-3 ghost, real-PDF 1.5-page verify |
 | 28 | `NIL-GEN-ADAPTATION-001` | 2026-09-19 | NIL gen adaptation — CV ~1.5-page gen-level target (current export still 5pp) |
@@ -71,58 +71,58 @@ citing an old number may mean either row — the ID disambiguates.
 | 49 | `SIDEBAR-GROUP-PAGE-BREAK-001` | 2026-09-21 | (owner, design guidance) — a very long TOOLS & METHODS group (e.g. "Project & del |
 | 50 | `UPLOAD-SCREEN-TOP-CLIP-001` | 2026-09-21 | (owner 2026-07-05, same live session as rows 46-49): the upload screen's EN/gear/Editor header row was still c |
 | 51 | `PREVIEW-SCROLL-JITTER-001` | 2026-09-21 | (owner 2026-07-05, live session, reported as two symptoms: "application analysis panel is stuck again, does no |
-| 39 | `GEN-MODELROLE-001` | 2026-09-12 | code shipped AND MODEL_ROLES set in both wrangler.toml (owner map; coherence now `openai`). Remaining = live-deplo |
-| 53 | `CROSS-APP-EXPORT-CONTAMINATION-001` | 2026-09-12 | leg (a) P0 SHIPPED (1.51.639 scope-guard → reworked MIRROR-LOAD-001 1.51.680); legs b-f open — (owner 2026-07-06, P0 — real export) — target was the KOMBIT "AI-udvikler"  |
-| 54 | `GEN-JD-TAILOR-KERNEL-RECALL-001` | 2026-09-12 | (owner 2026-07-07) — targeted tailoring narrows/compresses to the JD but does  |
-| 55 | `TARGETED-OUTPUT-FURNITURE-001` | 2026-09-12 | (owner 2026-07-07) — targeted-output furniture/personalization defects on the KO |
-| 56 | `GEN-JD-RELEVANCE-TRIM-001` | 2026-09-12 | (owner 2026-07-07) — sibling of row 54: row 54 RECALLS relevant items the narrow set |
-| 60 | — | 2026-09-12 | PANEL-CONTROLS-2026-07-07 (owner, editor/preview panel controls — 6 legs, diagnostic-first, auto-deploy prod s |
-| 61 | `LINE-DISTRIBUTION-GUIDELINES-001` | 2026-09-12 | gen leg + bidirectional Fit-it SHIPPED (LINE-DISTRIBUTION-001, 1.51.2921/2980) — (KOMBIT lessons v1→v7, owner asked to crystallize) — conclusions on line-fill / orphan control, the single mos |
-| 57 | `TARGETED-CV-POLISH-RULES-001` | 2026-09-12 | (owner 2026-07-07, universal rules from a full CV review) — CONTENT: (1) each bul |
-| 59 | `GENERATOR-BASELINE-001` | 2026-09-12 | (owner 2026-07-07, "make the lessons enter the generator baseline") — two things the GE |
-| 63 | `ANALYSIS-STALE-ON-APP-LOAD-001` | 2026-09-12 | / NEW-1 (owner 2026-07-07) — loading a saved application does NOT load ITS JD a |
-| 64 | `ANALYSIS-EXPORT-DROPS-FILLED-ANSWERS-001` | 2026-09-12 | / NEW-2 (owner 2026-07-07) — exporting the JD-analysis PDF omits the  |
-| 58 | `EXPORT-SETTLED-001` | 2026-09-12 | MOBILE-BUGS-2026-07 (owner "Mobile App Bug Findings Report", 2026-07-07) — 9 findings: MOB-001 Danish UI shows |
-| 62 | `HEADER-BANNER-DESIGN-RULES-001` | 2026-09-13 | (owner 2026-07-07, KOMBIT gold) — bake the correct CV/CL header-banner design i |
-| 74 | `JD-SWAP-STALE-RATIONALE-001` | 2026-09-13 | LIVE-APP DRIVE (owner 2026-07-08: estimator calibration → generate 4 via the app). Three outcomes: (A) PARITY- |
-| 73 | — | 2026-09-13 | CV REVIEW-4 — LINE-FILL DEEP PASS + accessibility/competency (owner 2026-07-08: "lines are very very uneven",  |
-| 72 | `AI-NOTICE-ANCHOR-FIX-001` | 2026-09-13 | CV REVIEW-3 + worker 1.14.136 (owner 2026-07-08) — "handle as UNIVERSAL for gen/enhance/fix". WORKER (universa |
-| 71 | `AI-NOTICE-INLINE-001` | 2026-09-13 | CV REVIEW-2 FIXES + worker 1.14.135 (owner 2026-07-08, 9 issues). All applied + verified on the Trackman CV: ( |
-| 70 | — | 2026-09-13 | CV REBUILD v2 (owner 2026-07-08: "do the CV for my review") + slogan/closure rule refinements. Trackman CV re- |
-| 69 | — | 2026-09-13 | CL POLISH v2 + SYSTEMIC EM-DASH (owner 2026-07-08 CL review). Three standing CL rules, applied to the Trackman |
-| 67 | `CV-CORECOMP-BLANK-001` | 2026-09-13 | DESKTOP-RUN OPEN QUEUE (owner reconcile 2026-07-08 — these were NOT in the register and would have aged out; m |
-| 66 | `LINKEDIN-CLICK-001` | 2026-09-13 | TRACKMAN-DELIVERABLE-REVIEW-2026-07-08 (owner, on the generated Trackman CV+CL) — a batch of GENERATOR-BASELIN |
-| 65 | `PTR-STALE-GUARD-001` | 2026-09-13 | ANALYSIS+SYNC-BATCH-2026-07-08 (owner report, 5 issues; gap-export CONFIRMED FIXED by NEW-2/row 64): (A) LANG- |
-| 68 | `JD-SYNC-001` | 2026-09-13 | REGISTER-ESCAPE SWEEP (owner 2026-07-08: "look for all scopes of work that escaped the register, incl. incomin |
-| 75 | `JOBTRACKER-AUTOFILL-ADDFLOW-VERIFY-001` | 2026-09-14 | (owner-gated live test) — the manual-add auto-fill flow (deterministic tier on add + async LLM refine: tier up |
-| 77 | `JOBTRACKER-TOP5-PERIODIC-RESCORE-001` | 2026-09-14 | (optional) — Top-5 is re-evaluated on every add/edit (the fit-ranked useMemo). Owner asked whether a PERIODIC  |
-| 81 | `PHOTO-FUSE-OWNER-VERIFY-001` | 2026-09-14 | (owner-gated visual check) — the 1.51.390-393 photo-panel rework (PW-CJLR-PHOTO-LEAK-002 guard + PHOTO-BTN-FUS |
-| 83 | `JD-REMOVE-OWNER-VERIFY-001` | 2026-09-14 | (owner-gated live check) — JD-REMOVE-STICKY-001 (1.51.395, see the 2026-07-13 CLOSED block) is suite- and pred |
-| 88 | — | 2026-09-14 | OWNER-ROUND-3-BACKLOG (Aimpoint-810 deep review close-out, 2026-07-13; full detail in the ACTIVE_BUGS OWNER-RO |
-| 87 | `OWNER-ROUND-2-RESIDUE-001` | 2026-09-14 | (Aimpoint app-810 review, 2026-07-13, commit 73264c6) — the golden/detection/label/slogan/Scholar fixes landed |
-| 86 | `GOLD-SESSION-FOLLOWUPS-001` | 2026-09-14 | (density/gold session residue, 2026-07-13) — the marathon closed its main arc (see the ACTIVE_BUGS 2026-07-13  |
-| 89 | `MODEL-TABLE-FRESHNESS-001` | 2026-09-15 | DEPLOYED 2026-09-15 (owner "deploy"; local `wrangler deploy` from a clean `origin/main` worktree at `8ce85e0c`, one at a time, bindings intact: cv-proxy `02e93051`, antcv-demo-proxy `ba3496be`, antcv-access-relay `cbac842a`; `/health` ok ×3; deployed relay source verified to carry `gpt-5.5: [5,30]`, `gpt-6-astra`, `claude-mythos-5-1`, `gemini-3.8-flash` — covers the 09-06 AND 09-10 rate fixes. Only the owner-gated D1 INSERTs remain) · ADVANCED 2026-09-10 (weekly-tune cross-check: `gpt-5.5` [30,60]→**[5,30]** GPT55-RATE-2026-09-001 + 8 new ids priced — mythos-5/-5-1, gpt-6-astra, gpt-5.6-sol/terra/luna, gemini-3.8/3.5-flash; 3 mirrors + 3 test sites, suite 2066/0; deploy ×3 + D1 INSERTs still OWED) · ADVANCED 2026-09-06 (ANTHROPIC-RATES-2026-09-001: opus-5 / fable-5 / fable-5-1 priced, sonnet-5 → [2,10] in all 3 mirrors + PWA C map, `1.51.4486-anthropic-rates`; deploy ×3 + D1 INSERT OWED) · CODE FIXED 2026-07-13 (shift lane 1.51.518-1.51.537, isolated worktree; DEPLOY OWED) — the proxy cost tables n |
+| 39 | `GEN-MODELROLE-001` | 2026-09-22 | code shipped AND MODEL_ROLES set in both wrangler.toml (owner map; coherence now `openai`). Remaining = live-deplo |
+| 53 | `CROSS-APP-EXPORT-CONTAMINATION-001` | 2026-09-22 | leg (a) P0 SHIPPED (1.51.639 scope-guard → reworked MIRROR-LOAD-001 1.51.680); legs b-f open — (owner 2026-07-06, P0 — real export) — target was the KOMBIT "AI-udvikler"  |
+| 54 | `GEN-JD-TAILOR-KERNEL-RECALL-001` | 2026-09-22 | (owner 2026-07-07) — targeted tailoring narrows/compresses to the JD but does  |
+| 55 | `TARGETED-OUTPUT-FURNITURE-001` | 2026-09-22 | (owner 2026-07-07) — targeted-output furniture/personalization defects on the KO |
+| 56 | `GEN-JD-RELEVANCE-TRIM-001` | 2026-09-22 | (owner 2026-07-07) — sibling of row 54: row 54 RECALLS relevant items the narrow set |
+| 60 | — | 2026-09-22 | PANEL-CONTROLS-2026-07-07 (owner, editor/preview panel controls — 6 legs, diagnostic-first, auto-deploy prod s |
+| 61 | `LINE-DISTRIBUTION-GUIDELINES-001` | 2026-09-22 | gen leg + bidirectional Fit-it SHIPPED (LINE-DISTRIBUTION-001, 1.51.2921/2980) — (KOMBIT lessons v1→v7, owner asked to crystallize) — conclusions on line-fill / orphan control, the single mos |
+| 57 | `TARGETED-CV-POLISH-RULES-001` | 2026-09-22 | (owner 2026-07-07, universal rules from a full CV review) — CONTENT: (1) each bul |
+| 59 | `GENERATOR-BASELINE-001` | 2026-09-22 | (owner 2026-07-07, "make the lessons enter the generator baseline") — two things the GE |
+| 63 | `ANALYSIS-STALE-ON-APP-LOAD-001` | 2026-09-22 | / NEW-1 (owner 2026-07-07) — loading a saved application does NOT load ITS JD a |
+| 64 | `ANALYSIS-EXPORT-DROPS-FILLED-ANSWERS-001` | 2026-09-22 | / NEW-2 (owner 2026-07-07) — exporting the JD-analysis PDF omits the  |
+| 58 | `EXPORT-SETTLED-001` | 2026-09-22 | MOBILE-BUGS-2026-07 (owner "Mobile App Bug Findings Report", 2026-07-07) — 9 findings: MOB-001 Danish UI shows |
+| 62 | `HEADER-BANNER-DESIGN-RULES-001` | 2026-09-23 | (owner 2026-07-07, KOMBIT gold) — bake the correct CV/CL header-banner design i |
+| 74 | `JD-SWAP-STALE-RATIONALE-001` | 2026-09-23 | LIVE-APP DRIVE (owner 2026-07-08: estimator calibration → generate 4 via the app). Three outcomes: (A) PARITY- |
+| 73 | — | 2026-09-23 | CV REVIEW-4 — LINE-FILL DEEP PASS + accessibility/competency (owner 2026-07-08: "lines are very very uneven",  |
+| 72 | `AI-NOTICE-ANCHOR-FIX-001` | 2026-09-23 | CV REVIEW-3 + worker 1.14.136 (owner 2026-07-08) — "handle as UNIVERSAL for gen/enhance/fix". WORKER (universa |
+| 71 | `AI-NOTICE-INLINE-001` | 2026-09-23 | CV REVIEW-2 FIXES + worker 1.14.135 (owner 2026-07-08, 9 issues). All applied + verified on the Trackman CV: ( |
+| 70 | — | 2026-09-23 | CV REBUILD v2 (owner 2026-07-08: "do the CV for my review") + slogan/closure rule refinements. Trackman CV re- |
+| 69 | — | 2026-09-23 | CL POLISH v2 + SYSTEMIC EM-DASH (owner 2026-07-08 CL review). Three standing CL rules, applied to the Trackman |
+| 67 | `CV-CORECOMP-BLANK-001` | 2026-09-23 | DESKTOP-RUN OPEN QUEUE (owner reconcile 2026-07-08 — these were NOT in the register and would have aged out; m |
+| 66 | `LINKEDIN-CLICK-001` | 2026-09-23 | TRACKMAN-DELIVERABLE-REVIEW-2026-07-08 (owner, on the generated Trackman CV+CL) — a batch of GENERATOR-BASELIN |
+| 65 | `PTR-STALE-GUARD-001` | 2026-09-23 | ANALYSIS+SYNC-BATCH-2026-07-08 (owner report, 5 issues; gap-export CONFIRMED FIXED by NEW-2/row 64): (A) LANG- |
+| 68 | `JD-SYNC-001` | 2026-09-23 | REGISTER-ESCAPE SWEEP (owner 2026-07-08: "look for all scopes of work that escaped the register, incl. incomin |
+| 75 | `JOBTRACKER-AUTOFILL-ADDFLOW-VERIFY-001` | 2026-09-24 | (owner-gated live test) — the manual-add auto-fill flow (deterministic tier on add + async LLM refine: tier up |
+| 77 | `JOBTRACKER-TOP5-PERIODIC-RESCORE-001` | 2026-09-24 | (optional) — Top-5 is re-evaluated on every add/edit (the fit-ranked useMemo). Owner asked whether a PERIODIC  |
+| 81 | `PHOTO-FUSE-OWNER-VERIFY-001` | 2026-09-24 | (owner-gated visual check) — the 1.51.390-393 photo-panel rework (PW-CJLR-PHOTO-LEAK-002 guard + PHOTO-BTN-FUS |
+| 83 | `JD-REMOVE-OWNER-VERIFY-001` | 2026-09-24 | (owner-gated live check) — JD-REMOVE-STICKY-001 (1.51.395, see the 2026-07-13 CLOSED block) is suite- and pred |
+| 88 | — | 2026-09-24 | OWNER-ROUND-3-BACKLOG (Aimpoint-810 deep review close-out, 2026-07-13; full detail in the ACTIVE_BUGS OWNER-RO |
+| 87 | `OWNER-ROUND-2-RESIDUE-001` | 2026-09-24 | (Aimpoint app-810 review, 2026-07-13, commit 73264c6) — the golden/detection/label/slogan/Scholar fixes landed |
+| 86 | `GOLD-SESSION-FOLLOWUPS-001` | 2026-09-24 | (density/gold session residue, 2026-07-13) — the marathon closed its main arc (see the ACTIVE_BUGS 2026-07-13  |
+| 89 | `MODEL-TABLE-FRESHNESS-001` | 2026-09-25 | DEPLOYED 2026-09-15 (owner "deploy"; local `wrangler deploy` from a clean `origin/main` worktree at `8ce85e0c`, one at a time, bindings intact: cv-proxy `02e93051`, antcv-demo-proxy `ba3496be`, antcv-access-relay `cbac842a`; `/health` ok ×3; deployed relay source verified to carry `gpt-5.5: [5,30]`, `gpt-6-astra`, `claude-mythos-5-1`, `gemini-3.8-flash` — covers the 09-06 AND 09-10 rate fixes. Only the owner-gated D1 INSERTs remain) · ADVANCED 2026-09-10 (weekly-tune cross-check: `gpt-5.5` [30,60]→**[5,30]** GPT55-RATE-2026-09-001 + 8 new ids priced — mythos-5/-5-1, gpt-6-astra, gpt-5.6-sol/terra/luna, gemini-3.8/3.5-flash; 3 mirrors + 3 test sites, suite 2066/0; deploy ×3 + D1 INSERTs still OWED) · ADVANCED 2026-09-06 (ANTHROPIC-RATES-2026-09-001: opus-5 / fable-5 / fable-5-1 priced, sonnet-5 → [2,10] in all 3 mirrors + PWA C map, `1.51.4486-anthropic-rates`; deploy ×3 + D1 INSERT OWED) · CODE FIXED 2026-07-13 (shift lane 1.51.518-1.51.537, isolated worktree; DEPLOY OWED) — the proxy cost tables n |
 | 96 | `CV-HEADER-BOX-001` | 2026-07-17 | CV header redesign (plan §5), not started. Target (owner's hand-fixed 1017_Ibsen_Photonics_CV_FINAL_v4.docx):  |
 | 97 | `DELIVERABLES-3CO-001` | 2026-07-18 | the three brand-correct deliverable sets (Ibsen / Aimpoint / Demant). Owner ask 2026-07-17: regenerate CV+CL f |
 | 95 | `CV-POLISH-BATCH-001` | 2026-07-19 | (owner CV review, desktop session 2026-07-19 — Ibsen 1017 regen). Five CV-quality defects reported against a l |
 | 92 | `EXPORT-PREVIEW-PAGINATION-DIVERGENCE-001` | 2026-07-21 | (owner 2026-07-20; NOT reproduced on current content) — owner's Ibsen PDF: the EXPORT main column breaks after |
 | 93 | `AUTO-ANALYSE-ON-JD-LOAD-ERROR-001` | 2026-07-21 | (owner 2026-07-21, transient — NOT captured) — owner repeatedly hit an "auto-run analysis on JD load" error th |
-| 31 | `META-STATE-CORRUPTION-002` | 2026-09-15 | Poisoned NIL row repair — set row meta from its own display name, guard auto-save |
-| 98 | `BYOK-COST-AUDIT-001` | 2026-09-15 | (2026-07-05, PR #331, register-escape — never given a row). byok-qualify.js's own docstring documented total_c |
-| 99 | `REG-GROUP-FOLD-NAMED-001` | 2026-09-15 | (2026-07-05, PR #331, register-escape). REGULATORY CONTEXT rendered two near-duplicate group headers side by s |
-| 100 | `GRAB-ZONE-DISMISS-THRESHOLD-001` | 2026-09-15 | + GRAB-ZONE-SCROLL-FORWARD-001 (2026-07-05, PR #332 + same-day follow-up, register-escape). Owner (Android): " |
-| 101 | `ZOOM-FLOOR-001` | 2026-09-15 | (2026-07-05, PR #334, register-escape). Owner: "allow Zoom out down to 10-20, currently it is down to 35%… tha |
-| 19 | `JD-SCOPE-OCC2-GUARD-001` | 2026-09-15 | JD-scope isolation — two-real-device test |
-| 103 | `RELAY-TUNE-COVERAGE-GAP-001` | 2026-09-16 | (found by weekly cost-quality tune 2026-07-13): the tune loop is blind to 100% of real traffic and can never f |
-| 45 | — | 2026-09-16 | PERF-001 — multi-second main-thread stalls on export/preview; profile → debounce/memoize. |
-| 40 | — | 2026-09-16 | SO-003 DATA LOSS — core-comp row-count change wipes Selected Outcomes (cloud-persisted). |
-| 35 | `OVERLAY-EARLY-HALT-001` | 2026-09-16 | NEW — OVERLAY-EARLY-HALT-001 regen-confirm. Shipped 1.51.41 (heartbeat-gated watchdog replacing the fixed 2-mi |
-| 36 | `GEN-CORECOMP-BROAD-001` | 2026-09-16 | NEW — GEN-CORECOMP-BROAD-001 regen-confirm. Shipped 1.51.41 (unsolicited CORE COMPETENCIES broadened to PdM/BA |
-| 37 | `FOCUS-LABEL-EO-001` | 2026-09-16 | NEW — FOCUS-LABEL-EO-001 regen-confirm. Shipped 1.51.42/43 (canonicalised EO focus-area label post-process). N |
-| 3 | `FLOAT-SPINE-001` | 2026-09-16 | Floating spine: byte-diff flag-on doc vs reference, add grid equalization + spacer anchor |
-| 14 | `JD-SCAN-HALLUCINATION-001` | 2026-09-16 | JD-scan-hallucination ingest reorder — needs real models + owner present |
-| 20 | `CONTACT-TRACK-TIGHT-001` | 2026-09-16 | Owner verify list — 6 sub-items (alignment, sidebar runts, CL spacing, Sirin result, abbreviation, contact tra |
-| 52 | `GROUP-EMPTY-HIDE-001` | 2026-09-16 | (owner 2026-07-06, screenshot) — a labeled-list group (TOOLS & METHODS) with a heading bu |
+| 31 | `META-STATE-CORRUPTION-002` | 2026-09-25 | Poisoned NIL row repair — set row meta from its own display name, guard auto-save |
+| 98 | `BYOK-COST-AUDIT-001` | 2026-09-25 | (2026-07-05, PR #331, register-escape — never given a row). byok-qualify.js's own docstring documented total_c |
+| 99 | `REG-GROUP-FOLD-NAMED-001` | 2026-09-25 | (2026-07-05, PR #331, register-escape). REGULATORY CONTEXT rendered two near-duplicate group headers side by s |
+| 100 | `GRAB-ZONE-DISMISS-THRESHOLD-001` | 2026-09-25 | + GRAB-ZONE-SCROLL-FORWARD-001 (2026-07-05, PR #332 + same-day follow-up, register-escape). Owner (Android): " |
+| 101 | `ZOOM-FLOOR-001` | 2026-09-25 | (2026-07-05, PR #334, register-escape). Owner: "allow Zoom out down to 10-20, currently it is down to 35%… tha |
+| 19 | `JD-SCOPE-OCC2-GUARD-001` | 2026-09-25 | JD-scope isolation — two-real-device test |
+| 103 | `RELAY-TUNE-COVERAGE-GAP-001` | 2026-09-26 | (found by weekly cost-quality tune 2026-07-13): the tune loop is blind to 100% of real traffic and can never f |
+| 45 | — | 2026-09-26 | PERF-001 — multi-second main-thread stalls on export/preview; profile → debounce/memoize. |
+| 40 | — | 2026-09-26 | SO-003 DATA LOSS — core-comp row-count change wipes Selected Outcomes (cloud-persisted). |
+| 35 | `OVERLAY-EARLY-HALT-001` | 2026-09-26 | NEW — OVERLAY-EARLY-HALT-001 regen-confirm. Shipped 1.51.41 (heartbeat-gated watchdog replacing the fixed 2-mi |
+| 36 | `GEN-CORECOMP-BROAD-001` | 2026-09-26 | NEW — GEN-CORECOMP-BROAD-001 regen-confirm. Shipped 1.51.41 (unsolicited CORE COMPETENCIES broadened to PdM/BA |
+| 37 | `FOCUS-LABEL-EO-001` | 2026-09-26 | NEW — FOCUS-LABEL-EO-001 regen-confirm. Shipped 1.51.42/43 (canonicalised EO focus-area label post-process). N |
+| 3 | `FLOAT-SPINE-001` | 2026-09-26 | Floating spine: byte-diff flag-on doc vs reference, add grid equalization + spacer anchor |
+| 14 | `JD-SCAN-HALLUCINATION-001` | 2026-09-26 | JD-scan-hallucination ingest reorder — needs real models + owner present |
+| 20 | `CONTACT-TRACK-TIGHT-001` | 2026-09-26 | Owner verify list — 6 sub-items (alignment, sidebar runts, CL spacing, Sirin result, abbreviation, contact tra |
+| 52 | `GROUP-EMPTY-HIDE-001` | 2026-09-26 | (owner 2026-07-06, screenshot) — a labeled-list group (TOOLS & METHODS) with a heading bu |
 | 1 | — | 2026-08-26 _(STANDING)_ | Quick-gen page convergence + CV 3-page convergence, export-only pagination parity |
 | 11 | `SIDEBAR-PROMOTE-MARGIN-001` | 2026-08-26 _(STANDING)_ | SIDEBAR-PAGE23-DANCE CLOSED (verified 2026-07-03, headless): diag-sidebar-promote-margin (owner-scale sidebar  |
 | 16 | `SID-FALLBACK-HARDEN-001` | 2026-08-26 _(STANDING)_ | Sidebar TOOLS/REGULATORY justify↔left flap — re-check after hard refresh, diagnose if persists |
@@ -134,7 +134,7 @@ citing an old number may mean either row — the ID disambiguates.
 | 102 | `DEMAND-SEED-SEARCH-TOKEN-MISSING-001` | 2026-08-26 | (found by the weekly demand-seed run 2026-08-26, first run to PROBE rather than assume). the routine's prescri |
 | 108 | `JOBTRACKER-PYTEST-UNWIRED-001` | 2026-08-27 | (found by the job-tracker nightly 2026-08-27) — the 14 network-free python tests under scripts/job-tracker/ ar |
 | 107 | `IMPORT-REWRAP-SIBLING-DROP-001` | 2026-08-26 | (2026-08-26 desktop nightly, residual of row 18). The settings-import rewrap now carries photo across (1.51.44 |
-| 109 | `DEPLOY-YML-CF-AUTH-BROKEN-001` | 2026-09-15 | (found 2026-09-15 while deploying the rate fixes) — `.github/workflows/deploy.yml` has FAILED on every push to `main` since 2026-08-01 (last green run `30697485564`): wrangler exits "Failed to automatically retrieve account IDs for the logged in user" — the `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` repo secrets are expired, under-scoped or missing. Not a production outage (Pages deploys through its own Git integration — live PWA matched the repo; the relay was redeployed 08-16 by another path), but the WORKER deploy path this repo documents (`gh workflow run deploy.yml -f target=<worker>`) is dead, which is why the 09-06 and 09-10 rate fixes sat undeployed until 09-15. OWNER: rotate the token (Account→Workers→Edit, Account→Pages→Edit) and set the account id; until then every "deploy via deploy.yml" instruction in `SCHEDULED_ROUTINES.md` / the routine prompts silently no-ops. |
+| 109 | `DEPLOY-YML-CF-AUTH-BROKEN-001` | 2026-09-25 | (found 2026-09-15 while deploying the rate fixes) — `.github/workflows/deploy.yml` has FAILED on every push to `main` since 2026-08-01 (last green run `30697485564`): wrangler exits "Failed to automatically retrieve account IDs for the logged in user" — the `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` repo secrets are expired, under-scoped or missing. Not a production outage (Pages deploys through its own Git integration — live PWA matched the repo; the relay was redeployed 08-16 by another path), but the WORKER deploy path this repo documents (`gh workflow run deploy.yml -f target=<worker>`) is dead, which is why the 09-06 and 09-10 rate fixes sat undeployed until 09-15. OWNER: rotate the token (Account→Workers→Edit, Account→Pages→Edit) and set the account id; until then every "deploy via deploy.yml" instruction in `SCHEDULED_ROUTINES.md` / the routine prompts silently no-ops. |
 
 ---
 

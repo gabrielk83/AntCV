@@ -182,7 +182,9 @@ in CI) + a live translate-persist cycle to verify — carry forward.
 
 ## Row 25 — TABLE-GEOMETRY-PARITY-001
 
-_verified: 2026-09-17_
+_verified: 2026-09-27_
+
+_reconcile 2026-09-27 (CI nightly, E1): forwarding pipeline STILL INTACT on HEAD `0537eb7b` — `renderCompetencyTable` + `tableWidthPct`/`tableRatio` confirmed present across all five sites (`antcv-docx-client.js`, `antcv-table-headers-editable-341.js`, `antcv-section-align.js`, `antcv-auto-pagebreak-block-001.js`, `workers/docx-worker/src/index.js`); full suite 1715/1715 green. Unchanged: the FIDELITY gap is a REAL-CloudConvert-PDF render diff (Carlito advance widths, 3pt/7.5pt padding, 2-vs-3 line clamp) that CI cannot produce — owner/desktop real-PDF pass still owed._
 
 _reconcile 2026-09-17 (CI nightly, E1): forwarding pipeline STILL INTACT on HEAD `d8e041ea` — `renderCompetencyTable` + `tableWidthPct`/`tableRatio` present across `antcv-docx-client.js`, `antcv-table-headers-editable-341.js`, `antcv-section-align.js`, `antcv-auto-pagebreak-block-001.js` and `workers/docx-worker/src/index.js`; full suite 1715/1715 green. Unchanged from the 09-07 finding: the FIDELITY gap is a REAL-CloudConvert-PDF render diff (Carlito advance widths, 3pt/7.5pt padding, 2-vs-3 line clamp) that CI cannot produce — owner/desktop real-PDF pass still owed._
 
@@ -204,7 +206,9 @@ _reconcile 2026-09-07 (CI nightly, E1): WIB-TABLE-DIMS-001 forwarding pipeline I
 
 ## Row 6 — BANNED-WORDS-MERGE-001
 
-_verified: 2026-09-17_
+_verified: 2026-09-27_
+
+_reconcile 2026-09-27 (CI nightly, E1): code-complete state STILL HOLDS on HEAD `0537eb7b` — `antcv:keep-native-banned` + `antcv:no-kernel-chain` kill-switches present in `antcv-data-importer.js`, island `banned_*` writer present in `antcv-react-islands.js`; full suite 1715/1715 green. Unchanged: OWNER eyeball of the merged banned-words UI + one file of each of the 6 loader types — owner-gated, not verifiable in CI._
 
 _reconcile 2026-09-17 (CI nightly, E1): code-complete state STILL HOLDS on HEAD `d8e041ea` — `antcv:keep-native-banned` + `antcv:no-kernel-chain` kill-switches present (`antcv-data-importer.js`), island writes `stylePrefs.banned_*` (`antcv-react-islands.js`); full suite 1715/1715 green. Unchanged: OWNER eyeball of the merged banned-words UI + one file of each of the 6 loader types — owner-gated, not verifiable in CI._
 
@@ -226,7 +230,9 @@ _reconcile 2026-09-07 (CI nightly, E1): code-complete state CONFIRMED against HE
 
 ## Row 8 — KERNEL-V2-READER-001
 
-_verified: 2026-09-17_
+_verified: 2026-09-27_
+
+_reconcile 2026-09-27 (CI nightly, E1): `pwa/test/unit/kernel-v2-reader.test.mjs` RE-RUN GREEN (5/5) on HEAD `0537eb7b`; `antcv:ingestedKernel` staged-kernel reader intact in `antcv-kernel-import.js` (both bundles). Unchanged: (a) bullets-path v2-direct migration (safe while autoSync projects v2→workHistory), (c) es/zh + lazy language_view tier (needs real models), (d) §6 P/DOCX/PDF regression parity on an uploaded docx (owner-gated) — none doable in CI._
 
 _reconcile 2026-09-17 (CI nightly, E1): `pwa/test/unit/kernel-v2-reader.test.mjs` RE-RUN GREEN on HEAD `d8e041ea` (part of the 8/8 pass with ai-notice-position); `antcv:ingestedKernel` staged-kernel reader intact (`antcv-kernel-import.js`, both bundles). Unchanged: (a) bullets-path v2-direct migration (safe while autoSync projects v2→workHistory), (c) es/zh + lazy language_view tier (needs real models), (d) §6 P/DOCX/PDF regression parity on an uploaded docx (owner-gated) — none doable in CI._
 
@@ -248,7 +254,9 @@ _reconcile 2026-09-07 (CI nightly, E1): `pwa/test/unit/kernel-v2-reader.test.mjs
 
 ## Row 12 — AI-NOTICE-LEFT-CLOUDCONVERT-001
 
-_verified: 2026-09-17_
+_verified: 2026-09-27_
+
+_reconcile 2026-09-27 (CI nightly, E1): `pwa/test/unit/ai-notice-position.test.mjs` RE-RUN GREEN (3/3) on HEAD `0537eb7b`; the page-relative margin-left encoding (0pt/275pt + jc) in `workers/docx-worker/src/index.js` is unchanged. The AI-NOTICE-LEFT anchor bug stays effectively resolved; row lingers only on the docx-baseline "remaining 3" (cjlr-table-export, pageflow-export, spacing-linkedin-export), which are SEPARATE tests. Recommendation stands: owner move to CLOSED and re-file the 3 baseline gaps under their own IDs if still open._
 
 _reconcile 2026-09-17 (CI nightly, E1): `pwa/test/unit/ai-notice-position.test.mjs` RE-RUN GREEN on HEAD `d8e041ea` (3/3, in the 8/8 pass); the page-relative margin-left encoding (0pt/275pt + jc) in `workers/docx-worker/src/index.js` is unchanged. The AI-NOTICE-LEFT anchor bug itself stays effectively resolved; row lingers only on the docx-baseline "remaining 3" (cjlr-table-export, pageflow-export, spacing-linkedin-export), which are SEPARATE tests. Recommendation stands: owner move to CLOSED and re-file the 3 baseline gaps under their own IDs if still open._
 
@@ -264,7 +272,9 @@ _reconcile 2026-09-07 (CI nightly, E1): the shipped page-relative margin-left en
 
 ## Row 21 — SETTINGS-ROLLER-RESET-001
 
-_verified: 2026-09-17_
+_verified: 2026-09-27_
+
+_reconcile 2026-09-27 (CI nightly, E1): the fix code is INTACT on HEAD `0537eb7b` — `antcv-settings-history-guard.js` present with kill-switch `antcv:no-settings-history-guard`; full suite 1715/1715 green. NOTE: this env has no chromium (`~/.cache/ms-playwright` absent), so `diag-settings-history-guard.mjs` (headless real browser) could NOT be launched this run — the 2026-09-17 headless GREEN result stands as the last live confirmation. Unchanged: OWNER live-verify on real roller-side hardware Back button still owed._
 
 _reconcile 2026-09-17 (CI nightly, E1): `diag-settings-history-guard.mjs` RE-RUN GREEN on HEAD `d8e041ea` (headless, real browser) — guarded run: openBefore {open:true,sentinel:true} → after {marker:"alive", url:/index.html, open:false, sentinel:true} (Back consumed the sentinel, panel closed, NO reload, sentinel re-armed); kill-switch control: navigated away to /manifest.json, marker GONE (the reset reproduced). `antcv-settings-history-guard.js` + kill-switch present. Unchanged: OWNER live-verify on real roller-side hardware Back button still owed._
 
@@ -280,7 +290,9 @@ _reconcile 2026-09-07 (CI nightly, E1): `diag-settings-history-guard.mjs` GREEN 
 
 ## Row 22 — CL-SLOGAN-RICHCONTENT-001
 
-_verified: 2026-09-18_
+_verified: 2026-09-28_
+
+_E1 re-verify 2026-09-28 (CI nightly, HEAD c9c60887): phase-1 sidecar `antcv-cl-slogan-element.js` loaded in index.html (1 ref) + kill-switch `antcv:disable-cl-slogan-element` present in the sidecar; suite 1721/1721. Phase 2 (real sections.cl rich_block) remains GENUINE OPEN WORK — spec-before-splice, owner-gated._
 
 _E1 re-verify 2026-09-18 (CI nightly, HEAD 8c94775c): phase-1 sidecar `antcv-cl-slogan-element.js` + kill-switch `antcv:disable-cl-slogan-element` still present and loaded; suite 1715/1715. Phase 2 (real sections.cl rich_block) remains GENUINE OPEN WORK — spec-before-splice, owner-gated._
 
@@ -302,7 +314,9 @@ _E1 sweep 2026-09-08 (CI nightly): phase 1 (`antcv-cl-slogan-element.js`) confir
 
 ## Row 33 — WHY-RULE-EXPORT-PARITY-001
 
-_verified: 2026-09-18_
+_verified: 2026-09-28_
+
+_E1 re-verify 2026-09-28 (CI nightly, HEAD c9c60887): `antcv:nameLineAlign`/`headline_align`/`headlineAlign` markers intact in `antcv-docx-client.js` (3 hits); `pwa/test/unit/export-align-parity.test.mjs` present + GREEN (suite 1721/1721). CODE-COMPLETE — only remaining step is a signed-in export eyeball; **recommended to owner for CLOSED**._
 
 _E1 re-verify 2026-09-18 (CI nightly, HEAD 8c94775c): `antcv:nameLineAlign`/`headline_align`/`headlineAlign` markers intact in `antcv-docx-client.js`; `export-align-parity.test.mjs` GREEN (suite 1715/1715). CODE-COMPLETE — only remaining step is a signed-in export eyeball; **recommended to owner for CLOSED**._
 
@@ -324,7 +338,9 @@ _E1 sweep 2026-09-08 (CI nightly): all three legs confirmed in CURRENT code — 
 
 ## Row 24 — ANALYTICS-BUTTONS-SESSION-TIMEOUT-001
 
-_verified: 2026-09-18_
+_verified: 2026-09-28_
+
+_E1 re-verify 2026-09-28 (CI nightly, HEAD c9c60887): client 401-wipe scope guard `pwa/test/unit/auth-401-wipe-scope.test.mjs` present + GREEN (suite 1721/1721); server secret-pair fix recorded live-verified. Owner three-button click-through (live) is the only remainder — kept ACTIVE (owner gate)._
 
 _E1 re-verify 2026-09-18 (CI nightly, HEAD 8c94775c): client 401-wipe scope guard `auth-401-wipe-scope.test.mjs` present + GREEN (suite 1715/1715); server secret-pair fix recorded live-verified. Owner three-button click-through (live) is the only remainder — kept ACTIVE (owner gate)._
 
@@ -346,7 +362,9 @@ _E1 sweep 2026-09-08 (CI nightly): client 401-wipe scope guard (`auth-401-wipe-s
 
 ## Row 26 — TOOLS-SIDEBAR-COMPRESS-001
 
-_verified: 2026-09-18_
+_verified: 2026-09-28_
+
+_E1 re-verify 2026-09-28 (CI nightly, HEAD c9c60887): belt `antcv-sidebar-compact-001.js` loaded in index.html (1 ref), `sidebar_compact` block present in `pwa/gold-rules.json`, `pwa/test/unit/sidebar-compact.test.mjs` GREEN (suite 1721/1721). Owner visual verify of the gold Instruments/Lab strings + the separate SIDEBAR-PACKING token-order belt remain — kept ACTIVE (owner gate)._
 
 _E1 re-verify 2026-09-18 (CI nightly, HEAD 8c94775c): belt `antcv-sidebar-compact-001.js` loaded, `sidebar_compact` block in `gold-rules.json`, `sidebar-compact.test.mjs` GREEN (suite 1715/1715). Owner visual verify of the gold Instruments/Lab strings + the separate SIDEBAR-PACKING token-order belt remain — kept ACTIVE (owner gate)._
 
@@ -368,7 +386,9 @@ _E1 sweep 2026-09-08 (CI nightly): belt present in CURRENT code — `antcv-sideb
 
 ## Row 30 — LLM-IMAGE-ROUTING-001
 
-_verified: 2026-09-18_
+_verified: 2026-09-28_
+
+_E1 re-verify 2026-09-28 (CI nightly, HEAD c9c60887): `filterVisionBlind`/`VISION_BLIND` intact in BOTH `workers/proxy/src/multi-llm.js` + `workers/demo-proxy/src/multi-llm.js` (5 hits each); `pwa/test/unit/image-routing-ee.test.mjs` present + GREEN (suite 1721/1721). Only remainder is the optional adequacy-gate extension → CODE-COMPLETE, **recommended to owner for CLOSED**._
 
 _E1 re-verify 2026-09-18 (CI nightly, HEAD 8c94775c): `filterVisionBlind`/`VISION_BLIND` intact in BOTH proxy + demo-proxy `multi-llm.js`; PWA `ee()` ladder mistral-drop mirrored in both bundles (`l.filter((p) => p !== "mistral")` src + `l.filter(p=>"mistral"!==p)` minified); `image-routing-ee.test.mjs` GREEN (suite 1715/1715). Only remainder is the optional adequacy-gate extension → CODE-COMPLETE, **recommended to owner for CLOSED**._
 
@@ -390,7 +410,9 @@ _E1 sweep 2026-09-08 (CI nightly): all legs confirmed in CURRENT code — `filte
 
 ## Row 32 — CL-PLATFORM-SIGNALS-001
 
-_verified: 2026-09-18_
+_verified: 2026-09-28_
+
+_E1 re-verify 2026-09-28 (CI nightly, HEAD c9c60887): `__platformRule` in `app.src.js` (2 hits) / minified `__pr` in `app.js` both-bundle mirror intact; `pwa/test/unit/cl-platform-signals.test.mjs` present + GREEN (suite 1721/1721). CODE-COMPLETE, **recommended to owner for CLOSED**; remaining is a live gen tone-check on a hardware-platform JD (owner, non-code)._
 
 _E1 re-verify 2026-09-18 (CI nightly, HEAD 8c94775c): `__platformRule` (src) / minified `__pr` (app.js) both-bundle mirror intact; `cl-platform-signals.test.mjs` GREEN (suite 1715/1715). CODE-COMPLETE, **recommended to owner for CLOSED**; remaining is a live gen tone-check on a hardware-platform JD (owner, non-code)._
 
@@ -688,7 +710,9 @@ _verified: 2026-09-21_
 
 ## Row 39 — GEN-MODELROLE-001
 
-_verified: 2026-09-12_
+_verified: 2026-09-22_
+
+**2026-09-22 (CI nightly, verify-first — HEAD 95038553):** re-confirmed unchanged — `MODEL_ROLES` present in BOTH `workers/proxy/wrangler.toml:50` and `workers/demo-proxy/wrangler.toml:50` (`{"writer":"anthropic","supervisor":"mistral","coherence":"openai"}`); `roleHeadOrder` still in `multi-llm.js` (2 refs); `workers/proxy/test/model-roles.test.mjs` present; suite 1715/1715. Deploy-verify + role-split telemetry remain CI-unconfirmable (no `gh`/D1). Kept ACTIVE.
 
 **2026-09-12 (CI nightly, verify-first):** `MODEL_ROLES` still SET in BOTH `workers/proxy/wrangler.toml:50` and `workers/demo-proxy/wrangler.toml:50` — current live map is `{"writer":"anthropic","supervisor":"mistral","coherence":"openai"}` (coherence has moved `anthropic`→`openai` since the 2026-07-06 note; the deliberate change matches the `app.src.js:1384` "fit rationale is quality-sensitive… led with openai" decision). Both proxy sources still parse `env.MODEL_ROLES` (multi-llm.js `roleHeadOrder`, index.js; `workers/proxy/test/model-roles.test.mjs` present). Deploy-verify + role-split telemetry remain unconfirmable in CI (no `gh`/D1) — unchanged remaining ask. Kept ACTIVE.
 
@@ -708,7 +732,9 @@ _verified: 2026-09-12_
 
 ## Row 53 — CROSS-APP-EXPORT-CONTAMINATION-001
 
-_verified: 2026-09-12_
+_verified: 2026-09-22_
+
+**2026-09-22 (CI nightly, verify-first — HEAD 95038553):** re-confirmed — leg (a) still SHIPPED via MIRROR-LOAD-001 (marker in `pwa/app.src.js`, **2 occurrences** — correcting the earlier note that said "3×"); retired `antcv-export-app-scope-guard` is still NOT wired in `index.html` (0 refs, correctly dead on disk). Legs (b)–(f) unchanged/OPEN (CL lang leak, placeholders, diacritics, CV partial-lang residue, brand-fit) — all content/gen-quality, live-gen-gated. Kept ACTIVE for legs b–f.
 
 **2026-09-12 (CI nightly, verify-first — ADVANCE):** leg (a) (the P0 cross-app CV/filename/header content leak) is SHIPPED. First landed as sidecar `antcv-export-app-scope-guard.js` (1.51.639, commit e8e77577 — payload-boundary interceptor reconciling filename/header company to the authoritative active app, block-on-two-real-companies). It was then REWORKED into **MIRROR-LOAD-001** (1.51.680, commit 42a1d853): loading an app is now a byte-faithful mirror copy in preview AND print (marker present 3× in `pwa/app.src.js`), and the scope-guard sidecar was removed from `index.html` (the `.js` file survives on disk as a RETIRED dead file — do not re-wire it). So leg (a) is handled by MIRROR-LOAD-001, not a regression. **Legs (b)–(f) remain OPEN:** (b) CL English lead-ins untranslated to target lang, (c) unrendered `[Company/team]`/`[Action…]` placeholders, (d) Danish diacritics stripped in CL prose, (e) CV partial-lang residue (Results/skill-labels/PROFIL/interests/SPROG), (f) brand-fit-per-app leak. Kept ACTIVE for legs b–f.
 
@@ -728,7 +754,9 @@ _verified: 2026-09-12_
 
 ## Row 54 — GEN-JD-TAILOR-KERNEL-RECALL-001
 
-_verified: 2026-09-12_
+_verified: 2026-09-22_
+
+**2026-09-22 (CI nightly, verify-first — HEAD 95038553):** still NOT started — no `KERNEL-RECALL` markers anywhere in `pwa/`/`workers/`, no commits on the ID. Targeted gen still re-ranks the narrowed set without recalling JD-relevant items from the unsolicited kernel. Content-quality; needs a real gen to verify (owner/live-gated). Kept ACTIVE.
 
 **2026-09-12 (CI nightly, verify-first):** still NOT started — no `KERNEL-RECALL` markers in `pwa/`/`workers/`, no commits since 2026-07-08 touching the ID. Targeted gen still narrows/re-ranks the selected set without recalling JD-relevant items from the unsolicited kernel. Scope unchanged. Content-quality; needs a real gen to verify a fix (owner/live-gated). Kept ACTIVE.
 
@@ -748,7 +776,9 @@ _verified: 2026-09-12_
 
 ## Row 55 — TARGETED-OUTPUT-FURNITURE-001
 
-_verified: 2026-09-12_
+_verified: 2026-09-22_
+
+**2026-09-22 (CI nightly, verify-first — HEAD 95038553):** still NOT started — no `TARGETED-OUTPUT-FURNITURE` markers, no commits on the ID. All six furniture legs (a–f) remain hand-fixed only. Content/gen-quality; owner/live-gated. Kept ACTIVE.
 
 **2026-09-12 (CI nightly, verify-first):** still NOT started — no `TARGETED-OUTPUT-FURNITURE` markers, no commits on the ID. All six furniture legs (a CV header specialization-vs-application line, b fixed-label localization, c named-contact greeting, d employer brand-fit, e merged-role title order, f AI-notice localization) remain hand-fixed only. Scope unchanged. Content/gen-quality; owner/live-gated. Kept ACTIVE.
 
@@ -768,7 +798,9 @@ _verified: 2026-09-12_
 
 ## Row 56 — GEN-JD-RELEVANCE-TRIM-001
 
-_verified: 2026-09-12_
+_verified: 2026-09-22_
+
+**2026-09-22 (CI nightly, verify-first — HEAD 95038553):** still NOT started — no `RELEVANCE-TRIM` markers, no commits on the ID. Targeted CV still doesn't relevance-gate per-role bullets / hide irrelevant tools. Content-quality, sibling of row 54; owner/live-gated. Kept ACTIVE.
 
 **2026-09-12 (CI nightly, verify-first):** still NOT started — no `RELEVANCE-TRIM` markers, no commits on the ID. Targeted CV still doesn't relevance-gate per-role bullets / hide irrelevant tools. Scope unchanged. Content-quality, sibling of row 54; owner/live-gated. Kept ACTIVE.
 
@@ -788,7 +820,9 @@ _verified: 2026-09-12_
 
 ## Row 60
 
-_verified: 2026-09-12_
+_verified: 2026-09-22_
+
+**2026-09-22 (CI nightly, verify-first — HEAD 95038553):** re-confirmed — both control sidecars still on disk AND wired in `index.html` (`antcv-header-rule-control.js` leg a, `antcv-cl-slogan-control.js` legs c/d/e/f; 2 refs). Status unchanged: diagnosed (code-map done); leg (d) `clClosingHidden`/`clSignNameHidden` a genuine gap. All six legs need live-DOM capture + patch and, being auto-deploy-to-prod app changes, a live repro before ship — not doable in CI. Kept ACTIVE.
 
 **2026-09-12 (CI nightly, verify-first):** the two control sidecars are still on disk — `pwa/antcv-header-rule-control.js` (leg a) and `pwa/antcv-cl-slogan-control.js` (legs c/d/e/f). Status unchanged: diagnosed (code-map done, the CL slogan/signature/sign-off render the clSlogan*/signature* keys, not section items, so generic panel controls write keys the render never reads); leg (d) clClosingHidden/clSignNameHidden confirmed a genuine gap. All six legs still need live-DOM capture + patch and, because these are auto-deploy-to-prod app changes, a live repro before ship — not doable in CI. Kept ACTIVE.
 
@@ -802,7 +836,9 @@ _verified: 2026-09-12_
 
 ## Row 61 — LINE-DISTRIBUTION-GUIDELINES-001
 
-_verified: 2026-09-12_
+_verified: 2026-09-22_
+
+**2026-09-22 (CI nightly, verify-first — HEAD 95038553):** re-confirmed — guidelines partly BAKED under LINE-DISTRIBUTION-001: `antcv-bullet-targets.js goldDensity()` (4 refs) + `window.__antcvRowFit` (8 refs in app.src.js) both present. Remaining guideline points (clean-cut floor pt 10, result-line one-line budget pt 5, multi-language render-measure) still feed the generator orphan-measure work (rows 27/49/59A). Kept ACTIVE as the standing guidelines anchor.
 
 **2026-09-12 (CI nightly, verify-first — ADVANCE):** the guidelines are now partly BAKED INTO CODE under ticket `LINE-DISTRIBUTION-001` (the implementation of these guidelines; not a separate register row): (1) generation-side fill-band unified to `pwa/gold-rules.json` density via `antcv-bullet-targets.js goldDensity()` — SHIPPED 1.51.2921 (commit 210fdce3); (2) measure-based BIDIRECTIONAL per-row Fit-it — `window.__antcvRowFit`, canvas greedy-wrap on live geometry, trim runts + enrich shorts — SHIPPED 1.51.2980 (commit dfa3fa55). These realize guideline points 2/3/4/7 (bidirectional, last-line fill ratio, layout-before-fill re-fit, generator-owned). Remaining guideline points (clean-cut floor pt 10, result-line one-line budget pt 5, multi-language render-measure) still feed the ongoing generator orphan-measure work (rows 27/49/59A). Kept ACTIVE as the standing guidelines anchor.
 
@@ -819,7 +855,9 @@ _verified: 2026-09-12_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-09-12_
+_verified: 2026-09-22_
+
+**2026-09-22 (CI nightly, verify-first — HEAD 95038553):** unchanged — still a set of universal polish rules applied by hand, NOT baked into the generator, except the line-fill/orphan points (4/14/19/22/28/29) which overlap row 61 and are partly served by LINE-DISTRIBUTION-001 (`antcv-bullet-targets.js goldDensity()` 4 refs + `window.__antcvRowFit` 8 refs confirmed present). The content/furniture rules remain generator-baseline TODOs. Kept ACTIVE.
 
 **2026-09-12 (CI nightly, verify-first):** still a set of universal polish rules applied by hand, NOT baked into the generator — except the line-fill/orphan points (4, 14, 19, 22, 28, 29) which overlap row 61 and are now partly served by LINE-DISTRIBUTION-001 (gen fill-band 1.51.2921 + Fit-it 1.51.2980). The content/furniture rules (one-sentence bullets, dedup, generic-descriptor, banned em-dash, bold-red scope, interest-joke reveal, AI-notice-at-sidebar-bottom, sidebar tint/width) remain generator-baseline TODOs. Scope unchanged. Kept ACTIVE.
 
@@ -836,7 +874,9 @@ _verified: 2026-09-12_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-09-12_
+_verified: 2026-09-22_
+
+**2026-09-22 (CI nightly, verify-first — HEAD 95038553):** unchanged — leg (A) generator pagination/orphan ADVANCED via LINE-DISTRIBUTION-001 (goldDensity + `__antcvRowFit` both present, row 61), still open for clean-cut floor + mid-unit-cut/blank-lower-sidebar (rows 27/49); leg (B) docx integrity FIXED in hand-edit tooling; leg (C) renderer = desktop Word-COM only (not CI). Kept ACTIVE.
 
 **2026-09-12 (CI nightly, verify-first):** leg (A) generator pagination + orphan/enhance is ADVANCED — the measure-based generator fill-band + bidirectional Fit-it shipped under LINE-DISTRIBUTION-001 (1.51.2921/2980, see row 61) is exactly the generator-owned orphan-measure home this leg called for; still open for the clean-cut floor + mid-unit-cut / blank-lower-sidebar cases (rows 27/49). Leg (B) docx integrity = FIXED in the hand-edit tooling (unchanged). Leg (C) renderer = Word-COM available on desktop only (not CI). Scope unchanged; kept ACTIVE.
 
@@ -853,7 +893,9 @@ _verified: 2026-09-12_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-09-12_
+_verified: 2026-09-22_
+
+**2026-09-22 (CI nightly, verify-first — HEAD 95038553):** re-confirmed — the mount-hydrate unsol-guard is present at `pwa/app.src.js:18763` (`if (t.rationale && !(t.meta && t.meta.company && !window.__antcvUnsol(t.meta.company))) { … u.set("rationale", t.rationale); … bo(t.rationale); }`); `__antcvUnsol` referenced 37× across the bundle. Owner live-verify still owed (saved-app targeted→targeted switch needs the relay — no headless repro in CI). Kept ACTIVE.
 
 **2026-09-12 (CI nightly, verify-first):** shipped 1.51.196 (rationale overwrite on load) still present in `pwa/app.src.js`. NOTE for the desktop live-verify: the active-application mount-hydrate at `app.src.js:18763` now reads `if (t.rationale && !(t.meta && t.meta.company && !window.__antcvUnsol(t.meta.company)))` — a later unsolicited-guard refinement layered over the 1.51.196 "overwrite value-or-null" note. Confirm on a real targeted→targeted app switch that stale rationale is still cleared (the unsol-guard skips the set only when loading into an unsolicited context). Owner live-verify still owed (saved-app switch needs the relay — no headless repro in CI). Kept ACTIVE.
 
@@ -870,7 +912,9 @@ _verified: 2026-09-12_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-09-12_
+_verified: 2026-09-22_
+
+**2026-09-22 (CI nightly, verify-first — HEAD 95038553):** re-confirmed — `pwa/antcv-analysis-report-pdf-360.js` still carries the `gapStateKey`/`readGapState` helpers (content-based scan, newest-ts wins; 6 refs) and `pwa/test/diag-new2-gap-detail-export.mjs` present + green. Owner live-verify still owed (fill a gap detail live → confirm it exports). Kept ACTIVE.
 
 **2026-09-12 (CI nightly, verify-first):** shipped 1.51.196 + hardened 1.51.198 both intact — `pwa/antcv-analysis-report-pdf-360.js` still carries the `gapStateKey`/`readGapState` helpers (content-based scan, newest-ts wins; 6 refs) and the guard `pwa/test/diag-new2-gap-detail-export.mjs` is present. Suite green. Owner live-verify still owed (fill a gap detail live → confirm it exports). Kept ACTIVE.
 
@@ -887,7 +931,9 @@ _verified: 2026-09-12_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-09-12_
+_verified: 2026-09-22_
+
+**2026-09-22 (CI nightly, verify-first — HEAD 95038553):** re-confirmed — MOB-008 fix intact: `pwa/antcv-mobile-controls.css` still carries the `overflow-y:auto; -webkit-overflow-scrolling:touch !important` panel rules (8 refs) and `pwa/test/diag-mob008-panel-overflow.mjs` present + green. MOB-009 folded into row 59A; remaining mobile findings (001/002/003/004/005/006/007, MOB-GAP-OPEN) still open — headless-repro-blocked, owner live-gated. Kept ACTIVE.
 
 **2026-09-12 (CI nightly, verify-first):** MOB-008 fix intact — `pwa/antcv-mobile-controls.css` still carries the `overflow-y:auto; -webkit-overflow-scrolling:touch !important` panel rules and the guard `pwa/test/diag-mob008-panel-overflow.mjs` is present. MOB-009 remains folded into row 59A (generator pagination). Remaining mobile findings (MOB-001/002/003/004/005/006/007, MOB-GAP-OPEN) still open — headless-repro-blocked, owner live-gated. Scope unchanged; kept ACTIVE.
 
@@ -904,7 +950,7 @@ _verified: 2026-09-12_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-09-13_ — CI E1 sweep: verify-first against HEAD. Header-banner generator rules SHIPPED remain intact (`bodyTopBorder` + ✉ icon-separated contact confirmed in `workers/docx-worker/src/index.js`, 5 markers). REMAINING = the render-measure loop vs KOMBIT gold + the two Track-C follow-ups (CL `meta.subtitle` double-render; page-2 column-balance → row 61) — all need a real docx-worker render CI cannot do. Kept ACTIVE.
+_verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited markers intact, remaining work unchanged & CI-ungated): verify-first against HEAD. Header-banner generator rules SHIPPED remain intact (`bodyTopBorder` + ✉ icon-separated contact confirmed in `workers/docx-worker/src/index.js`, 5 markers). REMAINING = the render-measure loop vs KOMBIT gold + the two Track-C follow-ups (CL `meta.subtitle` double-render; page-2 column-balance → row 61) — all need a real docx-worker render CI cannot do. Kept ACTIVE.
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -919,7 +965,7 @@ _verified: 2026-09-13_ — CI E1 sweep: verify-first against HEAD. Header-banner
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-09-13_ — CI E1 sweep: verify-first against HEAD. (A) estimator left as-is (autofit finding) — DONE. (B) JD-swap stale-rationale clear SHIPPED (1.51.216) confirmed: `JD-SWAP-STALE-RATIONALE`/`CL-GHOST-COMPANY` markers present in `app.src.js` (7), covered by `pwa/test/unit/cl-ghost-hunt.test.mjs` (suite green). (C) BACKGROUND-STALL still OPEN — the SSE-stream throttle on a backgrounded tab is the real mobile first-gen blocker; needs a live foreground gen CI cannot drive. Kept ACTIVE for C + owner's one-gen validation of B.
+_verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited markers intact, remaining work unchanged & CI-ungated): verify-first against HEAD. (A) estimator left as-is (autofit finding) — DONE. (B) JD-swap stale-rationale clear SHIPPED (1.51.216) confirmed: `JD-SWAP-STALE-RATIONALE`/`CL-GHOST-COMPANY` markers present in `app.src.js` (7), covered by `pwa/test/unit/cl-ghost-hunt.test.mjs` (suite green). (C) BACKGROUND-STALL still OPEN — the SSE-stream throttle on a backgrounded tab is the real mobile first-gen blocker; needs a live foreground gen CI cannot drive. Kept ACTIVE for C + owner's one-gen validation of B.
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -934,7 +980,7 @@ _verified: 2026-09-13_ — CI E1 sweep: verify-first against HEAD. (A) estimator
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-09-13_ — CI E1 sweep: verify-first. The 2026-07-08 CV REVIEW-4 line-fill pass delivered (0 runts, 2 pages, even columns); the word-method + 2-full-line-fill rules are captured in checklist §2 + memory. REMAINING residual = page-2 lower dead-space, which is the float-spine job tracked to row 61 and owed to a real render CI cannot do. Kept ACTIVE as the residual pointer.
+_verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited markers intact, remaining work unchanged & CI-ungated): verify-first. The 2026-07-08 CV REVIEW-4 line-fill pass delivered (0 runts, 2 pages, even columns); the word-method + 2-full-line-fill rules are captured in checklist §2 + memory. REMAINING residual = page-2 lower dead-space, which is the float-spine job tracked to row 61 and owed to a real render CI cannot do. Kept ACTIVE as the residual pointer.
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -949,7 +995,7 @@ _verified: 2026-09-13_ — CI E1 sweep: verify-first. The 2026-07-08 CV REVIEW-4
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-09-13_ — CI E1 sweep: verify-first against HEAD. Worker fix SHIPPED (1.14.136) confirmed: `__mt = bodyLevel ? 822 : 806` in `workers/docx-worker/src/index.js` (the page-anchored notice lift to pin at the page bottom) intact; HEADING-TABLE-GAP-001 content rules captured in checklist. DEFERRED page-2+ sidebar dead-space needs the FLOAT-SPINE (row 61) + a real CloudConvert render CI cannot do. Kept ACTIVE.
+_verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited markers intact, remaining work unchanged & CI-ungated): verify-first against HEAD. Worker fix SHIPPED (1.14.136) confirmed: `__mt = bodyLevel ? 822 : 806` in `workers/docx-worker/src/index.js` (the page-anchored notice lift to pin at the page bottom) intact; HEADING-TABLE-GAP-001 content rules captured in checklist. DEFERRED page-2+ sidebar dead-space needs the FLOAT-SPINE (row 61) + a real CloudConvert render CI cannot do. Kept ACTIVE.
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -964,7 +1010,7 @@ _verified: 2026-09-13_ — CI E1 sweep: verify-first against HEAD. Worker fix SH
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-09-13_ — CI E1 sweep: verify-first against HEAD. Worker fix SHIPPED (1.14.135) confirmed: `ai_wm_side` + `mainTint` tokens present in `workers/docx-worker/src/index.js` (3 markers). CV content rules (9 issues) delivered + captured in checklist §1/§2. RESIDUAL = page-2 sidebar bottom slack (inline notice sits after content, not pinned — acceptable; float-spine/row 61 would pin it). Kept ACTIVE as residual pointer.
+_verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited markers intact, remaining work unchanged & CI-ungated): verify-first against HEAD. Worker fix SHIPPED (1.14.135) confirmed: `ai_wm_side` + `mainTint` tokens present in `workers/docx-worker/src/index.js` (3 markers). CV content rules (9 issues) delivered + captured in checklist §1/§2. RESIDUAL = page-2 sidebar bottom slack (inline notice sits after content, not pinned — acceptable; float-spine/row 61 would pin it). Kept ACTIVE as residual pointer.
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -979,7 +1025,7 @@ _verified: 2026-09-13_ — CI E1 sweep: verify-first against HEAD. Worker fix SH
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-09-13_ — CI E1 sweep: verify-first. Delivered CV REBUILD v2 (2 pages, all mandatory sections, gold header) — DONE 2026-07-08; slogan (both-placement, one-visible) + softened-closure rules captured. Of the surfaced worker-feature gaps: (i) main light-brand-TINT is now SHIPPED (row 71 `mainTint`); (ii) body active-hyperlinks tie to row 66 LINKEDIN-CLICK-001; (iii) page-2 sidebar slack → row 61. Kept ACTIVE as pointer to those legs.
+_verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited markers intact, remaining work unchanged & CI-ungated): verify-first. Delivered CV REBUILD v2 (2 pages, all mandatory sections, gold header) — DONE 2026-07-08; slogan (both-placement, one-visible) + softened-closure rules captured. Of the surfaced worker-feature gaps: (i) main light-brand-TINT is now SHIPPED (row 71 `mainTint`); (ii) body active-hyperlinks tie to row 66 LINKEDIN-CLICK-001; (iii) page-2 sidebar slack → row 61. Kept ACTIVE as pointer to those legs.
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -994,7 +1040,7 @@ _verified: 2026-09-13_ — CI E1 sweep: verify-first. Delivered CV REBUILD v2 (2
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-09-13_ — CI E1 sweep: verify-first against HEAD. Systemic em-dash→hyphen SHIPPED (worker 1.14.134) re-confirmed: the `__AINOTICE` footer map in `workers/docx-worker/src/index.js` uses a HYPHEN in all 7 languages (da/es/zh/he/ar/am + the EN default "AI-assisted - author retains responsibility…") — no em-dash in the AI-notice/citation/doc-title path. The three standing CL rules (slogan / centered-signature-brand-ink / mixed-closure) are captured in checklist §3 + memory. Kept ACTIVE as the standing-rule anchor.
+_verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited markers intact, remaining work unchanged & CI-ungated): verify-first against HEAD. Systemic em-dash→hyphen SHIPPED (worker 1.14.134) re-confirmed: the `__AINOTICE` footer map in `workers/docx-worker/src/index.js` uses a HYPHEN in all 7 languages (da/es/zh/he/ar/am + the EN default "AI-assisted - author retains responsibility…") — no em-dash in the AI-notice/citation/doc-title path. The three standing CL rules (slogan / centered-signature-brand-ink / mixed-closure) are captured in checklist §3 + memory. Kept ACTIVE as the standing-rule anchor.
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -1009,7 +1055,7 @@ _verified: 2026-09-13_ — CI E1 sweep: verify-first against HEAD. Systemic em-d
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-09-13_ — CI E1 sweep: verify-first against HEAD. (B) editable CL slogan SHIPPED — `antcv-cl-slogan-control.js` still loaded by `index.html` (1 ref). (A) convergence verify (CV-CORECOMP-BLANK / CL-BLANK / CV-ACCESS-DROP, 1.51.29, 22 vm tests) still needs a signed-in 2nd-generation regen; (C) preview-dance/perf + (D) regen-gated content + (E) unsolicited-gen quality all need a live desktop browser / real LLM CI lacks. Kept ACTIVE (owner/desktop/regen-gated).
+_verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited markers intact, remaining work unchanged & CI-ungated): verify-first against HEAD. (B) editable CL slogan SHIPPED — `antcv-cl-slogan-control.js` still loaded by `index.html` (1 ref). (A) convergence verify (CV-CORECOMP-BLANK / CL-BLANK / CV-ACCESS-DROP, 1.51.29, 22 vm tests) still needs a signed-in 2nd-generation regen; (C) preview-dance/perf + (D) regen-gated content + (E) unsolicited-gen quality all need a live desktop browser / real LLM CI lacks. Kept ACTIVE (owner/desktop/regen-gated).
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -1024,7 +1070,7 @@ _verified: 2026-09-13_ — CI E1 sweep: verify-first against HEAD. (B) editable 
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-09-13_ — CI E1 sweep: verify-first. TRACKMAN-DELIVERABLE-REVIEW batch of GENERATOR-BASELINE gaps (CV items a–i, CL items j–o) — root cause was a lossy-export payload bypassing the app belts; prevention doc `DELIVERABLE_PREFLIGHT_CHECKLIST.md` in place. Each item is a generator-baseline requirement that ties rows 57/59/61/54 and can only be closed by a re-deliver from the master kernel through the app belts + a real render — CI cannot regen. Kept ACTIVE (regen/deliverable-gated).
+_verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited markers intact, remaining work unchanged & CI-ungated): verify-first. TRACKMAN-DELIVERABLE-REVIEW batch of GENERATOR-BASELINE gaps (CV items a–i, CL items j–o) — root cause was a lossy-export payload bypassing the app belts; prevention doc `DELIVERABLE_PREFLIGHT_CHECKLIST.md` in place. Each item is a generator-baseline requirement that ties rows 57/59/61/54 and can only be closed by a re-deliver from the master kernel through the app belts + a real render — CI cannot regen. Kept ACTIVE (regen/deliverable-gated).
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -1039,7 +1085,7 @@ _verified: 2026-09-13_ — CI E1 sweep: verify-first. TRACKMAN-DELIVERABLE-REVIE
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-09-13_ — CI E1 sweep: verify-first against HEAD. (E) CROSS-DEVICE-GEN-LEAK-GUARD SHIPPED (1.51.201) re-confirmed: `CROSS-DEVICE-GEN-LEAK` markers in `app.src.js` (4) + the `__fahA`/`__fahB` app.js mirror (2) present, `pwa/test/diag-cross-device-gen-leak-guard.mjs` on disk (suite green). (A) LANG-SWITCH-MOBILE + (B) analysis-export-unsolicited-gate + (C) market-fit/salary JD wiring + (D) panel-upload OCR all need live-mobile / live-repro CI cannot do. Kept ACTIVE for A–D.
+_verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited markers intact, remaining work unchanged & CI-ungated): verify-first against HEAD. (E) CROSS-DEVICE-GEN-LEAK-GUARD SHIPPED (1.51.201) re-confirmed: `CROSS-DEVICE-GEN-LEAK` markers in `app.src.js` (4) + the `__fahA`/`__fahB` app.js mirror (2) present, `pwa/test/diag-cross-device-gen-leak-guard.mjs` on disk (suite green). (A) LANG-SWITCH-MOBILE + (B) analysis-export-unsolicited-gate + (C) market-fit/salary JD wiring + (D) panel-upload OCR all need live-mobile / live-repro CI cannot do. Kept ACTIVE for A–D.
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -1054,7 +1100,7 @@ _verified: 2026-09-13_ — CI E1 sweep: verify-first against HEAD. (E) CROSS-DEV
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-09-13_ — CI E1 sweep: verify-first against HEAD. (A) brandfit WIP PRESERVED re-confirmed: `origin/brandfit-per-app-scope` still exists at `fc2477c` (durable backup survives worktree prune) — NOT merged (behind main, needs rebase+review), live D1 `ALTER TABLE` NOT run (owner fresh-confirm required). (B) content-gen missing fields [regen-gated], (C) coordinator sidebar-inflate watermark, (D) PackagePicker→Layout merge, (E) cluster-demand worker pipeline, (F) cloud/mobile live-verify backlog — all owner/desktop/regen-gated. Kept ACTIVE.
+_verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited markers intact, remaining work unchanged & CI-ungated): verify-first against HEAD. (A) brandfit WIP PRESERVED re-confirmed: `origin/brandfit-per-app-scope` still exists at `fc2477c` (durable backup survives worktree prune) — NOT merged (behind main, needs rebase+review), live D1 `ALTER TABLE` NOT run (owner fresh-confirm required). (B) content-gen missing fields [regen-gated], (C) coordinator sidebar-inflate watermark, (D) PackagePicker→Layout merge, (E) cluster-demand worker pipeline, (F) cloud/mobile live-verify backlog — all owner/desktop/regen-gated. Kept ACTIVE.
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -1066,7 +1112,7 @@ _verified: 2026-09-13_ — CI E1 sweep: verify-first against HEAD. (A) brandfit 
 
 ## Row 75 — JOBTRACKER-AUTOFILL-ADDFLOW-VERIFY-001
 
-_verified: 2026-09-14_
+_verified: 2026-09-24_ — CI E1 re-verify against HEAD 88f89001 (cited markers intact, remaining work unchanged & CI-ungated): the deterministic-tier + async-enrich autofill flow is present in `pwa/antcv-react-islands.js` (AUTOFILL-TOP5/tier/enrich/refine, 7 refs) and the jobtracker unit set (`jobtracker-top5-*`, `jobtracker-open-jd-routing`, etc.) is green in the suite (1715/1715). REMAINING = one real URL/PDF add-test end-to-end (reject after) with the owner or a throwaway account — CI cannot drive a live LLM add without writing a junk row to the owner's live tracker. Kept ACTIVE, owner-gated.
 
 **OPEN-queue row (verbatim):**
 
@@ -1078,7 +1124,7 @@ _verified: 2026-09-14_
 
 ## Row 77 — JOBTRACKER-TOP5-PERIODIC-RESCORE-001
 
-_verified: 2026-09-14_
+_verified: 2026-09-24_ — CI E1 re-verify against HEAD 88f89001: the on-add/on-change fit-ranked Top-5 re-rank is present and covered by `pwa/test/unit/jobtracker-top5-rescore.test.mjs` (suite green). The PERIODIC recompute (drift Top-5 with cluster-demand refreshes, not just on add) is deliberately NOT built — it is an OWNER-DECISION gate, not code owed. Kept ACTIVE awaiting owner confirm.
 
 **OPEN-queue row (verbatim):**
 
@@ -1090,7 +1136,7 @@ _verified: 2026-09-14_
 
 ## Row 81 — PHOTO-FUSE-OWNER-VERIFY-001
 
-_verified: 2026-09-14_
+_verified: 2026-09-24_ — CI E1 re-verify against HEAD 88f89001 (cited markers intact): the 1.51.390-393 photo-panel rework is present — PHOTO-BTN-FUSE-001 + the single "＋ Add photos…" upload control in `pwa/antcv-photo-library.js` (4 refs) and the PW-CJLR-PHOTO-LEAK guard in `pwa/antcv-profile-workstyle-cjlr-238.js` + `pwa/test/diag-pw-cjlr-photo-leak.mjs`; suite green. REMAINING = one on-device visual pass after a hard refresh (legs a–e of the row) — needs a signed-in browser CI lacks. Kept ACTIVE, owner-gated visual check.
 
 **OPEN-queue row (verbatim):**
 
@@ -1102,7 +1148,7 @@ _verified: 2026-09-14_
 
 ## Row 83 — JD-REMOVE-OWNER-VERIFY-001
 
-_verified: 2026-09-14_
+_verified: 2026-09-24_ — CI E1 re-verify against HEAD 88f89001 (cited markers intact): JD-REMOVE-STICKY-001 (1.51.395) present — JD-REMOVE-STICKY/tombstone markers in `pwa/app.src.js` (6 refs) + `pwa/test/unit/jd-remove-tombstone.test.mjs` green in the suite. REMAINING = one live 4-step pass (remove→refresh stays removed / reopen re-stages the tombstone / read-from-cloud returns JD / a different JD seeds normally) — needs the live app + relay CI cannot drive. Kept ACTIVE, owner live-verify owed.
 
 **OPEN-queue row (verbatim):**
 
@@ -1114,7 +1160,7 @@ _verified: 2026-09-14_
 
 ## Row 88
 
-_verified: 2026-09-14_
+_verified: 2026-09-24_ — CI E1 re-verify against HEAD 88f89001 (round-3 ship intact, owner-deferred legs unchanged): the round-3 worker/gen markers are present — docx-worker `VERSION = "1.14.174-appline-edit"` (past the 1.14.154 of the ship), ROLE-SPLIT-CONT-001 in `workers/docx-worker/src/index.js` (~26918), and `fit_page_flow` wired in both `scripts/job-tracker/gen-runner.py` and `scripts/job-tracker/density_fit.py`. OWNER-DEFERRED / OPEN (all owner-gated / regen / real-render): (a) 19-app rollout, (b) fit-page-flow y-alignment (backlog #49), (c) table-geometry 6630→7689 (backlog #1), (d) client-half bullet_pages forwarding (backlog #2), (e) orphan misdetection + density grow, (f) rows 54/56/59A/62/22. Kept ACTIVE.
 
 **OPEN-queue row (verbatim):**
 
@@ -1126,7 +1172,7 @@ _verified: 2026-09-14_
 
 ## Row 87 — OWNER-ROUND-2-RESIDUE-001
 
-_verified: 2026-09-14_
+_verified: 2026-09-24_ — CI E1 re-verify against HEAD 88f89001 (all 5 legs remain diagnosed-not-fixed, gates unchanged): (a) CORE-COMP 3-4 ROWS — grounded per-app table regen, owner-gated, no fabrication; (b) BRAND COLORS — `origin/brandfit-per-app-scope` branch still at `fc2477c`, NOT merged (git ls-remote confirmed); (c) SIGNATURE — needs an actual signature upload (signatureB64 empty); (d) ROLE-SPLIT "(cont.)" — worker ROLE-SPLIT-CONT-001 present (docx-worker index.js ~26918) but the LibreOffice natural-flow cont. header still needs a deploy + CloudConvert test; (e) RUNT LINES — density frontier. Each needs live/regen/deploy CI lacks. Kept ACTIVE.
 
 **OPEN-queue row (verbatim):**
 
@@ -1138,7 +1184,7 @@ _verified: 2026-09-14_
 
 ## Row 86 — GOLD-SESSION-FOLLOWUPS-001
 
-_verified: 2026-09-14_
+_verified: 2026-09-24_ — CI E1 re-verify against HEAD 88f89001: leg (f) ROW-82 UNBLOCKED confirmed — the role-canon export audit is wired in `scripts/job-tracker/gold_audit.py` (`role_canon`, 3 refs). Remaining legs are gated: (a) PUBS-AUTHORS-FIRST cosmetic (deterministic sub-rule or hand-edit), (b) RESULTS-NEEDS-TRANSLATION app 792 (translated swaps), (c) PROXY-GOLD-RULES-FETCH (fetch served /gold-rules.json), (d) CORE-COMP-FLOOR backfill (per-app content regen, owner call), (e) STALE-LOCKED-PDFS (owner deletes at leisure). Content/regen/owner-gated — CI cannot regen. Kept ACTIVE.
 
 **OPEN-queue row (verbatim):**
 
@@ -1150,7 +1196,9 @@ _verified: 2026-09-14_
 
 ## Row 89 — MODEL-TABLE-FRESHNESS-001
 
-_verified: 2026-09-15_
+_verified: 2026-09-25_
+
+_CI nightly 2026-09-25 (E1 sweep, HEAD `ab2a43c7`): the deployed rate corrections still hold in source across all THREE mirrors — `workers/access-relay/src/model-rates.js` carries `claude-sonnet-5 [2,10]`, `gpt-5.5 [5,30]`, `gpt-6-astra [10,50]`, `gemini-3.8-flash [0.75,3.75]`, longest-key ordering intact; `gpt-5.5` also present in both `demo-enforcement.js` mirrors; freshness + mirror tests green in the 1715/1715 suite. Only remaining: the owner-gated D1 `llm_provider_costs` INSERTs (sonnet-5 [2,10] + gpt-5.5 [5,30]; SQL in the 09-06 report § B) — not fakeable in CI._
 
 **OPEN-queue row (verbatim):**
 
@@ -1263,9 +1311,10 @@ _verified: 2026-07-21_
 
 ## Row 31 — META-STATE-CORRUPTION-002
 
-_verified: 2026-09-15_
+_verified: 2026-09-25_
 
-_CI nightly 2026-09-15 (E1 sweep): both shipped guards confirmed present on `main` — `META-DRIFT-GUARD-002` ×2 (both bundles) and `META-DOWNGRADE-GUARD-003` ×2; `meta-drift-guard-both-blocks.test.mjs` + `meta-downgrade-guard-autosave.test.mjs` green in the 1715/1715 suite. Remaining leg (repair an already-poisoned server row from its own display name) is owner-gated — needs a live poisoned row, not fakeable in CI._
+_CI nightly 2026-09-25 (E1 sweep, HEAD `ab2a43c7`): re-confirmed — `META-DRIFT-GUARD-002` (2× in `app.src.js`, present in the `app.js` mirror) and `META-DOWNGRADE-GUARD-003` (same) both live; `meta-drift-guard-both-blocks.test.mjs` + `meta-downgrade-guard-autosave.test.mjs` green in the 1715/1715 suite. Remaining leg (repair an already-poisoned server row from its own display name) stays owner-gated — needs a live poisoned row, not fakeable in CI._
+_CI nightly 2026-09-15 (E1 sweep): both shipped guards confirmed present on `main`; tests green._
 
 **OPEN-queue row (verbatim):**
 
@@ -1283,9 +1332,10 @@ _CI nightly 2026-09-15 (E1 sweep): both shipped guards confirmed present on `mai
 
 ## Row 98 — BYOK-COST-AUDIT-001
 
-_verified: 2026-09-15_
+_verified: 2026-09-25_
 
-_CI nightly 2026-09-15 (E1 sweep): `total_cost_usd_est` still present in BOTH `workers/proxy/src/byok-qualify.js` and the `workers/demo-proxy` mirror; the two src copies are byte-identical (`diff -q` clean); `byok-cost-audit.test.mjs` present in both worker test dirs and green in the suite. Unreverted, no regression._
+_CI nightly 2026-09-25 (E1 sweep, HEAD `ab2a43c7`): `total_cost_usd_est` present ×7 in BOTH `workers/proxy/src/byok-qualify.js` and the `workers/demo-proxy` mirror; the two src copies remain byte-identical (`diff -q` clean); `byok-cost-audit.test.mjs` green in the 1715/1715 suite. Unreverted, no regression._
+_CI nightly 2026-09-15 (E1 sweep): same, confirmed present + byte-identical._
 
 **OPEN-queue row (verbatim):**
 
@@ -1297,9 +1347,10 @@ _CI nightly 2026-09-15 (E1 sweep): `total_cost_usd_est` still present in BOTH `w
 
 ## Row 99 — REG-GROUP-FOLD-NAMED-001
 
-_verified: 2026-09-15_
+_verified: 2026-09-25_
 
-_CI nightly 2026-09-15 (E1 sweep): `NAMED_FOLD` still present in `pwa/antcv-dup-group-merge.js`; `dup-group-merge.test.mjs` green in the suite. Code leg unreverted. The owner "sidebar dancing" investigation-thread resolution remains unconfirmed — owner-check item, not a code regression (no CI capability to reproduce the live symptom)._
+_CI nightly 2026-09-25 (E1 sweep, HEAD `ab2a43c7`): `NAMED_FOLD` present ×2 in `pwa/antcv-dup-group-merge.js`; `dup-group-merge.test.mjs` green in the 1715/1715 suite. Code leg unreverted. The owner "sidebar dancing" investigation-thread resolution remains unconfirmed — owner-check item, not a code regression (no CI capability to reproduce the live symptom)._
+_CI nightly 2026-09-15 (E1 sweep): `NAMED_FOLD` present; test green._
 
 **OPEN-queue row (verbatim):**
 
@@ -1311,9 +1362,10 @@ _CI nightly 2026-09-15 (E1 sweep): `NAMED_FOLD` still present in `pwa/antcv-dup-
 
 ## Row 100 — GRAB-ZONE-DISMISS-THRESHOLD-001
 
-_verified: 2026-09-15_
+_verified: 2026-09-25_
 
-_CI nightly 2026-09-15 (E1 sweep): both legs test-locked and green — `grab-zone-dismiss-threshold.test.mjs` asserts the old 28px threshold no longer dismisses and a ~40-60px scroll-start graze does not dismiss (80px threshold + scroll-forward behaviour). `antcv-panel-grab-zone` present in both `app.src.js` and the `app.js` mirror; the `GRAB-ZONE-SCROLL-FORWARD-001` comment is expected to be stripped from minified `app.js` (behaviour, not comment, is locked). Live-device confirm still owner-owed._
+_CI nightly 2026-09-25 (E1 sweep, HEAD `ab2a43c7`): both legs still test-locked and green — `grab-zone-dismiss-threshold.test.mjs` in the 1715/1715 suite. `antcv-panel-grab-zone` present in both `app.src.js` and the `app.js` mirror; `GRAB-ZONE-SCROLL-FORWARD-001` present in `app.src.js` (behaviour, not the comment, is locked in the minified `app.js`). Live-device confirm still owner-owed._
+_CI nightly 2026-09-15 (E1 sweep): both legs test-locked and green; grab-zone present in both bundles._
 
 **OPEN-queue row (verbatim):**
 
@@ -1325,9 +1377,10 @@ _CI nightly 2026-09-15 (E1 sweep): both legs test-locked and green — `grab-zon
 
 ## Row 101 — ZOOM-FLOOR-001
 
-_verified: 2026-09-15_
+_verified: 2026-09-25_
 
-_CI nightly 2026-09-15 (E1 sweep): `0.1` floor present in both `app.src.js` and the `app.js` mirror (button + pinch); `zoom-floor.test.mjs` green (6 assertions). Zoom-in ceiling unchanged. Unreverted._
+_CI nightly 2026-09-25 (E1 sweep, HEAD `ab2a43c7`): `0.1` floor still present in both `app.src.js` and the `app.js` mirror (button + pinch); `zoom-floor.test.mjs` green (6 assertions) in the 1715/1715 suite. Zoom-in ceiling unchanged. Unreverted._
+_CI nightly 2026-09-15 (E1 sweep): `0.1` floor present in both bundles; test green._
 
 **OPEN-queue row (verbatim):**
 
@@ -1339,9 +1392,10 @@ _CI nightly 2026-09-15 (E1 sweep): `0.1` floor present in both `app.src.js` and 
 
 ## Row 19 — JD-SCOPE-OCC2-GUARD-001
 
-_verified: 2026-09-15_
+_verified: 2026-09-25_
 
-_CI nightly 2026-09-15 (E1 sweep): `shouldAdoptCloudPointer` present 4× across the pwa sidecars; `jd-scope-isolation.test.mjs` green in the suite (occ-2 guard behaviour string-locked). Remaining two-real-device leg is owner-gated (physical devices, not fakeable headlessly)._
+_CI nightly 2026-09-25 (E1 sweep, HEAD `ab2a43c7`): `shouldAdoptCloudPointer` present across the pwa sidecars (`antcv-jd-scope.js` ×2 + `app.src.js` ×1; the `app.js` mirror carries the minified equivalent); `jd-scope-isolation.test.mjs` green in the 1715/1715 suite (occ-2 guard behaviour string-locked). Remaining two-real-device leg is owner-gated (physical devices, not fakeable headlessly)._
+_CI nightly 2026-09-15 (E1 sweep): `shouldAdoptCloudPointer` present; test green._
 
 **OPEN-queue row (verbatim):**
 
@@ -1361,7 +1415,9 @@ _CI nightly 2026-09-15 (E1 sweep): `shouldAdoptCloudPointer` present 4× across 
 
 > **Renumbered 2026-08-26: was row 38.** A document written before that date citing "row 38" may mean this row or GEN-BACKGROUND-001. The ID is the key.
 
-_verified: 2026-09-16_
+_verified: 2026-09-26_
+
+**Re-verify 2026-09-26 (CI nightly — E1 stalest slot, code-presence on HEAD `fe4b8f7f`):** `workers/proxy/src/multi-llm.js` `ROLE_KEYS`/`roleHeadOrder` present (4 refs); `scripts/relay-cost-quality-tune.mjs` present. Both halves (compress client-lever + analysis addressability) remain owner-gated on real traffic + a same-prompt benchmark; no code owed. Full PWA suite 1715/1715 green.
 
 **Re-verify 2026-09-16 (CI nightly — E1 stalest slot, code-presence on HEAD `3f595acf`):** multi-llm.js ROLE_KEYS/roleHeadOrder present; scripts/relay-cost-quality-tune.mjs present. Both halves (compress client-lever + analysis addressability) remain owner-gated on real traffic + a same-prompt benchmark; no code owed. Full PWA suite 1715/1715 green.
 
@@ -1375,7 +1431,9 @@ _verified: 2026-09-16_
 
 ## Row 45
 
-_verified: 2026-09-16_
+_verified: 2026-09-26_
+
+**Re-verify 2026-09-26 (CI nightly — E1 stalest slot, code-presence on HEAD `fe4b8f7f`):** `pwa/antcv-pdf-preview-gate.js` openModal loading-shell leg present; `pwa/test/diag-generate-click-profile.mjs` present. PARTIAL 1.51.158 intact; setTimeout leg still needs a live-model profile (BLOCKED in CI). Full PWA suite 1715/1715 green.
 
 **Re-verify 2026-09-16 (CI nightly — E1 stalest slot, code-presence on HEAD `3f595acf`):** antcv-pdf-preview-gate.js openModal loading-shell leg present (11 markers); diag-generate-click-profile.mjs present. PARTIAL 1.51.158 intact; setTimeout leg still needs a live-model profile (BLOCKED in CI). Full PWA suite 1715/1715 green.
 
@@ -1395,7 +1453,9 @@ _verified: 2026-09-16_
 
 ## Row 40
 
-_verified: 2026-09-16_
+_verified: 2026-09-26_
+
+**Re-verify 2026-09-26 (CI nightly — E1 stalest slot, code-presence on HEAD `fe4b8f7f`):** `pwa/antcv-outcomes-loss-guard.js` present; trigger-side test `pwa/test/unit/core-comp-format-preserves-outcomes.test.mjs` green in the full suite. SHIPPED 1.51.138 intact; owner-verify (change row count, confirm outcomes survive) still owed. Full PWA suite 1715/1715 green.
 
 **Re-verify 2026-09-16 (CI nightly — E1 stalest slot, code-presence on HEAD `3f595acf`):** antcv-outcomes-loss-guard.js present; trigger-side test core-comp-format-preserves-outcomes.test.mjs green. SHIPPED 1.51.138 intact; owner-verify (change row count, confirm outcomes survive) still owed. Full PWA suite 1715/1715 green.
 
@@ -1415,7 +1475,9 @@ _verified: 2026-09-16_
 
 ## Row 35 — OVERLAY-EARLY-HALT-001
 
-_verified: 2026-09-16_
+_verified: 2026-09-26_
+
+**Re-verify 2026-09-26 (CI nightly — E1 stalest slot, code-presence on HEAD `fe4b8f7f`):** `__antcvGenCost` heartbeat gate present in both bundles (app.src.js ×10, app.js ×4). Shipped 1.51.41 intact; live regen-confirm still owed, BLOCKED in CI. Full PWA suite 1715/1715 green.
 
 **Re-verify 2026-09-16 (CI nightly — E1 stalest slot, code-presence on HEAD `3f595acf`):** __antcvGenCost heartbeat gate present app.js x4 + app.src.js x10 (both bundles). Shipped 1.51.41 intact; live regen-confirm still owed, BLOCKED in CI. Full PWA suite 1715/1715 green.
 
@@ -1435,7 +1497,9 @@ _verified: 2026-09-16_
 
 ## Row 36 — GEN-CORECOMP-BROAD-001
 
-_verified: 2026-09-16_
+_verified: 2026-09-26_
+
+**Re-verify 2026-09-26 (CI nightly — E1 stalest slot, code-presence on HEAD `fe4b8f7f`):** broad core_comp rule inside `__neutralCo` present (app.src.js ×5); `pwa/test/unsolicited-corecomp-broad.test.mjs` green in the full suite (both-bundle guard validates the app.js minified name). Shipped 1.51.41 intact; live regen-confirm still owed, BLOCKED in CI. Full PWA suite 1715/1715 green.
 
 **Re-verify 2026-09-16 (CI nightly — E1 stalest slot, code-presence on HEAD `3f595acf`):** broad core_comp rule inside __neutralCo present app.src.js x5; unsolicited-corecomp-broad.test.mjs green. Shipped 1.51.41 intact; live regen-confirm still owed, BLOCKED in CI. Full PWA suite 1715/1715 green.
 
@@ -1455,7 +1519,9 @@ _verified: 2026-09-16_
 
 ## Row 37 — FOCUS-LABEL-EO-001
 
-_verified: 2026-09-16_
+_verified: 2026-09-26_
+
+**Re-verify 2026-09-26 (CI nightly — E1 stalest slot, code-presence on HEAD `fe4b8f7f`):** `FOCUS-LABEL` prompt rule present (app.src.js ×2); `pwa/antcv-core-comp-compress.js` present + `pwa/test/unit/core-comp-compress-eo.test.mjs` green in the full suite. Shipped 1.51.42/43 intact; live regen-confirm still owed. Full PWA suite 1715/1715 green.
 
 **Re-verify 2026-09-16 (CI nightly — E1 stalest slot, code-presence on HEAD `3f595acf`):** FOCUS-LABEL prompt rule present app.src.js x2; antcv-core-comp-compress.js + core-comp-compress-eo.test.mjs green. Shipped 1.51.42/43 intact; live regen-confirm still owed. Full PWA suite 1715/1715 green.
 
@@ -1475,7 +1541,9 @@ _verified: 2026-09-16_
 
 ## Row 3 — FLOAT-SPINE-001
 
-_verified: 2026-09-16_
+_verified: 2026-09-26_
+
+**Re-verify 2026-09-26 (CI nightly — E1 stalest slot, code-presence on HEAD `fe4b8f7f`):** `floatSpine`/`float_spine` gate present `workers/docx-worker/src/index.js` ×6 + `pwa/antcv-docx-client.js` ×2, default-OFF unchanged; owner-visual re-export gate (no reference docx in CI) still owed. Full PWA suite 1715/1715 green.
 
 **Re-verify 2026-09-16 (CI nightly — E1 stalest slot, code-presence on HEAD `3f595acf`):** floatSpine gate present workers/docx-worker/src/index.js x6 + antcv-docx-client.js x2, default-OFF unchanged; owner-visual re-export gate (no reference docx in CI) still owed. Full PWA suite 1715/1715 green.
 
@@ -1495,7 +1563,9 @@ _verified: 2026-09-16_
 
 ## Row 14 — JD-SCAN-HALLUCINATION-001
 
-_verified: 2026-09-16_
+_verified: 2026-09-26_
+
+**Re-verify 2026-09-26 (CI nightly — E1 stalest slot, code-presence on HEAD `fe4b8f7f`):** JD-scan-hallucination anchors present in `pwa/app.src.js` (`filename_mismatch` / `garbled_skip_llm_for_vision`, 3 refs). Code CLOSED; live model-behaviour leg still owner/live-gated. Full PWA suite 1715/1715 green.
 
 **Re-verify 2026-09-16 (CI nightly — E1 stalest slot, code-presence on HEAD `3f595acf`):** JD-scan-hallucination anchors present pwa/app.src.js (charset hardening / filename echo / garbled->vision route). Code CLOSED; live model-behaviour leg still owner/live-gated. Full PWA suite 1715/1715 green.
 
@@ -1515,7 +1585,9 @@ _verified: 2026-09-16_
 
 ## Row 20 — CONTACT-TRACK-TIGHT-001
 
-_verified: 2026-09-16_
+_verified: 2026-09-26_
+
+**Re-verify 2026-09-26 (CI nightly — E1 stalest slot, code-presence on HEAD `fe4b8f7f`):** docx-worker anchors present (`headlineAlign` / `fix_orphans` / `SIRIN-SEMANTICS-001` / `CONTACT-TRACK-TIGHT-001`, 4 refs in `workers/docx-worker/src/index.js`). Stays OWNER-GATED: acceptance needs a real CloudConvert PDF eyeball CI cannot do. Full PWA suite 1715/1715 green.
 
 **Re-verify 2026-09-16 (CI nightly — E1 stalest slot, code-presence on HEAD `3f595acf`):** docx-worker anchors present (headlineAlign / fix_orphans / SIRIN-SEMANTICS-001 / CONTACT-TRACK-TIGHT-001). Stays OWNER-GATED: acceptance needs a real CloudConvert PDF eyeball CI cannot do. Full PWA suite 1715/1715 green.
 
@@ -1535,7 +1607,9 @@ _verified: 2026-09-16_
 
 ## Row 52 — GROUP-EMPTY-HIDE-001
 
-_verified: 2026-09-16_
+_verified: 2026-09-26_
+
+**Re-verify 2026-09-26 (CI nightly — E1 stalest slot, code-presence on HEAD `fe4b8f7f`):** `__grpHasChild` ×3 app.src.js + minified mirror `__gc` ×3 app.js (occurrence count) + `renderRichBlock` ×7 docx-worker; `pwa/test/unit/group-empty-hide.test.mjs` green in the full suite. Shipped 1.51.194 intact. Full PWA suite 1715/1715 green.
 
 **Re-verify 2026-09-16 (CI nightly — E1 stalest slot, code-presence on HEAD `3f595acf`):** __grpHasChild x3 app.src.js + minified mirror __gc x3 app.js + renderRichBlock x7 docx-worker; group-empty-hide.test.mjs 29/29 green. Shipped 1.51.194 intact. Full PWA suite 1715/1715 green.
 
@@ -1742,7 +1816,9 @@ _verified: 2026-08-27_
 
 ## Row 109 — DEPLOY-YML-CF-AUTH-BROKEN-001
 
-_verified: 2026-09-15_
+_verified: 2026-09-25_
+
+_CI nightly 2026-09-25 (E1 sweep, HEAD `ab2a43c7`): STILL BROKEN — `gh run list --workflow=deploy.yml` shows every `push`-to-main run failing, last at 2026-09-10 (`push`, failure); the only `success` runs since (09-14/09-21/09-23) are `pull_request` events, which the workflow gates to lint + unit-tests and NEVER deploy (deploy.yml header comment + push/dispatch gate confirm this). No push-triggered deploy run has succeeded since 2026-08-01. Owner secret rotation (`CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID = 17c026b6d08c3e0ba63425cb26a5a7d9`) still owed — credentials are owner-only, an agent cannot rotate them._
 
 **OPEN-queue row (verbatim):**
 

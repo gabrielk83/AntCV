@@ -27,7 +27,19 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.x-roles-richblock-adapter';
+  var VERSION = '1.51.4566-role-location';
+
+  // ROLE-LOCATION-001 (EXEC-LINEAR step 2, 2026-09-27): a role carries an optional
+  // `location` (4th segment). The role LINE has two formats, stored in
+  // localStorage['antcv:roleLineFormat'] (own key, read here + docx-client + the
+  // antcv-role-line-format.js control; NOT React state, so no app.js surface):
+  //   classic (absent/default)  title, company ........ years[ | location]
+  //   meta                      title — company ....... (years | location)
+  // classic shows the location ONLY when set, so existing CVs render byte-identically.
+  var RLF_KEY = 'antcv:roleLineFormat';
+  function roleLineFormat() {
+    try { return localStorage.getItem(RLF_KEY) === 'meta' ? 'meta' : 'classic'; } catch (_) { return 'classic'; }
+  }
 
   // CPH-RENDER-FLAGS-001 flag 3 (spec COPENHAGEN_MODERN_NORDIC_PALETTE_SPEC.md,
   // OPEN item 3: "Role row draws a teal 1px bottom rule; mockup: NO per-role
@@ -151,7 +163,10 @@
       var seg = [
         Object.assign({ t: role.title || '', kind: 'role' }, segStyle(role, 'role')),
         Object.assign({ t: role.company || '', kind: 'company' }, segStyle(role, 'company')),
-        Object.assign({ t: role.years || '', kind: 'years' }, segStyle(role, 'years'))
+        Object.assign({ t: role.years || '', kind: 'years' }, segStyle(role, 'years')),
+        // ROLE-LOCATION-001: seg[3]. Always present so the editor can set it; renderRoleHead
+        // hides an empty one in classic format.
+        Object.assign({ t: role.location || '', kind: 'location' }, segStyle(role, 'location'))
       ];
       items.push({
         grp: true, roleHead: true, seg: seg,
@@ -202,7 +217,7 @@
     var cur = null;
     // Fields the role LINE / bullets own here — everything else on the orig role
     // is carried through untouched.
-    var OWNED = { title: 1, company: 1, years: 1, bullets: 1, bulletMeta: 1, results: 1, roleLineStyle: 1, roleLineHr: 1, page: 1, on: 1 };
+    var OWNED = { title: 1, company: 1, years: 1, location: 1, bullets: 1, bulletMeta: 1, results: 1, roleLineStyle: 1, roleLineHr: 1, page: 1, on: 1 };
     function startRole(it) {
       var base = (it && it._rid != null && byId[it._rid]) ? byId[it._rid] : null;
       var role = {};
@@ -212,8 +227,11 @@
         role.title = (seg[0] && seg[0].t) || '';
         role.company = (seg[1] && seg[1].t) || '';
         role.years = (seg[2] && seg[2].t) || '';
+        // ROLE-LOCATION-001: only write the key when set, so untouched roles keep their shape.
+        var __loc = (seg[3] && seg[3].t) || '';
+        if (__loc) role.location = __loc;
         var style = {};
-        ['role', 'company', 'years'].forEach(function (kind, idx) {
+        ['role', 'company', 'years', 'location'].forEach(function (kind, idx) {
           var sg = seg[idx] || {}, st = {};
           if (sg.color != null) st.color = sg.color;
           if (sg.bold != null) st.bold = sg.bold;
@@ -267,6 +285,7 @@
       if (field === 'role') role.title = value;
       else if (field === 'company') role.company = value;
       else if (field === 'years') role.years = value;
+      else if (field === 'location') role.location = value;   // ROLE-LOCATION-001
       else return null;
     } else if (it._results) {
       role.results = value;
@@ -296,6 +315,7 @@
       if (field === 'role') return ['roles', ri, 'title'];
       if (field === 'company') return ['roles', ri, 'company'];
       if (field === 'years') return ['roles', ri, 'years'];
+      if (field === 'location') return ['roles', ri, 'location'];   // ROLE-LOCATION-001
       return null;
     }
     if (it._results) return ['roles', ri, 'results'];
@@ -316,8 +336,11 @@
     var h = React.createElement;
     var B = ctx.B, T = ctx.T, k = ctx.k || {}, s = ctx.s, exp = ctx.exp;
     var segs = Array.isArray(row.seg) ? row.seg : [];
-    var roleSeg = segs[0] || {}, compSeg = segs[1] || {}, yearSeg = segs[2] || {};
+    var roleSeg = segs[0] || {}, compSeg = segs[1] || {}, yearSeg = segs[2] || {}, locSeg = segs[3] || {};
     var subColor = k.mainSubHeadColor || s;
+    // ROLE-LOCATION-001: 'meta' = "title — company ... (years | location)"; classic unchanged.
+    var meta = roleLineFormat() === 'meta';
+    var hasLoc = !!(locSeg.t && String(locSeg.t).trim());
     var left = h('span', {
       style: {
         // Owner 2026-07-14: role line = seg0 BOLD (not italic), seg1 italic, seg2 normal.
@@ -326,21 +349,32 @@
       }
     },
       h(B, { path: ['items', i, 'role'], value: roleSeg.t || '', placeholder: '[Role title]' }),
-      compSeg.t ? ', ' : '',
+      compSeg.t ? (meta ? ' — ' : ', ') : '',
       h('span', {
         style: {
           fontWeight: compSeg.bold ? 700 : 400,
           color: compSeg.color || (k.mainCompanyColor || '#333333'),
-          fontStyle: compSeg.italic === false ? 'normal' : 'italic'
+          // meta: company upright (the v2 reference); classic keeps the italic default.
+          fontStyle: compSeg.italic === false || (meta && compSeg.italic == null) ? 'normal' : 'italic'
         }
       }, h(B, { path: ['items', i, 'company'], value: compSeg.t || '', placeholder: '[Company]' }))
     );
+    var locNode = (meta || hasLoc) ? [
+      ' | ',
+      h(B, { path: ['items', i, 'location'], value: locSeg.t || '', placeholder: '[Location]' })
+    ] : [];
     var right = h('span', {
       style: {
         fontSize: exp, color: yearSeg.color || (k.mainYearColor || '#595959'),
-        fontStyle: yearSeg.italic ? 'italic' : 'normal', fontFamily: T, whiteSpace: 'nowrap'
+        fontStyle: yearSeg.italic ? 'italic' : 'normal', fontFamily: T, whiteSpace: 'nowrap',
+        fontWeight: meta && yearSeg.bold == null ? 700 : (yearSeg.bold ? 700 : 400)
       }
-    }, h(B, { path: ['items', i, 'years'], value: yearSeg.t || '', placeholder: '[Years]' }));
+    },
+      meta ? '(' : '',
+      h(B, { path: ['items', i, 'years'], value: yearSeg.t || '', placeholder: '[Years]' }),
+      locNode[0] || null, locNode[1] || null,
+      meta ? ')' : ''
+    );
     var align = ['left', 'center', 'right', 'justify'].indexOf(ctx.align) >= 0 ? ctx.align : 'justify';
     // The role line is ALWAYS a flex row (role+company | years); a flex row ignores
     // textAlign, so the "Groups" control drives its justifyContent instead:

@@ -1897,6 +1897,47 @@ long-lived machine token (the `x-antcv-cse-token` pattern already in the relay �
 `scripts/routine-preflight.mjs start` decode `~/.antcv/token` and WARN while it is still valid but inside the
 refresh window, so an expiry is caught before it blocks a run rather than after.
 
+**ADVANCED 2026-09-29 — leg (b) SHIPPED** (job-tracker nightly, same evening, worktree-isolated, Opus 5;
+`scripts/routine-preflight.mjs` + one new test + `SCHEDULED_ROUTINES.md`. Script-side only: no `pwa/` asset,
+no cache-bust, no version consumed, no shift lane, no deploy. That run hit the identical 401 independently and
+confirmed the diagnosis from the other side: all three workers healthy — relay `/health` 200
+`auth-38-subtitle-guard-qual-put`, cv-proxy + demo-proxy `3.8.4-brand-ink-match` — so the 401 is the stored
+credential alone.)
+
+`routine-preflight.mjs start`, the first action of every routine, now prints two lines ahead of the workspace
+verdict:
+
+- **TOKEN OK / EXPIRING / EXPIRED / MISSING / UNPARSEABLE** — a local base64url decode of the JWT payload for
+  `exp`. No network, no signature check (the relay stays the auth authority; this is an expiry read, not an
+  auth decision), and the token value is never printed and never written to the ledger. It warns at **3 days
+  left**, inside the 6-day `SESSION_REFRESH_WINDOW` where a re-save still helps, and carries the exact console
+  recipe; when already dead it gives the age in days and states that self-renewal cannot recover it.
+- **DISPATCH GAP** — days since THIS routine's own previous `start`, flagged at 3+. Read BEFORE the current run
+  logs its own line, or it would find itself at 0. The ledger row gained `token` + `token_exp`, so a later
+  `report` can see WHEN the credential died rather than only that runs stopped.
+
+Both are **advisory**: `start`'s clean(0)/dirty(3) exit contract, which every routine's worktree decision
+depends on, is unchanged — a dead token must not read as a dirty workspace. New `token` subcommand runs the
+check standalone (exit 0 usable / 4 unusable) for use before any live relay work.
+
+**Tests.** `scripts/tests/routine-preflight-token-health.test.mjs` — 9 checks, network-free, synthetic
+junk-signature JWTs (proving the code never verifies one) and a throwaway git repo: healthy / warn-window /
+dead / missing / empty / malformed; the token value never reaching stdout; the clean(0)/dirty(3) contract
+surviving a dead token in both directions; a back-dated 33-day gap detected, a same-day rerun NOT called a gap,
+another routine's rows not mistaken for this one's; the ledger token stamp. **Negative-controlled**: the expiry
+comparison is disabled BY LINE INDEX and the sabotage asserted to land (`TOKEN OK` on a 5-day-dead token)
+before restore — per [[negative-control-first-match-replace]], a first-match string replace was not trusted.
+Suite `run-tests.mjs pwa` **1721 / 1714 pass / 0 fail / 7 skipped**, `scripts` **42/42**, `check-register.mjs`
+OK. Live-proved on the real ledger and the real dead token: `TOKEN EXPIRED 27d ago (2026-09-02T10:23:44Z)` +
+`DISPATCH GAP — previous start 2026-08-27T06:48:45.505Z (33.6d ago)`, exit 3 preserved. Documented in
+`SCHEDULED_ROUTINES.md` STANDING RULE 0.
+
+**Still owed, both owner-only.** (1) Re-save the token — unchanged, detection does not refill a credential.
+(2) The uptime half: leg (a) a long-lived machine token for routines, or the cheaper variant the job-tracker run
+recommends — raise the relay's session TTL. A louder warning does not restart a cron, and a 7-day credential on
+a desktop-app-local routine that can silently miss a month will keep dying no matter how early the preflight
+says so.
+
 **OPEN-queue row (verbatim):**
 
 ```

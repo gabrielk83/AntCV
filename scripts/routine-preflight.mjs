@@ -23,6 +23,19 @@
 //   node scripts/routine-preflight.mjs end    --routine antcv-nightly --status no-op   --summary "sources dry; nothing to propose"
 //   node scripts/routine-preflight.mjs error  --routine antcv-nightly --summary "relay 401 — token expired"
 //   node scripts/routine-preflight.mjs report  [--days 14]     → print the recent ledger (health check)
+//   node scripts/routine-preflight.mjs token                    → token-health only (offline; exit 4 if unusable)
+//
+// TOKEN HEALTH + DISPATCH GAP (added 2026-09-29, third recurrence of the same failure):
+// every relay-backed routine authenticates with the owner's PWA JWT at ~/.antcv/token. That token
+// carries a plain 7-day TTL and only self-renews when a routine CALLS the relay inside the 6-day
+// SESSION_REFRESH_WINDOW — so a stretch of missed dispatches kills it, and the next run discovers
+// that only by eating a 401 mid-task. It has died this way three times (ANTCV-TOKEN-EXPIRED-
+// 2026-08-14-001 on 08-14, again after the 08-26 re-save, found dead 27d later on 09-29 behind a
+// 33-day dispatch gap). `start` now decodes the token LOCALLY (no network, no signature check,
+// never prints the token) and reports days-to-expiry, warning while it is still re-savable rather
+// than after it is dead; it also reports days since this routine's own previous start, which is
+// the other half of the failure. Both are ADVISORY: they never change `start`'s exit code, so the
+// clean(0)/dirty(3) contract every routine depends on is untouched.
 //
 // The ledger lives OUTSIDE the repo so writing it never dirties the tree the routine guards:
 //   C:\Users\karpg\.claude\scheduled-tasks\ROUTINE_HEALTH.jsonl   (one JSON object per line)
@@ -34,8 +47,11 @@ import { dirname, join } from 'node:path';
 import os from 'node:os';
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..');
-const LEDGER_DIR = join(os.homedir(), '.claude', 'scheduled-tasks');
-const LEDGER = join(LEDGER_DIR, 'ROUTINE_HEALTH.jsonl');
+const LEDGER = process.env.ANTCV_ROUTINE_LEDGER || join(os.homedir(), '.claude', 'scheduled-tasks', 'ROUTINE_HEALTH.jsonl');
+const LEDGER_DIR = dirname(LEDGER);
+const TOKEN_FILE = process.env.ANTCV_TOKEN_FILE || join(os.homedir(), '.antcv', 'token');
+const EXPIRY_WARN_DAYS = 3;   // warn this far ahead — inside the 6d self-renewal window
+const GAP_WARN_DAYS = 3;      // a routine that has not fired in this long cannot refresh the token
 
 function arg(name, def = null) {
   const i = process.argv.indexOf('--' + name);
@@ -51,6 +67,68 @@ function log(obj) {
 }
 function now() { return new Date().toISOString(); }
 
+// --- token health: decode the stored PWA JWT LOCALLY. No network, no signature verification
+// (this is an advisory expiry read, not an auth decision — the relay stays the authority), and
+// the token value itself is never printed or logged.
+function tokenHealth() {
+  if (!existsSync(TOKEN_FILE)) return { state: 'missing', reason: 'no file at ' + TOKEN_FILE };
+  let raw = '';
+  try { raw = readFileSync(TOKEN_FILE, 'utf8').trim(); } catch (e) { return { state: 'unreadable', reason: e.message }; }
+  if (!raw) return { state: 'missing', reason: 'file is empty' };
+  const parts = raw.split('.');
+  if (parts.length !== 3) return { state: 'unparseable', reason: `expected 3 JWT segments, got ${parts.length}` };
+  let payload;
+  try {
+    const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    payload = JSON.parse(Buffer.from(b64 + '='.repeat((4 - (b64.length % 4)) % 4), 'base64').toString('utf8'));
+  } catch (e) { return { state: 'unparseable', reason: 'payload is not base64url JSON' }; }
+  if (typeof payload.exp !== 'number') return { state: 'unparseable', reason: 'payload carries no numeric exp' };
+  const expMs = payload.exp * 1000;
+  const days = (expMs - Date.now()) / 86400000;
+  const expIso = new Date(expMs).toISOString().replace('.000Z', 'Z');
+  const state = days <= 0 ? 'expired' : days <= EXPIRY_WARN_DAYS ? 'expiring' : 'ok';
+  return { state, expIso, days, email: payload.email || payload.sub || null };
+}
+
+const RESAVE_RECIPE = 'OWNER: re-save the token — on https://antcv.pages.dev (signed in) run '
+  + "copy(localStorage.getItem('antcv:auth:token')) in the console, paste into "
+  + TOKEN_FILE + ' (no trailing newline).';
+
+function printTokenHealth(t) {
+  const who = t.email ? ` [${t.email}]` : '';
+  if (t.state === 'ok') {
+    console.log(`[preflight] TOKEN OK — expires ${t.expIso} (${t.days.toFixed(1)}d left)${who}`);
+  } else if (t.state === 'expiring') {
+    console.log(`[preflight] TOKEN EXPIRING in ${t.days.toFixed(1)}d (${t.expIso})${who} — still valid, so a relay call THIS run self-renews it.`);
+    console.log(`[preflight] ${RESAVE_RECIPE}`);
+  } else if (t.state === 'expired') {
+    console.log(`[preflight] TOKEN EXPIRED ${Math.abs(t.days).toFixed(0)}d ago (${t.expIso})${who} — every relay-backed step will 401. Self-renewal cannot recover a dead token; only a manual re-save can.`);
+    console.log(`[preflight] ${RESAVE_RECIPE}`);
+  } else {
+    console.log(`[preflight] TOKEN ${t.state.toUpperCase()} — ${t.reason}`);
+    console.log(`[preflight] ${RESAVE_RECIPE}`);
+  }
+}
+
+// --- dispatch gap: how long since THIS routine's own previous start. A routine that stops firing
+// is why the token dies (its own relay calls are what refresh it), so report the gap rather than
+// assume a cadence the ledger does not record.
+function dispatchGap(routineName) {
+  if (!existsSync(LEDGER)) return null;
+  let lines = [];
+  try { lines = readFileSync(LEDGER, 'utf8').split(/\r?\n/).filter(Boolean); } catch { return null; }
+  let prev = null;
+  for (const l of lines) {
+    let r; try { r = JSON.parse(l); } catch { continue; }
+    if (r && r.routine === routineName && r.event === 'start') {
+      const t = Date.parse(r.ts);
+      if (Number.isFinite(t) && (prev === null || t > prev)) prev = t;
+    }
+  }
+  if (prev === null) return null;
+  return { prevIso: new Date(prev).toISOString(), days: (Date.now() - prev) / 86400000 };
+}
+
 const cmd = process.argv[2];
 const routine = arg('routine', 'unknown-routine');
 
@@ -58,10 +136,23 @@ if (cmd === 'start') {
   const head = sh('git rev-parse --short HEAD');
   const branch = sh('git rev-parse --abbrev-ref HEAD');
   const dirty = sh('git status --porcelain').length > 0;
-  log({ ts: now(), routine, event: 'start', host: os.hostname(), branch, head, dirty });
+  // Read the gap BEFORE logging this run's own start line, or it would find itself at 0 days.
+  const gap = dispatchGap(routine);
+  const tok = tokenHealth();
+  log({ ts: now(), routine, event: 'start', host: os.hostname(), branch, head, dirty, token: tok.state, token_exp: tok.expIso || null });
 
   console.log(`[preflight] ${routine} start logged → ${LEDGER}`);
   console.log(`[preflight] branch=${branch} head=${head}`);
+  printTokenHealth(tok);
+  if (gap) {
+    const tag = gap.days >= GAP_WARN_DAYS ? 'DISPATCH GAP' : 'last run';
+    console.log(`[preflight] ${tag} — previous start ${gap.prevIso} (${gap.days.toFixed(1)}d ago)`);
+    if (gap.days >= GAP_WARN_DAYS) {
+      console.log('[preflight] A routine that stops firing cannot refresh the token (6d self-renewal window) — report the gap to the owner, routines are desktop-app-local.');
+    }
+  } else {
+    console.log('[preflight] no previous start for this routine in the ledger (first run, or ledger rotated)');
+  }
   if (dirty) {
     // A dirty shared tree is the collision hazard. Steer the routine into an isolated worktree.
     const stamp = Date.now().toString(36);
@@ -84,6 +175,12 @@ if (cmd === 'end' || cmd === 'error') {
   log({ ts: now(), routine, event: cmd, status, summary });
   console.log(`[preflight] ${routine} ${cmd} logged (status=${status}).`);
   process.exit(0);
+}
+
+if (cmd === 'token') {
+  const t = tokenHealth();
+  printTokenHealth(t);
+  process.exit(t.state === 'ok' || t.state === 'expiring' ? 0 : 4);
 }
 
 if (cmd === 'report' || cmd === 'status') {
@@ -112,5 +209,5 @@ if (cmd === 'report' || cmd === 'status') {
   process.exit(0);
 }
 
-console.error('usage: routine-preflight.mjs <start|end|error|report> --routine <name> [--status ok|no-op] [--summary "..."] [--days N]');
+console.error('usage: routine-preflight.mjs <start|end|error|report|token> --routine <name> [--status ok|no-op] [--summary "..."] [--days N]');
 process.exit(1);

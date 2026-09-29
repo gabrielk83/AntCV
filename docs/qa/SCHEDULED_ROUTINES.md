@@ -72,6 +72,30 @@ pusher, no collision. `node scripts/routine-preflight.mjs report --days 14` prin
 and flags any that STARTED but never ended (crashed / killed / silent). Check it to answer "did the
 routines actually run?" — a start with no matching end is the alarm the old setup lacked.
 
+**Token health + dispatch gap (added 2026-09-29, job-tracker nightly).** `start` now also prints,
+before the workspace verdict, two things every relay-backed routine used to discover the hard way:
+
+- **TOKEN OK / EXPIRING / EXPIRED / MISSING** — the owner's PWA JWT at `~/.antcv/token`, decoded
+  LOCALLY (offline, no signature check, the token value is never printed or written to the ledger).
+  That token carries a plain 7-day TTL and self-renews only when a routine calls the relay inside
+  the 6-day `SESSION_REFRESH_WINDOW`, so it dies whenever dispatches stop. It has died three times
+  (`ANTCV-TOKEN-EXPIRED-2026-08-14-001` on 08-14; again after the 08-26 re-save, found 27 days dead
+  on 09-29) and each time a routine only learned about it by eating a `401` part-way through its
+  task. The check warns at **3 days left**, while a re-save still helps, and prints the exact
+  recipe. A dead token means every relay-backed step of the run will 401 — record it and skip those
+  steps rather than retrying.
+- **DISPATCH GAP** — days since THIS routine's own previous `start`, flagged at 3+ days. This is
+  the other half of the same failure: a routine that stops firing is *why* the token dies. On
+  2026-09-29 the gap was **33 days** (last dispatch 08-27) behind a 27-day-dead token — and
+  host-wide, not task-specific: the position-discovery run the same evening found NO routine of any
+  kind had fired in that window (row 110). Routines are desktop-app-local, so a stretch with the
+  app closed silently skips every fire; report the gap to the owner, it is not self-healing.
+
+Both are **advisory**: they never change `start`'s exit code, so the clean(0)/dirty(3) contract
+above is unchanged. `node scripts/routine-preflight.mjs token` runs the token check on its own
+(exit 0 when usable, 4 when expired/missing/malformed) — useful before any live relay work.
+Guard test: `scripts/tests/routine-preflight-token-health.test.mjs` (network-free, negative-controlled).
+
 **Scheduling (owner 2026-07-21).** The two nightlies moved off 03:30/03:45 (app almost never open
 then → always deferred) to a morning window the app is reliably open in and staggered wider:
 antcv-nightly 08:00, antcv-job-tracker-nightly 08:45. The evening weeklies (Wed/Fri/Sun+Tue 22:00)

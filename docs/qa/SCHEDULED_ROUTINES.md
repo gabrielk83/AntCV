@@ -107,7 +107,7 @@ Guard test: `scripts/tests/routine-preflight-token-health.test.mjs` (network-fre
 
 **Scheduling (owner 2026-07-21).** The two nightlies moved off 03:30/03:45 (app almost never open
 then → always deferred) to a morning window the app is reliably open in and staggered wider:
-antcv-nightly 08:00, antcv-job-tracker-nightly 08:45. The evening weeklies (Wed/Fri/Sun+Tue 22:00)
+antcv-nightly 08:00, antcv-job-tracker-nightly 08:45. The evening routines (Wed/Fri/Sun+Tue+Thu 22:00)
 stay — the app is usually open then; worktree isolation (rule 0) handles their collision risk.
 
 **Substrate note (structural, owner-gated).** Reliability is ultimately capped by the desktop app
@@ -122,7 +122,7 @@ machine is off" path for those is a **claude.ai cloud routine**, created from th
 
 | Routine | Cadence | Pushes to main / deploys? | Claim required | Notes |
 |---|---|---|---|---|
-| `antcv-position-discovery` | bi-weekly (Sun + Tue 22:00) | data only (Excel/D1 PROPOSED rows) | no (data-only) — SYNC FIRST | Finds NEW openings vs the Dream Envelope, propose-only. `scripts/job-tracker/discover-positions.py`; memory position-discovery-task. ⚠ **Two of its five mandatory sources need `scripts/job-tracker/job_sources.py` — a hand-fetch of their search pages returns nothing. It should also run the obsolescence sweep. See "Position-discovery sources + the obsolescence sweep" below.** |
+| `antcv-position-discovery` | 3x weekly (Sun + Tue + Thu 22:00; Thu added 2026-09-30, max gap 3 days) | data only (Excel/D1 PROPOSED rows) | no (data-only) — SYNC FIRST | Finds NEW openings vs the Dream Envelope, propose-only. `scripts/job-tracker/discover-positions.py`; memory position-discovery-task. ⚠ **Two of its five mandatory sources need `scripts/job-tracker/job_sources.py` — a hand-fetch of their search pages returns nothing. It should also run the obsolescence sweep. See "Position-discovery sources + the obsolescence sweep" below.** |
 | antcv-job-tracker-nightly | nightly | yes (gen-runner may commit; may bump islands/app) | **yes** | Generates/persists tracked applications. `scripts/job-tracker/gen-runner.py`. |
 | antcv-nightly | nightly | yes (PWA/worker fixes) | **yes** | Verify-first backlog work; ships cache-busted PWA changes → always claim. |
 | weekly demand-seed (CLUSTER-QUAL) | weekly | yes (worker + D1 top-20 refresh) | **yes** (if it ships code) | Cluster demand model refresh. Partly unbuilt. LIVE TRIGGER since 2026-07-13: scheduled task `antcv-demand-seed-weekly` (Fri 22:00) — before that the routine existed only on paper (one manual run 2026-07-10). ⚠ **Its stored prompt's step 4 is WRONG — see "Demand-seed step 4" below before running it.** |

@@ -259,8 +259,21 @@ export const CHECKS = [
 // Runs the selected checks against an already-open `page`, in-process (no
 // browser lifecycle here — caller owns launch/close). Returns the same
 // `results` array shape both harnesses used to build inline.
+// `only` is one check id or a comma list ("version-live,sidecars-live").
+// An unknown id throws: matching it as one exact id used to select 0 checks
+// and exit 0, a false green on every nightly (BROWSER-QA-ONLY-LIST-001).
+export function selectChecks(only) {
+  if (!only || only === true) return CHECKS;
+  const ids = String(only).split(',').map((s) => s.trim()).filter(Boolean);
+  const unknown = ids.filter((id) => !CHECKS.some((c) => c.id === id));
+  if (!ids.length || unknown.length) {
+    throw new Error(`--only: unknown check id(s) ${JSON.stringify(unknown.length ? unknown : [String(only)])}; known: ${CHECKS.map((c) => c.id).join(', ')}`);
+  }
+  return CHECKS.filter((c) => ids.includes(c.id));
+}
+
 export async function runChecks(page, ctx, { only = null, jwt = null } = {}) {
-  const selected = CHECKS.filter((c) => (only ? c.id === only : true));
+  const selected = selectChecks(only);
   const results = [];
   for (const c of selected) {
     if (c.auth && !jwt) {

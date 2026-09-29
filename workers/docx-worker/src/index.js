@@ -26168,22 +26168,24 @@ function buildLinearCvDocument(ctx) {
     if (typeof it === "string") return clean(it);
     if (Array.isArray(it)) return clean(it.join(" "));
     if (Array.isArray(it.seg)) return clean(it.seg.map((g) => (g && g.t) || "").join(" "));
-    const l = it.l || it.label || it.b || it.name || "", v = it.v || it.value || it.t || it.text || "";
+    const l = it.l || it.label || it.b || it.name || it.deg || it.degree || "", v = it.v || it.value || it.t || it.text || it.sch || it.school || "";
     return clean(l && v ? `${l}: ${v}` : (l || v));
   };
   const idt = (s) => `${s.id || ""} ${s.title || ""}`.toLowerCase();
   const kind = (s) => {
     const k = idt(s);
     if (s.type === "experience") return "experience";
-    if (s.type === "education") return "education";
+    // only a real education section; e.g. "recommendations" can be education-typed (owner data 2026-09-29)
+    if (s.type === "education") return /educat|uddannelse|degree|academ/.test(k) ? "education" : "details";
     if (s.type === "table") return "tiles";
     if (/cert|course|credential|licen/.test(k)) return "certs";
-    if (s.type === "labeled_list" && /tool|method|skill|technical|arsenal|expertise|stack/.test(k)) return "tools";
+    if ((s.type === "labeled_list" || s.type === "rich_block") && /tool|method|skill|technical|arsenal|expertise|stack/.test(k)) return "tools";
+    if ((s.type === "bullets" || s.type === "text_bullets") && !/profile|summary|work.?style/.test(k)) return "bullets";
     if (/profile|summary|about|work.?style|arbejdsstil|profil|who i am/.test(k) &&
         /^(text|text_inline|text_bullets|rich_block|foundation|bullets)$/.test(s.type)) return "profile";
     return "details";
   };
-  const by = { profile: [], tiles: [], experience: [], education: [], certs: [], tools: [], details: [] };
+  const by = { profile: [], tiles: [], bullets: [], experience: [], education: [], certs: [], tools: [], details: [] };
   for (const s of secs) by[kind(s)].push(s);
 
   // profile callout rows [lead, text]
@@ -26242,7 +26244,8 @@ function buildLinearCvDocument(ctx) {
   // tools 2x2 [label, value]
   const tools = [];
   for (const s of by.tools) for (const it of (s.items || [])) {
-    const l = clean(it && (it.l || it.label || it.b) || ""), v = clean(it && (it.v || it.value || it.t) || "");
+    if (it && it.hr) continue;
+    const l = clean(it && (it.l || it.label || it.b) || ""), v = clean(it && (it.v || it.value || it.t || (Array.isArray(it.seg) ? it.seg.map((g) => g && g.t).join(" ") : "")) || "");
     if (l && v && !isPh(v)) tools.push([l.replace(/:\s*$/, ""), v]);
   }
   // details rows
@@ -26376,6 +26379,12 @@ function buildLinearCvDocument(ctx) {
     children.push(heading(T(by.tiles, "Core Competencies")));
     const rows = []; for (let i = 0; i < tiles.length; i += 3) { const r = tiles.slice(i, i + 3); while (r.length < 3) r.push(["", ""]); rows.push(r); }
     children.push(tileGrid(rows, Math.floor(CONTENT_W / 3), { fill: TILE, margins: { top: 100, bottom: 100, left: 120, right: 120 }, titleSize: 10, descSize: 10, titleAfter: 2, rowGap: rows.length > 1 }));
+  }
+  for (const s of by.bullets) {
+    const items = (s.items || []).map((it) => clean(typeof it === "string" ? it : itemText(it))).filter((t) => t && !isPh(t));
+    if (!items.length) continue;
+    children.push(heading(s.title || "Highlights"));
+    items.forEach((t, i) => { const m = t.match(/^([^:.]{3,48}):\s+(.+)$/); children.push(bullet(m ? [m[1] + ":", m[2]] : ["", t], i < items.length - 1)); });
   }
   if (roles.length) {
     children.push(heading(T(by.experience, "Professional Experience")));

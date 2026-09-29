@@ -11,7 +11,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.4607-exec-linear-export';
+  var VERSION = '1.51.4627-linear-preview';
   if (window.__antcvRoleLineFormat === VERSION) return;
   window.__antcvRoleLineFormat = VERSION;
 
@@ -33,11 +33,13 @@
   function writeLayout(v) {
     try {
       if (v === 'linear') localStorage.setItem(LKEY, 'linear'); else localStorage.removeItem(LKEY);
-      window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { reason: 'cv-layout' } }));
+      // step 3: antcv-cv-layout-linear.js moves the sections + switches the columns right away
+      if (typeof window.__antcvCvLayoutApply === 'function') window.__antcvCvLayoutApply();
+      else window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { reason: 'cv-layout' } }));
     } catch (_) {}
   }
-  // EXEC-LINEAR step 5a: "CV layout" - Two-column (default) | Linear. Export-only until the preview
-  // step (3) lands: the worker renders the executive single-column CV, the preview stays two-column.
+  // EXEC-LINEAR "CV layout" - Two-column (default) | Linear. Export: worker buildLinearCvDocument (5a);
+  // preview: antcv-cv-layout-linear.js (step 3, single column, plain sections).
   function buildLayout() {
     var row = document.createElement('label');
     row.setAttribute(ATTR, 'layout');
@@ -47,7 +49,7 @@
     lb.style.cssText = 'font-size:9px;color:rgba(255,255,255,0.45);flex:0 0 auto;';
     var sel = document.createElement('select');
     sel.style.cssText = 'font-size:9px;padding:1px 2px;max-width:100%;';
-    [['two_column', 'Two-column'], ['linear', 'Linear (export only)']].forEach(function (o) {
+    [['two_column', 'Two-column'], ['linear', 'Linear']].forEach(function (o) {
       var op = document.createElement('option'); op.value = o[0]; op.textContent = o[1];
       if (o[0] === readLayout()) op.selected = true;
       sel.appendChild(op);

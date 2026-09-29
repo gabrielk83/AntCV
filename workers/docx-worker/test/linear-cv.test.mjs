@@ -109,3 +109,21 @@ test('two_column CV and linear CL are untouched by the linear CV path', async ()
   const two = unzipEntry(await gen({ layout: 'two_column' }), 'word/document.xml').toString('utf8');
   assert.ok(!/Experience &amp; Technical Arsenal/.test(two));
 });
+
+// The owner's real CV shapes (2026-09-29 live data): tools is a rich_block, "recommendations" is an
+// education-TYPED section, and SELECTED OUTCOMES is a bullets section.
+test('linear CV adapter: rich_block tools -> tiles, education-typed recommendations -> details, outcomes -> bullets', async () => {
+  const extra = [
+    { id: 'outcomes', title: 'SELECTED OUTCOMES', type: 'bullets', loc: 'main', items: ['Change cycle cut from ~250 to ~10 days.', 'A 10x LiDAR unit-cost reduction.'] },
+    { id: 'tools2', title: 'TOOLS & METHODS', type: 'rich_block', loc: 'sidebar', items: [{ b: 'Software', t: 'Jira, Confluence, Power BI.' }, { b: 'Methods', t: 'FMEA, DoE.' }] },
+    { id: 'recommendations', title: 'RECOMMENDATIONS', type: 'education', loc: 'main', items: [{ deg: 'References', sch: 'Available on request' }] },
+  ];
+  const secs = sections.filter((s) => s.id !== 'tools').concat(extra);
+  const xml = unzipEntry(await gen({ sections: secs }), 'word/document.xml').toString('utf8');
+  const t = texts(xml);
+  assert.ok(t.includes('SELECTED OUTCOMES') && t.indexOf('SELECTED OUTCOMES') < t.indexOf('PROFESSIONAL EXPERIENCE'), 'outcomes as its own bullet block before experience');
+  assert.ok(t.includes('Software') && t.includes('Jira, Confluence, Power BI') && !t.includes('Power BI.'), 'rich_block tools as tiles, no final stop');
+  const edu = t.slice(t.indexOf('EDUCATION'), t.indexOf('TOOLS'));
+  assert.ok(!edu.includes('References'), 'recommendations are not printed as a degree');
+  assert.ok(/Recommendations/.test(t) && t.includes('Available on request'), 'recommendations land in the details table');
+});

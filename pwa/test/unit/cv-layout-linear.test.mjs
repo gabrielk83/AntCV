@@ -38,5 +38,5 @@ test('antcv:cvLayout=linear -> CV export asks for linear; letters unaffected; ex
 test('the PAGE FLOW control offers the CV layout choice on its own key', () => {
   const src = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '../../antcv-role-line-format.js'), 'utf8');
   assert.ok(src.includes("var LKEY = 'antcv:cvLayout';"));
-  assert.ok(src.includes("['linear', 'Linear (export only)']"));
+  assert.ok(src.includes("['linear', 'Linear']"));
 });

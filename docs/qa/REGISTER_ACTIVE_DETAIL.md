@@ -1865,6 +1865,8 @@ _verified: 2026-08-26_
 
 _verified: 2026-09-29_
 
+**2026-09-29 (job-tracker nightly, second fire, cross-check): leg (1) DONE.** The owner re-saved `~/.antcv/token`; `routine-preflight.mjs token` -> `TOKEN OK, expires 2026-10-06T19:40:25Z (6.9d left)`, and `check-postings.py check` + `gen-runner.py list` both read the relay doc without a 401. Row stays ACTIVE for leg (a): a 7-day credential on a desktop-local routine host still dies after any week-long host gap.
+
 **2026-09-29 (desktop nightly, CORROBORATED + widened):** hit independently the same day from the other side — the nightly needed an authed live session for the owner-verify legs on rows 40/42/43/44 and 39a and could not open one. The expiry is WIDER than the relay token: **both** stored credentials are dead — `~/.antcv/token` (relay JWT, `iss antcv-access-relay`, `exp 2026-09-02T10:23:44Z`) and `~/.antcv/browser-session.json` (the persisted Browser-pane `localStorage` auth map, `expiresAtIso 2026-07-17T22:35:34Z`, captured 2026-07-10). So the blast radius is not only the relay-backed routines: **every signed-in live-verify is blocked**, which is the single largest reason ~60 register rows sat un-advanceable tonight. An agent cannot fix this (entering a password is prohibited, and the email code is unreadable to it): it needs one owner UI login, after which the `localStorage` auth map should be re-saved to `~/.antcv/browser-session.json` and the relay JWT to `~/.antcv/token` — or, better, the self-renewing token path be wired so a 7-day TTL stops taking the capability out every week.
 
 _Found by the `antcv-position-discovery` run 2026-09-29 (JOB-DISCOVERY-001, worktree-isolated, Opus 5).

@@ -25,7 +25,10 @@ async function gen(payload) {
   return Buffer.from(await res.arrayBuffer());
 }
 const base = {
-  schema_version: '1.0', doc: 'cv', language: 'da', layout: 'linear', filename: 't',
+  // EXEC-LINEAR step 5a (1.51.4607): doc 'cv' + layout 'linear' is now the executive CV (buildLinearCvDocument,
+  // its own page-2+ running header per the approved addendum). This strip check targets the linear
+  // builder that 'cv'+'linear' used to reach - the letter path - so it asks for doc 'cl'.
+  schema_version: '1.0', doc: 'cl', language: 'da', layout: 'linear', filename: 't',
   package: 'copenhagen-modern', watermark: 'DEMO - AntCV',
   personal_info: { name: 'Anita Myre', location: '2300, K', email: 'anita@ex.dk', phone: '+45 12 34 56 78', linkedin: 'linkedin.com/in/anita' },
   meta: { subtitle: 'Processes & Products' },

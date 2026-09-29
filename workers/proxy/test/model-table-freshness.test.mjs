@@ -244,7 +244,43 @@ test('the 2026-09-29 ids are priced but stay OUT of the default cascades', () =>
   for (const id of ['gpt-6-sol', 'gpt-6.1-sol', 'gpt-6-luna', 'gpt-5.5-pro', 'gpt-5.4-pro']) {
     assert.ok(!PROVIDER_MODELS.openai.includes(id), `${id} must stay out of the default openai chain`);
   }
-  for (const id of ['claude-opus-5-5', 'claude-sonnet-5-5']) {
+  // claude-opus-5-5 WAS here until the owner adopted it the same day (OPUS55-ADOPT-001) — see the cascade test below.
+  for (const id of ['claude-sonnet-5-5']) {
     assert.ok(!PROVIDER_MODELS.anthropic.includes(id), `${id} adoption is an owner call, not a pricing side effect`);
   }
+});
+
+// ------------------------------------------------------------
+// OPUS55-ADOPT-001 (owner 2026-09-29): claude-opus-5-5 replaces claude-opus-4-8 as the
+// flagship gen pin. Opus 5.5 keeps thinking ON (thinking:disabled and budget_tokens = 400),
+// so the cascade must (a) never send it thinking:disabled, (b) read the TEXT block, not
+// content[0], which is the thinking block.
+import { SONNET5_THINK_OFF, ALWAYS_THINKING, anthropicText } from '../src/multi-llm.js';
+
+test('claude-opus-5-5 heads the opus tier of the anthropic cascade; opus-4-8 stays as the next fallback', () => {
+  const a = PROVIDER_MODELS.anthropic;
+  assert.ok(a.includes('claude-opus-5-5'));
+  assert.ok(a.indexOf('claude-opus-5-5') < a.indexOf('claude-opus-4-8'));
+  assert.equal(a[0], 'claude-sonnet-5', 'the cascade head is unchanged — adoption is the opus slot only');
+});
+
+test('thinking:disabled is sent to Sonnet 5.0 only — never to the always-thinking 5.5 / Fable / Mythos ids', () => {
+  assert.ok(SONNET5_THINK_OFF.test('claude-sonnet-5'));
+  for (const m of ['claude-sonnet-5-5', 'claude-opus-5-5', 'claude-fable-5-1', 'claude-mythos-5']) {
+    assert.ok(!SONNET5_THINK_OFF.test(m), m + ' would get thinking:disabled and 400');
+    assert.ok(ALWAYS_THINKING.test(m), m + ' must be treated as always-thinking');
+  }
+  for (const m of ['claude-opus-5', 'claude-opus-4-8', 'claude-sonnet-4-6']) assert.ok(!ALWAYS_THINKING.test(m), m);
+});
+
+test('anthropicText skips the leading thinking block', () => {
+  assert.equal(anthropicText({ content: [{ type: 'thinking', thinking: '' }, { type: 'text', text: '{"ok":1}' }] }), '{"ok":1}');
+  assert.equal(anthropicText({ content: [{ type: 'text', text: 'a' }, { type: 'text', text: 'b' }] }), 'ab');
+  assert.equal(anthropicText({}), '');
+});
+
+test('the pass-through guard uses the same Sonnet-5.0-only pattern (no thinking:disabled for sonnet-5-5)', () => {
+  const src = readFileSync(new URL('../src/index.js', import.meta.url), 'utf8');
+  assert.ok(src.includes(String.raw`/claude-sonnet-5(?![-.]?\d)/.test(body.model)`), 'index.js pass-through regex drifted');
+  assert.ok(!src.includes('/claude-sonnet-5/.test(body.model)'), 'the old over-broad /claude-sonnet-5/ guard is back');
 });

@@ -123,7 +123,8 @@ const PROVIDER_MODELS = {
     // Current flagship + 4.x family (2025-2026)
     'claude-sonnet-5',           // 2026-07 preferred: best speed/intelligence, drop-in for 4.6. Adaptive thinking is ON by default -> we send thinking:disabled (see callAnthropic); NO sampling params anywhere in AntCV, so no 400.
     'claude-sonnet-4-20250514',  // stable, current production default for this proxy
-    'claude-opus-4-8',           // 2026-07 flagship (AntCV gen pin since 1.51.332) — supersedes 4-7
+    'claude-opus-5-5',           // 2026-09-29 flagship (AntCV gen pin since 1.51.4666, OPUS55-ADOPT-001) — [4,20], cheaper than 4-8. Thinking is ALWAYS on (disabled = 400); callAnthropic sends effort:'low' so the 8000 budget still covers the JSON.
+    'claude-opus-4-8',           // 2026-07 previous flagship (gen pin 1.51.332 → 1.51.4666) — kept as the next fallback
     'claude-opus-4-7',           // 2026-04 flagship, available with appropriate tier
     'claude-sonnet-4-6',         // 2026-02 mainline
     'claude-haiku-4-5',          // fast/cheap current
@@ -216,6 +217,15 @@ async function getKeyForProvider(env, provider) {
 // They don't catch network errors — those bubble up so the
 // caller can record them with the same error shape.
 
+// OPUS55-ADOPT-001 (2026-09-29). Sonnet 5.0 only: NOT followed by a version suffix (-5, .1, …).
+export const SONNET5_THINK_OFF = /claude-sonnet-5(?![-.]?\d)/;
+// Thinking cannot be disabled on these; sampling params 400 on them too.
+export const ALWAYS_THINKING = /claude-(opus-5-5|sonnet-5-5|fable-5|mythos-5)/;
+export function anthropicText(data) {
+  const c = Array.isArray(data?.content) ? data.content : [];
+  return c.filter((b) => b && b.type === 'text').map((b) => b.text || '').join('');
+}
+
 async function callAnthropic(key, system, userPrompt, model) {
   const m = model || 'claude-sonnet-5';
   const { signal, cleanup } = withTimeout(null, PER_CALL_TIMEOUT_MS, 'anthropic');
@@ -231,7 +241,12 @@ async function callAnthropic(key, system, userPrompt, model) {
     system,
     messages: [{ role: 'user', content: userPrompt }],
   };
-  if (/claude-sonnet-5/.test(m)) __body.thinking = { type: 'disabled' };
+  // OPUS55-ADOPT-001 (2026-09-29): the regex used to be /claude-sonnet-5/, which ALSO matched
+  // claude-sonnet-5-5 — and sonnet-5-5 returns 400 on thinking:disabled. Opus 5.5, Sonnet 5.5, Fable 5.x
+  // and Mythos 5.x keep thinking ON (disabled / budget_tokens = 400) and reject sampling params, so for
+  // them lower the effort instead: 'low' keeps thinking short enough that the 8000 cap covers the JSON.
+  if (SONNET5_THINK_OFF.test(m)) __body.thinking = { type: 'disabled' };
+  else if (ALWAYS_THINKING.test(m)) __body.output_config = { effort: 'low' };
   let res;
   try {
     res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -252,7 +267,9 @@ async function callAnthropic(key, system, userPrompt, model) {
   if (status !== 200) {
     return { ok: false, status, error: data?.error?.message || JSON.stringify(data).slice(0, 300) };
   }
-  const text = data.content?.[0]?.text || '';
+  // Thinking models put a `thinking` block FIRST (empty text by default), so content[0] is not the
+  // answer on Opus 5.5 / Fable / Sonnet 5.5 — join the text blocks (OPUS55-ADOPT-001).
+  const text = anthropicText(data);
   if (!text) return { ok: false, status, error: 'empty content' };
   return { ok: true, text, model: data.model || m, usage: data.usage || null, status };
 }

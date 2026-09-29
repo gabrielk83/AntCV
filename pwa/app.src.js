@@ -1832,7 +1832,7 @@
         u = __antcvAbortBudget(p);
       let m;
       const f = JSON.stringify({
-          model: "claude-opus-4-8",
+          model: "claude-opus-5-5",
           max_tokens: 32768,
           system: t,
           messages: e,
@@ -33962,14 +33962,14 @@
                               (S && S[t] && S[t].model) ||
                               null ||
                               ("anthropic" === t
-                                ? "claude-opus-4-8"
+                                ? "claude-opus-5-5"
                                 : "openai" === t
                                   ? "gpt-5.5"
                                   : "mistral" === t
                                     ? "mistral-large-latest"
                                     : "gemini" === t
                                       ? "gemini-2.5-flash"
-                                      : "claude-opus-4-8"),
+                                      : "claude-opus-5-5"),
                             max_tokens: 20,
                             messages: [
                               {
@@ -36768,7 +36768,7 @@
                                         "x-api-key": t || "sk-ant-test",
                                       },
                                       body: JSON.stringify({
-                                        model: "claude-opus-4-8",
+                                        model: "claude-opus-5-5",
                                         max_tokens: 10,
                                         messages: [
                                           { role: "user", content: "Say hi" },

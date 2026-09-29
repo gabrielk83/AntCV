@@ -1220,7 +1220,9 @@ _verified: 2026-09-24_ — CI E1 re-verify against HEAD 88f89001: leg (f) ROW-82
 
 ## Row 89 — MODEL-TABLE-FRESHNESS-001
 
-_verified: 2026-09-29_
+_verified: 2026-09-30_
+
+_2026-09-30 OPUS55-ADOPT-001 (owner): the owed D1 `llm_provider_costs` INSERT is APPLIED — superseding rows for claude-sonnet-5 [2,10], claude-opus-5 [5,25], claude-fable-5 / -5-1 [10,50], gpt-5.5 [5,30], plus claude-opus-5-5 [4,20], each now the newest row per model (SELECT-verified). claude-opus-5-5 is the new gen pin (`1.51.4666-opus55-adopt`). Worker deploys ×3 in the same run. Remaining on this row: the 2027-01-01 Gemini 3.x re-verify._
 
 _Weekly tune 2026-09-29 (desktop, Opus 5.5): pins all verify against the vendor pages. Ten vendor-listed ids were unpriced or resolved to a SIBLING's key via longest-key-wins: ANTHROPIC-55-RATES-2026-09-001 (`claude-opus-5-5` [4,20], was opus-5 [5,25]; `claude-sonnet-5-5` [2,10]), GPT6-SOL-LUNA-RATES-2026-09-001 (`gpt-6-sol`/`gpt-6.1-sol` [2,10], `gpt-6-luna` [0.1,0.5] was 30x OVER, `gpt-5.5-pro`/`gpt-5.4-pro` [30,180] were 6x/12x UNDER on the pin keys), GEMINI31-RATES-2026-09-001 (`gemini-3.5-flash-lite` [0.3,2.5] was 5x OVER on 3.5-flash, `gemini-3.1-flash-lite` [0.25,1.5], `gemini-3.1-pro` [2,12]; ALL Gemini 3.x promotional through 2026-12-31). Fixed in all three mirrors; freshness 26/26 ×2, mirror 8/8, suite 2113/2113. OWED: deploy ×3 for these keys; D1 INSERT (sonnet-5 [2,10], opus-5, fable-5/-5-1, gpt-5.5 [5,30]), where this week's stored cost is 1.301x the recomputed cost, all on claude. Report: `docs/qa/COST_QUALITY_WEEKLY_2026-09-29.md`._
 

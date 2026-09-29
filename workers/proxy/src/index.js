@@ -1541,8 +1541,14 @@ async function handleRequest(request, env = {}) {
     // sonnet-5 also 400s on NON-DEFAULT sampling params — strip temperature/top_p/top_k defensively
     // (AntCV sends none, but a BYOK/custom body might). Only touches sonnet-5; every other model is
     // forwarded unchanged. The buffered retry below re-parses this same (normalised) bodyText.
-    if (typeof body.model === 'string' && /claude-sonnet-5/.test(body.model)) {
+    // OPUS55-ADOPT-001 (2026-09-29): /claude-sonnet-5/ also matched claude-sonnet-5-5, which 400s on
+    // thinking:disabled. Sonnet 5.0 keeps the disable; the always-thinking 5.5 / Fable / Mythos models
+    // get NO thinking change (their default is adaptive) but lose sampling params, which they reject.
+    if (typeof body.model === 'string' && /claude-sonnet-5(?![-.]?\d)/.test(body.model)) {
       if (body.thinking == null) body.thinking = { type: 'disabled' };
+      delete body.temperature; delete body.top_p; delete body.top_k;
+    } else if (typeof body.model === 'string' && /claude-(opus-5-5|sonnet-5-5|fable-5|mythos-5)/.test(body.model)) {
+      if (body.thinking && body.thinking.type !== 'adaptive') delete body.thinking;
       delete body.temperature; delete body.top_p; delete body.top_k;
     }
     bodyText = JSON.stringify(body);

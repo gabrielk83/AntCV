@@ -176,3 +176,50 @@ from the same worktree.
 5. Data path: the D1 MCP connector is not reachable from this desktop session. This run used logged-in
    wrangler, which `66687345` has since written into `SCHEDULED_ROUTINES.md` STANDING RULE 0 as the approved
    fallback. The scheduled-task prompt still names only the MCP connector; worth aligning.
+
+---
+
+# Owner follow-up 2026-09-29/30 — OPUS55-ADOPT-001 (all four §6 calls taken)
+
+Owner, same evening: run the D1 insert, redeploy the three workers, pin `analysis`, adopt
+`claude-opus-5-5`. Shift lane `1.51.4666-1.51.4685`, worktree `.claude/worktrees/opus55-adopt`.
+
+**D1 (§2) — APPLIED.** `wrangler d1 execute ant_memory --remote`: 6 rows, `changes:6`. Superseding
+rows for `claude-sonnet-5` [2,10], `claude-opus-5` [5,25], `claude-fable-5` / `-5-1` [10,50],
+`gpt-5.5` [5,30], and `claude-opus-5-5` [4,20] (`effective_from` 2026-09-29) so the new pin is priced
+even before the relay redeploy. Verified by SELECT: each model's newest row is the corrected one. The first
+attempt returned `Authentication error [code: 10000]` (expired OAuth access token; the token scope does
+include `d1 (write)`). `wrangler whoami` refreshed it and the retry succeeded.
+
+**`analysis` → mistral — APPLIED** in `workers/proxy/wrangler.toml` + `workers/demo-proxy/wrangler.toml`.
+`roleHeadOrder(analysis)` = `[mistral, anthropic, openai, gemini]`; anthropic stays in the tail.
+**Rollback:** `MODEL_ROLES = '{"writer":"anthropic","supervisor":"mistral","coherence":"openai"}'`.
+
+**`claude-opus-5-5` adopted.** The four PWA gen-pin sites (`callClaude` body, the provider ping, its
+default arm, the Settings worker test) `claude-opus-4-8` → `claude-opus-5-5` in `app.js` + `app.src.js`.
+Proxy cascade: `claude-opus-5-5` inserted ahead of `claude-opus-4-8` (4-8 kept as the next fallback;
+`claude-sonnet-5` still heads). Opus 5.5 differs from 4.8 in ways that would have broken AntCV. Fixed in
+both proxies before the swap:
+
+1. **Thinking cannot be disabled** (`{type:"disabled"}` and `budget_tokens` → 400). The PWA sends no
+   `thinking`, so its calls run adaptive at Opus 5.5's default effort `medium` (4.8 ran with no thinking;
+   expect somewhat higher latency and output tokens per call). The cascade `callAnthropic` now sends
+   `output_config:{effort:"low"}` to the always-thinking models so its fixed 8000 `max_tokens` still covers the JSON.
+2. **`content[0]` is the thinking block.** `callAnthropic` and `byok-qualify` read `content[0].text`, which
+   would have logged every Opus 5.5 call as `empty content`. They now join the `text` blocks (`anthropicText`).
+   The PWA was already safe (stream keeps only `text_delta`; JSON path joins `.text`).
+3. **Latent bug:** the Sonnet-5 guard `/claude-sonnet-5/` (cascade + pass-through) also matched
+   `claude-sonnet-5-5`, which 400s on `thinking:disabled`. Now `/claude-sonnet-5(?![-.]?\d)/`. The
+   always-thinking set `/claude-(opus-5-5|sonnet-5-5|fable-5|mythos-5)/` also gets sampling params stripped
+   in the pass-through, since those 400 too.
+
+Cache-bust `1.51.4666-opus55-adopt`: every `index.html` stamp that was on `1.51.4646-linear-length` (11,
+including `app.js?v`, the `ANTCV_VERSION` seed, version-override, docx-client, copenhagen, pdf-preview-gate),
+`sw.js` CACHE, `TARGET_VERSION`, with `1.51.4646-linear-length` added to `STALE_VERSIONS`.
+
+**Tests:** freshness 30/30 ×2 (+4: cascade order, thinking regexes, `anthropicText`, pass-through guard);
+relay mirror 8/8 (`claude-opus-5-5` in the live list); full suite **2127/2127**; boot smoke
+`glDemo=function, errors=0`; `app.js` head `(()=>{`, 0 `"use strict"`.
+
+**Not verified live:** no Anthropic key on this machine, so no real Opus 5.5 call was made. First real
+generation after deploy is the check: watch `llm_calls` for `model='claude-opus-5-5'` with `success=1`.

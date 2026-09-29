@@ -9,6 +9,8 @@ A run appends its summary to the TOP of the list below. Row status belongs in
 
 ---
 
+> **OPUS55-ADOPT-001 2026-09-30 (owner-directed follow-up to the weekly cost-quality tune; lane 1.51.4666-1.51.4685).** All four owner calls from COST_QUALITY_WEEKLY_2026-09-29 §6 were taken. D1 superseding cost rows applied (6 rows). `analysis`→mistral pinned. `claude-opus-5-5` adopted as the gen pin, with three API-compatibility fixes in both proxies (text-block extraction, Sonnet-5-only thinking disable, effort:low for always-thinking cascade calls). Cache-bust `1.51.4666-opus55-adopt`. Suite 2127/2127, boot smoke OK. Worker deploys ×3 in the same run. Not verified live: no Anthropic key on this machine; the first production Opus 5.5 call is the check.
+
 > **POSITION-DISCOVERY 2026-09-29, rerun (JOB-DISCOVERY-001, desktop scheduled, Opus 5.5, worktree-isolated) — 21 leads PROPOSED (5 T1, 16 T2), 12 dead rows archived.** The earlier entry today stopped at AUTH with zero searches, so the duplicate-run rule did not apply: no search had run. Gates: AUTH OK (`TOKEN OK`, expires 2026-10-06), Python 3.12 OK. Preflight WORKSPACE DIRTY -> worktree on `origin/main`; no shift claim, no `pwa/` touched.
 >
 > **Step 1a sweep** (`check-postings.py check --apply`): probed 55 — LIVE 39, CLOSED 12 archived (NVIDIA Optical System Eng V&Q, NKT Senior Process Eng, Siemens TPM MV, Microsoft PTPM Quantum Manufacturing, FalCom, Eaton, Radiometer Sr Innovation Mgr, 3Shape Head of Product, Everllence Sr TPM, VENZO, ElevateIT, Demant Sr Systems Eng Process Specialist), GONE 3 held at strike 1/2 (3Shape x2 HTTP 410, GE Healthcare 410), ERROR 1 (VML MAP HTTP 500, no strike).

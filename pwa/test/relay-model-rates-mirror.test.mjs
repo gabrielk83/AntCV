@@ -54,7 +54,7 @@ test('every model production actually calls is priced', async () => {
   // Observed in D1 llm_calls over the 30 days to 2026-08-20, plus the two
   // owner-pinned gen models. None of these has a row in llm_provider_costs.
   const LIVE = [
-    'claude-sonnet-5', 'claude-opus-4-8',
+    'claude-sonnet-5', 'claude-opus-5-5', 'claude-opus-4-8',   // opus-5-5: gen pin since 1.51.4666 (OPUS55-ADOPT-001)
     'gpt-5.4-mini', 'gpt-5.5',
     'mistral-large-latest', 'gemini-2.5-flash',
   ];

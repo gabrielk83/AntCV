@@ -226,7 +226,8 @@ async function callAnthropicCompat(url, apiKey, modelId, system, user) {
   if (status !== 200) {
     return { ok: false, status, error: data?.error?.message || JSON.stringify(data).slice(0, 300) };
   }
-  const text = data.content?.[0]?.text || '';
+  // OPUS55-ADOPT-001: thinking models return a `thinking` block first — join the text blocks.
+  const text = (Array.isArray(data.content) ? data.content : []).filter((b) => b && b.type === 'text').map((b) => b.text || '').join('');
   if (!text) return { ok: false, status, error: 'empty content in response' };
   const usage = data.usage || {};
   return {

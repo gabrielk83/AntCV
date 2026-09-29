@@ -47,7 +47,11 @@ proxy_url = "https://cv-proxy.karp-gabriel-a.workers.dev"
 # 100% ok, health 1.0) with ZERO anthropic traffic — the anthropic head produced nothing,
 # so the pin now matches the empirically-working provider. anthropic stays in the cascade
 # tail as fallback. ROLLBACK: coherence->anthropic.
-MODEL_ROLES = '{"writer":"anthropic","supervisor":"mistral","coherence":"openai"}'
+# OWNER 2026-09-29 (OPUS55-ADOPT-001 / COST_QUALITY_WEEKLY_2026-09-29 §6.3): analysis head -> mistral.
+# parse_jd, 5 reports running: anthropic $0.164/call vs mistral $0.0216 (7.6x), both ok=100%.
+# Owner call over the --activation-min-calls 30 floor, which 4 sessions/month never reach.
+# anthropic stays in the cascade tail. ROLLBACK: drop "analysis" from the map.
+MODEL_ROLES = '{"writer":"anthropic","supervisor":"mistral","coherence":"openai","analysis":"mistral"}'
 
 # ---------- KV namespaces ----------
 # The code reads two binding names: ANALYTICS (for /analytics events and the

@@ -155,8 +155,11 @@ if (cmd === 'start') {
   }
   if (dirty) {
     // A dirty shared tree is the collision hazard. Steer the routine into an isolated worktree.
+    // The worktree goes under <repo>/.claude/worktrees/ (gitignored), NOT os.tmpdir(): %TEMP% is
+    // outside the project dir, so every command there needs a permission prompt, and an unattended
+    // run stalls on the first one (relay-cost-quality-tune 09-17 + 09-23 died 6-18s after start).
     const stamp = Date.now().toString(36);
-    const wt = join(os.tmpdir(), `antcv-routine-${routine}-${stamp}`);
+    const wt = join(REPO, '.claude', 'worktrees', `routine-${routine}-${stamp}`).replace(/\\/g, '/');
     console.log('[preflight] WORKSPACE DIRTY — the owner (or another session) has uncommitted work here.');
     console.log('[preflight] Do NOT edit or rebase in this clone. Work in an isolated worktree instead:');
     console.log(`    git fetch origin && git worktree add "${wt}" origin/main`);

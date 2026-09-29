@@ -61,6 +61,9 @@ node scripts/routine-preflight.mjs start --routine <this-routine-name>
 #   exit 0 "WORKSPACE CLEAN"  → SYNC FIRST + work in this clone as normal.
 #   exit 3 "WORKSPACE DIRTY"  → do NOT rebase/edit here; run the printed `git worktree add
 #            origin/main` line and do ALL work in that worktree (this is what stops the collision).
+#            The worktree is under <repo>/.claude/worktrees/ (gitignored). Never move it to %TEMP%:
+#            outside the project dir every command prompts, and an unattended run stalls on the
+#            first prompt (ROUTINE-PERMISSION-STALL-001, relay tune 2026-09-17 + 09-23).
 
 # LAST (always, even on a no-op or a blocker — this is what makes a silent failure visible):
 node scripts/routine-preflight.mjs end   --routine <name> --status ok|no-op --summary "<one line>"

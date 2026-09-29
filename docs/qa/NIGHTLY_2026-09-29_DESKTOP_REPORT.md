@@ -81,3 +81,17 @@ negative control, and one diag's self-inflicted false-RED removed. No product co
 - The button audit's `Bundle: 1.51.4246-era` line is derived from the first version string inside
   `app.js`, not the deploy version; it is not evidence of a stale bundle.
 - `FEATURES_REGISTRY.md` is untouched on purpose: nothing product-facing shipped.
+
+---
+
+## Desktop cross-check (second antcv-nightly fire, 2026-09-29, Opus 5.5)
+
+A second `antcv-nightly` fired on Gabo-PC after this report existed, so it ran cross-check only. Worktree `routine-antcv-nightly-mun7m6to`, base `df21668a` (live `1.51.4646-linear-length`). No code changed, no version consumed, no claim.
+
+- **Live attest: PASS.** `diag-live-guard-sidecars.mjs`: all 9 sidecars served, executed, content-identical. `browser-qa --only version-live` PASS, `--only sidecars-live` PASS. Live `sw.js` CACHE `antcv-1.51.4646-linear-length` and `app.js?v=1.51.4646-linear-length` equal the repo. `/health` 200 on relay, demo-proxy, cv-proxy, docx-worker (`antcv-docx-worker` and `c2pa-worker` hosts return 404; not in the four-worker set).
+- **Tooling defect found:** the routine prompt's `browser-qa.mjs --only version-live,sidecars-live` runs **0/0 checks and exits 0**. `runChecks` matches `only` as one exact id (`scripts/qa-checks.mjs:263`), so the comma list matches nothing. A false green on every nightly that used the prompt form. Fix is owed: accept a comma list, or fail when 0 checks are selected. Not fixed in a cross-check run.
+- **E2 Settings churn: PASS.** 0 mutations/8s on Personal/Layout/Account/Advanced, 4 of 4 distinct fingerprints; `--selftest` 80/80 per tab.
+- **E3 button audit:** 216 buttons, 0 THROWS, 0 DEAD, 0 page errors. Totals moved from 138 active / 11 ui-only to 134 / 15. The same 216 signatures, with 12 buttons flipping between active and ui-only **in both directions** (8 one way, 4 the other). That is classification timing noise, not a regression. A third run to confirm was not done. The morning artifact was kept; this run's copy was not committed.
+- **E4 export/preview parity: OK** (4 hard checks green, `dom=0` INFO as designed).
+- **E1 stalest rows:** 96 CV-HEADER-BOX-001 (07-17), 97 DELIVERABLES-3CO-001 (07-18), 95 CV-POLISH-BATCH-001 (07-19), 92 EXPORT-PREVIEW-PAGINATION-DIVERGENCE-001, 93 AUTO-ANALYSE-ON-JD-LOAD-ERROR-001 (07-21). All still owner/live-session gated. `~/.antcv/browser-session.json` is still the expired 07-17 one. Not advanced.
+- **Row 110 ANTCV-TOKEN-EXPIRED-2026-09-02-001: owner leg DONE.** The owner re-saved `~/.antcv/token` (preflight `TOKEN OK`, expires 2026-10-06T19:40Z). An authed `GET /api/job-tracker` returns **200**. Relay-backed routines are unblocked. Leg (a), a long-lived routine token or longer TTL, remains open.

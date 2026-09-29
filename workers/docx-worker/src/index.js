@@ -26172,20 +26172,26 @@ function buildLinearCvDocument(ctx) {
     return clean(l && v ? `${l}: ${v}` : (l || v));
   };
   const idt = (s) => `${s.id || ""} ${s.title || ""}`.toLowerCase();
+  // LINEAR-DETAILS-STRUCTURE-001 (owner 2026-09-30 "publications.. headline is too long"): a details row
+  // holds a one-liner. Publications and sections with 7+ rows keep their own heading and list (block);
+  // the rest form ONE details table. Mirrors pwa/antcv-cv-layout-linear.js detailsOrBlock().
+  const rowCount = (s) => Array.isArray(s.items) ? s.items.filter((x) => x && !x.grp && !x.hr).length
+    : Array.isArray(s.rows) ? s.rows.length : (s.content ? 1 : 0);
+  const detailsOrBlock = (s, k) => (/(^|\s)pubs?(\s|$)|publica|patent|publikation/.test(k) || rowCount(s) >= 7) ? "block" : "details";
   const kind = (s) => {
     const k = idt(s);
     if (s.type === "experience") return "experience";
     // only a real education section; e.g. "recommendations" can be education-typed (owner data 2026-09-29)
-    if (s.type === "education") return /educat|uddannelse|degree|academ/.test(k) ? "education" : "details";
+    if (s.type === "education") return /educat|uddannelse|degree|academ/.test(k) ? "education" : detailsOrBlock(s, k);
     if (s.type === "table") return "tiles";
     if (/cert|course|credential|licen/.test(k)) return "certs";
     if ((s.type === "labeled_list" || s.type === "rich_block") && /tool|method|skill|technical|arsenal|expertise|stack/.test(k)) return "tools";
     if ((s.type === "bullets" || s.type === "text_bullets") && !/profile|summary|work.?style/.test(k)) return "bullets";
     if (/profile|summary|about|work.?style|arbejdsstil|profil|who i am/.test(k) &&
         /^(text|text_inline|text_bullets|rich_block|foundation|bullets)$/.test(s.type)) return "profile";
-    return "details";
+    return detailsOrBlock(s, k);
   };
-  const by = { profile: [], tiles: [], bullets: [], experience: [], education: [], certs: [], tools: [], details: [] };
+  const by = { profile: [], tiles: [], bullets: [], experience: [], education: [], certs: [], tools: [], block: [], details: [] };
   for (const s of secs) by[kind(s)].push(s);
 
   // profile callout rows [lead, text]
@@ -26239,7 +26245,10 @@ function buildLinearCvDocument(ctx) {
     const yrs = clean(typeof it === "object" && (it.years || it.yrs || it.dates) || "");
     if (deg && !isPh(deg)) edu.push([deg, sch + (yrs ? ` (${yrs})` : ""), detail]);
   }
-  const eduL = edu.filter((_, i) => i % 2 === 0), eduR = edu.filter((_, i) => i % 2 === 1);
+  // LINEAR-MERGE-001: an odd last degree takes the full width below the two columns
+  const eduLast = edu.length % 2 === 1 && edu.length > 1 ? edu[edu.length - 1] : null;
+  const eduPair = eduLast ? edu.slice(0, -1) : edu;
+  const eduL = eduPair.filter((_, i) => i % 2 === 0), eduR = eduPair.filter((_, i) => i % 2 === 1);
   const certs = by.certs.flatMap((s) => (s.items || []).map(itemText)).filter((x) => x && !isPh(x)).join(" • ");
   // tools 2x2 [label, value]
   const tools = [];
@@ -26279,13 +26288,15 @@ function buildLinearCvDocument(ctx) {
   const tileGrid = (rows, colW, o) => new Table({
     alignment: AlignmentType.CENTER, layout: "fixed", width: { size: colW * rows[0].length, type: WidthType.DXA },
     columnWidths: Array(rows[0].length).fill(colW), borders: nb,
-    rows: rows.map((r) => new TableRow({ children: r.map(([t, d]) => new TableCell({
-      width: { size: colW, type: WidthType.DXA }, shading: { fill: o.fill, type: ShadingType.CLEAR, color: "auto" }, margins: o.margins,
+    // LINEAR-MERGE-001 (owner 2026-09-30): padding cells are dropped and the last real tile spans them
+    rows: rows.map((r0) => { const r = r0.filter(([t, d]) => t || d), span = r0.length - r.length + 1; return new TableRow({ children: r.map(([t, d], ci) => new TableCell({
+      width: { size: colW * (ci === r.length - 1 ? span : 1), type: WidthType.DXA }, columnSpan: ci === r.length - 1 && span > 1 ? span : undefined,
+      shading: { fill: o.fill, type: ShadingType.CLEAR, color: "auto" }, margins: o.margins,
       borders: { left: { style: BorderStyle.SINGLE, size: 16, color: BAR }, top: NONE, right: NONE, bottom: o.rowGap ? { style: BorderStyle.SINGLE, size: 12, color: "FFFFFF" } : NONE },
       children: [
         new Paragraph({ spacing: { before: 0, after: lcPt(o.titleAfter) }, children: [run(noStop(t), { bold: true, size: lcSz(o.titleSize), color: INK })] }),
         new Paragraph({ spacing: { before: 0, after: 0, line: lcLine(1.1) }, children: [run(noStop(d), { size: lcSz(o.descSize), color: SEC })] }),
-      ] })) })),
+      ] })) }); }),
   });
   const jobHeader = (r) => new Paragraph({
     spacing: { before: lcPt(5), after: lcPt(1) }, keepNext: true, tabStops: [{ type: TabStopType.RIGHT, position: CONTENT_W }],
@@ -26401,6 +26412,8 @@ function buildLinearCvDocument(ctx) {
       alignment: AlignmentType.CENTER, layout: "fixed", width: { size: HALF_W * 2, type: WidthType.DXA }, columnWidths: [HALF_W, HALF_W], borders: nb,
       rows: [
         ...(edu.length ? [new TableRow({ children: [cell(eduL, { top: 60, bottom: 60, left: 40, right: 60 }), cell(eduR, { top: 60, bottom: 60, left: 60, right: 40 })] })] : []),
+        ...(eduLast ? [new TableRow({ children: [new TableCell({ width: { size: HALF_W * 2, type: WidthType.DXA }, columnSpan: 2,
+          margins: { top: 0, bottom: 60, left: 40, right: 40 }, children: [eduBlock(eduLast, true)] })] })] : []),
         // certifications span BOTH columns as a full-width row (owner 2026-09-27)
         ...(certs ? [new TableRow({ children: [new TableCell({ width: { size: HALF_W * 2, type: WidthType.DXA }, columnSpan: 2,
           margins: { top: 40, bottom: 60, left: 40, right: 40 }, children: [new Paragraph({ spacing: { before: 0, after: 0 }, children: [
@@ -26414,9 +26427,34 @@ function buildLinearCvDocument(ctx) {
     const rows = []; for (let i = 0; i < tools.length; i += 2) { const r = tools.slice(i, i + 2); while (r.length < 2) r.push(["", ""]); rows.push(r); }
     children.push(tileGrid(rows, HALF_W, { fill: FILL, margins: { top: 70, bottom: 70, left: 90, right: 90 }, titleSize: 9.5, descSize: 9.5, titleAfter: 1 }));
   }
+  // blocks: own heading, one paragraph per row ("Lead: text" bold lead; {grp} rows as bold sub-heads)
+  for (const s of by.block) {
+    const paras = [];
+    const rows = Array.isArray(s.items) ? s.items : Array.isArray(s.rows) ? s.rows : (s.content ? [s.content] : []);
+    for (const it of rows) {
+      if (!it || it.hr) continue;
+      if (typeof it === "object" && it.grp) {
+        const g = clean(it.b || it.t || (typeof it.grp === "string" ? it.grp : ""));
+        if (g) paras.push(new Paragraph({ spacing: { before: lcPt(3), after: lcPt(1) }, keepNext: true, children: [run(g, { bold: true, size: lcSz(9.5), color: ACC })] }));
+        continue;
+      }
+      const lead = typeof it === "object" && !Array.isArray(it) ? clean(it.b || it.l || it.label || "").replace(/:\s*$/, "") : "";
+      const body = lead ? clean(it.t || it.v || it.value || "") : itemText(it);
+      if ((!lead && !body) || isPh(body)) continue;
+      paras.push(new Paragraph({ spacing: { before: lcPt(1), after: lcPt(1), line: lcLine(1.1) }, children: [
+        ...(lead ? [run(lead + (body ? ": " : ""), { bold: true, size: lcSz(9.5), color: INK })] : []),
+        ...(body ? [run(body, { size: lcSz(9.5), color: "334155" })] : []) ] }));
+    }
+    if (!paras.length) continue;
+    children.push(heading(titleCase(s.title || s.id || "")));
+    children.push(...paras);
+  }
   if (details.length) {
-    const labels = details.map((d) => d.label).filter(Boolean).slice(0, 4);
-    const head = labels.length > 1 ? labels.slice(0, -1).join(", ") + " & " + labels[labels.length - 1] : (labels[0] || "Details");
+    // LINEAR-DETAILS-STRUCTURE-001: one SHORT heading - "A & B" up to two labels, else a generic one
+    const labels = details.map((d) => d.label).filter(Boolean);
+    const lang = String(ctx.lang || "en").toLowerCase().slice(0, 2);
+    const head = labels.length === 2 ? labels[0] + " & " + labels[1] : labels.length === 1 ? labels[0]
+      : (lang === "da" ? "Øvrige oplysninger" : "Additional Details");
     children.push(heading(head));
     children.push(new Table({ alignment: AlignmentType.CENTER, layout: "fixed", width: { size: CONTENT_W, type: WidthType.DXA },
       columnWidths: [LABEL_W, CONTENT_W - LABEL_W], borders: nb, rows: details.map(detailRow) }));

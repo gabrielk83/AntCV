@@ -127,3 +127,28 @@ test('linear CV adapter: rich_block tools -> tiles, education-typed recommendati
   assert.ok(!edu.includes('References'), 'recommendations are not printed as a degree');
   assert.ok(/Recommendations/.test(t) && t.includes('Available on request'), 'recommendations land in the details table');
 });
+
+// 1.51.4726 (owner 2026-09-30): LINEAR-MERGE-001 + LINEAR-DETAILS-STRUCTURE-001
+test('linear CV: short last rows merge; publications and long sections are blocks; short details heading', async () => {
+  const secs = [
+    { id: 'core_comp', title: 'CORE COMPETENCIES', type: 'table', loc: 'main', rows: [['Focus Area', 'Strategic Expertise'],
+      ['A focus', 'a text'], ['B focus', 'b text'], ['C focus', 'c text'], ['Technical Coordination', 'change control boards']] },
+    { id: 'education', title: 'EDUCATION', type: 'education', loc: 'main', items: [{ deg: 'MBA', sch: 'Technion' }, { deg: 'M.Sc.', sch: 'TAU' }, { deg: 'B.Sc.', sch: 'TAU' }] },
+    { id: 'tools', title: 'TOOLS & METHODS', type: 'labeled_list', loc: 'main', items: [{ l: 'Tools', v: 'Jira' }, { l: 'Methods', v: 'FMEA' }, { l: 'Lab', v: 'benches' }] },
+    { id: 'pubs', title: 'PUBLICATIONS & PATENTS', type: 'list_italic', loc: 'main', items: ['Integration of Suspended Carbon Nanotubes, 2009'] },
+    { id: 'regulatory', title: 'REGULATORY CONTEXT', type: 'rich_block', loc: 'main', items: Array.from({ length: 8 }, (_, i) => ({ b: 'Std ' + i, t: 'context ' + i })) },
+    { id: 'recommendations', title: 'RECOMMENDATIONS', type: 'education', loc: 'main', items: [{ deg: 'References', sch: 'on request' }] },
+    { id: 'languages', title: 'LANGUAGES', type: 'labeled_list', loc: 'main', items: [{ l: 'English', v: 'native' }] },
+    { id: 'interests', title: 'INTERESTS', type: 'labeled_list', loc: 'main', items: [{ l: 'Rugby', v: 'team player' }] },
+  ];
+  const xml = unzipEntry(await gen({ sections: secs }), 'word/document.xml').toString('utf8');
+  const t = texts(xml);
+  const spans = [...xml.matchAll(/<w:gridSpan w:val="(\d)"\/>/g)].map((m) => +m[1]);
+  assert.ok(spans.includes(3), '4th competency tile spans the 3-column row');
+  assert.ok(spans.filter((n) => n === 2).length >= 2, 'odd tool tile and odd degree span 2');
+  assert.ok(t.includes('PUBLICATIONS &amp; PATENTS') && t.includes('REGULATORY CONTEXT'), 'blocks keep their own headings');
+  assert.ok(t.includes('Std 0: context 0'), 'block rows as "Lead: text"');
+  assert.ok(t.includes('ADDITIONAL DETAILS'), 'one short details heading for 3 labels');
+  assert.ok(!/PUBLICATIONS &amp; PATENTS, /.test(t), 'no long joined heading');
+  assert.ok(t.indexOf('REGULATORY CONTEXT') < t.indexOf('ADDITIONAL DETAILS'), 'details table last');
+});

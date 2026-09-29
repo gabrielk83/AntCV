@@ -27,11 +27,16 @@
  * 1.51.4706 (owner 2026-09-30): the profile + work-style rows sit in one tinted callout box, the
  * details rows get ONE heading ("Languages, Interests & ..." - the export's first four labels), and
  * certificates render as a full-width "Certificates & courses: a • b • c" row under education.
+ * 1.51.4726 (owner 2026-09-30): LINEAR-MERGE-001 - a grid's last row with fewer items than columns
+ * merges the last item with the empty space to its right (tiles, tool tiles, education columns).
+ * LINEAR-DETAILS-STRUCTURE-001 - publications and long sections (more than 6 rows) are their own
+ * blocks under their own heading; only short one-liners stay in the details table, whose heading
+ * is "A & B" for up to two labels, else "Additional Details". Same rules in the docx-worker.
  * Letters are untouched (no sidebar). No app.js edit. Kill: antcv:disable-cv-layout-linear=1.
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.4707-linear-resync';
+  var VERSION = '1.51.4726-linear-merge';
   if (window.__antcvCvLayoutLinear === VERSION) return;
   window.__antcvCvLayoutLinear = VERSION;
 
@@ -91,6 +96,21 @@
     pageModelChanged();
     return true;
   }
+  // LINEAR-DETAILS-STRUCTURE-001: the details one-liners form ONE table at the end, as in the export.
+  // Only details sections move (relative order kept); every other section keeps the owner's order.
+  // Idempotent - writes only when a details section sits before a non-details one. Two-column
+  // restores the saved map order, so this never leaks into the two-column layout.
+  function detailsLast() {
+    var s = readSections();
+    if (!s || !Array.isArray(s.cv) || s.cv.length < 2) return false;
+    var isD = s.cv.map(function (x) { return !!x && !!x.type && linKind(x) === 'details'; });
+    var seenD = false, bad = false;
+    for (var i = 0; i < isD.length; i++) { if (isD[i]) seenD = true; else if (seenD) { bad = true; break; } }
+    if (!bad) return false;
+    s.cv = s.cv.filter(function (_, j) { return !isD[j]; }).concat(s.cv.filter(function (_, j) { return isD[j]; }));
+    writeSections(s, 'cv-layout-linear-details');
+    return true;
+  }
   // back to the saved two-column map (order + loc); sections that did not exist then keep their place at the end
   function toTwoColumn() {
     var raw = null; try { raw = localStorage.getItem(MAP); } catch (_) {}
@@ -123,14 +143,25 @@
     if (!s) return 'details';
     var k = ((s.id || '') + ' ' + (s.title || '')).toLowerCase(), t = s.type;
     if (t === 'experience') return 'experience';
-    if (t === 'education') return /educat|uddannelse|degree|academ/.test(k) ? 'education' : 'details';
+    if (t === 'education') return /educat|uddannelse|degree|academ/.test(k) ? 'education' : detailsOrBlock(s, k);
     if (t === 'table') return 'tiles';
     if (/cert|course|credential|licen/.test(k)) return 'certs';
     if ((t === 'labeled_list' || t === 'rich_block') && /tool|method|skill|technical|arsenal|expertise|stack/.test(k)) return 'tools';
     if ((t === 'bullets' || t === 'text_bullets') && !/profile|summary|work.?style/.test(k)) return 'bullets';
     if (/profile|summary|about|work.?style|arbejdsstil|profil|who i am/.test(k) &&
         /^(text|text_inline|text_bullets|rich_block|foundation|bullets)$/.test(t)) return 'profile';
-    return 'details';
+    return detailsOrBlock(s, k);
+  }
+  // a details row holds a one-liner; publications and long sections keep their own heading and list
+  var BLOCK_MIN_ROWS = 7;
+  function rowCount(s) {
+    if (Array.isArray(s.items)) return s.items.filter(function (x) { return x && !x.grp && !x.hr; }).length;
+    if (Array.isArray(s.rows)) return s.rows.length;
+    return s.content ? 1 : 0;
+  }
+  function detailsOrBlock(s, k) {
+    if (/(^|\s)pubs?(\s|$)|publica|patent|publikation/.test(k)) return 'block';
+    return rowCount(s) >= BLOCK_MIN_ROWS ? 'block' : 'details';
   }
   window.__antcvCvLinearKind = linKind;
   // the export's tile/details bar colour: style.accent, else the heading colour
@@ -160,9 +191,12 @@
       if (!first) first = x.id;
       var l = titleCase(x.title || x.id); if (l) labels.push(l);
     });
-    labels = labels.slice(0, 4);
-    var head = labels.length > 1 ? labels.slice(0, -1).join(', ') + ' & ' + labels[labels.length - 1] : (labels[0] || 'Details');
+    var head = labels.length === 2 ? labels[0] + ' & ' + labels[1] : labels.length === 1 ? labels[0]
+      : (cvLang() === 'da' ? 'Øvrige oplysninger' : 'Additional Details');
     return first ? { id: first, text: head } : null;
+  }
+  function cvLang() {
+    try { return String(localStorage.getItem('language') || '').replace(/[^a-z]/gi, '').slice(0, 2).toLowerCase(); } catch (_) { return ''; }
   }
   function headStyle() {
     try {
@@ -197,7 +231,7 @@
       if (!ids[kind].length) return '';
       return ids[kind].map(function (id) { return M + '[data-sid="' + cssId(id) + '"]' + suffix; }).join(',') + '{' + body + '}';
     }
-    var HEAD = ' > :first-child:not([data-antcv-row-path])';
+    var HEAD = ' > :first-child:not([data-antcv-row-path])', ROW = '[data-antcv-row-path]:not([data-antcv-group-head])';
     var adj = [];
     ids.details.forEach(function (x) { ids.details.forEach(function (y) { if (x !== y) adj.push(M + '[data-sid="' + cssId(x) + '"] + [data-sid="' + cssId(y) + '"]'); }); });
     return '' +
@@ -206,6 +240,9 @@
       rule('tiles', ' table', 'border:none !important;border-collapse:separate !important;') +
       rule('tiles', ' thead', 'display:none !important;') +
       rule('tiles', ' tbody', 'display:grid !important;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;') +
+      // LINEAR-MERGE-001: a short last row - the last tile takes the empty space to its right
+      rule('tiles', ' tbody tr:last-child:nth-child(3n+1)', 'grid-column:1 / -1 !important;') +
+      rule('tiles', ' tbody tr:last-child:nth-child(3n+2)', 'grid-column:span 2 !important;') +
       rule('tiles', ' tbody tr', 'display:flex !important;flex-direction:column;background:#F1F5F9 !important;border-left:2pt solid ' + A + ';padding:7px 8px;text-align:left !important;') +
       rule('tiles', ' tbody td', 'display:block !important;border:none !important;padding:0 !important;background:transparent !important;font-size:13.33px !important;text-align:left !important;vertical-align:top !important;') +
       rule('tiles', ' tbody td:first-child', 'font-weight:700 !important;color:#0F172A !important;margin-bottom:2px;') +
@@ -214,12 +251,14 @@
       // tools -> 2 tiles per row (the export drops the group heads too)
       rule('tools', '', 'display:grid !important;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;') +
       rule('tools', HEAD, 'grid-column:1 / -1;') +
+      rule('tools', ' > ' + ROW + ':nth-last-child(1 of ' + ROW + '):nth-child(odd of ' + ROW + ')', 'grid-column:1 / -1 !important;') +
       rule('tools', ' > [data-antcv-group-head]', 'display:none !important;') +
       rule('tools', ' > [data-antcv-row-path]', 'margin:0 !important;background:#F8FAFC;border-left:2pt solid ' + A + ';padding:5px 6px;font-size:12.67px !important;line-height:1.1 !important;color:#475569 !important;text-align:left !important;') +
       rule('tools', ' > [data-antcv-row-path] > span:first-child', 'display:block;color:#0F172A !important;margin-bottom:1px;') +
       // education -> 2 columns, no fill, no borders
       rule('education', '', 'display:grid !important;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:14px;') +
       rule('education', HEAD, 'grid-column:1 / -1;') +
+      rule('education', ' > ' + ROW + ':nth-last-child(1 of ' + ROW + '):nth-child(odd of ' + ROW + ')', 'grid-column:1 / -1 !important;') +
       // details -> label | content rows: tinted label cell with the accent bar, hairline frame
       rule('details', '', 'display:grid !important;grid-template-columns:127px minmax(0,1fr);margin-bottom:0 !important;border:0.5pt solid #E2E8F0;border-left:none;') +
       (dh ? M + '[data-sid="' + cssId(dh.id) + '"]{border-top:none;margin-top:10px;}' +
@@ -274,6 +313,7 @@
       if (disabled()) { css(false); return; }
       if (isLinear()) {
         var wrote = toLinear();
+        if (!wrote) wrote = detailsLast();
         var stale = sidebarHoldsContent();
         if (stale && !wrote) resync();
         css(!stale);

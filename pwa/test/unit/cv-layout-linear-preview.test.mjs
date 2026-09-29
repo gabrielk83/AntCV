@@ -154,7 +154,7 @@ test('callout, combined details heading and certificates row', () => {
   assert.ok(css.includes(M + '[data-sid="profile"] > [data-antcv-row-path],') && css.includes('background:#F8FAFC !important;border-left:3pt solid #ffc92b'), 'tinted rows');
   assert.ok(css.includes(M + '[data-sid="profile"]:has(+ [data-sid="work_style"]){') || css.includes(M + '[data-sid="profile"]:has(+ [data-sid="work_style"]),'), 'adjacent profile sections join');
   // one heading over the details rows: first visible details section, export label rule, hidden sections skipped
-  assert.ok(css.includes(M + '[data-sid="languages"]::before{content:"LANGUAGES, INTERESTS & ACCESSIBILITY"'), 'combined heading');
+  assert.ok(css.includes(M + '[data-sid="languages"]::before{content:"ADDITIONAL DETAILS"'), 'one short heading for 3+ labels');
   assert.ok(!/REGULATORY/.test(css), 'a hidden section is not in the heading');
   assert.ok(css.includes('color:#00746E'), 'heading in the heading colour');
   // certificates: title line + items joined by a bullet
@@ -176,4 +176,52 @@ test('stale preview with sidebar sections: bounded resync event, no sections wri
   assert.deepEqual(sb.events.filter((r) => /resync/.test(r || '')), ['cv-layout-linear-resync standalone'], 'one event inside the 1.5 s window');
   assert.equal(sb.store.get('sections'), before, 'storage untouched');
   assert.equal(sb.body.attrs['data-antcv-cv-layout'], 'two_column', 'sidebar content is never hidden');
+});
+
+// 1.51.4726 LINEAR-MERGE-001 + LINEAR-DETAILS-STRUCTURE-001 (owner 2026-09-30).
+test('merge: a short last row spans the empty space (tiles, tools, education)', () => {
+  const sb = sandbox({ cl: [], cv: [
+    { id: 'core_comp', type: 'table', title: 'CORE COMPETENCIES', loc: 'main' },
+    { id: 'tools', type: 'rich_block', title: 'TOOLS & METHODS', loc: 'main' },
+    { id: 'education', type: 'education', title: 'EDUCATION', loc: 'main' },
+  ] });
+  sb.store.set('antcv:cvLayout', 'linear');
+  sb.ctx.window.__antcvCvLayoutApply();
+  const css = sb.styleEls['antcv-cv-layout-linear-style'].textContent;
+  assert.ok(css.includes('[data-sid="core_comp"] tbody tr:last-child:nth-child(3n+1){grid-column:1 / -1'), '1 leftover tile spans the row');
+  assert.ok(css.includes('[data-sid="core_comp"] tbody tr:last-child:nth-child(3n+2){grid-column:span 2'), '2 leftover tiles: the last spans 2');
+  const ROW = '[data-antcv-row-path]:not([data-antcv-group-head])';
+  assert.ok(css.includes('[data-sid="tools"] > ' + ROW + ':nth-last-child(1 of ' + ROW + '):nth-child(odd of ' + ROW + '){grid-column:1 / -1'), 'odd tool count: last tile spans (group heads not counted)');
+  assert.ok(css.includes('[data-sid="education"] > ' + ROW + ':nth-last-child(1 of '), 'odd education count: last item spans');
+});
+
+test('details structure: publications and long sections are blocks; two labels read "A & B"', () => {
+  const K = sandbox({ cl: [], cv: [] }).ctx.window.__antcvCvLinearKind;
+  assert.equal(K({ id: 'pubs', type: 'list_italic', title: 'PUBLICATIONS & PATENTS', items: ['a'] }), 'block');
+  assert.equal(K({ id: 'regulatory', type: 'rich_block', title: 'REGULATORY CONTEXT', items: Array.from({ length: 17 }, (_, i) => ({ b: 'x' + i, t: 'y' })) }), 'block');
+  assert.equal(K({ id: 'recommendations', type: 'education', title: 'RECOMMENDATIONS', items: [{ deg: 'References' }] }), 'details');
+  assert.equal(K({ id: 'languages', type: 'labeled_list', title: 'LANGUAGES', items: [{}, {}, {}, {}] }), 'details');
+  const sb = sandbox({ cl: [], cv: [
+    { id: 'languages', type: 'labeled_list', title: 'LANGUAGES', loc: 'main', items: [{}] },
+    { id: 'interests', type: 'rich_block', title: 'INTERESTS', loc: 'main', items: [{}] },
+  ] });
+  sb.store.set('antcv:cvLayout', 'linear');
+  sb.ctx.window.__antcvCvLayoutApply();
+  assert.ok(sb.styleEls['antcv-cv-layout-linear-style'].textContent.includes('content:"LANGUAGES & INTERESTS"'));
+});
+
+test('details one-liners are grouped at the end in linear; other sections keep their order', () => {
+  const sb = sandbox({ cl: [], cv: [
+    { id: 'experience', type: 'experience', loc: 'main' },
+    { id: 'pubs', type: 'list_italic', title: 'PUBLICATIONS', loc: 'main', items: ['a'] },
+    { id: 'recommendations', type: 'education', title: 'RECOMMENDATIONS', loc: 'main', items: [{}] },
+    { id: 'regulatory', type: 'rich_block', title: 'REGULATORY CONTEXT', loc: 'main', items: Array.from({ length: 9 }, () => ({ b: 'x', t: 'y' })) },
+    { id: 'languages', type: 'labeled_list', title: 'LANGUAGES', loc: 'main', items: [{}] },
+  ] });
+  sb.store.set('antcv:cvLayout', 'linear');
+  sb.ctx.window.__antcvCvLayoutApply();
+  assert.deepEqual(sb.cv().map((s) => s.id), ['experience', 'pubs', 'regulatory', 'recommendations', 'languages']);
+  const n = sb.events.length;
+  sb.ctx.window.__antcvCvLayoutApply();
+  assert.equal(sb.events.length, n, 'idempotent');
 });

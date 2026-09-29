@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.51.66-early-break-tune3';
+  var VERSION = '1.51.4726-linear-keys';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -488,6 +488,12 @@
     var l = all && all[doc];
     return Array.isArray(l) ? l : [];
   }
+  function __isLinearLayout() {
+    try {
+      if (document.body && document.body.getAttribute('data-antcv-cv-layout') === 'linear') return true;
+      return localStorage.getItem('antcv:cvLayout') === 'linear';
+    } catch (_) { return false; }
+  }
   function sectionById(list, sid) {
     for (var i = 0; i < list.length; i++) {
       if (list[i] && String(list[i].id || '') === String(sid || '')) return list[i];
@@ -837,6 +843,36 @@
     // column role so the coordinator can tell sidebar from main.
     var __uniBlocks = { sidebar: [], main: [] };
     var __sbColW = 0;   // sidebar column layout width — part of the FORCE-LAST-GRP cache signature
+    // LINEAR-PART-KEYS-001 (1.51.4726, owner 2026-09-30 "reduce page jumping"): the app renders a
+    // split main section as parts whose rows restart at items.0 (app.src.js oMain groups). Read as-is,
+    // each pass saw a different key set for a split section and the coordinator flipped between two
+    // maps every recheck. In Linear, a part's DOM key is shifted by its first ORIGINAL item index,
+    // rebuilt with the render's own grouping (itemPages + the auto map, runs never go back a page).
+    var __linearKeys = __isLinearLayout();
+    var __partOrd = typeof Map === 'function' ? new Map() : null, __partCnt = {}, __partStartsCache = {};
+    function __partStarts(sid) {
+      if (__partStartsCache[sid]) return __partStartsCache[sid];
+      var sec = sectionById(list, sid), n = sec && Array.isArray(sec.items) ? sec.items.length : 0;
+      var ip = (readJson('antcv:itemPages', {}) || {})[sid] || {};
+      var ap = (readJson(AUTO_KEY, {}) || {})[sid];
+      if (!ap || !Object.keys(ap).length) ap = (readJson(PREVIEW_KEY, {}) || {})[sid] || {};
+      var base = Math.max(1, parseInt((sec && sec.page) || 1, 10) || 1), run = base, pg = [], st = [];
+      for (var i = 0; i < n; i++) {
+        var p = Math.max(+ip[i] || 0, +ap[i] || 0);
+        p = p >= 1 ? Math.max(p, base) : run;
+        if (p > run) run = p; else p = run;
+        if (!pg.length || pg[pg.length - 1] !== p) { pg.push(p); st.push(i); }
+      }
+      __partStartsCache[sid] = st;
+      return st;
+    }
+    function __origKey(sidEl, sid, key) {
+      if (!__linearKeys || !__partOrd || !sidEl || !sid) return key;
+      var ord = __partOrd.get(sidEl);
+      if (ord == null) { ord = __partCnt[sid] || 0; __partCnt[sid] = ord + 1; __partOrd.set(sidEl, ord); }
+      var off = __partStarts(sid)[ord] || 0;
+      return off ? String(off + (+key)) : key;
+    }
 
     for (var c = 0; c < cols.length; c++) {
       var col = cols[c];
@@ -967,9 +1003,10 @@
             if (!__rm) continue;
             var __rSidEl = __rEl.closest ? __rEl.closest('[data-sid]') : null;
             var __rc = __rEl.getBoundingClientRect();
+            var __rSid = __rSidEl ? __rSidEl.getAttribute('data-sid') : null;
             __uniBucket.push({
-              sid: __rSidEl ? __rSidEl.getAttribute('data-sid') : null,
-              kind: 'item', key: __rm[1],
+              sid: __rSid,
+              kind: 'item', key: isMainCol ? __origKey(__rSidEl, __rSid, __rm[1]) : __rm[1],
               // GROUP HEADER signal in DOM-key space (data grp indices don't match DOM row-path
               // keys). rich_block renders a {grp} header as a bold DIV with no "CODE:" colon;
               // item rows are <p> "CODE: desc". This marks where a group starts for keep-whole.
@@ -1697,6 +1734,7 @@
   // that window so a click-to-edit never lands a re-paginate.
   var __editGuardUntil = 0;
 
+  var __writtenPairs = [];
   function run() {
     try {
       var now = nowMs();
@@ -1739,6 +1777,14 @@
       var exportChanged = nextExport !== curExport && nextExport !== lastWritten;
       var previewChanged = nextPreview !== curPreview && nextPreview !== lastWrittenPreview;
       if (!exportChanged && !previewChanged) { lastWritten = nextExport; lastWrittenPreview = nextPreview; return; }
+      // LINEAR-CONVERGE-001 (1.51.4726): in Linear, a pass that would re-write the maps written two
+      // cycles ago is an A-B-A oscillation - keep the current maps and stop (no write, no re-arm).
+      var __pair = nextExport + '\u0001' + nextPreview;
+      if (__isLinearLayout() && __writtenPairs.length >= 2 && __writtenPairs[__writtenPairs.length - 2] === __pair) {
+        lastWritten = curExport; lastWrittenPreview = curPreview;
+        try { console.info('[v' + VERSION + ' auto-pagebreak] linear A-B-A oscillation - kept the current page maps'); } catch (_) {}
+        return;
+      }
 
       // Circuit breaker backstop: > 8 distinct write-cycles in 4s → back off 8s
       // AND freeze the fingerprint so we stop recomputing.
@@ -1756,6 +1802,7 @@
       if (exportChanged) { localStorage.setItem(AUTO_KEY, nextExport); lastWritten = nextExport; }
       if (previewChanged) { localStorage.setItem(PREVIEW_KEY, nextPreview); lastWrittenPreview = nextPreview; }
       cooldownUntil = now + 1500;   // 1.50.287: don't re-measure our own pagination for 1.5s
+      __writtenPairs.push(__pair); if (__writtenPairs.length > 3) __writtenPairs.shift();
       try {
         window.dispatchEvent(new CustomEvent('antcv:auto-pages-changed', {
           detail: { source: 'auto-pagebreak-001', version: VERSION },

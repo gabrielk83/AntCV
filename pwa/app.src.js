@@ -46326,7 +46326,9 @@
                                 if (idxByPage[pv] === undefined) { idxByPage[pv] = groups.length; groups.push({ page: pv, rows: [sec.rows[0]] }); }
                                 groups[idxByPage[pv]].rows.push(sec.rows[i]);
                               }
-                              if (groups.length <= 1) return [{ ...sec, page: basePage }];
+                              // LINEAR-WHOLE-MOVE-001 (1.51.4726): in Linear a map that moves the WHOLE section (every item on
+                              // one page, e.g. education {"0":2}) is honoured; two-column keeps the base page as before.
+                              if (groups.length <= 1) return [{ ...sec, page: (groups.length && document.body && document.body.getAttribute("data-antcv-cv-layout") === "linear") ? groups[0].page : basePage }];
                               groups.sort((a, b) => a.page - b.page);
                               return groups.map((gp, gi) => ({ ...sec, rows: gp.rows, page: gp.page, _antcvSplitCont: gi > 0 }));
                             }
@@ -46342,7 +46344,9 @@
                                 if (idxByPage[pv] === undefined) { idxByPage[pv] = groups.length; groups.push({ page: pv, items: [] }); }
                                 groups[idxByPage[pv]].items.push(items[i]);
                               }
-                              if (groups.length <= 1) return [{ ...sec, page: basePage }];
+                              // LINEAR-WHOLE-MOVE-001 (1.51.4726): in Linear a map that moves the WHOLE section (every item on
+                              // one page, e.g. education {"0":2}) is honoured; two-column keeps the base page as before.
+                              if (groups.length <= 1) return [{ ...sec, page: (groups.length && document.body && document.body.getAttribute("data-antcv-cv-layout") === "linear") ? groups[0].page : basePage }];
                               groups.sort((a, b) => a.page - b.page);
                               return groups.map((gp, gi) => ({ ...sec, items: gp.items, page: gp.page, _antcvSplitCont: gi > 0 }));
                             }

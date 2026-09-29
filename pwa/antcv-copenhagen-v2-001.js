@@ -33,7 +33,7 @@
 (function () {
   'use strict';
   if (window.__antcvCopenhagenV2) return;
-  window.__antcvCopenhagenV2 = '1.51.3822-cph-flags';
+  window.__antcvCopenhagenV2 = '1.51.4626-spec-photo-clear';
 
   var FLAG = 'antcv:copenhagen-v2';
   var STYLE_ID = 'antcv-copenhagen-v2-style';
@@ -102,7 +102,7 @@
 
   // CPH-FIT-STABLE-001: the chosen name/contact fit persists across applies so
   // re-measurement can only TIGHTEN it, never snap the lines back to full size.
-  var __fit = { nameLs: null, nameFs: null, contFs: null, contK: null, specFs: null };
+  var __fit = { nameLs: null, nameFs: null, contFs: null, contK: null, specFs: null, specMaxW: null };
 
   function buildCSS() {
     var side = sidebarSide();
@@ -243,6 +243,13 @@
           // poisoned cache self-heals on the next good pass. Floors keep the
           // contact legible: font >= 9.5px, compression >= 0.68.
           var __sane = __cssW > 350 && __cssW < 1600 && __maxW > 200;
+          // CPH-SPEC-PHOTO-CLEAR-001 (owner 2026-09-29 "in the preview the photo is overlayed on the
+          // specification line"): an explicit Font sizes value for the specialisation switches the
+          // SPEC-SHORTER shrink off (owner's size wins) - and nothing then kept the centered line clear of
+          // the band photo, so a long spec ran UNDER it. Keep the owner's size; cap the spec row at the
+          // photo-cleared width (__maxW) so it WRAPS beside the photo instead. Also covers the auto-shrink
+          // floor (11px) on a very long spec. Only with a band photo and a sane measurement.
+          __fit.specMaxW = (__img && __sane) ? Math.round(__maxW) : (__img ? __fit.specMaxW : null);
           // CPH-NAME-WIDTH-001b: scrollWidth equals the GRID CELL once the
           // text is narrower than the band (the stretched child clips nothing),
           // which fed the fit a 745px "name width" and shrank the name to 15px.
@@ -430,6 +437,7 @@
     if (__fit.contK != null) css += BAND + ' > div:last-of-type:not(:first-of-type){transform:scaleX(' + __fit.contK.toFixed(3) + ') !important;transform-origin:center !important;}';
     // SPEC-SHORTER-001: fitted spec size beats the static 18px rule above.
     if (__fit.specFs != null && !__userSet('specialisation')) css += BAND + ' > div:nth-of-type(2):not(:last-of-type){font-size:' + __fit.specFs + 'px !important;}';
+    if (__fit.specMaxW != null) css += BAND + ' > div:nth-of-type(2):not(:last-of-type){max-width:' + __fit.specMaxW + 'px !important;margin-left:auto !important;margin-right:auto !important;white-space:normal !important;text-align:center !important;}';
     // HDR-TYPE-CONTROLS-001 (owner 2026-07-29 "make sure nothing prevents the
     // user from controlling these values"): the panel's letter-spacing deltas
     // are the LAST word — they beat both the static .14em name tracking and the

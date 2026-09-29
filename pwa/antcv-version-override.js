@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.4628-linear-pagemodel';
+  const TARGET_VERSION = '1.51.4629-linear-repaginate';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.4628-linear-pagemodel',
     '1.51.4627-linear-preview',
     '1.51.4626-spec-photo-clear',
     '1.51.4607-exec-linear-export',

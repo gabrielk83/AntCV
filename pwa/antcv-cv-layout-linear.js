@@ -23,13 +23,19 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.4628-linear-pagemodel';
+  var VERSION = '1.51.4629-linear-repaginate';
   if (window.__antcvCvLayoutLinear === VERSION) return;
   window.__antcvCvLayoutLinear = VERSION;
 
   var KEY = 'antcv:cvLayout', MAP = 'antcv:cvLayout:twoColMap', STYLE_ID = 'antcv-cv-layout-linear-style';
   var PAGE_KEYS = ['antcv:autoPages', 'antcv:autoPagesPreview', 'antcv:itemPages'];
-  function pageModelChanged() { try { window.dispatchEvent(new CustomEvent('antcv:item-pages-changed', { detail: { reason: 'cv-layout' } })); } catch (_) {} }
+  // After a switch the paginator (antcv-auto-pagebreak-block-001.js) must recompute for the new column
+  // geometry: AntcvAutoPagebreak.run() clears its source-fingerprint gate and schedules a pass (else it
+  // waits for its 3 s poll). Its pass runs on requestAnimationFrame - it proceeds once the tab is visible.
+  function pageModelChanged() {
+    try { window.dispatchEvent(new CustomEvent('antcv:item-pages-changed', { detail: { reason: 'cv-layout' } })); } catch (_) {}
+    try { if (window.AntcvAutoPagebreak && typeof window.AntcvAutoPagebreak.run === 'function') setTimeout(function () { window.AntcvAutoPagebreak.run(); }, 400); } catch (_) {}
+  }
   var ORDER = [
     [/(^|\s)(profile|summary|profil)(\s|$)/, 1], [/work.?style|arbejdsstil/, 2], [/outcome/, 3],
     [/core.?comp|competen|kompetence/, 4], [/(^|\s)experience|erfaring/, 5], [/educat|uddannelse/, 6],

@@ -1,10 +1,8 @@
-<<<<<<< HEAD
-> **JOBSRC-JOBBANK-PARAM-001 — OPEN 2026-09-29 (position-discovery rerun; register row 111; not fixed, routine is data/docs-only).** jobbank.dk now filters on `key=`, not `soegeord=`. `scripts/job-tracker/job_sources.py` `JOBBANK_SEARCH` still sends `soegeord=`, so every query returns the same unfiltered 20 ads (10 queries -> 1 distinct set) and the source looks healthy while blind. Fix: one-line URL change + a test that two queries return different sets. Workaround this run: fetcher parser with `key=`.
-=======
 > **BROWSER-QA-ONLY-LIST-001 — FIXED 2026-09-29 (desktop session, Opus 5.5; `scripts/` only, no `pwa/` asset, no cache-bust, no version consumed). Found by the 2026-09-29 desktop nightly cross-check.**
 >
 > `browser-qa.mjs --only version-live,sidecars-live` (the form the nightly prompt uses) selected **0 checks and exited 0**: `runChecks` compared `only` to one exact id (`scripts/qa-checks.mjs:263`). Every nightly that used the list form reported a live attest that never ran. Fix: new `selectChecks(only)` splits a comma list and **throws on any unknown id**, so a typo or empty selection exits 1 instead of green. Shared by `phone-qa.mjs`. Test `scripts/tests/qa-checks-only.test.mjs` 4/4, negative-controlled (comma split sabotaged → 1 fail). Live: `--only version-live,sidecars-live` → 2/2 PASS against antcv.pages.dev; `--only version-live,typo` → exit 1.
->>>>>>> 1dbc6cac (fix(qa): browser-qa --only accepts a comma list, unknown id fails)
+
+> **JOBSRC-JOBBANK-PARAM-001 — OPEN 2026-09-29 (position-discovery rerun; register row 111; not fixed, routine is data/docs-only).** jobbank.dk now filters on `key=`, not `soegeord=`. `scripts/job-tracker/job_sources.py` `JOBBANK_SEARCH` still sends `soegeord=`, so every query returns the same unfiltered 20 ads (10 queries -> 1 distinct set) and the source looks healthy while blind. Fix: one-line URL change + a test that two queries return different sets. Workaround this run: fetcher parser with `key=`.
 
 > **ANTHROPIC-55 / GPT6-SOL-LUNA / GEMINI31-RATES-2026-09-001 — FIXED 2026-09-29 (weekly relay cost-quality tune, Opus 5.5, worktree-isolated; no `pwa/` asset, no cache-bust, no version consumed; worker deploys OWED).**
 >

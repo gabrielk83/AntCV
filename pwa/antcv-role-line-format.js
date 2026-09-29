@@ -11,7 +11,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.4627-linear-preview';
+  var VERSION = '1.51.4628-linear-pagemodel';
   if (window.__antcvRoleLineFormat === VERSION) return;
   window.__antcvRoleLineFormat = VERSION;
 

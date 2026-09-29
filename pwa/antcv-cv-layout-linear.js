@@ -14,15 +14,22 @@
  *      live DOM, so the page boxes follow the wider column.
  * Guard: a generation or cloud restore can write sidebar sections while Linear is on — the
  * sidebar is never hidden while it still holds a section; those sections are re-mapped first.
+ * Page model (1.51.4628, live-found 2026-09-29): the paginator's page assignments live in
+ * antcv:autoPages / antcv:autoPagesPreview (computed) and antcv:itemPages (manual breaks). Computed
+ * for one layout they are WRONG for the other (after a round trip the two-column sidebar was pinned
+ * to pages 2-3 and page 1's sidebar was empty). The switch saves them in the map, clears them so the
+ * paginator recomputes for the new layout, and restores the saved two-column set on the way back.
  * Letters are untouched (no sidebar). No app.js edit. Kill: antcv:disable-cv-layout-linear=1.
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.4627-linear-preview';
+  var VERSION = '1.51.4628-linear-pagemodel';
   if (window.__antcvCvLayoutLinear === VERSION) return;
   window.__antcvCvLayoutLinear = VERSION;
 
   var KEY = 'antcv:cvLayout', MAP = 'antcv:cvLayout:twoColMap', STYLE_ID = 'antcv-cv-layout-linear-style';
+  var PAGE_KEYS = ['antcv:autoPages', 'antcv:autoPagesPreview', 'antcv:itemPages'];
+  function pageModelChanged() { try { window.dispatchEvent(new CustomEvent('antcv:item-pages-changed', { detail: { reason: 'cv-layout' } })); } catch (_) {} }
   var ORDER = [
     [/(^|\s)(profile|summary|profil)(\s|$)/, 1], [/work.?style|arbejdsstil/, 2], [/outcome/, 3],
     [/core.?comp|competen|kompetence/, 4], [/(^|\s)experience|erfaring/, 5], [/educat|uddannelse/, 6],
@@ -52,10 +59,12 @@
     if (!hasSidebar) return false;
     try {
       if (!localStorage.getItem(MAP)) {
-        var map = { order: [], loc: {} };
+        var map = { order: [], loc: {}, pages: {} };
         s.cv.forEach(function (x) { if (x && x.id) { map.order.push(x.id); map.loc[x.id] = x.loc || 'main'; } });
+        PAGE_KEYS.forEach(function (k) { map.pages[k] = localStorage.getItem(k); });
         localStorage.setItem(MAP, JSON.stringify(map));
       }
+      PAGE_KEYS.forEach(function (k) { localStorage.removeItem(k); });
     } catch (_) {}
     var cv = s.cv.map(function (x, i) { return { x: x, i: i, r: rank(x) }; })
       .sort(function (a, b) { return (a.r - b.r) || (a.i - b.i); })
@@ -65,6 +74,7 @@
       });
     s.cv = cv;
     writeSections(s, 'cv-layout-linear');
+    pageModelChanged();
     return true;
   }
   // back to the saved two-column map (order + loc); sections that did not exist then keep their place at the end
@@ -83,7 +93,14 @@
         var c = {}; for (var k in o.x) c[k] = o.x[k]; c.loc = m.loc[o.x.id]; return c;
       });
     s.cv = cv;
+    try {
+      PAGE_KEYS.forEach(function (k) {
+        var v = m.pages ? m.pages[k] : null;
+        if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v);
+      });
+    } catch (_) {}
     writeSections(s, 'cv-layout-two-column');
+    pageModelChanged();
     return true;
   }
 

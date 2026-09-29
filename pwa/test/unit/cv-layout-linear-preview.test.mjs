@@ -79,3 +79,21 @@ test('kill switch keeps the stored sections and the two-column look', () => {
   assert.deepEqual(sb.cv(), SECTIONS.cv);
   assert.equal(sb.body.attrs['data-antcv-cv-layout'], 'two_column');
 });
+
+// 1.51.4628: the page model computed for one layout is wrong for the other (live-found: after a round
+// trip the two-column sidebar was pinned to pages 2-3). The switch saves, clears and restores it.
+test('page model: saved + cleared on the way to linear, restored exactly on the way back', () => {
+  const sb = sandbox(SECTIONS);
+  const AUTO = JSON.stringify({ experience: { 7: 2 }, languages: { 0: 2 } }), MAN = JSON.stringify({ education: { 1: 2 } });
+  sb.store.set('antcv:autoPages', AUTO); sb.store.set('antcv:autoPagesPreview', AUTO); sb.store.set('antcv:itemPages', MAN);
+  sb.store.set('antcv:cvLayout', 'linear');
+  sb.ctx.window.__antcvCvLayoutApply();
+  for (const k of ['antcv:autoPages', 'antcv:autoPagesPreview', 'antcv:itemPages']) assert.ok(!sb.store.has(k), k + ' cleared for the linear recompute');
+  assert.ok(sb.events.includes('cv-layout'), 'paginator told to recompute');
+  sb.store.set('antcv:autoPages', JSON.stringify({ education: { 0: 2 } }));   // what the linear paginator writes
+  sb.store.delete('antcv:cvLayout');
+  sb.ctx.window.__antcvCvLayoutApply();
+  assert.equal(sb.store.get('antcv:autoPages'), AUTO, 'two-column auto pages back');
+  assert.equal(sb.store.get('antcv:autoPagesPreview'), AUTO);
+  assert.equal(sb.store.get('antcv:itemPages'), MAN, 'manual breaks back');
+});

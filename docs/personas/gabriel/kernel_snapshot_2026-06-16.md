@@ -13,6 +13,16 @@
 > SPLIT Meprolight (`Electro-Optics Engineer & Team Leader` → `Electro-Optics Team Leader (2013–2014)`
 > + `R&D Electro-Optics Engineer (2010–2013)`) per the Raw CV — kernel is now **11 roles**.
 > This snapshot was hand-updated to reflect that write; re-run the script (with CF creds) for a canonical regen.
+>
+> **2026-09-23 education reconciliation (owner-supplied):** the snapshot carried NO education at all,
+> because `gen_kernel_snapshot.mjs` never read `history.education` — the generator has been fixed in the
+> same change. Degrees below are owner-supplied (2026-09-23) and still need mirroring into D1 via the app.
+> **Years and institution are UNVERIFIED** — confirm before this feeds a generated CV.
+
+## Education
+- M.Sc., Electrical Engineering — Physical Electronics (nanotechnology, photonics) — Tel Aviv University (GPA 91.7; thesis 93)
+- B.Sc., Electrical Engineering — Tel Aviv University
+- B.Sc., Physics — Tel Aviv University
 
 ## Tools
 - **Project workflow:** Jira, Confluence, Codebeamer

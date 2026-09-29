@@ -61,11 +61,12 @@ node scripts/routine-preflight.mjs start --routine <this-routine-name>
 #   exit 0 "WORKSPACE CLEAN"  → SYNC FIRST + work in this clone as normal.
 #   exit 3 "WORKSPACE DIRTY"  → do NOT rebase/edit here; run the printed `git worktree add
 #            origin/main` line and do ALL work in that worktree (this is what stops the collision).
-#            The worktree is under <repo>/.claude/worktrees/ (gitignored). Never move it to %TEMP%:
-#            outside the project dir every command prompts, and an unattended run stalls on the
-#            first prompt (ROUTINE-PERMISSION-STALL-001, relay tune 2026-09-17 + 09-23).
-#            Desktop scheduled tasks MUST be set to "Bypass permissions" in the Claude app
-#            (owner decision 2026-09-29); the default mode stalls every unattended run.
+#            The worktree is under ~/antcv-worktrees/ (override ANTCV_ROUTINE_WT_DIR): outside
+#            OneDrive, whose inherited Deny-delete ACL made in-repo worktrees undeletable and
+#            synced them (ROUTINE-WT-ONEDRIVE-001, 2026-09-30). It is outside the project dir, so
+#            desktop scheduled tasks MUST be set to "Bypass permissions" in the Claude app (owner
+#            decision 2026-09-29); in default mode the first prompt stalls the run
+#            (ROUTINE-PERMISSION-STALL-001, relay tune 2026-09-17 + 09-23). Remove it at the end.
 #            No D1 connector in the session is not a blocker: read D1 with
 #            `npx --no-install wrangler d1 execute ant_memory --remote --json --command "<SELECT>"`
 #            from workers/access-relay (SELECT only).

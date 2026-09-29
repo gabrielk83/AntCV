@@ -155,11 +155,13 @@ if (cmd === 'start') {
   }
   if (dirty) {
     // A dirty shared tree is the collision hazard. Steer the routine into an isolated worktree.
-    // The worktree goes under <repo>/.claude/worktrees/ (gitignored), NOT os.tmpdir(): %TEMP% is
-    // outside the project dir, so every command there needs a permission prompt, and an unattended
-    // run stalls on the first one (relay-cost-quality-tune 09-17 + 09-23 died 6-18s after start).
+    // The worktree goes under ~/antcv-worktrees/ (override: ANTCV_ROUTINE_WT_DIR): outside
+    // OneDrive, where an inherited Deny-delete ACL left every worktree undeletable and synced
+    // (ROUTINE-WT-ONEDRIVE-001), and not %TEMP%. It is outside the project dir, so tasks MUST run
+    // in Bypass permissions; in default mode the first prompt stalls the run (ROUTINE-PERMISSION-STALL-001).
     const stamp = Date.now().toString(36);
-    const wt = join(REPO, '.claude', 'worktrees', `routine-${routine}-${stamp}`).replace(/\\/g, '/');
+    const wtRoot = process.env.ANTCV_ROUTINE_WT_DIR || join(os.homedir(), 'antcv-worktrees');
+    const wt = join(wtRoot, `routine-${routine}-${stamp}`).replace(/\\/g, '/');
     console.log('[preflight] WORKSPACE DIRTY — the owner (or another session) has uncommitted work here.');
     console.log('[preflight] Do NOT edit or rebase in this clone. Work in an isolated worktree instead:');
     console.log(`    git fetch origin && git worktree add "${wt}" origin/main`);

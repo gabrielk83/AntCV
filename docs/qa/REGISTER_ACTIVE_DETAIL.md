@@ -434,7 +434,9 @@ _E1 sweep 2026-09-08 (CI nightly): confirmed in CURRENT code — `__platformRule
 
 ## Row 34 — ROLE-MERGE-STORED-001
 
-_verified: 2026-09-19_
+_verified: 2026-09-29_
+
+_E1 sweep 2026-09-29 (CI nightly, Opus 4.8): re-confirmed INTACT against HEAD `07a07add` — `antcv-role-merge-stored.js` still loaded in `index.html` (1 ref); `window.AntcvMergeSameCompanyRoles` still exposed by `antcv-docx-client.js` (2 refs) and consumed by the sidecar (docx-client's export merge is the idempotent belt); `pwa/test/unit/role-merge-stored.test.mjs` + `merged-results-union.test.mjs` both present and GREEN inside the full 1721/1721 suite (`run-tests.mjs pwa`, 0 fail). STILL OWED (owner-gated, not possible in CI — no signed-in Browser pane / real render): the live preview==export byte-for-byte eyeball on a targeted regen._
 
 _E1 sweep 2026-09-19 (CI nightly, Opus 4.8): re-confirmed INTACT against HEAD `365c9827` — `antcv-role-merge-stored.js` still loaded in `index.html`; `window.AntcvMergeSameCompanyRoles` still exposed by `antcv-docx-client.js` (2 refs) and consumed by the sidecar (docx-client's export merge is the idempotent belt); `pwa/test/unit/role-merge-stored.test.mjs` + `merged-results-union.test.mjs` run GREEN (16/16) and inside the full 1715/1715 suite. STILL OWED (owner-gated, not possible in CI — no signed-in Browser pane / real render): the live preview==export byte-for-byte eyeball on a targeted regen._
 
@@ -456,7 +458,9 @@ _E1 sweep 2026-09-09 (CI nightly, Opus 4.8): shipped code INTACT against HEAD `3
 
 ## Row 27 — MAIN-RUNT-ORPHAN-SWEEP-001
 
-_verified: 2026-09-19_
+_verified: 2026-09-29_
+
+_E1 sweep 2026-09-29 (CI nightly, Opus 4.8): re-confirmed — all four ORPHAN-PREFLIGHT-V3 sidecars still loaded by `index.html` (`antcv-orphan-export-preflight.js`, `antcv-orphan-measure-bind.js`, `antcv-package-orphan-apply.js`, `antcv-orphan-cloud-persist-385.js`, 1 ref each); full suite 1721/1721 GREEN on HEAD `07a07add`. STILL OPEN (unchanged, all need a real render/regen CI lacks): (a) work-style tail truncation against the owner's stored kernel, (b) page-3 ghost, (c) ~1.5-page real-PDF verify on a FRESH NIL-targeted export._
 
 _E1 sweep 2026-09-19 (CI nightly, Opus 4.8): re-confirmed — all four ORPHAN-PREFLIGHT-V3 sidecars still loaded by `index.html` (`antcv-orphan-export-preflight.js`, `antcv-orphan-measure-bind.js`, `antcv-package-orphan-apply.js`, `antcv-orphan-cloud-persist-385.js`); full suite 1715/1715 GREEN on HEAD `365c9827`. STILL OPEN (unchanged, all need a real render/regen CI lacks): (a) work-style tail truncation against the owner's stored kernel, (b) page-3 ghost, (c) ~1.5-page real-PDF verify on a FRESH NIL-targeted export._
 
@@ -478,7 +482,9 @@ _E1 sweep 2026-09-09 (CI nightly, Opus 4.8): ORPHAN-PREFLIGHT-V3 sidecars INTACT
 
 ## Row 28 — NIL-GEN-ADAPTATION-001
 
-_verified: 2026-09-19_
+_verified: 2026-09-29_
+
+_E1 sweep 2026-09-29 (CI nightly, Opus 4.8): re-confirmed — `antcv-profile-access-scrub.js` (PROFILE-ACCESS-SCRUB-001) + `antcv-sidebar-relevance-cut.js` (JD-relevance cut) both still loaded in `index.html` (1 ref each); full suite 1721/1721 GREEN on HEAD `07a07add`. REMAINING is unchanged: the CV ~1.5pp GEN-LEVEL target (rides row 27's orphan work) is regen-gated — it needs a fresh live NIL-targeted generation + real export, which this CI environment cannot run (no models, no signed-in render)._
 
 _E1 sweep 2026-09-19 (CI nightly, Opus 4.8): re-confirmed — `antcv-profile-access-scrub.js` (PROFILE-ACCESS-SCRUB-001) + `antcv-sidebar-relevance-cut.js` (JD-relevance cut) both still loaded in `index.html`; full suite 1715/1715 GREEN on HEAD `365c9827`. REMAINING is unchanged: the CV ~1.5pp GEN-LEVEL target (rides row 27's orphan work) is regen-gated — it needs a fresh live NIL-targeted generation + real export, which this CI environment cannot run (no models, no signed-in render)._
 
@@ -500,7 +506,9 @@ _E1 sweep 2026-09-09 (CI nightly, Opus 4.8): belts INTACT + loaded — `antcv-pr
 
 ## Row 29 — NIL-TARGETED-STATE-STICK-001
 
-_verified: 2026-09-19_
+_verified: 2026-09-29_
+
+_E1 sweep 2026-09-29 (CI nightly, Opus 4.8): closed legs re-confirmed in current code on HEAD `07a07add` — `META-DRIFT-GUARD-002` present in `app.js` (mirror, 1 ref) + `app.src.js` (2 refs); `277-SEQUENCE-GUARD-001` lives in the loaded sidecar `antcv-generate-cloud-sync-277.js` (5 refs); `CL-HYDRATE-EXPORT-GATE-001` lives in the loaded `antcv-docx-client.js` (3 refs). Full suite 1721/1721 GREEN. Leg C (the writer hunt — a live setItem probe on 'sections'/'meta' during ONE row selection to catch the pre-gen auto-save that also defeats the 277 staleness guard, + the auto-save downgrade belt) is unchanged OPEN — it needs a live signed-in session, not possible in CI._
 
 _E1 sweep 2026-09-19 (CI nightly, Opus 4.8): closed legs re-confirmed in current code — `META-DRIFT-GUARD-002` present in `app.js` (mirror) + `app.src.js`; `277-SEQUENCE-GUARD-001` lives in the loaded sidecar `antcv-generate-cloud-sync-277.js` (5 refs) + `app.src.js`; `CL-HYDRATE-EXPORT-GATE-001` lives in the loaded `antcv-docx-client.js` (3 refs). (The 2026-09-09 note said "present in app.js" for all three — corrected: 277-SEQUENCE/CL-HYDRATE are sidecar/docx-client-resident, both wired and loaded.) Full suite 1715/1715 GREEN on HEAD `365c9827`. Leg C (the writer hunt — a live setItem probe on 'sections'/'meta' during ONE row selection to catch the pre-gen auto-save that also defeats the 277 staleness guard, + the auto-save downgrade belt) is unchanged OPEN — it needs a live signed-in session, not possible in CI._
 

@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.4666-opus55-adopt';
+const CACHE = 'antcv-1.51.4686-linear-tables';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

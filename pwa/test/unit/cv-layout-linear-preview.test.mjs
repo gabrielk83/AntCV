@@ -97,3 +97,38 @@ test('page model: saved + cleared on the way to linear, restored exactly on the 
   assert.equal(sb.store.get('antcv:autoPagesPreview'), AUTO);
   assert.equal(sb.store.get('antcv:itemPages'), MAN, 'manual breaks back');
 });
+
+// 1.51.4686 LINEAR-TABLES-001: the preview draws the export's table blocks with CSS keyed by section id
+// (the preview replaces section nodes about once a second - attributes on them would flicker).
+test('tables: kinds match the export and the CSS targets the section ids', () => {
+  const sb = sandbox({ cl: [], cv: [
+    { id: 'core_comp', type: 'table', title: 'CORE COMPETENCIES', loc: 'main' },
+    { id: 'tools', type: 'rich_block', title: 'TOOLS & METHODS', loc: 'sidebar' },
+    { id: 'education', type: 'education', title: 'EDUCATION', loc: 'sidebar' },
+    { id: 'recommendations', type: 'education', title: 'RECOMMENDATIONS', loc: 'main' },
+    { id: 'languages', type: 'labeled_list', title: 'LANGUAGES', loc: 'sidebar' },
+    { id: 'interests', type: 'rich_block', title: 'INTERESTS', loc: 'sidebar' },
+    { id: 'certs', type: 'rich_block', title: 'CERTIFICATES & COURSES', loc: 'sidebar' },
+  ] });
+  const K = sb.ctx.window.__antcvCvLinearKind;
+  assert.equal(K({ id: 'core_comp', type: 'table' }), 'tiles');
+  assert.equal(K({ id: 'tools', type: 'rich_block', title: 'TOOLS & METHODS' }), 'tools');
+  assert.equal(K({ id: 'recommendations', type: 'education' }), 'details', 'an education-typed non-degree section is a details row');
+  assert.equal(K({ id: 'certs', type: 'rich_block', title: 'CERTIFICATES' }), 'certs');
+  sb.store.set('antcv:cvLayout', 'linear');
+  sb.store.set('styleConfig', JSON.stringify({ accent: '#ffc92b' }));
+  sb.ctx.window.__antcvCvLayoutApply();
+  const css = sb.styleEls['antcv-cv-layout-linear-style'].textContent;
+  const M = '[data-antcv-document-main] > ';
+  assert.ok(css.includes(M + '[data-sid="core_comp"] tbody{display:grid !important;grid-template-columns:repeat(3,'), '3 tiles per row');
+  assert.ok(css.includes(M + '[data-sid="core_comp"] thead{display:none'), 'header row dropped');
+  assert.ok(css.includes(M + '[data-sid="tools"]{display:grid !important;grid-template-columns:repeat(2,'), 'tools 2 per row');
+  assert.ok(css.includes(M + '[data-sid="education"]{display:grid'), 'education in 2 columns');
+  assert.ok(css.includes(M + '[data-sid="languages"],') && css.includes('grid-template-columns:127px minmax(0,1fr)'), 'details label | content');
+  assert.ok(css.includes(M + '[data-sid="recommendations"]'), 'recommendations as a details row');
+  assert.ok(css.includes('2pt solid #ffc92b'), 'accent bar from style.accent');
+  assert.ok(!/data-antcv-lin-kind/.test(css), 'no per-node attributes');
+  sb.store.delete('antcv:cvLayout');
+  sb.ctx.window.__antcvCvLayoutApply();
+  assert.ok(!sb.styleEls['antcv-cv-layout-linear-style'], 'two-column: the style is removed');
+});

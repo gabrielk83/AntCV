@@ -69,7 +69,7 @@
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.51.4646-linear-length';
+  const SCRIPT_VERSION = '1.51.4686-linear-tables';
   const STORAGE_KEY = 'antcv:bullet-targets';
   const STYLE_ID = 'antcv-bullet-targets-styles';
   const STRIP_MARKER = 'data-antcv-bullet-target-strip';
@@ -883,7 +883,44 @@
       // need one site that controls every antcv generation"): the block text
       // comes from /gold-rules.json — the single machine-readable control
       // site — with this inline copy only as the fetch-failure fallback.
-      '\n' + goldPromptBlock();
+      '\n' + goldPromptBlock() +
+      (g.layout === 'linear' ? linearTablesBlock(g) : '');
+  }
+
+  // LINEAR-TABLES-001 (owner 2026-09-30 "implement the tables for linear"): the linear export draws
+  // the competency table as 3 tiles per row, tools as 2 tiles per row and the small sections as
+  // label | content rows (docx-worker buildLinearCvDocument). Cell widths in DXA from the worker;
+  // chars per line measured like the bullets. Appended AFTER the gold block so it overrides its
+  // two-column "3-4 table rows" count.
+  const LINEAR_CELLS = {
+    tile: { dxa: Math.floor(LINEAR_CONTENT_DXA / 3) - 240, pt: 10 },        // 3590 - 120/120 margins
+    tool: { dxa: Math.floor(LINEAR_CONTENT_DXA / 2) - 180, pt: 9.5 },       // 5386 - 90/90 margins
+    detail: { dxa: LINEAR_CONTENT_DXA - 1900 - 180, pt: 9.5 },              // content cell beside the 1900 label
+  };
+  function cellCpl(c, g, bold) {
+    try {
+      const ctx = document.createElement('canvas').getContext('2d');
+      if (!ctx) return 0;
+      ctx.font = (bold ? 'bold ' : '') + (c.pt * 4 / 3) + 'px "' + g.font + '", Calibri, sans-serif';
+      const sample = 'Design and characterise low-light optical systems, supplier ' +
+                     'qualification plans and measured validation procedures for production.';
+      const avg = ctx.measureText(sample).width / sample.length;
+      return avg > 0 ? Math.round(c.dxa * PX_PER_DXA / avg) : 0;
+    } catch (_) { return 0; }
+  }
+  function linearTablesBlock(g) {
+    const tile = cellCpl(LINEAR_CELLS.tile, g), title = cellCpl(LINEAR_CELLS.tile, g, true);
+    const tool = cellCpl(LINEAR_CELLS.tool, g), det = cellCpl(LINEAR_CELLS.detail, g);
+    if (!(tile > 10 && tool > 10 && det > 10)) return '';
+    return '\nLINEAR TABLES (this CV exports in the LINEAR layout - these override the table rules above):' +
+      '\n - Core competencies render as TILES, 3 per row, ~' + tile + ' chars per line: exactly 3 rows (or 6 when the JD needs ' +
+      'more) - 4 or 5 rows leave empty tiles. Focus Area = the tile title, ONE line, at most ' + Math.max(12, title - 2) +
+      ' chars. Strategic Expertise = 2 full lines, ' + Math.round(1.65 * tile) + '-' + Math.round(1.95 * tile) +
+      ' chars, a short phrase list or clause without a final full stop.' +
+      '\n - Tools & Methods render as TILES, 2 per row: a short label (at most ' + Math.round(0.45 * tool) +
+      ' chars) and a value of 1-2 lines at ~' + tool + ' chars per line; an even number of items fills the rows.' +
+      '\n - Languages, interests, accessibility and other short sections render as label | content ROWS, ~' + det +
+      ' chars per content line: keep each item to ONE line, without a final full stop.';
   }
 
   // ── GOLD-RULES-SITE-001: the single control site (/gold-rules.json) ──────

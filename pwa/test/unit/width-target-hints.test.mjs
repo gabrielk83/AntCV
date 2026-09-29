@@ -187,3 +187,19 @@ test('linear layout: full-width chars per line, prompt names the layout, back to
   store.set('cvSidebarRatio', '0.36');
   assert.equal(api._measureCharsPerLine(), 76, 'two-column restored');
 });
+
+// LINEAR-TABLES-001 (owner 2026-09-30): linear adds tile / tool-tile / details-row budgets after the gold block.
+test('linear layout: table budgets follow the linear export cells; two-column prompt has none', () => {
+  const store = new Map([['cvSidebarRatio', '0.36'], ['styleConfig', '{}']]);
+  const api = load(store);
+  const body = JSON.stringify({ messages: [{ role: 'system', content: ENRICH_SYS }, { role: 'user', content: 'x' }] });
+  const two = JSON.parse(api._maybeInjectWidthHint(body)).messages[0].content;
+  assert.doesNotMatch(two, /LINEAR TABLES/);
+  store.set('antcv:cvLayout', 'linear');
+  const lin = JSON.parse(api._maybeInjectWidthHint(body)).messages[0].content;
+  // fake canvas 6px/char: tile (3590-240)/15 = 223.3px -> 37; tool (5386-180)/15 -> 58; detail (10772-2080)/15 -> 97
+  assert.match(lin, /3 per row, ~37 chars per line: exactly 3 rows \(or 6/);
+  assert.match(lin, /2 per row: a short label \(at most 26 chars\) and a value of 1-2 lines at ~58 chars per line/);
+  assert.match(lin, /label \| content ROWS, ~97 chars per content line/);
+  assert.ok(lin.indexOf('LINEAR TABLES') > lin.indexOf('GOLD CONTENT RULES'), 'after the gold block so it overrides its row count');
+});

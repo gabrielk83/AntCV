@@ -15,7 +15,9 @@ When you finish it: move it to `REGISTER_CLOSED.md`.
 
 ## Row 38 — GEN-BACKGROUND-001
 
-_verified: 2026-09-20_
+_verified: 2026-09-29_
+
+**2026-09-29 (desktop nightly, LIVE attest):** the shipped guard is LIVE-ATTESTED on the deployed PWA for the first time: new `pwa/test/diag-live-guard-sidecars.mjs` proves, against `antcv.pages.dev` at `1.51.4606-exec-linear-dash`, that the sidecar was SERVED, that it EXECUTED (global on `window`) and that the served bytes are IDENTICAL to the repo file (EOL-normalized). Until now every re-verify was repo-side only, which cannot distinguish a shipped fix from one that is on disk but never loaded, or from a stale CDN/SW copy under an unbumped `?v`. Both legs pass: `antcv-gen-memo.js` (`?v=1.51.134`, `AntcvGenMemo` + `__antcvGenTrigger`) and `antcv-gen-job-client.js` (`?v=1.51.132`, `AntcvGenJob`). REMAINING unchanged and unchanged in kind: the A/B on a REAL mobile gen with `antcv:gen-resume=1` (background/lock -> foreground auto-resume, mid-run reload resume, output parity against a flag-off gen) and, only if that is clean, the owner-gated proposal to flip the default. Needs a real device — no desktop or headless substitute exists. Kept ACTIVE.
 
 **Re-verify 2026-09-20 (CI nightly — E1 stalest slot, code-presence):** on HEAD `bbc5f534`
 `antcv-gen-memo.js` + `antcv-gen-job-client.js` both still loaded in `index.html` (2 refs);
@@ -436,6 +438,8 @@ _E1 sweep 2026-09-08 (CI nightly): confirmed in CURRENT code — `__platformRule
 
 _verified: 2026-09-29_
 
+**2026-09-29 (desktop nightly, LIVE attest + parity diag):** the shipped guard is LIVE-ATTESTED on the deployed PWA for the first time: new `pwa/test/diag-live-guard-sidecars.mjs` proves, against `antcv.pages.dev` at `1.51.4606-exec-linear-dash`, that the sidecar was SERVED, that it EXECUTED (global on `window`) and that the served bytes are IDENTICAL to the repo file (EOL-normalized). Until now every re-verify was repo-side only, which cannot distinguish a shipped fix from one that is on disk but never loaded, or from a stale CDN/SW copy under an unbumped `?v`. `antcv-role-merge-stored.js` served at `?v=1.51.3482-sections-storm`, `AntcvRoleMergeStored` live, bytes identical. Export/preview parity re-run green: `diag-results-preview-export-parity.mjs` confirms the preview computes a result for every role the export does and that the per-role strings are identical (one `applyOutcomesMode`). That diag had been reporting RED on a soft check that gated its exit code — fixed this run (see the ACTIVE_BUGS 2026-09-29 block). OWED unchanged: signed-in preview==export byte eyeball on a targeted app. Kept ACTIVE.
+
 _E1 sweep 2026-09-29 (CI nightly, Opus 4.8): re-confirmed INTACT against HEAD `07a07add` — `antcv-role-merge-stored.js` still loaded in `index.html` (1 ref); `window.AntcvMergeSameCompanyRoles` still exposed by `antcv-docx-client.js` (2 refs) and consumed by the sidecar (docx-client's export merge is the idempotent belt); `pwa/test/unit/role-merge-stored.test.mjs` + `merged-results-union.test.mjs` both present and GREEN inside the full 1721/1721 suite (`run-tests.mjs pwa`, 0 fail). STILL OWED (owner-gated, not possible in CI — no signed-in Browser pane / real render): the live preview==export byte-for-byte eyeball on a targeted regen._
 
 _E1 sweep 2026-09-19 (CI nightly, Opus 4.8): re-confirmed INTACT against HEAD `365c9827` — `antcv-role-merge-stored.js` still loaded in `index.html`; `window.AntcvMergeSameCompanyRoles` still exposed by `antcv-docx-client.js` (2 refs) and consumed by the sidecar (docx-client's export merge is the idempotent belt); `pwa/test/unit/role-merge-stored.test.mjs` + `merged-results-union.test.mjs` run GREEN (16/16) and inside the full 1715/1715 suite. STILL OWED (owner-gated, not possible in CI — no signed-in Browser pane / real render): the live preview==export byte-for-byte eyeball on a targeted regen._
@@ -550,7 +554,9 @@ _verified: 2026-09-21_
 
 ## Row 39a — AUTOSAVE-NO-DOWNGRADE-001
 
-_verified: 2026-09-21_
+_verified: 2026-09-29_
+
+**2026-09-29 (desktop nightly, LIVE attest + relay version match):** the shipped guard is LIVE-ATTESTED on the deployed PWA for the first time: new `pwa/test/diag-live-guard-sidecars.mjs` proves, against `antcv.pages.dev` at `1.51.4606-exec-linear-dash`, that the sidecar was SERVED, that it EXECUTED (global on `window`) and that the served bytes are IDENTICAL to the repo file (EOL-normalized). Until now every re-verify was repo-side only, which cannot distinguish a shipped fix from one that is on disk but never loaded, or from a stale CDN/SW copy under an unbumped `?v`. Leg 2 (client) `antcv-pointer-stale-guard.js` served at `?v=1.51.334-unsol-pillar`, `AntcvPointerStaleGuard` live, bytes identical. Leg 1 (relay) attested a second way: live `/health` on `antcv-access-relay` returns `RELAY_VERSION auth-38-subtitle-guard-qual-put`, which is byte-equal to the in-repo constant, and that source carries the guard (7 `__blockDowngrade`/`__blockCvBlank`/`__blockClBlank` sites) — so the DEPLOYED relay is the build that contains it. The authed downgrade-PUT itself was NOT run: both stored owner credentials are expired (`~/.antcv/browser-session.json` 2026-07-17, `~/.antcv/token` 2026-09-02) and entering a password is prohibited, so a live authed write is owner-gated — and it would mutate the real account. REMAINING: row 19 two-real-device test + the authed downgrade-PUT / same-device stale-pointer A/B. Kept ACTIVE.
 
 **2026-09-21 (CI nightly, verify-first):** both shipped legs intact — client `antcv-pointer-stale-guard.js` still loaded in `pwa/index.html`; the relay downgrade/blank-overwrite guard code still present; `jd-scope-isolation.test.mjs` (both-bundle mirror-lock) green in the 1715/1715 suite. REMAINING unchanged and owner-gated: row 19 two-real-device test + live authed downgrade-PUT / same-device stale-pointer A/B (need a signed-in session + a real second device — CI cannot fake either). Kept ACTIVE (2 of 3 legs shipped).
 
@@ -570,7 +576,9 @@ _verified: 2026-09-21_
 
 ## Row 41
 
-_verified: 2026-09-21_
+_verified: 2026-09-29_
+
+**2026-09-29 (desktop nightly, LIVE attest):** the shipped guard is LIVE-ATTESTED on the deployed PWA for the first time: new `pwa/test/diag-live-guard-sidecars.mjs` proves, against `antcv.pages.dev` at `1.51.4606-exec-linear-dash`, that the sidecar was SERVED, that it EXECUTED (global on `window`) and that the served bytes are IDENTICAL to the repo file (EOL-normalized). Until now every re-verify was repo-side only, which cannot distinguish a shipped fix from one that is on disk but never loaded, or from a stale CDN/SW copy under an unbumped `?v`. `antcv-debug-logger.js` served at `?v=1.51.160`, `AntcvDebug` live, bytes identical, and the widened capture path (`Maximum update depth`) is present in the SERVED bytes — so the probe is armed in production, not just in the repo. Still no repro: #185 here needs a real Android reflow oscillation that a stable headless layout cannot produce. NEXT unchanged: the next live Android crash populates a capture. Kept ACTIVE (instrumented, no repro).
 
 **2026-09-21 (CI nightly, verify-first):** the shipped #185 capture PROBE is intact — `antcv-debug-logger.js` still loaded in `pwa/index.html` (widened error capture: open panel, field-editor reached, pre-crash input/change breadcrumbs, step/doc state). No headless repro is reproducible in CI (React-18 #185 here = "Maximum update depth exceeded", proven to need a real Android reflow oscillation the stable headless layout can't produce). Suite green. NEXT unchanged: waiting on the next live Android crash to populate a capture — a desktop/owner-device leg. Kept ACTIVE (instrumented, no repro).
 
@@ -590,7 +598,9 @@ _verified: 2026-09-21_
 
 ## Row 42 — GEN-LANGFAB-001
 
-_verified: 2026-09-21_
+_verified: 2026-09-29_
+
+**2026-09-29 (desktop nightly, LIVE attest):** the shipped guard is LIVE-ATTESTED on the deployed PWA for the first time: new `pwa/test/diag-live-guard-sidecars.mjs` proves, against `antcv.pages.dev` at `1.51.4606-exec-linear-dash`, that the sidecar was SERVED, that it EXECUTED (global on `window`) and that the served bytes are IDENTICAL to the repo file (EOL-normalized). Until now every re-verify was repo-side only, which cannot distinguish a shipped fix from one that is on disk but never loaded, or from a stale CDN/SW copy under an unbumped `?v`. `antcv-lang-fabrication-guard.js` served at `?v=1.51.136`, `AntcvLangFabricationGuard` live, bytes identical. REMAINING unchanged: owner-verify on a FRESH targeted gen (German omitted, Danish B1) — a real LLM generation, which needs the expired owner session. Kept ACTIVE.
 
 **2026-09-21 (CI nightly, verify-first):** fix intact — `antcv-lang-fabrication-guard.js` still loaded in `pwa/index.html`; `pwa/test/unit/lang-fabrication-guard.test.mjs` green in the 1715/1715 suite (reconciles CV languages vs kernel `personalInfo.languages`: drop non-kernel, correct levels, name-neutral, both item shapes). No regression. REMAINING unchanged: owner-verify on a FRESH targeted gen (German omitted + Danish B1) — regen-gated, needs a real LLM generation CI cannot run. Kept ACTIVE.
 
@@ -610,7 +620,9 @@ _verified: 2026-09-21_
 
 ## Row 43
 
-_verified: 2026-09-21_
+_verified: 2026-09-29_
+
+**2026-09-29 (desktop nightly, LIVE attest):** the shipped guard is LIVE-ATTESTED on the deployed PWA for the first time: new `pwa/test/diag-live-guard-sidecars.mjs` proves, against `antcv.pages.dev` at `1.51.4606-exec-linear-dash`, that the sidecar was SERVED, that it EXECUTED (global on `window`) and that the served bytes are IDENTICAL to the repo file (EOL-normalized). Until now every re-verify was repo-side only, which cannot distinguish a shipped fix from one that is on disk but never loaded, or from a stale CDN/SW copy under an unbumped `?v`. `antcv-candidate-preview-editor-341.js` served at `?v=1.51.139-ca006-pathc-header-whitelist`, bytes identical, and the Path-C whitelist marker (`data-antcv-candidate-band`) is present in the SERVED bytes. Owner click-through eyeball on a targeted gen preview remains the only owed verify. Kept ACTIVE.
 
 **2026-09-21 (CI nightly, verify-first):** fix intact — `antcv-candidate-preview-editor-341.js` still loaded in `pwa/index.html`; `pwa/test/unit/ca006-pathc-header-guard.test.mjs` green in the 1715/1715 suite (Path-C-only header-whitelist on both anchor loops, strictly additive). Sidecar-only, no app.js edit. No regression. Owner click-through eyeball on a targeted gen preview remains the only owed verify (live). Kept ACTIVE.
 
@@ -630,7 +642,9 @@ _verified: 2026-09-21_
 
 ## Row 44 — JD-ANALYSIS-PRINT-001
 
-_verified: 2026-09-21_
+_verified: 2026-09-29_
+
+**2026-09-29 (desktop nightly, LIVE attest):** the shipped guard is LIVE-ATTESTED on the deployed PWA for the first time: new `pwa/test/diag-live-guard-sidecars.mjs` proves, against `antcv.pages.dev` at `1.51.4606-exec-linear-dash`, that the sidecar was SERVED, that it EXECUTED (global on `window`) and that the served bytes are IDENTICAL to the repo file (EOL-normalized). Until now every re-verify was repo-side only, which cannot distinguish a shipped fix from one that is on disk but never loaded, or from a stale CDN/SW copy under an unbumped `?v`. `antcv-analysis-report-pdf-360.js` served at `?v=1.51.2072-analysis-cloudconvert`, bytes identical, and the render-present offscreen-iframe geometry (`left:-99999px`) is present in the SERVED bytes — the exact defect (a `visibility:hidden;0x0` iframe printing the top-level CV preview) cannot be present in production. REMAINING: owner click-through of "Download analysis (PDF)". Kept ACTIVE.
 
 **2026-09-21 (CI nightly, verify-first):** fix intact — `antcv-analysis-report-pdf-360.js` still loaded in `pwa/index.html`; `pwa/test/unit/analysis-print-surface.test.mjs` green in the 1715/1715 suite (render-present offscreen iframe, `left:-99999px;794×1123;opacity:0`, so `contentWindow.print()` no longer falls back to the top-level CV preview). No regression. REMAINING: owner click-through of "Download analysis (PDF)" (live). Kept ACTIVE.
 
@@ -718,7 +732,9 @@ _verified: 2026-09-21_
 
 ## Row 39 — GEN-MODELROLE-001
 
-_verified: 2026-09-22_
+_verified: 2026-09-29_
+
+**2026-09-29 (desktop nightly, BLOCKED — evidence path unavailable):** the code + `MODEL_ROLES` in both `wrangler.toml` are unchanged and present; `parseModelRoles` tests are green in CI (runs 36628929136 log). The owed leg is the LIVE half — confirm the deployed workers carry the var and that D1 `llm_calls` shows the role split — and neither probe is reachable: `/config` on `cv-proxy` does not expose `MODEL_ROLES` (checked: it reports proxy_url / demo_mode / server_keys / KV bindings only), `npx wrangler whoami` fails `Failed to fetch auth token: 400` (the desktop OAuth token in `~/.wrangler/config/default.toml` expired 2026-08-27 and no `CLOUDFLARE_API_TOKEN` is set in the environment), and the D1 read needs the same expired owner credential. Not advanced. Owner action that would unblock it: one `wrangler login`, or expose the parsed role map on an unauthenticated `/config` field.
 
 **2026-09-22 (CI nightly, verify-first — HEAD 95038553):** re-confirmed unchanged — `MODEL_ROLES` present in BOTH `workers/proxy/wrangler.toml:50` and `workers/demo-proxy/wrangler.toml:50` (`{"writer":"anthropic","supervisor":"mistral","coherence":"openai"}`); `roleHeadOrder` still in `multi-llm.js` (2 refs); `workers/proxy/test/model-roles.test.mjs` present; suite 1715/1715. Deploy-verify + role-split telemetry remain CI-unconfirmable (no `gh`/D1). Kept ACTIVE.
 
@@ -1461,7 +1477,9 @@ _verified: 2026-09-26_
 
 ## Row 40
 
-_verified: 2026-09-26_
+_verified: 2026-09-29_
+
+**2026-09-29 (desktop nightly, LIVE attest):** the shipped guard is LIVE-ATTESTED on the deployed PWA for the first time: new `pwa/test/diag-live-guard-sidecars.mjs` proves, against `antcv.pages.dev` at `1.51.4606-exec-linear-dash`, that the sidecar was SERVED, that it EXECUTED (global on `window`) and that the served bytes are IDENTICAL to the repo file (EOL-normalized). Until now every re-verify was repo-side only, which cannot distinguish a shipped fix from one that is on disk but never loaded, or from a stale CDN/SW copy under an unbumped `?v`. `antcv-outcomes-loss-guard.js` served at `?v=1.51.2200-lang-guard-key`, `AntcvOutcomesGuard` live, bytes identical. Trigger-side test `core-comp-format-preserves-outcomes.test.mjs` green in the 1721/1721 suite. Owner-verify (change the Core Competencies row count, confirm Selected Outcomes survives) still owed — a signed-in live session, which this run could not open. Kept ACTIVE.
 
 **Re-verify 2026-09-26 (CI nightly — E1 stalest slot, code-presence on HEAD `fe4b8f7f`):** `pwa/antcv-outcomes-loss-guard.js` present; trigger-side test `pwa/test/unit/core-comp-format-preserves-outcomes.test.mjs` green in the full suite. SHIPPED 1.51.138 intact; owner-verify (change row count, confirm outcomes survive) still owed. Full PWA suite 1715/1715 green.
 
@@ -1693,7 +1711,9 @@ _verified: 2026-08-26_
 
 > **STANDING regression anchor** — re-run by the nightly diag set every time, not unstarted work.
 
-_verified: 2026-09-17_
+_verified: 2026-09-29_
+
+**2026-09-29 (desktop nightly — ADVANCED panel measured for the first time; earlier claim corrected):** the standing `diag-settings-panels-probe.mjs` already covers Personal / Account / Layout (6s, plus `setItem`-write bucketing) and was RE-RUN this night: **0 mutations/6s on each, rootFound=true, 0 page errors, no key written more than 6x** (`antcv:resetprobe:ctx`, the probe's own harness key) → DIAG PASS. What no probe covered was **Advanced** — it is advanced-tier, and the sibling probe deliberately anchors on the standard-tier strip. (Separately: the 2026-08-17 desktop report credited `diag-personal-panel-probe.mjs` with covering Layout/Account/Advanced; that probe clicks PERSONAL only, so that line was wrong.) New `pwa/test/diag-settings-panel-churn.mjs` closes the Advanced gap and adds two things neither sibling had: a NEGATIVE CONTROL (`--selftest` ticks synthetic churn into the anchored root and must see it — 80/80 observed per tab, so a reported 0 is a measurement and not a blind probe) and a detached-root FAILURE (an observer holding a root that left the document would report serenity while the real panel churned elsewhere). **Result across all four subtabs: 0 mutations in 8s, 0 page errors**, with four DISTINCT panel fingerprints (4121 / 799 / 1595 / 923 chars) proving each subtab really rendered rather than the default being measured four times. STANDING: both probes re-run every nightly.
 
 _reconcile 2026-09-17 (CI nightly, E2): `diag-settings-panels-probe.mjs` RE-RUN on HEAD `d8e041ea` — Personal 0 mut/6s, Account 0 mut/6s, Layout 0 mut/6s, rootFound=true, 0 page errors → DIAG PASS (all standard settings panels at rest). No regression._
 
@@ -1729,7 +1749,9 @@ _verified: 2026-08-26_
 
 > **STANDING regression anchor** — re-run by the nightly diag set every time, not unstarted work.
 
-_verified: 2026-09-17_
+_verified: 2026-09-29_
+
+**2026-09-29 (desktop nightly, pass-2 re-run):** `diag-panel-button-audit.mjs` on HEAD — **216 buttons: 138 active, 11 ui-only, 53 not-visible/disabled, 14 skipped-dangerous, 0 THROWS, 0 DEAD candidates, 0 page errors.** Pass-2 recovery legs reported 0 recovered (row-hover for not-visible, label-locator retry for unclickable), so the 53 are structurally not-visible in this headless seed rather than pass-2 misses. Artifacts committed: `docs/qa/PANEL_BUTTON_AUDIT_2026-09-29.{json,md}`. The live dangerous-button audit (14 skipped labels incl. the SW unregister and the three Enrich buttons) stays owner-gated — clicking them headlessly against a live session would mutate real content. STANDING.
 
 _reconcile 2026-09-17 (CI nightly, E3): `diag-panel-button-audit.mjs` RE-RUN on HEAD `d8e041ea` — 208 buttons enumerated, {skipped-dangerous:14, ui-only:14, active:134, not-visible-or-disabled:45, DEAD:1}, 0 page errors during audit, THROWS section EMPTY (no button throws on click). The single DEAD candidate is "Undo last change" — the known explainable idempotent no-op on the seeded empty edit history (same as 08-17/08-19/08-26), not a defect. Report: `docs/qa/PANEL_BUTTON_AUDIT_2026-09-17.{json,md}`. Diff vs 2026-09-07 (215 buttons, {14,13,140,48}, 0 THROWS/0 DEAD): enumeration varies with mount timing; invariant (0 THROWS, 0 page errors, only explainable DEAD) holds — NO REGRESSION._
 
@@ -1822,20 +1844,6 @@ _verified: 2026-08-27_
 
 ---
 
-## Row 109 — DEPLOY-YML-CF-AUTH-BROKEN-001
-
-_verified: 2026-09-25_
-
-_CI nightly 2026-09-25 (E1 sweep, HEAD `ab2a43c7`): STILL BROKEN — `gh run list --workflow=deploy.yml` shows every `push`-to-main run failing, last at 2026-09-10 (`push`, failure); the only `success` runs since (09-14/09-21/09-23) are `pull_request` events, which the workflow gates to lint + unit-tests and NEVER deploy (deploy.yml header comment + push/dispatch gate confirm this). No push-triggered deploy run has succeeded since 2026-08-01. Owner secret rotation (`CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID = 17c026b6d08c3e0ba63425cb26a5a7d9`) still owed — credentials are owner-only, an agent cannot rotate them._
-
-**OPEN-queue row (verbatim):**
-
-```
-| **109** | **DEPLOY-YML-CF-AUTH-BROKEN-001 (found 2026-09-15 while deploying the rate fixes).** `.github/workflows/deploy.yml` has failed on every push to `main` since 2026-08-01 (last green: run `30697485564`, "Merge pull request #358"). Every run since dies in ~35 s at the same step: wrangler `✘ [ERROR] Failed to automatically retrieve account IDs for the logged in user. You may have incorrect permissions on your API token, or your authentication may have expired.` The workflow reads `secrets.CLOUDFLARE_API_TOKEN` + `secrets.CLOUDFLARE_ACCOUNT_ID` (deploy.yml lines 127/177/186) and no `wrangler.toml` carries an `account_id`, so an expired/under-scoped token or a missing account id both produce exactly this. NOT a production outage: `antcv.pages.dev` served `1.51.4526-slogan-paper-contrast` = repo `TARGET_VERSION` on 09-15 (Pages deploys via its own Git integration, not this job), and the relay was redeployed 08-16 (`auth-38-subtitle-guard-qual-put`, after the last green run) by another path. It IS the reason the 09-06 + 09-10 worker rate fixes sat undeployed for 9 days — every routine that says "deploy via `gh workflow run deploy.yml`" has been silently no-op'ing. Worked around 09-15 with local `wrangler deploy` (row 89). **OWNER:** rotate `CLOUDFLARE_API_TOKEN` (Account→Workers→Edit, Account→Pages→Edit) and set `CLOUDFLARE_ACCOUNT_ID` = `17c026b6d08c3e0ba63425cb26a5a7d9`; then re-run `deploy.yml` with `mode=dry-run` on any worker to confirm green. Credentials are owner-only — an agent cannot do this step. | desktop 2026-09-15, `gh run list --workflow=deploy.yml` + `gh run view 34483645567 --log-failed` | no — OWNER (secret rotation) |
-```
-
----
-
 ## Row 107 — IMPORT-REWRAP-SIBLING-DROP-001
 
 > **Renumbered 2026-08-26: was row 102.** A document written before that date citing "row 102" may mean this row or DEMAND-SEED-SEARCH-TOKEN-MISSING-001. The ID is the key.
@@ -1854,6 +1862,8 @@ _verified: 2026-08-26_
 ## Row 110 — ANTCV-TOKEN-EXPIRED-2026-09-02-001
 
 _verified: 2026-09-29_
+
+**2026-09-29 (desktop nightly, CORROBORATED + widened):** hit independently the same day from the other side — the nightly needed an authed live session for the owner-verify legs on rows 40/42/43/44 and 39a and could not open one. The expiry is WIDER than the relay token: **both** stored credentials are dead — `~/.antcv/token` (relay JWT, `iss antcv-access-relay`, `exp 2026-09-02T10:23:44Z`) and `~/.antcv/browser-session.json` (the persisted Browser-pane `localStorage` auth map, `expiresAtIso 2026-07-17T22:35:34Z`, captured 2026-07-10). So the blast radius is not only the relay-backed routines: **every signed-in live-verify is blocked**, which is the single largest reason ~60 register rows sat un-advanceable tonight. An agent cannot fix this (entering a password is prohibited, and the email code is unreadable to it): it needs one owner UI login, after which the `localStorage` auth map should be re-saved to `~/.antcv/browser-session.json` and the relay JWT to `~/.antcv/token` — or, better, the self-renewing token path be wired so a 7-day TTL stops taking the capability out every week.
 
 _Found by the `antcv-position-discovery` run 2026-09-29 (JOB-DISCOVERY-001, worktree-isolated, Opus 5).
 The run stopped at its AUTH gate before any search or write, per the routine's AUTH clause: zero queries

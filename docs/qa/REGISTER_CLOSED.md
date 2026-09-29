@@ -4,6 +4,52 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 109 — DEPLOY-YML-CF-AUTH-BROKEN-001 — CLOSED 2026-09-29 (desktop nightly, evidence: green deploy runs)
+
+The Cloudflare repo secrets have been rotated: `deploy.yml` deploys again. Evidence on 2026-09-29:
+
+- `gh run list --workflow=deploy.yml` shows **four green runs today** — `workflow_dispatch`
+  `36625185693` (20:16Z), `36628782575` (20:47Z), `36628929136` (20:48Z) and `push` run
+  `36630429311` (21:01Z). Under the row's own 2026-09-25 re-verify these could only have been
+  `pull_request` events (lint + unit-tests, never deploy); these are not.
+- `36628929136` **actually deployed a worker**: its `deploy-worker` job ran wrangler to
+  completion — `Total Upload: 1132.36 KiB`, bindings intact (`env.ANALYTICS` KV
+  `1cfec90c37c043c9a03d7db32df178ba`, `ALLOWED_ORIGINS`, `SETUP_URL`),
+  `Uploaded docx-worker`, `Current Version ID: 08b107f5-2e18-4507-a7d1-4563007a824e`. The
+  failure mode this row tracked — `Failed to automatically retrieve account IDs for the logged
+  in user` — does not occur.
+- `36630429311` (push) deployed Pages green in the same window.
+- The one red run today, `36628097053`, failed on a DOCX render diag
+  (`diag-header-navy-invisible.mjs`, "1pt para font (sz=2)" / "line=20 exact"), not on
+  credentials; it passes locally at HEAD and the next push run was green, so the parallel
+  EXEC-LINEAR session fixed it. Recording it here so the red run is not later mistaken for a
+  relapse of this row.
+
+**Found in passing, NOT open work.** The documented FALLBACK for this row — a local
+`npx wrangler deploy` from the desktop — is itself dead: `wrangler whoami` fails
+`Failed to fetch auth token: 400 Bad Request` because the OAuth token in
+`~/.wrangler/config/default.toml` expired `2026-08-27T07:20:16Z`, and no `CLOUDFLARE_API_TOKEN`
+/ `CLOUDFLARE_ACCOUNT_ID` is set in the desktop environment. It is not filed as a row because
+the primary path works and one owner `wrangler login` restores it; but if `deploy.yml` regresses
+again there is currently **no** second path, and row 39's live `MODEL_ROLES` check and row 89's
+D1 INSERTs are blocked on that same missing credential today.
+
+_Original row text is preserved verbatim below._
+
+### Original row 109 text
+
+_verified: 2026-09-25_
+
+_CI nightly 2026-09-25 (E1 sweep, HEAD `ab2a43c7`): STILL BROKEN — `gh run list --workflow=deploy.yml` shows every `push`-to-main run failing, last at 2026-09-10 (`push`, failure); the only `success` runs since (09-14/09-21/09-23) are `pull_request` events, which the workflow gates to lint + unit-tests and NEVER deploy (deploy.yml header comment + push/dispatch gate confirm this). No push-triggered deploy run has succeeded since 2026-08-01. Owner secret rotation (`CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID = 17c026b6d08c3e0ba63425cb26a5a7d9`) still owed — credentials are owner-only, an agent cannot rotate them._
+
+**OPEN-queue row (verbatim):**
+
+```
+| **109** | **DEPLOY-YML-CF-AUTH-BROKEN-001 (found 2026-09-15 while deploying the rate fixes).** `.github/workflows/deploy.yml` has failed on every push to `main` since 2026-08-01 (last green: run `30697485564`, "Merge pull request #358"). Every run since dies in ~35 s at the same step: wrangler `✘ [ERROR] Failed to automatically retrieve account IDs for the logged in user. You may have incorrect permissions on your API token, or your authentication may have expired.` The workflow reads `secrets.CLOUDFLARE_API_TOKEN` + `secrets.CLOUDFLARE_ACCOUNT_ID` (deploy.yml lines 127/177/186) and no `wrangler.toml` carries an `account_id`, so an expired/under-scoped token or a missing account id both produce exactly this. NOT a production outage: `antcv.pages.dev` served `1.51.4526-slogan-paper-contrast` = repo `TARGET_VERSION` on 09-15 (Pages deploys via its own Git integration, not this job), and the relay was redeployed 08-16 (`auth-38-subtitle-guard-qual-put`, after the last green run) by another path. It IS the reason the 09-06 + 09-10 worker rate fixes sat undeployed for 9 days — every routine that says "deploy via `gh workflow run deploy.yml`" has been silently no-op'ing. Worked around 09-15 with local `wrangler deploy` (row 89). **OWNER:** rotate `CLOUDFLARE_API_TOKEN` (Account→Workers→Edit, Account→Pages→Edit) and set `CLOUDFLARE_ACCOUNT_ID` = `17c026b6d08c3e0ba63425cb26a5a7d9`; then re-run `deploy.yml` with `mode=dry-run` on any worker to confirm green. Credentials are owner-only — an agent cannot do this step. | desktop 2026-09-15, `gh run list --workflow=deploy.yml` + `gh run view 34483645567 --log-failed` | no — OWNER (secret rotation) |
+```
+
+---
+
 ## Row 78 — JOBTRACKER-OPEN-DESKTOP-REVERIFY-001 — CLOSED 2026-09-14 (CI nightly, Band-E E1 sweep)
 
 Row from the 2026-07-13 job-tracker batch that was already **owner live-verified end-to-end** in its

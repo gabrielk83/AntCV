@@ -42,7 +42,7 @@ citing an old number may mean either row — the ID disambiguates.
 
 | # | ID | verified | scope |
 |---|---|---|---|
-| 38 | `GEN-BACKGROUND-001` | 2026-09-20 | CLIENT — ENGINE SHIPPED 1.51.132 (antcv-gen-job-client.js, window.AntcvGenJob, 8 tests, ine |
+| 38 | `GEN-BACKGROUND-001` | 2026-09-29 | CLIENT — ENGINE SHIPPED 1.51.132 (antcv-gen-job-client.js, window.AntcvGenJob, 8 tests, ine |
 | 76 | `JOBTRACKER-LLM-REFIT-BUTTON-001` | 2026-09-20 | (deferred enhancement) — the fit SCORE that orders the Top-5 is deterministic by design (ranking stability). O |
 | 82 | `ROLE-CANON-AUDIT-LEG-001` | 2026-09-20 | (follow-up) — export-audit leg NOW WIRED + green (gold_audit.py role_canon_issues, test_gold_residue 18/18); only es/zh eyeball owner-gated |
 | 94 | `CONTENT-LANG-STAMP-001` | 2026-09-20 | CODE SHIPPED 1.51.4446-content-lang-stamp (D1 content_language column + relay whitelist + both app.js legs). R |
@@ -62,16 +62,16 @@ citing an old number may mean either row — the ID disambiguates.
 | 28 | `NIL-GEN-ADAPTATION-001` | 2026-09-29 | NIL gen adaptation — CV ~1.5-page gen-level target (current export still 5pp) |
 | 29 | `NIL-TARGETED-STATE-STICK-001` | 2026-09-29 | NIL state-stick — leg C: stale-row snapshot restore + auto-save downgraded-meta belt |
 | 2 | `LINKIFY-EXPORT-001` | 2026-09-21 | SW-projects line-end overflow leg (hyperlink half already closed) |
-| 39a | `AUTOSAVE-NO-DOWNGRADE-001` | 2026-09-21 | TAB/DEVICE ISOLATION residuals — auto-save poison-writer CLOSED (AUTOSAVE-NO-DOWNGRADE-001) + same-device stal |
-| 41 | — | 2026-09-21 | SO-004 CRASH — React #185 on editor field commits, shared renderer. |
-| 42 | `GEN-LANGFAB-001` | 2026-09-21 | fabricated languages (invented German, wrong Danish); deterministic language-fact belt vs ke |
-| 43 | — | 2026-09-21 | CA-006 — Application label bleeds into first role title; guard the write site. |
-| 44 | `JD-ANALYSIS-PRINT-001` | 2026-09-21 | analysis PDF button exports the CV; fix the export doc-type. |
+| 39a | `AUTOSAVE-NO-DOWNGRADE-001` | 2026-09-29 | TAB/DEVICE ISOLATION residuals — auto-save poison-writer CLOSED (AUTOSAVE-NO-DOWNGRADE-001) + same-device stal |
+| 41 | — | 2026-09-29 | SO-004 CRASH — React #185 on editor field commits, shared renderer. |
+| 42 | `GEN-LANGFAB-001` | 2026-09-29 | fabricated languages (invented German, wrong Danish); deterministic language-fact belt vs ke |
+| 43 | — | 2026-09-29 | CA-006 — Application label bleeds into first role title; guard the write site. |
+| 44 | `JD-ANALYSIS-PRINT-001` | 2026-09-29 | analysis PDF button exports the CV; fix the export doc-type. |
 | 47 | `MOBILE-TOPBAR-SAFEAREA-001` | 2026-09-21 | + MOBILE-TOPBAR-EXPORT-FAB-001 (owner, mobile P0) — top bar unreachable at 100% zoo |
 | 49 | `SIDEBAR-GROUP-PAGE-BREAK-001` | 2026-09-21 | (owner, design guidance) — a very long TOOLS & METHODS group (e.g. "Project & del |
 | 50 | `UPLOAD-SCREEN-TOP-CLIP-001` | 2026-09-21 | (owner 2026-07-05, same live session as rows 46-49): the upload screen's EN/gear/Editor header row was still c |
 | 51 | `PREVIEW-SCROLL-JITTER-001` | 2026-09-21 | (owner 2026-07-05, live session, reported as two symptoms: "application analysis panel is stuck again, does no |
-| 39 | `GEN-MODELROLE-001` | 2026-09-22 | code shipped AND MODEL_ROLES set in both wrangler.toml (owner map; coherence now `openai`). Remaining = live-deplo |
+| 39 | `GEN-MODELROLE-001` | 2026-09-29 | code shipped AND MODEL_ROLES set in both wrangler.toml (owner map; coherence now `openai`). Remaining = live-deplo |
 | 53 | `CROSS-APP-EXPORT-CONTAMINATION-001` | 2026-09-22 | leg (a) P0 SHIPPED (1.51.639 scope-guard → reworked MIRROR-LOAD-001 1.51.680); legs b-f open — (owner 2026-07-06, P0 — real export) — target was the KOMBIT "AI-udvikler"  |
 | 54 | `GEN-JD-TAILOR-KERNEL-RECALL-001` | 2026-09-22 | (owner 2026-07-07) — targeted tailoring narrows/compresses to the JD but does  |
 | 55 | `TARGETED-OUTPUT-FURNITURE-001` | 2026-09-22 | (owner 2026-07-07) — targeted-output furniture/personalization defects on the KO |
@@ -115,7 +115,7 @@ citing an old number may mean either row — the ID disambiguates.
 | 19 | `JD-SCOPE-OCC2-GUARD-001` | 2026-09-25 | JD-scope isolation — two-real-device test |
 | 103 | `RELAY-TUNE-COVERAGE-GAP-001` | 2026-09-26 | (found by weekly cost-quality tune 2026-07-13): the tune loop is blind to 100% of real traffic and can never f |
 | 45 | — | 2026-09-26 | PERF-001 — multi-second main-thread stalls on export/preview; profile → debounce/memoize. |
-| 40 | — | 2026-09-26 | SO-003 DATA LOSS — core-comp row-count change wipes Selected Outcomes (cloud-persisted). |
+| 40 | — | 2026-09-29 | SO-003 DATA LOSS — core-comp row-count change wipes Selected Outcomes (cloud-persisted). |
 | 35 | `OVERLAY-EARLY-HALT-001` | 2026-09-26 | NEW — OVERLAY-EARLY-HALT-001 regen-confirm. Shipped 1.51.41 (heartbeat-gated watchdog replacing the fixed 2-mi |
 | 36 | `GEN-CORECOMP-BROAD-001` | 2026-09-26 | NEW — GEN-CORECOMP-BROAD-001 regen-confirm. Shipped 1.51.41 (unsolicited CORE COMPETENCIES broadened to PdM/BA |
 | 37 | `FOCUS-LABEL-EO-001` | 2026-09-26 | NEW — FOCUS-LABEL-EO-001 regen-confirm. Shipped 1.51.42/43 (canonicalised EO focus-area label post-process). N |
@@ -126,15 +126,14 @@ citing an old number may mean either row — the ID disambiguates.
 | 1 | — | 2026-08-26 _(STANDING)_ | Quick-gen page convergence + CV 3-page convergence, export-only pagination parity |
 | 11 | `SIDEBAR-PROMOTE-MARGIN-001` | 2026-08-26 _(STANDING)_ | SIDEBAR-PAGE23-DANCE CLOSED (verified 2026-07-03, headless): diag-sidebar-promote-margin (owner-scale sidebar  |
 | 16 | `SID-FALLBACK-HARDEN-001` | 2026-08-26 _(STANDING)_ | Sidebar TOOLS/REGULATORY justify↔left flap — re-check after hard refresh, diagnose if persists |
-| 17 | `SETTINGS-PERSONAL-STABILIZE-001` | 2026-09-17 _(STANDING)_ | Settings sweep-army cost on Layout/Account/Advanced panels (Personal panel already fixed) |
+| 17 | `SETTINGS-PERSONAL-STABILIZE-001` | 2026-09-29 _(STANDING)_ | Settings sweep-army cost on Layout/Account/Advanced panels (Personal panel already fixed) |
 | 18 | `ANITA-PERSONA-NO-PHOTO-001` | 2026-08-26 | Anita demo residuals — docx-photo + PDF-contact legs ROOT-CAUSED + FIXED 2026-08-26 (desktop nightly, PWA 1.51 |
-| 23 | `NIGHTLY-PREVIEW-BUTTON-AUDIT-001` | 2026-09-17 _(STANDING)_ | Preview-button audit pass 2 (65 not-visible, 23 overlay-obstructed) + live dangerous-button audit |
+| 23 | `NIGHTLY-PREVIEW-BUTTON-AUDIT-001` | 2026-09-29 _(STANDING)_ | Preview-button audit pass 2 (65 not-visible, 23 overlay-obstructed) + live dangerous-button audit |
 | 105 | `JOBSRC-FETCH-001` | 2026-08-26 | follow-through — teach the discovery routine to CALL job_sources.py instead of hand-fetching board search page |
 | 106 | `POSTING-OBSOLETE-001` | 2026-08-27 | ADVANCED 2026-08-27 (job-tracker nightly): the two-strike rule gained the missing per-DAY gate — POSTING-STRIK |
 | 102 | `DEMAND-SEED-SEARCH-TOKEN-MISSING-001` | 2026-08-26 | (found by the weekly demand-seed run 2026-08-26, first run to PROBE rather than assume). the routine's prescri |
 | 108 | `JOBTRACKER-PYTEST-UNWIRED-001` | 2026-08-27 | (found by the job-tracker nightly 2026-08-27) — the 14 network-free python tests under scripts/job-tracker/ ar |
 | 107 | `IMPORT-REWRAP-SIBLING-DROP-001` | 2026-08-26 | (2026-08-26 desktop nightly, residual of row 18). The settings-import rewrap now carries photo across (1.51.44 |
-| 109 | `DEPLOY-YML-CF-AUTH-BROKEN-001` | 2026-09-25 | (found 2026-09-15 while deploying the rate fixes) — `.github/workflows/deploy.yml` has FAILED on every push to `main` since 2026-08-01 (last green run `30697485564`): wrangler exits "Failed to automatically retrieve account IDs for the logged in user" — the `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` repo secrets are expired, under-scoped or missing. Not a production outage (Pages deploys through its own Git integration — live PWA matched the repo; the relay was redeployed 08-16 by another path), but the WORKER deploy path this repo documents (`gh workflow run deploy.yml -f target=<worker>`) is dead, which is why the 09-06 and 09-10 rate fixes sat undeployed until 09-15. OWNER: rotate the token (Account→Workers→Edit, Account→Pages→Edit) and set the account id; until then every "deploy via deploy.yml" instruction in `SCHEDULED_ROUTINES.md` / the routine prompts silently no-ops. |
 | 110 | `ANTCV-TOKEN-EXPIRED-2026-09-02-001` | 2026-09-29 | (found by the position-discovery run 2026-09-29, JOB-DISCOVERY-001) — `~/.antcv/token` expired **2026-09-02T10:23:44Z** (issued 08-26, plain 7-day TTL) and has not been re-saved in 27 days, so every relay-backed routine stops at its AUTH gate: `GET /api/job-tracker` -> `401 {"error":"unauthenticated"}`. Recurrence of the CLOSED `ANTCV-TOKEN-EXPIRED-2026-08-14-001`, and the cause is visible in `ROUTINE_HEALTH.jsonl`: **no routine of any kind fired between 2026-08-27 and 2026-09-29 (33 days)** — routines are desktop-app-local, so the app was not running, and the token's `SESSION_REFRESH_WINDOW` self-renewal only extends a token a routine actually calls while it is still valid. OWNER: re-save the token (PWA console on `antcv.pages.dev`: `copy(localStorage.getItem('antcv:auth:token'))` -> paste into `C:\Users\karpg\.antcv\token`, no trailing newline). ADVANCED 2026-09-29 (job-tracker nightly, same evening): **structural leg (b) SHIPPED** — `routine-preflight.mjs start` now decodes the token offline and reports OK / EXPIRING (warns at 3 days left, inside the refresh window) / EXPIRED / MISSING, plus this routine's own dispatch gap; `token` subcommand; 9 network-free negative-controlled tests; both checks advisory so the clean(0)/dirty(3) contract is unchanged. REMAINING: OWNER re-save, and the uptime half — leg (a), a long-lived machine token for routines, or a longer relay session TTL; a warning does not restart a cron, and a 7-day credential on a desktop-app-local routine that can miss a month will keep dying. |
 
 ---

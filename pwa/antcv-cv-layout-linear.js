@@ -24,11 +24,14 @@
  * CSS keyed by section id draws the addendum blocks - competency table -> 3 tiles
  * per row, tools -> 2 tiles per row, education -> 2 columns, the remaining small sections ->
  * label | content details rows. CSS only, so React keeps owning the DOM.
+ * 1.51.4706 (owner 2026-09-30): the profile + work-style rows sit in one tinted callout box, the
+ * details rows get ONE heading ("Languages, Interests & ..." - the export's first four labels), and
+ * certificates render as a full-width "Certificates & courses: a • b • c" row under education.
  * Letters are untouched (no sidebar). No app.js edit. Kill: antcv:disable-cv-layout-linear=1.
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.4686-linear-tables';
+  var VERSION = '1.51.4706-linear-callout';
   if (window.__antcvCvLayoutLinear === VERSION) return;
   window.__antcvCvLayoutLinear = VERSION;
 
@@ -147,6 +150,27 @@
     return out;
   }
   function cssId(id) { return String(id).replace(/["\\]/g, '\\$&'); }
+  // export titleCase (docx-worker buildLinearCvDocument): "LANGUAGES & ACCESSIBILITY" -> "Languages & Accessibility"
+  function titleCase(t) { return String(t || '').trim().toLowerCase().replace(/(^|[\s(&/-])([a-zæøåéü])/g, function (m, a, b) { return a + b.toUpperCase(); }); }
+  // the combined details heading, as the export builds it: first four visible labels, "A, B, C & D"
+  function detailsHeading() {
+    var s = readSections(), labels = [], first = null;
+    ((s && s.cv) || []).forEach(function (x) {
+      if (!x || !x.id || x.on === false || linKind(x) !== 'details') return;
+      if (!first) first = x.id;
+      var l = titleCase(x.title || x.id); if (l) labels.push(l);
+    });
+    labels = labels.slice(0, 4);
+    var head = labels.length > 1 ? labels.slice(0, -1).join(', ') + ' & ' + labels[labels.length - 1] : (labels[0] || 'Details');
+    return first ? { id: first, text: head } : null;
+  }
+  function headStyle() {
+    try {
+      var sc = JSON.parse(localStorage.getItem('styleConfig') || '{}') || {};
+      var ok = function (v) { return /^#?[0-9a-f]{6}$/i.test(String(v || '')) ? '#' + String(v).replace(/^#/, '') : ''; };
+      return { color: ok(sc.mainHeadColor) || '#0369A1', font: String(sc.mainHeadFont || 'Trebuchet MS').replace(/["\\;{}]/g, '') };
+    } catch (_) { return { color: '#0369A1', font: 'Trebuchet MS' }; }
+  }
 
   // 2. column CSS
   function css(on) {
@@ -160,13 +184,13 @@
         P + '[data-antcv-document-sidebar]{display:none !important;}' +
         P + '.antcv-col-splitter{display:none !important;}' +
         P + '[data-antcv-document-main]{width:100% !important;max-width:100% !important;flex:1 1 100% !important;}' +
-        tableCss(P + '[data-antcv-document-main] > ', kindsById(), accent());
+        tableCss(P + '[data-antcv-document-main] > ', kindsById(), accent(), detailsHeading(), headStyle());
       if (st.textContent !== text) st.textContent = text;
     } catch (_) {}
   }
   // 2b. addendum table blocks (10 pt = 13.33 px, 9.5 pt = 12.67 px; fills and hairlines as the export)
-  function tableCss(M, kinds, A) {
-    var ids = { tiles: [], tools: [], education: [], details: [] };
+  function tableCss(M, kinds, A, dh, hs) {
+    var ids = { tiles: [], tools: [], education: [], details: [], profile: [], certs: [] };
     Object.keys(kinds).forEach(function (id) { if (ids[kinds[id]]) ids[kinds[id]].push(id); });
     // rule(kind, suffix, body): one selector per section id of that kind
     function rule(kind, suffix, body) {
@@ -198,14 +222,45 @@
       rule('education', HEAD, 'grid-column:1 / -1;') +
       // details -> label | content rows: tinted label cell with the accent bar, hairline frame
       rule('details', '', 'display:grid !important;grid-template-columns:127px minmax(0,1fr);margin-bottom:0 !important;border:0.5pt solid #E2E8F0;border-left:none;') +
+      (dh ? M + '[data-sid="' + cssId(dh.id) + '"]{border-top:none;margin-top:10px;}' +
+        M + '[data-sid="' + cssId(dh.id) + '"]::before{content:"' + cssStr(dh.text.toUpperCase()) + '";grid-column:1 / -1;grid-row:1;display:block;' +
+          'font-family:"' + hs.font + '",Arial,sans-serif;font-weight:700;font-size:15px;letter-spacing:0.5px;line-height:1;color:' + hs.color + ';' +
+          'padding-bottom:3px;margin-bottom:0;border-bottom:1.5pt solid #777777;}' +
+        M + '[data-sid="' + cssId(dh.id) + '"]' + HEAD + '{grid-row:2 / span 40 !important;}' : '') +
       (adj.length ? adj.join(',') + '{border-top:none;}' : '') +
       rule('details', HEAD, 'grid-column:1;grid-row:1 / span 40;margin:0 !important;background:#F8FAFC;border-left:2pt solid ' + A + ';padding:3px 6px;') +
       rule('details', HEAD + ' [data-antcv-section-headline]', 'font-size:12.67px !important;color:#0F172A !important;letter-spacing:0 !important;text-transform:lowercase !important;line-height:1.15 !important;') +
       rule('details', HEAD + ' [data-antcv-section-headline]::first-letter', 'text-transform:uppercase;') +
       rule('details', HEAD + ' > :not([data-antcv-section-headline])', 'display:none !important;') +
       rule('details', ' > [data-antcv-row-path]', 'grid-column:2;margin:0 !important;padding:2px 6px !important;font-size:12.67px !important;line-height:1.1 !important;text-align:left !important;') +
-      rule('details', ' > [data-antcv-row-path] *', 'font-size:inherit !important;');
+      rule('details', ' > [data-antcv-row-path] *', 'font-size:inherit !important;') +
+      // profile + work style -> one tinted callout box: light fill, accent bar left, hairline frame.
+      // Rows carry the box (the section headline stays outside it); adjacent profile sections join.
+      rule('profile', ' > [data-antcv-row-path]', 'background:#F8FAFC !important;border-left:3pt solid ' + A + ' !important;border-right:0.5pt solid #E2E8F0;margin:0 !important;padding:2px 12px !important;') +
+      rule('profile', HEAD + ' + [data-antcv-row-path]', 'border-top:0.5pt solid #E2E8F0;padding-top:8px !important;') +
+      rule('profile', ' > [data-antcv-row-path]:first-child', 'border-top:0.5pt solid #E2E8F0;padding-top:8px !important;') +
+      rule('profile', ' > [data-antcv-row-path]:last-child', 'border-bottom:0.5pt solid #E2E8F0;padding-bottom:8px !important;') +
+      (adjOf('profile').length ? adjOf('profile').map(function (p) { return p[0] + ':has(+ ' + p[1] + ')'; }).join(',') + '{margin-bottom:0 !important;}' +
+        adjOf('profile').map(function (p) { return p[0] + ':has(+ ' + p[1] + ') > [data-antcv-row-path]:last-child'; }).join(',') + '{border-bottom:none;padding-bottom:2px !important;}' +
+        adjOf('profile').map(function (p) { return p[0] + ' + ' + p[1] + ' > [data-antcv-row-path]:first-child'; }).join(',') + '{border-top:none;padding-top:2px !important;}' : '') +
+      // certificates -> a full-width row under education: bold "Title:" then the items joined by " • "
+      rule('certs', '', 'margin-top:-6px !important;text-align:left !important;') +
+      rule('certs', HEAD, 'display:block !important;margin:0 !important;') +
+      rule('certs', HEAD + ' [data-antcv-section-headline]', 'display:block !important;font-family:inherit !important;font-size:13.33px !important;color:#0F172A !important;letter-spacing:0 !important;text-transform:lowercase !important;line-height:1.15 !important;') +
+      rule('certs', HEAD + ' [data-antcv-section-headline]::first-letter', 'text-transform:uppercase;') +
+      rule('certs', HEAD + ' [data-antcv-section-headline]::after', 'content:":";') +
+      rule('certs', HEAD + ' > :not([data-antcv-section-headline])', 'display:none !important;') +
+      rule('certs', ' > [data-antcv-row-path]', 'display:inline !important;margin:0 !important;padding:0 !important;font-size:12.67px !important;color:#475569 !important;') +
+      rule('certs', ' > [data-antcv-row-path] *', 'font-size:inherit !important;display:inline !important;') +
+      rule('certs', ' > [data-antcv-row-path]:not(:last-child)::after', 'content:"  \\2022  ";white-space:pre;color:#94A3B8;');
+    // [prev (full selector), next (bare [data-sid])] pairs of two sections of the same kind, for the joins above
+    function adjOf(kind) {
+      var out = [];
+      ids[kind].forEach(function (x) { ids[kind].forEach(function (y) { if (x !== y) out.push([M + '[data-sid="' + cssId(x) + '"]', '[data-sid="' + cssId(y) + '"]']); }); });
+      return out;
+    }
   }
+  function cssStr(t) { return String(t).replace(/["\\]/g, '\\$&').replace(/[\r\n]+/g, ' '); }
   // the sidebar is only hidden while it is EMPTY - content is never hidden, it is moved first
   function sidebarHoldsContent() {
     try { return !!document.querySelector('.antcv-preview-paper [data-antcv-document-sidebar] [data-sid]'); } catch (_) { return false; }

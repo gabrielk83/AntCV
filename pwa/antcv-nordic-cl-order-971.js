@@ -25,7 +25,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.4506-foundation-fold';
+  var VERSION = '1.51.4706-who-pingpong';
   if (window.__antcvNordicClOrder971 === VERSION) return;
   window.__antcvNordicClOrder971 = VERSION;
 
@@ -214,11 +214,21 @@
     var whoItems = w.items;
     var toAdd = [];
     if (!whoCarriesFoundation(w)) {
-      var have = {};
-      whoItems.forEach(function (r) { var t = realRowText(r); if (t) have[t.toLowerCase()] = 1; });
+      var have = {}, labels = {};
+      // CL-WHO-PINGPONG-001 (owner 2026-09-30 "the preview is jumping"): a who row that already carries
+      // real text under the SAME label counts as present. antcv-rich-block-shape-fix dedupeLabels keeps
+      // one row per label (the longest), so re-adding a same-label foundation row was removed again on
+      // the next pass -> both sidecars rewrote sections ~40x/s and the preview re-rendered without end.
+      whoItems.forEach(function (r) {
+        var t = realRowText(r); if (!t) return;
+        have[t.toLowerCase()] = 1;
+        var lb = String((r && r.b) || '').trim().toLowerCase(); if (lb) labels[lb] = 1;
+      });
       realRows.forEach(function (r) {
         var t = realRowText(r);
         if (have[t.toLowerCase()]) return;
+        var lb = String(r.b == null ? '' : r.b).trim().toLowerCase();
+        if (lb && labels[lb]) return;
         have[t.toLowerCase()] = 1;
         toAdd.push({ b: String(r.b == null ? '' : r.b), t: t, mk: true, fnd: true });
       });

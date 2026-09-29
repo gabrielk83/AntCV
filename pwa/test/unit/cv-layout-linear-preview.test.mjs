@@ -132,3 +132,32 @@ test('tables: kinds match the export and the CSS targets the section ids', () =>
   sb.ctx.window.__antcvCvLayoutApply();
   assert.ok(!sb.styleEls['antcv-cv-layout-linear-style'], 'two-column: the style is removed');
 });
+
+// 1.51.4706 (owner 2026-09-30): profile callout box, ONE details heading, certificates row under education.
+test('callout, combined details heading and certificates row', () => {
+  const sb = sandbox({ cl: [], cv: [
+    { id: 'profile', type: 'rich_block', title: 'PROFILE', loc: 'main' },
+    { id: 'work_style', type: 'rich_block', title: 'Work style', loc: 'main' },
+    { id: 'education', type: 'education', title: 'EDUCATION', loc: 'sidebar' },
+    { id: 'certs', type: 'rich_block', title: 'CERTIFICATES & COURSES', loc: 'sidebar' },
+    { id: 'regulatory', type: 'rich_block', title: 'REGULATORY CONTEXT', loc: 'main', on: false },
+    { id: 'languages', type: 'labeled_list', title: 'LANGUAGES', loc: 'sidebar' },
+    { id: 'interests', type: 'rich_block', title: 'INTERESTS', loc: 'sidebar' },
+    { id: 'accessibility', type: 'labeled_list', title: 'ACCESSIBILITY', loc: 'sidebar' },
+  ] });
+  sb.store.set('antcv:cvLayout', 'linear');
+  sb.store.set('styleConfig', JSON.stringify({ accent: '#ffc92b', mainHeadColor: '#00746E' }));
+  sb.ctx.window.__antcvCvLayoutApply();
+  const css = sb.styleEls['antcv-cv-layout-linear-style'].textContent;
+  const M = '[data-antcv-document-main] > ';
+  // callout: rows tinted with the accent bar, profile + work style joined into one box
+  assert.ok(css.includes(M + '[data-sid="profile"] > [data-antcv-row-path],') && css.includes('background:#F8FAFC !important;border-left:3pt solid #ffc92b'), 'tinted rows');
+  assert.ok(css.includes(M + '[data-sid="profile"]:has(+ [data-sid="work_style"]){') || css.includes(M + '[data-sid="profile"]:has(+ [data-sid="work_style"]),'), 'adjacent profile sections join');
+  // one heading over the details rows: first visible details section, export label rule, hidden sections skipped
+  assert.ok(css.includes(M + '[data-sid="languages"]::before{content:"LANGUAGES, INTERESTS & ACCESSIBILITY"'), 'combined heading');
+  assert.ok(!/REGULATORY/.test(css), 'a hidden section is not in the heading');
+  assert.ok(css.includes('color:#00746E'), 'heading in the heading colour');
+  // certificates: title line + items joined by a bullet
+  assert.ok(css.includes(M + '[data-sid="certs"] > [data-antcv-row-path]{display:inline !important'), 'items inline');
+  assert.ok(css.includes('[data-sid="certs"] > [data-antcv-row-path]:not(:last-child)::after{content:"  \\2022  "'), 'bullet separators');
+});

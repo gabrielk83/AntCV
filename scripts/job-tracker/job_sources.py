@@ -9,7 +9,7 @@ search pages a generic HTML-to-markdown fetch CANNOT read:
                the same result set as a fully server-rendered RSS feed at
                /jobsoegning.rss?q=... — that is what we read.
   jobbank.dk   there is no /en/job-search endpoint (404). The real search path is
-               /job/?soegeord=... , and its rows are NOT <a href> links: each ad
+               /job/?key=... (soegeord= is now ignored), and its rows are NOT <a href> links: each ad
                is a div.job-item whose destination lives in an inline
                onclick="document.location.href='/job/<id>/<slug>/<slug>/'".
                A link scrape finds nothing; we parse the onclick.
@@ -41,7 +41,9 @@ _UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
        "(KHTML, like Gecko) Chrome/124 Safari/537.36")
 
 JOBINDEX_RSS = "https://www.jobindex.dk/jobsoegning.rss?q={q}"
-JOBBANK_SEARCH = "https://www.jobbank.dk/job/?soegeord={q}"
+# key=, NOT soegeord=: since ~2026-09 jobbank ignores soegeord and returns the same
+# unfiltered 20 ads for every query (JOBSRC-JOBBANK-PARAM-001, register row 111).
+JOBBANK_SEARCH = "https://www.jobbank.dk/job/?key={q}"
 
 
 def _decode(raw: bytes) -> str:

@@ -140,7 +140,7 @@ scheduled task that a run cannot edit.
 
 | Source | What the prompt implies | Reality | Use instead |
 |---|---|---|---|
-| `jobbank.dk` | a search endpoint | `/en/job-search?searchterm=` **404s** — that URL never existed | `https://www.jobbank.dk/job/?soegeord=<q>` |
+| `jobbank.dk` | a search endpoint | `/en/job-search?searchterm=` **404s** — that URL never existed | `https://www.jobbank.dk/job/?key=<q>` (`soegeord=` ignored since 2026-09, row 111) |
 | `jobindex.dk` | read `/jobsoegning` | the result page paints its ads **client-side**; a fetch returns nav chrome and **zero ads** | `https://www.jobindex.dk/jobsoegning.rss?q=<q>` (same result set, server-rendered) |
 
 Both failure modes look identical to "the source was dry", which is why the weekly-target

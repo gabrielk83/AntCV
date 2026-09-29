@@ -103,6 +103,10 @@ import re  # noqa: E402
 check("negative control: the fixture contains no <a href> job links at all",
       len(re.findall(r'<a[^>]+href="/job/\d+', JOBBANK_HTML)), 0)
 
+# ---- JOBSRC-JOBBANK-PARAM-001: the search URL must filter ----------------------
+check("jobbank search filters on key= (soegeord= is ignored since 2026-09)",
+      js.JOBBANK_SEARCH.format(q="optik"), "https://www.jobbank.dk/job/?key=optik")
+
 # ---- deadline helper --------------------------------------------------------
 check("dk date parses", js._dk_date("Frist: 07.09.2026"), datetime.date(2026, 9, 7))
 check("dk date rejects junk", js._dk_date("snarest muligt"), None)
@@ -112,4 +116,4 @@ if fails:
     for f in fails:
         print("  - " + f)
     sys.exit(1)
-print("PASS - job_sources parsers (%d checks)" % 15)
+print("PASS - job_sources parsers (%d checks)" % 16)

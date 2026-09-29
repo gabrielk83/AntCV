@@ -4,6 +4,28 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 111 — JOBSRC-JOBBANK-PARAM-001 — CLOSED 2026-09-30 (desktop session, evidence: live key= filtering + test)
+
+_verified: 2026-09-29_
+
+_Found by the `antcv-position-discovery` rerun 2026-09-29 (JOB-DISCOVERY-001, worktree-isolated). Not fixed here: the routine is data/docs-only._
+
+**Evidence.** `job_sources.py search --source all` over 10 queries returned jobbank 20 ads each, but the jobbank URL sets were identical across all 10 (1 distinct set): Ørsted, CERN, Region Syddanmark nurses for "technical product manager". `curl https://www.jobbank.dk/job/?soegeord=produktchef` shows pagination to page 561 = whole catalogue. The page's own `mainSearchForm` field is `key`: `/job/?key=produktchef` returns 4 matching ads (Eurofins Produktchef, Tryg, Moment, JP/Politiken). `keywords=` is also ignored.
+
+**Workaround used this run.** jobbank searched through the fetcher's own `parse_jobbank_html` with `key=` (12 queries, 190 cards, 127 unique).
+
+**Fix owed (follow-through, ~2 lines).** `scripts/job-tracker/job_sources.py` line 44: `JOBBANK_SEARCH = "https://www.jobbank.dk/job/?key={q}"`. Add a network-gated test asserting two different queries yield different URL sets, so a future param change fails loud instead of reading as "20 rows". `key=` OR-matches multi-word input; prefer single-word or quoted Danish titles.
+
+**OPEN-queue row (verbatim):**
+
+```
+| 111 | `JOBSRC-JOBBANK-PARAM-001` | 2026-09-29 | (found by the position-discovery run 2026-09-29) — jobbank.dk moved its search param from `soegeord=` to `key=`: `job_sources.py` JOBBANK_SEARCH (`/job/?soegeord=<q>`) now returns the unfiltered 561-page catalogue, the SAME 20 ads for every query (10 queries -> 1 distinct result set), so the jobbank leg reads as "20 rows" while being blind. Silent regression of JOBSRC-FETCH-001's fetcher. Fix: `JOBBANK_SEARCH = "https://www.jobbank.dk/job/?key={q}"` + a test that two different queries return different sets. Note `key=` OR-matches multi-word queries (noise on "technical product manager"); single-word terms are clean. |
+```
+
+---
+
+**CLOSED 2026-09-30.** `JOBBANK_SEARCH` now sends `key=`. Live diagnostic: `soegeord=` gave 1 distinct 20-ad set across produktchef/fysiker/optik; `key=` gave 3 distinct filtered sets (4/5/2 ads). `test_job_sources.py` 16/16 with a new URL check, negative-controlled (reverting to `soegeord=` fails it). SCHEDULED_ROUTINES.md source table updated.
+
 ## Row 109 — DEPLOY-YML-CF-AUTH-BROKEN-001 — CLOSED 2026-09-29 (desktop nightly, evidence: green deploy runs)
 
 The Cloudflare repo secrets have been rotated: `deploy.yml` deploys again. Evidence on 2026-09-29:

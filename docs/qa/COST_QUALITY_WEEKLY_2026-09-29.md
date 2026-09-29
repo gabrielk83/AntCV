@@ -223,3 +223,11 @@ relay mirror 8/8 (`claude-opus-5-5` in the live list); full suite **2127/2127**;
 
 **Not verified live:** no Anthropic key on this machine, so no real Opus 5.5 call was made. First real
 generation after deploy is the check: watch `llm_calls` for `model='claude-opus-5-5'` with `success=1`.
+
+**Live verification 2026-09-30 (owner saved `~/.antcv/keys.env`).** `claude-opus-5-5` with the exact
+`callClaude` body shape (model, max_tokens, system, messages, no `thinking`): HTTP 200, `end_turn`,
+4.1 s, blocks `thinking,text`, 62 in / 123 out. `content[0].text` = `null`, which confirms that the
+`anthropicText` fix was required; the old code would have logged every call as `empty content`. The same
+model through the deployed `cv-proxy` pass-through (Settings "test worker" shape): HTTP 200, SSE, and the
+app's `text_delta` parser receives the answer. OpenAI, Mistral, Gemini and the demo Anthropic key all
+return 200 on `/models`. Rollback no longer expected.

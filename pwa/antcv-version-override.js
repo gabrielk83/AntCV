@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.4706-linear-callout';
+  const TARGET_VERSION = '1.51.4707-linear-resync';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.4706-linear-callout',
     '1.51.4686-linear-tables',
     '1.51.4666-opus55-adopt',
     '1.51.4646-linear-length',

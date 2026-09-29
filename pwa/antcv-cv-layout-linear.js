@@ -31,7 +31,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.4706-linear-callout';
+  var VERSION = '1.51.4707-linear-resync';
   if (window.__antcvCvLayoutLinear === VERSION) return;
   window.__antcvCvLayoutLinear = VERSION;
 
@@ -273,8 +273,10 @@
     try {
       if (disabled()) { css(false); return; }
       if (isLinear()) {
-        toLinear();
-        css(!sidebarHoldsContent());
+        var wrote = toLinear();
+        var stale = sidebarHoldsContent();
+        if (stale && !wrote) resync();
+        css(!stale);
       } else {
         css(false);
         toTwoColumn();
@@ -283,6 +285,19 @@
   }
   window.__antcvCvLayoutApply = apply;
 
+  // LINEAR-RESYNC-001 (1.51.4706, live-found 2026-09-30): storage already holds the linear sections
+  // but the preview renders an older in-memory copy with sidebar sections (boot hydration from a
+  // snapshot; a sections-update storm used to mask it by re-applying storage many times a second).
+  // One forced sections-updated ('standalone' bypasses the app's same-signature early return) makes
+  // the app re-read storage. Bounded: at most one per 1.5 s and 5 per page load - never a storm.
+  var resyncs = 0, lastResync = 0;
+  function resync() {
+    var now = Date.now();
+    if (resyncs >= 5 || now - lastResync < 1500) return;
+    resyncs++; lastResync = now;
+    try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { reason: 'cv-layout-linear-resync standalone' } })); } catch (_) {}
+  }
+
   var pending = 0;
   function schedule() { if (pending) return; pending = setTimeout(function () { pending = 0; apply(); }, 200); }
   function start() {
@@ -290,7 +305,7 @@
     window.addEventListener('storage', function (e) { if (!e || e.key === KEY || e.key === 'sections') schedule(); });
     window.addEventListener('antcv:sections-updated', function (e) {
       var r = e && e.detail && e.detail.reason;
-      if (r === 'cv-layout-linear' || r === 'cv-layout-two-column') { setTimeout(function () { css(isLinear() && !disabled() && !sidebarHoldsContent()); }, 350); return; }
+      if (/^cv-layout-(linear|two-column)/.test(String(r || ''))) { setTimeout(function () { css(isLinear() && !disabled() && !sidebarHoldsContent()); }, 350); return; }
       schedule();
     });
     // generations / restores that re-render the preview with sidebar sections while Linear is on

@@ -161,3 +161,19 @@ test('callout, combined details heading and certificates row', () => {
   assert.ok(css.includes(M + '[data-sid="certs"] > [data-antcv-row-path]{display:inline !important'), 'items inline');
   assert.ok(css.includes('[data-sid="certs"] > [data-antcv-row-path]:not(:last-child)::after{content:"  \\2022  "'), 'bullet separators');
 });
+
+// LINEAR-RESYNC-001 (1.51.4707): storage is linear but the preview still renders sidebar sections
+// (stale in-memory copy) -> one forced sections-updated, rate-limited, never a storm.
+test('stale preview with sidebar sections: bounded resync event, no sections write', () => {
+  const allMain = { cl: [], cv: [{ id: 'profile', loc: 'main' }, { id: 'education', loc: 'main' }] };
+  const sb = sandbox(allMain);
+  sb.store.set('antcv:cvLayout', 'linear');
+  sb.ctx.document.querySelector = (q) => (/document-sidebar/.test(q) ? {} : null);
+  const before = sb.store.get('sections');
+  sb.ctx.window.__antcvCvLayoutApply();
+  sb.ctx.window.__antcvCvLayoutApply();
+  sb.ctx.window.__antcvCvLayoutApply();
+  assert.deepEqual(sb.events.filter((r) => /resync/.test(r || '')), ['cv-layout-linear-resync standalone'], 'one event inside the 1.5 s window');
+  assert.equal(sb.store.get('sections'), before, 'storage untouched');
+  assert.equal(sb.body.attrs['data-antcv-cv-layout'], 'two_column', 'sidebar content is never hidden');
+});

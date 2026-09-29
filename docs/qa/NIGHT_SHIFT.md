@@ -37,7 +37,6 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 ## ACTIVE CLAIMS
 
 <!-- SHIFT:BEGIN — one JSON object per line; managed by scripts/shift.mjs, safe to hand-edit a line if a session died without releasing -->
-{"id":"sh_mun1t8ob_e4jy","started":"2026-09-29T19:58:35.090Z","host":"Gabo-PC","worktree":null,"branch":"main","range":"1.51.4606-1.51.4625","task":"EXEC-LINEAR step 1 addendum + step 5a worker buildLinearCvDocument (linear CV export) + meta role line em dash -> hyphen","beat":"2026-09-29T19:58:35.154Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

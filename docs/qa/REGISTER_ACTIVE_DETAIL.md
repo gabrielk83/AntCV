@@ -1220,7 +1220,9 @@ _verified: 2026-09-24_ — CI E1 re-verify against HEAD 88f89001: leg (f) ROW-82
 
 ## Row 89 — MODEL-TABLE-FRESHNESS-001
 
-_verified: 2026-09-25_
+_verified: 2026-09-29_
+
+_Weekly tune 2026-09-29 (desktop, Opus 5.5): pins all verify against the vendor pages. Ten vendor-listed ids were unpriced or resolved to a SIBLING's key via longest-key-wins: ANTHROPIC-55-RATES-2026-09-001 (`claude-opus-5-5` [4,20], was opus-5 [5,25]; `claude-sonnet-5-5` [2,10]), GPT6-SOL-LUNA-RATES-2026-09-001 (`gpt-6-sol`/`gpt-6.1-sol` [2,10], `gpt-6-luna` [0.1,0.5] was 30x OVER, `gpt-5.5-pro`/`gpt-5.4-pro` [30,180] were 6x/12x UNDER on the pin keys), GEMINI31-RATES-2026-09-001 (`gemini-3.5-flash-lite` [0.3,2.5] was 5x OVER on 3.5-flash, `gemini-3.1-flash-lite` [0.25,1.5], `gemini-3.1-pro` [2,12]; ALL Gemini 3.x promotional through 2026-12-31). Fixed in all three mirrors; freshness 26/26 ×2, mirror 8/8, suite 2113/2113. OWED: deploy ×3 for these keys; D1 INSERT (sonnet-5 [2,10], opus-5, fable-5/-5-1, gpt-5.5 [5,30]), where this week's stored cost is 1.301x the recomputed cost, all on claude. Report: `docs/qa/COST_QUALITY_WEEKLY_2026-09-29.md`._
 
 _CI nightly 2026-09-25 (E1 sweep, HEAD `ab2a43c7`): the deployed rate corrections still hold in source across all THREE mirrors — `workers/access-relay/src/model-rates.js` carries `claude-sonnet-5 [2,10]`, `gpt-5.5 [5,30]`, `gpt-6-astra [10,50]`, `gemini-3.8-flash [0.75,3.75]`, longest-key ordering intact; `gpt-5.5` also present in both `demo-enforcement.js` mirrors; freshness + mirror tests green in the 1715/1715 suite. Only remaining: the owner-gated D1 `llm_provider_costs` INSERTs (sonnet-5 [2,10] + gpt-5.5 [5,30]; SQL in the 09-06 report § B) — not fakeable in CI._
 

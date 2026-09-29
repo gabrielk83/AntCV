@@ -101,6 +101,28 @@ test('the ids shipped since the 09-06 pass are priced ahead of adoption (2026-09
   assert.deepEqual(rateForStrict('gemini-2.5-flash'), [0.3, 2.5]);
 });
 
+test('the ids shipped since the 09-10 pass are priced ahead of adoption (2026-09-29 tune)', async () => {
+  const { rateForStrict } = await import(pathToFileURL(MIRROR).href);
+  // Four of these sit on an existing key's prefix, so before 2026-09-29 they resolved to a
+  // SIBLING's rate, not to null — the strict lookup could not flag them either.
+  assert.deepEqual(rateForStrict('claude-opus-5-5'), [4, 20]);        // ANTHROPIC-55-RATES-2026-09-001 (was opus-5 [5,25])
+  assert.deepEqual(rateForStrict('claude-sonnet-5-5'), [2, 10]);
+  assert.deepEqual(rateForStrict('gpt-6-sol'), [2, 10]);              // GPT6-SOL-LUNA-RATES-2026-09-001
+  assert.deepEqual(rateForStrict('gpt-6.1-sol'), [2, 10]);
+  assert.deepEqual(rateForStrict('gpt-6-luna'), [0.1, 0.5]);
+  assert.deepEqual(rateForStrict('gpt-5.5-pro'), [30, 180]);          // was gpt-5.5 [5,30]
+  assert.deepEqual(rateForStrict('gpt-5.4-pro'), [30, 180]);          // was gpt-5.4 [2.5,15]
+  assert.deepEqual(rateForStrict('gemini-3.5-flash-lite'), [0.3, 2.5]); // GEMINI31-RATES-2026-09-001 (was 3.5-flash [1.5,9])
+  assert.deepEqual(rateForStrict('gemini-3.1-flash-lite'), [0.25, 1.5]);
+  assert.deepEqual(rateForStrict('gemini-3.1-pro-preview'), [2, 12]);
+  // The pins they sit above are undisturbed.
+  assert.deepEqual(rateForStrict('claude-opus-5'), [5, 25]);
+  assert.deepEqual(rateForStrict('claude-sonnet-5'), [2, 10]);
+  assert.deepEqual(rateForStrict('gpt-5.5'), [5, 30]);
+  assert.deepEqual(rateForStrict('gpt-5.4-mini'), [0.75, 4.5]);
+  assert.deepEqual(rateForStrict('gemini-3.5-flash'), [1.5, 9]);
+});
+
 test('the strict lookup refuses to guess an unknown model', async () => {
   const { rateForStrict, rateFor } = await import(pathToFileURL(MIRROR).href);
   assert.equal(rateForStrict('some-model-nobody-has-shipped'), null);

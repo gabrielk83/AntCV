@@ -194,3 +194,57 @@ test('gemini-3.8-flash carries its promotional-expiry note (re-verify from 2027-
   assert.ok(src.slice(i, i + 240).includes('2027-01-01'),
     'the gemini-3.8-flash entry must keep its 2027-01-01 price-rise note');
 });
+
+// ------------------------------------------------------------
+// 2026-09-29 (weekly cost-quality tune) — ids shipped since the 09-10 pass. The
+// sharp ones sit on an EXISTING key's prefix, so longest-key-wins handed them a
+// sibling's rate rather than the fallback:
+//   - "claude-opus-5-5"       -> "claude-opus-5" [5,25]      (real [4,20], 1.25x OVER)
+//   - "gpt-5.5-pro"           -> "gpt-5.5" [5,30]            (real [30,180], 6x UNDER)
+//   - "gpt-5.4-pro"           -> "gpt-5.4" [2.5,15]          (real [30,180], 12x UNDER)
+//   - "gemini-3.5-flash-lite" -> "gemini-3.5-flash" [1.5,9]  (real [0.30,2.50], 5x OVER in)
+//   - "gpt-6-luna"            -> FALLBACK_RATE [3,15]        (real [0.10,0.50], 30x OVER)
+// Verified 2026-09-29 against platform.claude.com, developers.openai.com and ai.google.dev.
+
+test('claude-opus-5-5 prices at [4,20], not its claude-opus-5 sibling [5,25]', () => {
+  assert.deepEqual(rateFor('claude-opus-5-5'), [4.00, 20.00]);
+  assert.deepEqual(rateFor('claude-opus-5'), [5.00, 25.00]);
+});
+
+test('claude-sonnet-5-5 has its own key (same rate as sonnet-5 today; a split must not drift)', () => {
+  assert.deepEqual(rateFor('claude-sonnet-5-5'), [2.00, 10.00]);
+  assert.ok(Object.prototype.hasOwnProperty.call(RATES_KEYS(), 'claude-sonnet-5-5'),
+    'claude-sonnet-5-5 needs its own key so a future price split cannot land on claude-sonnet-5');
+});
+
+test('the -pro tiers lift off the PINNED gpt-5.5 / gpt-5.4 keys', () => {
+  assert.deepEqual(rateFor('gpt-5.5-pro'), [30.00, 180.00]);
+  assert.deepEqual(rateFor('gpt-5.4-pro'), [30.00, 180.00]);
+  // The pins they sit above are undisturbed.
+  assert.deepEqual(rateFor('gpt-5.5'), [5.00, 30.00]);
+  assert.deepEqual(rateFor('gpt-5.4'), [2.50, 15.00]);
+  assert.deepEqual(rateFor('gpt-5.4-mini'), [0.75, 4.50]);
+});
+
+test('the GPT-6 sol / luna ids are priced instead of inheriting the [3,15] fallback', () => {
+  assert.deepEqual(rateFor('gpt-6-sol'), [2.00, 10.00]);
+  assert.deepEqual(rateFor('gpt-6.1-sol'), [2.00, 10.00]);
+  assert.deepEqual(rateFor('gpt-6-luna'), [0.10, 0.50]);
+  assert.deepEqual(rateFor('gpt-6-astra'), [10.00, 50.00]);
+});
+
+test('Gemini 3.5 Flash-Lite lifts off the 3.5 Flash key; 3.1 Flash-Lite + 3.1 Pro are priced', () => {
+  assert.deepEqual(rateFor('gemini-3.5-flash-lite'), [0.30, 2.50]);
+  assert.deepEqual(rateFor('gemini-3.5-flash'), [1.50, 9.00]);
+  assert.deepEqual(rateFor('gemini-3.1-flash-lite'), [0.25, 1.50]);
+  assert.deepEqual(rateFor('gemini-3.1-pro-preview'), [2.00, 12.00]);
+});
+
+test('the 2026-09-29 ids are priced but stay OUT of the default cascades', () => {
+  for (const id of ['gpt-6-sol', 'gpt-6.1-sol', 'gpt-6-luna', 'gpt-5.5-pro', 'gpt-5.4-pro']) {
+    assert.ok(!PROVIDER_MODELS.openai.includes(id), `${id} must stay out of the default openai chain`);
+  }
+  for (const id of ['claude-opus-5-5', 'claude-sonnet-5-5']) {
+    assert.ok(!PROVIDER_MODELS.anthropic.includes(id), `${id} adoption is an owner call, not a pricing side effect`);
+  }
+});

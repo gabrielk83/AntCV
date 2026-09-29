@@ -29,6 +29,13 @@ const RATES = {
   // [10,50] (limited availability, anthropic.com/glasswing). Neither had a key and neither shares a prefix
   // with an existing entry, so both fell to FALLBACK_RATE [3,15] = 3.3x UNDER-price (rateForStrict -> null).
   // Same longest-key-wins rule as the Fable pair: 'claude-mythos-5-1' MUST stay longer than 'claude-mythos-5'.
+  // ANTHROPIC-55-RATES-2026-09-001 (2026-09-29): Opus 5.5 + Sonnet 5.5 are on the pricing page. Neither had a key,
+  // and both sit on a 5.0 sibling's prefix, so longest-key-wins handed them the SIBLING's rate:
+  //   'claude-opus-5-5'    matched 'claude-opus-5'    -> [5,25]  => 1.25x OVER-price (real [4,20])
+  //   'claude-sonnet-5-5'  matched 'claude-sonnet-5'  -> [2,10]  => right by accident; explicit so a price split cannot drift
+  // Both MUST stay longer than 'claude-opus-5' / 'claude-sonnet-5'.
+  'claude-opus-5-5':     [4.00, 20.00],   // 2026-09-29 not an AntCV pin — priced so a BYOK/override call meters correctly
+  'claude-sonnet-5-5':   [2.00, 10.00],   // 2026-09-29 not an AntCV pin
   'claude-mythos-5-1':   [10.00, 50.00],  // 2026-09-10 limited availability; not an AntCV pin — priced so a BYOK/override call meters correctly
   'claude-mythos-5':     [10.00, 50.00],  // 2026-09-10 limited availability
   'claude-fable-5-1':    [10.00, 50.00],  // 2026-09-06 most capable widely released tier; not an AntCV pin — priced so a BYOK/override call meters correctly
@@ -60,6 +67,17 @@ const RATES = {
   // Longest-key-wins is what lifts each of these off the shorter 'gpt-5' key — keep them explicit.
   // Pricing a model is not adopting it (1a-bis(ii)): PROVIDER_MODELS stays as is; these are priced so a
   // BYOK / explicit opts.models override meters correctly.
+  // GPT6-SOL-LUNA-RATES-2026-09-001 (2026-09-29): three more GPT-6 ids, plus the two -pro tiers that sit on a
+  // PINNED model's prefix. Verified against developers.openai.com/api/docs/pricing:
+  //   'gpt-6-sol' / 'gpt-6.1-sol'  matched no key      -> FALLBACK_RATE [3,15] => 1.5x OVER (real [2,10])
+  //   'gpt-6-luna'                 matched no key      -> FALLBACK_RATE [3,15] => 30x OVER (real [0.10,0.50])
+  //   'gpt-5.5-pro'                matched 'gpt-5.5'   -> [5,30]               => 6x UNDER (real [30,180])
+  //   'gpt-5.4-pro'                matched 'gpt-5.4'   -> [2.5,15]             => 12x UNDER (real [30,180])
+  'gpt-6.1-sol':         [2.00, 10.00],  // 2026-09-29
+  'gpt-6-sol':           [2.00, 10.00],  // 2026-09-29
+  'gpt-6-luna':          [0.10, 0.50],   // 2026-09-29 cheapest OpenAI text model on the page
+  'gpt-5.5-pro':         [30.00, 180.00], // 2026-09-29 MUST stay longer than 'gpt-5.5' (the thorough-tier pin)
+  'gpt-5.4-pro':         [30.00, 180.00], // 2026-09-29 MUST stay longer than 'gpt-5.4'
   'gpt-6-astra':         [10.00, 50.00],  // 2026-09-10 OpenAI flagship; not an AntCV pin
   'gpt-5.6-sol':         [4.00, 20.00],  // 2026-09-10
   'gpt-5.6-terra':       [2.00, 12.00],  // 2026-09-10
@@ -93,6 +111,14 @@ const RATES = {
   // had no keys — neither id contains an existing key, so both fell to FALLBACK_RATE [3,15]: 4x OVER-price on
   // 3.8-flash and 2x OVER on 3.5-flash. An OVER-price demotes the provider in the weekly tune, so a missing
   // key here steers the router just as a wrong one does (1a-bis(iv)).
+  // GEMINI31-RATES-2026-09-001 (2026-09-29): three more Gemini 3 ids. The page says ALL Gemini 3.x prices are
+  // promotional through 2026-12-31 with rises from 2027-01-01 — re-verify the whole 3.x block at the first tune of 2027.
+  //   'gemini-3.5-flash-lite'  matched 'gemini-3.5-flash' -> [1.5,9]   => 5x OVER in, 3.6x OVER out (real [0.30,2.50])
+  //   'gemini-3.1-flash-lite'  matched no key             -> FALLBACK [3,15] => 12x OVER in (real [0.25,1.50])
+  //   'gemini-3.1-pro'         matched no key             -> FALLBACK [3,15] (real [2,12] for prompts <=200k; [4,18] above)
+  'gemini-3.5-flash-lite': [0.30, 2.50], // 2026-09-29 promotional through 2026-12-31. MUST stay longer than 'gemini-3.5-flash'.
+  'gemini-3.1-flash-lite': [0.25, 1.50], // 2026-09-29 promotional through 2026-12-31
+  'gemini-3.1-pro':      [2.00, 12.00],  // 2026-09-29 preview; <=200k-token tier (>200k is [4,18]); promotional through 2026-12-31
   'gemini-3.8-flash':    [0.75, 3.75],  // 2026-09-10 promotional through 2026-12-31; RISES to [1.50, 7.50] on 2027-01-01 — re-verify at the first tune of 2027
   'gemini-3.5-flash':    [1.50, 9.00],  // 2026-09-10
   'gemini-2.5-flash-lite': [0.10, 0.40], // verified 2026-08-20 ai.google.dev/gemini-api/docs/pricing. MUST stay longer than the 2.5-flash key below - longest-key-wins is what keeps Flash-Lite off the Flash rate.

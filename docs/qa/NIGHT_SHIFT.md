@@ -37,7 +37,6 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 ## ACTIVE CLAIMS
 
 <!-- SHIFT:BEGIN — one JSON object per line; managed by scripts/shift.mjs, safe to hand-edit a line if a session died without releasing -->
-{"id":"sh_mun1t8ob_e4jy","started":"2026-09-29T19:07:26.177Z","host":"Gabo-PC","worktree":null,"branch":"main","range":"1.51.4586-1.51.4605","task":"VEO-ROLE-LEAK fix: gold-rules target-role + example-isolation + same-company no-merge + 0927 banned words/accessibility/truncation guard; proxy prompt-augment example isolation","beat":"2026-09-29T19:07:26.230Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

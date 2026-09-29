@@ -55,6 +55,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -107,6 +108,32 @@ _JOB_PATH_HINT = re.compile(r"/(job|jobs|vis-job|stilling|career|vacanc|position
 # jobindex.dk 301s an expired /jobannonce/ to /arkiv/vis/ and then to
 # jobindexarkiv.dk (observed on the FDPARTS + KK Group rows, 2026-08-26).
 _ARCHIVE_URL = re.compile(r"jobindexarkiv\.dk|/arkiv/vis/", re.I)
+
+
+# LinkedIn slug URLs (dk./se.linkedin.com/jobs/view/<title>-at-<co>-<id>) serve a
+# 200 page that never renders the closed-ad banner, so a closed job read LIVE
+# (POSTING-LI-SLUG-001: Novo Nordisk, Karnov, Alfa Laval, FOSS, 2026-09-30). The
+# guest jobPosting endpoint for the same numeric id DOES render it. Probe that.
+_LI_HOST = re.compile(r"(^|\.)linkedin\.com$", re.I)
+_LI_VIEW_ID = re.compile(r"/jobs/view/(?:[^/]*?-)?(\d{8,})/?$")
+LI_GUEST = "https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/%s"
+LI_DELAY = 2.0                   # seconds between LinkedIn probes
+LI_BACKOFF = (5, 15, 45)         # waits before each retry on HTTP 429
+
+
+def linkedin_job_id(url):
+    """Numeric job id from any *.linkedin.com/jobs/view/ URL, slug or plain; else None."""
+    p = urllib.parse.urlparse(url or "")
+    if not _LI_HOST.search(p.netloc.split(":")[0]):
+        return None
+    m = _LI_VIEW_ID.search(p.path)
+    return m.group(1) if m else None
+
+
+def probe_target(url):
+    """The URL to actually fetch for a tracker URL (guest API for LinkedIn views)."""
+    jid = linkedin_job_id(url)
+    return LI_GUEST % jid if jid else url
 
 
 # ------------------------------------------------------------------ relay glue
@@ -213,6 +240,20 @@ def probe(url, timeout=25):
         return None, url, "__probe_error__ %s: %s" % (type(e).__name__, e)
 
 
+def probe_with_backoff(url, timeout=25, fetch=None, sleep=time.sleep,
+                       backoff=LI_BACKOFF):
+    """probe() that retries on HTTP 429. A 429 that survives every retry is
+    returned as-is and classifies WALLED (no evidence), never a strike."""
+    fetch = fetch or probe
+    res = fetch(url, timeout)
+    for wait in backoff:
+        if res[0] != 429:
+            break
+        sleep(wait)
+        res = fetch(url, timeout)
+    return res
+
+
 # ------------------------------------------------------------------ row edits
 
 def row_uk(row):
@@ -282,6 +323,7 @@ def cmd_check(args):
         archived = []
 
         checked = 0
+        last_li = 0.0
         for row in rows:
             uk = row_uk(row)
             url = (urls.get(uk) or "").strip()
@@ -295,11 +337,21 @@ def cmd_check(args):
                 break
             checked += 1
 
-            status, final_url, text = probe(url, args.timeout)
+            target = probe_target(url)
+            if target != url:
+                # LinkedIn rate-limits bursts (429 on most rows when parallel):
+                # space the probes out and back off on 429.
+                gap = LI_DELAY - (time.monotonic() - last_li)
+                if gap > 0:
+                    time.sleep(gap)
+                status, final_url, text = probe_with_backoff(target, args.timeout)
+                last_li = time.monotonic()
+            else:
+                status, final_url, text = probe(url, args.timeout)
             if isinstance(text, str) and text.startswith("__probe_error__"):
                 verdict, detail = "ERROR", text.replace("__probe_error__ ", "")
             else:
-                verdict, detail = classify(status, final_url, url, text, today)
+                verdict, detail = classify(status, final_url, target, text, today)
 
             ent = dict(doc["postingcheck"].get(uk) or {})
             misses, struck = next_misses(ent, verdict, today)

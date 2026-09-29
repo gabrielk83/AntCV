@@ -4,6 +4,24 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 112 — POSTING-LI-SLUG-001 — CLOSED 2026-09-30 (desktop session, evidence: live guest-API probe + test)
+
+_verified: 2026-09-30_
+
+_Found and fixed the same day in a desktop session (owner-reported)._
+
+**Evidence.** `check-postings.py` read 4 closed postings as LIVE: Novo Nordisk, Karnov Group, Alfa Laval, FOSS. All 4 used LinkedIn slug URLs (`dk./se.linkedin.com/jobs/view/<title>-at-<co>-<id>`). The slug page returns 200 with no closed banner (`curl` on the Novo URL: 0 hits for "no longer accepting"). The guest endpoint `/jobs-guest/jobs/api/jobPosting/4445506698` for the same id renders `closed-job__flavor--closed` "No longer accepting applications". Novo, Karnov, Alfa Laval archived by hand 2026-09-30. Parallel LinkedIn probing also drew HTTP 429 (WALLED) on most rows.
+
+**OPEN-queue row (verbatim):**
+
+```
+| 112 | `POSTING-LI-SLUG-001` | 2026-09-30 | `scripts/job-tracker/check-postings.py` probes LinkedIn slug URLs (`*.linkedin.com/jobs/view/<slug>-<id>`) as-is; the slug page never renders the closed banner, so closed ads read LIVE (4 rows: Novo Nordisk, Karnov, Alfa Laval, FOSS). Fix: pull the trailing 8+ digit id and probe `/jobs-guest/jobs/api/jobPosting/<id>`; probe LinkedIn sequentially with a delay and back off on 429. Graded-evidence rules unchanged. |
+```
+
+---
+
+**CLOSED 2026-09-30.** `linkedin_job_id()` + `probe_target()` route any `*.linkedin.com/jobs/view/` URL (slug or plain) to the guest jobPosting endpoint; `classify()` receives the guest URL as the requested URL, so no false SUSPECT. LinkedIn probes are spaced `LI_DELAY` = 2 s apart and `probe_with_backoff()` retries 429 after 5/15/45 s; a surviving 429 stays WALLED (no strike). Live: the Novo slug now classifies CLOSED. `test_check_postings.py` PASS with slug->id (dk./se./www, lookalike host, short number), a guest-API closed fixture trimmed from the live response, and 429 backoff cases; negative-controlled (identity `probe_target` fails it). All 14 `scripts/job-tracker/test_*.py` pass; `node scripts/run-tests.mjs` 2137/2137. FOSS row still needs a `check --apply` sweep to archive.
+
 ## Row 111 — JOBSRC-JOBBANK-PARAM-001 — CLOSED 2026-09-30 (desktop session, evidence: live key= filtering + test)
 
 _verified: 2026-09-29_

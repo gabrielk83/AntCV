@@ -159,6 +159,66 @@ check("WALLED carries the stamp forward untouched",
       cp.next_misses({"misses": 1, "last_strike": "2026-08-26"}, "WALLED", DAY2),
       (1, "2026-08-26"))
 
+# ---- LinkedIn slug URLs -> guest API (POSTING-LI-SLUG-001) ------------------
+# The slug page (dk./se.linkedin.com/jobs/view/<title>-at-<co>-<id>) returns 200
+# with no closed banner, so 4 closed rows read LIVE on 2026-09-30. The guest
+# jobPosting endpoint for the same id renders the banner; probe_target routes there.
+SLUG = "https://dk.linkedin.com/jobs/view/assoc-director-ai-product-manager-at-novo-nordisk-4445506698"
+GUEST = "https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/4445506698"
+check("dk. slug URL -> numeric id", cp.linkedin_job_id(SLUG), "4445506698")
+check("se. slug URL with trailing slash + query -> id",
+      cp.linkedin_job_id("https://se.linkedin.com/jobs/view/product-manager-at-alfa-laval-4301234567/?trk=x"),
+      "4301234567")
+check("plain www /jobs/view/<id>/ -> id",
+      cp.linkedin_job_id("https://www.linkedin.com/jobs/view/4434843281/"), "4434843281")
+check("slug URL routes to the guest endpoint", cp.probe_target(SLUG), GUEST)
+check("a non-LinkedIn URL is fetched as-is", cp.probe_target(U), U)
+check("a LinkedIn company page is not a job view", cp.probe_target(
+    "https://www.linkedin.com/company/novo-nordisk/"), "https://www.linkedin.com/company/novo-nordisk/")
+check("a lookalike host is not LinkedIn",
+      cp.linkedin_job_id("https://evil-linkedin.com/jobs/view/4445506698"), None)
+check("a short number in the slug is not a job id",
+      cp.linkedin_job_id("https://www.linkedin.com/jobs/view/pm-at-acme-2026"), None)
+
+# Trimmed from the live guest response for 4445506698 (2026-09-30).
+GUEST_CLOSED = """<section class="top-card-layout">
+  <h2 class="top-card-layout__title topcard__title">Assoc Director AI Product Manager</h2>
+  <figure class="closed-job closed-job__flavor topcard__flavor-row">
+    <span class="closed-job__icon closed-job__icon--error-pebble lazy-load"></span>
+    <figcaption class="closed-job__flavor--closed">No longer accepting applications</figcaption>
+  </figure></section>"""
+GUEST_OPEN = """<section class="top-card-layout">
+  <h2 class="top-card-layout__title topcard__title">Assoc Director AI Product Manager</h2>
+  <a class="apply-button">Apply</a></section>"""
+check("guest-API closed fixture is CLOSED (hard, archives on first sight)",
+      cp.classify(200, GUEST, cp.probe_target(SLUG), GUEST_CLOSED, TODAY)[0], "CLOSED")
+check("guest-API open fixture is LIVE, not SUSPECT (target is the requested URL)",
+      cp.classify(200, GUEST, cp.probe_target(SLUG), GUEST_OPEN, TODAY)[0], "LIVE")
+check("negative control: the slug page's own 200 (no banner) reads LIVE - the bug",
+      cp.classify(200, SLUG, SLUG, GUEST_OPEN, TODAY)[0], "LIVE")
+
+# 429 backoff: retries, then gives up as WALLED (never a strike).
+def fake(seq):
+    calls = []
+    def f(url, timeout):
+        calls.append(url)
+        return seq[min(len(calls) - 1, len(seq) - 1)]
+    return f, calls
+
+slept = []
+f, calls = fake([(429, GUEST, ""), (429, GUEST, ""), (200, GUEST, GUEST_CLOSED)])
+res = cp.probe_with_backoff(GUEST, fetch=f, sleep=slept.append, backoff=(1, 2, 3))
+check("429 then 200: retried until the real answer", (res[0], len(calls), slept), (200, 3, [1, 2]))
+slept = []
+f, calls = fake([(429, GUEST, "")])
+res = cp.probe_with_backoff(GUEST, fetch=f, sleep=slept.append, backoff=(1, 2, 3))
+check("429 every time: gives up after the backoff list", (res[0], len(calls), slept), (429, 4, [1, 2, 3]))
+check("a surviving 429 is WALLED", cp.classify(res[0], GUEST, GUEST, "", TODAY)[0], "WALLED")
+slept = []
+f, calls = fake([(200, GUEST, GUEST_OPEN)])
+cp.probe_with_backoff(GUEST, fetch=f, sleep=slept.append)
+check("no 429: one fetch, no sleep", (len(calls), slept), (1, []))
+
 # ---- the archive edit -------------------------------------------------------
 def fresh():
     return [7, "Acme", "Optical PM", "Copenhagen", "", "Proposed", "strong", "OPEN",

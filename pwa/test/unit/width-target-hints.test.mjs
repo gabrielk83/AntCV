@@ -164,3 +164,26 @@ test('SHIP 4: idempotent and inert without a role match', () => {
   const noRole = JSON.stringify({ messages: [{ role: 'system', content: 'DIMENSION-AWARE BULLET LENGTH only, no role marker' }] });
   assert.equal(api._maybeInjectBulletWindows(noRole), null);
 });
+
+// LINEAR-LENGTH-BUDGET-001 (owner 2026-09-29): antcv:cvLayout = 'linear' measures the single-column
+// export (A4, 1 cm sides = 10772 DXA, 360 DXA bullet indent, 10 pt) - not the two-column main column.
+test('linear layout: full-width chars per line, prompt names the layout, back to two-column on switch', () => {
+  const store = new Map([
+    ['cvSidebarRatio', '0.36'],
+    ['styleConfig', JSON.stringify({ mainBodyFont: 'Calibri', mainEdgeIndent: 14, bulletIndent: 20, seamGap: 6 })],
+  ]);
+  const api = load(store);
+  assert.equal(api._measureCharsPerLine(), 76, 'two-column baseline');
+  store.set('antcv:cvLayout', 'linear');
+  // fake canvas 6px/char: (10772 - 360) / 15 = 694.1px -> 116 cpl, independent of the sidebar ratio
+  assert.equal(api._measureCharsPerLine(), 116);
+  store.set('cvSidebarRatio', '0.45');
+  assert.equal(api._measureCharsPerLine(), 116, 'sidebar ratio has no effect in linear');
+  const body = JSON.stringify({ messages: [{ role: 'system', content: ENRICH_SYS }, { role: 'user', content: 'x' }] });
+  const sys = JSON.parse(api._maybeInjectWidthHint(body)).messages[0].content;
+  assert.match(sys, /one full rendered line here = 116 chars/);
+  assert.match(sys, /LINEAR single-column layout/);
+  store.delete('antcv:cvLayout');
+  store.set('cvSidebarRatio', '0.36');
+  assert.equal(api._measureCharsPerLine(), 76, 'two-column restored');
+});

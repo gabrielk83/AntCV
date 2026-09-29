@@ -69,7 +69,7 @@
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.51.4586-veo-role-leak';
+  const SCRIPT_VERSION = '1.51.4646-linear-length';
   const STORAGE_KEY = 'antcv:bullet-targets';
   const STYLE_ID = 'antcv-bullet-targets-styles';
   const STRIP_MARKER = 'data-antcv-bullet-target-strip';
@@ -781,6 +781,17 @@
   const PAGE_W_DXA = 11906;      // A4, zero page margins (worker model)
   const PX_PER_DXA = 1 / 15;
   const DEFAULT_BODY_PT = 10.5;  // worker main-body default
+  // LINEAR-LENGTH-BUDGET-001 (owner 2026-09-29: "bullet length - implement different ones for
+  // linear versus the two column's lengths"): localStorage['antcv:cvLayout'] = 'linear' exports
+  // the single-column CV (docx-worker buildLinearCvDocument): A4 with 1 cm sides -> 10772 DXA
+  // content width, bullets at 10 pt with a 360 DXA left indent. Every width below comes from
+  // currentGeometry(), so the calibration, measured windows and row fit follow the layout.
+  const LINEAR_CONTENT_DXA = 11906 - 2 * 567;   // 10772
+  const LINEAR_BULLET_INDENT_DXA = 360;
+  const LINEAR_BODY_PT = 10;
+  function isLinearLayout() {
+    try { return localStorage.getItem('antcv:cvLayout') === 'linear'; } catch (_) { return false; }
+  }
 
   let cplCache = { sig: null, cpl: 0 };
 
@@ -798,14 +809,27 @@
     let ratio = parseFloat(localStorage.getItem('cvSidebarRatio'));
     if (!(ratio > 0.1 && ratio < 0.7)) ratio = 0.36;
     const num = (v, d) => (typeof v === 'number' && isFinite(v) ? v : d);
-    return {
+    const font = (typeof sc.mainBodyFont === 'string' && sc.mainBodyFont) || 'Calibri';
+    if (isLinearLayout()) {
+      return {
+        layout: 'linear', ratio: 0, mainEdgeIndent: 0, seamGap: 0,
+        bulletIndent: LINEAR_BULLET_INDENT_DXA * PX_PER_DXA,
+        cellWpx: LINEAR_CONTENT_DXA * PX_PER_DXA,
+        font: font, pt: LINEAR_BODY_PT,
+      };
+    }
+    const g = {
+      layout: 'two_column',
       ratio: ratio,
       mainEdgeIndent: num(sc.mainEdgeIndent, 14),   // px
       bulletIndent: num(sc.bulletIndent, 20),       // px
       seamGap: num(sc.seamGap, 6),                  // px
-      font: (typeof sc.mainBodyFont === 'string' && sc.mainBodyFont) || 'Calibri',
+      font: font,
       pt: DEFAULT_BODY_PT,
     };
+    g.cellWpx = (PAGE_W_DXA - Math.round(PAGE_W_DXA * g.ratio)
+                 - 2 * g.mainEdgeIndent * 15 - g.seamGap * 15) * PX_PER_DXA;
+    return g;
   }
 
   // chars-per-line for a main-column bullet at the live geometry.
@@ -815,7 +839,7 @@
   // (pt → px at 4/3, the same conversion the export preflight uses).
   function measureCharsPerLine() {
     const g = currentGeometry();
-    const sig = [g.ratio, g.mainEdgeIndent, g.bulletIndent, g.seamGap, g.font, g.pt].join('|');
+    const sig = [g.layout, g.ratio, g.mainEdgeIndent, g.bulletIndent, g.seamGap, g.font, g.pt].join('|');
     if (cplCache.sig === sig && cplCache.cpl > 0) return cplCache.cpl;
     let avg = 0;
     try {
@@ -828,9 +852,7 @@
       avg = ctx.measureText(sample).width / sample.length;
     } catch (_) { return 0; }
     if (!(avg > 0)) return 0;
-    const cellWpx = (PAGE_W_DXA - Math.round(PAGE_W_DXA * g.ratio)
-                     - 2 * g.mainEdgeIndent * 15 - g.seamGap * 15) * PX_PER_DXA;
-    const bulletWpx = cellWpx - g.bulletIndent;
+    const bulletWpx = g.cellWpx - g.bulletIndent;
     const cpl = Math.round(bulletWpx / avg);
     if (!(cpl > 20 && cpl < 200)) return 0;
     cplCache = { sig: sig, cpl: cpl };
@@ -848,7 +870,9 @@
     };
     return '\n\n' + WIDTH_BLOCK_TAG + ' (measured from the CURRENT column width and body font — ' +
       'these numbers OVERRIDE any chars-per-line figures above): one full rendered line here = ' +
-      cpl + ' chars (' + g.font + ' ' + g.pt + 'pt, main column at the live sidebar ratio ' + g.ratio + '). ' +
+      cpl + ' chars (' + g.font + ' ' + g.pt + 'pt, ' + (g.layout === 'linear'
+        ? 'LINEAR single-column layout, full page width - lines are about 1.5x a two-column main-column line'
+        : 'main column at the live sidebar ratio ' + g.ratio) + '). ' +
       'Every bullet/paragraph must END ON A FULL LINE: its last line must reach at least ' +
       Math.round(gd.runt * 100) + '% of ' +
       'the column width. Valid total lengths: 1-LINE = ' + r.l1[0] + '-' + r.l1[1] + ' chars; ' +
@@ -960,9 +984,7 @@
       if (!ctx) return null;
       const g = currentGeometry();
       ctx.font = (g.pt * 4 / 3) + 'px "' + g.font + '", Calibri, sans-serif';
-      const cellWpx = (PAGE_W_DXA - Math.round(PAGE_W_DXA * g.ratio)
-                       - 2 * g.mainEdgeIndent * 15 - g.seamGap * 15) * PX_PER_DXA;
-      const widthPx = cellWpx - g.bulletIndent;
+      const widthPx = g.cellWpx - g.bulletIndent;
       if (!(widthPx > 50)) return null;
       const gd = goldDensity();
       const words = s.split(/\s+/);
@@ -1062,10 +1084,7 @@
     const role = sec && Array.isArray(sec.roles) ? sec.roles[home.roleIdx] : null;
     const bullets = role && Array.isArray(role.bullets) ? role.bullets : null;
     if (!bullets || !bullets.length) return null;
-    const g = currentGeometry();
-    const cellWpx = (PAGE_W_DXA - Math.round(PAGE_W_DXA * g.ratio)
-                     - 2 * g.mainEdgeIndent * 15 - g.seamGap * 15) * PX_PER_DXA;
-    const block = buildWindowsBlock(bullets, cellWpx);
+    const block = buildWindowsBlock(bullets, currentGeometry().cellWpx);
     if (!block) return null;
     body.messages[sysIdx] = { ...body.messages[sysIdx], content: body.messages[sysIdx].content + block };
     return JSON.stringify(body);

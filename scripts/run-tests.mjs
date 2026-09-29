@@ -55,10 +55,14 @@ console.log('');
 // after every test has passed, so `node --test` would otherwise HANG at the
 // end and get killed with a nonzero code — masking an all-green run as a
 // failure for CI / the pre-push hook. Force a clean exit once tests finish.
+// Pass paths RELATIVE to ROOT (cwd). Absolute paths overflow the Windows 32,767-char command
+// line from a deep worktree (290 files x a .claude/worktrees/<name>/ prefix = 46k chars); the
+// spawn then fails, status is null, and the run exits 1 with no test output (RUN-TESTS-CMDLINE-001).
 const res = spawnSync(
   process.execPath,
-  ['--test', '--test-force-exit', '--test-reporter=spec', ...files],
+  ['--test', '--test-force-exit', '--test-reporter=spec', ...files.map((f) => relative(ROOT, f))],
   { stdio: 'inherit', cwd: ROOT }
 );
 
+if (res.error) console.error(`[run-tests] could not start node --test: ${res.error.code || ''} ${res.error.message}`);
 process.exit(res.status ?? 1);

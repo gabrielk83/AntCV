@@ -64,6 +64,11 @@ node scripts/routine-preflight.mjs start --routine <this-routine-name>
 #            The worktree is under <repo>/.claude/worktrees/ (gitignored). Never move it to %TEMP%:
 #            outside the project dir every command prompts, and an unattended run stalls on the
 #            first prompt (ROUTINE-PERMISSION-STALL-001, relay tune 2026-09-17 + 09-23).
+#            Desktop scheduled tasks MUST be set to "Bypass permissions" in the Claude app
+#            (owner decision 2026-09-29); the default mode stalls every unattended run.
+#            No D1 connector in the session is not a blocker: read D1 with
+#            `npx --no-install wrangler d1 execute ant_memory --remote --json --command "<SELECT>"`
+#            from workers/access-relay (SELECT only).
 
 # LAST (always, even on a no-op or a blocker — this is what makes a silent failure visible):
 node scripts/routine-preflight.mjs end   --routine <name> --status ok|no-op --summary "<one line>"

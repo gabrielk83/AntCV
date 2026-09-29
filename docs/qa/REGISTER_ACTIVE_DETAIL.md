@@ -1850,3 +1850,57 @@ _verified: 2026-08-26_
 
 ---
 
+
+## Row 110 — ANTCV-TOKEN-EXPIRED-2026-09-02-001
+
+_verified: 2026-09-29_
+
+_Found by the `antcv-position-discovery` run 2026-09-29 (JOB-DISCOVERY-001, worktree-isolated, Opus 5).
+The run stopped at its AUTH gate before any search or write, per the routine's AUTH clause: zero queries
+run, zero leads proposed, no push notification sent (a 401/403 sends no push). No code changed._
+
+**Evidence (probed, not assumed).** `python scripts/job-tracker/check-postings.py check --apply` (step 1a,
+the first relay call of the run) returned `job-tracker GET failed: 401 {'error': '{"error":"unauthenticated"}'}`.
+`~/.antcv/token` exists (255 bytes, mtime 2026-08-26 12:23) and is a well-formed JWT for the right account;
+its decoded payload is the whole story:
+
+```
+sub/email = karp.gabriel.a@gmail.com     iss = antcv-access-relay
+iat = 2026-08-26T10:23:44Z               exp = 2026-09-02T10:23:44Z
+run started 2026-09-29T20:31Z  ->  expired 27 days 10 h before this run
+```
+
+A plain 7-day TTL that lapsed on 09-02. **Not a code bug** — the relay is healthy and answering; the stored
+credential is simply stale. Same failure as the CLOSED `ANTCV-TOKEN-EXPIRED-2026-08-14-001`, third occurrence
+of the family.
+
+**Why it lapsed this time (new finding, and the part worth fixing).** `ROUTINE_HEALTH.jsonl` shows
+**no routine of ANY kind fired between 2026-08-27T06:59Z and 2026-09-29T20:31Z — a 33-day gap** across all of
+`antcv-nightly`, `antcv-job-tracker-nightly`, `antcv-position-discovery`, `antcv-demand-seed-weekly` and
+`antcv-relay-cost-quality-tune`. That is host-wide, not task-specific (unlike the 9-day single-task gap seen
+2026-08-07..08-16), so the desktop Claude app was simply not running — routines are desktop-app-local
+([[routine-reliability-hardening]]). The token's `SESSION_REFRESH_WINDOW` self-renewal (6 d,
+[[job-tracker-system]]) only extends a token that is **still valid when a routine calls it**, so a month of
+desktop downtime guarantees expiry with no mechanism to recover. Owner-side work continued during the gap
+(register rows advanced 09-14..09-26, deploys attempted 09-15), so the desktop was in use — only the
+scheduled-task host was not.
+
+**OWNER ACTION (unblocks position-discovery, the job-tracker nightly, and every live relay/gen check).**
+In the PWA console while logged in on `antcv.pages.dev`:
+`copy(localStorage.getItem('antcv:auth:token'))` -> paste into `C:\Users\karpg\.antcv\token`, no trailing
+newline.
+
+**REMAINING / structural leg (still owed, not started).** A 7-day TTL whose only renewal path is "a routine
+happened to call the relay while it was still valid" cannot survive a gap in desktop uptime, and this is now
+the third time it has cost a routine cycle. Two candidate fixes, neither attempted here: (a) issue routines a
+long-lived machine token (the `x-antcv-cse-token` pattern already in the relay — cf. row 102), or (b) have
+`scripts/routine-preflight.mjs start` decode `~/.antcv/token` and WARN while it is still valid but inside the
+refresh window, so an expiry is caught before it blocks a run rather than after.
+
+**OPEN-queue row (verbatim):**
+
+```
+| **110** | **ANTCV-TOKEN-EXPIRED-2026-09-02-001 (found by the position-discovery run 2026-09-29).** `~/.antcv/token` expired 2026-09-02T10:23:44Z (issued 08-26, 7-day TTL), unrefreshed 27 days; relay answers `401 {"error":"unauthenticated"}` so every relay-backed routine stops at its AUTH gate. Cause: no routine fired 2026-08-27..2026-09-29 (33-day host-wide gap — routines are desktop-app-local), and the token only self-renews on a routine call made while it is still valid. OWNER: re-save the token from the PWA console. REMAINING: structural fix (machine token for routines, or a preflight pre-expiry warning). | `ROUTINE_HEALTH.jsonl`; ACTIVE_BUGS 2026-09-29 top block | BLOCKED on owner token re-save |
+```
+
+---

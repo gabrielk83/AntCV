@@ -27962,7 +27962,7 @@ function renderExperience(s, ctx) {
     // ROLE-LOCATION-001 (EXEC-LINEAR step 2): optional role.location + two role-line formats,
     // mirroring the preview adapter renderRoleHead:
     //   classic (default)  title | company ........ years[ | location]
-    //   meta               title — company ........ (years | location)   company upright, years bold
+    //   meta               title - company ........ (years | location)   company upright, years bold (owner 2026-09-29: hyphen, not em dash)
     // location absent + classic => byte-identical to the pre-change export.
     const __meta = style && style.roleLineFormat === "meta";
     const __loc = typeof role.location === "string" ? role.location.trim() : "";
@@ -27979,7 +27979,7 @@ function renderExperience(s, ctx) {
     }
     if (role.company) {
       left.push(new TextRun({
-        text: (left.length ? (__meta ? " — " : " | ") : "") + role.company,
+        text: (left.length ? (__meta ? " - " : " | ") : "") + role.company,
         italics: __cSeg && __cSeg.italic != null ? !!__cSeg.italic : !__meta,
         bold: __cSeg && __cSeg.bold != null ? !!__cSeg.bold : false,
         // Spec: role title in main head colour, COMPANY in BLACK, year in gray.

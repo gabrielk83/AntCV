@@ -57,15 +57,15 @@ test('classic: no location -> unchanged "title | company<TAB>years"; location ->
   assert.deepEqual(texts(paraSlice(xml, 'ROLEB')), ['ROLEB', ' | CoB', TAB + '2026 - | Hørsholm, Denmark']);
 });
 
-test('meta: "title — company<TAB>(years | location)", company upright, years bold', async () => {
+test('meta: "title - company<TAB>(years | location)", company upright, years bold', async () => {
   const xml = await gen({ sections, style: { roleLineFormat: 'meta' } });
   const pb = paraSlice(xml, 'ROLEB');
-  assert.deepEqual(texts(pb), ['ROLEB', ' — CoB', TAB + '(2026 - | Hørsholm, Denmark)']);
+  assert.deepEqual(texts(pb), ['ROLEB', ' - CoB', TAB + '(2026 - | Hørsholm, Denmark)']);
   const runs = [...pb.matchAll(/<w:r>[\s\S]*?<\/w:r>/g)].map((m) => m[0]);
   assert.ok(!/<w:i\/>/.test(runs[1]), 'company run is upright in meta');
   assert.ok(/<w:b\/>/.test(runs[2]), 'years run is bold in meta');
   // no location -> "(years)" only
-  assert.deepEqual(texts(paraSlice(xml, 'ROLEA')), ['ROLEA', ' — CoA', TAB + '(2017 - 2020)']);
+  assert.deepEqual(texts(paraSlice(xml, 'ROLEA')), ['ROLEA', ' - CoA', TAB + '(2017 - 2020)']);
 });
 
 test('mergeStyle never hex-coerces roleLineFormat; unknown values are dropped', async () => {

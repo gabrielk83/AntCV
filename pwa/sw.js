@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.4586-veo-role-leak';
+const CACHE = 'antcv-1.51.4606-exec-linear-dash';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

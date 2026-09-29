@@ -98,11 +98,12 @@ UX rules:
 
 ## 4. Suggested order
 
-1. Spec addendum (block primitives + linear layout) — docs only. OPEN.
+1. Spec addendum (block primitives + linear layout) — docs only. **DRAFTED 1.51.4606 (2026-09-29): `EXECUTIVE_LINEAR_SPEC_ADDENDUM.md` — awaiting owner approval.**
 2. `role.location` + role-line format (small, both renderers). **DONE 1.51.4566-role-location (2026-09-27).**
    - Store: `role.location` (4th role-line segment); format in `localStorage['antcv:roleLineFormat']` = `meta` | absent (own key, no React state, no `app.js` edit).
    - Preview: `antcv-roles-richblock-adapter.js` (adapt / itemsToRoles / writeBack / rolesPathFor / renderRoleHead); editor input in `antcv-rich-block-editor.js`; control `antcv-role-line-format.js` injected under PAGE FLOW.
    - Export: `antcv-docx-client.js` forwards `location` + `style.roleLineFormat`; worker `renderExperience` + `mergeStyle` enum guard.
+   - 1.51.4606 (owner 2026-09-29 "— to -"): meta role line is now `title - company` (hyphen) in the worker, preview adapter and control label.
    - Classic + no location is byte-identical to before (tests: `pwa/test/unit/role-location.test.mjs`, `workers/docx-worker/test/role-location.test.mjs`).
    - Not covered: the flag-off legacy chimera role line in `app.js` (rollback path only) and the translate collector (`app.src.js:19659`) — location is not sent for translation.
 3. `cvLayout: 'linear'` in preview with plain sections (no new blocks) — proves the page-1 experience fit.

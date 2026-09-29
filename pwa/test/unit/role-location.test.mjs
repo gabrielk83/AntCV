@@ -2,7 +2,7 @@
 // Runs the roles adapter sidecar in a fake window and checks:
 //   - classic + no location renders byte-identically to the pre-change segments;
 //   - a 4th segment carries the location through adapt -> itemsToRoles -> writeBack;
-//   - the meta format renders "title — company" left and "(years | location)" right;
+//   - the meta format renders "title - company" left and "(years | location)" right;
 //   - the docx-client payload carries location only when set, and forwards the format.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -63,11 +63,11 @@ test('classic format: no location -> pre-change role line; location -> appended 
   assert.equal(text(line2.children[1]), '<items.2.years=2026 –> | <items.2.location=Hørsholm, Denmark>');
 });
 
-test('meta format: "title — company" left, "(years | location)" right, company upright, years bold', () => {
+test('meta format: "title - company" left, "(years | location)" right, company upright, years bold', () => {
   const A = loadAdapter({ 'antcv:roleLineFormat': 'meta' });
   const ad = A.adapt(sec);
   const line = A.renderRoleHead(React, ctx, ad.items[2], 2).children[0];
-  assert.equal(text(line.children[0]), '<items.2.role=PM> — <items.2.company=Trackman>');
+  assert.equal(text(line.children[0]), '<items.2.role=PM> - <items.2.company=Trackman>');
   assert.equal(text(line.children[1]), '(<items.2.years=2026 –> | <items.2.location=Hørsholm, Denmark>)');
   assert.equal(line.children[0].children[2].props.style.fontStyle, 'normal');
   assert.equal(line.children[1].props.style.fontWeight, 700);

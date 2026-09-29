@@ -34,7 +34,7 @@
   // localStorage['antcv:roleLineFormat'] (own key, read here + docx-client + the
   // antcv-role-line-format.js control; NOT React state, so no app.js surface):
   //   classic (absent/default)  title, company ........ years[ | location]
-  //   meta                      title — company ....... (years | location)
+  //   meta                      title - company ....... (years | location)
   // classic shows the location ONLY when set, so existing CVs render byte-identically.
   var RLF_KEY = 'antcv:roleLineFormat';
   function roleLineFormat() {
@@ -338,7 +338,7 @@
     var segs = Array.isArray(row.seg) ? row.seg : [];
     var roleSeg = segs[0] || {}, compSeg = segs[1] || {}, yearSeg = segs[2] || {}, locSeg = segs[3] || {};
     var subColor = k.mainSubHeadColor || s;
-    // ROLE-LOCATION-001: 'meta' = "title — company ... (years | location)"; classic unchanged.
+    // ROLE-LOCATION-001: 'meta' = "title - company ... (years | location)" (hyphen, owner 2026-09-29); classic unchanged.
     var meta = roleLineFormat() === 'meta';
     var hasLoc = !!(locSeg.t && String(locSeg.t).trim());
     var left = h('span', {
@@ -349,7 +349,7 @@
       }
     },
       h(B, { path: ['items', i, 'role'], value: roleSeg.t || '', placeholder: '[Role title]' }),
-      compSeg.t ? (meta ? ' — ' : ', ') : '',
+      compSeg.t ? (meta ? ' - ' : ', ') : '',
       h('span', {
         style: {
           fontWeight: compSeg.bold ? 700 : 400,

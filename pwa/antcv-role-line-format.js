@@ -2,7 +2,7 @@
  * ============================================================================
  * Adds a "Role line" select to the PAGE FLOW group of the style panel:
  *   classic  title, company ........ years[ | location]     (default, unchanged look)
- *   meta     title — company ....... (years | location)     (the 2026-09-27 v2 reference CV)
+ *   meta     title - company ....... (years | location)     (the 2026-09-27 v2 reference CV; hyphen per owner 2026-09-29)
  * Store: localStorage['antcv:roleLineFormat'] = 'meta' | absent. Read by
  * antcv-roles-richblock-adapter.js (preview) and antcv-docx-client.js (export
  * -> style.roleLineFormat -> worker renderExperience). Own key on purpose: no
@@ -11,7 +11,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.4566-role-location';
+  var VERSION = '1.51.4606-exec-linear-dash';
   if (window.__antcvRoleLineFormat === VERSION) return;
   window.__antcvRoleLineFormat = VERSION;
 
@@ -39,7 +39,7 @@
     sel.style.cssText = 'font-size:9px;padding:1px 2px;max-width:100%;';
     [
       ['classic', 'Title, company · years'],
-      ['meta', 'Title — company (years | location)']
+      ['meta', 'Title - company (years | location)']
     ].forEach(function (o) {
       var op = document.createElement('option'); op.value = o[0]; op.textContent = o[1];
       if (o[0] === read()) op.selected = true;

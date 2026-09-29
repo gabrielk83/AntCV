@@ -1777,7 +1777,9 @@ _reconcile 2026-09-07 (CI nightly, E3): `diag-panel-button-audit.mjs` RE-RUN on 
 
 > **Renumbered 2026-08-26: was row 40.** A document written before that date citing "row 40" may mean this row or SO-003. The ID is the key.
 
-_verified: 2026-08-26_
+_verified: 2026-09-29_
+
+**2026-09-29 (position-discovery run, re-verified live):** jobindex leg healthy (10 queries, 13–20 ads each, charset clean, 0 expired dropped). jobbank leg REGRESSED — the host now ignores `soegeord=`; filed as row 111 `JOBSRC-JOBBANK-PARAM-001`. LinkedIn guest strongest again (16 queries x 20 = 320 cards); TheHub readable only via WebFetch (the `/api/jobs` path 404s); Google Jobs (WebSearch) exercised for the first time since 2026-08-26 and surfaced 2 named leads. follow-through: the routine prompt's source list is otherwise still correct.
 
 **OPEN-queue row (verbatim):**
 
@@ -1864,6 +1866,8 @@ _verified: 2026-08-26_
 ## Row 110 — ANTCV-TOKEN-EXPIRED-2026-09-02-001
 
 _verified: 2026-09-29_
+
+**2026-09-29 (position-discovery rerun, corroboration):** the re-saved token carried a full discovery run end to end — sweep, context, envelope read, `discover-positions.py add` PUT, Excel pull — with no 401. Leg (a) still owed.
 
 **2026-09-29 (desktop nightly cross-check, OWNER LEG DONE):** `~/.antcv/token` re-saved by the owner; preflight `TOKEN OK`, expires 2026-10-06T19:40:25Z. Authed `GET /api/job-tracker` → **200**. Relay-backed routines are unblocked. Still open: leg (a), a long-lived routine token or longer relay TTL. Without it the token lapses again 2026-10-06 if no routine calls it inside the refresh window.
 **2026-09-29 (job-tracker nightly, second fire, cross-check): leg (1) DONE.** The owner re-saved `~/.antcv/token`; `routine-preflight.mjs token` -> `TOKEN OK, expires 2026-10-06T19:40:25Z (6.9d left)`, and `check-postings.py check` + `gen-runner.py list` both read the relay doc without a 401. Row stays ACTIVE for leg (a): a 7-day credential on a desktop-local routine host still dies after any week-long host gap.
@@ -1960,3 +1964,24 @@ says so.
 ```
 
 ---
+
+## Row 111 — JOBSRC-JOBBANK-PARAM-001
+
+_verified: 2026-09-29_
+
+_Found by the `antcv-position-discovery` rerun 2026-09-29 (JOB-DISCOVERY-001, worktree-isolated). Not fixed here: the routine is data/docs-only._
+
+**Evidence.** `job_sources.py search --source all` over 10 queries returned jobbank 20 ads each, but the jobbank URL sets were identical across all 10 (1 distinct set): Ørsted, CERN, Region Syddanmark nurses for "technical product manager". `curl https://www.jobbank.dk/job/?soegeord=produktchef` shows pagination to page 561 = whole catalogue. The page's own `mainSearchForm` field is `key`: `/job/?key=produktchef` returns 4 matching ads (Eurofins Produktchef, Tryg, Moment, JP/Politiken). `keywords=` is also ignored.
+
+**Workaround used this run.** jobbank searched through the fetcher's own `parse_jobbank_html` with `key=` (12 queries, 190 cards, 127 unique).
+
+**Fix owed (follow-through, ~2 lines).** `scripts/job-tracker/job_sources.py` line 44: `JOBBANK_SEARCH = "https://www.jobbank.dk/job/?key={q}"`. Add a network-gated test asserting two different queries yield different URL sets, so a future param change fails loud instead of reading as "20 rows". `key=` OR-matches multi-word input; prefer single-word or quoted Danish titles.
+
+**OPEN-queue row (verbatim):**
+
+```
+| 111 | `JOBSRC-JOBBANK-PARAM-001` | 2026-09-29 | (found by the position-discovery run 2026-09-29) — jobbank.dk moved its search param from `soegeord=` to `key=`: `job_sources.py` JOBBANK_SEARCH (`/job/?soegeord=<q>`) now returns the unfiltered 561-page catalogue, the SAME 20 ads for every query (10 queries -> 1 distinct result set), so the jobbank leg reads as "20 rows" while being blind. Silent regression of JOBSRC-FETCH-001's fetcher. Fix: `JOBBANK_SEARCH = "https://www.jobbank.dk/job/?key={q}"` + a test that two different queries return different sets. Note `key=` OR-matches multi-word queries (noise on "technical product manager"); single-word terms are clean. |
+```
+
+---
+

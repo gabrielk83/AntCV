@@ -1,3 +1,5 @@
+> **JOBSRC-JOBBANK-PARAM-001 — OPEN 2026-09-29 (position-discovery rerun; register row 111; not fixed, routine is data/docs-only).** jobbank.dk now filters on `key=`, not `soegeord=`. `scripts/job-tracker/job_sources.py` `JOBBANK_SEARCH` still sends `soegeord=`, so every query returns the same unfiltered 20 ads (10 queries -> 1 distinct set) and the source looks healthy while blind. Fix: one-line URL change + a test that two queries return different sets. Workaround this run: fetcher parser with `key=`.
+
 > **ANTHROPIC-55 / GPT6-SOL-LUNA / GEMINI31-RATES-2026-09-001 — FIXED 2026-09-29 (weekly relay cost-quality tune, Opus 5.5, worktree-isolated; no `pwa/` asset, no cache-bust, no version consumed; worker deploys OWED).**
 >
 > Also reproduced here: RUN-TESTS-CMDLINE-001 (`run-tests.mjs` silently exits 1 from the in-repo routine worktree, argv over the Windows 32K limit). A parallel session fixed it in `66687345` during this run; this run's identical fix was dropped on rebase. Suite 2113/2113.

@@ -177,6 +177,14 @@ export function readPhotoShape() {
   } catch (_) { return "circle"; }
 }
 
+// EXEC-LINEAR step 5a (1.51.4607): the "CV layout" control (antcv-role-line-format.js) stores
+// localStorage['antcv:cvLayout'] = 'linear' | absent. A CV export then asks the worker for the
+// single-column executive layout (buildLinearCvDocument); letters are always linear anyway.
+// Explicit `layout` from a caller still wins. Spec: docs/design/EXECUTIVE_LINEAR_SPEC_ADDENDUM.md.
+export function readCvLayout() {
+  try { return localStorage.getItem('antcv:cvLayout') === 'linear' ? 'linear' : 'two_column'; } catch (_) { return 'two_column'; }
+}
+
 export function readPhotoPosition() {
   // EXPORT-PHOTO-POS-CLAMP-001 (1.50.373): this VALID set lagged the app's
   // picker. 'band-overlap' was MISSING, so the bridge silently exported as
@@ -857,7 +865,7 @@ export function buildPayload({
     schema_version: '1.0',
     doc,
     language,
-    layout: layout || (doc === 'cl' ? 'linear' : 'two_column'),
+    layout: layout || (doc === 'cl' ? 'linear' : readCvLayout()),
     filename: filename || buildFilename({ personalInfo, meta, doc, language }),
     personal_info: {
       name:        localizeName(personalInfo.name || '', language),

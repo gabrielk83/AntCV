@@ -98,7 +98,7 @@ UX rules:
 
 ## 4. Suggested order
 
-1. Spec addendum (block primitives + linear layout) — docs only. **DRAFTED 1.51.4606 (2026-09-29): `EXECUTIVE_LINEAR_SPEC_ADDENDUM.md` — awaiting owner approval.**
+1. Spec addendum (block primitives + linear layout) — docs only. **DONE: `EXECUTIVE_LINEAR_SPEC_ADDENDUM.md`, approved by the owner 2026-09-29.**
 2. `role.location` + role-line format (small, both renderers). **DONE 1.51.4566-role-location (2026-09-27).**
    - Store: `role.location` (4th role-line segment); format in `localStorage['antcv:roleLineFormat']` = `meta` | absent (own key, no React state, no `app.js` edit).
    - Preview: `antcv-roles-richblock-adapter.js` (adapt / itemsToRoles / writeBack / rolesPathFor / renderRoleHead); editor input in `antcv-rich-block-editor.js`; control `antcv-role-line-format.js` injected under PAGE FLOW.
@@ -109,6 +109,7 @@ UX rules:
 3. `cvLayout: 'linear'` in preview with plain sections (no new blocks) — proves the page-1 experience fit.
 4. `callout`, `tiles`, `cols` in preview; section chips.
 5. Worker parity + density preset + running header text.
+   - **5a DONE 1.51.4607 (2026-09-29), ahead of 3–4:** worker `buildLinearCvDocument` (doc "cv" + layout "linear"; port of the owner-approved `exec_cv_lib.mjs` + an adapter from the section model: profile/work style -> callout, table -> 3 tiles, experience -> `Title - Company <TAB> years | location`, education -> 2 columns + certs row, tools -> 2x2 tiles, rest -> details table; 9.5 pt floor, no em dash, no stop in cells, running header + AI notice page 2+). Client: "CV layout: Two-column | Linear (export only)" in PAGE FLOW (`antcv-role-line-format.js`, key `antcv:cvLayout`) -> `antcv-docx-client.js` sends layout linear for CVs. Tests: `workers/docx-worker/test/linear-cv.test.mjs`, `pwa/test/unit/cv-layout-linear.test.mjs`. Preview still two-column until step 3.
 6. Fix the five preview/export drift items.
 
 Each step is a hotfix bundle with its own shift claim; steps 3–5 touch `app.js` and go through the diagnostic-first protocol.

@@ -24742,7 +24742,8 @@ async function generateDocx(payload) {
     // numeric id.
     contCounter: 0
   };
-  const document2 = layout === "two_column" ? buildTwoColumnDocument(ctx) : buildLinearDocument(ctx);
+  // EXEC-LINEAR step 5a: a CV asked for as linear gets the single-column executive layout; letters unchanged.
+  const document2 = layout === "two_column" ? buildTwoColumnDocument(ctx) : (payload.doc === "cv" ? buildLinearCvDocument(ctx) : buildLinearDocument(ctx));
   const raw = await Packer.toBuffer(document2);
   let buffer2 = raw;
   let postProcessStatus = "skipped";
@@ -24750,12 +24751,12 @@ async function generateDocx(payload) {
   let postProcessError = null;
   let markersRemaining = 0;
   try {
-    const result = postProcessDocx(raw, { watermark: payload.watermark || "", photoShape: resolvePhotoShape(payload), headerBg: (style && style.headerBg) || "", aiNotice: style && style._aiNotice, aiFont: style && style._aiFont, cph: !!(style && style._cph), docType: payload.doc,
+    const result = postProcessDocx(raw, { watermark: payload.watermark || "", photoShape: resolvePhotoShape(payload), headerBg: (payload.doc === "cv" && layout === "linear") ? "" : ((style && style.headerBg) || ""), aiNotice: style && style._aiNotice, aiFont: style && style._aiFont, cph: !!(style && style._cph), docType: payload.doc,
       // COPENHAGEN-STAGE4: rounded navy header box + cyan 1.5pt border as a
       // page-anchored VML roundrect in a FIRST-PAGE header part (titlePg) —
       // the band cells above dropped their shading for it. Page 1 only; the
       // default header (spine/watermark) keeps serving pages 2+.
-      headerBox: style && style._cph ? { fill: style.headerBg, stroke: style._cphCyan } : null,
+      headerBox: style && style._cph && !(payload.doc === "cv" && layout === "linear") ? { fill: style.headerBg, stroke: style._cphCyan } : null,
       // SIDEBAR-SPINE-VML-001: full-height header-hosted rect behind the
       // sidebar (two-column CVs only; kill: style_config sidebarSpine:false)
       spineColor: (layout === "two_column" && ctx.sidebarSpine && style && style.sidebarBg) || "",
@@ -26124,6 +26125,321 @@ function buildLinearDocument(ctx) {
   });
 }
 __name(buildLinearDocument, "buildLinearDocument");
+// ============================================================================
+// EXEC-LINEAR step 5a (1.51.4606, owner-approved addendum 2026-09-29):
+// single-column executive CV, doc === "cv" && layout === "linear".
+// Spec: docs/design/EXECUTIVE_LINEAR_SPEC_ADDENDUM.md. Visual target: the owner-approved
+// house generator (Application Generator Files/housestyle_pdf_generator/exec_cv_lib.mjs),
+// ported here and fed by an adapter from the AntCV section model:
+//   profile-like text / rich_block / work style -> callout      table (core comp) -> 3 tiles
+//   experience -> "Title - Company <TAB> years | location"      education -> 2 columns + certs row
+//   tools-like labeled_list -> 2x2 tiles                         everything else -> details table
+// Rules (addendum §3): nothing below 9.5 pt; no em dash; table cells end without a full stop;
+// running header + AI notice on page 2+ only (titlePage); content flows, no hard page breaks.
+// Only reached when a client asks for it - two_column CVs and every letter are untouched.
+// ============================================================================
+function buildLinearCvDocument(ctx) {
+  const { style } = ctx;
+  const pi = ctx.pi || {}, meta = ctx.meta || {};
+  const __IN = 1440, SIDE = 567, TB = 714;
+  const CONTENT_W = Math.round(8.27 * __IN) - SIDE * 2;            // 10772 DXA (A4, 1 cm sides)
+  const LABEL_W = 1900, HALF_W = Math.floor(CONTENT_W / 2);
+  const hex = (v, d) => { const s = String(v || "").replace(/^#/, "").trim(); return /^[0-9a-fA-F]{6}$/.test(s) ? s.toUpperCase() : d; };
+  const INK = hex(style.mainTextColor, "0F172A"), ACC = hex(style.mainHeadColor, "0369A1"), BAR = hex(style.accent, ACC);
+  const SEC = "475569", MUTE = "64748B", FILL = "F8FAFC", TILE = "F1F5F9", HAIR = "E2E8F0";
+  const FONT = style.mainBodyFont || "Calibri";
+  const lcPt = (v) => Math.round(v * 20);
+  const lcSz = (v) => Math.floor(Math.max(v, 9.5) * 2);          // FONT FLOOR 9.5 pt (owner 2026-09-29)
+  const lcLine = (m) => Math.round(240 * m);
+  // text hygiene: no em dash (owner "— to -"), no bracketed template placeholders
+  const clean = (s) => String(s == null ? "" : s).replace(/\*\*/g, "").replace(/\s*—\s*/g, " - ").replace(/\s+/g, " ").trim();
+  const isPh = (s) => /^\s*\[[\s\S]*\]\s*$/.test(String(s || ""));
+  const noStop = (s) => String(s).replace(/\.\s*$/, "");            // table cells end without a full stop
+  const run = (text, o = {}) => new TextRun({ text, font: FONT, ...o });
+  const NONE = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
+  const hair = { style: BorderStyle.SINGLE, size: 4, color: HAIR };
+  const nb = { top: NONE, bottom: NONE, left: NONE, right: NONE, insideHorizontal: NONE, insideVertical: NONE };
+  const titleCase = (t) => clean(t).toLowerCase().replace(/(^|[\s(&/-])([a-zæøåéü])/g, (m, a, b) => a + b.toUpperCase());
+
+  // ---------------- adapter: AntCV sections -> linear blocks ----------------
+  const secs = (ctx.sections || []).filter((s) => s && s.on !== false);
+  const itemText = (it) => {
+    if (it == null) return "";
+    if (typeof it === "string") return clean(it);
+    if (Array.isArray(it)) return clean(it.join(" "));
+    if (Array.isArray(it.seg)) return clean(it.seg.map((g) => (g && g.t) || "").join(" "));
+    const l = it.l || it.label || it.b || it.name || "", v = it.v || it.value || it.t || it.text || "";
+    return clean(l && v ? `${l}: ${v}` : (l || v));
+  };
+  const idt = (s) => `${s.id || ""} ${s.title || ""}`.toLowerCase();
+  const kind = (s) => {
+    const k = idt(s);
+    if (s.type === "experience") return "experience";
+    if (s.type === "education") return "education";
+    if (s.type === "table") return "tiles";
+    if (/cert|course|credential|licen/.test(k)) return "certs";
+    if (s.type === "labeled_list" && /tool|method|skill|technical|arsenal|expertise|stack/.test(k)) return "tools";
+    if (/profile|summary|about|work.?style|arbejdsstil|profil|who i am/.test(k) &&
+        /^(text|text_inline|text_bullets|rich_block|foundation|bullets)$/.test(s.type)) return "profile";
+    return "details";
+  };
+  const by = { profile: [], tiles: [], experience: [], education: [], certs: [], tools: [], details: [] };
+  for (const s of secs) by[kind(s)].push(s);
+
+  // profile callout rows [lead, text]
+  const callout = [];
+  for (const s of by.profile) {
+    if (s.type === "rich_block" && Array.isArray(s.items)) {
+      for (const r of s.items) {
+        if (!r || r.hr) continue;
+        const lead = clean(r.b || ""), body = clean(r.t || (Array.isArray(r.seg) ? r.seg.map((g) => g && g.t).join(" ") : ""));
+        if ((lead || body) && !isPh(body)) callout.push([lead.replace(/:\s*$/, ""), body]);
+      }
+    } else if (Array.isArray(s.items) && s.items.length) {
+      const t = s.items.map(itemText).filter((x) => x && !isPh(x)).join(" ");
+      if (t) callout.push([titleCase(s.title || "Profile"), t]);
+    } else if (s.content && !isPh(s.content)) {
+      let t = clean(s.content), lead = titleCase(s.title || "Profile");
+      const m = t.match(/^([A-Z][^:.]{2,30}):\s+(.+)$/);                  // "Work style: ..." carries its own lead
+      if (m) { lead = m[1]; t = m[2]; }
+      callout.push([lead, t]);
+    }
+  }
+  // tiles [title, text] from the competency table (header row skipped, placeholders dropped)
+  const tiles = [];
+  for (const s of by.tiles) {
+    const rows = Array.isArray(s.rows) ? s.rows.slice(1) : [];
+    for (const r of rows) {
+      const a = clean(Array.isArray(r) ? r[0] : r && (r.a || r.k)), b = clean(Array.isArray(r) ? r[1] : r && (r.b || r.v));
+      if (a && b && !isPh(a) && !isPh(b)) tiles.push([a, b]);
+    }
+  }
+  // roles
+  const roles = [];
+  for (const s of by.experience) for (const r of (s.roles || [])) {
+    if (!r || r.on === false || (!r.title && !r.company)) continue;
+    const bl = (r.bullets || []).filter(Boolean).map((b) => {
+      const t = clean(typeof b === "string" ? b : itemText(b));
+      const m = t.match(/^([^:.]{3,48}):\s+(.+)$/);                        // "Lead: text" -> bold lead
+      return m ? [m[1] + ":", m[2]] : ["", t];
+    }).filter((b) => b[1] && !isPh(b[1]));
+    if (typeof r.results === "string" && r.results.trim()) bl.push([clean(style._resultsLabel || "Results:").replace(/\s+$/, ""), clean(r.results)]);
+    roles.push({ title: clean(r.title), company: clean(r.company), years: clean(r.years).replace(/\s*-\s*$/, " - present"), location: clean(r.location || ""), bullets: bl });
+  }
+  // education: [degree, school, detail] alternating into two columns
+  const edu = [];
+  for (const s of by.education) for (const it of (s.items || [])) {
+    if (!it) continue;
+    const deg = clean(typeof it === "string" ? it : (it.deg || it.degree || ""));
+    let sch = clean(typeof it === "string" ? "" : (it.sch || it.school || "")), detail = "";
+    const i = sch.indexOf(" - ");
+    if (i > 0) { detail = sch.slice(i + 3); sch = sch.slice(0, i); }
+    const yrs = clean(typeof it === "object" && (it.years || it.yrs || it.dates) || "");
+    if (deg && !isPh(deg)) edu.push([deg, sch + (yrs ? ` (${yrs})` : ""), detail]);
+  }
+  const eduL = edu.filter((_, i) => i % 2 === 0), eduR = edu.filter((_, i) => i % 2 === 1);
+  const certs = by.certs.flatMap((s) => (s.items || []).map(itemText)).filter((x) => x && !isPh(x)).join(" • ");
+  // tools 2x2 [label, value]
+  const tools = [];
+  for (const s of by.tools) for (const it of (s.items || [])) {
+    const l = clean(it && (it.l || it.label || it.b) || ""), v = clean(it && (it.v || it.value || it.t) || "");
+    if (l && v && !isPh(v)) tools.push([l.replace(/:\s*$/, ""), v]);
+  }
+  // details rows
+  const details = [];
+  for (const s of by.details) {
+    let txt = "";
+    if (s.content) txt = clean(s.content);
+    else if (Array.isArray(s.items)) txt = s.items.map(itemText).filter((x) => x && !isPh(x)).join("; ");
+    else if (Array.isArray(s.rows)) txt = s.rows.map(itemText).filter(Boolean).join("; ");
+    if (txt && !isPh(txt)) details.push({ label: titleCase(s.title || s.id || ""), content: txt, center: /accessib/.test(idt(s)) });
+  }
+
+  // ---------------- blocks (port of exec_cv_lib.mjs) ----------------
+  const heading = (title) => new Paragraph({
+    spacing: { before: lcPt(7), after: lcPt(3) }, keepNext: true,
+    border: { bottom: { style: BorderStyle.SINGLE, size: 8, space: 2, color: BAR } },
+    children: [run(clean(title).toUpperCase(), { size: lcSz(10), bold: true, color: INK })],
+  });
+  const calloutBox = (items) => new Table({
+    alignment: AlignmentType.CENTER, layout: "fixed", width: { size: CONTENT_W, type: WidthType.DXA }, columnWidths: [CONTENT_W], borders: nb,
+    rows: [new TableRow({ children: [new TableCell({
+      width: { size: CONTENT_W, type: WidthType.DXA }, shading: { fill: FILL, type: ShadingType.CLEAR, color: "auto" },
+      margins: { top: 130, bottom: 130, left: 180, right: 180 },
+      borders: { left: { style: BorderStyle.SINGLE, size: 24, color: BAR }, top: hair, right: hair, bottom: hair },
+      children: items.map(([lead, body]) => new Paragraph({
+        spacing: { before: lcPt(2), after: lcPt(2), line: lcLine(1.12) },
+        children: [...(lead ? [run(lead + ": ", { size: lcSz(9.5), bold: true, color: INK })] : []), run(body, { size: lcSz(9.5), color: "334155" })],
+      })),
+    })] })],
+  });
+  const tileGrid = (rows, colW, o) => new Table({
+    alignment: AlignmentType.CENTER, layout: "fixed", width: { size: colW * rows[0].length, type: WidthType.DXA },
+    columnWidths: Array(rows[0].length).fill(colW), borders: nb,
+    rows: rows.map((r) => new TableRow({ children: r.map(([t, d]) => new TableCell({
+      width: { size: colW, type: WidthType.DXA }, shading: { fill: o.fill, type: ShadingType.CLEAR, color: "auto" }, margins: o.margins,
+      borders: { left: { style: BorderStyle.SINGLE, size: 16, color: BAR }, top: NONE, right: NONE, bottom: o.rowGap ? { style: BorderStyle.SINGLE, size: 12, color: "FFFFFF" } : NONE },
+      children: [
+        new Paragraph({ spacing: { before: 0, after: lcPt(o.titleAfter) }, children: [run(noStop(t), { bold: true, size: lcSz(o.titleSize), color: INK })] }),
+        new Paragraph({ spacing: { before: 0, after: 0, line: lcLine(1.1) }, children: [run(noStop(d), { size: lcSz(o.descSize), color: SEC })] }),
+      ] })) })),
+  });
+  const jobHeader = (r) => new Paragraph({
+    spacing: { before: lcPt(5), after: lcPt(1) }, keepNext: true, tabStops: [{ type: TabStopType.RIGHT, position: CONTENT_W }],
+    children: [
+      run(r.title, { bold: true, size: lcSz(10), color: INK }),
+      ...(r.company ? [run(` - ${r.company}`, { size: lcSz(10), color: SEC })] : []),
+      run(`\t${r.years}${r.location ? " | " + r.location : ""}`, { bold: true, size: lcSz(9.5), color: ACC }),
+    ],
+  });
+  const bullet = ([lead, text], keepNext) => new Paragraph({
+    numbering: { reference: "lincv-bullets", level: 0 }, keepNext, keepLines: true,
+    spacing: { before: lcPt(1), after: lcPt(1), line: lcLine(1.12) },
+    children: [...(lead ? [run(lead + " ", { bold: true, size: lcSz(10), color: INK })] : []), run(text, { size: lcSz(10), color: INK })],
+  });
+  const eduBlock = ([title, school, detail], first) => new Paragraph({
+    spacing: { before: first ? 0 : lcPt(4), after: 0 },
+    children: [
+      run(title, { bold: true, size: lcSz(10), color: INK }), new TextRun({ break: 1 }),
+      run(school, { size: lcSz(9.5), color: SEC }),
+      ...(detail ? [new TextRun({ break: 1 }), run(detail, { size: lcSz(9.5), color: MUTE })] : []),
+    ],
+  });
+  const detailRow = ({ label, content, center }) => new TableRow({ children: [
+    new TableCell({ width: { size: LABEL_W, type: WidthType.DXA }, shading: { fill: FILL, type: ShadingType.CLEAR, color: "auto" },
+      margins: { top: 35, bottom: 35, left: 90, right: 60 },
+      borders: { left: { style: BorderStyle.SINGLE, size: 16, color: BAR }, top: hair, bottom: hair, right: NONE },
+      children: [new Paragraph({ spacing: { before: 0, after: 0 }, alignment: center ? AlignmentType.CENTER : void 0,
+        children: [run(label, { bold: true, size: lcSz(9.5), color: INK })] })] }),
+    new TableCell({ width: { size: CONTENT_W - LABEL_W, type: WidthType.DXA }, margins: { top: 35, bottom: 35, left: 90, right: 90 },
+      borders: { left: NONE, top: hair, bottom: hair, right: hair },
+      children: [new Paragraph({ spacing: { before: 0, after: 0, line: lcLine(1.1) }, children: [run(noStop(content), { size: lcSz(9.5), color: SEC })] })] }),
+  ] });
+
+  // ---------------- header box: photo left (post-process rounds it), text right ----------------
+  const children = [];
+  const name = clean(pi.name) || "Your Name";
+  const title = clean(meta.role || meta.title || "");
+  const loc = clean(pi.location || [pi.city, pi.country].filter(Boolean).join(", "));
+  let slogan = clean(meta.subtitle || pi.headline || "").replace(/\s*[•|]\s*/g, ", ");
+  // one-line budget (addendum §3): TITLE | slogan • location  <= ~95 chars - shorten the slogan, never wrap
+  const budget = 95 - title.length - (loc ? loc.length + 3 : 0) - 3;
+  if (slogan.length > budget && budget > 12) { const cut = slogan.slice(0, budget); slogan = cut.slice(0, Math.max(cut.lastIndexOf(","), cut.lastIndexOf(" "))).replace(/[,\s&]+$/, ""); }
+  const hasPhoto = !!pi.photo_b64 && String(pi.photoPosition || "").toLowerCase() !== "none";
+  const PHOTO_W = 1413, PHOTO_PX = 71;
+  const accent = { style: BorderStyle.SINGLE, size: 6, color: ACC };
+  const hdrCell = (kids, w, extra) => new TableCell({ width: { size: w, type: WidthType.DXA },
+    shading: { fill: FILL, type: ShadingType.CLEAR, color: "auto" }, verticalAlign: VerticalAlign.CENTER, children: kids, ...extra });
+  const al = hasPhoto ? void 0 : AlignmentType.CENTER;
+  const contact = [];
+  const addC = (lab, val, link) => {
+    if (!val) return;
+    if (contact.length) contact.push(run("   |   ", { size: lcSz(9.5), color: SEC }));
+    contact.push(run(lab + ": ", { bold: true, size: lcSz(9.5), color: INK }));
+    contact.push(link ? new ExternalHyperlink({ link, children: [run(val, { size: lcSz(9.5), color: ACC, underline: {} })] }) : run(val, { size: lcSz(9.5), color: SEC }));
+  };
+  addC("Email", clean(pi.email));
+  addC("Phone", clean(pi.phone));
+  const li = clean(pi.linkedin || "");
+  if (li) addC("LinkedIn", li.replace(/^https?:\/\/(www\.)?/, ""), /^https?:/.test(li) ? li : "https://" + li.replace(/^\/+/, ""));
+  const textCell = hdrCell([
+    new Paragraph({ alignment: al, spacing: { before: 0, after: lcPt(1) }, children: [run(name, { size: lcSz(20), bold: true, color: INK })] }),
+    new Paragraph({ alignment: al, spacing: { before: 0, after: lcPt(2) }, children: [
+      ...(title ? [run(title.toUpperCase() + " ", { size: lcSz(10.5), bold: true, color: ACC })] : []),
+      ...(slogan ? [run((title ? "| " : "") + slogan + "  ", { size: lcSz(10), color: MUTE })] : []),
+      ...(loc ? [run("•  " + loc, { size: lcSz(9.5), bold: true, color: SEC })] : []),
+    ] }),
+    new Paragraph({ alignment: al, spacing: { before: 0, after: 0 }, children: contact }),
+  ], hasPhoto ? CONTENT_W - PHOTO_W : CONTENT_W, { margins: { top: 100, bottom: 100, left: 60, right: 120 },
+    borders: { top: accent, bottom: accent, right: accent, left: hasPhoto ? NONE : { style: BorderStyle.SINGLE, size: 24, color: BAR } } });
+  let photoCell = null;
+  if (hasPhoto) {
+    try {
+      photoCell = hdrCell([new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 0, after: 0 }, children: [
+        new ImageRun({ type: detectImageType(pi.photo_b64), data: base64ToUint8Array(pi.photo_b64), transformation: { width: PHOTO_PX, height: PHOTO_PX } }),
+      ] })], PHOTO_W, { margins: { top: 100, bottom: 100, left: 120, right: 60 },
+        borders: { top: accent, bottom: accent, right: NONE, left: { style: BorderStyle.SINGLE, size: 24, color: BAR } } });
+    } catch (_) { photoCell = null; }
+  }
+  children.push(new Table({
+    alignment: AlignmentType.CENTER, layout: "fixed", width: { size: CONTENT_W, type: WidthType.DXA },
+    columnWidths: photoCell ? [PHOTO_W, CONTENT_W - PHOTO_W] : [CONTENT_W],
+    borders: { top: accent, bottom: accent, left: accent, right: accent, insideHorizontal: NONE, insideVertical: NONE },
+    rows: [new TableRow({ children: photoCell ? [photoCell, textCell] : [textCell] })],
+  }));
+  children.push(new Paragraph({ spacing: { before: 0, after: lcPt(4) }, children: [] }));
+
+  // ---------------- body in the addendum's default order ----------------
+  const T = (list, dflt) => (list.length && list[0].title) ? list[0].title : dflt;
+  if (callout.length) { children.push(heading(T(by.profile, "Profile"))); children.push(calloutBox(callout)); }
+  if (tiles.length) {
+    children.push(heading(T(by.tiles, "Core Competencies")));
+    const rows = []; for (let i = 0; i < tiles.length; i += 3) { const r = tiles.slice(i, i + 3); while (r.length < 3) r.push(["", ""]); rows.push(r); }
+    children.push(tileGrid(rows, Math.floor(CONTENT_W / 3), { fill: TILE, margins: { top: 100, bottom: 100, left: 120, right: 120 }, titleSize: 10, descSize: 10, titleAfter: 2, rowGap: rows.length > 1 }));
+  }
+  if (roles.length) {
+    children.push(heading(T(by.experience, "Professional Experience")));
+    for (const r of roles) {
+      children.push(jobHeader(r));
+      r.bullets.forEach((b, i) => children.push(bullet(b, i < r.bullets.length - 1)));
+    }
+  }
+  if (edu.length || certs) {
+    children.push(heading(T(by.education, "Education")));
+    const cell = (blocks, m) => new TableCell({ width: { size: HALF_W, type: WidthType.DXA }, margins: m,
+      children: blocks.length ? blocks.map((b, i) => eduBlock(b, i === 0)) : [new Paragraph({ children: [] })] });
+    children.push(new Table({
+      alignment: AlignmentType.CENTER, layout: "fixed", width: { size: HALF_W * 2, type: WidthType.DXA }, columnWidths: [HALF_W, HALF_W], borders: nb,
+      rows: [
+        ...(edu.length ? [new TableRow({ children: [cell(eduL, { top: 60, bottom: 60, left: 40, right: 60 }), cell(eduR, { top: 60, bottom: 60, left: 60, right: 40 })] })] : []),
+        // certifications span BOTH columns as a full-width row (owner 2026-09-27)
+        ...(certs ? [new TableRow({ children: [new TableCell({ width: { size: HALF_W * 2, type: WidthType.DXA }, columnSpan: 2,
+          margins: { top: 40, bottom: 60, left: 40, right: 40 }, children: [new Paragraph({ spacing: { before: 0, after: 0 }, children: [
+            run(titleCase(T(by.certs, "Certifications")) + ":", { bold: true, size: lcSz(10), color: INK }), new TextRun({ break: 1 }),
+            run(noStop(certs), { size: lcSz(9.5), color: SEC }) ] })] })] })] : []),
+      ],
+    }));
+  }
+  if (tools.length) {
+    children.push(heading(T(by.tools, "Tools & Methods")));
+    const rows = []; for (let i = 0; i < tools.length; i += 2) { const r = tools.slice(i, i + 2); while (r.length < 2) r.push(["", ""]); rows.push(r); }
+    children.push(tileGrid(rows, HALF_W, { fill: FILL, margins: { top: 70, bottom: 70, left: 90, right: 90 }, titleSize: 9.5, descSize: 9.5, titleAfter: 1 }));
+  }
+  if (details.length) {
+    const labels = details.map((d) => d.label).filter(Boolean).slice(0, 4);
+    const head = labels.length > 1 ? labels.slice(0, -1).join(", ") + " & " + labels[labels.length - 1] : (labels[0] || "Details");
+    children.push(heading(head));
+    children.push(new Table({ alignment: AlignmentType.CENTER, layout: "fixed", width: { size: CONTENT_W, type: WidthType.DXA },
+      columnWidths: [LABEL_W, CONTENT_W - LABEL_W], borders: nb, rows: details.map(detailRow) }));
+  }
+
+  // ---------------- document: running header + AI notice on page 2+ only ----------------
+  const scope = "Experience & Technical Arsenal";
+  return new File({
+    creator: "AntCV", description: "AntCV linear CV" + (ctx.workerVersion ? " " + ctx.workerVersion : ""),
+    styles: { default: { document: { run: { font: FONT, size: lcSz(9.5), color: "334155" } } } },
+    numbering: { config: [{ reference: "lincv-bullets", levels: [{ level: 0, format: LevelFormat.BULLET, text: "•", alignment: AlignmentType.LEFT,
+      style: { paragraph: { indent: { left: 360, hanging: 240 } } } }] }] },
+    sections: [{
+      headers: {
+        default: { options: { children: [new Paragraph({ spacing: { before: 0, after: lcPt(4) },
+          border: { bottom: { style: BorderStyle.SINGLE, size: 12, space: 1, color: INK } },
+          children: [run(name + " ", { bold: true, size: lcSz(10), color: INK }), run(`- ${title || clean(meta.subtitle || "")} (${scope})`, { size: lcSz(9.5), color: ACC })] })] } },
+        first: { options: { children: [new Paragraph({ children: [] })] } },
+      },
+      footers: {
+        default: { options: { children: [new Paragraph({ alignment: AlignmentType.RIGHT, spacing: { before: 0, after: 0 },
+          children: [run(style._aiNotice || "AI-assisted - author retains responsibility for content.", { size: lcSz(9.5), italics: true, color: "999999" })] })] } },
+        first: { options: { children: [new Paragraph({ children: [] })] } },
+      },
+      properties: { titlePage: true, page: { size: { width: Math.round(8.27 * __IN), height: Math.round(11.69 * __IN) },
+        margin: { top: TB, bottom: TB, left: SIDE, right: SIDE } } },
+      children,
+    }],
+  });
+}
+__name(buildLinearCvDocument, "buildLinearCvDocument");
+
 // CPH-NAME-WIDTH-001 (owner 2026-07-24 "increase the name so its width equals
 // the contact line width"): approximate rendered width of a string at 1pt of
 // the band face (Carlito/Calibri-class metrics). Only the name/contact RATIO

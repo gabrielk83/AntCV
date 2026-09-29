@@ -11,7 +11,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.4606-exec-linear-dash';
+  var VERSION = '1.51.4607-exec-linear-export';
   if (window.__antcvRoleLineFormat === VERSION) return;
   window.__antcvRoleLineFormat = VERSION;
 
@@ -26,6 +26,35 @@
       // the adapter reads the key at render time.
       window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { reason: 'role-line-format' } }));
     } catch (_) {}
+  }
+
+  var LKEY = 'antcv:cvLayout';
+  function readLayout() { try { return localStorage.getItem(LKEY) === 'linear' ? 'linear' : 'two_column'; } catch (_) { return 'two_column'; } }
+  function writeLayout(v) {
+    try {
+      if (v === 'linear') localStorage.setItem(LKEY, 'linear'); else localStorage.removeItem(LKEY);
+      window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { reason: 'cv-layout' } }));
+    } catch (_) {}
+  }
+  // EXEC-LINEAR step 5a: "CV layout" - Two-column (default) | Linear. Export-only until the preview
+  // step (3) lands: the worker renders the executive single-column CV, the preview stays two-column.
+  function buildLayout() {
+    var row = document.createElement('label');
+    row.setAttribute(ATTR, 'layout');
+    row.style.cssText = 'display:flex;align-items:center;gap:6px;margin:2px 0 4px;cursor:pointer;';
+    var lb = document.createElement('span');
+    lb.textContent = 'CV layout';
+    lb.style.cssText = 'font-size:9px;color:rgba(255,255,255,0.45);flex:0 0 auto;';
+    var sel = document.createElement('select');
+    sel.style.cssText = 'font-size:9px;padding:1px 2px;max-width:100%;';
+    [['two_column', 'Two-column'], ['linear', 'Linear (export only)']].forEach(function (o) {
+      var op = document.createElement('option'); op.value = o[0]; op.textContent = o[1];
+      if (o[0] === readLayout()) op.selected = true;
+      sel.appendChild(op);
+    });
+    sel.onchange = function () { writeLayout(sel.value); };
+    row.appendChild(lb); row.appendChild(sel);
+    return row;
   }
 
   function build() {
@@ -63,7 +92,9 @@
       // Skip the title + every checkbox label that follows it.
       var after = n;
       while (after.nextSibling && after.nextSibling.tagName === 'LABEL' && !after.nextSibling.hasAttribute(ATTR)) after = after.nextSibling;
-      parent.insertBefore(build(), after.nextSibling);
+      var r1 = build();
+      parent.insertBefore(r1, after.nextSibling);
+      parent.insertBefore(buildLayout(), r1.nextSibling);
     }
   }
 

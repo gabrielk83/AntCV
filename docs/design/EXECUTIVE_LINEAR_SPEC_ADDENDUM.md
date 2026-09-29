@@ -1,7 +1,7 @@
 # Addendum to Unified_Visual_Package_System — Executive Linear CV layout
 
-Status: DRAFT for owner approval (2026-09-29). Step 1 of `EXECUTIVE_LINEAR_LAYOUT_PROPOSAL.md` §4.
-Scope: adds one CV **layout** and five **block primitives**. It does not change palettes, the photo system or the typography roles of the locked spec — it adds rules where the spec is silent. Until approved, code ships only behind `layout: 'linear'` (no client sends it by default).
+Status: **APPROVED by the owner 2026-09-29.** Step 1 of `EXECUTIVE_LINEAR_LAYOUT_PROPOSAL.md` §4.
+Scope: adds one CV **layout** and five **block primitives**. It does not change palettes, the photo system or the typography roles of the locked spec — it adds rules where the spec is silent. Code ships behind `layout: 'linear'` (no client sends it by default).
 
 Reference renders: `Application Generator Files/housestyle_pdf_generator` packages 1030–1037 (exec generator), owner-edited 2026-09-27 and 2026-09-29.
 

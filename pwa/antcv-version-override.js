@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.4566-role-location';
+  const TARGET_VERSION = '1.51.4586-veo-role-leak';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.4566-role-location',
     '1.51.4526-slogan-paper-contrast',
     '1.51.4506-qa-page-foundation-fold',
     '1.51.4486-anthropic-rates',

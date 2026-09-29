@@ -89,6 +89,7 @@ function bannedListBlock() {
 function noFabricationBlock() {
   return [
     'NO FABRICATION (HARD RULE — overrides any other instruction):',
+    '  Examples in these instructions name OTHER employers and roles: never reuse their company names, role titles, products or activities (EXAMPLE-ISOLATION-001).',
     '  Every domain, technology, industry, employer, project, role, methodology, certification, eligibility, clearance status, citizenship, language proficiency, or competency you attribute to the candidate MUST be present in the source material provided. Not implied. Not "close enough". Present.',
     '',
     '  When a job description mentions things the candidate has NOT got, has NOT done, or whose status is UNSPECIFIED in the source:',
@@ -278,6 +279,8 @@ Pattern:
 2. Anchor that fit in the candidate's actual experience or working preference.
 3. Optionally, name a value/cultural element from the listing that resonates.
 
+EXAMPLE ISOLATION (EXAMPLE-ISOLATION-001): the examples below were written for OTHER employers and roles. Copy their SHAPE only - never their company names, role titles, products, activities or phrases. The only employer and role in your output are the ones in the JOB DESCRIPTION; every claim about the employer must come from the JD text.
+
 Real approved example (Sigma Connectivity / Optics Engineer):
   "Sigma Connectivity's focus on challenging multi-disciplinary connectivity projects aligns precisely with my experience in complex imaging systems. Your emphasis on working across competence areas — from optics through electronics to software development — matches my background leading cross-functional teams and managing the intricate trade-offs that define successful camera products. The opportunity to work on miniaturized systems while maintaining system-level ownership particularly appeals to my experience linking design decisions to tested performance and practical delivery."
 
@@ -298,6 +301,8 @@ Each bullet:
 - Starts with a verb (Leading / Coordinating / Building / Supporting / Establishing / Implementing / Creating / Managing / Keeping).
 - Names a SPECIFIC activity tied to the role.
 - Grounds in the candidate's real capability — never invents tools, certifications, or domains.
+
+EXAMPLE ISOLATION (EXAMPLE-ISOLATION-001): the examples below were written for OTHER employers and roles. Copy their SHAPE only - never their company names, role titles, products, activities or phrases. The only employer and role in your output are the ones in the JOB DESCRIPTION; every claim about the employer must come from the JD text.
 
 Real approved example (Optics/Camera Engineer):
   - "Establishing camera architecture frameworks that balance optical performance, module constraints, and manufacturing feasibility through systematic trade-off analysis and validation"
@@ -330,6 +335,8 @@ Professionally paragraph:
 - Working posture, decision-making style, communication strengths.
 - Where the candidate operates best in an organization.
 - Present tense ("I work best where…", "I bring…").
+
+EXAMPLE ISOLATION (EXAMPLE-ISOLATION-001): the examples below were written for OTHER employers and roles. Copy their SHAPE only - never their company names, role titles, products, activities or phrases. The only employer and role in your output are the ones in the JOB DESCRIPTION; every claim about the employer must come from the JD text.
 
 Real approved example (Optics/Camera Engineer):
   Hands-on: My hands-on foundation includes leading a 7-engineer smartphone optics team at Sigma Connectivity in Lund, Sweden, from concept to production. I developed complete optical subsystems, implemented tolerance analysis and validation workflows, built comprehensive EO labs for calibration and testing, and managed image-quality optimization using MATLAB, Imatest, and Qualcomm ISP tools.

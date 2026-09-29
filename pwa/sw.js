@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.4566-role-location';
+const CACHE = 'antcv-1.51.4586-veo-role-leak';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

@@ -1,5 +1,5 @@
 {
-  "version": "1.5.0",
+  "version": "1.6.0",
   "_note": "GOLD RULES - the ONE machine-readable control site for every AntCV generation (owner 2026-07-13). Narrative + enforcement map: docs/qa/GOLD_STANDARD_LOCKER.md. Consumers: pwa/antcv-bullet-targets.js (prompt block on every generation/Fit-it/Enhance call), scripts/job-tracker/{quality_pass,density_fit,measure_density,gen-runner}.py (persist + sweep enforcement). Served at antcv.pages.dev/gold-rules.json so workers can fetch it (proxy prompt-augment wiring = open follow-up). Change values HERE; code reads them.",
   "density": {
     "runt_fraction": 0.6,
@@ -132,6 +132,11 @@
       "the",
       "a",
       "an",
+      "at",
+      "to",
+      "for",
+      "by",
+      "with",
       "und",
       "from",
       "into",
@@ -192,9 +197,14 @@
     " - COVER LETTER LENGTH (CL-LENGTH-001): 350-450 words total on one page - a compact opening tied to THIS role, three evidence paragraphs, a short close. Never assume the employer has gaps or problems; never open with a generic \"roles where...\" line.",
     " - EVERY experience role carries its own Results line (ROLE-RESULTS-MANDATORY-001): the role's strongest REAL outcome in the source's own terms; a role without a Results line is an incomplete generation.",
     " - HOUSE SECTIONS ARE MANDATORY (HOUSE-SECTIONS-001): a commercial CV always carries Profile, 'Work style:' line, the Core Competencies table (Focus Area | Strategic Expertise), Experience, Education, and the sidebar set (Tools & Methods, Certificates, Languages, Interests - all six items - and Accessibility). Never drop a house section to hit a length target; compress WITHIN sections instead.",
-    " - ACCESSIBILITY LINE (owner 2026-08-16): 'Hearing impaired (cochlear implant); written follow-up works well.' - the full line, never a bare 'Hearing impaired.'",
+    " - ACCESSIBILITY LINE (owner 2026-09-03, supersedes 2026-08-16): 'Hearing impaired; clear spoken communication and written follow-ups work well.' - the full line, never a bare 'Hearing impaired.' It belongs in the CV only; a cover letter carries no hearing line.",
     " - SLOGAN FUSION (SLOGAN-PERSONALITY-IMPACT-001): the positioning line fuses IMPACT with the candidate's PERSONALITY - prefer a word that carries both the temperament and the craft (gold: 'AN ELECTRO-OPTICS ENGINEER WHO TURNS MEASURED LIGHT INTO SHIPPED PRODUCT' - 'measured' is both the work style and the metrology).",
-    " - GREETING (CL-GREETING-001): the cover letter ALWAYS opens with a greeting to the hiring manager - BY NAME when the JD, the recruiter search or the application notes provide one ('Dear Firstname Lastname,'), else 'Dear Hiring Team,' (localised). A letter without a greeting is an incomplete generation."
+    " - GREETING (CL-GREETING-001): the cover letter ALWAYS opens with a greeting to the hiring manager - BY NAME when the JD, the recruiter search or the application notes provide one ('Dear Firstname Lastname,'), else 'Dear Hiring Team,' (localised). A letter without a greeting is an incomplete generation.",
+    " - TARGET ROLE (TARGET-ROLE-001, owner 2026-09-29, Veo): meta.role is the title of the POSTING itself - the posting header or the 'we are looking for a <title>' line. A title the JD names as a partner, manager or neighbouring team ('you will partner with our Director of Hardware Engineering', 'reporting to the Head of X') is NEVER the target role. When the pasted text has no header, take the title whose responsibilities the JD describes as 'you will...'.",
+    " - EXAMPLE ISOLATION (EXAMPLE-ISOLATION-001, owner 2026-09-29): examples inside these instructions were written for OTHER employers and roles (Aimpoint, NKT Photonics, Sigma Connectivity, HBK, Novo Nordisk ...). Copy their SHAPE only - never their company names, role titles, products, activities or phrases. The only employer and role in the output are the ones in the JOB DESCRIPTION, and every statement about the employer must come from the JD text.",
+    " - STORED FACTS STAY AS STORED (STORED-FACTS-001, owner 2026-09-27): two stored roles at the same company with different titles or date ranges are NEVER merged into one role and never get a fused title; education entries stay separate (two degrees taken in parallel are two entries, never 'Dual B.Sc.' or 'B.Sc. X & B.Sc. Y'); language levels, publication counts and team sizes are copied exactly from the source; the candidate's current role (newest start date, 'present') is listed first.",
+    " - PLACEMENT NOTES (PLACEMENT-NOTES-001): obey placement notes stored on a kernel item (e.g. 'promote to an experience ROLE when the employer is sports-tech / people / community-oriented, otherwise the INTERESTS line') - the note decides the section, not the model.",
+    " - WORDING 2026-09-27 (BANNED-0927): collaborative -> team-based, cross-functional -> multi-disciplinary, end-to-end -> from start to finish, 'leading' as a verb -> running; keep the original capitalisation. Standards are cited by name, never by clause number (ISO 9001, not 8.3/8.4). A 'no ties to Russia' sentence appears only when the ad explicitly asks for it."
   ],
   "banned_words": [
     "spearhead",
@@ -216,7 +226,10 @@
     "utilize",
     "state-of-the-art",
     "best-in-class",
-    "game-changing"
+    "game-changing",
+    "collaborative",
+    "cross-functional",
+    "end-to-end"
   ],
   "page_budgets": {
     "_note": "per writing style; mirrors antcv-style-page-budget.js STYLE_PAGE_BUDGET (engine reads remain there until wired)",
@@ -378,5 +391,5 @@
     "evidence_paragraphs": 3,
     "_doc": "CL-LENGTH-001 (owner 2026-08-16, Nvidia critique): 350-450 words, one page, exactly three evidence paragraphs; enforced in cl_fit + prompt_block."
   },
-  "accessibility_line": "Hearing impaired (cochlear implant); written follow-up works well."
+  "accessibility_line": "Hearing impaired; clear spoken communication and written follow-ups work well."
 }

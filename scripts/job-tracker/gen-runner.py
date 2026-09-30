@@ -838,6 +838,11 @@ def cmd_run(args):
     todo = high + quick
     if not todo:
         print("no eligible rows to generate."); return
+    # PERSIST-SKELETON-GATE-001: refuse before any model call, so the rows stay armed.
+    stop = persist_preflight(args.persist and not args.dry, getattr(args, "allow_flat", False),
+                             load_skeleton())
+    if stop:
+        print(stop); sys.exit(5)
     print(f"generating {len(high)} high + {len(quick)} quick (of {len(rows)} eligible). persist={args.persist} dry={args.dry}")
     # ACTIVE-POINTER-GUARD-001: POST /api/applications sets the new app as the
     # account's active application. A batch persist would otherwise hijack the
@@ -1053,6 +1058,19 @@ def load_skeleton():
     except Exception as e:
         print(f"   [skeleton] not usable ({e})")
     return None
+
+def persist_preflight(persist, allow_flat, skeleton):
+    """PERSIST-SKELETON-GATE-001 (2026-09-30): a persist without the captured
+    skeleton writes a CV of 4 flat text blocks (no experience, no sidebar) and
+    sets queue=false, so the row reads as done while the app is unusable (apps
+    3504 + 3505 on a host that never had the fixture). Return an abort message,
+    or None when the run may proceed."""
+    if not persist or skeleton or allow_flat:
+        return None
+    return ("ABORT: --persist needs the captured skeleton at %s (missing or unusable).\n"
+            "Without it the saved CV has no experience or sidebar. Nothing was generated;\n"
+            "armed rows stay armed. Run on a host with the fixture, or capture it here.\n"
+            "Override (flat, low fidelity): --allow-flat." % SKELETON_PATH)
 
 # ── content guards + language furniture + Nordic compaction ─────────
 _SCAFFOLD_RE = re.compile(r"\[[^\]\n]{3,}\]")
@@ -2394,6 +2412,7 @@ def main():
         p.add_argument("--max-high", type=int, default=5)
         p.add_argument("--max-quick", type=int, default=10)
         p.add_argument("--persist", action="store_true", help="save real applications + doc writeback")
+        p.add_argument("--allow-flat", action="store_true", help="persist even without ~/.antcv/cv_skeleton.json (flat low-fidelity CV)")
         p.add_argument("--no-measure", dest="measure", action="store_false", help="skip the render-and-fit page-budget loop (needs PyMuPDF + docx-worker)")
         p.add_argument("--max-pages", type=int, default=2, help="CV page budget for the render-and-fit loop (default 2)")
         p.add_argument("--dry", action="store_true", help="build the plan only; no LLM calls")

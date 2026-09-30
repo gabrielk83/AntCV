@@ -152,3 +152,23 @@ test('linear CV: short last rows merge; publications and long sections are block
   assert.ok(!/PUBLICATIONS &amp; PATENTS, /.test(t), 'no long joined heading');
   assert.ok(t.indexOf('REGULATORY CONTEXT') < t.indexOf('ADDITIONAL DETAILS'), 'details table last');
 });
+
+// owner 2026-09-30: the Accessibility label is left-aligned like every details label
+test('linear CV: Accessibility label cell is not centered', async () => {
+  const xml = unzipEntry(await gen(), 'word/document.xml').toString('utf8');
+  const i = xml.indexOf('>Accessibility<');
+  assert.ok(i > 0, 'accessibility row present');
+  const para = xml.slice(xml.lastIndexOf('<w:p>', i) >= 0 ? xml.lastIndexOf('<w:p', i) : i, i);
+  assert.ok(!/<w:jc w:val="center"\/>/.test(para), 'no centered alignment on the label paragraph');
+});
+
+// CL-CLOSE-SPACE-001 (owner 2026-09-30): the letter's closing line gets 5 pt (100 twips) above and below
+test('cover letter: closing line spaced 5 pt before and after', async () => {
+  const buf = await gen({ doc: 'cl', sections: [{ id: 'opening', title: 'Opening', type: 'text', loc: 'main', content: 'Opening paragraph.' },
+    { id: 'closure', title: 'Closing', type: 'text', loc: 'main', content: 'I welcome a conversation about the role.' }] });
+  const xml = unzipEntry(buf, 'word/document.xml').toString('utf8');
+  const i = xml.indexOf('I welcome a conversation');
+  assert.ok(i > 0);
+  const para = xml.slice(xml.lastIndexOf('<w:p>', i) >= 0 ? xml.lastIndexOf('<w:p', i) : i, i);
+  assert.match(para, /<w:spacing [^>]*w:after="100"/); assert.match(para, /<w:spacing [^>]*w:before="100"/);
+});

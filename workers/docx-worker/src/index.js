@@ -26264,7 +26264,7 @@ function buildLinearCvDocument(ctx) {
     if (s.content) txt = clean(s.content);
     else if (Array.isArray(s.items)) txt = s.items.map(itemText).filter((x) => x && !isPh(x)).join("; ");
     else if (Array.isArray(s.rows)) txt = s.rows.map(itemText).filter(Boolean).join("; ");
-    if (txt && !isPh(txt)) details.push({ label: titleCase(s.title || s.id || ""), content: txt, center: /accessib/.test(idt(s)) });
+    if (txt && !isPh(txt)) details.push({ label: titleCase(s.title || s.id || ""), content: txt });   // labels left-aligned, Accessibility included (owner 2026-09-30)
   }
 
   // ---------------- blocks (port of exec_cv_lib.mjs) ----------------
@@ -27703,7 +27703,9 @@ function renderText(s, ctx, isSidebar) {
   if (/^\s*\[[\s\S]*\]\s*$/.test(String(s.content))) return [];
   const paras = String(s.content).split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
   const align = paraAlignPath(s, "content") ?? paraAlign(s, null, void 0) ?? AlignmentType.JUSTIFIED;
-  return paras.map((p) => bodyParagraphRich(p, ctx, isSidebar, { align }));
+  // CL-CLOSE-SPACE-001 (owner 2026-09-30): the letter's closing line ("I welcome ...") gets 5 pt above and below
+  const spacing = s.id === "closure" ? { before: 100, after: 100, line: 276, lineRule: "auto" } : void 0;
+  return paras.map((p) => bodyParagraphRich(p, ctx, isSidebar, { align, spacing }));
 }
 __name(renderText, "renderText");
 function renderTextInline(s, ctx, isSidebar) {
@@ -27743,7 +27745,7 @@ __name(renderTextInline, "renderTextInline");
 function bodyParagraphRich(text, ctx, isSidebar, opts = {}) {
   const { style, fs } = ctx;
   return new Paragraph({
-    spacing: { before: 60, after: 60, line: 276, lineRule: "auto" },
+    spacing: opts.spacing || { before: 60, after: 60, line: 276, lineRule: "auto" },
     alignment: opts.align || AlignmentType.JUSTIFIED,
     shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
     children: inlineRuns(text, {

@@ -17,7 +17,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.227-sidebar-equalize';
+  var VERSION = '1.51.4727-scroll-damper';
   if (window.__antcvSidebarEqualize === VERSION) return;
   window.__antcvSidebarEqualize = VERSION;
 
@@ -27,6 +27,28 @@
   var MAIN_SEL = '[data-antcv-document-main="true"],.antcv-document-main';
 
   var applying = false; // guards our own style writes from re-triggering work
+
+  // SCROLL-DISPATCH-DAMPER-001 (owner 2026-09-30 "notice how jumpy we are now"): the synthetic
+  // scroll below exists only to resync the vertical roller to a NEW scrollHeight. Live-found loop:
+  // app's scroll handler sets state -> the preview re-renders and REMOUNTS its sections (inline
+  // style heights dropped) -> equalize re-writes the sidebar -> another synthetic scroll. The page
+  // cycled through 3 heights ~5x/s. Dispatch only for a scrollHeight not announced recently, at most
+  // once per 400 ms, and back off 5 s after 6 dispatches in 3 s.
+  var __scrollSeen = [], __scrollTimes = [], __scrollMuteUntil = 0;
+  function scrollDispatchAllowed(c) {
+    try {
+      var now = Date.now();
+      if (now < __scrollMuteUntil) return false;
+      var h = c.scrollHeight + 'x' + c.clientHeight;
+      if (__scrollSeen.indexOf(h) >= 0) return false;
+      __scrollTimes = __scrollTimes.filter(function (t) { return now - t < 3000; });
+      if (__scrollTimes.length && now - __scrollTimes[__scrollTimes.length - 1] < 400) return false;
+      if (__scrollTimes.length >= 6) { __scrollMuteUntil = now + 5000; __scrollTimes = []; return false; }
+      __scrollTimes.push(now);
+      __scrollSeen.push(h); if (__scrollSeen.length > 4) __scrollSeen.shift();
+      return true;
+    } catch (_) { return true; }
+  }
 
   // SALMON-EMPTY-REGION-001 (1.50.753): measure the main column's true CONTENT
   // height = the lowest bottom edge of its direct children minus the column top.
@@ -167,7 +189,7 @@
       // scrollHeight.
       try {
         var scrollContainer = document.querySelector('.antcv-preview-scroll');
-        if (scrollContainer && typeof Event === 'function') {
+        if (scrollContainer && typeof Event === 'function' && scrollDispatchAllowed(scrollContainer)) {
           scrollContainer.dispatchEvent(new Event('scroll', { bubbles: false }));
         }
       } catch (e) {}
@@ -263,7 +285,7 @@
       // corrected scrollTop and bi maps to 100 (slider thumb stays at
       // the bottom AND the viewport actually shows the document end).
       stickToBottomIfNeeded(scrollContainer);
-      if (typeof Event === 'function') {
+      if (typeof Event === 'function' && scrollDispatchAllowed(scrollContainer)) {
         scrollContainer.dispatchEvent(new Event('scroll', { bubbles: false }));
       }
     } catch (_) {}

@@ -732,7 +732,9 @@ _verified: 2026-09-21_
 
 ## Row 39 — GEN-MODELROLE-001
 
-_verified: 2026-09-29_
+_verified: 2026-09-30_
+
+**2026-09-30 (desktop nightly, ADVANCED — deploy leg verified live):** wrangler is authenticated on Gabo-PC again, so yesterday's blocked leg ran. `wrangler versions view` on the live version of both proxies: `cv-proxy` `babdf99e` (deployed 2026-09-29T22:14Z) and `antcv-demo-proxy` `7d0ec439` (22:15Z) carry `MODEL_ROLES = {"writer":"anthropic","supervisor":"mistral","coherence":"openai","analysis":"mistral"}`, byte-equal to both `wrangler.toml` [vars]. The deployed `cv-proxy` bundle (read via the Cloudflare MCP) contains `claude-opus-5-5` 3×, same count as `workers/proxy/src`, so the OPUS55-ADOPT-001 deploy is live. **Telemetry leg still open:** D1 `llm_calls` has 0 rows after 2026-09-28 21:38 UTC (note: `ts` is seconds). No PWA generation has run since the deploy. The job-tracker nightly's gen today went through the proxy `/job/*` path, which never writes `llm_calls` (filed as row 114). Close on the first PWA gen that shows the role split. Proxy `/health` still reads `3.8.4-brand-ink-match`: the adopt did not bump the version string, so `/health` cannot tell pre- from post-adopt.
 
 **2026-09-29 (desktop nightly, BLOCKED — evidence path unavailable):** the code + `MODEL_ROLES` in both `wrangler.toml` are unchanged and present; `parseModelRoles` tests are green in CI (runs 36628929136 log). The owed leg is the LIVE half — confirm the deployed workers carry the var and that D1 `llm_calls` shows the role split — and neither probe is reachable: `/config` on `cv-proxy` does not expose `MODEL_ROLES` (checked: it reports proxy_url / demo_mode / server_keys / KV bindings only), `npx wrangler whoami` fails `Failed to fetch auth token: 400` (the desktop OAuth token in `~/.wrangler/config/default.toml` expired 2026-08-27 and no `CLOUDFLARE_API_TOKEN` is set in the environment), and the D1 read needs the same expired owner credential. Not advanced. Owner action that would unblock it: one `wrangler login`, or expose the parsed role map on an unauthenticated `/config` field.
 
@@ -1759,7 +1761,9 @@ _verified: 2026-08-26_
 
 > **STANDING regression anchor** — re-run by the nightly diag set every time, not unstarted work.
 
-_verified: 2026-09-29_
+_verified: 2026-09-30_
+
+**2026-09-30 (desktop nightly, E2):** `diag-settings-panel-churn.mjs` at `1.51.4727-close-space`, 8 runs. Selftest 80/80 on every tab. Run 1 (the first full run after the E3 audit): **Personal 257 mutations/8s, FAIL**; Layout/Account/Advanced 0. The next 7 runs (1 Personal-only, 6 full): all four tabs 0. The per-key breakdown of the failing run was not captured (output was tailed). Read: intermittent, first-measured tab only; not reproduced. If it recurs, capture the breakdown before triage.
 
 **2026-09-29 (desktop nightly — ADVANCED panel measured for the first time; earlier claim corrected):** the standing `diag-settings-panels-probe.mjs` already covers Personal / Account / Layout (6s, plus `setItem`-write bucketing) and was RE-RUN this night: **0 mutations/6s on each, rootFound=true, 0 page errors, no key written more than 6x** (`antcv:resetprobe:ctx`, the probe's own harness key) → DIAG PASS. What no probe covered was **Advanced** — it is advanced-tier, and the sibling probe deliberately anchors on the standard-tier strip. (Separately: the 2026-08-17 desktop report credited `diag-personal-panel-probe.mjs` with covering Layout/Account/Advanced; that probe clicks PERSONAL only, so that line was wrong.) New `pwa/test/diag-settings-panel-churn.mjs` closes the Advanced gap and adds two things neither sibling had: a NEGATIVE CONTROL (`--selftest` ticks synthetic churn into the anchored root and must see it — 80/80 observed per tab, so a reported 0 is a measurement and not a blind probe) and a detached-root FAILURE (an observer holding a root that left the document would report serenity while the real panel churned elsewhere). **Result across all four subtabs: 0 mutations in 8s, 0 page errors**, with four DISTINCT panel fingerprints (4121 / 799 / 1595 / 923 chars) proving each subtab really rendered rather than the default being measured four times. STANDING: both probes re-run every nightly.
 
@@ -2041,3 +2045,13 @@ host with the fixtures: `gen-runner.py run --persist --force --row celare_quantu
 `--row danfoss-production-testi-4818`. Neither app is fit to send as is. Both tracker rows carry a ⚠ note.
 
 ---
+
+---
+
+## Row 114 — TELEMETRY-BGJOB-GAP-001
+
+_verified: 2026-09-30_
+
+**Found by the desktop nightly 2026-09-30 (Gabo-PC).** While checking row 39's telemetry leg, D1 `llm_calls` showed 0 rows after 2026-09-28 21:38 UTC, yet the job-tracker nightly generated and persisted app 3505 (gpt-5-mini, 12/12 sections) the same morning. Cause, verified in code: the only writer of `llm_calls` is `insertLlmCall` in `workers/access-relay/src/telemetry.js`, fed by PWA client telemetry events. `workers/proxy/src` has no `llm_calls` writer. `pwa/antcv-gen-job-client.js` (loaded, `?v=1.51.132`) posts `/job/create` + `/job/step` and emits no telemetry. `scripts/job-tracker/gen-runner.py` uses the same `/job/*` path. So every background-job and routine gen is invisible to the weekly cost-quality tune, to the row 39 role-split check and to the Opus 5.5 first-call check. Not verified: which share of PWA gens take the job path by default.
+
+**Owed:** a design call (owner): (a) proxy `gen-job.js` posts one event per section to the relay telemetry endpoint, or (b) the job client emits per-section events from the step results. (a) also covers `gen-runner.py`. Then a test that a finished job leaves N rows.

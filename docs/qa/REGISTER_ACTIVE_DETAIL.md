@@ -1279,7 +1279,20 @@ INSERTs** (sonnet-5 [2,10] + gpt-5.5 [5,30]; SQL in the 09-06 report § B).
 
 ## Row 96 — CV-HEADER-BOX-001
 
-_verified: 2026-07-17_
+_verified: 2026-09-30_
+
+**2026-09-30 (CI cloud nightly, E1 staleness sweep — code re-check):** the row was stale at "not
+started (2026-07-17)". The ROUNDED HEADER BOX is in fact SHIPPED in the worker: `postProcessDocx`
+emits a `headerBox` roundRect (`v:roundrect id="AntCVHeadBox"`, ~583.3pt × 144pt, `arcsize=15000f`,
+brand `fillcolor` + cyan `strokecolor` 1.5pt, page-anchored) at `workers/docx-worker/src/index.js`
+~23957-23964, wired from `generateDocx` at ~24759 (`headerBox: style._cph && !(cv && linear) ?
+{fill: style.headerBg, stroke: style._cphCyan} : null`); the candidate-band composition (band-row
+heights, `verticalAlign:CENTER`, spec colour) is at ~25296-25316; `_cph` = the `copenhagen-modern`
+package (~24594). Landed 2026-07-23 as the Copenhagen STAGE4 export-parity commit `eb198927`
+(wk 1.14.165, PWA 1.51.3622). REMAINING (narrowed, live/owner-gated — not runnable in cloud, no
+signed-in export / gold-docx diff here): photo-anchored-inside-header parity, CV AI-notice→footer
+(CL already footers), `header=144` twips margins, and preview↔export parity vs the gold
+`1017_Ibsen_Photonics_CV_FINAL_v4.docx`. Kept ACTIVE — owner/desktop live-export verify owed.
 
 **OPEN-queue row (verbatim):**
 
@@ -1291,7 +1304,12 @@ _verified: 2026-07-17_
 
 ## Row 97 — DELIVERABLES-3CO-001
 
-_verified: 2026-07-18_
+_verified: 2026-09-30_
+
+**2026-09-30 (CI cloud nightly, E1 staleness sweep):** no code leg — this row is a pure
+live-regen + D1 JD-data check + owner deliverable, and its output quality is gated on row 95
+(CV-POLISH-BATCH-001) + the v5 CL work. Cloud has no signed-in session / live LLM to regenerate
+CV+CL or to verify the Aimpoint/Demant JDs in D1, so nothing was advanced. Kept ACTIVE — owner/live.
 
 **OPEN-queue row (verbatim):**
 
@@ -1303,7 +1321,16 @@ _verified: 2026-07-18_
 
 ## Row 95 — CV-POLISH-BATCH-001
 
-_verified: 2026-07-19_
+_verified: 2026-09-30_
+
+**2026-09-30 (CI cloud nightly, E1 staleness sweep — code re-check):** leg (a) Strategic-Expertise
+cell caps ARE enforced in the gen prompt — `pwa/app.src.js` ~3834 (Nordic Minimal: CORE
+COMPETENCIES / WHAT I BRING row one line, Strategic Expertise cell max ~48 chars) and ~4086
+(TIGHT CELLS: WHAT I BRING ~48 chars, CORE COMPETENCIES ~28 chars, "these caps are HARD: never let
+a cell wrap"). So the cap exists prompt-side; the owner's "cap not holding" symptom is render/regen,
+not a missing rule. Legs (b) results-render-on-one-role, (c) Project-expertise selection, (d)
+lab-fab evidence, (e) security-clearance RECOMMENDATIONS wording are render/kernel/regen-gated. All
+five need a FRESH targeted regen to confirm — not runnable in cloud (no signed-in gen). Kept ACTIVE.
 
 **OPEN-queue row (verbatim):**
 
@@ -1315,7 +1342,16 @@ _verified: 2026-07-19_
 
 ## Row 92 — EXPORT-PREVIEW-PAGINATION-DIVERGENCE-001
 
-_verified: 2026-07-21_
+_verified: 2026-09-30_
+
+**2026-09-30 (CI cloud nightly, E1 staleness sweep — code re-check):** the worker two-map split is
+intact — `sidebarPages`/`mainPages` split at `workers/docx-worker/src/index.js` ~25099-25101 with
+`numPages = Math.max(sidebarPages.length, mainPages.length, 1)`, the trailing-empty-page trim, and
+the PDF-BLANK-PAGE-001/002 minimum-page guards (~24732, ~25227, ~25238) all present. As recorded
+2026-07-21 this is NOT reproducible on current content: reproducing needs the ORIGINAL overflowing
+content (a full REGULATORY CONTEXT) reloaded, which cloud has no way to stage. The row's own guidance
+("index.js ~26586 flags PDF-BLANK-PAGE-history as fragile — do NOT guess a fix") stands. Kept ACTIVE
+— needs the owner's original overflowing application reloaded to reproduce.
 
 **OPEN-queue row (verbatim):**
 
@@ -1327,7 +1363,15 @@ _verified: 2026-07-21_
 
 ## Row 93 — AUTO-ANALYSE-ON-JD-LOAD-ERROR-001
 
-_verified: 2026-07-21_
+_verified: 2026-09-30_
+
+**2026-09-30 (CI cloud nightly, E1 staleness sweep — code re-check):** the auto-analyse-on-JD-load
+path is present and hardened — `pwa/antcv-analysis-panel-jd-block-356.js` carries AUTO-ANALYSE-ON-JD-
+LOAD-001 (owner 2026-07-19) with the OPEN-ANALYSIS-AUTORUN-001 last-JD fingerprint (~86) and a
+slow-poll that catches a JD attached after boot (~895). The related dead-end was root-caused +
+fixed as SWITCH-OPEN-JDONLY-001. The transient `__errTrap` diagnostic never persisted in current
+code (it was armed twice, caught zero hits). This is a transient the owner has to reproduce with a
+re-armed trap on a signed-in device — not stageable in cloud. Kept ACTIVE — owner-repro gated.
 
 **OPEN-queue row (verbatim):**
 

@@ -70,3 +70,18 @@ person can judge it. Exit 1 on any FAIL.
 python course_checklist.py --cv CV.pdf --jd jd.txt --company "NKT Photonics" --title "Technical Project Manager"
 python test_course_checklist.py   # pure units, negative-controlled
 ```
+
+**Runs by default (COURSE-CHECKLIST-DEFAULT-001).** Every CV the pipeline produces gets The Checklist,
+filled under the 8 p 22 headings (1. Overall ... 8. Final Check), one line per item with its status and note:
+
+| Path | Checks | Writes |
+|---|---|---|
+| `gen-runner.py run` | the final persisted CV (`--persist`), else the generated `cv_*` sections | `checklist_<uk>.md` + `.json` beside `gen_<uk>.json`; summary in `index.json` and the run log |
+| `export_pdfs.py` / `export_docx.py` | the exported CV PDF (the DOCX when `--no-pdf`) | `<name>.checklist.md` + `.json` beside it; summary in the report JSON and the printed line |
+
+Opt out with `--no-checklist`. A checklist error is logged as `[checklist] skipped (...)` and never stops
+generation. `--out DIR` on `course_checklist.py` writes the same report for any CV by hand.
+
+```
+python test_checklist_default.py  # default-on, opt-out, crash isolation (no network)
+```

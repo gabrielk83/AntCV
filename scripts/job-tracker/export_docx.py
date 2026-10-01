@@ -32,6 +32,8 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--docs", default="cv,cl")
     ap.add_argument("--no-pdf", action="store_true", help="skip the PDF verification render")
+    ap.add_argument("--no-checklist", dest="checklist", action="store_false",
+                    help="skip The Checklist (course CV checklist, p 22); it runs on every CV by default")
     args = ap.parse_args()
     os.makedirs(args.out, exist_ok=True)
     rows = []
@@ -45,10 +47,12 @@ def main():
                 docx = render(payload, "/generate")
                 dpath = os.path.join(args.out, base + ".docx")
                 open(dpath, "wb").write(docx)
-                status, pages = "OK", "-"
+                status, pages, chk = "OK", "-", None
                 if not args.no_pdf:
                     pdf = render(payload, "/generate-pdf")
                     open(os.path.join(args.out, base + ".pdf"), "wb").write(pdf)
+                    if doc == "cv" and args.checklist:
+                        chk = EP.run_checklist_for(os.path.join(args.out, base + ".pdf"), a, args.out)
                     v = EP.verify_pdf(pdf, payload, doc)
                     pages = v["pages"]
                     flags = []
@@ -57,8 +61,12 @@ def main():
                     if doc == "cv" and v["spine_bottom"] is False: flags.append("SPINE-GAP")
                     if v["banned_dashes"]: flags.append("BANNED-DASH " + ",".join(f"{k}x{n}" for k, n in v["banned_dashes"].items()))
                     status = "OK" if not flags else "; ".join(flags)
-                rows.append({"app": app_id, "doc": doc, "docx": base + ".docx", "pages": pages, "status": status})
-                print(f"{app_id} {doc}: {base}.docx ({len(docx)//1024}KB) pages={pages} {status}", flush=True)
+                elif doc == "cv" and args.checklist:
+                    chk = EP.run_checklist_for(dpath, a, args.out)
+                rows.append({"app": app_id, "doc": doc, "docx": base + ".docx", "pages": pages, "status": status,
+                             "checklist": chk["summary"] if chk else None})
+                print(f"{app_id} {doc}: {base}.docx ({len(docx)//1024}KB) pages={pages} {status}"
+                      + (f"  [{chk['summary']}]" if chk else ""), flush=True)
             except Exception as e:
                 rows.append({"app": app_id, "doc": doc, "docx": "-", "pages": "-", "status": f"FAILED {str(e)[:70]}"})
                 print(f"{app_id} {doc}: FAILED {str(e)[:90]}", flush=True)

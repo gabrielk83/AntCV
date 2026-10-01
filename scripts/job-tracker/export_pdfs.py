@@ -83,11 +83,27 @@ def verify_pdf(pdf_bytes, payload, doc):
     return out
 
 
+def run_checklist_for(pdf_path, a, out_dir):
+    """COURSE-CHECKLIST-DEFAULT-001: The Checklist (course compendium p 22) over the
+    exported CV PDF, written beside it as <name>.checklist.md + .json. Never raises."""
+    try:
+        import course_checklist as CC
+        stem = os.path.splitext(os.path.basename(pdf_path))[0] + ".checklist"
+        return CC.save_report_for_file(pdf_path, out_dir, stem, jd=str(a.get("jd_text") or ""),
+                                       company=str(a.get("jd_company") or "") or None,
+                                       title=str(a.get("jd_role") or "") or None)
+    except Exception as e:
+        print(f"   [checklist] skipped ({str(e)[:80]})")
+        return None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--apps", required=True, help="comma-separated application ids")
     ap.add_argument("--out", required=True)
     ap.add_argument("--docs", default="cv,cl")
+    ap.add_argument("--no-checklist", dest="checklist", action="store_false",
+                    help="skip The Checklist (course CV checklist, p 22); it runs on every CV by default")
     args = ap.parse_args()
     os.makedirs(args.out, exist_ok=True)
     gr = MD._gen_runner()
@@ -100,6 +116,8 @@ def main():
                 company = str(a.get("jd_company") or "app").replace(" ", "_").replace("/", "-")[:24]
                 name = f"{app_id}_{company}_{doc.upper()}.pdf"
                 open(os.path.join(args.out, name), "wb").write(pdf)
+                chk = run_checklist_for(os.path.join(args.out, name), a, args.out) \
+                    if (doc == "cv" and args.checklist) else None
                 v = verify_pdf(pdf, payload, doc)
                 flags = []
                 if v["blank_pages"]:
@@ -110,12 +128,14 @@ def main():
                     flags.append(f"SPINE-GAP avg={v.get('_spine_avg')} want={v.get('_spine_want')}")
                 if v["banned_dashes"]:
                     flags.append("BANNED-DASH " + ",".join(f"{k}x{n}" for k, n in v["banned_dashes"].items()))
-                rows.append((app_id, doc, name, v["pages"], "OK" if not flags else "; ".join(flags)))
-                print(f"{app_id} {doc}: {name}  pages={v['pages']}  {'OK' if not flags else '; '.join(flags)}")
+                rows.append((app_id, doc, name, v["pages"], "OK" if not flags else "; ".join(flags),
+                             chk["summary"] if chk else None))
+                print(f"{app_id} {doc}: {name}  pages={v['pages']}  {'OK' if not flags else '; '.join(flags)}"
+                      + (f"  [{chk['summary']}]" if chk else ""))
             except Exception as e:
-                rows.append((app_id, doc, "-", "-", f"FAILED {str(e)[:70]}"))
+                rows.append((app_id, doc, "-", "-", f"FAILED {str(e)[:70]}", None))
                 print(f"{app_id} {doc}: FAILED {str(e)[:90]}")
-    json.dump([{"app": r[0], "doc": r[1], "file": r[2], "pages": r[3], "status": r[4]} for r in rows],
+    json.dump([{"app": r[0], "doc": r[1], "file": r[2], "pages": r[3], "status": r[4], "checklist": r[5]} for r in rows],
               open(os.path.join(args.out, "_export_report.json"), "w", encoding="utf-8"), indent=1)
     print("report ->", os.path.join(args.out, "_export_report.json"))
 

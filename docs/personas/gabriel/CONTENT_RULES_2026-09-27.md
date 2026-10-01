@@ -24,6 +24,7 @@ Owner-issued rules from the executive-linear package batch (Terma 1030–1034, H
 | References | Names of the two most relevant referees, ending "contact details available upon request". No phone or e-mail. `REFERENCES-ON-REQUEST-001`. |
 | Skills | Few and grouped: hard skills in Core Competencies and Tools & Methods, soft skills in the "Work style:" line. `SKILLS-GROUPED-001`. |
 | Course pointers | Picture, course, references, readable font, grouped skills, margins. Where each one lives: `cv_pointers` in `pwa/gold-rules.json`. |
+| The Checklist runs by default | Owner 2026-10-01: the course CV checklist (compendium p 22, 8 groups) is filled for every generated CV. `gen-runner.py run` writes `checklist_<uk>.md` + `.json` beside the review bundle; `export_pdfs.py` / `export_docx.py` write `<name>.checklist.md` + `.json` beside each CV. Opt out: `--no-checklist`. `COURSE-CHECKLIST-DEFAULT-001`. |
 
 ## Profile (owner 2026-10-01, Improve Academy session 1)
 

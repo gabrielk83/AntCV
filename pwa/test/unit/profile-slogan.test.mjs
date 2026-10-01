@@ -53,8 +53,20 @@ function loadHeading(store = {}) {
 test('generation replaces PROFILE with the slogan by default and keeps it as sloganTitle', () => {
   const H = loadHeading();
   const s = H.applyGen({ id: 'profile', title: 'PROFILE' }, { profile_slogan: 'Make the case before the spec.' }, { cl_slogan: VEO_CL });
-  assert.equal(s.title, 'Make the case before the spec');
+  assert.equal(s.title, 'PROFILE: Make the case before the spec');
   assert.equal(s.sloganTitle, 'Make the case before the spec');
+});
+
+test('the heading keeps the section label as a prefix ("Profile: <slogan>") in any UI language', () => {
+  const H = loadHeading();
+  const da = H.applyGen({ id: 'profile', title: 'PROFIL' }, { profile_slogan: 'Profil: Fra første prototype til levering' }, {});
+  assert.equal(da.title, 'PROFIL: Fra første prototype til levering');
+  assert.equal(da.sloganTitle, 'Fra første prototype til levering');
+  const again = H.applyGen({ id: 'profile', title: 'Profile: Old slogan' }, { profile_slogan: 'From first prototype to quantum delivery' }, {});
+  assert.equal(again.title, 'Profile: From first prototype to quantum delivery');
+  assert.equal(R.stripLabel('PROFILE: Make the case before the spec'), 'Make the case before the spec');
+  assert.deepEqual(fails(VEO, { company: 'Veo', slogan: 'Profile: Make the case before the spec', clSlogan: VEO_CL }), []);
+  assert.ok(fails(VEO, { company: 'Veo', slogan: 'Profile: Cameras that earn the spec', clSlogan: VEO_CL }).includes('PROFILE-SLOGAN-DISTINCT-001'));
 });
 
 test('a slogan that repeats the cover-letter slogan is not applied', () => {
@@ -66,7 +78,7 @@ test('a slogan that repeats the cover-letter slogan is not applied', () => {
 
 test('label mode keeps the plain heading; other sections and missing slogans pass through', () => {
   const H = loadHeading({ 'antcv:cvProfileHeadingMode': 'label' });
-  assert.equal(H.applyGen({ id: 'profile', title: 'Old slogan' }, { profile_slogan: 'Make the case before the spec' }, {}).title, 'PROFILE');
+  assert.equal(H.applyGen({ id: 'profile', title: 'Profile: Old slogan' }, { profile_slogan: 'Make the case before the spec' }, {}).title, 'Profile');
   const w = { id: 'work_style', title: 'Work style' };
   assert.equal(H.applyGen(w, { profile_slogan: 'x y z' }, {}), w);
   const p = { id: 'profile', title: 'PROFILE' };

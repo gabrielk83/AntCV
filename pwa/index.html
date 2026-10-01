@@ -367,9 +367,9 @@
   })();
 </script>
 <script type="module">
-  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.4786-impact-types';
+  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.4790-profile-slogan';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.4786-impact-types';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.4790-profile-slogan';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -408,10 +408,10 @@
         auth.src = 'antcv-auth.js?v=1.51.92-analytics-401-scope';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.51.4786-impact-types';
+          app.src = 'app.js?v=1.51.4790-profile-slogan';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.4786-impact-types';
+            vo.src = 'antcv-version-override.js?v=1.51.4790-profile-slogan';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -757,7 +757,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-preview-paper-memo.js?v=1.51.59" defer></script>
 <script src="antcv-sections-normalize-415.js?v=1.51.2680-hourglass-storm" defer></script>
 <script src="antcv-demo-watermark.js?v=1.50.340-live-keystate" defer></script>
-<script src="antcv-bullet-targets.js?v=1.51.4786-impact-types" defer></script>
+<script src="antcv-bullet-targets.js?v=1.51.4790-profile-slogan" defer></script>
 <!-- SIDECAR-CONSOLIDATE G10 (1.50.427): photo-position + photo-pentagon-shape +
      photo-bridge-button merged into ONE file behind a single shared rAF
      scheduler + ONE MutationObserver. The three old files stay on disk,
@@ -771,6 +771,9 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <!-- AI-NOTICE-POSITION-CONTROL-001: Layout-tab control to pin the CV AI-notice corner (auto/left/center/right). -->
 <script src="antcv-ai-notice-position-control.js?v=1.51.156" defer></script>
 <script src="antcv-cl-slogan-control.js?v=1.51.746-slogan-place-ctrl" defer></script>
+<!-- PROFILE-SLOGAN-001 (owner 2026-10-01): profile checks + CV profile heading slogan control -->
+<script src="antcv-profile-rules.js?v=1.51.4790-profile-slogan" defer></script>
+<script src="antcv-cv-profile-heading.js?v=1.51.4790-profile-slogan" defer></script>
 <script src="antcv-cl-slogan-element.js?v=1.51.1992-slogan-cap-4-13" defer></script>
 <!-- SLOGAN-FRESH-GEN-001 + SLOGAN-SMART-STATEMENT-001 (spec rules 23/33): stale overrides yield; the gen's meta.cl_slogan (smart statement) is adopted; a targeted CL never falls back to the specialization. Kill antcv:disable-slogan-fresh. -->
 <script src="antcv-cl-slogan-fresh.js?v=1.51.1504-slogan-lang-gate" defer></script>
@@ -786,7 +789,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      Sidecar-owned DOM. Kill: antcv:disable-style-kernels-table. -->
 <script src="antcv-app-history-style-kernels.js?v=1.51.349-kernel-table-time" defer></script>
 <script src="antcv-preview-header-tokens.js?v=1.50.41" defer></script>
-<script src="antcv-copenhagen-v2-001.js?v=1.51.4786-impact-types" defer></script>
+<script src="antcv-copenhagen-v2-001.js?v=1.51.4790-profile-slogan" defer></script>
 <!-- CL-NO-PHOTO-001 (preview): hide the candidate headshot inside the band on the cover letter (export already suppresses it) -->
 <script src="antcv-cl-no-photo-001.js?v=1.51.2561-cl-spec-center" defer></script>
 <!-- HEADER-ELEM-COLORS-001: per-element BRAND colours (name/spec/contact/slogan/application) from brandV2 -->
@@ -803,7 +806,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      style (var(--package-base) cascade), matching the DOCX. Companion to
      preview-header-tokens (which deliberately skips the sidebar). -->
 <script src="antcv-sidebar-bg-token.js?v=1.51.883-editable-marks" defer></script>
-<script src="antcv-pdf-preview-gate.js?v=1.51.4786-impact-types" defer></script>
+<script src="antcv-pdf-preview-gate.js?v=1.51.4790-profile-slogan" defer></script>
 <!-- EXPORT-SETTLED-001: defer the FIRST export until the doc is settled (cloud-restore + migrations
      converged) so it isn't stale — the real fix for "refresh twice for a good PDF". -->
 <script src="antcv-export-settled-gate.js?v=1.51.14" defer></script>
@@ -890,7 +893,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-section-panel-tweaks.js?v=1.51.128" defer></script>
 <script src="antcv-item-align.js?v=1.51.1604-align-storm-001" defer></script>
 <script src="antcv-page-fit.js?v=1.51.3803-word-sheet" defer></script>
-<script src="antcv-auto-pagebreak-block-001.js?v=1.51.4786-impact-types" defer></script>
+<script src="antcv-auto-pagebreak-block-001.js?v=1.51.4790-profile-slogan" defer></script>
 <script src="antcv-table-fast-drag.js?v=1.50.490" defer></script>
 <script src="antcv-pdf-error-toast.js?v=1.40.194" defer></script>
 <script src="antcv-item-pages-render.js?v=1.50.202-native-render-retired" defer></script>
@@ -932,12 +935,12 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      intervals). Verified: 211's CSS replicates each 206/207/208 rule; no
      external consumer of their APIs/attrs. Review: docs/refactor/SIDECAR_CONSOLIDATION_REVIEW.md -->
 <script src="antcv-section-panel-211.js?v=1.51.1224-headline-cjlr2" defer></script>
-<script src="antcv-roles-richblock-adapter.js?v=1.51.4786-impact-types" defer></script>
+<script src="antcv-roles-richblock-adapter.js?v=1.51.4790-profile-slogan" defer></script>
 <!-- ROLE-LOCATION-001 (1.51.4566): role.location + role-line format control (classic | meta) in PAGE FLOW; store antcv:roleLineFormat read by the roles adapter + docx-client. Kill antcv:disable-role-line-format -->
-<script src="antcv-role-line-format.js?v=1.51.4786-impact-types" defer></script>
-<script src="antcv-references-mode.js?v=1.51.4786-impact-types" defer></script>
-<script src="antcv-cv-layout-linear.js?v=1.51.4786-impact-types" defer></script>
-<script src="antcv-cl-close-space.js?v=1.51.4786-impact-types" defer></script>
+<script src="antcv-role-line-format.js?v=1.51.4790-profile-slogan" defer></script>
+<script src="antcv-references-mode.js?v=1.51.4790-profile-slogan" defer></script>
+<script src="antcv-cv-layout-linear.js?v=1.51.4790-profile-slogan" defer></script>
+<script src="antcv-cl-close-space.js?v=1.51.4790-profile-slogan" defer></script>
 <script src="antcv-experience-role-cjlr-230.js?v=1.51.1126-cjlr-persist" defer></script>
 <script src="antcv-core-competencies-row-controls-234.js?v=1.51.1604-align-storm-001" defer></script>
 <script src="antcv-selected-outcomes-row-controls-237.js?v=1.51.56" defer></script>
@@ -959,7 +962,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <!-- RICH-BLOCK-001 (2026-06-22): editor surface for the universal composite section
      type:"rich_block" (headline/rule toggles + section CJLR + {lead-in, body} rows with
      per-row CJLR/Page/Enhance/Fit/Delete). app.js delegates to window.AntcvRichBlockEditor. -->
-<script src="antcv-rich-block-editor.js?v=1.51.4786-impact-types" defer></script>
+<script src="antcv-rich-block-editor.js?v=1.51.4790-profile-slogan" defer></script>
 <!-- TABLE-TYPE-001 (2026-06-23): editor surface for the universal `table` type (CORE COMPETENCIES /
      WHAT I BRING + any 2-col table): whole-table CJLR/enhance/fit, heading/rule toggles, header-row
      CJLR (fixes the missing-header-CJLR + alignment-drift report) + header B/I, column-ratio,
@@ -977,7 +980,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-cv-subtitle-pin-760.js?v=1.51.4146-appload-fixes" defer></script>
 <!-- RICH-BLOCK-001 Phase C: convert the six named single-paragraph sections (opening, who, why,
      closure, profile, work_style) into rich_block so they gain the full controls. Idempotent. -->
-<script src="antcv-text-sections-to-rich-block-759.js?v=1.50.822" defer></script>
+<script src="antcv-text-sections-to-rich-block-759.js?v=1.51.4790-profile-slogan" defer></script>
 <!-- RICH-BLOCK-GROUP-001: fold labeled_list (Tools/Regulatory/Additional) + list (Certifications) into rich_block with group rows. -->
 <script src="antcv-labeled-list-to-rich-block-763.js?v=1.50.955" defer></script>
 <!-- RICH-BLOCK-SHAPE-001 (2026-06-23): convert RAW {l,v}/{group} items left inside rich_block
@@ -993,15 +996,15 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <!-- ROLES-ACTIVE-FLOOR-001 (1.51.146): a targeted CV must never have 0 active experience roles; restore real roles when a gen hid them all (keeps merge-hidden ones off). Kill antcv:disable-roles-active-floor -->
 <script src="antcv-roles-active-floor.js?v=1.51.146" defer></script>
 <!-- ROLE-MERGE-STORED-001 (1.51.154, row 34): move the same-company role merge to STORED sections so the PREVIEW matches the export (insert merged role, hide constituents on:false, eye-reversible). Reuses the exact docx-client merge. Kill antcv:disable-role-merge-stored -->
-<script src="antcv-role-merge-stored.js?v=1.51.4786-impact-types" defer></script>
+<script src="antcv-role-merge-stored.js?v=1.51.4790-profile-slogan" defer></script>
 <!-- SIDEBAR-GROUP-MERGE-STORED-001 (1.51.159): move the near-duplicate sidebar category merge (Imaging->Optics..., Project management->Project & delivery management) to STORED sections so the PREVIEW matches the export. Reuses the exact docx-client merge (window.AntcvMergeSidebarGroups). Kill antcv:disable-sidebar-group-merge-stored -->
 <script src="antcv-sidebar-group-merge-stored.js?v=1.51.159" defer></script>
 <script src="antcv-final-role-condense.js?v=1.50.924" defer></script>
 <!-- CORE-COMP-COMPRESS-001: cap Strategic Expertise cells at 105 chars + abbreviate Focus Area labels. -->
-<script src="antcv-core-comp-compress.js?v=1.51.4786-impact-types" defer></script>
+<script src="antcv-core-comp-compress.js?v=1.51.4790-profile-slogan" defer></script>
 <script src="antcv-orphan-measure-bind.js?v=1.51.52" defer></script>
 <!-- ORPHANS v2 (owner 2026-07-03): export-metric measurer + export preflight (EXPORT-METRIC-MEASURE-001 / EXPORT-PREFLIGHT-ORPHANS-001). Awaited from antcv-docx-client before the POST; kill antcv:disable-orphan-preflight. -->
-<script src="antcv-orphan-export-preflight.js?v=1.51.4786-impact-types" defer></script>
+<script src="antcv-orphan-export-preflight.js?v=1.51.4790-profile-slogan" defer></script>
 <!-- EMPTY-ROLE-HIDE-001 (1.51.52): hide fully-empty skeleton roles (gray "[Role title]" placeholder rows) -->
 <script src="antcv-empty-role-hide.js?v=1.51.52" defer></script>
 <!-- PAN-IDRAET-BACKFILL-001: when a role's near-dups would collapse below 2 bullets, append a DISTINCT bullet from the user's data to the STORED role (build-time, so preview+PDF match). Append-only + once-per-role (r._ndBackfill) + idempotent. Kill antcv:disable-neardup-backfill. -->
@@ -1016,9 +1019,9 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <!-- GEN-LANGFAB-001 (1.51.136): drop fabricated languages + correct levels against kernel personalInfo.languages ({lang,level}), name-neutral. Runs before concise so hallucinated rows are removed first. Kill antcv:disable-lang-fabrication-guard -->
 <script src="antcv-lang-fabrication-guard.js?v=1.51.136" defer></script>
 <!-- LANGUAGES-CONCISE-001: trim language proficiency to its concise core (CEFR→word, drop qualifiers). -->
-<script src="antcv-languages-concise.js?v=1.51.4786-impact-types" defer></script>
+<script src="antcv-languages-concise.js?v=1.51.4790-profile-slogan" defer></script>
 <!-- ROLE-BODY-NOTE-001 (owner 2026-10-01): the Trackman role body says it is an internship; the role line stays as stored. -->
-<script src="antcv-role-body-notes.js?v=1.51.4786-impact-types" defer></script>
+<script src="antcv-role-body-notes.js?v=1.51.4790-profile-slogan" defer></script>
 <!-- SKELETON-LEAK-001: strip leaked me() authoring instructions ("[PROFILE - 2-3 sentences…]") that
      got appended to real profile/work_style/opening/who/why/foundation content. -->
 <script src="antcv-strip-skeleton-placeholders.js?v=1.50.773" defer></script>
@@ -1032,7 +1035,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      intro/closing as paragraphs, bullets as marker rows (mk:true). Idempotent. -->
 <script src="antcv-hwic-to-rich-block-760.js?v=1.51.64" defer></script>
 <script src="antcv-bring-to-rich-block-761.js?v=1.51.64" defer></script>
-<script src="antcv-nordic-cl-order-971.js?v=1.51.4786-impact-types" defer></script>
+<script src="antcv-nordic-cl-order-971.js?v=1.51.4790-profile-slogan" defer></script>
 <script src="antcv-core-wib-strict-row-layout-274.js?v=1.50.943" defer></script>
 <script src="antcv-row-controls-wording-341.js?v=1.40.357-p1b3" defer></script>
 <script src="antcv-help-text-wording-357.js?v=1.40.357-p1b2" defer></script>
@@ -1077,7 +1080,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-sidebar-subsection-pagebreaks-329.js?v=1.51.3803-word-sheet" defer></script>
 <script src="antcv-sidebar-item-page-controls-359.js?v=1.50.151-cldoc" defer></script>
 <script src="antcv-edit-freeze.js?v=1.51.785-edit-freeze" defer></script>
-<script src="antcv-sidebar-fill-equalize-227.js?v=1.51.4786-impact-types" defer></script>
+<script src="antcv-sidebar-fill-equalize-227.js?v=1.51.4790-profile-slogan" defer></script>
 <!-- PB-MAIN-OVERFLOW-001 step 1 (1.50.811): READ-ONLY main-column overflow detector.
      Measures the main column total content height across all page-rows vs live A4
      usable height; writes antcv:mainOverflow {verdict, overshootLines, ...}. Renders

@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.4786-impact-types';
+const CACHE = 'antcv-1.51.4790-profile-slogan';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

@@ -25,6 +25,18 @@ Owner-issued rules from the executive-linear package batch (Terma 1030–1034, H
 | Skills | Few and grouped: hard skills in Core Competencies and Tools & Methods, soft skills in the "Work style:" line. `SKILLS-GROUPED-001`. |
 | Course pointers | Picture, course, references, readable font, grouped skills, margins. Where each one lives: `cv_pointers` in `pwa/gold-rules.json`. |
 
+## Profile (owner 2026-10-01, Improve Academy session 1)
+
+| Rule | Detail |
+|---|---|
+| Heading slogan (PROFILE-SLOGAN-001) | The word PROFILE above the profile is replaced by a slogan by default: 3–8 words, their product + their need. It shares **no content word** with the cover-letter slogan. AntCV: gen returns `cv_overrides.profile_slogan`, and `antcv-cv-profile-heading.js` sets it as the heading. A slogan that repeats the cover-letter slogan is not applied. Layout tab → **CV PROFILE HEADING** to edit the text or switch Slogan / PROFILE. |
+| "I" (PROFILE-VOICE-001) | Written with "I". Never third person, never "Experienced engineer with…". |
+| From me to them (PROFILE-VOICE-001) | Only the opening sentence is personal: "I am a <role> who…" + 1–2 real results. After it, every sentence faces the company: "<Company> does X / faces Y" → "As your <role> I will…" + outcome. Never "I'm excited / I enjoy / I'm drawn to / I thrive / I want to develop". |
+| No buzzword list (PROFILE-NO-BUZZWORD-LIST-001) | Every sentence has a subject, a verb and something concrete. No stacks of adjectives or nouns ("Results-driven, detail-oriented…", "Risk, agile, delivery"). |
+| Structure | Who I Am / How I Work / What I Bring. Name the target company. Name past work by product, not by Israeli employer names (Trackman stays when relevant). |
+
+Checks: `pwa/antcv-profile-rules.js` (Layout control + `pwa/test/unit/profile-slogan.test.mjs`). Prompt rules: `pwa/gold-rules.json` prompt_block 1.9.0. Current Veo and Hamamatsu profiles: `PROFILES_2026-10-01_veo-hamamatsu.md`.
+
 ## Layout (executive-linear style, CV and letter)
 
 | Rule | Detail |

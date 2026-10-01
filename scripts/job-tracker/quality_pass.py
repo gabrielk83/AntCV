@@ -363,6 +363,9 @@ def rule_results_numeric(cv, kernel, jd_text_for_partner, report, language="en")
         return
     def toks(s):
         return set(re.findall(r"[a-z]{3,}", str(s).lower()))
+    # RESULTS-IMPACT-TYPES-001 (owner 2026-10-01): among equally good kernel
+    # matches, the impact type this JD asks for most wins the swap.
+    demand = gr._jd_impact_demand(jd_text_for_partner) if hasattr(gr, "_jd_impact_demand") else {}
     for r in exp.get("roles") or []:
         res = str(r.get("results") or "")
         # RESULTS-OUTCOME-METRIC-001 v2: replace whenever the current line
@@ -378,7 +381,7 @@ def rule_results_numeric(cv, kernel, jd_text_for_partner, report, language="en")
         for cid in (r.get("__covers") or []):
             ids.add(str(cid))
         bullets_norm = {DF._norm(b).lower() for b in (r.get("bullets") or [])}
-        best, bs = None, 0
+        best, bs, bi = None, 0, -1.0
         for entry in pool_entries:
             cand = entry["result"]
             if not cand or not _is_outcome(cand):
@@ -390,8 +393,9 @@ def rule_results_numeric(cv, kernel, jd_text_for_partner, report, language="en")
             else:
                 rt = toks(str(r.get("title", "")) + " " + str(r.get("company", "")))
                 s = len(rt & toks(entry["label"])) if entry["label"] else 0
-            if s > bs:
-                best, bs = cand, s
+            imp = gr._impact_score(cand, demand) if demand else 0.0
+            if s > bs or (s == bs and s > 0 and imp > bi):
+                best, bs, bi = cand, s, imp
         if best and bs >= 2:
             for pname, generic in _PARTNER_NAMES:
                 if pname.lower() in best.lower() and pname.lower() not in (jd_text_for_partner or "").lower():
@@ -850,6 +854,54 @@ def rule_compound_backed(cv, cl, kernel, jd, report):
                     f"but never together in one statement (COMPOUND-BACKED-001)")
 
 
+def rule_role_body_notes(cv, report):
+    """ROLE-BODY-NOTE-001 (owner 2026-10-01): the Trackman role body says it
+    is an internship; the role line stays as stored. Notes live in
+    gold-rules.json role_body_notes (mirrored in pwa/antcv-role-body-notes.js)."""
+    notes = (_G.get("role_body_notes") or {}).get("notes") or [
+        {"company_pattern": "trackman", "present_pattern": r"\bintern(?:ship)?s?\b",
+         "label_suffix": " (internship)", "prefix": "Internship: "}]
+    for s in cv:
+        for r in (s.get("roles") or []) if isinstance(s.get("roles"), list) else []:
+            bl = r.get("bullets") or []
+            if not bl or not isinstance(bl[0], str):
+                continue
+            head = str(r.get("company") or "") + " " + str(r.get("title") or "")
+            for n in notes:
+                if not re.search(n["company_pattern"], head, re.I):
+                    continue
+                if re.search(n["present_pattern"], " ".join(map(str, bl)) + " " + str(r.get("results") or ""), re.I):
+                    break
+                m = re.match(r"^([^:.]{2,48}):\s+(\S.*)$", bl[0], re.S)
+                bl[0] = (m.group(1) + n["label_suffix"] + ": " + m.group(2)) if m else (n["prefix"] + bl[0])
+                report.append(f"role body: internship note on '{str(r.get('company'))[:28]}' (ROLE-BODY-NOTE-001)")
+                break
+
+
+def rule_languages_order(cv, report):
+    """LANGUAGES-ORDER-001 (owner 2026-10-01): Danish, English, Spanish,
+    Hebrew; other languages keep their place after them. Order list lives in
+    gold-rules.json languages_order."""
+    order = (_G.get("languages_order") or {}).get("order") or [
+        ["danish", "dansk"], ["english", "engelsk"], ["spanish", "spansk"], ["hebrew", "hebraisk"]]
+    def rank(it):
+        lab = str((it.get("l") or it.get("b") or "") if isinstance(it, dict) else it).lower()
+        for i, names in enumerate(order):
+            if any(re.search(r"(?<!\w)" + re.escape(n) + r"(?!\w)", lab) for n in names):
+                return i
+        return len(order)
+    for s in cv:
+        if not (s.get("id") == "languages" or re.search(r"\blanguages?\b|\bsprog\b", str(s.get("title") or ""), re.I)):
+            continue
+        items = s.get("items")
+        if not isinstance(items, list) or any(isinstance(it, dict) and it.get("grp") for it in items):
+            continue
+        new = sorted(items, key=rank)          # stable: unknown languages keep their order
+        if new != items:
+            s["items"] = new
+            report.append("languages: reordered Danish, English, Spanish, Hebrew (LANGUAGES-ORDER-001)")
+
+
 def apply_all(cv, cl, jd, kernel, language="en", use_llm=True):
     """Run every rule in place. Returns the report list."""
     report = []
@@ -865,6 +917,8 @@ def apply_all(cv, cl, jd, kernel, language="en", use_llm=True):
     rule_pubs(cv, report)
     rule_jd_relevance(cv, jd, language, report)
     rule_lone_group(cv, report)
+    rule_languages_order(cv, report)
+    rule_role_body_notes(cv, report)
     rule_research_link(cv, report)
     rule_bullet_periods(cv, report)
     rule_cl_prose(cl, cv, kernel_facts, language, report, use_llm=use_llm)

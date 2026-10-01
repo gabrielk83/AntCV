@@ -24426,6 +24426,16 @@ function paraAlignPath(s, path) {
   return v === "left" || v === "center" || v === "right" || v === "justify" ? alignType(v) : null;
 }
 __name(paraAlignPath, "paraAlignPath");
+// EXPORT-CONDENSE-001 (owner 2026-10-01): per-paragraph character-spacing condense decided by the PWA export
+// preflight (the owner's house rule - pull a short last line back, never global). Value in 1/20 pt (w:spacing),
+// clamped to [-8, 0] = the owner's -0.4 pt body floor. 0/absent = untouched.
+function paraCondensePath(s, path) {
+  const m = s && s.item_condense;
+  if (!m || typeof m !== "object" || !path) return 0;
+  const v = Number(m[path]);
+  return Number.isFinite(v) && v < 0 ? Math.max(-8, Math.round(v)) : 0;
+}
+__name(paraCondensePath, "paraCondensePath");
 function rowAlignAt(s, idx) {
   // CJLR-EXPORT-PARITY-001 (owner 2026-06-19): the native table CJLR writes the
   // section's own rowAlign[] (preview reads it since 1.50.692). Honour it on export
@@ -27707,7 +27717,8 @@ function renderText(s, ctx, isSidebar) {
   const align = paraAlignPath(s, "content") ?? paraAlign(s, null, void 0) ?? AlignmentType.JUSTIFIED;
   // CL-CLOSE-SPACE-001 (owner 2026-09-30): the letter's closing line ("I welcome ...") gets 5 pt above and below
   const spacing = s.id === "closure" ? { before: 100, after: 100, line: 276, lineRule: "auto" } : void 0;
-  return paras.map((p) => bodyParagraphRich(p, ctx, isSidebar, { align, spacing }));
+  const charSpacing = paras.length === 1 ? paraCondensePath(s, "content") : 0;   // EXPORT-CONDENSE-001 (one paragraph = one path)
+  return paras.map((p) => bodyParagraphRich(p, ctx, isSidebar, { align, spacing, charSpacing }));
 }
 __name(renderText, "renderText");
 function renderTextInline(s, ctx, isSidebar) {
@@ -27755,7 +27766,8 @@ function bodyParagraphRich(text, ctx, isSidebar, opts = {}) {
       size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
       font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont,
       italics: opts.italic || false,
-      bold: opts.bold || false
+      bold: opts.bold || false,
+      ...(opts.charSpacing ? { characterSpacing: opts.charSpacing } : {})
     })
   });
 }
@@ -27879,13 +27891,14 @@ function renderRichBlock(s, ctx, isSidebar) {
     const n = Number(rp[String(i)] != null ? rp[String(i)] : rp["items." + i]);
     return Number.isFinite(n) && n >= 2 ? Math.round(n) : 1;
   }, "rowPage");
-  const make = /* @__PURE__ */ __name((lead, body, align, emoji) => new Paragraph({
+  const make = /* @__PURE__ */ __name((lead, body, align, emoji, cs) => new Paragraph({
     spacing: { before: 60, after: 60, line: 276, lineRule: "auto" },
     alignment: align,
     shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
     children: [
       ...emoji ? [new TextRun({
         text: emoji + " ",
+        ...(cs ? { characterSpacing: cs } : {}),
         color: isSidebar ? style.sidebarTextColor : style.mainTextColor,
         size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
         font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont
@@ -27897,12 +27910,14 @@ function renderRichBlock(s, ctx, isSidebar) {
         color: leadHex,
         underline: leadUnderline ? { type: UnderlineType.SINGLE, color: leadUlHex } : undefined,
         size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
-        font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont
+        font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont,
+        ...(cs ? { characterSpacing: cs } : {})
       })] : [],
       ...inlineRuns(body || "", {
         color: isSidebar ? style.sidebarTextColor : style.mainTextColor,
         size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
-        font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont
+        font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont,
+        ...(cs ? { characterSpacing: cs } : {})
       })
     ]
   }), "make");
@@ -28044,9 +28059,10 @@ function renderRichBlock(s, ctx, isSidebar) {
         if (!s.headlineOff && s.title && !(ctx.style && ctx.style.contHeadlines === false)) out.push(headingParagraph(String(s.title || "").toUpperCase() + " " + (ctx.contSuffix || "(CONT.)"), ctx, isSidebar, s.ruleOff));
       }
     }
-    if (row.mk === true) out.push(bulletParagraphRich(lead, body, ctx, isSidebar, align, void 0, void 0, leadUnderline, leadUlHex));
-    else if (typeof row.mk === "string" && row.mk) out.push(make(lead, body, align, row.mk));
-    else out.push(make(lead, body, align));
+    const __cs = paraCondensePath(s, "items." + i);   // EXPORT-CONDENSE-001
+    if (row.mk === true) out.push(bulletParagraphRich(lead, body, ctx, isSidebar, align, void 0, void 0, leadUnderline, leadUlHex, __cs));
+    else if (typeof row.mk === "string" && row.mk) out.push(make(lead, body, align, row.mk, __cs));
+    else out.push(make(lead, body, align, void 0, __cs));
   });
   return out;
 }
@@ -28061,12 +28077,13 @@ function renderBullets(s, ctx, isSidebar) {
   });
 }
 __name(renderBullets, "renderBullets");
-function bulletParagraphRich(lead, body, ctx, isSidebar, align, keepWithNext, lineTwips, leadUnderline, leadUlHex) {
+function bulletParagraphRich(lead, body, ctx, isSidebar, align, keepWithNext, lineTwips, leadUnderline, leadUlHex, charSpacing) {
   const { style, fs } = ctx;
   const baseRun = {
     color: isSidebar ? style.sidebarTextColor : style.mainTextColor,
     size: pt2hp(isSidebar ? fs.sbBody : fs.bulletContent),
-    font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont
+    font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont,
+    ...(charSpacing ? { characterSpacing: charSpacing } : {})
   };
   return new Paragraph({
     numbering: { reference: isSidebar ? "antcv-sb-bullet" : "antcv-bullet", level: 0 },
@@ -28093,7 +28110,8 @@ function bulletParagraphRich(lead, body, ctx, isSidebar, align, keepWithNext, li
         // leadUnderline too (threaded from renderRichBlock); default colour = leadUlHex.
         underline: leadUnderline ? { type: UnderlineType.SINGLE, color: leadUlHex || (isSidebar ? style.sidebarHeadColor : style.mainTextColor) } : undefined,
         size: baseRun.size,
-        font: baseRun.font
+        font: baseRun.font,
+        ...(charSpacing ? { characterSpacing: charSpacing } : {})
       })] : [],
       ...inlineRuns(body || "", baseRun)
     ]
@@ -28456,7 +28474,10 @@ function renderExperience(s, ctx) {
           bAlign,
           _keepWithNext,
           /*lineTwips*/
-          252
+          252,
+          void 0,
+          void 0,
+          paraCondensePath(s, "roles." + ri + ".bullets." + bi)
         ));
       });
     }
@@ -28477,6 +28498,7 @@ function renderExperience(s, ctx) {
             // CPH-RENDER-FLAGS-001 flag 5: upright with a grey underline on
             // copenhagen (the mockup reserves italics for the company line).
             text: style._resultsLabel || "Results: ",
+            ...(paraCondensePath(s, "roles." + ri + ".results") ? { characterSpacing: paraCondensePath(s, "roles." + ri + ".results") } : {}),
             bold: true,
             italics: !style._cph,
             ...(style._cph ? { underline: { type: "single", color: "777777" } } : {}),
@@ -28486,6 +28508,7 @@ function renderExperience(s, ctx) {
           }),
           new TextRun({
             text: role.results.trim(),
+            ...(paraCondensePath(s, "roles." + ri + ".results") ? { characterSpacing: paraCondensePath(s, "roles." + ri + ".results") } : {}),
             color: style.mainTextColor,
             size: pt2hp(fs.mainBody),
             font: style.mainBodyFont

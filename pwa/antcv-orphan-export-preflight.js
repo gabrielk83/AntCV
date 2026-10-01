@@ -67,7 +67,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.130-orphan-v3-bulletcap';
+  var VERSION = '1.51.4767-export-condense';
   if (window.__antcvOrphanExportPreflight === VERSION) return;
   window.__antcvOrphanExportPreflight = VERSION;
 
@@ -76,6 +76,13 @@
   var MAX_BIND = 8;          // 0.60 needs more trailing glue than the old 0.40 pass
   var JUSTIFY_MIN = 0.85;    // rule 30: a natural mid-line under 85% renders stretched when justified
   var MIN_LINE_PX = 8;
+  // EXPORT-CONDENSE-001 (owner 2026-10-01): a paragraph whose LAST line fills <= CONDENSE_FRAC of the column
+  // gets the smallest character-spacing condense (-0.1 pt steps, floor -0.4 pt - the owner's body floor) that
+  // removes that line. Written per paragraph into sec.item_condense[path] (1/20 pt, the DOCX w:spacing unit);
+  // the docx-worker applies it to every run of that paragraph (Word and LibreOffice both honour it).
+  var CONDENSE_FRAC = 0.55;
+  var CONDENSE_FLOOR_PT = 0.4;
+  function condenseDisabled(storage) { try { var v = (storage || localStorage).getItem('antcv:disable-export-condense'); return v === '1' || v === 'true'; } catch (_) { return false; } }
   var PAGE_W = 11906;        // A4 twips — worker src/generate.js
   var TWIPS_PER_PX = 15;     // 96dpi
   var L3_TIMEOUT_MS = 8500;  // inside the caller's hard 12s envelope
@@ -212,6 +219,7 @@
       }
       var el = document.createElement('div');
       el.style.cssText = 'display:block;white-space:normal;letter-spacing:normal;word-spacing:normal;hyphens:none;text-wrap:initial;line-height:1.3;';
+      if (spec.letterSpacingPx) el.style.letterSpacing = spec.letterSpacingPx + 'px';
       el.style.width = spec.widthPx + 'px';
       el.style.fontFamily = spec.family + ', Carlito, sans-serif';
       el.style.fontSize = spec.fontPx + 'px';
@@ -360,7 +368,7 @@
                 if (!vk || /^\s*\[/.test(it[vk])) return;
                 var label = String(it.l || it.label || '');
                 out.push({
-                  kind: 'side_label', sid: s.id || '', itemIdx: li2,
+                  kind: 'side_label', sid: s.id || '', itemIdx: li2, sec: s, condensePath: 'items.' + li2,
                   widthPx: met.sideCellWpx, fontPx: met.sbBodyPx, align: 'left',
                   family: met.sideFamily,
                   prefixHtml: (label && it.labelHidden !== true) ? '<b>' + esc(label) + ': </b>' : '',
@@ -382,7 +390,7 @@
                 // it already ends in punctuation or row.colon === false.
                 var colon = (it.colon != null) ? !!it.colon : (s.leadColon !== false && !/[:.;,!?…–—-]$/.test(lead.trim()));
                 out.push({
-                  kind: 'side_label', sid: s.id || '', itemIdx: i2,
+                  kind: 'side_label', sid: s.id || '', itemIdx: i2, sec: s, condensePath: 'items.' + i2,
                   widthPx: met.sideCellWpx, fontPx: met.sbBodyPx, align: 'left',
                   family: met.sideFamily,
                   prefixHtml: lead ? '<b>' + esc(lead + (colon ? ': ' : ' ')) + '</b>' : '',
@@ -406,6 +414,7 @@
                     out.push({
                       kind: 'bullet', sid: s.id || 'experience', roleIdx: ri2, bulletIdx: bi2, role: role, sec: s,
                       alignPath: 'roles.' + ri2 + '.bullets.' + bi2,     // worker paraAlignPath key (renderExperience)
+                      condensePath: 'roles.' + ri2 + '.bullets.' + bi2,  // worker paraCondensePath key (EXPORT-CONDENSE-001)
                       widthPx: met.bulletWpx, fontPx: met.bulletPx, align: 'left', prefixHtml: '',
                       get: function () { return role.bullets[bi2]; },
                       set: function (v) { role.bullets[bi2] = v; },
@@ -415,7 +424,7 @@
               }
               if (typeof role.results === 'string' && role.results.trim() && !/^\s*\[/.test(role.results)) {
                 out.push({
-                  kind: 'results', sid: s.id || 'experience', roleIdx: ri2, role: role, sec: s,
+                  kind: 'results', sid: s.id || 'experience', roleIdx: ri2, role: role, sec: s, condensePath: 'roles.' + ri2 + '.results',
                   widthPx: met.cellWpx, fontPx: met.bodyPx, align: 'left',
                   prefixHtml: '<b><i>Results: </i></b>',   // same paragraph as the lead run (worker renderExperience)
                   get: function () { return role.results; },
@@ -423,6 +432,24 @@
                 });
               }
             })(s.roles[ri], ri);
+          }
+        } else if (s.type === 'rich_block' && Array.isArray(s.items) && s.loc !== 'sidebar') {
+          // EXPORT-CONDENSE-001: main-column rich_block prose rows (profile, work style, ...) - CONDENSE ONLY
+          // (no NBSP bind, no LLM rewrite: these rows are owner prose).
+          for (var mi = 0; mi < s.items.length; mi++) {
+            (function (it, i2) {
+              if (!it || typeof it !== 'object' || it.grp || it.mk) return;
+              if (typeof it.t !== 'string' || !it.t.trim() || /^\s*\[/.test(it.t)) return;
+              var lead = String(it.b || '');
+              var colon = (it.colon != null) ? !!it.colon : (s.leadColon !== false && !/[:.;,!?…–—-]$/.test(lead.trim()));
+              out.push({
+                kind: 'main_rich', condenseOnly: true, sid: s.id || '', itemIdx: i2, sec: s, condensePath: 'items.' + i2,
+                widthPx: met.cellWpx, fontPx: met.bodyPx, align: 'left',
+                prefixHtml: lead ? '<b>' + esc(lead + (colon ? ': ' : ' ')) + '</b>' : '',
+                get: function () { return it.t; },
+                set: function (v) { it.t = v; },
+              });
+            })(s.items[mi], mi);
           }
         } else if ((s.type === 'text' || s.type === 'text_inline') && String(s.id || '') === 'profile') {
           if (typeof s.content !== 'string' || /^\s*\[[\s\S]*\]\s*$/.test(s.content)) return; // worker drops placeholders
@@ -433,6 +460,7 @@
               out.push({
                 kind: 'profile', sid: s.id, parIdx: pi2, section: s, sec: s,
                 alignPath: 'content',                                   // worker renderText paraAlignPath key
+                condensePath: parts.length === 1 ? 'content' : null,    // one paragraph = one path (multi-paragraph content: no condense)
                 widthPx: met.cellWpx, fontPx: met.bodyPx, align: 'left', prefixHtml: '',
                 get: function () { return parts[pi2]; },
                 set: function (v) { parts[pi2] = v; s.content = parts.join(''); },
@@ -541,9 +569,32 @@
   }
 
   // ── per-target measure + L2 ─────────────────────────────────────────────────
-  function measureTarget(measure, tg, raw) {
+  function measureTarget(measure, tg, raw, letterSpacingPx) {
     // Always measure NATURAL (left) widths — see domMeasureLines note.
-    return measure({ html: tg.prefixHtml + toDisplayHtml(raw), widthPx: tg.widthPx, fontPx: tg.fontPx, family: tg.family, align: 'left' });
+    return measure({ html: tg.prefixHtml + toDisplayHtml(raw), widthPx: tg.widthPx, fontPx: tg.fontPx, family: tg.family, align: 'left', letterSpacingPx: letterSpacingPx || 0 });
+  }
+  // EXPORT-CONDENSE-001: returns {condensed:true, tw} when a condense removed the short last line.
+  function tryCondense(measure, tg, baseOpt) {
+    if (!tg.condensePath || !tg.sec) return {};
+    var raw = tg.get();
+    if (typeof raw !== 'string' || !raw.trim()) return {};
+    var base = baseOpt || measureTarget(measure, tg, raw);
+    if (!base || base.length < 2) return {};
+    var last = base[base.length - 1];
+    if (!(last > 0) || (last / tg.widthPx) > CONDENSE_FRAC) return {};
+    var m = tg.sec.item_condense;
+    if (m && typeof m === 'object' && typeof m[tg.condensePath] === 'number') return {};   // already decided upstream
+    var pxPerPt = 4 / 3;
+    for (var step = 1; step <= Math.round(CONDENSE_FLOOR_PT * 10); step++) {
+      var pt = -step / 10;
+      var l = measureTarget(measure, tg, raw, pt * pxPerPt);
+      if (l.length && l.length < base.length) {
+        if (!m || typeof m !== 'object') m = tg.sec.item_condense = {};
+        m[tg.condensePath] = Math.round(pt * 20);
+        return { condensed: true, tw: m[tg.condensePath], lines: base.length };
+      }
+    }
+    return {};
   }
   // Returns {fixed:true, n} when a bind cleared the runt, {runt:true} when it is
   // a genuine runt L2 cannot clear, or {} when the text does not runt at all.
@@ -639,8 +690,18 @@
 
       var targeted = isTargetedMeta(storage);
       var residue = [];
+      var noCondense = condenseDisabled(storage);
+      summary.condensed = 0;
       targets.forEach(function (tg) {
         var base = null;
+        // EXPORT-CONDENSE-001 first: a short last line pulled back by a small per-paragraph condense needs no
+        // bind and no rewrite. Condense-only targets stop here either way.
+        if (!noCondense) {
+          var c = {};
+          try { c = tryCondense(measure, tg); } catch (_) { c = {}; }
+          if (c.condensed) { summary.condensed++; return; }
+        }
+        if (tg.condenseOnly) return;
         // rule 30 (NO-FORCE-JUSTIFY): bullets + profile render justified by
         // default; a naturally under-filled MID line would stretch into rivers.
         if (tg.alignPath) {
@@ -667,7 +728,7 @@
         }
       });
       summary.residue = residue.length;
-      try { console.log('[orphan-preflight] scanned ' + summary.scanned + ', runts ' + summary.runts + ', L2-bound ' + summary.bound + ', left-aligned ' + summary.leftAligned + ', packed ' + (summary.packed || 0) + ', residue ' + residue.length); } catch (_) {}
+      try { console.log('[orphan-preflight] scanned ' + summary.scanned + ', condensed ' + summary.condensed + ', runts ' + summary.runts + ', L2-bound ' + summary.bound + ', left-aligned ' + summary.leftAligned + ', packed ' + (summary.packed || 0) + ', residue ' + residue.length); } catch (_) {}
       if (!residue.length) { summary.ms = Date.now() - t0; return Promise.resolve(summary); }
 
       // budget: never start the LLM leg if measurement already ate the envelope

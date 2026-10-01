@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.4767-export-condense';
+const CACHE = 'antcv-1.51.4768-page-budget';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

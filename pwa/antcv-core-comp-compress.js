@@ -16,7 +16,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.43';
+  var VERSION = '1.51.4746-value-for-role';
   if (window.__antcvCoreCompCompress === VERSION) return;
   window.__antcvCoreCompCompress = VERSION;
 
@@ -145,7 +145,13 @@
             // Pin the EO row's Strategic Expertise to the owner's exact string (heals the dropped "(EO)").
             if (gab && row[0] === EO_FOCUS && typeof row[1] === 'string' && row[1] !== EO_EXPERTISE) {
               var __ex = row[1].trim();
-              if (!__ex || /^\[/.test(__ex) || /electro-?optic|photonic|semiconductor|\boptics\b/i.test(row[1])) { row[1] = EO_EXPERTISE; changed = true; }
+              // VALUE-FOR-ROLE-001 (owner 2026-10-01): the cell may carry a value sentence now - only an EMPTY or
+              // placeholder cell takes the pinned string; otherwise just restore a dropped "(EO)" so the value text survives.
+              if (!__ex || /^\[/.test(__ex)) { row[1] = EO_EXPERTISE; changed = true; }
+              else if (/electro-?optics?\b/i.test(row[1]) && !/\(EO\)/.test(row[1])) {
+                var __eo = row[1].replace(/(electro-?optics?)\b\s*/i, '$1 (EO) ').replace(/\s+,/g, ',').replace(/\s{2,}/g, ' ').trim();
+                if (__eo !== row[1]) { row[1] = __eo; changed = true; }
+              }
             }
           });
         });

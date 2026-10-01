@@ -129,3 +129,9 @@ test('NAME-GUARD: a non-Gabriel EO expertise is not pinned', () => {
   const rows = runOn([H, ['Optics, photonics & devices', 'Electro-optics , photonics']], { pi: { name: 'Anita Example' } });
   assert.notEqual(rows[1][1], 'Electro-optics (EO), photonics, semiconductor physics');
 });
+
+// VALUE-FOR-ROLE-001 (owner 2026-10-01): a value sentence in the EO row survives - only "(EO)" is restored.
+test('run(): an EO value sentence is kept, only "(EO)" is added', () => {
+  const rows = runOn([H, ['EO & Photonic sensors', 'Electro-optics that ship: sensor stacks to volume; 20 MP camera and patent']]);
+  assert.equal(rows[1][1], 'Electro-optics (EO) that ship: sensor stacks to volume; 20 MP camera and patent');
+});

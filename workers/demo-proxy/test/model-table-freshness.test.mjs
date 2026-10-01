@@ -284,3 +284,24 @@ test('the pass-through guard uses the same Sonnet-5.0-only pattern (no thinking:
   assert.ok(src.includes(String.raw`/claude-sonnet-5(?![-.]?\d)/.test(body.model)`), 'index.js pass-through regex drifted');
   assert.ok(!src.includes('/claude-sonnet-5/.test(body.model)'), 'the old over-broad /claude-sonnet-5/ guard is back');
 });
+
+// ------------------------------------------------------------
+// 2026-10-01 (desktop cross-check of the 09-29 tune) — GEMINI36-37-RATES-2026-10-001.
+// Two more Gemini 3 Flash ids on ai.google.dev, same promotional price as 3.8-flash:
+//   - "gemini-3.7-flash" -> no key -> FALLBACK_RATE [3,15]  (real [0.75,3.75], 4x OVER)
+//   - "gemini-3.6-flash" -> no key -> FALLBACK_RATE [3,15]  (real [0.75,3.75], 4x OVER)
+
+test('gemini-3.7-flash / 3.6-flash are priced instead of inheriting the [3,15] fallback', () => {
+  assert.deepEqual(rateFor('gemini-3.7-flash'), [0.75, 3.75]);
+  assert.deepEqual(rateFor('gemini-3.6-flash'), [0.75, 3.75]);
+  // Neighbours undisturbed.
+  assert.deepEqual(rateFor('gemini-3.8-flash'), [0.75, 3.75]);
+  assert.deepEqual(rateFor('gemini-3.5-flash'), [1.50, 9.00]);
+  assert.deepEqual(rateFor('gemini-2.5-flash'), [0.30, 2.50]);
+});
+
+test('the 2026-10-01 Gemini ids are priced but stay OUT of the default gemini cascade', () => {
+  for (const id of ['gemini-3.7-flash', 'gemini-3.6-flash']) {
+    assert.ok(!PROVIDER_MODELS.gemini.includes(id), `${id} adoption is an owner call, not a pricing side effect`);
+  }
+});

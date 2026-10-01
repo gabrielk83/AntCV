@@ -1258,7 +1258,9 @@ _verified: 2026-09-24_ — CI E1 re-verify against HEAD 88f89001: leg (f) ROW-82
 
 ## Row 89 — MODEL-TABLE-FRESHNESS-001
 
-_verified: 2026-09-30_
+_verified: 2026-10-01_
+
+_2026-10-01 desktop cross-check of the 09-29 tune (Opus 5.5): every pin verifies against the four vendor pages. GEMINI36-37-RATES-2026-10-001: `gemini-3.7-flash` and `gemini-3.6-flash` are new at [0.75,3.75] (promotional to 2026-12-31) and matched no key (FALLBACK [3,15], 4x OVER; strict `null`). Added to all three mirrors; freshness 32/32 ×2, relay mirror 9/9, both ids asserted out of the default gemini cascade. D1 `llm_provider_costs`: every newest row equals the audited rate. No `llm_calls` since 2026-09-28, so neither the D1 fix nor the opus-5-5 pin has a production row yet. Deploy ×3 OWED (no traffic on the new ids). Deferred to a full audit: `gpt-5.2`, `gpt-5.2-pro`, `gpt-5-pro`, `gpt-5-nano` still resolve to `gpt-5` [1.25,10]. Report: `COST_QUALITY_WEEKLY_2026-09-29.md` § Desktop cross-check._
 
 _2026-09-30 OPUS55-ADOPT-001 (owner): the owed D1 `llm_provider_costs` INSERT is APPLIED — superseding rows for claude-sonnet-5 [2,10], claude-opus-5 [5,25], claude-fable-5 / -5-1 [10,50], gpt-5.5 [5,30], plus claude-opus-5-5 [4,20], each now the newest row per model (SELECT-verified). claude-opus-5-5 is the new gen pin (`1.51.4666-opus55-adopt`). Worker deploys ×3 in the same run. Remaining on this row: the 2027-01-01 Gemini 3.x re-verify._
 
@@ -2091,3 +2093,11 @@ _verified: 2026-09-30_
 **Found by the desktop nightly 2026-09-30 (Gabo-PC).** While checking row 39's telemetry leg, D1 `llm_calls` showed 0 rows after 2026-09-28 21:38 UTC, yet the job-tracker nightly generated and persisted app 3505 (gpt-5-mini, 12/12 sections) the same morning. Cause, verified in code: the only writer of `llm_calls` is `insertLlmCall` in `workers/access-relay/src/telemetry.js`, fed by PWA client telemetry events. `workers/proxy/src` has no `llm_calls` writer. `pwa/antcv-gen-job-client.js` (loaded, `?v=1.51.132`) posts `/job/create` + `/job/step` and emits no telemetry. `scripts/job-tracker/gen-runner.py` uses the same `/job/*` path. So every background-job and routine gen is invisible to the weekly cost-quality tune, to the row 39 role-split check and to the Opus 5.5 first-call check. Not verified: which share of PWA gens take the job path by default.
 
 **Owed:** a design call (owner): (a) proxy `gen-job.js` posts one event per section to the relay telemetry endpoint, or (b) the job client emits per-section events from the step results. (a) also covers `gen-runner.py`. Then a test that a finished job leaves N rows.
+
+## Row 115 — PWA-COST-METER-OPUS55-001
+
+_verified: 2026-10-01_
+
+**Found by the weekly cost-quality desktop cross-check 2026-10-01 (step 1b(ii)).** The PWA `C` map (`pwa/app.src.js` ~1207) prices `anthropic` and `claude` at [2,10], the sonnet-5 rate. The dispatcher sends provider `claude` to `q()` (`app.src.js:1811`), whose request body pins `claude-opus-5-5` [4,20] since `1.51.4666-opus55-adopt`, and meters the call with `C[a]` (`app.src.js:3251`). When opus-5-5 serves the call, the client per-generation meter (GEN-COST-CEILING-001, `window.__antcvGenCost`) and the client-reported `cost_usd` are 2x low, so the cost ceiling trips late. Server telemetry is not affected: `estimateCostUsd()` prices from D1 then `rateForStrict()` and uses the client number only on a miss. The 09-28 calls on this provider logged `claude-sonnet-5`, so the served model depends on the proxy path; the first post-adoption `llm_calls` row will show which.
+
+**Owed:** meter by the model id the response returns (or the body's model) instead of the provider. `app.js` + `app.src.js` + full cache-bust set, in a shift lane. Owner call; not done in a cross-check run.

@@ -231,3 +231,64 @@ generation after deploy is the check: watch `llm_calls` for `model='claude-opus-
 model through the deployed `cv-proxy` pass-through (Settings "test worker" shape): HTTP 200, SSE, and the
 app's `text_delta` parser receives the answer. OpenAI, Mistral, Gemini and the demo Anthropic key all
 return 200 on `/models`. Rollback no longer expected.
+
+---
+
+# Desktop cross-check 2026-10-01 (scheduled, Opus 5.5)
+
+Duplicate-run check found this report (2 days old), so this run did steps 1a + 1b only. No scoring,
+no flip proposal. Worktree `~/antcv-worktrees/routine-antcv-relay-cost-quality-tune-mup66ugi` off
+`origin/main` `9bc60c8c`; the shared clone was dirty. No `pwa/` asset changed, so no shift lane and no
+version number.
+
+**`MODEL_ROLES` unchanged** (`analysis`→mistral from the owner follow-up stands). Rollback value:
+`'{"writer":"anthropic","supervisor":"mistral","coherence":"openai"}'`.
+
+## 1a — pins GREEN; two new Gemini ids priced (GEMINI36-37-RATES-2026-10-001)
+
+Fetched 2026-10-01: platform.claude.com pricing.md, developers.openai.com pricing, mistral.ai/pricing,
+ai.google.dev pricing. Every pin verifies: `claude-sonnet-5` [2,10] (the note still says the $3/$15
+rise will not occur), `claude-opus-4-8` / `claude-opus-5` [5,25], `claude-opus-5-5` [4,20] (now the gen
+pin), `claude-fable-5` / `-5-1` [10,50], `claude-haiku-4-5` [1,5], `gpt-5.4-mini` [0.75,4.5], `gpt-5.5`
+[5,30], `mistral-large` [0.5,1.5], `gemini-2.5-flash` [0.3,2.5]. All 35 vendor ids checked through
+`rateForStrict()` resolve to the vendor number, except two.
+
+**RED:** `gemini-3.7-flash` and `gemini-3.6-flash` are new on the Gemini page at [0.75,3.75]
+(promotional through 2026-12-31, same as 3.8-flash). Neither contained a key: `rateFor()` gave
+FALLBACK [3,15] (4x OVER in and out), `rateForStrict()` gave `null`. Added to all three mirrors with a
+dated comment. Mirrors still byte-identical above the END-OF-MIRROR line. Tests: freshness +2 → 32/32
+in proxy and demo-proxy (files identical); relay mirror +1 → 9/9. A new assert keeps both ids out of
+the default gemini cascade.
+
+No new Anthropic, OpenAI or Mistral ids since 09-29. Still deferred to a full audit (not new, not
+pins, no traffic): `gpt-5.2` [1.75,14], `gpt-5.2-pro` [21,168], `gpt-5-pro` [15,120], `gpt-5-nano`
+[0.05,0.4] all resolve to the shorter `gpt-5` key [1.25,10].
+
+## 1b — D1 reconciles; PWA `C` map does not match the new gen pin
+
+(i) `llm_provider_costs` (SELECT, `changed_db:false`): every model's newest row equals the audited
+rate. The 09-29 superseding INSERT is live. No row exists for any Gemini 3.x id, so those price from
+the relay table.
+
+(iii) 7-day `llm_calls`: **18 calls, the same 2026-09-28 session the 09-29 report scored. No LLM
+traffic since.** Stored $0.355345 vs recomputed $0.273131 (1.301x), all on the single pre-fix claude
+`parse_jd` call. Every other row reconciles to the cent. The D1 fix cannot be confirmed on a new call
+until traffic arrives. Likewise no `claude-opus-5-5` call is in telemetry yet; the first one is the
+check (see also row 114: `/job/*` gens write no `llm_calls`).
+
+(ii) **Finding, not fixed (PWA-COST-METER-OPUS55-001).** The `C` map prices `anthropic` and `claude`
+at [2,10], the sonnet-5 rate. The PWA dispatcher sends provider `claude` to `q()` (`app.src.js:1811`),
+whose body pins `claude-opus-5-5` [4,20] since `1.51.4666`, and meters it with `C.claude`
+(`app.src.js:3251`). When the call is served as opus-5-5, the client per-generation meter
+(GEN-COST-CEILING-001) and the client-reported `cost_usd` are 2x low. The 09-28 calls on this
+provider logged `claude-sonnet-5`, so the served model depends on the proxy path; the first
+post-adoption telemetry row will show which. Server telemetry is NOT affected: it prices from D1, then
+the relay table, and uses the client number only on a miss. Tune scores are unaffected. Fix for the
+owner: meter by the returned model id instead of the provider. That is an `app.js` + `app.src.js`
+change with the full cache-bust set in a shift lane, so it was not done in a cross-check run.
+
+## Owed
+
+- **Deploy ×3** (`proxy`, `demo-proxy`, `access-relay`) for the two Gemini keys. Left OWED: neither id
+  has traffic or is in a cascade, so nothing in production is mispriced today.
+- Owner call on PWA-COST-METER-OPUS55-001 above.

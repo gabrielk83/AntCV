@@ -119,6 +119,11 @@ const RATES = {
   'gemini-3.5-flash-lite': [0.30, 2.50], // 2026-09-29 promotional through 2026-12-31. MUST stay longer than 'gemini-3.5-flash'.
   'gemini-3.1-flash-lite': [0.25, 1.50], // 2026-09-29 promotional through 2026-12-31
   'gemini-3.1-pro':      [2.00, 12.00],  // 2026-09-29 preview; <=200k-token tier (>200k is [4,18]); promotional through 2026-12-31
+  // GEMINI36-37-RATES-2026-10-001 (2026-10-01): two more Gemini 3 Flash ids on ai.google.dev/gemini-api/docs/pricing,
+  // same promotional price as 3.8-flash. Neither contains an existing key, so both fell to FALLBACK_RATE [3,15]
+  // (4x OVER in and out) and rateForStrict() answered null.
+  'gemini-3.7-flash':    [0.75, 3.75],  // 2026-10-01 promotional through 2026-12-31; RISES with 3.8-flash on 2027-01-01
+  'gemini-3.6-flash':    [0.75, 3.75],  // 2026-10-01 promotional through 2026-12-31; RISES with 3.8-flash on 2027-01-01
   'gemini-3.8-flash':    [0.75, 3.75],  // 2026-09-10 promotional through 2026-12-31; RISES to [1.50, 7.50] on 2027-01-01 — re-verify at the first tune of 2027
   'gemini-3.5-flash':    [1.50, 9.00],  // 2026-09-10
   'gemini-2.5-flash-lite': [0.10, 0.40], // verified 2026-08-20 ai.google.dev/gemini-api/docs/pricing. MUST stay longer than the 2.5-flash key below - longest-key-wins is what keeps Flash-Lite off the Flash rate.

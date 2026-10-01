@@ -147,11 +147,37 @@ def test_read_txt_and_docx():
     ok("read docx paragraphs", text.splitlines() == ["Profile", "Hello there"] and photo is False)
 
 
+def test_antcv_slogan_profile_and_referees():
+    """AntCV puts a slogan where PROFILE was and names referees with
+    'contact details available upon request' (course pointer)."""
+    cv = """Anna Example
+Technical Project Manager | Laser Systems
+anna@example.com  linkedin.com/in/anna
+FROM FIRST PROTOTYPE TO QUANTUM DELIVERY
+Who I Am: I am a technical project manager with 12 years in laser systems.
+How I Work: I put decisions in writing and stay calm in the lab.
+What I Bring: NKT Photonics builds fiber lasers. I will cut cycle time by 30%.
+PROFESSIONAL EXPERIENCE
+Project Manager - Lasers A/S  2020 - present
+References  Jane Doe, Head of R&D, Lasers A/S and John Roe, CTO, Optics ApS - contact details available upon request.
+"""
+    r = {(x["group"], x["item"]): x for x in CC.check_cv(cv, JD, company="NKT Photonics")}
+    ok("slogan profile found (no FAIL)", r.get(("3. Profile (Top Section)", "Profile section present")) is None
+       and r[("3. Profile (Top Section)", "5-10 lines")]["detail"].startswith("3 line"))
+    ok("slogan profile names the company", r[("3. Profile (Top Section)", "Motivation: why them / this role")]["status"] == "OK")
+    ok("named referees + 'upon request' pass", r[("8. Final Check", "'References available upon request'")]["status"] == "OK")
+    bad = cv.replace("Who I Am:", "I am:").replace(" - contact details available upon request", "")
+    r2 = {(x["group"], x["item"]): x for x in CC.check_cv(bad, JD, company="NKT Photonics")}
+    ok("no 'Who I Am' and no heading still FAILs", r2[("3. Profile (Top Section)", "Profile section present")]["status"] == "FAIL")
+    ok("referees without 'upon request' still FAIL", r2[("8. Final Check", "'References available upon request'")]["status"] == "FAIL")
+
+
 if __name__ == "__main__":
     test_good()
     test_bad()
     test_mixed_language_level()
     test_no_inputs_is_manual()
     test_read_txt_and_docx()
+    test_antcv_slogan_profile_and_referees()
     print(f"\n{_n - _fail}/{_n} passed")
     sys.exit(1 if _fail else 0)

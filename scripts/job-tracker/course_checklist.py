@@ -61,6 +61,7 @@ _RESULT = re.compile(r"\d|%|\b(reduced|increased|cut|saved|grew|improved|deliver
                      r"halved|doubled|achieved|raised|lowered|shortened|reduc\w+|øge\w*|reducere\w*|leverede)\b", re.I)
 _BULLET = re.compile(r"^\s*(?:[•●▪◦\-–*·]|\d+[.)])\s+")
 _REFS = re.compile(r"referen\w*[^.\n]{0,40}(request|forespørgsel|anmodning|available|tilgængelig)|"
+                   r"referen\w*\b.{0,200}?(?:upon|on|by|available on) request|referen\w*\b.{0,200}?på forespørgsel|"
                    r"(request|forespørgsel)[^.\n]{0,30}referen", re.I)
 
 
@@ -111,6 +112,23 @@ def split_sections(text):
             out.setdefault(cur, [])
         else:
             out.setdefault(cur, []).append(line)
+    return out
+
+
+def _slogan_profile(text):
+    """AntCV profiles (PR #369) put a slogan where the PROFILE heading was and open with
+    'Who I Am:'. Take the lines from 'Who I Am' up to the next section heading."""
+    lines = [l.strip() for l in text.splitlines() if l.strip()]
+    start = next((i for i, l in enumerate(lines) if re.match(r"(who i am|hvem jeg er)\b", l, re.I)), None)
+    if start is None:
+        return []
+    out = []
+    for l in lines[start:]:
+        if out and len(l) <= 40 and (l.isupper() or any(
+                re.fullmatch(r"(?:[A-ZÆØÅ&\s/]+:?\s*)?(?:%s)[\w\s&/-]*:?" % pat, l, re.I)
+                for pat in _SECTION_HEADS.values())):
+            break
+        out.append(l)
     return out
 
 
@@ -195,7 +213,7 @@ def check_cv(text, jd="", company=None, title=None, pages=None, has_photo=None):
 
     # 3. Profile
     g = GROUPS[2]
-    prof = sec.get("profile")
+    prof = sec.get("profile") or _slogan_profile(text)
     if not prof:
         add(g, "Profile section present", FAIL, "no Profile/Summary heading found")
     else:

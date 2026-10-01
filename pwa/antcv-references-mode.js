@@ -8,8 +8,8 @@
  * Settings panel (PAGE FLOW group, next to Role line / CV layout): "References" select
  *   exposed (DEFAULT, key absent) - the CV references row names the TWO referees most relevant to the job ad,
  *                                   with name, title, organisation and relationship ONLY. No phone, no e-mail:
- *                                   the row ends "contact details via me", so every contact goes through the
- *                                   candidate.
+ *                                   the row ends "contact details available upon request" (REFERENCES-ON-REQUEST-001,
+ *                                   owner 2026-10-01, course pointer), so every contact goes through the candidate.
  *   request                       - the generic "International and Danish recommendations provided on request".
  * Store: localStorage['antcv:referencesMode'] = 'request' | absent (absent = exposed).
  *
@@ -25,7 +25,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.4766-references-mode';
+  var VERSION = '1.51.4786-impact-types';
   if (window.__antcvReferencesMode === VERSION) return;
   window.__antcvReferencesMode = VERSION;
 
@@ -77,11 +77,11 @@
   window.__antcvPickReferees = pickTwo;   // test hook
 
   var TXT = {
-    en: { via: 'contact details via me', generic: { deg: 'References', sch: 'International and Danish recommendations provided on request' } },
-    da: { via: 'kontaktoplysninger via mig', generic: { deg: 'Referencer', sch: 'Danske og internationale referencer på forespørgsel' } },
+    en: { via: 'contact details available upon request', generic: { deg: 'References', sch: 'International and Danish recommendations provided on request' } },
+    da: { via: 'kontaktoplysninger på forespørgsel', generic: { deg: 'Referencer', sch: 'Danske og internationale referencer på forespørgsel' } },
   };
   function txt() { return TXT[lang()] || TXT.en; }
-  // one row per referee: name | title, organisation (relationship) - contact details via me. NEVER phone/e-mail.
+  // one row per referee: name | title, organisation (relationship) - contact details available upon request. NEVER phone/e-mail.
   function rowFor(r) {
     // optional per-language fields (title_da, relation_da, ...) win on a CV in that language
     var L = lang(), f = function (k) { return r[k + '_' + L] || r[k]; };

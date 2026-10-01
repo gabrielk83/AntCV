@@ -1,5 +1,5 @@
 {
-  "version": "1.7.0",
+  "version": "1.8.0",
   "_note": "GOLD RULES - the ONE machine-readable control site for every AntCV generation (owner 2026-07-13). Narrative + enforcement map: docs/qa/GOLD_STANDARD_LOCKER.md. Consumers: pwa/antcv-bullet-targets.js (prompt block on every generation/Fit-it/Enhance call), scripts/job-tracker/{quality_pass,density_fit,measure_density,gen-runner}.py (persist + sweep enforcement). Served at antcv.pages.dev/gold-rules.json so workers can fetch it (proxy prompt-augment wiring = open follow-up). Change values HERE; code reads them.",
   "density": {
     "runt_fraction": 0.6,
@@ -37,7 +37,96 @@
     "rule": "a Results line needs a QUANTIFIED OUTCOME OR SCOPE (change metric, or number+object of an action verb like '100 users across 150 machines'); digits that only DESCRIBE the role context (team size, site counts, years) do not qualify",
     "descriptor_digit_pattern": "\\d+\\s*[-]?\\s*(?:person|member|man|people|headcount)\\b|\\b(?:19|20)\\d{2}\\b",
     "legacy_change_metric_pattern": "%|×|x\\d|→|->| to \\d|\\d\\s*(?:days?|dage|weeks?|months?|hours?|hrs?|units?|percent|pct)|\\$\\s?\\d|\\d\\s?(?:M|K|mio\\.?|mn)\\b|DKK|EUR|USD|NIS",
-    "descriptors_are_bullets": "team sizes, site names, headcounts and years are role bullets, never Results"
+    "descriptors_are_bullets": "team sizes, site names, headcounts and years are role bullets, never Results",
+    "impact_types": {
+      "_doc": "RESULTS-IMPACT-TYPES-001 (owner 2026-10-01, from the Improve Academy slide 'Using result-oriented language: looking for impact'): every Results line and achievement bullet is one of four impact types. Per job, the type the JD asks for most gets extra weight when a role's bullets and Results line are chosen. JD relevance stays the primary key (EVIDENCE-RANK-002); motivation lines are untouched. Consumers: scripts/job-tracker/gen-runner.py (_impact_types, _jd_impact_demand, _fit_role), quality_pass.py (rule_results_numeric), pwa/antcv-docx-client.js (_impactNorm in _rankScore), prompt_block.",
+      "selection_weight": 0.35,
+      "types": {
+        "performance": {
+          "label": "Performance",
+          "meaning": "what increased, decreased or improved: time, cost, quality, efficiency, engagement, delivery",
+          "example": "Cut the change-request cycle from about 250 days to about 10.",
+          "detect_pattern": "\\b(?:cut|reduc\\w*|increas\\w*|rais\\w*|lower\\w*|shorten\\w*|halv\\w*|doubl\\w*|tripl\\w*|sav\\w*|grew|grow\\w*|boost\\w*|accelerat\\w*|faster|fewer|less|higher|lower)\\b[^.]*\\d|\\d[^.]*\\b(?:cut|reduc\\w*|increas\\w*|faster|fewer|less|higher|lower|saving|savings)\\b|\\d\\s*%|\\d\\s*(?:x|×)(?![a-z])|\\bfrom\\s+(?:about\\s+|~)?\\d[\\d,.]*[^.]{0,20}?\\bto\\s+(?:about\\s+|~)?\\d|\\d\\s*(?:->|→)\\s*~?\\d",
+          "jd_pattern": "\\b(?:cost\\w*|budget\\w*|schedule\\w*|on time|on plan|deadline\\w*|efficien\\w*|yield|quality|kpis?|time[- ]to[- ]market|lead[- ]time|reduc\\w*|productivity|performance|throughput|margin\\w*)\\b"
+        },
+        "deliverables": {
+          "label": "Deliverables",
+          "meaning": "what you created or completed: products, projects, plans, processes, systems, workshops, reports",
+          "example": "Built the project template every supplier-developed hardware project now runs on.",
+          "detect_pattern": "\\b(?:built|build|developed|designed|created|delivered|launched|shipped|released|set up|established|introduced|wrote|authored|drafted|defined|implemented|deployed|facilitated|ran|qualified|patented|published|produced|completed|founded|prototyped|commissioned|live on|templates?|one-pagers?|patents?|prototypes?|demonstrators?|roadmaps?|guides?|reports?|workshops?|toolkits?|checklists?)\\b",
+          "jd_pattern": "\\b(?:deliver\\w*|build\\w*|develop\\w*|design\\w*|launch\\w*|roadmap\\w*|prototyp\\w*|documentation|establish\\w*|new products?|from concept|from idea|introduc\\w*|creat\\w*|ship\\w*|release\\w*|plans?|specifications?)\\b"
+        },
+        "improvements": {
+          "label": "Improvements",
+          "meaning": "what worked better: faster, clearer, easier, more efficient, standardised",
+          "example": "Standardised gate reviews so in-house and supplier hardware follow one model.",
+          "detect_pattern": "\\b(?:streamlin\\w*|standardi[sz]\\w*|simplif\\w*|automat\\w*|formali[sz]\\w*|restructur\\w*|clarif\\w*|harmoni[sz]\\w*|consolidat\\w*|unified|unifi\\w*|optimi[sz]\\w*|improv\\w*|made [^.]{0,30}(?:easier|clearer|faster|simpler)|easier|clearer|simpler|traceab\\w*|repeatab\\w*)\\b",
+          "jd_pattern": "\\b(?:improv\\w*|process\\w*|streamlin\\w*|standardi[sz]\\w*|continuous improvement|lean|best practices?|structur\\w*|scalab\\w*|optimi[sz]\\w*|matur\\w*|systemati[sz]\\w*|framework\\w*)\\b"
+        },
+        "audience": {
+          "label": "Business and target audience",
+          "meaning": "value at what scale: who benefited and how many (users, customers, teams, sites, countries)",
+          "example": "Gave 100 users across 150 machines a backup they could restore themselves.",
+          "detect_pattern": "\\d[\\d,.]*\\s*\\+?\\s*(?:users|customers|clients|employees|engineers|operators|coaches|players|clubs|countries|markets|sites|plants|factories|teams|departments|oems?|suppliers|units|machines|vehicles|devices|schools|guests|members|players|attendees|participants)\\b|\\$\\s?\\d|\\b(?:revenue|nre)\\b|\\b(?:across|in)\\s+(?:\\d+|two|three|four|five|six|seven|eight|nine|ten)\\s+(?:countries|markets|sites|continents|regions|plants)\\b|\\b(?:worldwide|global(?:ly)?|tier[- ]1|international(?:ly)?)\\b",
+          "jd_pattern": "\\b(?:customers?|clients?|users?|end[- ]users?|markets?|global\\w*|international\\w*|countries|worldwide|scale|community|clubs?|coaches|partners?|commercial|business case|revenue|growth)\\b"
+        }
+      },
+      "jd_floor": 0.25
+    }
+  },
+  "languages_order": {
+    "_doc": "LANGUAGES-ORDER-001 (owner 2026-10-01): the CV LANGUAGES section lists Danish first, then English, Spanish, Hebrew; any other language follows in its stored order. Each entry lists the label in en/da/es/he so a translated section sorts the same. Consumers: pwa/antcv-languages-concise.js (sortLanguages), scripts/job-tracker/quality_pass.py (rule_languages_order).",
+    "order": [
+      [
+        "danish",
+        "dansk",
+        "danés",
+        "danes",
+        "דנית"
+      ],
+      [
+        "english",
+        "engelsk",
+        "inglés",
+        "ingles",
+        "אנגלית"
+      ],
+      [
+        "spanish",
+        "spansk",
+        "español",
+        "espanol",
+        "castellano",
+        "ספרדית"
+      ],
+      [
+        "hebrew",
+        "hebraisk",
+        "hebræisk",
+        "hebreo",
+        "עברית"
+      ]
+    ]
+  },
+  "role_body_notes": {
+    "_doc": "ROLE-BODY-NOTE-001 (owner 2026-10-01): 'make sure that for the Trackman, it is clear that it is an internship (inside the body, not header)'. The role line stays as stored; the first bullet's bold label gets the label_suffix, or an unlabelled first bullet opens with the prefix. Skipped when any bullet or the Results line already says intern. Consumers: pwa/antcv-role-body-notes.js, scripts/job-tracker/quality_pass.py (rule_role_body_notes).",
+    "notes": [
+      {
+        "company_pattern": "trackman",
+        "present_pattern": "\\bintern(?:ship)?s?\\b",
+        "label_suffix": " (internship)",
+        "prefix": "Internship: "
+      }
+    ]
+  },
+  "cv_pointers": {
+    "_doc": "CV-POINTERS-001 (owner 2026-10-01, Improve Business Academy slide 'A few (more) pointers'): the six pointers and where AntCV keeps each one.",
+    "picture": "header photo on the CV (circular, CV only); docx-worker header + photo controls",
+    "course_on_cv": "Improve Business Academy, Effective Job Creation Strategies (2026) is listed in the candidate's Certificates & courses data; certs carry no years in the render (certs.strip_years)",
+    "references": "named referees, 'contact details available upon request' (REFERENCES-ON-REQUEST-001, antcv-references-mode.js); no phone or e-mail",
+    "readable_font": "Calibri / Carlito body text; brand.per_app_only keeps decorative palettes off unmarked apps",
+    "skills_grouped": "few skills, grouped: hard skills in Core Competencies + Tools & Methods, soft skills in the 'Work style:' line (SKILLS-GROUPED-001 prompt line)",
+    "margins": "margins stay at the template value; page_budgets + the density fill band make content fit by compressing inside sections"
   },
   "partners": {
     "name_only_with_jd_signal": true,
@@ -196,6 +285,9 @@
     " - CONSISTENCY (CONTRADICTION-QA-001): stated years of experience, team sizes and scale figures must match the kernel exactly and be identical everywhere they appear across the CV and cover letter.",
     " - COVER LETTER LENGTH (CL-LENGTH-001): 350-450 words total on one page - a compact opening tied to THIS role, three evidence paragraphs, a short close. Never assume the employer has gaps or problems; never open with a generic \"roles where...\" line.",
     " - EVERY experience role carries its own Results line (ROLE-RESULTS-MANDATORY-001): the role's strongest REAL outcome in the source's own terms; a role without a Results line is an incomplete generation.",
+    " - RESULT IMPACT TYPES (RESULTS-IMPACT-TYPES-001, owner 2026-10-01): write every Results line and achievement bullet as ONE of four impact types: PERFORMANCE (what increased, decreased or improved: time, cost, quality, efficiency, delivery, with its number), DELIVERABLES (what was created or completed: a product, plan, process, system, workshop series or report, with a count or scope), IMPROVEMENTS (what works better: faster, clearer, easier, standardised) or AUDIENCE (who benefited and at what scale: users, customers, teams, sites, countries). Per job, the type the job description asks for most gets weight when you choose a role's bullets and Results line (cost and schedule language favours PERFORMANCE; build and launch language favours DELIVERABLES; process language favours IMPROVEMENTS; customer, user and market language favours AUDIENCE). JD relevance (EVIDENCE-RANK-002) still ranks first and motivation lines stay as they are. Spread the types across roles so the CV shows more than one kind of impact; never invent a number or a scale to fit a type.",
+    " - TRACKMAN IS AN INTERNSHIP (ROLE-BODY-NOTE-001, owner 2026-10-01): the Trackman role's body makes clear it is an internship (for example the first bullet label reads 'Hardware Project Management (internship):'); the role line itself (title, company, years) stays unchanged.",
+    " - SKILLS (SKILLS-GROUPED-001, owner 2026-10-01): do not go overboard on skills; keep them few and grouped: hard skills in the Core Competencies table and Tools & Methods, soft skills in the 'Work style:' line, never one long mixed list.",
     " - HOUSE SECTIONS ARE MANDATORY (HOUSE-SECTIONS-001): a commercial CV always carries Profile, 'Work style:' line, the Core Competencies table (Focus Area | Strategic Expertise), Experience, Education, and the sidebar set (Tools & Methods, Certificates, Languages, Interests - all six items - and Accessibility). Never drop a house section to hit a length target; compress WITHIN sections instead.",
     " - ACCESSIBILITY LINE (owner 2026-09-03, supersedes 2026-08-16): 'Hearing impaired; clear spoken communication and written follow-ups work well.' - the full line, never a bare 'Hearing impaired.' It belongs in the CV only; a cover letter carries no hearing line.",
     " - SLOGAN FUSION (SLOGAN-PERSONALITY-IMPACT-001): the positioning line fuses IMPACT with the candidate's PERSONALITY - prefer a word that carries both the temperament and the craft (gold: 'AN ELECTRO-OPTICS ENGINEER WHO TURNS MEASURED LIGHT INTO SHIPPED PRODUCT' - 'measured' is both the work style and the metrology).",

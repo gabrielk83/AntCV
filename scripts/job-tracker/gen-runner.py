@@ -616,7 +616,7 @@ def _same_job_baseline(company, role, jd_text):
 # the proxy PREPENDS its task frame + anti-fabrication + banned list.
 CV_SECTIONS = [
     ("cv_profile",          "PROFILE",           "Write the CV PROFILE section (2-3 tight sentences + optional 'Work style:' clause) for this candidate résumé. TARGETED-PROFILE-DOMAIN-001: the opener MUST match the JD domain (for an electro-optics / photonics / laser / LiDAR role: 'Electro-optics and photonics engineer with 15+ years across laser-based sensing, LiDAR, optical validation, supplier coordination and hardware product development.'); the second profile sentence carries scope or delivery evidence and must NEVER restate the separate 'Work style:' line (PROFILE-WORKSTYLE-DEDUP-001); a generic 'IT professional' opener on a targeted technical role is a FAILED generation."),
-    ("cv_outcomes",         "SELECTED OUTCOMES", "Generate the CV SELECTED OUTCOMES section: 5-6 verb-led outcomes, each with a bold lead and a body. Each body follows the RESULTS-LINE FORMULA (v5): [SUPPORTED OUTCOME] + [SCALE OR METRIC] + [MECHANISM OR OPERATIONAL CONTEXT] - e.g. 'Cut LiDAR unit cost 90% (10x) by leading substitute selection and qualification across source, detector and timing trade-offs'. Use ONLY real, supported numbers; NEVER an unsupported superlative; do not repeat the leading clause of a role bullet; do not combine unrelated achievements to fill a line. Return one per line as 'LEAD / body'."),
+    ("cv_outcomes",         "SELECTED OUTCOMES", "Generate the CV SELECTED OUTCOMES section: 5-6 verb-led outcomes, each with a bold lead and a body. Each body follows the RESULTS-LINE FORMULA (v5): [SUPPORTED OUTCOME] + [SCALE OR METRIC] + [MECHANISM OR OPERATIONAL CONTEXT] - e.g. 'Cut LiDAR unit cost 90% (10x) by leading substitute selection and qualification across source, detector and timing trade-offs'. Mix the four impact types (RESULTS-IMPACT-TYPES-001: Performance, Deliverables, Improvements, Business and target audience) and lead with the type this JD asks for most. Use ONLY real, supported numbers; NEVER an unsupported superlative; do not repeat the leading clause of a role bullet; do not combine unrelated achievements to fill a line. Return one per line as 'LEAD / body'."),
     ("cv_core",             "CORE COMPETENCIES", "Generate the CV CORE COMPETENCIES table: 6 rows, each 'Focus Area | Strategic Expertise'. ROLE-SPECIFIC (V5-FOCUS-PRIORITIES-001, owner ruled v5 authoritative 2026-07-21 - this REPLACES the former 'backward-looking, role-independent' rule): the FIRST THREE rows MUST MIRROR the three ranked employer priorities of THIS job description, in the SAME ORDER, as short evidence-based labels; the remaining rows carry the candidate's other strongest supporting competencies. Every row must be drawn from the candidate's REAL experience - NEVER invent or stretch a competency just to match a priority; if the candidate cannot genuinely cover a priority, use the nearest real adjacent strength instead, stated in the KERNEL'S OWN WORDING - NEVER synthesise a new technical noun-compound from adjacent kernel words (no 'thermal packaging' from separate 'thermal' + 'packaging' facts; COMPOUND-BACKED-001)."),
     ("cv_specialization",   "SPECIALISATION",    "Write the CV SPECIALISATION / positioning line for the header: AT MOST THREE short concepts separated by ' • ' (a bullet), tailored to THIS role's domain and drawn from the candidate's real strengths. NOT a sentence, no company name, no punctuation at the end. Return ONLY the line."),
 ]
@@ -645,6 +645,12 @@ def _user_turn(profile_json, meta, section_ask):
         lines.append("=== JOB DESCRIPTION (subordinate context: tells you which REAL experience to emphasise; never a source of identity/history) ===")
         # EVIDENCE-RANK-002 (owner 2026-08-16): exact-match-first + rarity weighting.
         lines.append("EVIDENCE RANKING (EVIDENCE-RANK-002): evidence matching an EXPLICIT JD requirement outranks ANY generic transferable evidence regardless of impact; the rarer the requirement the candidate genuinely covers (an automated optical test setup outranks generic project management), the higher that evidence ranks. Impact orders items only within the same relevance tier.")
+        # RESULTS-IMPACT-TYPES-001 (owner 2026-10-01): name the impact types this JD asks for.
+        _dem = _jd_impact_demand(meta["jd"])
+        if len(_dem) >= 2:
+            _lab = {k: ((_IMPACT.get("types") or {}).get(k) or {}).get("label", k) for k in _dem}
+            _rank = sorted(_dem, key=lambda k: -_dem[k])
+            lines.append("RESULT IMPACT TYPES (RESULTS-IMPACT-TYPES-001): write every result as Performance (what rose or fell, with its number), Deliverables (what was built or completed, with a count or scope), Improvements (what works better) or Business and target audience (who benefited, at what scale). THIS job asks most for " + _lab[_rank[0]] + ", then " + _lab[_rank[1]] + ": when two real results are equally relevant to the JD, choose that type, and spread the types across roles. Keep the motivation lines; never invent a number or a scale to fit a type.")
         lines.append("Company: " + str(meta.get("company", "")) + "  |  Role: " + str(meta.get("role", "")))
         lines.append(meta["jd"][:14000])
         lines.append("")
@@ -1236,6 +1242,43 @@ def _jd_kw(jd):
     return Counter(_toks(jd))
 def _rel(text, jdkw):
     return sum(jdkw.get(t, 0) for t in set(_toks(text)))
+# RESULTS-IMPACT-TYPES-001 (owner 2026-10-01, Improve Academy "looking for
+# impact"): a result is PERFORMANCE, DELIVERABLES, IMPROVEMENTS or AUDIENCE.
+# The type the JD asks for most gets weight when bullets and the Results line
+# are picked; JD relevance stays the primary key (EVIDENCE-RANK-002).
+# Patterns live in gold-rules.json results.impact_types.
+_IMPACT = (_GOLD.get("results") or {}).get("impact_types") or {}
+_IMPACT_W = float(_IMPACT.get("selection_weight", 0.35))
+_IMPACT_FLOOR = float(_IMPACT.get("jd_floor", 0.25))
+_IMPACT_RX = {}
+for _k, _v in (_IMPACT.get("types") or {}).items():
+    try:
+        _IMPACT_RX[_k] = (re.compile(_v["detect_pattern"], re.I), re.compile(_v["jd_pattern"], re.I))
+    except (KeyError, re.error):
+        pass
+def _impact_types(text):
+    """The impact types a bullet or result line shows (set of type keys)."""
+    t = str(text or "")
+    return {k for k, (det, _) in _IMPACT_RX.items() if det.search(t)}
+def _jd_impact_demand(jd):
+    """Per-type demand 0..1 from the JD: the most-asked type is 1, every type
+    keeps a floor so no impact type is worth nothing. {} without a JD."""
+    if not jd or not _IMPACT_RX:
+        return {}
+    n = {k: len(jdx.findall(jd)) for k, (_, jdx) in _IMPACT_RX.items()}
+    top = max(n.values()) or 1
+    return {k: max(_IMPACT_FLOOR, c / top) for k, c in n.items()}
+def _impact_score(text, demand):
+    """0..1: the best demand among the types this text shows."""
+    if not demand:
+        return 0.0
+    return max((demand.get(k, 0.0) for k in _impact_types(text)), default=0.0)
+def _rank_key(text, jdkw, demand):
+    """JD relevance first; the impact type adds up to _IMPACT_W on top of it
+    (and breaks ties when relevance is equal)."""
+    s = _impact_score(text, demand)
+    r = _rel(text, jdkw)
+    return r * (1 + _IMPACT_W * s) + _IMPACT_W * s
 # CAP-CLEAN-CUT-001 (owner 2026-07-13): the raw word-boundary fallback in the
 # caps was a TRUNCATION FACTORY — "…10 days while producing", "…traceable
 # from" (no terminal period, dangling connector/preposition). Every cut now
@@ -1594,14 +1637,18 @@ def _select_and_summarize(roles, jdkw, keep=6, language="en"):
     # reverse-chronological, Earlier career pinned last
     return sorted(result[:keep], key=lambda r: (1 if r.get("id") == "earlier-career" else 0, -_yr(r.get("years"))))
 
-def _fit_role(role, jdkw, max_bullets=3, cap=148):
+def _fit_role(role, jdkw, max_bullets=3, cap=148, demand=None):
     bl = role.get("bullets") or []
-    order = sorted(range(len(bl)), key=lambda i: -_rel(bl[i], jdkw))[:max_bullets]
+    # RESULTS-IMPACT-TYPES-001: impact type weighs in after JD relevance.
+    order = sorted(range(len(bl)), key=lambda i: -_rank_key(bl[i], jdkw, demand))[:max_bullets]
     top = [bl[i] for i in sorted(order)]                        # keep original narrative order
     res = role.get("results")
     if not res:                                                 # every role gets >=1 result
         rest = [b for b in bl if b not in top] or top or bl
         withnum = [b for b in rest if re.search(r"\d", b)]
+        # a number still comes first; among numbered lines, the impact type
+        # this JD asks for most wins (was: the first line with a digit)
+        withnum.sort(key=lambda b: -_rank_key(b, jdkw, demand))
         res = withnum[0] if withnum else (rest[0] if rest else None)
         if res in top and len(top) > 1: top = [b for b in top if b != res]
     role["bullets"] = [_cap_line(b, cap) for b in top]
@@ -1639,6 +1686,7 @@ def compact_jd_aware(cv, cl, jd, language="en"):
     experience to <=6 roles (<=3 bullets + a result each, capped lines), trim
     outcomes/core, and hide sidebar detail the JD does not touch."""
     jdkw = _jd_kw(jd)
+    demand = _jd_impact_demand(jd)
     cut = []
     for s in cv:
         sid, typ = s.get("id"), s.get("type")
@@ -1647,7 +1695,7 @@ def compact_jd_aware(cv, cl, jd, language="en"):
             roles = _select_and_summarize(_merge_roles(s["roles"]), jdkw, keep=6, language=language)
             for r in roles:
                 if r.get("id") != "earlier-career":            # keep the summary compact, verbatim
-                    _fit_role(r, jdkw, max_bullets=3, cap=148)
+                    _fit_role(r, jdkw, max_bullets=3, cap=148, demand=demand)
             s["roles"] = roles
             has_ec = any(r.get("id") == "earlier-career" for r in roles)
             cut.append(f"experience {n0}->{len(roles)} roles (merged + JD-ranked{', +Earlier career' if has_ec else ''}, <=3 bullets + result)")

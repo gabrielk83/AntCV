@@ -18,7 +18,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.242-lang-guard';
+  var VERSION = '1.51.4786-lang-order';
   if (window.__antcvLanguagesConcise === VERSION) return;
   window.__antcvLanguagesConcise = VERSION;
 
@@ -82,15 +82,44 @@
   // this would put English proficiency words back (the "languages stayed English
   // under zh" report). Only run in English.
   function nonEnglish() { try { var v = localStorage.getItem('language') || ''; if (v && v.charAt(0) === '"') v = JSON.parse(v); v = String(v || 'en').toLowerCase().replace(/[^a-z]/g, '').slice(0, 2); return !!v && v !== 'en'; } catch (_) { return false; } }
+  // LANGUAGES-ORDER-001 (owner 2026-10-01): Danish first, then English, Spanish, Hebrew;
+  // other languages keep their order after them. Mirrors gold-rules.json languages_order and
+  // quality_pass.py rule_languages_order. Runs in every output language (labels in en/da/es/he).
+  var LANG_ORDER = [
+    ['danish', 'dansk', 'danés', 'danes', 'דנית'],
+    ['english', 'engelsk', 'inglés', 'ingles', 'אנגלית'],
+    ['spanish', 'spansk', 'español', 'espanol', 'castellano', 'ספרדית'],
+    ['hebrew', 'hebraisk', 'hebræisk', 'hebreo', 'עברית']
+  ];
+  function langRank(it) {
+    var lab = String((it && typeof it === 'object') ? (it.l || it.b || '') : it).toLowerCase();
+    for (var i = 0; i < LANG_ORDER.length; i++) {
+      for (var k = 0; k < LANG_ORDER[i].length; k++) {
+        var n = LANG_ORDER[i][k], at = lab.indexOf(n);
+        if (at >= 0 && !/[a-zæøåéíóúñ]/.test(lab.charAt(at - 1) || '') && !/[a-zæøåéíóúñ]/.test(lab.charAt(at + n.length) || '')) return i;
+      }
+    }
+    return LANG_ORDER.length;
+  }
+  function sortLanguages(items) {
+    if (items.some(function (it) { return it && typeof it === 'object' && it.grp; })) return false;
+    var idx = items.map(function (it, i) { return [langRank(it), i, it]; });
+    idx.sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; });
+    var moved = idx.some(function (e, i) { return e[1] !== i; });
+    if (moved) for (var i = 0; i < idx.length; i++) items[i] = idx[i][2];
+    return moved;
+  }
   function run() {
     try {
-      if (nonEnglish()) return;
       var secs = readSections();
       if (!Array.isArray(secs.cv)) return;
       var changed = false;
+      var en = !nonEnglish();
       for (var i = 0; i < secs.cv.length; i++) {
         var s = secs.cv[i];
         if (!isLanguages(s) || !Array.isArray(s.items)) continue;
+        if (sortLanguages(s.items)) changed = true;
+        if (!en) continue;
         for (var j = 0; j < s.items.length; j++) { if (fixRow(s.items[j])) changed = true; }
       }
       if (!changed) return;
@@ -101,5 +130,5 @@
 
   window.addEventListener('antcv:sections-updated', run);
   [0, 300, 900, 2000, 3500, 6000].forEach(function (ms) { setTimeout(run, ms); });
-  window.AntcvLanguagesConcise = { version: VERSION, run: run, concise: concise };
+  window.AntcvLanguagesConcise = { version: VERSION, run: run, concise: concise, sortLanguages: sortLanguages };
 })();

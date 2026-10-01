@@ -17,6 +17,13 @@ Owner-issued rules from the executive-linear package batch (Terma 1030–1034, H
 | Hearing line | CV: the Accessibility row (centred label). Letters in the executive style: never. Employers who ask for no health data (Hamamatsu): drop the row from the CV too. |
 | Interests | Rugby line, then a full-width 3-column strip: Tai-chi · Cultural exchange (Languages, food, board games) · Hiking. |
 | Banned words | The `workers/proxy/src/writing-style-engine.js` en list, plus: collaborative → team-based, cross-functional → multi-disciplinary, end-to-end → from start to finish, leading → running. Scrub must preserve capitals. |
+| Results by impact type | Owner 2026-10-01 (Improve Academy, "looking for impact"): every Results line and achievement bullet is one of four types. **Performance**: what rose or fell (time, cost, quality, efficiency, delivery), with its number. **Deliverables**: what was built or completed, with a count or scope. **Improvements**: what works better (faster, clearer, standardised). **Business and target audience**: who benefited, at what scale. Per job, the type the ad asks for most gets weight in choosing results, after JD relevance; motivation lines stay. Spread types across roles. `RESULTS-IMPACT-TYPES-001` in `pwa/gold-rules.json`. |
+| Languages order | Danish first, then English, Spanish, Hebrew (owner 2026-10-01). `LANGUAGES-ORDER-001`. |
+| Trackman is an internship | Said in the role body, never in the role line: first bullet label "… (internship):". Owner 2026-10-01, `ROLE-BODY-NOTE-001`. |
+| Course on the CV | Add "Effective Job Creation Strategies, Improve Business Academy" to Certificates & courses (owner 2026-10-01, course pointer). Needs one entry in the app's stored certificates. |
+| References | Names of the two most relevant referees, ending "contact details available upon request". No phone or e-mail. `REFERENCES-ON-REQUEST-001`. |
+| Skills | Few and grouped: hard skills in Core Competencies and Tools & Methods, soft skills in the "Work style:" line. `SKILLS-GROUPED-001`. |
+| Course pointers | Picture, course, references, readable font, grouped skills, margins. Where each one lives: `cv_pointers` in `pwa/gold-rules.json`. |
 
 ## Layout (executive-linear style, CV and letter)
 

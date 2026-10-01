@@ -8,7 +8,9 @@
  * Owner rules:
  *  - The profile never reads as a list of buzzwords.
  *  - Written with "I". The opening sentence is personal (introduce yourself by role); after it,
- *    turn to the company ("from me to them"): what they do or face, then "As your <role> I will…".
+ *    turn to the company ("from me to them"): what they do or face, then "As <Company>'s <role> I will…".
+ *    Never addressed to the reader: no "you / your" ("You get…", "Your engineers get…"), owner
+ *    2026-10-01: "use I instead of You", How I Work included.
  *    Never self-focused motivation ("I'm excited", "I enjoy", "I'm drawn to").
  *  - The heading reads "Profile: <slogan>" (owner: "so it is clear that it still is a profile section"). The slogan must not repeat the cover-letter
  *    slogan: no shared content word.
@@ -110,9 +112,10 @@
       'Opens personal: "I am a <role> who…"');
     var rest = sents.slice(1).join(' ');
     var co = clean(opts.company);
-    var themRe = co ? new RegExp('\\byou(r)?\\b|' + co.split(/\s+/)[0].replace(/[^\p{L}\p{N}]/gu, '') , 'iu') : /\byou(r)?\b|\b[A-Z][\p{L}]+(?:'s)?\s+(team|cameras?|customers?|lab|products?|systems?)\b/u;
+    var themRe = co ? new RegExp(co.split(/\s+/)[0].replace(/[^\p{L}\p{N}]/gu, '') , 'iu') : /\b[A-Z][\p{L}]+(?:'s)?\s+(team|cameras?|customers?|lab|products?|systems?)\b/u;
     add('PROFILE-ME-TO-THEM-001', sents.length > 1 && themRe.test(rest),
-      'After the opening, turns to the company ("You / ' + (co || 'Company') + ' … As your <role> I will…")');
+      'After the opening, turns to the company ("' + (co || 'Company') + ' builds … As ' + (co || 'Company') + '\'s <role> I will…")');
+    add('PROFILE-NO-YOU-001', !/\b(you|your|you're|you'll|yours)\b/i.test(t), 'Written with "I", never "you / your"');
     add('PROFILE-NO-SELF-FOCUS-001', !SELF_FOCUSED.test(t), 'No "I\'m excited / I enjoy / drawn to"');
     var hits = buzzHits(t), lists = listSentences(t);
     add('PROFILE-NO-BUZZWORD-LIST-001', hits.length < 2 && lists.length === 0,

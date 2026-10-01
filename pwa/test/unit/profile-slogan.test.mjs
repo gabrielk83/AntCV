@@ -20,6 +20,13 @@ test('a first-person, me-to-them profile with a distinct slogan passes every che
   assert.deepEqual(fails(VEO, { company: 'Veo', slogan: 'Make the case before the spec', clSlogan: VEO_CL }), []);
 });
 
+test('the profile never addresses the reader as "you" (owner: "I" instead of "You")', () => {
+  const f = fails(VEO + ' You get a PM who writes every decision down.', { company: 'Veo' });
+  assert.ok(f.includes('PROFILE-NO-YOU-001'));
+  assert.ok(fails("I am a PM who ships cameras. As your hardware PM I will write the case first.", { company: 'Veo' }).includes('PROFILE-NO-YOU-001'));
+  assert.ok(!fails(VEO, { company: 'Veo' }).includes('PROFILE-NO-YOU-001'));
+});
+
 test('a buzzword list fails', () => {
   assert.ok(fails('Results-driven, detail-oriented and proactive project manager.').includes('PROFILE-NO-BUZZWORD-LIST-001'));
   assert.ok(fails('I am a PM. Stakeholder management, risk, agile, delivery.').includes('PROFILE-NO-BUZZWORD-LIST-001'));

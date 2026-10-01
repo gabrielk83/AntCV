@@ -25012,6 +25012,7 @@ function buildTwoColumnDocument(ctx) {
     }
     return out;
   }
+  ctx._twoColPaged = true;   // MAIN-LIST-PAGE-SEGMENTS-001: main lists split into page segments here
   const sidebarChildren = [
     // 1.14.53: the vertical-seam medallion anchors on a zero-height paragraph
     // at the TOP of the page-1 sidebar (its floating position is page-relative,
@@ -27238,7 +27239,12 @@ function renderSection(s, ctx, isSidebar) {
   // real Word page break, so the same segment chunking works there too. Fire
   // for the sidebar OR the linear CL. Safe superset: only engages when an item
   // carries _page>=2 (set by the measurer); CV main-column lists are excluded.
-  const _listSplitEligible = isSidebar || (ctx && ctx.doc === "cl");
+  // MAIN-LIST-PAGE-SEGMENTS-001 (owner 2026-10-01 "reasonable both in libre and word"): a two-column CV MAIN list
+  // split across pages (PUBLICATIONS items on pages 2 and 3) was not chunked, so the body renderer put its
+  // "(CONT.)" part inside the page-2 cell behind a real pageBreakBefore - a page break in the middle of a page
+  // row: Word and LibreOffice both pushed the page-3 table a page later (4 pages; #3501). In the two-column
+  // CV the main list now splits into page segments like the sidebar (the page-table builder sets the flag).
+  const _listSplitEligible = isSidebar || (ctx && ctx.doc === "cl") || !!(ctx && ctx._twoColPaged);
   if (
     _listSplitEligible && !s._antcvSegment && Array.isArray(s.items) && s.items.length > 1 &&
     (s.type === "labeled_list" || s.type === "list" || s.type === "list_italic" || s.type === "education")
@@ -27267,7 +27273,11 @@ function renderSection(s, ctx, isSidebar) {
           items: ch.items.map((it) => (it && typeof it === "object") ? (() => { const c = Object.assign({}, it); delete c._page; return c; })() : it),
           _antcvSegment: true,
           title: ci > 0 ? (ctx.style && ctx.style.contHeadlines === false ? "" : (s.title || "") + " " + (ctx.contSuffix || "(CONT.)")) : s.title,
-          pageBreakBefore: ci > 0 ? true : s.pageBreakBefore,
+          // the first chunk keeps its own leading break when it starts on page >= 2 (its items' _page is
+          // stripped above, which used to drop it); assembleColumn strips it when that page is already current.
+          pageBreakBefore: ci > 0 ? true : (ch.page >= 2 ? true : s.pageBreakBefore),
+          // the section footer line (PUBLICATIONS "All publications: ...") closes the LAST part only
+          ...(s.masterSite && ci < chunks.length - 1 ? { masterSite: void 0 } : {}),
         });
         out2.push(...renderSection(seg, ctx, isSidebar));
       });

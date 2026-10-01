@@ -4,6 +4,24 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 115 — JT-READY-LIST-CLOSED-001 — CLOSED 2026-10-01 (job-tracker nightly, evidence: live list + test)
+
+_verified: 2026-10-01_
+
+_Found and fixed the same night by the job-tracker nightly (Gabo-PC, Opus 5.5)._
+
+**Evidence.** `gen-runner.py list` printed 40 rows under "NOT QUEUED but ready". A probe of the pulled doc (rev 262) with the real `is_closed_row` found 13 of them closed: FalCom, Eaton, Tetra Pak, Radiometer_3, Everllence, VENZO, ElevateIT, FOSS, Novo Nordisk, Karnov, Alfa Laval, Demant (Archive band D9D9D9) and Phanofi (status "Archive / closed", T1 band). The owner was being told to arm jobs that no longer exist.
+
+**OPEN-queue row (verbatim):**
+
+```
+| 115 | `JT-READY-LIST-CLOSED-001` | 2026-10-01 | (found by the job-tracker nightly 2026-10-01) — `gen-runner.py list` "NOT QUEUED but ready" block reported archived rows as ready (13 of 40). `check-postings --apply` archives with queue=False, which matches the unarmed signature, and `unqueued_ready_rows` had no closed-row filter. Fix: skip `is_closed_row(row)`, same belt as `eligible_rows`. |
+```
+
+---
+
+**CLOSED 2026-10-01.** `unqueued_ready_rows` now skips `is_closed_row(row)` first. `scripts/job-tracker/test_closed_row_gate.py` adds 4 checks (16 -> 20) on the real function: unarmed live row listed; archived band not listed; closed status on a T1 band not listed; mixed pair lists only the live one. Negative control: the guard (line 416) replaced with `if False:` -> 3 checks red; restored -> green. All 15 job-tracker python tests green. Live: the ready list drops 40 -> 27 on the real doc. Script-only, no `pwa/` asset, no version number.
+
 ## Row 112 — POSTING-LI-SLUG-001 — CLOSED 2026-09-30 (desktop session, evidence: live guest-API probe + test)
 
 _verified: 2026-09-30_

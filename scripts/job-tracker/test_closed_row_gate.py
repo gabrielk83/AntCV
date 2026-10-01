@@ -72,9 +72,26 @@ check("--only cannot resurrect an archived row",
 check("--force cannot resurrect an archived row",
       ukeys(doc([row("dead", band="D9D9D9")]), force=True), [])
 
+# ---- unqueued_ready_rows (JT-READY-LIST-CLOSED-001) -------------------------
+# The sweep archives with queue=False, which is exactly the "unarmed but ready"
+# signature. The ready list must not advertise a job nobody can apply for.
+def ready(d):
+    return sorted(x["uk"] for x in gr.unqueued_ready_rows(d))
+
+
+check("an unarmed live row is listed as ready",
+      ready(doc([row("live")], {"live": False})), ["live"])
+check("an unarmed ARCHIVED row is not listed as ready",
+      ready(doc([row("dead", band="D9D9D9")], {"dead": False})), [])
+check("an unarmed closed-status row (T1 band) is not listed as ready",
+      ready(doc([row("dead", band="DDEBF7", status="Archive / closed")], {"dead": False})), [])
+check("live and archived together: only the live one is listed",
+      ready(doc([row("live"), row("dead", band="D9D9D9")], {"live": False, "dead": False})),
+      ["live"])
+
 if fails:
     print("FAIL (%d):" % len(fails))
     for f in fails:
         print("  - " + f)
     sys.exit(1)
-print("PASS - closed-row generation gate (16 checks)")
+print("PASS - closed-row generation gate (20 checks)")

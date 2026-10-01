@@ -410,6 +410,11 @@ def unqueued_ready_rows(doc):
     out = []
     for row in rows:
         uk = row_uk(row)
+        # JT-READY-LIST-CLOSED-001: the sweep sets queue=False when it archives a
+        # posting, so every archived row with a JD landed here and was reported
+        # as "ready" (13 of 40 on 2026-10-01). Same belt as eligible_rows.
+        if is_closed_row(row):
+            continue
         a = arts.get(uk) or {}
         if a.get("cv_export_url") or a.get("application_id"):
             continue

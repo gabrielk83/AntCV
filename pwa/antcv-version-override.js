@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.4746-value-for-role';
+  const TARGET_VERSION = '1.51.4766-references-mode';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.4746-value-for-role',
     '1.51.4727-close-space',
     '1.51.4726-linear-merge',
     '1.51.4707-linear-resync',

@@ -36,7 +36,7 @@ function stubMerge(roles) {
 }
 
 function load(store0) {
-  const store = new Map(Object.entries(store0 || {}));
+  const store = new Map(Object.entries({ 'antcv:enable-role-merge': '1', ...(store0 || {}) }));   // ROLE-MERGE-OFF-001: the mirror is opt-in now
   const win = {
     addEventListener() {}, dispatchEvent() { return true; },
     AntcvMergeSameCompanyRoles: stubMerge,
@@ -200,3 +200,4 @@ test('RESULTS-HEAL: runs even when the blob is already stamped (repairs without 
   const merged2 = roles(store).find((r) => r.__antcvStoredMergeRole);
   assert.equal(merged2.results, 'R1 R2', 'stamped blob still heals collapsed results');
 });
+

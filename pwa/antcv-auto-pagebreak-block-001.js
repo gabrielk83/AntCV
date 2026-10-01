@@ -191,7 +191,7 @@
   // DET-COORD page-1 band deduction (preview px): page 1 holds the candidate header band
   // above both columns, so its usable budget is smaller than pages 2+. Owner-tunable live:
   // AntcvAutoPagebreak.config({ PAGE1_BAND:N }). Higher = lighter page 1 (more to page 2).
-  var PAGE1_BAND = 200;
+  var PAGE1_BAND = 152;   // CPH-BAND-152-001 (owner 2026-09-30): header band 200 -> 152 px
   // DET-COORD-004 (owner 2026-06-25 "certs back on page 1"): the SIDEBAR's page 1 is shorter
   // than the main's because the PHOTO (~150-170px) sits at the sidebar/band top, so the sidebar
   // needs a BIGGER page-1 deduction than the main — otherwise certs fits page 1 in the coordinator
@@ -217,7 +217,7 @@
   // that then let ~1-2 lines too many onto page 1 (the "fabrication, lithography,
   // deposition, etch, DRIE, plasma" line should have flowed to page 2). 200 overcorrected
   // the other way. 190 is the confirmed middle value via a second live A/B round.
-  var SIDEBAR_PAGE1_BAND = 190;
+  var SIDEBAR_PAGE1_BAND = 142;   // CPH-BAND-152-001: -48 px with the band
   // KEEP-WHOLE only applies to sections up to this FRACTION of a page. A big SIDEBAR section
   // (the 25-item REGULATORY CONTEXT) is ~80% of a page: keeping it whole whole-moves it to the
   // next page and leaves the prior page's sidebar short. Splitting it instead BALANCES it across

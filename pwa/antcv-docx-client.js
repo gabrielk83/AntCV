@@ -1743,6 +1743,11 @@ function _isTargetedExport() {
 const _ANALYST_RX = /\b(?:data|analys|model|sql|python|pipeline|stakeholder|requirement|trace|document|metric|report|dashboard|change|request|process|insight|forecast|statist|research|experiment|quality|validation|impact|scope)\w*/gi;
 function _bulletText(b) { return String(typeof b === 'string' ? b : (b && (b.b || b.t)) || ''); }
 function _relevanceScore(b) { const m = _bulletText(b).match(_ANALYST_RX); return m ? m.length : 0; }
+// ROLE-MERGE-OFF-001 (owner 2026-09-27 STORED-FACTS-001 + "Innoviz is ALWAYS two roles", re-found live 2026-09-30:
+// an export merged Innoviz 2017-2020 + 2020-2025 into one 8-year role and shifted the role-indexed page map, so
+// page 2 of the PDF lost its main column). Same-company roles stay separate; opt back in with
+// localStorage antcv:enable-role-merge=1. The merge function itself is unchanged (tests, opt-in path).
+function _roleMergeEnabled() { try { return typeof localStorage !== 'undefined' && localStorage.getItem('antcv:enable-role-merge') === '1'; } catch (_) { return false; } }
 function mergeSameCompanyRoles(roles) {
   try {
     if (!Array.isArray(roles)) return null;
@@ -2002,7 +2007,7 @@ function sanitizeForExport(docSections, doc) {
           return r;
         });
         // ...then consolidate same-company roles among what remains visible.
-        const merged = mergeSameCompanyRoles(roles);
+        const merged = _roleMergeEnabled() ? mergeSameCompanyRoles(roles) : null;
         if (merged) roles = merged;
         return { ...s, roles };
       }
@@ -3964,7 +3969,7 @@ try {
           if (IRRELEVANT_ROLE.test(hay) || (hideTech && CLUSTER_ROLE.test(hay))) return Object.assign({}, r, { on: false });
           return r;
         });
-        var merged = mergeSameCompanyRoles(out);
+        var merged = _roleMergeEnabled() ? mergeSameCompanyRoles(out) : null;
         if (merged) out = merged;
         return out;
       } catch (_) { return null; }

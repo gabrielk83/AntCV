@@ -26,7 +26,8 @@
   window.__antcvRoleMergeStored = VERSION;
 
   var SRC = 'role-merge-stored';
-  function disabled() { try { var v = localStorage.getItem('antcv:disable-role-merge-stored'); return v === '1' || v === 'true'; } catch (_) { return false; } }
+  // ROLE-MERGE-OFF-001 (owner 2026-09-27 STORED-FACTS-001): stored roles are never merged unless the owner opts in.
+  function disabled() { try { var v = localStorage.getItem('antcv:disable-role-merge-stored'); if (v === '1' || v === 'true') return true; return localStorage.getItem('antcv:enable-role-merge') !== '1'; } catch (_) { return true; } }
   function erasing() { try { return !!(localStorage.getItem('antcv:full-erase-in-progress') || localStorage.getItem('antcv:just-erased')); } catch (_) { return false; } }
   function readJson(k, d) { try { var v = JSON.parse(localStorage.getItem(k) || 'null'); return v == null ? d : v; } catch (_) { return d; } }
   function jdText() { try { return String(localStorage.getItem('antcv:lastJdText') || ''); } catch (_) { return ''; } }

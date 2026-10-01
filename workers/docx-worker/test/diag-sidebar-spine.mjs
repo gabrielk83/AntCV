@@ -8,7 +8,7 @@
  *   2. one AntCVSpine rect PER PAGE (2), page-anchored, height 842pt, z<0
  *   3. rect fill = sidebarBg, width ≈ sidebar_ratio * page width (pt), left side
  *   4. style_config sidebarSpine:false kills the spine entirely
- *   5. the body-row atLeast minimums are untouched (12600 / 15538 pins)
+ *   5. the body-row atLeast minimums are untouched (13330 / 15538 pins; 13330 since CPH-BAND-152-001)
  * Run: node test/diag-sidebar-spine.mjs */
 import { writeSync } from 'node:fs';
 import { inflateRawSync } from 'node:zlib';
@@ -89,7 +89,8 @@ const check = (name, cond) => { log((cond ? 'PASS' : 'FAIL') + '  ' + name); if 
   check('left side (margin-left:0)', rects.every(r => r.includes('margin-left:0pt')));
   check('no spine leakage into the body', xml.indexOf('AntCVSpine') < 0 && xml.indexOf('__ANTCV_SPINE_') < 0);
   // the anti-blank-page pins MUST stay (sidebar-fill-gap-is-antiblank-slack)
-  check('PAGE1_BODY_MIN pin 12600 intact', /w:val="12600"/.test(xml));
+  // CPH-BAND-152-001 (owner 2026-09-30): band 3040 -> 2310 tw, body min 12600 -> 13330 - band + body = 15640, same slack as before
+  check('PAGE1_BODY_MIN pin 13330 intact', /w:val="13330"/.test(xml));
   check('CONT_BODY_MIN pin 15538 intact', /w:val="15538"/.test(xml));
 }
 

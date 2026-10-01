@@ -165,8 +165,8 @@
       // spec near the midline (its natural seat is a few px below exact center
       // because the name is taller than the contact — the specDy dial trims).
       css += BAND + '{display:grid !important;grid-template-columns:1fr !important;' +
-        'grid-template-rows:auto auto auto !important;align-content:center !important;row-gap:18px !important;' +
-        'min-height:200px !important;padding-top:14px !important;padding-bottom:14px !important;}';
+        'grid-template-rows:auto auto auto !important;align-content:center !important;row-gap:10px !important;' +
+        'min-height:152px !important;padding-top:10px !important;padding-bottom:10px !important;}';   // CPH-BAND-152-001 (owner 2026-09-30): was 200px / gap 18 / pad 14
       // CPH-PHOTO-CENTER-001 (owner 2026-07-23 "this is definitely not centered
       // to the middle of the sidebar"): the old grid column carried the band's
       // border+padding offset AND compared SCALED rects (the preview paper is
@@ -184,13 +184,13 @@
           var __sc2 = __bR2.width / __bEl2.offsetWidth;
           if (isFinite(__sc2) && __sc2 > 0.2) {
             var __cx = ((__sR2.left + __sR2.width / 2) - __bR2.left) / __sc2;
-            if (__cx > 80 && __cx < 420) __phL = __cx - 62;   // photo half = 62px (124px circle; CPH-PHOTO-124: owner 2026-07-24 "decrease the figure by 0.05in" -> 129 - 4.8 ~= 124)
+            if (__cx > 80 && __cx < 420) __phL = __cx - 50;   // CPH-BAND-152-001: photo half = 50px (100px circle; was 62 / CPH-PHOTO-124: owner 2026-07-24 "decrease the figure by 0.05in" -> 129 - 4.8 ~= 124)
           }
         }
       } catch (_) {}
-      if (__phL == null) __phL = Math.max(14, sbW / 2 - 53); // fallback approximation (124px half)
+      if (__phL == null) __phL = Math.max(14, sbW / 2 - 43); // fallback approximation (100px circle, CPH-BAND-152-001)
       css += BAND + ' img{position:absolute !important;left:' + __phL.toFixed(1) + 'px !important;top:50% !important;' +
-        'transform:translateY(-50%) !important;width:124px !important;height:124px !important;margin:0 !important;float:none !important;}';
+        'transform:translateY(-50%) !important;width:100px !important;height:100px !important;margin:0 !important;float:none !important;}';
       // CPH-BAND-SYMMETRY-002 (owner 2026-07-23 round 2): (a) the spec's OPTICAL
       // middle (the bullet-circle centers) sits on the box midline — all three
       // text rows now span the FULL band (grid-column 1/-1) so the spec centers

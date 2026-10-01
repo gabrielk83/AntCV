@@ -23953,11 +23953,12 @@ function postProcessDocx(input, opts = {}) {
     // Word AND LibreOffice/CloudConvert (a body-anchored negative-z rect gets
     // dropped by the converter). <w:titlePg/> keeps it on page 1 only. The
     // geometry mirrors the band rows generateDocx pins: A4 595.3pt wide, box
-    // inset 6pt L/R + 4pt top, height 144pt inside the 152pt band rows.
+    // inset 6pt L/R + 4pt top, height 108pt inside the 115.5pt band rows (CPH-BAND-152-001, owner 2026-09-30;
+    // was 144pt inside 152pt - the preview band went 200 -> 152 px).
     const __hbox = opts && opts.headerBox && opts.headerBox.fill ? opts.headerBox : null;
     const headerBoxRun = __hbox
       ? ('<w:r><w:rPr><w:noProof/></w:rPr><w:pict>' +
-         '<v:roundrect id="AntCVHeadBox" o:spid="_x0000_s6098" style="position:absolute;margin-left:6pt;margin-top:4pt;width:583.3pt;height:144pt;' +
+         '<v:roundrect id="AntCVHeadBox" o:spid="_x0000_s6098" style="position:absolute;margin-left:6pt;margin-top:4pt;width:583.3pt;height:108pt;' +
          'mso-position-horizontal-relative:page;mso-position-vertical-relative:page;z-index:-251655000;mso-wrap-style:square" arcsize="15000f" ' +
          'fillcolor="#' + String(__hbox.fill).replace(/[^0-9A-Fa-f]/g, "").slice(0, 6) + '" strokecolor="#' + String(__hbox.stroke || "01B9BD").replace(/[^0-9A-Fa-f]/g, "").slice(0, 6) + '" strokeweight="1.5pt">' +
          '<w10:wrap anchorx="page" anchory="page"/></v:roundrect></w:pict></w:r>')
@@ -25242,7 +25243,7 @@ function buildTwoColumnDocument(ctx) {
   // bottom slack so the stretched navy bar always stops well short of the sheet edge — the
   // row can never overflow + cascade. Cost: the navy fill ends ~1cm higher (a little more
   // white at the page bottom) — invisible next to losing the blank pages.
-  const PAGE1_BODY_MIN = 12600;
+  const PAGE1_BODY_MIN = 13330;   // CPH-BAND-152-001: the band shrank by 730 DXA (3040 -> 2310); same bottom slack as before
   const CONT_BODY_MIN = PAGE_H - 1300;
   const makeBodyRow = (sbEls, mnEls, withHeader) => new TableRow({
     cantSplit: false,
@@ -25293,7 +25294,7 @@ function buildTwoColumnDocument(ctx) {
     // to the box height (3040 tw ≈ 152pt ≈ the tuned preview's 200px box)
     // with content vertically centered, so text sits inside the rect.
     new TableRow({
-      ...(style._cph ? { height: { value: 2e3, rule: "atLeast" } } : {}),
+      ...(style._cph ? { height: { value: 1520, rule: "atLeast" } } : {}),   // CPH-BAND-152-001: was 2000
       children: [
         new TableCell({
           columnSpan: 2,
@@ -25308,7 +25309,7 @@ function buildTwoColumnDocument(ctx) {
     })
   ].concat(__contactParas.length ? [
     new TableRow({
-      ...(style._cph ? { height: { value: 1040, rule: "atLeast" } } : {}),
+      ...(style._cph ? { height: { value: 790, rule: "atLeast" } } : {}),   // CPH-BAND-152-001: was 1040
       children: [
         new TableCell({
           columnSpan: 2,
@@ -25322,7 +25323,7 @@ function buildTwoColumnDocument(ctx) {
     })
   ] : []) : [
     new TableRow({
-      ...(style._cph ? { height: { value: 3040, rule: "atLeast" } } : {}),
+      ...(style._cph ? { height: { value: 2310, rule: "atLeast" } } : {}),
       children: [
         new TableCell({
           columnSpan: 2,
@@ -25942,7 +25943,7 @@ function buildLinearDocument(ctx) {
       // COPENHAGEN-STAGE4: CL band = CV band — shading moves to the rounded
       // first-page-header VML box, row pins to the same 152pt, centered.
       new TableRow({
-        ...(style._cph ? { height: { value: 3040, rule: "atLeast" } } : {}),
+        ...(style._cph ? { height: { value: 2310, rule: "atLeast" } } : {}),
         children: [new TableCell({
           width: { size: PAGE_W, type: WidthType.DXA },
           shading: style._cph ? void 0 : { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
@@ -25965,7 +25966,7 @@ function buildLinearDocument(ctx) {
     borders: noBorders(),
     rows: [
       new TableRow({
-        ...(style._cph ? { height: { value: 3040, rule: "atLeast" } } : {}),
+        ...(style._cph ? { height: { value: 2310, rule: "atLeast" } } : {}),
         children: [new TableCell({
           width: { size: PAGE_W, type: WidthType.DXA },
           shading: style._cph ? void 0 : { type: ShadingType.CLEAR, fill: style.headerBg, color: "auto" },
@@ -26862,7 +26863,8 @@ function buildPhotoParagraph(ctx, position) {
   const fwdOk = Number.isFinite(fwdPx) && fwdPx >= 40 && fwdPx <= 260 ? Math.round(fwdPx) : null;
   let inches = 1.25;
   // COPENHAGEN-STAGE4: header (in-band) photo is the mockup's 1.4in circle.
-  if (pos === "header-left" || pos === "header-right") inches = style && style._cph ? 1.29 : 0.85;
+  // CPH-BAND-152-001 (owner 2026-09-30): the in-band header photo follows the preview's 100px circle (was 1.29in / 124px).
+  if (pos === "header-left" || pos === "header-right") inches = style && style._cph ? 1.04 : 0.85;
   if (pos === "main-left" || pos === "main-right" || pos === "main-left-bottom" || pos === "main-right-bottom") inches = 1.2;
   let sizePx = Math.round(inches * EMU_PER_INCH / 9525);
   if ((pos === "sidebar-top" || pos === "sidebar-bottom") && fwdOk) sizePx = fwdOk;

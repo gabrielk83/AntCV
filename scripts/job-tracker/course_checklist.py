@@ -9,7 +9,10 @@ Checks read the rendered document, not cv_sections, so they apply to any CV:
 an AntCV export, a house-style PDF, or a classmate's DOCX.
 
 Usage:
-  python course_checklist.py --cv CV.pdf --jd jd.txt [--company "NKT Photonics"] [--title "Technical Project Manager"] [--json]
+  python course_checklist.py --cv CV.pdf --jd jd.txt [--company "NKT Photonics"] [--title "Technical Project Manager"] [--json] [--out DIR]
+
+Runs BY DEFAULT (COURSE-CHECKLIST-DEFAULT-001) after every CV that gen-runner.py,
+export_pdfs.py and export_docx.py produce; opt out there with --no-checklist.
 
 Inputs: --cv takes .pdf (PyMuPDF, else the pdftotext CLI), .docx or .txt.
 Exit code: 1 when any item FAILs, else 0.
@@ -24,6 +27,10 @@ import sys
 import zipfile
 
 OK, WARN, FAIL, MANUAL = "OK", "WARN", "FAIL", "MANUAL"
+
+# The 8 group headings, verbatim from compendium p 22.
+GROUPS = ("1. Overall", "2. Structure & Layout", "3. Profile (Top Section)", "4. Experience (Most Important)",
+          "5. Education", "6. Skills / Competencies", "7. Personal", "8. Final Check")
 
 _STOP = set("""a about above after all also an and any are as at be been being both but by can could do does
 during each etc for from had has have having he her his how i if in into is it its just may me more most must my
@@ -54,6 +61,7 @@ _RESULT = re.compile(r"\d|%|\b(reduced|increased|cut|saved|grew|improved|deliver
                      r"halved|doubled|achieved|raised|lowered|shortened|reduc\w+|øge\w*|reducere\w*|leverede)\b", re.I)
 _BULLET = re.compile(r"^\s*(?:[•●▪◦\-–*·]|\d+[.)])\s+")
 _REFS = re.compile(r"referen\w*[^.\n]{0,40}(request|forespørgsel|anmodning|available|tilgængelig)|"
+                   r"referen\w*\b.{0,200}?(?:upon|on|by|available on) request|referen\w*\b.{0,200}?på forespørgsel|"
                    r"(request|forespørgsel)[^.\n]{0,30}referen", re.I)
 
 
@@ -63,7 +71,10 @@ def read_cv(path):
     ext = os.path.splitext(path)[1].lower()
     if ext == ".pdf":
         try:
-            import fitz  # PyMuPDF
+            try:
+                import pymupdf as fitz  # PyMuPDF >= 1.24; `import fitz` prints a deprecation line to stdout
+            except ImportError:
+                import fitz
             d = fitz.open(path)
             text = "\n".join(d[p].get_text() for p in range(d.page_count))
             return text, d.page_count, bool(d[0].get_images()) if d.page_count else False
@@ -104,6 +115,23 @@ def split_sections(text):
     return out
 
 
+def _slogan_profile(text):
+    """AntCV profiles (PR #369) put a slogan where the PROFILE heading was and open with
+    'Who I Am:'. Take the lines from 'Who I Am' up to the next section heading."""
+    lines = [l.strip() for l in text.splitlines() if l.strip()]
+    start = next((i for i, l in enumerate(lines) if re.match(r"(who i am|hvem jeg er)\b", l, re.I)), None)
+    if start is None:
+        return []
+    out = []
+    for l in lines[start:]:
+        if out and len(l) <= 40 and (l.isupper() or any(
+                re.fullmatch(r"(?:[A-ZÆØÅ&\s/]+:?\s*)?(?:%s)[\w\s&/-]*:?" % pat, l, re.I)
+                for pat in _SECTION_HEADS.values())):
+            break
+        out.append(l)
+    return out
+
+
 def jd_keywords(jd, n=15):
     """Top JD terms: two-word phrases that repeat, then single words, by frequency."""
     words = [w for w in re.findall(r"[a-zæøåA-ZÆØÅ][a-zæøåA-ZÆØÅ0-9+#/-]{2,}", jd)]
@@ -140,7 +168,7 @@ def check_cv(text, jd="", company=None, title=None, pages=None, has_photo=None):
     low = flat.lower()
 
     # 1. Overall
-    g = "1 Overall"
+    g = GROUPS[0]
     if company:
         add(g, "Tailored to the company", OK if company.lower() in low else WARN,
             "company named" if company.lower() in low else f"'{company}' never appears in the CV")
@@ -166,7 +194,7 @@ def check_cv(text, jd="", company=None, title=None, pages=None, has_photo=None):
     add(g, "Answers: why you for this role?", MANUAL, "read the profile as the recruiter")
 
     # 2. Structure & layout
-    g = "2 Structure & layout"
+    g = GROUPS[1]
     if pages is None:
         add(g, "Max 1-2 pages", MANUAL, "page count unknown for this input")
     else:
@@ -184,8 +212,8 @@ def check_cv(text, jd="", company=None, title=None, pages=None, has_photo=None):
     add(g, "Consistent formatting", MANUAL)
 
     # 3. Profile
-    g = "3 Profile"
-    prof = sec.get("profile")
+    g = GROUPS[2]
+    prof = sec.get("profile") or _slogan_profile(text)
     if not prof:
         add(g, "Profile section present", FAIL, "no Profile/Summary heading found")
     else:
@@ -204,7 +232,7 @@ def check_cv(text, jd="", company=None, title=None, pages=None, has_photo=None):
         add(g, "Written for the employer", WARN if m else OK, f"'{m.group(0)}'" if m else "")
 
     # 4. Experience
-    g = "4 Experience"
+    g = GROUPS[3]
     exp = sec.get("experience", [])
     ys = _start_years(exp)
     if len(ys) < 2:
@@ -223,7 +251,7 @@ def check_cv(text, jd="", company=None, title=None, pages=None, has_photo=None):
         add(g, "Bullets are results, not tasks", WARN, "no bullets in Experience")
 
     # 5. Education
-    g = "5 Education"
+    g = GROUPS[4]
     ys = _start_years(sec.get("education", []))
     if len(ys) < 2:
         add(g, "Chronological order", MANUAL, "fewer than 2 dated entries found")
@@ -233,7 +261,7 @@ def check_cv(text, jd="", company=None, title=None, pages=None, has_photo=None):
     add(g, "Relevant focus / results / methods", MANUAL)
 
     # 6. Skills
-    g = "6 Skills"
+    g = GROUPS[5]
     add(g, "Aligned with role, 4-6 items", MANUAL if "skills" in sec else WARN,
         "" if "skills" in sec else "no Skills/Competencies heading found")
     langs = " ".join(sec.get("languages", []))
@@ -249,7 +277,7 @@ def check_cv(text, jd="", company=None, title=None, pages=None, has_photo=None):
             add(g, "Language levels in words", OK)
 
     # 7. Personal
-    g = "7 Personal"
+    g = GROUPS[6]
     add(g, "Shows some personality", OK if "interests" in sec else WARN,
         "" if "interests" in sec else "no Interests/Personal section found")
     priv = sorted(set(m.group(0).lower() for m in _PRIVATE.finditer(flat)))
@@ -257,7 +285,7 @@ def check_cv(text, jd="", company=None, title=None, pages=None, has_photo=None):
         f"check: {', '.join(priv)}" if priv else "")
 
     # 8. Final check
-    g = "8 Final check"
+    g = GROUPS[7]
     dup = next((m for line in text.splitlines() for m in [re.search(r"\b(\w{3,}) \1\b", line, re.I)] if m), None)
     add(g, "No spelling mistakes", WARN if dup else MANUAL,
         f"repeated word '{dup.group(0)}'" if dup else "run a spell checker")
@@ -271,6 +299,122 @@ def check_cv(text, jd="", company=None, title=None, pages=None, has_photo=None):
     return rows
 
 
+# ── default-on report (COURSE-CHECKLIST-DEFAULT-001) ───────────────────────
+# Owner 2026-10-01: "fill in The Checklist by default as part of AntCV work".
+# The generation paths (gen-runner.py, export_pdfs.py, export_docx.py) call
+# save_report / save_report_for_file after every CV they produce. Both never
+# raise: a checklist failure is logged and generation continues.
+_SKIP_KEYS = {"id", "type", "loc", "style", "page", "hidden", "color", "icon", "key", "shape", "layout"}
+
+
+def sections_to_text(cv_sections, personal_info=None):
+    """Flatten AntCV cv_sections (text / rich_block items / table rows / roles)
+    into the reading-order text the checklist expects: contact header first,
+    then each section's title on its own line, list entries as bullets."""
+    out = []
+    pi = personal_info or {}
+    for k in ("name", "specialization", "email", "phone", "linkedin", "location"):
+        if str(pi.get(k) or "").strip():
+            out.append(str(pi[k]).strip())
+
+    def walk(node, bullet):
+        if isinstance(node, str):
+            for ln in node.splitlines():
+                if ln.strip():
+                    out.append(("• " if bullet and not _BULLET.match(ln) else "") + ln.strip())
+        elif isinstance(node, list):
+            if node and all(isinstance(x, str) for x in node) and len(node) <= 6 and not bullet:
+                out.append(" | ".join(x for x in node if x.strip()))   # a table row
+            else:
+                for x in node:
+                    walk(x, bullet or not isinstance(x, (list, dict)))
+        elif isinstance(node, dict):
+            line = " ".join(str(v).strip() for k, v in node.items()
+                            if k not in _SKIP_KEYS and isinstance(v, (str, int)) and not isinstance(v, bool)
+                            and str(v).strip())
+            if line:
+                walk(line, bullet)
+            for k, v in node.items():
+                if k not in _SKIP_KEYS and isinstance(v, (list, dict)):
+                    walk(v, k in ("bullets", "items") and isinstance(v, list)
+                         and all(isinstance(x, str) for x in v))
+
+    for sec in cv_sections or []:
+        if not isinstance(sec, dict) or sec.get("hidden"):
+            continue
+        if str(sec.get("title") or "").strip():
+            out.append(str(sec["title"]).strip())
+        for k, v in sec.items():
+            if k in _SKIP_KEYS or k == "title":
+                continue
+            if isinstance(v, str):
+                walk(v, False)
+            elif isinstance(v, (list, dict)):
+                walk(v, False)
+    return "\n".join(out)
+
+
+def tally(rows):
+    return {s: sum(1 for r in rows if r["status"] == s) for s in (OK, WARN, FAIL, MANUAL)}
+
+
+def summary_line(rows):
+    t = tally(rows)
+    return "checklist p22: " + " ".join(f"{k}={v}" for k, v in t.items())
+
+
+def to_markdown(rows, source="", company=None, title=None, pages=None):
+    """One line per checklist item under the 8 verbatim p 22 headings."""
+    md = ["# The Checklist (Improve Business Academy, compendium p 22)", ""]
+    if source:
+        md.append(f"Source: {source}")
+    if company or title:
+        md.append(f"Job: {title or '?'} at {company or '?'}")
+    if pages is not None:
+        md.append(f"Pages: {pages}")
+    md += [f"Summary: {summary_line(rows)}", ""]
+    for g in GROUPS:
+        md += [f"## {g}", ""]
+        for r in (r for r in rows if r["group"] == g):
+            md.append(f"- **{r['status']}** {r['item']}" + (f" - {r['detail']}" if r["detail"] else ""))
+        md.append("")
+    return "\n".join(md)
+
+
+def save_report(text, out_dir, stem, jd="", company=None, title=None, pages=None, has_photo=None,
+                source="", log=print):
+    """Run the checklist and write <stem>.md + <stem>.json in out_dir. Returns
+    {"summary", "md", "json", "counts"}, or None on any error (logged, never raised)."""
+    try:
+        rows = check_cv(text or "", jd or "", company or None, title or None, pages, has_photo)
+        os.makedirs(out_dir, exist_ok=True)
+        md_path = os.path.join(out_dir, stem + ".md")
+        js_path = os.path.join(out_dir, stem + ".json")
+        with open(md_path, "w", encoding="utf8") as f:
+            f.write(to_markdown(rows, source, company, title, pages))
+        with open(js_path, "w", encoding="utf8") as f:
+            json.dump({"checklist": "Improve Business Academy CV checklist (compendium p 22)",
+                       "groups": list(GROUPS), "source": source, "company": company, "title": title,
+                       "pages": pages, "counts": tally(rows), "rows": rows}, f, ensure_ascii=False, indent=1)
+        return {"summary": summary_line(rows), "md": md_path, "json": js_path, "counts": tally(rows)}
+    except Exception as e:  # a checklist failure must never break generation
+        if log:
+            log(f"   [checklist] skipped ({type(e).__name__}: {str(e)[:80]})")
+        return None
+
+
+def save_report_for_file(cv_path, out_dir, stem, jd="", company=None, title=None, log=print):
+    """save_report over a finished .pdf/.docx/.txt (page count + photo read from the file)."""
+    try:
+        text, pages, photo = read_cv(cv_path)
+    except BaseException as e:  # read_cv may SystemExit when no PDF reader exists
+        if log:
+            log(f"   [checklist] skipped ({type(e).__name__}: {str(e)[:80]})")
+        return None
+    return save_report(text, out_dir, stem, jd, company, title, pages, photo,
+                       source=os.path.basename(cv_path), log=log)
+
+
 def main():
     ap = argparse.ArgumentParser(description="Course CV checklist (compendium p 22) over a finished CV.")
     ap.add_argument("--cv", required=True, help=".pdf, .docx or .txt")
@@ -278,10 +422,15 @@ def main():
     ap.add_argument("--company")
     ap.add_argument("--title", help="the job title from the post")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--out", help="also write <cv-name>.checklist.md + .json into this folder")
     a = ap.parse_args()
     text, pages, photo = read_cv(a.cv)
     jd = open(a.jd, encoding="utf8").read() if a.jd else ""
     rows = check_cv(text, jd, a.company, a.title, pages, photo)
+    if a.out:
+        stem = os.path.splitext(os.path.basename(a.cv))[0] + ".checklist"
+        save_report(text, a.out, stem, jd, a.company, a.title, pages, photo,
+                    source=os.path.basename(a.cv), log=lambda m: print(m, file=sys.stderr))
     if a.json:
         print(json.dumps(rows, ensure_ascii=False, indent=2))
     else:

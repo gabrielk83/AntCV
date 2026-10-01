@@ -972,16 +972,35 @@ def cmd_run(args):
         bpath = os.path.join(args.out, f"gen_{uk}.json")
         json.dump(bundle, open(bpath, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
         print(f"   review bundle -> {bpath}")
-        results_index.append({"uk": uk, "status": res["status"], "done": ndone, "bundle": bpath})
+        entry = {"uk": uk, "status": res["status"], "done": ndone, "bundle": bpath}
+        results_index.append(entry)
+        persisted = None
         if args.persist and res["status"] in ("done",):
-            persist_application(doc, r, res, cat, language,
-                                kernel=kernel, measure=getattr(args, "measure", True) and not args.dry,
-                                max_pages=getattr(args, "max_pages", 2))
+            persisted = persist_application(doc, r, res, cat, language,
+                                            kernel=kernel, measure=getattr(args, "measure", True) and not args.dry,
+                                            max_pages=getattr(args, "max_pages", 2))
+        # COURSE-CHECKLIST-DEFAULT-001: The Checklist runs on every generated CV
+        # unless --no-checklist. Persisted run -> the final structured CV (after
+        # quality/nordic/fit); review-only -> the generated cv_* sections.
+        if getattr(args, "checklist", True):
+            if persisted and persisted.get("cv"):
+                cvs, pages, scope = persisted["cv"], persisted.get("pages"), "persisted CV (final sections)"
+            else:
+                cvs = [{"id": sid, "title": s.get("title") or sid, "type": "text",
+                        "content": sanitize_text(s.get("result") or "")}
+                       for sid, s in res["sections"].items() if sid.startswith("cv_")]
+                pages, scope = None, "generated cv_* sections (review-only; skeleton furniture not included)"
+            chk = run_course_checklist(args.out, r, cvs, kernel, pages, scope)
+            if chk:
+                entry["checklist"] = {"summary": chk["summary"], "md": chk["md"], "json": chk["json"]}
     if not args.row:
         print_unqueued_summary(doc)
     idx_path = os.path.join(args.out, "index.json")
     json.dump(results_index, open(idx_path, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     print(f"\nindex -> {idx_path}")
+    for e in results_index:
+        if e.get("checklist"):
+            print(f"   {e['uk']}: {e['checklist']['summary']}")
     if args.persist:
         # re-fetch + writeback the doc rev-safe (artifacts were mutated in place)
         rev2, cur = get_doc()
@@ -2280,6 +2299,7 @@ def persist_application(doc, r, res, category, language, kernel=None, measure=Fa
     missing (logs a warning), so a persist never crashes."""
     uk = r["uk"]
     company, role = str(r["company"]), str(r["role"])
+    pages = None   # measured CV page count, when the render-and-fit loop ran
     sk = load_skeleton()
     if sk:
         cv, cl = build_structured_sections(sk, res["sections"], company, role, language=language,
@@ -2444,7 +2464,7 @@ def persist_application(doc, r, res, category, language, kernel=None, measure=Fa
     })
     print(f"   [lang] subtitle={spec!r} slogan={('<suppressed:unsolicited>' if (slogan and _unsol) else slogan)!r}")
     if c != 200 or not (b.get("application") or {}).get("id"):
-        print(f"   persist POST failed: {c} {str(b)[:160]}"); return
+        print(f"   persist POST failed: {c} {str(b)[:160]}"); return {"cv": cv, "pages": pages}
     app_id = b["application"]["id"]
     c2, b2 = _req(RELAY, f"/api/applications/{app_id}", "PUT",
                   {"cv_sections": cv, "cl_sections": cl, "jd_company": str(r["company"]), "jd_role": str(r["role"])})
@@ -2452,6 +2472,25 @@ def persist_application(doc, r, res, category, language, kernel=None, measure=Fa
     arts = doc.setdefault("artifacts", {})
     arts[uk] = {**(arts.get(uk) or {}), "application_id": app_id, "generated_at": int(time.time())}
     q = doc.setdefault("queue", {}); q[uk] = False
+    return {"cv": cv, "pages": pages, "application_id": app_id}
+
+
+def run_course_checklist(out_dir, r, cv_sections, kernel=None, pages=None, scope=""):
+    """COURSE-CHECKLIST-DEFAULT-001 (owner 2026-10-01: "fill in The Checklist by
+    default as part of AntCV work"). Runs the course CV checklist (compendium
+    p 22, course_checklist.py) over the CV this run produced and writes
+    checklist_<uk>.md + .json beside the review bundle. Never raises."""
+    try:
+        import course_checklist as CC
+        text = CC.sections_to_text(cv_sections, _pi_from_kernel(kernel or {}))
+        rep = CC.save_report(text, out_dir, f"checklist_{r['uk']}", jd=r.get("jd") or "",
+                             company=str(r.get("company") or "") or None,
+                             title=str(r.get("role") or "") or None, pages=pages, source=scope)
+    except Exception as e:
+        print(f"   [checklist] skipped ({str(e)[:80]})"); return None
+    if rep:
+        print(f"   [checklist] {rep['summary']} -> {rep['md']}")
+    return rep
 
 def main():
     ap = argparse.ArgumentParser(description="AntCV job-tracker headless generation runner")
@@ -2472,6 +2511,7 @@ def main():
         p.add_argument("--force", action="store_true", help="regenerate even rows that already have an artifact (clean re-gen with today's fixes)")
         p.add_argument("--no-research", dest="research", action="store_false", help="skip Google-CSE employer research")
         p.add_argument("--no-brand", dest="brand", action="store_false", help="skip the brand-decides site-crawl (colours + spirit/values/tone)")
+        p.add_argument("--no-checklist", dest="checklist", action="store_false", help="skip The Checklist (course CV checklist, compendium p 22); it runs by default")
     args = ap.parse_args()
     if args.cmd == "list": cmd_list(args)
     elif args.cmd == "run": cmd_run(args)

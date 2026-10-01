@@ -59,3 +59,14 @@ Typical loops:
 - **Phase 1 (this)** — schema, endpoint, sync CLI, doc-driven Excel. ✅ built + tested.
 - **Phase 2** — CV/CL/Analysis generation seeded from a row's signals + the envelope guidelines; artifact URLs written back onto the row.
 - **Phase 3** — AntCV web UI: review/edit the table, download PDF, generate buttons, artifact hyperlinks.
+
+## Course CV checklist (COURSE-CV-CHECKLIST-001)
+
+`course_checklist.py` runs the Improve Business Academy CV checklist (course compendium p 22) over a
+finished CV: the PDF, DOCX or text a recruiter sees. Each item is OK, WARN, FAIL, or MANUAL when only a
+person can judge it. Exit 1 on any FAIL.
+
+```
+python course_checklist.py --cv CV.pdf --jd jd.txt --company "NKT Photonics" --title "Technical Project Manager"
+python test_course_checklist.py   # pure units, negative-controlled
+```

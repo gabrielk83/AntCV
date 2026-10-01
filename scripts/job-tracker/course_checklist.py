@@ -258,7 +258,7 @@ def check_cv(text, jd="", company=None, title=None, pages=None, has_photo=None):
 
     # 8. Final check
     g = "8 Final check"
-    dup = next((m for line in text.splitlines() for m in [re.search(r"\b(\w{3,})[ \t]+\1\b", line, re.I)] if m), None)
+    dup = next((m for line in text.splitlines() for m in [re.search(r"\b(\w{3,}) \1\b", line, re.I)] if m), None)
     add(g, "No spelling mistakes", WARN if dup else MANUAL,
         f"repeated word '{dup.group(0)}'" if dup else "run a spell checker")
     email = re.search(r"[\w.+-]+@[\w-]+\.[\w.]+", flat)

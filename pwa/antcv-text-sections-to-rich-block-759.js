@@ -26,7 +26,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.821';
+  var VERSION = '1.51.4790';
   if (window.__antcvTextSectionsToRichBlock759 === VERSION) return;
   window.__antcvTextSectionsToRichBlock759 = VERSION;
 
@@ -86,6 +86,9 @@
         if (s.hidden) ns.hidden = s.hidden;
         if (s.pageBreakBefore) ns.pageBreakBefore = s.pageBreakBefore;
         if (s.ruleOff) ns.ruleOff = s.ruleOff;
+        // PROFILE-SLOGAN-001: keep the generated heading slogan (antcv-cv-profile-heading.js).
+        if (s.sloganTitle) ns.sloganTitle = s.sloganTitle;
+        if (s.sloganRepeat) ns.sloganRepeat = s.sloganRepeat;
         return ns;
       }
       // (2) ongoing lead-in maintenance for who/why/work_style already in rich_block form:

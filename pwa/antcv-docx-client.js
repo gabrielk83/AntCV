@@ -3100,7 +3100,50 @@ const _demandNorm = (text) => {
     return (d && typeof d.scoreNorm === 'function') ? d.scoreNorm(String(text || '')) : 0;
   } catch (_) { return 0; }
 };
-const _rankScore = (text) => Math.min(1, _metricScore(text) / 10) + _demandNorm(text);
+// RESULTS-IMPACT-TYPES-001 (owner 2026-10-01, Improve Academy "looking for impact"):
+// a result is Performance, Deliverables, Improvements or Business/target audience.
+// The type the last JD asks for most adds up to 0.35 (gold-rules.json
+// results.impact_types.selection_weight), after the numeric + demand score.
+// Mirrors gen-runner.py _jd_impact_demand/_impact_score; patterns copied from
+// gold-rules.json results.impact_types (no JD -> 0, prior ordering unchanged).
+const _IMPACT_TYPES = {
+  performance: [/\b(?:cut|reduc\w*|increas\w*|rais\w*|lower\w*|shorten\w*|halv\w*|doubl\w*|tripl\w*|sav\w*|grew|grow\w*|boost\w*|accelerat\w*|faster|fewer|less|higher|lower)\b[^.]*\d|\d[^.]*\b(?:cut|reduc\w*|increas\w*|faster|fewer|less|higher|lower|saving|savings)\b|\d\s*%|\d\s*(?:x|×)(?![a-z])|\bfrom\s+(?:about\s+|~)?\d[\d,.]*[^.]{0,20}?\bto\s+(?:about\s+|~)?\d|\d\s*(?:->|→)\s*~?\d/i,
+    /\b(?:cost\w*|budget\w*|schedule\w*|on time|on plan|deadline\w*|efficien\w*|yield|quality|kpis?|time[- ]to[- ]market|lead[- ]time|reduc\w*|productivity|performance|throughput|margin\w*)\b/gi],
+  deliverables: [/\b(?:built|build|developed|designed|created|delivered|launched|shipped|released|set up|established|introduced|wrote|authored|drafted|defined|implemented|deployed|facilitated|ran|qualified|patented|published|produced|completed|founded|prototyped|commissioned|live on|templates?|one-pagers?|patents?|prototypes?|demonstrators?|roadmaps?|guides?|reports?|workshops?|toolkits?|checklists?)\b/i,
+    /\b(?:deliver\w*|build\w*|develop\w*|design\w*|launch\w*|roadmap\w*|prototyp\w*|documentation|establish\w*|new products?|from concept|from idea|introduc\w*|creat\w*|ship\w*|release\w*|plans?|specifications?)\b/gi],
+  improvements: [/\b(?:streamlin\w*|standardi[sz]\w*|simplif\w*|automat\w*|formali[sz]\w*|restructur\w*|clarif\w*|harmoni[sz]\w*|consolidat\w*|unified|unifi\w*|optimi[sz]\w*|improv\w*|made [^.]{0,30}(?:easier|clearer|faster|simpler)|easier|clearer|simpler|traceab\w*|repeatab\w*)\b/i,
+    /\b(?:improv\w*|process\w*|streamlin\w*|standardi[sz]\w*|continuous improvement|lean|best practices?|structur\w*|scalab\w*|optimi[sz]\w*|matur\w*|systemati[sz]\w*|framework\w*)\b/gi],
+  audience: [/\d[\d,.]*\s*\+?\s*(?:users|customers|clients|employees|engineers|operators|coaches|players|clubs|countries|markets|sites|plants|factories|teams|departments|oems?|suppliers|units|machines|vehicles|devices|schools|guests|members|players|attendees|participants)\b|\$\s?\d|\b(?:revenue|nre)\b|\b(?:across|in)\s+(?:\d+|two|three|four|five|six|seven|eight|nine|ten)\s+(?:countries|markets|sites|continents|regions|plants)\b|\b(?:worldwide|global(?:ly)?|tier[- ]1|international(?:ly)?)\b/i,
+    /\b(?:customers?|clients?|users?|end[- ]users?|markets?|global\w*|international\w*|countries|worldwide|scale|community|clubs?|coaches|partners?|commercial|business case|revenue|growth)\b/gi],
+};
+const _IMPACT_W = 0.35, _IMPACT_FLOOR = 0.25;
+let _impactJd = null, _impactDemand = null;
+export const _jdImpactDemand = (jd) => {
+  const t = String(jd || '');
+  if (!t) return null;
+  const n = {};
+  let top = 0;
+  for (const k of Object.keys(_IMPACT_TYPES)) { n[k] = (t.match(_IMPACT_TYPES[k][1]) || []).length; if (n[k] > top) top = n[k]; }
+  const d = {};
+  for (const k of Object.keys(n)) d[k] = Math.max(_IMPACT_FLOOR, n[k] / (top || 1));
+  return d;
+};
+export const _impactNorm = (text, demand) => {
+  try {
+    let d = demand;
+    if (d === undefined) {
+      const jd = _jdText();
+      if (jd !== _impactJd) { _impactJd = jd; _impactDemand = _jdImpactDemand(jd); }
+      d = _impactDemand;
+    }
+    if (!d) return 0;
+    const t = String(text || '');
+    let best = 0;
+    for (const k of Object.keys(_IMPACT_TYPES)) if (_IMPACT_TYPES[k][0].test(t) && d[k] > best) best = d[k];
+    return _IMPACT_W * best;
+  } catch (_) { return 0; }
+};
+const _rankScore = (text) => Math.min(1, _metricScore(text) / 10) + _demandNorm(text) + _impactNorm(text);
 // RESULTS-NEAR-DUP-001 (owner 2026-06-19): the lamination joins a role's top-2
 // outcomes, but those two are often the SAME fact phrased twice (Sirin: "Direct a
 // 7-person task force…" + "Directed a 7-person EO and optics team…"). Collapse

@@ -25012,6 +25012,7 @@ function buildTwoColumnDocument(ctx) {
     }
     return out;
   }
+  ctx._twoColPaged = true;   // MAIN-LIST-PAGE-SEGMENTS-001: main lists split into page segments here
   const sidebarChildren = [
     // 1.14.53: the vertical-seam medallion anchors on a zero-height paragraph
     // at the TOP of the page-1 sidebar (its floating position is page-relative,
@@ -25255,13 +25256,35 @@ function buildTwoColumnDocument(ctx) {
   // white at the page bottom) — invisible next to losing the blank pages.
   const PAGE1_BODY_MIN = 13330;   // CPH-BAND-152-001: the band shrank by 730 DXA (3040 -> 2310); same bottom slack as before
   const CONT_BODY_MIN = PAGE_H - 1300;
-  const makeBodyRow = (sbEls, mnEls, withHeader) => new TableRow({
+  // WORD-KEEPNEXT-ROW-001 (owner 2026-10-01 "reasonable both in libre and word"): each page is one
+  // body row; a section is a nested table (heading row with keepNext + a cantSplit items row). When a
+  // section straddles the page end, Word honours the nested heading's keepNext by moving the WHOLE
+  // outer page row to the next page: page 1 printed as an empty band and the CV grew to 4 pages
+  // (measured on #3501; LibreOffice ignores it). Reproduced in Word: dropping keepNext from the
+  // nested-section paragraphs alone restores page 1 (4 -> 3 pages). Page placement is decided by the
+  // paginator, so inside two-column page cells keepNext is cleared from every nested-table paragraph
+  // and from the cell's trailing elements (the cell end is a planned page boundary).
+  const __dropKeepNext = (el, depth, deep) => {
+    if (!el || depth > 6) return;
+    const props = el.properties;
+    if (props && Array.isArray(props.root)) props.root = props.root.filter((c) => !(c && c.rootKey === "w:keepNext"));
+    if (deep && (el.rootKey === "w:tbl" || el.rootKey === "w:tr" || el.rootKey === "w:tc")) {
+      (el.root || []).forEach((k) => { if (k && (k.rootKey === "w:tr" || k.rootKey === "w:tc" || k.rootKey === "w:p" || k.rootKey === "w:tbl")) __dropKeepNext(k, depth + 1, true); });
+    }
+  };
+  const __clearTrailingKeepNext = (els) => {
+    if (!Array.isArray(els)) return els;
+    els.forEach((el) => { if (el && el.rootKey === "w:tbl") __dropKeepNext(el, 0, true); });
+    for (let i = els.length - 1, n = 0; i >= 0 && n < 3; i--, n++) __dropKeepNext(els[i], 0, true);
+    return els;
+  };
+  const makeBodyRow = (sbEls, mnEls, withHeader) => (__clearTrailingKeepNext(sbEls), __clearTrailingKeepNext(mnEls), new TableRow({
     cantSplit: false,
     // 1.14.55: a repeated slim header strip on pages 2+ costs ~900 DXA;
     // shrink those pages' body min so the total stays inside the sheet.
     height: { value: withHeader ? PAGE1_BODY_MIN : style && style.repeatHeader === true ? CONT_BODY_MIN - 900 : CONT_BODY_MIN, rule: "atLeast" },
     children: sidebarOnRight ? [makeMainCell(mnEls, withHeader), makeSidebarCell(sbEls, withHeader)] : [makeSidebarCell(sbEls, withHeader), makeMainCell(mnEls, withHeader)]
-  });
+  }));
   // PHOTO-SIDEBAR-BRIDGE-001 (1.14.51): in bridge mode the candidate header
   // is SPLIT on the page grid — the left cell (sidebar width) is the photo
   // zone the floating medallion rises into, the right cell carries the text.
@@ -27216,7 +27239,12 @@ function renderSection(s, ctx, isSidebar) {
   // real Word page break, so the same segment chunking works there too. Fire
   // for the sidebar OR the linear CL. Safe superset: only engages when an item
   // carries _page>=2 (set by the measurer); CV main-column lists are excluded.
-  const _listSplitEligible = isSidebar || (ctx && ctx.doc === "cl");
+  // MAIN-LIST-PAGE-SEGMENTS-001 (owner 2026-10-01 "reasonable both in libre and word"): a two-column CV MAIN list
+  // split across pages (PUBLICATIONS items on pages 2 and 3) was not chunked, so the body renderer put its
+  // "(CONT.)" part inside the page-2 cell behind a real pageBreakBefore - a page break in the middle of a page
+  // row: Word and LibreOffice both pushed the page-3 table a page later (4 pages; #3501). In the two-column
+  // CV the main list now splits into page segments like the sidebar (the page-table builder sets the flag).
+  const _listSplitEligible = isSidebar || (ctx && ctx.doc === "cl") || !!(ctx && ctx._twoColPaged);
   if (
     _listSplitEligible && !s._antcvSegment && Array.isArray(s.items) && s.items.length > 1 &&
     (s.type === "labeled_list" || s.type === "list" || s.type === "list_italic" || s.type === "education")
@@ -27245,7 +27273,11 @@ function renderSection(s, ctx, isSidebar) {
           items: ch.items.map((it) => (it && typeof it === "object") ? (() => { const c = Object.assign({}, it); delete c._page; return c; })() : it),
           _antcvSegment: true,
           title: ci > 0 ? (ctx.style && ctx.style.contHeadlines === false ? "" : (s.title || "") + " " + (ctx.contSuffix || "(CONT.)")) : s.title,
-          pageBreakBefore: ci > 0 ? true : s.pageBreakBefore,
+          // the first chunk keeps its own leading break when it starts on page >= 2 (its items' _page is
+          // stripped above, which used to drop it); assembleColumn strips it when that page is already current.
+          pageBreakBefore: ci > 0 ? true : (ch.page >= 2 ? true : s.pageBreakBefore),
+          // the section footer line (PUBLICATIONS "All publications: ...") closes the LAST part only
+          ...(s.masterSite && ci < chunks.length - 1 ? { masterSite: void 0 } : {}),
         });
         out2.push(...renderSection(seg, ctx, isSidebar));
       });

@@ -217,7 +217,11 @@
   // that then let ~1-2 lines too many onto page 1 (the "fabrication, lithography,
   // deposition, etch, DRIE, plasma" line should have flowed to page 2). 200 overcorrected
   // the other way. 190 is the confirmed middle value via a second live A/B round.
-  var SIDEBAR_PAGE1_BAND = 142;   // CPH-BAND-152-001: -48 px with the band
+  // EXPORT-PAGE-BUDGET-001 (owner 2026-10-01): the sidebar renders 1.19x the preview in LibreOffice and
+  // ~1.27x in Word (Word wraps narrow sidebar rows a few % wider). Page-1 sidebar capacity ~900 export px
+  // (TOOLS heading to sheet bottom) / 1.27 = ~709, less the uncounted first heading = ~690 span px ->
+  // band = __uniLimit (924) - 690 ~= 230. Word-safe; LibreOffice keeps ~30 px spare. Was 142 on row costs.
+  var SIDEBAR_PAGE1_BAND = 230;   // CPH-BAND-152-001 + EXPORT-PAGE-BUDGET-001
   // KEEP-WHOLE only applies to sections up to this FRACTION of a page. A big SIDEBAR section
   // (the 25-item REGULATORY CONTEXT) is ~80% of a page: keeping it whole whole-moves it to the
   // next page and leaves the prior page's sidebar short. Splitting it instead BALANCES it across
@@ -245,7 +249,15 @@
   // HEADER on page 1 while its body overflowed to page 2 (orphan). The owner live-tuned
   // via AntcvAutoPagebreak.config({MAIN_PDF_LINE_BONUS}) and found 0-40 place the role
   // whole on page 2; 20 = the middle (robust against run-to-run measurement noise).
-  var MAIN_PDF_LINE_BONUS = 20;
+  // EXPORT-PAGE-BUDGET-001 (owner 2026-10-01): with SPAN costs (headings + gaps now counted) the page-1
+  // main budget is calibrated on real exports of #3501 - main column renders 1.12x the preview in BOTH
+  // LibreOffice and Word (line pitch: Calibri single x1.05 vs the preview's 1.15), page-1 main capacity
+  // ~907 px from the PROFILE heading to the sheet bottom -> ~810 preview px, less the uncounted first
+  // heading and ~3% wrap safety = ~772 = __uniLimit + 0 - PAGE1_BAND. Was +20 on row-only costs.
+  var MAIN_PDF_LINE_BONUS = 0;
+  // EXPORT-PAGE-BUDGET-001: largest gap (px) a block can inherit from the block above it in the same
+  // column box - a section heading plus section spacing is ~45-70 px; anything larger is layout slack.
+  var SPAN_GAP_MAX = 90;
   // MAIN-PAGE-N-BAND (owner 2026-06-25 "Research Assistant should start page 3"): pages 2+ of the
   // MAIN carry a "(CONT.)" experience header + the export renders roles slightly taller, so the
   // export page-2 main holds FEWER roles than USABLE_PDF suggests. Deduct this from the main's
@@ -1011,6 +1023,7 @@
               // keys). rich_block renders a {grp} header as a bold DIV with no "CODE:" colon;
               // item rows are <p> "CODE: desc". This marks where a group starts for keep-whole.
               grpHead: (__rEl.tagName === 'DIV' && !/:/.test((__rEl.textContent || '').slice(0, 40))),
+              col: c,
               top: (__rc.top - colTop) / scale,
               bottom: (__rc.bottom - colTop) / scale,
             });
@@ -1024,6 +1037,7 @@
             __uniBucket.push({
               sid: __qSidEl ? __qSidEl.getAttribute('data-sid') : null,
               kind: 'role', key: __qEl.getAttribute('data-antcv-role-index'),
+              col: c,
               top: (__qc.top - colTop) / scale,
               bottom: (__qc.bottom - colTop) / scale,
             });
@@ -1043,6 +1057,7 @@
             __uniBucket.push({
               sid: __wSidEl ? __wSidEl.getAttribute('data-sid') : null,
               kind: 'table', key: 'tr' + __wi,
+              col: c,
               top: (__wc.top - colTop) / scale,
               bottom: (__wc.bottom - colTop) / scale,
             });
@@ -1187,12 +1202,27 @@
           // original raw budget and stays stable (inflating page 1 wrongly split TOOLS & METHODS
           // off it — owner 2026-06-25). Only pages 2+ get the tighter export-equivalent budget.
           var __nLimit = nLim;
+          // EXPORT-PAGE-BUDGET-001 (owner 2026-10-01 "the LibreOffice/Word page budget"): a block's cost is
+          // its SPAN in the column - its own height PLUS the gap above it (section heading, table header row,
+          // section and paragraph spacing). The old cost was the bare row height, so headings and gaps were
+          // never counted: on #3501 page 1's main column was planned at 782 px of rows while it really spanned
+          // 944 px of preview, and both Word and LibreOffice spilled it onto an extra page. The gap is taken
+          // from the previous block in the SAME page-box column (running bottom, so nested/overlapping blocks
+          // add only what sticks out), capped at SPAN_GAP_MAX; the first block of a column box adds no gap.
+          var __runBottom = {};
+          ordered.forEach(function (b) {
+            var ck = String(b.col == null ? '' : b.col);
+            var rb = __runBottom[ck];
+            var start = (rb == null) ? b.top : Math.max(rb, b.top - SPAN_GAP_MAX);
+            b.__h = Math.max(0, b.bottom - Math.min(start, b.bottom));
+            if (rb == null || b.bottom > rb) __runBottom[ck] = b.bottom;
+          });
           var grpTot = {};
-          ordered.forEach(function (b) { var gk = __groupOf(b.sid, b.key); grpTot[gk] = (grpTot[gk] || 0) + Math.max(0, b.bottom - b.top); });
+          ordered.forEach(function (b) { var gk = __groupOf(b.sid, b.key); grpTot[gk] = (grpTot[gk] || 0) + b.__h; });
           var used = 0, page = 1, out = [], curGroup = null, curGroupCount = 0, curGroupHeaderH = 0, curGroupIsRealHead = false;
           for (var i = 0; i < ordered.length; i++) {
             var b = ordered[i];
-            var h = Math.max(0, b.bottom - b.top);
+            var h = b.__h;
             // PAGE 1 is SHORTER than pages 2+ — the candidate header band sits above both
             // columns (worker: page-1 body ~2978 DXA less). Deduct PAGE1_BAND from page 1's
             // budget so the columns don't over-fill page 1 (which is why certs + the later
@@ -1624,6 +1654,17 @@
 
   var lastWritten = null;
   var lastWrittenPreview = null;   // 1.50.316: separate change-guard for the preview map
+  // EXPORT-PAGE-BUDGET-001: breaks are sticky, so the application already open on a device kept the plan made
+  // with the old row-only budget. Drop both maps ONCE per budget revision; the next pass re-plans them
+  // (opening another application already clears them - app.js __pgk).
+  var BUDGET_REV = '2026-10-01-span';
+  try {
+    if (localStorage.getItem('antcv:autoPagesRev') !== BUDGET_REV) {
+      localStorage.removeItem(AUTO_KEY);
+      localStorage.removeItem(PREVIEW_KEY);
+      localStorage.setItem('antcv:autoPagesRev', BUDGET_REV);
+    }
+  } catch (_) {}
   var lastSourceFp = null;   // 1.50.269: source fingerprint of last compute
   var writeTimes = [];
   var brokenUntil = 0;

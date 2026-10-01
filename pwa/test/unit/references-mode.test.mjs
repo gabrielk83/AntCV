@@ -38,7 +38,7 @@ test('default is Exposed: two most relevant referees, no phone or e-mail', () =>
   sb.ctx.window.__antcvReferencesApply();
   const items = sb.rec().items;
   assert.deepEqual(items.map((i) => i.deg), ['Ada Example', 'Bo Eksempel']);
-  assert.match(items[0].sch, /^CBO, LidarCo \(senior leader at LidarCo\) - contact details via me$/);
+  assert.match(items[0].sch, /^CBO, LidarCo \(senior leader at LidarCo\) - contact details available upon request$/);
   assert.ok(!items.some((i) => /@|\+?\d[\d\s]{6,}/.test(i.sch)), 'no e-mail or phone');
   assert.deepEqual(sb.rec()._refsGeneric, GENERIC, 'generic line kept for the switch back');
 });
@@ -84,5 +84,5 @@ test('a Danish CV uses the referee Danish fields and the Danish contact phrase',
   const pool = [{ name: 'Bo Eksempel', title: 'Head coach', title_da: 'Cheftræner', org: 'City Rugby', relation: 'coach', relation_da: 'træner', lang: 'da', tags: ['dansk'] }, POOL[0]];
   const sb = sandbox({ language: 'da', personalInfo: JSON.stringify({ name: 'X', referees: pool }), 'antcv:lastJdText': 'dansk' });
   sb.ctx.window.__antcvReferencesApply();
-  assert.equal(sb.rec().items[0].sch, 'Cheftræner, City Rugby (træner) - kontaktoplysninger via mig');
+  assert.equal(sb.rec().items[0].sch, 'Cheftræner, City Rugby (træner) - kontaktoplysninger på forespørgsel');
 });

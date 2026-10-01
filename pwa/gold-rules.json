@@ -53,7 +53,7 @@
           "label": "Deliverables",
           "meaning": "what you created or completed: products, projects, plans, processes, systems, workshops, reports",
           "example": "Built the project template every supplier-developed hardware project now runs on.",
-          "detect_pattern": "\\b(?:built|build|developed|designed|created|delivered|launched|shipped|released|set up|established|introduced|wrote|authored|drafted|defined|implemented|deployed|facilitated|ran|qualified|patented|published|produced|completed|founded|prototyped|commissioned)\\b",
+          "detect_pattern": "\\b(?:built|build|developed|designed|created|delivered|launched|shipped|released|set up|established|introduced|wrote|authored|drafted|defined|implemented|deployed|facilitated|ran|qualified|patented|published|produced|completed|founded|prototyped|commissioned|live on|templates?|one-pagers?|patents?|prototypes?|demonstrators?|roadmaps?|guides?|reports?|workshops?|toolkits?|checklists?)\\b",
           "jd_pattern": "\\b(?:deliver\\w*|build\\w*|develop\\w*|design\\w*|launch\\w*|roadmap\\w*|prototyp\\w*|documentation|establish\\w*|new products?|from concept|from idea|introduc\\w*|creat\\w*|ship\\w*|release\\w*|plans?|specifications?)\\b"
         },
         "improvements": {
@@ -67,7 +67,7 @@
           "label": "Business and target audience",
           "meaning": "value at what scale: who benefited and how many (users, customers, teams, sites, countries)",
           "example": "Gave 100 users across 150 machines a backup they could restore themselves.",
-          "detect_pattern": "\\d[\\d,.]*\\s*\\+?\\s*(?:users|customers|clients|employees|engineers|operators|coaches|players|clubs|countries|markets|sites|plants|factories|teams|departments|oems?|suppliers|units|machines|vehicles|devices|schools)\\b|\\b(?:across|in)\\s+(?:\\d+|two|three|four|five|six|seven|eight|nine|ten)\\s+(?:countries|markets|sites|continents|regions|plants)\\b|\\b(?:worldwide|global(?:ly)?|tier[- ]1|international(?:ly)?)\\b",
+          "detect_pattern": "\\d[\\d,.]*\\s*\\+?\\s*(?:users|customers|clients|employees|engineers|operators|coaches|players|clubs|countries|markets|sites|plants|factories|teams|departments|oems?|suppliers|units|machines|vehicles|devices|schools|guests|members|players|attendees|participants)\\b|\\$\\s?\\d|\\b(?:revenue|nre)\\b|\\b(?:across|in)\\s+(?:\\d+|two|three|four|five|six|seven|eight|nine|ten)\\s+(?:countries|markets|sites|continents|regions|plants)\\b|\\b(?:worldwide|global(?:ly)?|tier[- ]1|international(?:ly)?)\\b",
           "jd_pattern": "\\b(?:customers?|clients?|users?|end[- ]users?|markets?|global\\w*|international\\w*|countries|worldwide|scale|community|clubs?|coaches|partners?|commercial|business case|revenue|growth)\\b"
         }
       },

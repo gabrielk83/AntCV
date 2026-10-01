@@ -37,6 +37,9 @@ check("performance: multiplier", "performance" in t("Cut LiDAR unit cost 10x by 
 check("deliverables: built", "deliverables" in t("Built the PMA template for supplier hardware."))
 check("improvements: standardised", "improvements" in t("Standardised gate reviews across in-house and supplier work."))
 check("audience: users across machines", "audience" in t("Backup for 100 users across 150 machines."))
+check("deliverables: noun-led result", "deliverables" in t("PMA template v2, supplier one-pager and a pilot project."))
+check("audience: money and revenue", "audience" in t("Supported an $8M customer NRE program, about 30% of FY2025 revenue."))
+check("audience: guests", "audience" in t("Club events drawing 300 guests."))
 check("descriptor is not audience", "audience" not in t("Coordinated a 7-person optics team."))
 
 jd_cost = "We need someone to keep cost, schedule and budget on plan, with quality and lead time KPIs."

@@ -68,6 +68,23 @@ SYS = ("You are a sharp, honest career analyst advising a specific candidate on 
        "}")
 
 
+QBANK = os.path.join(os.path.dirname(os.path.abspath(__file__)), "employer_questions.json")
+
+
+def question_bank_block():
+    """Compact listing of employer_questions.json for the prompt; '' if the file is missing."""
+    try:
+        qs = json.load(open(QBANK, encoding="utf-8")).get("questions") or []
+    except Exception:
+        return ""
+    lines = [f"- [{q.get('pattern')}] {q.get('text')}" + (f" (use when: {q['use_when']})" if q.get("use_when") else "")
+             for q in qs]
+    return ("QUESTION BANK (patterns for questions_to_employer). Pick 3-5 that fit THIS job. "
+            "Tie each one to a specific line in the job description, fill every {placeholder}, "
+            "and never ask what the job description already answers. Always include one "
+            "'challenges' question.\n" + "\n".join(lines))
+
+
 def analyze(app_id, model, provider="anthropic"):
     cv, cl, pi, sc, meta, language, a = MD.job_context_for_app(app_id)
     jd = str(a.get("jd_text") or "")[:9000]
@@ -82,6 +99,7 @@ def analyze(app_id, model, provider="anthropic"):
             f"JOB DESCRIPTION:\n{jd}\n\n"
             f"CANDIDATE TAILORED CV (sections JSON):\n{cvtxt}\n\n"
             f"CANDIDATE FULL BACKGROUND (kernel digest):\n{kdigest}\n\n"
+            f"{question_bank_block()}\n\n"
             "Analyze the fit and return the JSON.")
     text = _post(provider, model, SYS, user)
     m = re.search(r"\{.*\}", text, re.S)

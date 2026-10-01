@@ -59,7 +59,12 @@ needs-live-env — carry forward.
 
 ## Row 76 — JOBTRACKER-LLM-REFIT-BUTTON-001
 
-_verified: 2026-09-20_
+_verified: 2026-10-01_
+
+**Re-verify 2026-10-01 (CI nightly — E1 stalest slot):** unchanged on HEAD `f6f6f68c` — still a
+deferred OPTIONAL enhancement, not a defect. Deterministic Top-5 fit ranking is by design; the
+on-demand "re-judge fit" LLM button is only worth building if the deterministic tier proves too
+coarse on real edge JDs. No code owed; nothing regressed. Kept ACTIVE (optional, low priority).
 
 **Re-verify 2026-09-20 (CI nightly — E1 stalest slot):** unchanged on HEAD `bbc5f534` — still a
 deferred OPTIONAL enhancement, not a defect. Deterministic Top-5 fit ranking is by design; the
@@ -87,7 +92,13 @@ too coarse on real edge JDs — no such evidence has surfaced. No code owed; kee
 
 ## Row 82 — ROLE-CANON-AUDIT-LEG-001
 
-_verified: 2026-09-20_
+_verified: 2026-10-01_
+
+**Re-verify 2026-10-01 (CI nightly — E1 stalest slot): CODE LEG STILL DONE.** Re-ran
+`scripts/job-tracker/test_gold_residue.py` on HEAD `f6f6f68c` — **18/18 checks pass**;
+`role_canon_issues(cv, lang, gold)` still wired into `run()` as `checks["role_canon"]`
+(`gold_audit.py`). Unchanged since 2026-08-27; only the owner-gated es/zh canon-wording eyeball
+remains. Kept ACTIVE for that owner pass.
 
 **Re-verify 2026-09-20 (CI nightly — E1 stalest slot): CODE LEG STILL DONE.** Re-ran
 `scripts/job-tracker/test_gold_residue.py` on HEAD `bbc5f534` — **18/18 checks pass**;
@@ -124,7 +135,14 @@ agent/code work is complete.
 
 ## Row 94 — CONTENT-LANG-STAMP-001
 
-_verified: 2026-09-20_
+_verified: 2026-10-01_
+
+**Re-verify 2026-10-01 (CI nightly — E1 stalest slot, code-presence):** the `content_language` field
+is still present in `pwa/app.js` (2 references) AND in the access-relay whitelist
+(`workers/access-relay/src/index.js`); the `1.51.4446-content-lang-stamp` code leg is INTACT on HEAD
+`f6f6f68c`, suite 1746/1746 green. REMAINING unchanged: a live generate/translate-persist regen
+confirming the stamp is written and read authoritatively (needs real models — CI cannot drive). Kept
+ACTIVE, model-gated.
 
 **Re-verify 2026-09-20 (CI nightly — E1 stalest slot, code-presence):** the `content_language` field
 is still present in `pwa/app.js` (2 references) AND in the access-relay whitelist
@@ -664,7 +682,14 @@ _verified: 2026-09-29_
 
 ## Row 47 — MOBILE-TOPBAR-SAFEAREA-001
 
-_verified: 2026-09-21_
+_verified: 2026-10-01_
+
+**2026-10-01 (CI nightly, verify-first):** fix still intact on HEAD `f6f6f68c` — `.antcv-topbar` top
+safe-area padding (`env(safe-area-inset-top)) 12px 8px 12px`) present in BOTH `pwa/app.src.js` and the
+`pwa/app.js` mirror [1 ref each]; `antcv-topbar-tools-347.js` still loaded and still skips relocating
+`#antcv-pdf-preview-fab` into the topbar ≤900px [2 refs]. The redundant `antcv-mobile-export-fab.js` is
+correctly ABSENT. Suite 1746/1746 green. REMAINING: live phone re-verify of the FAB-relocation on a real
+device (owner/desktop-gated — no device in CI). Kept ACTIVE.
 
 **2026-09-21 (CI nightly, verify-first):** fix intact — `.antcv-topbar` top safe-area padding (`env(safe-area-inset-top)) 12px 8px 12px`) present in the `pwa/app.js` mirror [1 ref]; `antcv-topbar-tools-347.js` still loaded (skips relocating `#antcv-pdf-preview-fab` into the topbar ≤900px). The redundant `antcv-mobile-export-fab.js` is correctly ABSENT (removed same-session as redundant — see row 48). Suite green. REMAINING: live phone re-verify of the FAB-relocation on a real device (owner-gated). Kept ACTIVE.
 
@@ -704,7 +729,13 @@ _verified: 2026-09-21_
 
 ## Row 50 — UPLOAD-SCREEN-TOP-CLIP-001
 
-_verified: 2026-09-21_
+_verified: 2026-10-01_
+
+**2026-10-01 (CI nightly, verify-first):** fix still intact on HEAD `f6f6f68c` —
+`pwa/test/unit/upload-screen-top-clip.test.mjs` (scoped `.fade` flex-start match + dead-`scrollTop`-ref
+removal, both bundles) is green in the 1746/1746 suite, so the center→flex-start fix has not regressed.
+REMAINING: owner live re-verify (with and without an active background generation — no device in CI).
+Kept ACTIVE.
 
 **2026-09-21 (CI nightly, verify-first):** fix intact — the upload-screen `.fade` block carries `justifyContent:"flex-start"` (the old centering value gone) in both bundles, and `pwa/test/unit/upload-screen-top-clip.test.mjs` (scoped block match + dead-`scrollTop`-ref removal, both app.src.js and the app.js mirror) is green in the 1715/1715 suite. No regression. REMAINING: owner live re-verify (with and without an active background generation). Kept ACTIVE.
 
@@ -718,7 +749,12 @@ _verified: 2026-09-21_
 
 ## Row 51 — PREVIEW-SCROLL-JITTER-001
 
-_verified: 2026-09-21_
+_verified: 2026-10-01_
+
+**2026-10-01 (CI nightly, verify-first):** fix still intact on HEAD `f6f6f68c` —
+`pwa/test/unit/preview-scroll-jitter.test.mjs` green in the 1746/1746 suite (cosmetic deps `Ke, ya`
+still absent from the fit-recompute effect's dependency array in both bundles). No regression.
+REMAINING: owner live re-verify (no device in CI). Kept ACTIVE.
 
 **2026-09-21 (CI nightly, verify-first):** fix intact — `pwa/test/unit/preview-scroll-jitter.test.mjs` green in the 1715/1715 suite (the cosmetic deps `Ke, ya` / navyColor+styleConfig removed from the fit-recompute effect's dependency array in both bundles, so a silent brand/font change no longer snaps the reader's scroll position; doc/language resets preserved). No regression. REMAINING: owner live re-verify. Kept ACTIVE.
 

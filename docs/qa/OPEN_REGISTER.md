@@ -43,9 +43,9 @@ citing an old number may mean either row — the ID disambiguates.
 | # | ID | verified | scope |
 |---|---|---|---|
 | 38 | `GEN-BACKGROUND-001` | 2026-09-29 | CLIENT — ENGINE SHIPPED 1.51.132 (antcv-gen-job-client.js, window.AntcvGenJob, 8 tests, ine |
-| 76 | `JOBTRACKER-LLM-REFIT-BUTTON-001` | 2026-09-20 | (deferred enhancement) — the fit SCORE that orders the Top-5 is deterministic by design (ranking stability). O |
-| 82 | `ROLE-CANON-AUDIT-LEG-001` | 2026-09-20 | (follow-up) — export-audit leg NOW WIRED + green (gold_audit.py role_canon_issues, test_gold_residue 18/18); only es/zh eyeball owner-gated |
-| 94 | `CONTENT-LANG-STAMP-001` | 2026-09-20 | CODE SHIPPED 1.51.4446-content-lang-stamp (D1 content_language column + relay whitelist + both app.js legs). R |
+| 76 | `JOBTRACKER-LLM-REFIT-BUTTON-001` | 2026-10-01 | (deferred enhancement) — the fit SCORE that orders the Top-5 is deterministic by design (ranking stability). O |
+| 82 | `ROLE-CANON-AUDIT-LEG-001` | 2026-10-01 | (follow-up) — export-audit leg NOW WIRED + green (gold_audit.py role_canon_issues, test_gold_residue 18/18); only es/zh eyeball owner-gated |
+| 94 | `CONTENT-LANG-STAMP-001` | 2026-10-01 | CODE SHIPPED 1.51.4446-content-lang-stamp (D1 content_language column + relay whitelist + both app.js legs). R |
 | 25 | `TABLE-GEOMETRY-PARITY-001` | 2026-09-27 | Table geometry parity — diagnose real CloudConvert PDF vs preview measurement |
 | 6 | `BANNED-WORDS-MERGE-001` | 2026-09-27 | Wizard/Settings UX — owner eyeball gate on merged banned-words UI + 6-file loader test |
 | 8 | `KERNEL-V2-READER-001` | 2026-09-27 | Kernel v2 — bullets-path v2 migration, es/zh tier, §6 regression pass on uploaded docx |
@@ -67,10 +67,10 @@ citing an old number may mean either row — the ID disambiguates.
 | 42 | `GEN-LANGFAB-001` | 2026-09-29 | fabricated languages (invented German, wrong Danish); deterministic language-fact belt vs ke |
 | 43 | — | 2026-09-29 | CA-006 — Application label bleeds into first role title; guard the write site. |
 | 44 | `JD-ANALYSIS-PRINT-001` | 2026-09-29 | analysis PDF button exports the CV; fix the export doc-type. |
-| 47 | `MOBILE-TOPBAR-SAFEAREA-001` | 2026-09-21 | + MOBILE-TOPBAR-EXPORT-FAB-001 (owner, mobile P0) — top bar unreachable at 100% zoo |
+| 47 | `MOBILE-TOPBAR-SAFEAREA-001` | 2026-10-01 | + MOBILE-TOPBAR-EXPORT-FAB-001 (owner, mobile P0) — top bar unreachable at 100% zoo |
 | 49 | `SIDEBAR-GROUP-PAGE-BREAK-001` | 2026-09-21 | (owner, design guidance) — a very long TOOLS & METHODS group (e.g. "Project & del |
-| 50 | `UPLOAD-SCREEN-TOP-CLIP-001` | 2026-09-21 | (owner 2026-07-05, same live session as rows 46-49): the upload screen's EN/gear/Editor header row was still c |
-| 51 | `PREVIEW-SCROLL-JITTER-001` | 2026-09-21 | (owner 2026-07-05, live session, reported as two symptoms: "application analysis panel is stuck again, does no |
+| 50 | `UPLOAD-SCREEN-TOP-CLIP-001` | 2026-10-01 | (owner 2026-07-05, same live session as rows 46-49): the upload screen's EN/gear/Editor header row was still c |
+| 51 | `PREVIEW-SCROLL-JITTER-001` | 2026-10-01 | (owner 2026-07-05, live session, reported as two symptoms: "application analysis panel is stuck again, does no |
 | 39 | `GEN-MODELROLE-001` | 2026-09-30 | code shipped AND MODEL_ROLES set in both wrangler.toml (owner map; coherence now `openai`). Remaining = live-deplo |
 | 53 | `CROSS-APP-EXPORT-CONTAMINATION-001` | 2026-09-22 | leg (a) P0 SHIPPED (1.51.639 scope-guard → reworked MIRROR-LOAD-001 1.51.680); legs b-f open — (owner 2026-07-06, P0 — real export) — target was the KOMBIT "AI-udvikler"  |
 | 54 | `GEN-JD-TAILOR-KERNEL-RECALL-001` | 2026-09-22 | (owner 2026-07-07) — targeted tailoring narrows/compresses to the JD but does  |

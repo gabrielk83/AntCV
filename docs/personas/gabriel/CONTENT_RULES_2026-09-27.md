@@ -26,6 +26,7 @@ Owner-issued rules from the executive-linear package batch (Terma 1030–1034, H
 | "I" (PROFILE-VOICE-001) | Written with "I". Never third person, never "Experienced engineer with…". |
 | From me to them (PROFILE-VOICE-001) | Only the opening sentence is personal: "I am a <role> who…" + 1–2 real results. After it, every sentence faces the company: "<Company> does X / faces Y" → "As your <role> I will…" + outcome. Never "I'm excited / I enjoy / I'm drawn to / I thrive / I want to develop". |
 | No buzzword list (PROFILE-NO-BUZZWORD-LIST-001) | Every sentence has a subject, a verb and something concrete. No stacks of adjectives or nouns ("Results-driven, detail-oriented…", "Risk, agile, delivery"). |
+| Trackman is an internship | In body text (profile, experience bullets, letter) say it plainly: "I am an intern in hardware development at Trackman". The header/title line stays as is (owner 2026-10-01). |
 | Structure | Who I Am / How I Work / What I Bring. Name the target company. Name past work by product, not by Israeli employer names (Trackman stays when relevant). |
 
 Checks: `pwa/antcv-profile-rules.js` (Layout control + `pwa/test/unit/profile-slogan.test.mjs`). Prompt rules: `pwa/gold-rules.json` prompt_block 1.8.0. Current Veo and Hamamatsu profiles: `PROFILES_2026-10-01_veo-hamamatsu.md`.

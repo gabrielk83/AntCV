@@ -26,5 +26,5 @@ Changes from the rework in `06_cv-profiles-rework_guide-p10-15.pdf`:
 **MAKE THE CASE BEFORE THE SPEC**
 
 **Who I Am:** I am a hardware product manager and systems architect who has spent 15+ years taking camera, optical and sensor products from a written case to shipped units: a 20 MP hybrid-AF smartphone camera, an automotive LiDAR with a 10× unit-cost cut, defence sights qualified to MIL-STD-810.
-**How I Work:** You get a written argument behind every decision and results reported straight, including when a product is not working; I work in hardware development at Trackman and coach rugby at weekends, so I know your user at halftime.
+**How I Work:** You get a written argument behind every decision and results reported straight, including when a product is not working; I am an intern in hardware development at Trackman and coach rugby at weekends, so I know your user at halftime.
 **What I Bring:** Veo cameras already follow the play in 90+ countries, so the next one needs a step change in cost, optics or portability. As Veo's Staff Hardware Product Manager I will put the user, willingness to pay and unit economics on paper before anyone writes requirements, and bring optics, thermal, battery and cost into the decision while a change still costs a conversation, not a year.

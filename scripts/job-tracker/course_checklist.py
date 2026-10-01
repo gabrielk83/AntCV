@@ -70,7 +70,10 @@ def read_cv(path):
     ext = os.path.splitext(path)[1].lower()
     if ext == ".pdf":
         try:
-            import fitz  # PyMuPDF
+            try:
+                import pymupdf as fitz  # PyMuPDF >= 1.24; `import fitz` prints a deprecation line to stdout
+            except ImportError:
+                import fitz
             d = fitz.open(path)
             text = "\n".join(d[p].get_text() for p in range(d.page_count))
             return text, d.page_count, bool(d[0].get_images()) if d.page_count else False

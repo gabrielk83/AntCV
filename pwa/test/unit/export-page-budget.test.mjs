@@ -36,3 +36,10 @@ test('page-1 budgets: main bonus 0, sidebar band 230, gap cap 90', () => {
   assert.ok(/var SIDEBAR_PAGE1_BAND = 230;/.test(src));
   assert.ok(/var SPAN_GAP_MAX = 90;/.test(src));
 });
+
+test('one-time re-plan per budget revision (sticky maps of the open application)', () => {
+  assert.ok(/var BUDGET_REV = '2026-10-01-span';/.test(src));
+  const i = src.indexOf("localStorage.getItem('antcv:autoPagesRev') !== BUDGET_REV");
+  assert.ok(i > 0 && src.indexOf('localStorage.removeItem(AUTO_KEY);', i) > i && src.indexOf('localStorage.removeItem(PREVIEW_KEY);', i) > i);
+  assert.ok(src.indexOf('var AUTO_KEY') < i && src.indexOf('var PREVIEW_KEY') < i, 'keys declared before use');
+});

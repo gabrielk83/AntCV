@@ -1654,6 +1654,17 @@
 
   var lastWritten = null;
   var lastWrittenPreview = null;   // 1.50.316: separate change-guard for the preview map
+  // EXPORT-PAGE-BUDGET-001: breaks are sticky, so the application already open on a device kept the plan made
+  // with the old row-only budget. Drop both maps ONCE per budget revision; the next pass re-plans them
+  // (opening another application already clears them - app.js __pgk).
+  var BUDGET_REV = '2026-10-01-span';
+  try {
+    if (localStorage.getItem('antcv:autoPagesRev') !== BUDGET_REV) {
+      localStorage.removeItem(AUTO_KEY);
+      localStorage.removeItem(PREVIEW_KEY);
+      localStorage.setItem('antcv:autoPagesRev', BUDGET_REV);
+    }
+  } catch (_) {}
   var lastSourceFp = null;   // 1.50.269: source fingerprint of last compute
   var writeTimes = [];
   var brokenUntil = 0;

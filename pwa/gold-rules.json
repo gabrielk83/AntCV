@@ -119,6 +119,15 @@
       }
     ]
   },
+  "cv_pointers": {
+    "_doc": "CV-POINTERS-001 (owner 2026-10-01, Improve Business Academy slide 'A few (more) pointers'): the six pointers and where AntCV keeps each one.",
+    "picture": "header photo on the CV (circular, CV only); docx-worker header + photo controls",
+    "course_on_cv": "Improve Business Academy, Effective Job Creation Strategies (2026) is listed in the candidate's Certificates & courses data; certs carry no years in the render (certs.strip_years)",
+    "references": "named referees, 'contact details available upon request' (REFERENCES-ON-REQUEST-001, antcv-references-mode.js); no phone or e-mail",
+    "readable_font": "Calibri / Carlito body text; brand.per_app_only keeps decorative palettes off unmarked apps",
+    "skills_grouped": "few skills, grouped: hard skills in Core Competencies + Tools & Methods, soft skills in the 'Work style:' line (SKILLS-GROUPED-001 prompt line)",
+    "margins": "margins stay at the template value; page_budgets + the density fill band make content fit by compressing inside sections"
+  },
   "partners": {
     "name_only_with_jd_signal": true,
     "generic_replacements": {
@@ -278,6 +287,7 @@
     " - EVERY experience role carries its own Results line (ROLE-RESULTS-MANDATORY-001): the role's strongest REAL outcome in the source's own terms; a role without a Results line is an incomplete generation.",
     " - RESULT IMPACT TYPES (RESULTS-IMPACT-TYPES-001, owner 2026-10-01): write every Results line and achievement bullet as ONE of four impact types: PERFORMANCE (what increased, decreased or improved: time, cost, quality, efficiency, delivery, with its number), DELIVERABLES (what was created or completed: a product, plan, process, system, workshop series or report, with a count or scope), IMPROVEMENTS (what works better: faster, clearer, easier, standardised) or AUDIENCE (who benefited and at what scale: users, customers, teams, sites, countries). Per job, the type the job description asks for most gets weight when you choose a role's bullets and Results line (cost and schedule language favours PERFORMANCE; build and launch language favours DELIVERABLES; process language favours IMPROVEMENTS; customer, user and market language favours AUDIENCE). JD relevance (EVIDENCE-RANK-002) still ranks first and motivation lines stay as they are. Spread the types across roles so the CV shows more than one kind of impact; never invent a number or a scale to fit a type.",
     " - TRACKMAN IS AN INTERNSHIP (ROLE-BODY-NOTE-001, owner 2026-10-01): the Trackman role's body makes clear it is an internship (for example the first bullet label reads 'Hardware Project Management (internship):'); the role line itself (title, company, years) stays unchanged.",
+    " - SKILLS (SKILLS-GROUPED-001, owner 2026-10-01): do not go overboard on skills; keep them few and grouped: hard skills in the Core Competencies table and Tools & Methods, soft skills in the 'Work style:' line, never one long mixed list.",
     " - HOUSE SECTIONS ARE MANDATORY (HOUSE-SECTIONS-001): a commercial CV always carries Profile, 'Work style:' line, the Core Competencies table (Focus Area | Strategic Expertise), Experience, Education, and the sidebar set (Tools & Methods, Certificates, Languages, Interests - all six items - and Accessibility). Never drop a house section to hit a length target; compress WITHIN sections instead.",
     " - ACCESSIBILITY LINE (owner 2026-09-03, supersedes 2026-08-16): 'Hearing impaired; clear spoken communication and written follow-ups work well.' - the full line, never a bare 'Hearing impaired.' It belongs in the CV only; a cover letter carries no hearing line.",
     " - SLOGAN FUSION (SLOGAN-PERSONALITY-IMPACT-001): the positioning line fuses IMPACT with the candidate's PERSONALITY - prefer a word that carries both the temperament and the craft (gold: 'AN ELECTRO-OPTICS ENGINEER WHO TURNS MEASURED LIGHT INTO SHIPPED PRODUCT' - 'measured' is both the work style and the metrology).",

@@ -1928,18 +1928,6 @@ _verified: 2026-08-26_
 
 ---
 
-## Row 108 — JOBTRACKER-PYTEST-UNWIRED-001
-
-_verified: 2026-08-27_
-
-**OPEN-queue row (verbatim):**
-
-```
-| 108 | JOBTRACKER-PYTEST-UNWIRED-001 (found by the job-tracker nightly 2026-08-27) — the 14 network-free python tests under `scripts/job-tracker/` are run by HAND only. `scripts/run-tests.mjs` has no python leg and no workflow invokes them, so `test_check_postings.py`, `test_closed_row_gate.py`, `test_job_sources.py`, `test_gold_residue.py`, `test_cl_v5_structure.py` and the other nine are green-by-nobody-looking between the runs that happen to touch that directory. They are cheap (all 14 finish in seconds, zero network) and they guard the belts that decide whether a model call gets spent — the closed-row gate, the obsolescence classifier, the board parsers. Filed, NOT fixed blind: wiring python into the node suite is a separate change with its own failure mode (a missing interpreter on a CI runner turning the whole PWA suite red), so it wants a deliberate design — most likely an OPTIONAL python leg that SKIPS loudly when no interpreter is present rather than failing, plus the same treatment in the nightly. verified: 2026-08-27 |
-```
-
----
-
 ## Row 107 — IMPORT-REWRAP-SIBLING-DROP-001
 
 > **Renumbered 2026-08-26: was row 102.** A document written before that date citing "row 102" may mean this row or DEMAND-SEED-SEARCH-TOKEN-MISSING-001. The ID is the key.

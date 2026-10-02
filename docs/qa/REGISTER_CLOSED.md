@@ -4,6 +4,22 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 108 — JOBTRACKER-PYTEST-UNWIRED-001 — CLOSED 2026-10-02 (CI cloud nightly, evidence: suite run + guard test)
+
+_verified: 2026-10-02_
+
+_Found by the job-tracker nightly 2026-08-27; wired + closed by the CI cloud nightly 2026-10-02 (Opus 4.8, GitHub Actions)._
+
+**Evidence.** The repo's self-running `test_*.py` belts (now 18, up from the 14 at filing) ran by hand only — `scripts/run-tests.mjs` had no python leg, so the closed-row gate, obsolescence classifier and board parsers were green-by-nobody-looking between the runs that touched that dir. Wired an OPTIONAL python leg into the harness exactly as the row prescribed: `scripts/lib/python-test-leg.mjs` (`walkPyTests` scope-aware discovery + `pickPython` interpreter detection) and a scope-respecting leg in `run-tests.mjs`. Verified: (a) `node scripts/run-tests.mjs scripts/job-tracker` runs all 18 python belts, exit 0; (b) full `node scripts/run-tests.mjs` = 307 node files (2199 tests) + 18 python files, exit 0; (c) the two safety invariants proven — `node scripts/run-tests.mjs pwa` collects ZERO python tests (1782/1782 node, byte-for-byte unchanged, so the pre-push + CI gate is untouched), and a PATH with node-but-no-python prints a loud `SKIPPED` notice and exits 0 (a missing interpreter can NOT redden the suite). Guard test `scripts/tests/run-tests-python-leg.test.mjs` (7 checks: pwa-scope-empty, interpreter detection, fallback, null-on-absent, no-throw-on-error). "Same treatment in the nightly" is covered: every nightly/pre-push already runs `run-tests.mjs`, which now includes the python belts. Test-infra only, no `pwa/` asset, no version, no shift claim.
+
+**OPEN-queue row (verbatim):**
+
+```
+| 108 | JOBTRACKER-PYTEST-UNWIRED-001 (found by the job-tracker nightly 2026-08-27) — the 14 network-free python tests under `scripts/job-tracker/` are run by HAND only. `scripts/run-tests.mjs` has no python leg and no workflow invokes them, so `test_check_postings.py`, `test_closed_row_gate.py`, `test_job_sources.py`, `test_gold_residue.py`, `test_cl_v5_structure.py` and the other nine are green-by-nobody-looking between the runs that happen to touch that directory. They are cheap (all 14 finish in seconds, zero network) and they guard the belts that decide whether a model call gets spent — the closed-row gate, the obsolescence classifier, the board parsers. Filed, NOT fixed blind: wiring python into the node suite is a separate change with its own failure mode (a missing interpreter on a CI runner turning the whole PWA suite red), so it wants a deliberate design — most likely an OPTIONAL python leg that SKIPS loudly when no interpreter is present rather than failing, plus the same treatment in the nightly. verified: 2026-08-27 |
+```
+
+---
+
 ## Row 115 — JT-READY-LIST-CLOSED-001 — CLOSED 2026-10-01 (job-tracker nightly, evidence: live list + test)
 
 _verified: 2026-10-01_

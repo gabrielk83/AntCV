@@ -19,13 +19,16 @@
  *
  * Keys:
  *   antcv:cvProfileHeadingMode  'slogan' (default) | 'label'   — standing preference for gen
- * Data: sections.cv[id=profile].title (the rendered heading), .sloganTitle (last slogan).
+ * Format (owner 2026-10-01, "so it is clear that it still is a profile section"): the heading
+ * reads "<label>: <slogan>", e.g. "Profile: Make the case before the spec". The label is the
+ * section's own plain label (PROFILE / PROFIL …).
+ * Data: sections.cv[id=profile].title (the rendered heading), .sloganTitle (last slogan, bare).
  * Writes go to localStorage 'sections' + 'antcv:sections-updated' (same path as 759).
  * Kill: localStorage['antcv:disable-cv-profile-heading'] = '1'.
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.4790-profile-slogan';
+  var VERSION = '1.51.4791-profile-prefix';
   if (window.__antcvProfileHeading && window.__antcvProfileHeading.version === VERSION) return;
 
   var K_MODE = 'antcv:cvProfileHeadingMode';
@@ -41,20 +44,23 @@
   function clean(s) { return String(s == null ? '' : s).replace(/\s+/g, ' ').trim().replace(/[.]+$/, ''); }
   function isLabel(t) { var r = rules(); return r ? r.isPlainLabel(t) : /^(profile|profil)$/i.test(clean(t)); }
   function overlap(a, b) { var r = rules(); return r && a && b ? r.sloganOverlap(a, b) : []; }
+  function bare(t) { var r = rules(); return clean(r ? r.stripLabel(t) : String(t || '').replace(/^\s*profil[e]?\s*[:\-–—|]\s*/i, '')); }
+  function labelOf(t) { var r = rules(); var l = r ? r.labelOf(t) : ''; return l || LABEL; }
+  function withLabel(label, sl) { return label + ': ' + sl; }
 
   // ---- 1. generation hook (called from app.js; must never throw) ----
   function applyGen(sec, cvo, meta) {
     try {
       if (disabled() || !sec || sec.id !== 'profile') return sec;
-      var sl = clean((cvo && cvo.profile_slogan) || (meta && meta.profile_slogan) || '');
+      var sl = bare((cvo && cvo.profile_slogan) || (meta && meta.profile_slogan) || '');
       if (!sl || isLabel(sl)) return sec;
       var cl = clean((meta && meta.cl_slogan) || get('antcv:clSlogan', ''));
       var rep = overlap(sl, cl);
       var out = Object.assign({}, sec, { sloganTitle: sl });
-      var fallback = isLabel(sec.title) ? sec.title : LABEL;
+      var fallback = labelOf(sec.title);
       if (rep.length) { out.sloganRepeat = rep; out.title = fallback; return out; }
       delete out.sloganRepeat;
-      out.title = mode() === 'label' ? fallback : sl;
+      out.title = mode() === 'label' ? fallback : withLabel(fallback, sl);
       return out;
     } catch (_) { return sec; }
   }
@@ -123,15 +129,16 @@
 
     var textIn = document.createElement('input');
     textIn.type = 'text';
-    textIn.placeholder = 'Slogan, e.g. MAKE THE CASE BEFORE THE SPEC';
+    textIn.placeholder = 'Slogan, e.g. MAKE THE CASE BEFORE THE SPEC (shown as PROFILE: …)';
     textIn.style.cssText = 'width:100%;box-sizing:border-box;padding:5px 7px;border-radius:5px;border:1px solid rgba(1,183,187,0.35);' +
       'background:rgba(0,0,0,0.15);color:inherit;font-size:11px;text-transform:uppercase;';
     textIn.addEventListener('change', function () {
-      var v = clean(textIn.value);
-      if (!v) v = LABEL;
-      var patch = { title: v };
-      if (!isLabel(v)) { patch.sloganTitle = v; patch.sloganRepeat = undefined; set(K_MODE, 'slogan'); }
-      else set(K_MODE, 'label');
+      var s0 = profileSec();
+      var label = labelOf(s0 && s0.title);
+      var v = bare(textIn.value);
+      var patch;
+      if (!v || isLabel(v)) { patch = { title: v || label }; set(K_MODE, 'label'); }
+      else { patch = { title: withLabel(label, v), sloganTitle: v, sloganRepeat: undefined }; set(K_MODE, 'slogan'); }
       writeProfile(patch);
       refresh();
     });
@@ -142,15 +149,15 @@
     var bSlogan = btn('Slogan', function () {
       set(K_MODE, 'slogan');
       var s = profileSec();
-      if (s && s.sloganTitle) writeProfile({ title: s.sloganTitle });
+      if (s && s.sloganTitle) writeProfile({ title: withLabel(labelOf(s.title), bare(s.sloganTitle)) });
       refresh();
     });
-    var bLabel = btn('PROFILE', function () { set(K_MODE, 'label'); writeProfile({ title: LABEL }); refresh(); });
+    var bLabel = btn('PROFILE', function () { var s = profileSec(); set(K_MODE, 'label'); writeProfile({ title: labelOf(s && s.title) }); refresh(); });
     modeRow.appendChild(bSlogan); modeRow.appendChild(bLabel);
 
     var note = document.createElement('div');
     note.style.cssText = 'font-size:10px;color:#9ab;line-height:1.35;';
-    note.textContent = 'Replaces the word PROFILE above the CV profile. Must not repeat the cover-letter slogan.';
+    note.textContent = 'Shown as "PROFILE: <slogan>" above the CV profile. Must not repeat the cover-letter slogan.';
 
     var checks = document.createElement('div');
     checks.style.cssText = 'font-size:10px;line-height:1.45;color:#cdd;';
@@ -169,7 +176,7 @@
       body.style.display = open ? 'flex' : 'none';
       var s = profileSec();
       var title = s ? clean(s.title) : '';
-      if (document.activeElement !== textIn) textIn.value = title;
+      if (document.activeElement !== textIn) textIn.value = isLabel(title) ? '' : bare(title);
       var m = mode();
       paint(bSlogan, m === 'slogan'); paint(bLabel, m === 'label');
       bSlogan.disabled = !(s && s.sloganTitle);
@@ -177,7 +184,7 @@
       checks.textContent = '';
       var r = rules();
       if (!r || !s) return;
-      var slogan = isLabel(title) ? (s.sloganTitle || '') : title;
+      var slogan = isLabel(title) ? (s.sloganTitle || '') : bare(title);
       var res = r.checkProfile(profileText(s), { slogan: slogan, clSlogan: get('antcv:clSlogan', '') });
       if (s.sloganRepeat && s.sloganRepeat.length && isLabel(title)) {
         res.unshift({ ok: false, msg: 'Generated slogan "' + s.sloganTitle + '" repeated the cover letter (' + s.sloganRepeat.join(', ') + '); type a new one' });

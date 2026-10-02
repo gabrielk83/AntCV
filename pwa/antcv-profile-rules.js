@@ -8,9 +8,11 @@
  * Owner rules:
  *  - The profile never reads as a list of buzzwords.
  *  - Written with "I". The opening sentence is personal (introduce yourself by role); after it,
- *    turn to the company ("from me to them"): what they do or face, then "As your <role> I will…".
+ *    turn to the company ("from me to them"): what they do or face, then "As <Company>'s <role> I will…".
+ *    Never addressed to the reader: no "you / your" ("You get…", "Your engineers get…"), owner
+ *    2026-10-01: "use I instead of You", How I Work included.
  *    Never self-focused motivation ("I'm excited", "I enjoy", "I'm drawn to").
- *  - The heading "PROFILE" is replaced by a slogan. The slogan must not repeat the cover-letter
+ *  - The heading reads "Profile: <slogan>" (owner: "so it is clear that it still is a profile section"). The slogan must not repeat the cover-letter
  *    slogan: no shared content word.
  */
 (function (root, factory) {
@@ -27,7 +29,10 @@
     after: 1, every: 1, each: 1, one: 1, knack: 1, friendly: 1
   };
   // Plain section labels the slogan replaces (any UI language).
-  var PLAIN_LABELS = /^(profile|profil|perfil|个人简介|executive profile|professional profile|summary|resumé|resume|profilo)$/i;
+  var LABEL_ALT = 'profile|profil|perfil|个人简介|executive profile|professional profile|summary|resumé|resume|profilo';
+  var PLAIN_LABELS = new RegExp('^(' + LABEL_ALT + ')$', 'i');
+  // Owner 2026-10-01: the heading reads "Profile: <slogan>" so it is still clearly the profile section.
+  var LABEL_PREFIX = new RegExp('^(' + LABEL_ALT + ')\\s*[:\\-–—|]\\s*', 'i');
 
   // Trait labels and filler that turn a profile into a buzzword list.
   var BUZZ = [
@@ -70,6 +75,9 @@
     return A.filter(function (x) { return B.indexOf(x) >= 0; });
   }
   function isPlainLabel(t) { return PLAIN_LABELS.test(clean(t)); }
+  // "Profile: Make the case before the spec" -> "Make the case before the spec"
+  function stripLabel(t) { return clean(t).replace(LABEL_PREFIX, ''); }
+  function labelOf(t) { var m = clean(t).match(LABEL_PREFIX); return m ? m[1] : (isPlainLabel(t) ? clean(t) : ''); }
   function sentences(text) {
     return clean(text).split(/(?<=[.!?])\s+(?=[A-Z0-9"“(])/).map(function (s) { return s.trim(); }).filter(Boolean);
   }
@@ -104,9 +112,10 @@
       'Opens personal: "I am a <role> who…"');
     var rest = sents.slice(1).join(' ');
     var co = clean(opts.company);
-    var themRe = co ? new RegExp('\\byou(r)?\\b|' + co.split(/\s+/)[0].replace(/[^\p{L}\p{N}]/gu, '') , 'iu') : /\byou(r)?\b|\b[A-Z][\p{L}]+(?:'s)?\s+(team|cameras?|customers?|lab|products?|systems?)\b/u;
+    var themRe = co ? new RegExp(co.split(/\s+/)[0].replace(/[^\p{L}\p{N}]/gu, '') , 'iu') : /\b[A-Z][\p{L}]+(?:'s)?\s+(team|cameras?|customers?|lab|products?|systems?)\b/u;
     add('PROFILE-ME-TO-THEM-001', sents.length > 1 && themRe.test(rest),
-      'After the opening, turns to the company ("You / ' + (co || 'Company') + ' … As your <role> I will…")');
+      'After the opening, turns to the company ("' + (co || 'Company') + ' builds … As ' + (co || 'Company') + '\'s <role> I will…")');
+    add('PROFILE-NO-YOU-001', !/\b(you|your|you're|you'll|yours)\b/i.test(t), 'Written with "I", never "you / your"');
     add('PROFILE-NO-SELF-FOCUS-001', !SELF_FOCUSED.test(t), 'No "I\'m excited / I enjoy / drawn to"');
     var hits = buzzHits(t), lists = listSentences(t);
     add('PROFILE-NO-BUZZWORD-LIST-001', hits.length < 2 && lists.length === 0,
@@ -114,7 +123,7 @@
         : lists.length ? 'Reads as a list: "' + lists[0].slice(0, 60) + '…"'
           : 'Sentences, not a buzzword list');
 
-    var sl = clean(opts.slogan);
+    var sl = stripLabel(opts.slogan);
     if (opts.slogan !== undefined) {
       var words = sl ? sl.split(/\s+/).length : 0;
       add('PROFILE-SLOGAN-001', !!sl && !isPlainLabel(sl) && words >= 2 && words <= 9 && !/\.$/.test(sl),
@@ -127,11 +136,13 @@
   }
 
   return {
-    version: '1.0.0',
+    version: '1.1.0',
     checkProfile: checkProfile,
     sloganOverlap: sloganOverlap,
     contentStems: contentStems,
     isPlainLabel: isPlainLabel,
+    stripLabel: stripLabel,
+    labelOf: labelOf,
     buzzHits: buzzHits,
     listSentences: listSentences,
     sentences: sentences

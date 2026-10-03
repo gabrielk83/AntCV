@@ -61,21 +61,21 @@ citing an old number may mean either row — the ID disambiguates.
 | 27 | `MAIN-RUNT-ORPHAN-SWEEP-001` | 2026-09-29 | Orphan sweep v3 — work-style tail truncation, page-3 ghost, real-PDF 1.5-page verify |
 | 28 | `NIL-GEN-ADAPTATION-001` | 2026-09-29 | NIL gen adaptation — CV ~1.5-page gen-level target (current export still 5pp) |
 | 29 | `NIL-TARGETED-STATE-STICK-001` | 2026-09-29 | NIL state-stick — leg C: stale-row snapshot restore + auto-save downgraded-meta belt |
-| 2 | `LINKIFY-EXPORT-001` | 2026-09-21 | SW-projects line-end overflow leg (hyperlink half already closed) |
+| 2 | `LINKIFY-EXPORT-001` | 2026-10-03 | SW-projects line-end overflow leg (hyperlink half already closed) |
 | 39a | `AUTOSAVE-NO-DOWNGRADE-001` | 2026-09-29 | TAB/DEVICE ISOLATION residuals — auto-save poison-writer CLOSED (AUTOSAVE-NO-DOWNGRADE-001) + same-device stal |
 | 41 | — | 2026-09-29 | SO-004 CRASH — React #185 on editor field commits, shared renderer. |
 | 42 | `GEN-LANGFAB-001` | 2026-09-29 | fabricated languages (invented German, wrong Danish); deterministic language-fact belt vs ke |
 | 43 | — | 2026-09-29 | CA-006 — Application label bleeds into first role title; guard the write site. |
 | 44 | `JD-ANALYSIS-PRINT-001` | 2026-09-29 | analysis PDF button exports the CV; fix the export doc-type. |
 | 47 | `MOBILE-TOPBAR-SAFEAREA-001` | 2026-10-01 | + MOBILE-TOPBAR-EXPORT-FAB-001 (owner, mobile P0) — top bar unreachable at 100% zoo |
-| 49 | `SIDEBAR-GROUP-PAGE-BREAK-001` | 2026-09-21 | (owner, design guidance) — a very long TOOLS & METHODS group (e.g. "Project & del |
+| 49 | `SIDEBAR-GROUP-PAGE-BREAK-001` | 2026-10-03 | (owner, design guidance) — a very long TOOLS & METHODS group (e.g. "Project & del |
 | 50 | `UPLOAD-SCREEN-TOP-CLIP-001` | 2026-10-01 | (owner 2026-07-05, same live session as rows 46-49): the upload screen's EN/gear/Editor header row was still c |
 | 51 | `PREVIEW-SCROLL-JITTER-001` | 2026-10-01 | (owner 2026-07-05, live session, reported as two symptoms: "application analysis panel is stuck again, does no |
 | 39 | `GEN-MODELROLE-001` | 2026-09-30 | code shipped AND MODEL_ROLES set in both wrangler.toml (owner map; coherence now `openai`). Remaining = live-deplo |
-| 53 | `CROSS-APP-EXPORT-CONTAMINATION-001` | 2026-09-22 | leg (a) P0 SHIPPED (1.51.639 scope-guard → reworked MIRROR-LOAD-001 1.51.680); legs b-f open — (owner 2026-07-06, P0 — real export) — target was the KOMBIT "AI-udvikler"  |
-| 54 | `GEN-JD-TAILOR-KERNEL-RECALL-001` | 2026-09-22 | (owner 2026-07-07) — targeted tailoring narrows/compresses to the JD but does  |
-| 55 | `TARGETED-OUTPUT-FURNITURE-001` | 2026-09-22 | (owner 2026-07-07) — targeted-output furniture/personalization defects on the KO |
-| 56 | `GEN-JD-RELEVANCE-TRIM-001` | 2026-09-22 | (owner 2026-07-07) — sibling of row 54: row 54 RECALLS relevant items the narrow set |
+| 53 | `CROSS-APP-EXPORT-CONTAMINATION-001` | 2026-10-03 | leg (a) P0 SHIPPED (1.51.639 scope-guard → reworked MIRROR-LOAD-001 1.51.680); legs b-f open — (owner 2026-07-06, P0 — real export) — target was the KOMBIT "AI-udvikler"  |
+| 54 | `GEN-JD-TAILOR-KERNEL-RECALL-001` | 2026-10-03 | (owner 2026-07-07) — targeted tailoring narrows/compresses to the JD but does  |
+| 55 | `TARGETED-OUTPUT-FURNITURE-001` | 2026-10-03 | (owner 2026-07-07) — targeted-output furniture/personalization defects on the KO |
+| 56 | `GEN-JD-RELEVANCE-TRIM-001` | 2026-10-03 | (owner 2026-07-07) — sibling of row 54: row 54 RECALLS relevant items the narrow set |
 | 60 | — | 2026-09-22 | PANEL-CONTROLS-2026-07-07 (owner, editor/preview panel controls — 6 legs, diagnostic-first, auto-deploy prod s |
 | 61 | `LINE-DISTRIBUTION-GUIDELINES-001` | 2026-09-22 | gen leg + bidirectional Fit-it SHIPPED (LINE-DISTRIBUTION-001, 1.51.2921/2980) — (KOMBIT lessons v1→v7, owner asked to crystallize) — conclusions on line-fill / orphan control, the single mos |
 | 57 | `TARGETED-CV-POLISH-RULES-001` | 2026-09-22 | (owner 2026-07-07, universal rules from a full CV review) — CONTENT: (1) each bul |

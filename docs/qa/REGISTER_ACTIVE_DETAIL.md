@@ -552,7 +552,9 @@ _E1 sweep 2026-09-09 (CI nightly, Opus 4.8): closed legs CONFIRMED in current co
 
 ## Row 2 — LINKIFY-EXPORT-001
 
-_verified: 2026-09-21_
+_verified: 2026-10-03_
+
+**2026-10-03 (CI nightly, verify-first — HEAD 6d6dfbe3):** re-confirmed at current HEAD. `SIDEBAR_W`/`sidebar_ratio` derivation present in `workers/docx-worker/src/index.js` (`let __sbRatio = Number(payload.sidebar_ratio)` ~24673, `ctx.mainW`-based section widths ~25215/27597/28168, legacy `MAIN_W` constant retained only as fallback); regression lock `workers/docx-worker/test/main-column-ratio-width.test.mjs` **re-run, 1/1 PASS**. SCHOLAR-LINK-GATE / LINKIFY code still present in `pwa/antcv-docx-client.js` + `pwa/antcv-scholar-links.js`. Content+bullets/hyperlink legs stay CLOSED-and-locked; sole residual (per-line font-metric fidelity) still folds into row 25 (real-PDF-gated — a render CI cannot do). No regression. Kept ACTIVE.
 
 **2026-09-21 (CI nightly, verify-first):** worker sidebar-ratio fix intact — `sidebar_ratio` derivation present in `workers/docx-worker/src/index.js` [2 refs]; the regression lock `workers/docx-worker/test/main-column-ratio-width.test.mjs` still present. Content+bullets/hyperlink legs remain CLOSED-and-locked; the only residual (per-line font-metric fidelity) still folds into row 25 (real-PDF-gated, a render CI lacks). No regression. Kept ACTIVE.
 
@@ -709,7 +711,9 @@ device (owner/desktop-gated — no device in CI). Kept ACTIVE.
 
 ## Row 49 — SIDEBAR-GROUP-PAGE-BREAK-001
 
-_verified: 2026-09-21_
+_verified: 2026-10-03_
+
+**2026-10-03 (CI nightly, verify-first — HEAD 6d6dfbe3):** still NOT-STARTED and still applicable — the docx-worker page-DISTRIBUTION algorithm (per-page Table objects, `cantSplit`, `sidebar_ratio` split) in `workers/docx-worker/src/index.js` is unchanged, so a long focus-area group can still be orphaned/truncated instead of carried under "(CONT.)". Owner-authorized design work in the project's highest-risk area; needs a dedicated diagnostic-first session with a real long-group export (a render + worker deploy CI lacks; ALLOW_DEPLOY=false this run) — NOT a speculative unattended patch. Kept ACTIVE (scoped, not started).
 
 **2026-09-21 (CI nightly, verify-first):** genuinely NOT-STARTED and still applicable — the docx-worker page-DISTRIBUTION algorithm (`cantSplit` / per-page Table objects, `sidebar_ratio` split) in `workers/docx-worker/src/index.js` is unchanged, so a long focus-area group can still be orphaned/truncated rather than carried under "(CONT.)". This is owner-authorized design work that touches the highest-risk area in the project's history — it needs a dedicated diagnostic-first session with a real long-group export (a render CI lacks), NOT a speculative nightly patch. Kept ACTIVE (scoped, not started).
 
@@ -794,7 +798,9 @@ _verified: 2026-09-30_
 
 ## Row 53 — CROSS-APP-EXPORT-CONTAMINATION-001
 
-_verified: 2026-09-22_
+_verified: 2026-10-03_
+
+**2026-10-03 (CI nightly, verify-first — HEAD 6d6dfbe3):** re-confirmed. Leg (a) still SHIPPED via MIRROR-LOAD-001 — marker present **2×** in `pwa/app.src.js`; retired `antcv-export-app-scope-guard` still **0 refs** in `pwa/index.html` (correctly dead on disk). Legs (b)–(f) — CL lang-leak, unrendered placeholders, diacritics, CV partial-lang residue, brand-fit — unchanged/OPEN; all content/gen-quality, live-gen-gated (a real targeted LLM generation CI cannot run). Kept ACTIVE for legs b–f.
 
 **2026-09-22 (CI nightly, verify-first — HEAD 95038553):** re-confirmed — leg (a) still SHIPPED via MIRROR-LOAD-001 (marker in `pwa/app.src.js`, **2 occurrences** — correcting the earlier note that said "3×"); retired `antcv-export-app-scope-guard` is still NOT wired in `index.html` (0 refs, correctly dead on disk). Legs (b)–(f) unchanged/OPEN (CL lang leak, placeholders, diacritics, CV partial-lang residue, brand-fit) — all content/gen-quality, live-gen-gated. Kept ACTIVE for legs b–f.
 
@@ -816,7 +822,9 @@ _verified: 2026-09-22_
 
 ## Row 54 — GEN-JD-TAILOR-KERNEL-RECALL-001
 
-_verified: 2026-09-22_
+_verified: 2026-10-03_
+
+**2026-10-03 (CI nightly, verify-first — HEAD 6d6dfbe3):** still NOT started — `grep -rl KERNEL-RECALL pwa/ workers/` returns nothing; no commits on the ID. Targeted gen still re-ranks the narrowed set without recalling JD-relevant items (military comms service, Pan Idræt) from the unsolicited kernel. Content-quality; a fix needs a real targeted LLM gen to verify (owner/live-gated, not doable in cloud CI). Kept ACTIVE.
 
 **2026-09-22 (CI nightly, verify-first — HEAD 95038553):** still NOT started — no `KERNEL-RECALL` markers anywhere in `pwa/`/`workers/`, no commits on the ID. Targeted gen still re-ranks the narrowed set without recalling JD-relevant items from the unsolicited kernel. Content-quality; needs a real gen to verify (owner/live-gated). Kept ACTIVE.
 
@@ -838,7 +846,9 @@ _verified: 2026-09-22_
 
 ## Row 55 — TARGETED-OUTPUT-FURNITURE-001
 
-_verified: 2026-09-22_
+_verified: 2026-10-03_
+
+**2026-10-03 (CI nightly, verify-first — HEAD 6d6dfbe3):** still NOT started — `grep -rl TARGETED-OUTPUT-FURNITURE pwa/ workers/` returns nothing; no commits on the ID. All six furniture legs (a CV header specialization-vs-application line, b fixed-label localization, c JD named-contact greeting, d employer brand-fit, e merged-role title order, f AI-notice localization) remain hand-fixed only. Legs b/e/f are deterministic template transforms that COULD be coded, but they live in the docx export path (worker + `antcv-docx-client.js`) → would need a PR plus a live export live-verify this cloud run cannot do (no browser pane, ALLOW_DEPLOY=false); not shipped speculatively per owner's "no brickable mid-product". Content/gen-quality; owner/live-gated. Kept ACTIVE.
 
 **2026-09-22 (CI nightly, verify-first — HEAD 95038553):** still NOT started — no `TARGETED-OUTPUT-FURNITURE` markers, no commits on the ID. All six furniture legs (a–f) remain hand-fixed only. Content/gen-quality; owner/live-gated. Kept ACTIVE.
 
@@ -860,7 +870,9 @@ _verified: 2026-09-22_
 
 ## Row 56 — GEN-JD-RELEVANCE-TRIM-001
 
-_verified: 2026-09-22_
+_verified: 2026-10-03_
+
+**2026-10-03 (CI nightly, verify-first — HEAD 6d6dfbe3):** still NOT started — `grep -rl RELEVANCE-TRIM pwa/ workers/` returns nothing; no commits on the ID. Targeted CV still doesn't relevance-gate per-role bullets / hide irrelevant tools. Content-quality, sibling of row 54; needs a real targeted LLM gen to verify (owner/live-gated, not doable in cloud CI). Kept ACTIVE.
 
 **2026-09-22 (CI nightly, verify-first — HEAD 95038553):** still NOT started — no `RELEVANCE-TRIM` markers, no commits on the ID. Targeted CV still doesn't relevance-gate per-role bullets / hide irrelevant tools. Content-quality, sibling of row 54; owner/live-gated. Kept ACTIVE.
 

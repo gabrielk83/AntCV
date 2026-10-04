@@ -49,7 +49,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.4386';
+  var VERSION = '1.51.4792';
   if (window.AntcvClusterDemand && window.AntcvClusterDemand.version === VERSION) return;
 
   // Embedded seed (verbatim ranks/share from the analyst-reviewed JSON). Keeping it
@@ -125,7 +125,7 @@
     // ── CLUSTER-QUAL-001 stage 4 (spec 7.6, owner 2026-07-05): the 6 remaining
     // clusters, research-derived from current (2025-2026) market postings +
     // skills reports (Robert Half, LinkedIn, Coursera, CFI, AIHR, Pluralsight,
-    // BLS et al.; sources in docs/analysis/cluster_top20_research_2026-08-26.json).
+    // BLS et al.; sources in docs/analysis/cluster_top20_research_2026-10-04.json).
     // These extend the COLD-START classifier/weighting to all 9 clusters so a
     // targeted JD in software / data / consulting / executive / finance / HR
     // gets real demand weighting from the seed before the user accumulates
@@ -159,8 +159,8 @@
     data_analytics: { label: "Data & Analytics", top20: [
       [1, "SQL & data querying", "ABC"],
       [2, "Excel / spreadsheet modelling", "ABC"],
-      [3, "Python / R for analysis", "AB"],
-      [4, "Data visualisation & BI (Power BI / Tableau / Looker)", "AC"],
+      [3, "Data visualisation & BI (Power BI / Tableau / Looker)", "AC"],
+      [4, "Python / R for analysis", "AB"],
       [5, "Statistics & probability (hypothesis testing)", "AB"],
       [6, "Data cleaning, wrangling & quality", "none"],
       [7, "AI/agentic tools & prompt engineering for analytics workflows", "ABC"],
@@ -202,16 +202,16 @@
     ] },
     executive: { label: "Executive / Senior Leadership", top20: [
       [1, "Strategic vision & execution", "AB"],
-      [2, "AI & digital strategy fluency (incl. AI governance, agentic workflow leadership)", "AB"],
+      [2, "Commercial growth & revenue architecture", "none"],
       [3, "Stakeholder, board & investor communication", "none"],
-      [4, "Emotional intelligence & people leadership", "ABC"],
+      [4, "Operational excellence & execution", "AB"],
       [5, "Building & leading high-performing teams", "AB"],
-      [6, "Commercial growth & revenue architecture", "none"],
-      [7, "P&L ownership & financial stewardship", "none"],
-      [8, "Organisational change & transformation leadership", "AB"],
-      [9, "Operational excellence & execution", "AB"],
-      [10, "Coaching, culture, talent development & continuous succession management", "AB"],
-      [11, "Customer & client centricity / experience ownership", "none"],
+      [6, "Customer & client centricity / experience ownership", "none"],
+      [7, "Emotional intelligence & people leadership", "ABC"],
+      [8, "AI & digital strategy fluency (incl. AI governance, agentic workflow leadership)", "AB"],
+      [9, "P&L ownership & financial stewardship", "none"],
+      [10, "Organisational change & transformation leadership", "AB"],
+      [11, "Coaching, culture, talent development & continuous succession management", "AB"],
       [12, "Financial acumen (EBITDA, balance sheet, ROI)", "none"],
       [13, "Governance, risk, cybersecurity & AI-governance oversight (ESG/CSRD where in scope)", "none"],
       [14, "Judgment & decision-making under ambiguity", "ABC"],

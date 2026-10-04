@@ -1946,7 +1946,9 @@ confirmed landed, 3 checks go red. All 14 job-tracker python tests green. Live-v
 
 ## Row 102 — DEMAND-SEED-SEARCH-TOKEN-MISSING-001
 
-_verified: 2026-08-26_
+_verified: 2026-10-04_
+
+**2026-10-04 (weekly demand-seed, DESKTOP Gabo-PC) — ADVANCED: the desktop legs are unblocked; the run completed end to end.** (1) WRITE leg FIXED on the desktop: `CLUSTER_RESEARCH_TOKEN` is now a User env var (51 chars), and the empty-body probe returned **400 `no_known_clusters`** (accepted). The live push then returned `{"ok":true,"clusters_updated":9,"total_inserted":226,"unknown":[]}`. (2) SEARCH leg reachable: `CSE_PROXY_TOKEN` is still unset on the desktop, but `~/.antcv/token` is valid (preflight `TOKEN OK`, exp 2026-10-08), so `POST /api/research` with `siteSearch: "jobindex.dk"` returned `{"ok":true,"source":"brave"}` with Jobindex hits. First run of this routine to reach the site-scoped Brave search since the Brave switch. That route lives only as long as the 7-day JWT (row 110), so `CSE_PROXY_TOKEN` (64-hex relay token) is still the durable fix. (3) Still owner-owed and not verifiable from the desktop: the CLOUD routine env holds a 39-char `AIza` Google key in the `CSE_PROXY_TOKEN` slot and a refused `CLUSTER_RESEARCH_TOKEN`; rotate the Google key, then set both cloud values. Method note: Jobindex hosted `vis-job/h*` pages carry only the teaser plus a recommended-jobs list, so the site-scoped search gives Danish ROLE evidence, not requirement-level posting shares (426-ad sample discarded; see SESSION_LOG_2026-10-04_DEMAND_SEED.md). Seed and `__global_market__` refreshed after 39 days stale.
 
 **OPEN-queue row (verbatim):**
 
@@ -2131,3 +2133,11 @@ _verified: 2026-10-04_
 **Found by the position-discovery run 2026-10-04.** `python scripts/job-tracker/job_sources.py search --q "<q>" --source all --json > out.json` on Windows writes the JSON in the console code page (cp1252), not UTF-8. Every Danish letter (ø, æ, å) then fails a UTF-8 parse (`UnicodeDecodeError: 0xf8`), so a consumer reading the file as UTF-8 sees zero ads: the same silent "source was dry" failure mode as JOBSRC-FETCH-001. Characters outside cp1252 would raise inside the fetcher. Workaround used this run: `PYTHONIOENCODING=utf-8`.
 
 **Owed:** reconfigure stdout to UTF-8 in `job_sources.py` main (`sys.stdout.reconfigure(encoding="utf-8")`) or add `--out <file>`; same check for `discover-positions.py` / `check-postings.py` output. Test in `test_job_sources.py`. `scripts/` only, no cache-bust.
+
+---
+
+## Row 117 — CLUSTER-GLOBAL-SINGLE-JD-DOMINANCE-001
+
+_verified: 2026-10-04_
+
+**Found by the weekly demand-seed run 2026-10-04 (read-only D1 verify).** In `cluster_top_qualifications` under `user_hash='__global_market__'`, real-JD rows (weight_sum 1) outrank every research row (rank-scaled, ceiling 0.4) by design. Measured split after this run's push: `executive` 18 of 20 rows are JD signal with **max jd_count = 1** (one hardware-exec JD: battery management, Capex/Opex, DFM/DFA, mechanics…), so one posting fills the market-wide executive top 18 and research appears only from r19. `pm_process` 20/20 JD (max jd_count 2), `photonics_eng` 20/20 (max 7), `research_phd` 16/20 (max 2). The other five clusters are 100% research. **Why it matters:** `__global_market__` is meant to represent the market; a single JD from one user outranking 180 researched items makes the weekly research invisible in those clusters (this run's executive reorder has no effect on the live rollup) and pumps one employer's niche quals for every executive CV. Not a bug in the writer: `recomputeClusterTop20` orders by `weight_sum DESC` as specified. **Owner decision owed (design, CLUSTER-QUAL-001 §7):** e.g. require `jd_count >= 3` before JD rows can outrank research in the global rollup, or blend (JD weight scaled by min(1, jd_count/N)), or keep per-user JD signal out of `__global_market__`. No code changed this run. Read-only evidence query: `SELECT cluster_id, SUM(weight_sum<=0.4), SUM(weight_sum>0.4), MAX(jd_count) FROM cluster_top_qualifications WHERE user_hash='__global_market__' GROUP BY cluster_id`.

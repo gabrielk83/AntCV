@@ -1,0 +1,1022 @@
+{
+  "source": "Market research (2025-2026 postings + posting-share reports) - CLUSTER-QUAL-001 stage 4 (spec 7.6), weekly refresh",
+  "generated": "2026-10-04",
+  "supersedes": "docs/analysis/cluster_top20_research_2026-08-26.json",
+  "method": "Nine cluster passes run inline: built-in WebSearch/WebFetch plus the relay site-scoped search (POST /api/research, session JWT, Brave backend; first run since the Brave switch to reach it). Each pass given the shipped 2026-08-26 top-20 as baseline, constrained to evidence-backed keep/reorder/merge/add/drop. Ranking evidence is posting share only; skills-gap surveys are context, not rank input. A robots-compliant Jobindex sample (single RSS page per single-term query, no page= or multi-+ queries, 1.2s delay; 426 hosted ads fetched) was attempted for Danish requirement-level shares and DISCARDED: hosted vis-job pages carry only the teaser plus a recommended-jobs list, so keyword shares measured page chrome, not requirements. INTERVAL: 39 days after 2026-08-26 (four weekly runs blocked on credentials).",
+  "note": "2 of 9 clusters changed, 7 re-confirmed unchanged. Changes are reorders only, no adds or drops: executive (commercial growth 6->2, operational excellence 9->4, customer centricity 11->6, AI & digital strategy 2->8 on C-suite JD posting shares) and data_analytics (visualisation/BI 4->3 over Python/R). Theme: where JD-share data exists for senior roles, core commercial and operating duties outrank AI fluency; AI stays in the top 10 because it is the fastest-growing line.",
+  "changes_this_run": [
+    "data_analytics",
+    "executive"
+  ],
+  "unchanged_confirmed": [
+    "pm_process",
+    "photonics_eng",
+    "research_phd",
+    "engineering_software",
+    "consulting",
+    "finance",
+    "people_soft"
+  ],
+  "share_legend": "ABC=universal transferable skill; AB/AC/BC=shared across two of the three original A/B/C clusters (pm_process/photonics_eng/research_phd) or, for the 6 stage-4 clusters, a demand-universality tier; none=cluster-specific",
+  "sources": [
+    "https://www.qarera.com/reports/most-in-demand-skills-2026",
+    "https://tyomarkkinadata.fi/en/articles/tyomarkkinaraportti-2026-10",
+    "https://epic-photonics.com/news-media/photonics-talent-trends-job-market-insights/",
+    "https://www.mynewsdesk.com/dk/it-branchen/pressreleases/ai-aendrer-arbejdsmarkedet-nye-tal-viser-en-markant-stigende-efterspoergsel-efter-it-kompetencer-i-hele-danmark-3450642",
+    "https://acciojob.com/blogs/latest/most-in-demand-data-analytics-skills-in-2026-based-on-328-real-job-descriptions",
+    "https://www.metaintro.com/blog/bcg-25-percent-ai-revenue-consulting-jobs-2026",
+    "https://talentfoot.com/top-csuite-skills-2026/"
+  ],
+  "clusters": {
+    "pm_process": {
+      "label": "PM / Product / Process Management",
+      "changed": false,
+      "changes_summary": "Re-confirmed unchanged. Qarera Project Manager postings (3,430): communication 40.6%, project management 40.1%, a near-tie that matches r1 methodology / r3 stakeholder management. Product Manager postings (3,064): AI 37.0% ahead of product management 29.5%, consistent with AI at r2. Nordic September 2026 report (55,172 postings): project management 964 postings, AI the top skill at 3,713. No evidence for a move.",
+      "top20": [
+        {
+          "r": 1,
+          "q": "Project management methodology (PMP / Agile / hybrid / lifecycle)",
+          "share": "none"
+        },
+        {
+          "r": 2,
+          "q": "AI/GenAI tool fluency, agentic workflows & EU AI Act awareness",
+          "share": "ABC"
+        },
+        {
+          "r": 3,
+          "q": "Stakeholder management, cross-functional coordination, emotional intelligence & conflict resolution",
+          "share": "ABC"
+        },
+        {
+          "r": 4,
+          "q": "Business/commercial acumen, go-to-market & financial understanding",
+          "share": "ABC"
+        },
+        {
+          "r": 5,
+          "q": "Risk identification, assessment & mitigation (risk register)",
+          "share": "ABC"
+        },
+        {
+          "r": 6,
+          "q": "Change & governance control (incl. compliance)",
+          "share": "AB"
+        },
+        {
+          "r": 7,
+          "q": "Requirements management & translating needs into specs",
+          "share": "AB"
+        },
+        {
+          "r": 8,
+          "q": "Process design, modelling & documentation (BPM / BABOK / BPMN)",
+          "share": "none"
+        },
+        {
+          "r": 9,
+          "q": "Process / continuous improvement (Lean / Six Sigma)",
+          "share": "none"
+        },
+        {
+          "r": 10,
+          "q": "Project planning, time plans & milestone tracking (Jira / Asana / MS Project / Smartsheet)",
+          "share": "none"
+        },
+        {
+          "r": 11,
+          "q": "Product lifecycle management (concept to field)",
+          "share": "none"
+        },
+        {
+          "r": 12,
+          "q": "Supplier / vendor collaboration & spec management",
+          "share": "AB"
+        },
+        {
+          "r": 13,
+          "q": "ERP / CRM or system-implementation experience",
+          "share": "AB"
+        },
+        {
+          "r": 14,
+          "q": "Hardware product development (mechanics/electronics/RF)",
+          "share": "AB"
+        },
+        {
+          "r": 15,
+          "q": "Design verification & validation vs specifications",
+          "share": "AB"
+        },
+        {
+          "r": 16,
+          "q": "International product certification (CE / FCC / UL / EASA-145)",
+          "share": "AB"
+        },
+        {
+          "r": 17,
+          "q": "Audit / compliance & CAPA handling",
+          "share": "AB"
+        },
+        {
+          "r": 18,
+          "q": "Status communication to senior management / board",
+          "share": "ABC"
+        },
+        {
+          "r": 19,
+          "q": "Systems-level thinking & managing complexity in matrix/multi-project environments",
+          "share": "ABC"
+        },
+        {
+          "r": 20,
+          "q": "English fluency (Danish an advantage)",
+          "share": "ABC"
+        }
+      ],
+      "sources": [
+        "https://www.qarera.com/reports/most-in-demand-skills-2026",
+        "https://tyomarkkinadata.fi/en/articles/tyomarkkinaraportti-2026-10"
+      ]
+    },
+    "photonics_eng": {
+      "label": "Photonics / Optical / Test Engineering",
+      "changed": false,
+      "changes_summary": "Re-confirmed unchanged. EPIC photonics job data (Sep 2025-Mar 2026): quantum postings 5 -> 24 (+380%), backing r8; process and optical engineers lead demand and systems engineers (272 postings) sit above application engineers (227), consistent with r1 systems and r9 manufacturability/packaging ahead of r12 application engineering. No posting-share data contradicts the 08-26 packaging promotion.",
+      "top20": [
+        {
+          "r": 1,
+          "q": "Optical / photonics systems engineering (free-space & fiber)",
+          "share": "BC"
+        },
+        {
+          "r": 2,
+          "q": "Photonic integrated circuit (PIC) design / sim / tape-out",
+          "share": "none"
+        },
+        {
+          "r": 3,
+          "q": "Device & sensor / EO characterization",
+          "share": "BC"
+        },
+        {
+          "r": 4,
+          "q": "Optical measurement setups, calibration & instrumentation (DCA / OSA / BERT)",
+          "share": "BC"
+        },
+        {
+          "r": 5,
+          "q": "Laser systems (seed lasers, amplifiers, stabilization)",
+          "share": "none"
+        },
+        {
+          "r": 6,
+          "q": "Silicon-photonics test programs & co-packaged optics for AI interconnects",
+          "share": "none"
+        },
+        {
+          "r": 7,
+          "q": "Test concept development, yield & test-time improvement",
+          "share": "AB"
+        },
+        {
+          "r": 8,
+          "q": "Quantum technology / QPU context awareness",
+          "share": "BC"
+        },
+        {
+          "r": 9,
+          "q": "Manufacturability, photonic packaging & assembly (fiber attach, cleanroom, IPC/ISO)",
+          "share": "AB"
+        },
+        {
+          "r": 10,
+          "q": "Foundry PDKs & simulation tools (COMSOL, Zemax, FDTD/Lumerical)",
+          "share": "BC"
+        },
+        {
+          "r": 11,
+          "q": "Data acquisition, automation & analysis (Python, LabVIEW, MATLAB)",
+          "share": "BC"
+        },
+        {
+          "r": 12,
+          "q": "Requirements capture from customer applications (application engineering)",
+          "share": "AB"
+        },
+        {
+          "r": 13,
+          "q": "Patent & IP generation (invention disclosures, patent filings)",
+          "share": "AB"
+        },
+        {
+          "r": 14,
+          "q": "IP strategy, patent portfolio & licensing frameworks",
+          "share": "none"
+        },
+        {
+          "r": 15,
+          "q": "Multivariate analysis / spectrometer technology",
+          "share": "none"
+        },
+        {
+          "r": 16,
+          "q": "Technical leadership & mentoring engineers",
+          "share": "ABC"
+        },
+        {
+          "r": 17,
+          "q": "Cross-disciplinary R&D collaboration",
+          "share": "ABC"
+        },
+        {
+          "r": 18,
+          "q": "Supplier coordination & quality issues",
+          "share": "AB"
+        },
+        {
+          "r": 19,
+          "q": "Medtech / healthtech / deep-tech domain exposure",
+          "share": "none"
+        },
+        {
+          "r": 20,
+          "q": "English fluency; ~10% travel willingness",
+          "share": "ABC"
+        }
+      ],
+      "sources": [
+        "https://epic-photonics.com/news-media/photonics-talent-trends-job-market-insights/"
+      ]
+    },
+    "research_phd": {
+      "label": "PhD / Research positions",
+      "changed": false,
+      "changes_summary": "Re-confirmed unchanged. No new posting-share evidence for PhD/research calls this run. Jobindex PhD/postdoc ads were sampled but the hosted pages expose only a teaser (full call text sits on the university site), so they give no requirement-level share.",
+      "top20": [
+        {
+          "r": 1,
+          "q": "Completed M.Sc. (physics / EE / engineering) eligibility",
+          "share": "AC"
+        },
+        {
+          "r": 2,
+          "q": "Independent, structured research-project management",
+          "share": "AC"
+        },
+        {
+          "r": 3,
+          "q": "Peer-reviewed publication record",
+          "share": "none"
+        },
+        {
+          "r": 4,
+          "q": "Experimental design & lab work (optics / spectroscopy)",
+          "share": "BC"
+        },
+        {
+          "r": 5,
+          "q": "Scientific computing & AI/ML tooling (Python/MATLAB, GenAI-assisted workflows)",
+          "share": "BC"
+        },
+        {
+          "r": 6,
+          "q": "Data acquisition, processing & visualisation (large sets)",
+          "share": "BC"
+        },
+        {
+          "r": 7,
+          "q": "Hyperspectral / spectroscopic measurement techniques",
+          "share": "BC"
+        },
+        {
+          "r": 8,
+          "q": "Quantum optics / light-source characterization",
+          "share": "BC"
+        },
+        {
+          "r": 9,
+          "q": "Nanofabrication / cleanroom & hands-on device fabrication",
+          "share": "none"
+        },
+        {
+          "r": 10,
+          "q": "Conference presentation & dissemination",
+          "share": "ABC"
+        },
+        {
+          "r": 11,
+          "q": "Interdisciplinary collaboration with external partners",
+          "share": "ABC"
+        },
+        {
+          "r": 12,
+          "q": "Clear technical communication, clarity & precision",
+          "share": "ABC"
+        },
+        {
+          "r": 13,
+          "q": "Methodological rigour & critical analysis",
+          "share": "BC"
+        },
+        {
+          "r": 14,
+          "q": "Curiosity, initiative & self-ownership of research",
+          "share": "none"
+        },
+        {
+          "r": 15,
+          "q": "Domain expertise in a specified subfield (depth)",
+          "share": "none"
+        },
+        {
+          "r": 16,
+          "q": "Reproducible documentation & version control (LaTeX/Jupyter/git)",
+          "share": "none"
+        },
+        {
+          "r": 17,
+          "q": "Teaching / knowledge dissemination",
+          "share": "none"
+        },
+        {
+          "r": 18,
+          "q": "International research mobility / collaboration",
+          "share": "none"
+        },
+        {
+          "r": 19,
+          "q": "English fluency (+ language test if non-native)",
+          "share": "ABC"
+        },
+        {
+          "r": 20,
+          "q": "Innovation systems / STI policy & technology transfer",
+          "share": "none"
+        }
+      ],
+      "sources": []
+    },
+    "engineering_software": {
+      "label": "Software Engineering",
+      "changed": false,
+      "changes_summary": "Re-confirmed unchanged. Qarera Software Engineer postings (38,747): Java 31.5%, Python 31.2%, AI 26.6%, matching r1 core language and r2 AI tooling. Across all postings AWS 11.3% + Azure 8.2% exceed security 8.7%, but the Danish IT-Branchen/Jobindex split (security ~19% > cloud 14.5% > AI/ML 12.3%; AI/ML +242.6%, back-end +192.9%) keeps secure coding r5 ahead of cloud r6 under the Danish-evidence preference.",
+      "top20": [
+        {
+          "r": 1,
+          "q": "Proficiency in a core language (Python / Java / Go / TypeScript)",
+          "share": "none"
+        },
+        {
+          "r": 2,
+          "q": "AI-assisted & agentic coding tools (Copilot / Cursor / Claude Code), LLM/RAG integration",
+          "share": "ABC"
+        },
+        {
+          "r": 3,
+          "q": "System design & scalable architecture",
+          "share": "none"
+        },
+        {
+          "r": 4,
+          "q": "Evaluating & reviewing AI-generated code / agent output",
+          "share": "AB"
+        },
+        {
+          "r": 5,
+          "q": "Secure coding & application security (NIS2 compliance)",
+          "share": "none"
+        },
+        {
+          "r": 6,
+          "q": "Cloud platforms & deployment (AWS / GCP / Azure)",
+          "share": "none"
+        },
+        {
+          "r": 7,
+          "q": "CI/CD pipelines & automated testing",
+          "share": "none"
+        },
+        {
+          "r": 8,
+          "q": "Agile / Scrum delivery & iteration",
+          "share": "AB"
+        },
+        {
+          "r": 9,
+          "q": "Data structures, algorithms & problem-solving",
+          "share": "none"
+        },
+        {
+          "r": 10,
+          "q": "Version control & collaborative workflows (Git)",
+          "share": "AB"
+        },
+        {
+          "r": 11,
+          "q": "Observability, monitoring & debugging",
+          "share": "none"
+        },
+        {
+          "r": 12,
+          "q": "Databases, SQL & data modelling (SQL / NoSQL)",
+          "share": "AB"
+        },
+        {
+          "r": 13,
+          "q": "Containerisation & orchestration (Docker / Kubernetes)",
+          "share": "none"
+        },
+        {
+          "r": 14,
+          "q": "API design & microservices (REST / gRPC)",
+          "share": "none"
+        },
+        {
+          "r": 15,
+          "q": "Infrastructure as code & platform engineering (Terraform / developer portals)",
+          "share": "none"
+        },
+        {
+          "r": 16,
+          "q": "Enterprise platform & SaaS ecosystem engineering (SAP / Oracle / Salesforce / Workday)",
+          "share": "AB"
+        },
+        {
+          "r": 17,
+          "q": "Frontend frameworks (React / TypeScript)",
+          "share": "none"
+        },
+        {
+          "r": 18,
+          "q": "Code review & mentoring engineers",
+          "share": "none"
+        },
+        {
+          "r": 19,
+          "q": "Cross-functional collaboration & clear technical communication (product, design, docs)",
+          "share": "ABC"
+        },
+        {
+          "r": 20,
+          "q": "English fluency (Danish an advantage)",
+          "share": "ABC"
+        }
+      ],
+      "sources": [
+        "https://www.qarera.com/reports/most-in-demand-skills-2026",
+        "https://www.mynewsdesk.com/dk/it-branchen/pressreleases/ai-aendrer-arbejdsmarkedet-nye-tal-viser-en-markant-stigende-efterspoergsel-efter-it-kompetencer-i-hele-danmark-3450642"
+      ]
+    },
+    "data_analytics": {
+      "label": "Data & Analytics",
+      "changed": true,
+      "changes_summary": "Visualisation & BI 4->3, Python/R 3->4. Qarera (360,336 postings, Dec 2025-Jun 2026), Data Analyst/BI roles (9,674): SQL 54.6%, Power BI 42.3%, analytics 40.3%, with Python below the top three. AccioJob (328 JDs): Power BI 43% vs Python 41%. One older dataset still has Python 31.2% above Power BI 29%, so 2 of 3 favour BI. SQL r1 / Excel r2 unchanged: the sources still disagree on that pair (Excel 81% vs SQL 60% in one, SQL ahead in the other two), which does not support a flip.",
+      "top20": [
+        {
+          "r": 1,
+          "q": "SQL & data querying",
+          "share": "ABC"
+        },
+        {
+          "r": 2,
+          "q": "Excel / spreadsheet modelling",
+          "share": "ABC"
+        },
+        {
+          "r": 3,
+          "q": "Data visualisation & BI (Power BI / Tableau / Looker)",
+          "share": "AC"
+        },
+        {
+          "r": 4,
+          "q": "Python / R for analysis",
+          "share": "AB"
+        },
+        {
+          "r": 5,
+          "q": "Statistics & probability (hypothesis testing)",
+          "share": "AB"
+        },
+        {
+          "r": 6,
+          "q": "Data cleaning, wrangling & quality",
+          "share": "none"
+        },
+        {
+          "r": 7,
+          "q": "AI/agentic tools & prompt engineering for analytics workflows",
+          "share": "ABC"
+        },
+        {
+          "r": 8,
+          "q": "Data pipelines & warehousing (dbt / Snowflake / Spark)",
+          "share": "none"
+        },
+        {
+          "r": 9,
+          "q": "Machine learning & predictive modelling",
+          "share": "AB"
+        },
+        {
+          "r": 10,
+          "q": "Business acumen & translating data to decisions",
+          "share": "ABC"
+        },
+        {
+          "r": 11,
+          "q": "Data storytelling & stakeholder communication",
+          "share": "ABC"
+        },
+        {
+          "r": 12,
+          "q": "ETL / data engineering fundamentals",
+          "share": "none"
+        },
+        {
+          "r": 13,
+          "q": "Cloud data platforms (BigQuery / Databricks / Azure)",
+          "share": "AB"
+        },
+        {
+          "r": 14,
+          "q": "Dashboard & KPI reporting",
+          "share": "none"
+        },
+        {
+          "r": 15,
+          "q": "Critical thinking & problem-solving",
+          "share": "ABC"
+        },
+        {
+          "r": 16,
+          "q": "Experiment design & A/B testing",
+          "share": "AB"
+        },
+        {
+          "r": 17,
+          "q": "Domain / industry knowledge",
+          "share": "ABC"
+        },
+        {
+          "r": 18,
+          "q": "Version control & reproducible analysis (Git)",
+          "share": "AB"
+        },
+        {
+          "r": 19,
+          "q": "Data governance, privacy & ethics",
+          "share": "AB"
+        },
+        {
+          "r": 20,
+          "q": "English fluency (Danish an advantage)",
+          "share": "ABC"
+        }
+      ],
+      "sources": [
+        "https://www.qarera.com/reports/most-in-demand-skills-2026",
+        "https://acciojob.com/blogs/latest/most-in-demand-data-analytics-skills-in-2026-based-on-328-real-job-descriptions"
+      ]
+    },
+    "consulting": {
+      "label": "Consulting",
+      "changed": false,
+      "changes_summary": "Re-confirmed unchanged. BCG and peers still hire into AI strategy/value identification, MLOps, applied GenAI, change management for AI adoption and AI governance. All five are already in the list (r1, r11, r16, r18) after the 08-26 change-management promotion. No new posting-share data.",
+      "top20": [
+        {
+          "r": 1,
+          "q": "AI-augmented delivery & agentic-AI/GenAI tool fluency (prompt engineering, AI oversight)",
+          "share": "ABC"
+        },
+        {
+          "r": 2,
+          "q": "Structured problem-solving (hypothesis-driven, 80/20)",
+          "share": "AC"
+        },
+        {
+          "r": 3,
+          "q": "Quantitative & financial analysis / modelling",
+          "share": "AB"
+        },
+        {
+          "r": 4,
+          "q": "Client relationship, stakeholder management & trust-building",
+          "share": "ABC"
+        },
+        {
+          "r": 5,
+          "q": "Executive communication & storytelling (slides)",
+          "share": "AB"
+        },
+        {
+          "r": 6,
+          "q": "Data analysis & synthesis (Excel)",
+          "share": "ABC"
+        },
+        {
+          "r": 7,
+          "q": "Project / workstream management",
+          "share": "ABC"
+        },
+        {
+          "r": 8,
+          "q": "Business & commercial judgement",
+          "share": "AC"
+        },
+        {
+          "r": 9,
+          "q": "Presentation & facilitation skills",
+          "share": "ABC"
+        },
+        {
+          "r": 10,
+          "q": "Adaptability & fast learning",
+          "share": "ABC"
+        },
+        {
+          "r": 11,
+          "q": "Change management, implementation & value realisation",
+          "share": "AC"
+        },
+        {
+          "r": 12,
+          "q": "Industry / domain expertise",
+          "share": "none"
+        },
+        {
+          "r": 13,
+          "q": "Strategic thinking & framing",
+          "share": "AC"
+        },
+        {
+          "r": 14,
+          "q": "Analytical rigour & attention to detail",
+          "share": "ABC"
+        },
+        {
+          "r": 15,
+          "q": "Market research & competitive analysis",
+          "share": "AB"
+        },
+        {
+          "r": 16,
+          "q": "AI governance, risk & EU AI Act conformity advisory",
+          "share": "AB"
+        },
+        {
+          "r": 17,
+          "q": "Data visualisation & dashboards (Power BI / Tableau)",
+          "share": "AB"
+        },
+        {
+          "r": 18,
+          "q": "AI output verification & critical judgement (bias, hallucination checks)",
+          "share": "AB"
+        },
+        {
+          "r": 19,
+          "q": "Teamwork & collaboration under pressure",
+          "share": "ABC"
+        },
+        {
+          "r": 20,
+          "q": "English fluency (Danish an advantage)",
+          "share": "ABC"
+        }
+      ],
+      "sources": [
+        "https://www.metaintro.com/blog/bcg-25-percent-ai-revenue-consulting-jobs-2026"
+      ]
+    },
+    "executive": {
+      "label": "Executive / Senior Leadership",
+      "changed": true,
+      "changes_summary": "Posting-share reorder from the Talentfoot C-suite job-description analysis (share of JDs): strategic leadership & vision 95%, revenue growth & commercial leadership 93%, operational scaling 90%, team leadership & talent development 82%, customer/client centricity 82%, financial acumen (P&L, EBITDA) 64%, cross-functional leadership 55%, AI literacy & governance 27% (up from <10% two years ago). Commercial growth 6->2, operational excellence 9->4, customer centricity 11->6. AI & digital strategy 2->8: 27% of JDs is below five measured items, so r2 overstated it; kept in the top 10 because it is the fastest-growing requirement (~3x in two years; Danish AI/ML postings +242.6% per IT-Branchen). Knock-on: emotional intelligence 4->7, P&L 7->9, change leadership 8->10, coaching/succession 10->11. Unmeasured items keep their relative order; stakeholder/board communication stays r3. Single source, no published sample size, so the reorder is partial (no item moves more than 6 places) rather than a strict share sort.",
+      "top20": [
+        {
+          "r": 1,
+          "q": "Strategic vision & execution",
+          "share": "AB"
+        },
+        {
+          "r": 2,
+          "q": "Commercial growth & revenue architecture",
+          "share": "none"
+        },
+        {
+          "r": 3,
+          "q": "Stakeholder, board & investor communication",
+          "share": "none"
+        },
+        {
+          "r": 4,
+          "q": "Operational excellence & execution",
+          "share": "AB"
+        },
+        {
+          "r": 5,
+          "q": "Building & leading high-performing teams",
+          "share": "AB"
+        },
+        {
+          "r": 6,
+          "q": "Customer & client centricity / experience ownership",
+          "share": "none"
+        },
+        {
+          "r": 7,
+          "q": "Emotional intelligence & people leadership",
+          "share": "ABC"
+        },
+        {
+          "r": 8,
+          "q": "AI & digital strategy fluency (incl. AI governance, agentic workflow leadership)",
+          "share": "AB"
+        },
+        {
+          "r": 9,
+          "q": "P&L ownership & financial stewardship",
+          "share": "none"
+        },
+        {
+          "r": 10,
+          "q": "Organisational change & transformation leadership",
+          "share": "AB"
+        },
+        {
+          "r": 11,
+          "q": "Coaching, culture, talent development & continuous succession management",
+          "share": "AB"
+        },
+        {
+          "r": 12,
+          "q": "Financial acumen (EBITDA, balance sheet, ROI)",
+          "share": "none"
+        },
+        {
+          "r": 13,
+          "q": "Governance, risk, cybersecurity & AI-governance oversight (ESG/CSRD where in scope)",
+          "share": "none"
+        },
+        {
+          "r": 14,
+          "q": "Judgment & decision-making under ambiguity",
+          "share": "ABC"
+        },
+        {
+          "r": 15,
+          "q": "Cross-functional & enterprise-wide alignment",
+          "share": "AB"
+        },
+        {
+          "r": 16,
+          "q": "Resilience, adaptability & learning agility",
+          "share": "ABC"
+        },
+        {
+          "r": 17,
+          "q": "Negotiation & partnership building",
+          "share": "AB"
+        },
+        {
+          "r": 18,
+          "q": "Vision communication & influence",
+          "share": "AB"
+        },
+        {
+          "r": 19,
+          "q": "Global / multi-market & cross-cultural leadership",
+          "share": "none"
+        },
+        {
+          "r": 20,
+          "q": "English fluency (Danish an advantage)",
+          "share": "ABC"
+        }
+      ],
+      "sources": [
+        "https://talentfoot.com/top-csuite-skills-2026/",
+        "https://www.mynewsdesk.com/dk/it-branchen/pressreleases/ai-aendrer-arbejdsmarkedet-nye-tal-viser-en-markant-stigende-efterspoergsel-efter-it-kompetencer-i-hele-danmark-3450642"
+      ]
+    },
+    "finance": {
+      "label": "Finance",
+      "changed": false,
+      "changes_summary": "Re-confirmed unchanged. No posting-share study newer than the Datarails 5,000+ posting analysis behind the 08-26 business-partnering promotion. Generic analyst-JD data (Excel 81%, Power BI 43%, Python 41%) is consistent with r1 Excel and r7 BI.",
+      "top20": [
+        {
+          "r": 1,
+          "q": "Advanced Excel & spreadsheet analysis",
+          "share": "ABC"
+        },
+        {
+          "r": 2,
+          "q": "AI & automation in finance",
+          "share": "ABC"
+        },
+        {
+          "r": 3,
+          "q": "Financial modelling & forecasting (FP&A)",
+          "share": "none"
+        },
+        {
+          "r": 4,
+          "q": "Business partnering & stakeholder communication",
+          "share": "BC"
+        },
+        {
+          "r": 5,
+          "q": "Data analysis, SQL & Python fundamentals",
+          "share": "AB"
+        },
+        {
+          "r": 6,
+          "q": "Financial reporting & month-end close",
+          "share": "none"
+        },
+        {
+          "r": 7,
+          "q": "BI & data visualisation (Power BI / Tableau)",
+          "share": "AB"
+        },
+        {
+          "r": 8,
+          "q": "ERP & finance systems (SAP / Oracle / NetSuite / Tagetik)",
+          "share": "none"
+        },
+        {
+          "r": 9,
+          "q": "Budgeting, planning & variance analysis",
+          "share": "none"
+        },
+        {
+          "r": 10,
+          "q": "Scenario modelling & sensitivity analysis",
+          "share": "none"
+        },
+        {
+          "r": 11,
+          "q": "Accounting standards (IFRS / GAAP)",
+          "share": "none"
+        },
+        {
+          "r": 12,
+          "q": "Internal controls, audit & compliance (SOX)",
+          "share": "none"
+        },
+        {
+          "r": 13,
+          "q": "Regulatory, ESG & sustainability reporting (CSRD)",
+          "share": "BC"
+        },
+        {
+          "r": 14,
+          "q": "Commercial & business acumen",
+          "share": "ABC"
+        },
+        {
+          "r": 15,
+          "q": "Cash flow & working-capital management",
+          "share": "none"
+        },
+        {
+          "r": 16,
+          "q": "Cost analysis & profitability management",
+          "share": "none"
+        },
+        {
+          "r": 17,
+          "q": "Professional qualification (CPA / ACCA / CFA / CIMA) or MBA",
+          "share": "none"
+        },
+        {
+          "r": 18,
+          "q": "Attention to detail & accuracy",
+          "share": "ABC"
+        },
+        {
+          "r": 19,
+          "q": "Cross-functional collaboration",
+          "share": "ABC"
+        },
+        {
+          "r": 20,
+          "q": "English fluency (Danish an advantage)",
+          "share": "ABC"
+        }
+      ],
+      "sources": [
+        "https://acciojob.com/blogs/latest/most-in-demand-data-analytics-skills-in-2026-based-on-328-real-job-descriptions"
+      ]
+    },
+    "people_soft": {
+      "label": "People / HR",
+      "changed": false,
+      "changes_summary": "Re-confirmed unchanged. 2026 HRBP postings still name HRIS (Workday), Excel/Power BI, labour-law competence and AI tools, all already covered (r1, r3, r4, r7, r8). No posting-share data to support a reorder.",
+      "top20": [
+        {
+          "r": 1,
+          "q": "HR business partnering & stakeholder advisory",
+          "share": "none"
+        },
+        {
+          "r": 2,
+          "q": "Business acumen & commercial understanding",
+          "share": "ABC"
+        },
+        {
+          "r": 3,
+          "q": "People analytics, data storytelling & data-driven HR",
+          "share": "AB"
+        },
+        {
+          "r": 4,
+          "q": "AI literacy & AI-fluency in HR / recruiting automation",
+          "share": "AB"
+        },
+        {
+          "r": 5,
+          "q": "Critical thinking, complex problem-solving & judgment",
+          "share": "ABC"
+        },
+        {
+          "r": 6,
+          "q": "Talent acquisition & full-cycle recruiting, incl. skills-based hiring",
+          "share": "none"
+        },
+        {
+          "r": 7,
+          "q": "Employee relations & labour-law compliance",
+          "share": "none"
+        },
+        {
+          "r": 8,
+          "q": "HRIS & people-analytics systems (Workday / SuccessFactors / Oracle / Visier / Power BI)",
+          "share": "none"
+        },
+        {
+          "r": 9,
+          "q": "Strategic workforce planning & succession planning",
+          "share": "none"
+        },
+        {
+          "r": 10,
+          "q": "Coaching, influencing, emotional intelligence & learning agility",
+          "share": "AB"
+        },
+        {
+          "r": 11,
+          "q": "Change management & organisational development",
+          "share": "AB"
+        },
+        {
+          "r": 12,
+          "q": "Cross-functional stakeholder management & collaboration",
+          "share": "ABC"
+        },
+        {
+          "r": 13,
+          "q": "Performance management & development",
+          "share": "none"
+        },
+        {
+          "r": 14,
+          "q": "Learning & development (L&D), incl. AI-enabled learning",
+          "share": "none"
+        },
+        {
+          "r": 15,
+          "q": "Compensation, benefits & total rewards",
+          "share": "none"
+        },
+        {
+          "r": 16,
+          "q": "Culture, employee experience & belonging",
+          "share": "none"
+        },
+        {
+          "r": 17,
+          "q": "Employer branding & candidate experience",
+          "share": "none"
+        },
+        {
+          "r": 18,
+          "q": "Diversity, equity, inclusion & belonging",
+          "share": "none"
+        },
+        {
+          "r": 19,
+          "q": "HR policy & governance",
+          "share": "none"
+        },
+        {
+          "r": 20,
+          "q": "English fluency (Danish an advantage)",
+          "share": "ABC"
+        }
+      ],
+      "sources": []
+    }
+  }
+}

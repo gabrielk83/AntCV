@@ -894,7 +894,9 @@ _verified: 2026-10-03_
 
 ## Row 60
 
-_verified: 2026-09-22_
+_verified: 2026-10-04_
+
+**2026-10-04 (CI cloud nightly, E1 staleness sweep — HEAD c8356182):** re-confirmed unchanged — both control sidecars still on disk AND wired in `index.html` (`antcv-header-rule-control.js` leg a, `antcv-cl-slogan-control.js` legs c/d/e/f; 2 refs). Status: diagnosed (code-map done); leg (d) `clClosingHidden`/`clSignNameHidden` still the genuine gap. All six legs need live-DOM capture + patch and, being auto-deploy-to-prod app changes, a live repro before ship — not doable in CI. Kept ACTIVE.
 
 **2026-09-22 (CI nightly, verify-first — HEAD 95038553):** re-confirmed — both control sidecars still on disk AND wired in `index.html` (`antcv-header-rule-control.js` leg a, `antcv-cl-slogan-control.js` legs c/d/e/f; 2 refs). Status unchanged: diagnosed (code-map done); leg (d) `clClosingHidden`/`clSignNameHidden` a genuine gap. All six legs need live-DOM capture + patch and, being auto-deploy-to-prod app changes, a live repro before ship — not doable in CI. Kept ACTIVE.
 
@@ -910,7 +912,9 @@ _verified: 2026-09-22_
 
 ## Row 61 — LINE-DISTRIBUTION-GUIDELINES-001
 
-_verified: 2026-09-22_
+_verified: 2026-10-04_
+
+**2026-10-04 (CI cloud nightly, E1 staleness sweep — HEAD c8356182):** re-confirmed unchanged — guidelines partly BAKED under LINE-DISTRIBUTION-001: `antcv-bullet-targets.js goldDensity()` (4 refs) + `window.__antcvRowFit` (8 refs in app.src.js) both present. Remaining guideline points (clean-cut floor pt 10, result-line one-line budget pt 5, multi-language render-measure) still feed the generator orphan-measure work (rows 27/49/59A). Kept ACTIVE as the standing guidelines anchor.
 
 **2026-09-22 (CI nightly, verify-first — HEAD 95038553):** re-confirmed — guidelines partly BAKED under LINE-DISTRIBUTION-001: `antcv-bullet-targets.js goldDensity()` (4 refs) + `window.__antcvRowFit` (8 refs in app.src.js) both present. Remaining guideline points (clean-cut floor pt 10, result-line one-line budget pt 5, multi-language render-measure) still feed the generator orphan-measure work (rows 27/49/59A). Kept ACTIVE as the standing guidelines anchor.
 
@@ -929,7 +933,9 @@ _verified: 2026-09-22_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-09-22_
+_verified: 2026-10-04_
+
+**2026-10-04 (CI cloud nightly, E1 staleness sweep — HEAD c8356182):** unchanged — still a set of universal polish rules applied by hand, NOT baked into the generator, except the line-fill/orphan points (4/14/19/22/28/29) which overlap row 61 and are partly served by LINE-DISTRIBUTION-001 (`goldDensity()` 4 refs + `__antcvRowFit` 8 refs re-confirmed present). The content/furniture rules remain generator-baseline TODOs. Kept ACTIVE.
 
 **2026-09-22 (CI nightly, verify-first — HEAD 95038553):** unchanged — still a set of universal polish rules applied by hand, NOT baked into the generator, except the line-fill/orphan points (4/14/19/22/28/29) which overlap row 61 and are partly served by LINE-DISTRIBUTION-001 (`antcv-bullet-targets.js goldDensity()` 4 refs + `window.__antcvRowFit` 8 refs confirmed present). The content/furniture rules remain generator-baseline TODOs. Kept ACTIVE.
 
@@ -948,7 +954,9 @@ _verified: 2026-09-22_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-09-22_
+_verified: 2026-10-04_
+
+**2026-10-04 (CI cloud nightly, E1 staleness sweep — HEAD c8356182):** unchanged — leg (A) generator pagination/orphan ADVANCED via LINE-DISTRIBUTION-001 (goldDensity + `__antcvRowFit` both re-confirmed present, row 61), still open for clean-cut floor + mid-unit-cut/blank-lower-sidebar (rows 27/49); leg (B) docx integrity FIXED in hand-edit tooling; leg (C) renderer = desktop Word-COM only (not CI). Kept ACTIVE.
 
 **2026-09-22 (CI nightly, verify-first — HEAD 95038553):** unchanged — leg (A) generator pagination/orphan ADVANCED via LINE-DISTRIBUTION-001 (goldDensity + `__antcvRowFit` both present, row 61), still open for clean-cut floor + mid-unit-cut/blank-lower-sidebar (rows 27/49); leg (B) docx integrity FIXED in hand-edit tooling; leg (C) renderer = desktop Word-COM only (not CI). Kept ACTIVE.
 
@@ -1837,7 +1845,9 @@ _reconcile 2026-09-07 (CI nightly, E2): `diag-settings-panels-probe.mjs` RE-RUN 
 
 ## Row 18 — ANITA-PERSONA-NO-PHOTO-001
 
-_verified: 2026-08-26_
+_verified: 2026-10-04_
+
+**2026-10-04 (CI cloud nightly, E1 staleness sweep — HEAD c8356182):** photo legs re-confirmed locked against current code. `docs/personas/anita/personalInfo.json` carries the embedded `photo` field (data URL, 61 KB JPEG). The IMPORT-REWRAP-DROPS-PHOTO-001 guard is present in BOTH bundles — `app.src.js:37725` and `app.js:165` (`n.photo ? { personalInfo: n, photo: n.photo } : …`). `pwa/test/unit/import-rewrap-keeps-photo.test.mjs` 7/7 green; full PWA suite 1773/1773. REMAINING unchanged: the CL foundation/bring/interests leg on a fresh Anita gen needs live models — not doable in CI. Kept ACTIVE.
 
 **OPEN-queue row (verbatim):**
 

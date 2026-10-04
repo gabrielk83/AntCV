@@ -76,10 +76,10 @@ citing an old number may mean either row — the ID disambiguates.
 | 54 | `GEN-JD-TAILOR-KERNEL-RECALL-001` | 2026-10-03 | (owner 2026-07-07) — targeted tailoring narrows/compresses to the JD but does  |
 | 55 | `TARGETED-OUTPUT-FURNITURE-001` | 2026-10-03 | (owner 2026-07-07) — targeted-output furniture/personalization defects on the KO |
 | 56 | `GEN-JD-RELEVANCE-TRIM-001` | 2026-10-03 | (owner 2026-07-07) — sibling of row 54: row 54 RECALLS relevant items the narrow set |
-| 60 | — | 2026-09-22 | PANEL-CONTROLS-2026-07-07 (owner, editor/preview panel controls — 6 legs, diagnostic-first, auto-deploy prod s |
-| 61 | `LINE-DISTRIBUTION-GUIDELINES-001` | 2026-09-22 | gen leg + bidirectional Fit-it SHIPPED (LINE-DISTRIBUTION-001, 1.51.2921/2980) — (KOMBIT lessons v1→v7, owner asked to crystallize) — conclusions on line-fill / orphan control, the single mos |
-| 57 | `TARGETED-CV-POLISH-RULES-001` | 2026-09-22 | (owner 2026-07-07, universal rules from a full CV review) — CONTENT: (1) each bul |
-| 59 | `GENERATOR-BASELINE-001` | 2026-09-22 | (owner 2026-07-07, "make the lessons enter the generator baseline") — two things the GE |
+| 60 | — | 2026-10-04 | PANEL-CONTROLS-2026-07-07 (owner, editor/preview panel controls — 6 legs, diagnostic-first, auto-deploy prod s |
+| 61 | `LINE-DISTRIBUTION-GUIDELINES-001` | 2026-10-04 | gen leg + bidirectional Fit-it SHIPPED (LINE-DISTRIBUTION-001, 1.51.2921/2980) — (KOMBIT lessons v1→v7, owner asked to crystallize) — conclusions on line-fill / orphan control, the single mos |
+| 57 | `TARGETED-CV-POLISH-RULES-001` | 2026-10-04 | (owner 2026-07-07, universal rules from a full CV review) — CONTENT: (1) each bul |
+| 59 | `GENERATOR-BASELINE-001` | 2026-10-04 | (owner 2026-07-07, "make the lessons enter the generator baseline") — two things the GE |
 | 63 | `ANALYSIS-STALE-ON-APP-LOAD-001` | 2026-09-22 | / NEW-1 (owner 2026-07-07) — loading a saved application does NOT load ITS JD a |
 | 64 | `ANALYSIS-EXPORT-DROPS-FILLED-ANSWERS-001` | 2026-09-22 | / NEW-2 (owner 2026-07-07) — exporting the JD-analysis PDF omits the  |
 | 58 | `EXPORT-SETTLED-001` | 2026-09-22 | MOBILE-BUGS-2026-07 (owner "Mobile App Bug Findings Report", 2026-07-07) — 9 findings: MOB-001 Danish UI shows |
@@ -127,7 +127,7 @@ citing an old number may mean either row — the ID disambiguates.
 | 11 | `SIDEBAR-PROMOTE-MARGIN-001` | 2026-08-26 _(STANDING)_ | SIDEBAR-PAGE23-DANCE CLOSED (verified 2026-07-03, headless): diag-sidebar-promote-margin (owner-scale sidebar  |
 | 16 | `SID-FALLBACK-HARDEN-001` | 2026-08-26 _(STANDING)_ | Sidebar TOOLS/REGULATORY justify↔left flap — re-check after hard refresh, diagnose if persists |
 | 17 | `SETTINGS-PERSONAL-STABILIZE-001` | 2026-09-30 _(STANDING)_ | Settings sweep-army cost on Layout/Account/Advanced panels (Personal panel already fixed) |
-| 18 | `ANITA-PERSONA-NO-PHOTO-001` | 2026-08-26 | Anita demo residuals — docx-photo + PDF-contact legs ROOT-CAUSED + FIXED 2026-08-26 (desktop nightly, PWA 1.51 |
+| 18 | `ANITA-PERSONA-NO-PHOTO-001` | 2026-10-04 | Anita demo residuals — docx-photo + PDF-contact legs ROOT-CAUSED + FIXED 2026-08-26 (desktop nightly, PWA 1.51 |
 | 23 | `NIGHTLY-PREVIEW-BUTTON-AUDIT-001` | 2026-09-29 _(STANDING)_ | Preview-button audit pass 2 (65 not-visible, 23 overlay-obstructed) + live dangerous-button audit |
 | 105 | `JOBSRC-FETCH-001` | 2026-09-29 | follow-through — teach the discovery routine to CALL job_sources.py instead of hand-fetching board search page |
 | 106 | `POSTING-OBSOLETE-001` | 2026-10-01 | ADVANCED 2026-08-27 (job-tracker nightly): the two-strike rule gained the missing per-DAY gate — POSTING-STRIK |

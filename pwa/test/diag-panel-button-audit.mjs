@@ -213,7 +213,11 @@ while (clicks < MAX_CLICKS) {
         if (recheck) { next = { ...next, visible: true }; notVisibleRecovered++; }
       } catch (_) { /* hover failed — fall through to the not-visible verdict below */ }
     }
-    if (!next.visible) { results.push({ ...next, verdict: 'not-visible-or-disabled' }); continue; }
+    // AUDIT-DISABLED-DEAD-001 (2026-10-04): a visible but DISABLED button
+    // used to fall through to the force:true click below (force bypasses the
+    // disabled check), do nothing, and be scored DEAD — e.g. the editor
+    // 'Undo last change' with an empty undo stack. Disabled is not dead.
+    if (!next.visible || next.disabled) { results.push({ ...next, verdict: 'not-visible-or-disabled' }); continue; }
   }
   if (DANGEROUS.test(next.label)) { results.push({ ...next, verdict: 'skipped-dangerous' }); continue; }
   clicks++;

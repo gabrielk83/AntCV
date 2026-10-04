@@ -129,7 +129,7 @@ citing an old number may mean either row — the ID disambiguates.
 | 17 | `SETTINGS-PERSONAL-STABILIZE-001` | 2026-09-30 _(STANDING)_ | Settings sweep-army cost on Layout/Account/Advanced panels (Personal panel already fixed) |
 | 18 | `ANITA-PERSONA-NO-PHOTO-001` | 2026-10-04 | Anita demo residuals — docx-photo + PDF-contact legs ROOT-CAUSED + FIXED 2026-08-26 (desktop nightly, PWA 1.51 |
 | 23 | `NIGHTLY-PREVIEW-BUTTON-AUDIT-001` | 2026-09-29 _(STANDING)_ | Preview-button audit pass 2 (65 not-visible, 23 overlay-obstructed) + live dangerous-button audit |
-| 105 | `JOBSRC-FETCH-001` | 2026-09-29 | follow-through — teach the discovery routine to CALL job_sources.py instead of hand-fetching board search page |
+| 105 | `JOBSRC-FETCH-001` | 2026-10-04 | follow-through — teach the discovery routine to CALL job_sources.py instead of hand-fetching board search page |
 | 106 | `POSTING-OBSOLETE-001` | 2026-10-01 | ADVANCED 2026-08-27 (job-tracker nightly): the two-strike rule gained the missing per-DAY gate — POSTING-STRIK |
 | 102 | `DEMAND-SEED-SEARCH-TOKEN-MISSING-001` | 2026-09-29 | (found by the weekly demand-seed run 2026-08-26, first run to PROBE rather than assume). the routine's prescri |
 | 107 | `IMPORT-REWRAP-SIBLING-DROP-001` | 2026-08-26 | (2026-08-26 desktop nightly, residual of row 18). The settings-import rewrap now carries photo across (1.51.44 |
@@ -137,6 +137,7 @@ citing an old number may mean either row — the ID disambiguates.
 | 113 | `PERSIST-SKELETON-GATE-001` | 2026-10-01 | (found by the job-tracker nightly 2026-09-30) — gen-runner `--persist` on a host without `~/.antcv/cv_skeleton.json` saved a 4-block flat CV (apps 3504, 3505). Gate SHIPPED; REMAINING owner legs: capture the skeleton + export_settings fixtures on Gabo-PC, regen the two apps |
 | 114 | `TELEMETRY-BGJOB-GAP-001` | 2026-09-30 | (found by the desktop nightly 2026-09-30) — the background-job gen path (cv-proxy `/job/create` + `/job/step`, used by `antcv-gen-job-client.js` and by `gen-runner.py`) writes NO `llm_calls` rows: only PWA client telemetry reaches the relay's `insertLlmCall`. Cost-quality tune, row 39 role-split verify and the Opus 5.5 first-call check are blind to it. Needs a design call: proxy posts to the relay, or the job client emits per-section events. |
 | 115 | `PWA-COST-METER-OPUS55-001` | 2026-10-01 | (found by the weekly cost-quality cross-check 2026-10-01) — the PWA `C` map meters provider `claude` at [2,10] (sonnet-5) while `q()` pins `claude-opus-5-5` [4,20] since 1.51.4666, so the client per-gen meter + cost ceiling run 2x low when opus-5-5 serves. Server telemetry unaffected. Fix: meter by returned model id (app.js + cache-bust, shift lane). |
+| 116 | `JOBSRC-STDOUT-ENCODING-001` | 2026-10-04 | (found by the position-discovery run 2026-10-04) — `job_sources.py search --json > file` on Windows writes cp1252 bytes (stdout encoding), so a UTF-8 reader of the file fails on the first Danish letter; workaround `PYTHONIOENCODING=utf-8` |
 
 ---
 

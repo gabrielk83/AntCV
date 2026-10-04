@@ -1887,7 +1887,9 @@ _reconcile 2026-09-07 (CI nightly, E3): `diag-panel-button-audit.mjs` RE-RUN on 
 
 > **Renumbered 2026-08-26: was row 40.** A document written before that date citing "row 40" may mean this row or SO-003. The ID is the key.
 
-_verified: 2026-09-29_
+_verified: 2026-10-04_
+
+**2026-10-04 (position-discovery run, re-verified live):** jobindex 14 queries, 133 unique ads, readable. jobbank 14 queries, 14 distinct result sets, 138 unique: the row-111 `key=` fix holds. LinkedIn guest strongest (18 x 20 cards). TheHub readable via WebFetch (15 jobs). Google Jobs returned aggregators only. Side defect filed as row 116 (stdout encoding of `--json`).
 
 **2026-09-29 (position-discovery run, re-verified live):** jobindex leg healthy (10 queries, 13–20 ads each, charset clean, 0 expired dropped). jobbank leg REGRESSED — the host now ignores `soegeord=`; filed as row 111 `JOBSRC-JOBBANK-PARAM-001`. LinkedIn guest strongest again (16 queries x 20 = 320 cards); TheHub readable only via WebFetch (the `/api/jobs` path 404s); Google Jobs (WebSearch) exercised for the first time since 2026-08-26 and surfaced 2 named leads. follow-through: the routine prompt's source list is otherwise still correct.
 
@@ -2115,3 +2117,11 @@ _verified: 2026-10-01_
 **Found by the weekly cost-quality desktop cross-check 2026-10-01 (step 1b(ii)).** The PWA `C` map (`pwa/app.src.js` ~1207) prices `anthropic` and `claude` at [2,10], the sonnet-5 rate. The dispatcher sends provider `claude` to `q()` (`app.src.js:1811`), whose request body pins `claude-opus-5-5` [4,20] since `1.51.4666-opus55-adopt`, and meters the call with `C[a]` (`app.src.js:3251`). When opus-5-5 serves the call, the client per-generation meter (GEN-COST-CEILING-001, `window.__antcvGenCost`) and the client-reported `cost_usd` are 2x low, so the cost ceiling trips late. Server telemetry is not affected: `estimateCostUsd()` prices from D1 then `rateForStrict()` and uses the client number only on a miss. The 09-28 calls on this provider logged `claude-sonnet-5`, so the served model depends on the proxy path; the first post-adoption `llm_calls` row will show which.
 
 **Owed:** meter by the model id the response returns (or the body's model) instead of the provider. `app.js` + `app.src.js` + full cache-bust set, in a shift lane. Owner call; not done in a cross-check run.
+
+## Row 116 — JOBSRC-STDOUT-ENCODING-001
+
+_verified: 2026-10-04_
+
+**Found by the position-discovery run 2026-10-04.** `python scripts/job-tracker/job_sources.py search --q "<q>" --source all --json > out.json` on Windows writes the JSON in the console code page (cp1252), not UTF-8. Every Danish letter (ø, æ, å) then fails a UTF-8 parse (`UnicodeDecodeError: 0xf8`), so a consumer reading the file as UTF-8 sees zero ads: the same silent "source was dry" failure mode as JOBSRC-FETCH-001. Characters outside cp1252 would raise inside the fetcher. Workaround used this run: `PYTHONIOENCODING=utf-8`.
+
+**Owed:** reconfigure stdout to UTF-8 in `job_sources.py` main (`sys.stdout.reconfigure(encoding="utf-8")`) or add `--out <file>`; same check for `discover-positions.py` / `check-postings.py` output. Test in `test_job_sources.py`. `scripts/` only, no cache-bust.

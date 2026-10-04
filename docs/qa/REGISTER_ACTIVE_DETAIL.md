@@ -772,7 +772,9 @@ REMAINING: owner live re-verify (no device in CI). Kept ACTIVE.
 
 ## Row 39 — GEN-MODELROLE-001
 
-_verified: 2026-09-30_
+_verified: 2026-10-04_
+
+**2026-10-04 (desktop nightly, VERIFIED still open):** D1 `llm_calls` (read via the Cloudflare D1 connector; local wrangler now returns 7403) newest row is 2026-09-28 (`claude` / `claude-sonnet-5`, 1 call). No production gen since the Opus 5.5 adopt, so the telemetry leg cannot close yet. `ts` is unix seconds.
 
 **2026-09-30 (desktop nightly, ADVANCED — deploy leg verified live):** wrangler is authenticated on Gabo-PC again, so yesterday's blocked leg ran. `wrangler versions view` on the live version of both proxies: `cv-proxy` `babdf99e` (deployed 2026-09-29T22:14Z) and `antcv-demo-proxy` `7d0ec439` (22:15Z) carry `MODEL_ROLES = {"writer":"anthropic","supervisor":"mistral","coherence":"openai","analysis":"mistral"}`, byte-equal to both `wrangler.toml` [vars]. The deployed `cv-proxy` bundle (read via the Cloudflare MCP) contains `claude-opus-5-5` 3×, same count as `workers/proxy/src`, so the OPUS55-ADOPT-001 deploy is live. **Telemetry leg still open:** D1 `llm_calls` has 0 rows after 2026-09-28 21:38 UTC (note: `ts` is seconds). No PWA generation has run since the deploy. The job-tracker nightly's gen today went through the proxy `/job/*` path, which never writes `llm_calls` (filed as row 114). Close on the first PWA gen that shows the role split. Proxy `/health` still reads `3.8.4-brand-ink-match`: the adopt did not bump the version string, so `/health` cannot tell pre- from post-adopt.
 

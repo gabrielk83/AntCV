@@ -76,5 +76,11 @@ Duplicate-run check: no artefact in the last 6 days, no open demand-seed PR.
   durable fix. The cloud routine env still needs the `AIza` key rotated and both values set.
   That was not verifiable from the desktop.
 - **Row 117**: owner decision on how JD signal blends into `__global_market__`.
-- **Live verify** of the deploy on antcv.pages.dev: see the run-log entry and the final lines of
-  this log.
+- Not exercised: an in-app JD classify against a real posting (needs a signed-in session).
+
+## Live verify (post-deploy, antcv.pages.dev)
+
+PASS. `sw.js` serves CACHE `antcv-1.51.4792-demand-seed-refresh`; `index.html` references
+`antcv-cluster-demand.js?v=1.51.4792-demand-seed-refresh`; the served file carries
+`var VERSION = '1.51.4792'` plus the new `executive` r2 (commercial growth) and `data_analytics` r3
+(visualisation & BI). Pushed as `ea854b29`; shift claim released.

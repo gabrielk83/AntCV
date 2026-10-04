@@ -43,8 +43,8 @@ citing an old number may mean either row — the ID disambiguates.
 | # | ID | verified | scope |
 |---|---|---|---|
 | 38 | `GEN-BACKGROUND-001` | 2026-09-29 | CLIENT — ENGINE SHIPPED 1.51.132 (antcv-gen-job-client.js, window.AntcvGenJob, 8 tests, ine |
-| 76 | `JOBTRACKER-LLM-REFIT-BUTTON-001` | 2026-10-01 | (deferred enhancement) — the fit SCORE that orders the Top-5 is deterministic by design (ranking stability). O |
-| 82 | `ROLE-CANON-AUDIT-LEG-001` | 2026-10-01 | (follow-up) — export-audit leg NOW WIRED + green (gold_audit.py role_canon_issues, test_gold_residue 18/18); only es/zh eyeball owner-gated |
+| 76 | `JOBTRACKER-LLM-REFIT-BUTTON-001` | 2026-10-04 | (deferred enhancement) — the fit SCORE that orders the Top-5 is deterministic by design (ranking stability). O |
+| 82 | `ROLE-CANON-AUDIT-LEG-001` | 2026-10-04 | (follow-up) — export-audit leg NOW WIRED + green (gold_audit.py role_canon_issues, test_gold_residue 18/18); only es/zh eyeball owner-gated |
 | 94 | `CONTENT-LANG-STAMP-001` | 2026-10-01 | CODE SHIPPED 1.51.4446-content-lang-stamp (D1 content_language column + relay whitelist + both app.js legs). R |
 | 25 | `TABLE-GEOMETRY-PARITY-001` | 2026-09-27 | Table geometry parity — diagnose real CloudConvert PDF vs preview measurement |
 | 6 | `BANNED-WORDS-MERGE-001` | 2026-09-27 | Wizard/Settings UX — owner eyeball gate on merged banned-words UI + 6-file loader test |

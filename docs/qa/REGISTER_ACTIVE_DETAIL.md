@@ -1905,7 +1905,9 @@ _verified: 2026-10-04_
 
 > **Renumbered 2026-08-26: was row 41.** A document written before that date citing "row 41" may mean this row or SO-004. The ID is the key.
 
-_verified: 2026-10-01_
+_verified: 2026-10-04_
+
+**RE-VERIFIED 2026-10-04 (job-tracker nightly, Gabo-PC).** `check --apply`: 56 probed, 54 LIVE, 1 archived on first sight (Factbird AI Enablement Coordinator, LinkedIn CLOSED), 1 ERROR not counted (VML MAP HTTP 500).
 
 **RE-VERIFIED 2026-09-30 (job-tracker nightly, Gabo-PC).** `check --apply` on doc rev 257: 58 probed, 53 LIVE, 0 archived, 2 GONE held at strike 1/2 (3Shape Senior PM R&D, GE HealthCare Strategic Sourcing, both HTTP 410), 3 ERROR not counted (VML MAP HTTP 500, Danfoss timeout, one LinkedIn read timeout). The 12 rows the 09-29 dry run saw as CLOSED were already archived by another session and are skipped as expected. Checked the new LinkedIn guest-API probe (POSTING-LI-SLUG-001) on 3 rows: page and guest API agree (microsoft_2 + nvidia LIVE, FalCom CLOSED). Strike-1 rows settle on the next day's sweep; the row stays open for that follow-through.
 
@@ -2071,7 +2073,7 @@ says so.
 
 ## Row 113 — PERSIST-SKELETON-GATE-001
 
-_verified: 2026-10-01_
+_verified: 2026-10-04_
 
 **Found by the job-tracker nightly 2026-09-30 (Gabo-PC).** `gen-runner.py run --persist` loads the captured
 me() skeleton from `~/.antcv/cv_skeleton.json` and overlays the 8 generated sections onto it. When the file
@@ -2097,6 +2099,8 @@ host with the fixtures: `gen-runner.py run --persist --force --row celare_quantu
 `--row danfoss-production-testi-4818`. Neither app is fit to send as is. Both tracker rows carry a ⚠ note.
 
 **Re-verified 2026-10-01 (job-tracker nightly).** Both fixtures are still missing on Gabo-PC (`~/.antcv/` holds only `keys.env` and `token`). Owner legs unchanged.
+
+**Advanced 2026-10-04 (job-tracker nightly).** Fixtures still missing. Diagnostic for a cloud capture path: a full PWA app (`GET /api/applications/3501`) has the same section ids the overlay targets (cv `profile`, `work_style`, `outcomes`, `core_comp`, `experience`, the sidebar set; cl `greeting` to `closure`). A `skeleton-from-app` command could write the fixture without a browser. Blocker before shipping it: when a generated section comes back empty or as scaffold, `build_structured_sections` keeps the skeleton text (the profile path says so explicitly). With a me() skeleton that is generic default text; with an app-derived skeleton it is another employer's tailored text. The command must reset the job-specific slots (profile, work_style, outcomes, core_comp, every CL slot) to the kernel defaults or me() scaffold first, with a test that drives the overlay on an empty section. `export_settings.json` has no cloud source yet (app `style_config` is a partial candidate). Owner legs unchanged.
 
 ---
 

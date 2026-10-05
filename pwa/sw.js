@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.4813-linear-detail-groups';
+const CACHE = 'antcv-1.51.4832-edu-detail';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

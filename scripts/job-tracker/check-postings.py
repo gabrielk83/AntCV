@@ -91,6 +91,16 @@ DEAD_PHRASES = [
     "tjänsten är tillsatt", "annonsen har utgått", "ansökningstiden har gått ut",
 ]
 
+# POSTING-SOFT404-001: an ATS that answers HTTP 200 for a req it has taken down.
+# SuccessFactors (jobs.danfoss.com) serves "You can't view this job because it's
+# not available at this time." with no job content. "At this time" is hedged, so
+# this is SOFT evidence: GONE, two strikes on separate days, same as a real 404.
+# The apostrophes arrive as ', a typographic quote or an HTML entity.
+_APOS = r"(?:'|’|&#39;|&#x27;|&apos;|&rsquo;)"
+SOFT_GONE_RE = re.compile(
+    r"can" + _APOS + r"t view this job because it" + _APOS + r"s not available at this time",
+    re.I)
+
 # Explicit application-deadline fields, trusted only on the two Danish boards
 # where the label is a real structured field rather than prose.
 DEADLINE_HOSTS = ("jobbank.dk", "jobindex.dk")
@@ -206,6 +216,8 @@ def classify(status, final_url, requested_url, text, today=None):
     for p in DEAD_PHRASES:
         if p in body:
             return "CLOSED", "page says: %r" % p
+    if SOFT_GONE_RE.search(body):
+        return "GONE", "HTTP %d, page says the job is not available at this time" % status
     # Redirected off the posting onto something with no job identity at all.
     if final_url and requested_url and final_url.rstrip("/") != requested_url.rstrip("/"):
         if not _JOB_PATH_HINT.search(final_url):

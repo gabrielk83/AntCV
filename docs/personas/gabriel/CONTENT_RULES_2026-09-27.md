@@ -92,6 +92,10 @@ General rules for every role and every executive-linear CV/letter, learned from 
 |---|---|
 | Details tables | The closing details are three tables, each with its own heading: CREDENTIALS (standards, courses, patents) · LANGUAGES & PERSONAL (languages, sport/interests, accessibility) · AVAILABILITY & REFERENCES. Not one combined "Languages, interests & profile details" table. AntCV app change (preview + docx-worker) pending owner approval. |
 | Bullet order | Lead each role with the people and decision signal (budget, hiring, team incl. its manager, change board), technical depth second. |
+| Education detail | Every degree gets a one-line focus under it (subjects, research group, papers, award), from stored facts, styled like the MBA note line. Never only title + school + years. |
+| Interests | Keep the Interests row in EVERY layout, humour included ("home supervision by three feline strategic napping experts"). Converting two-column to linear must carry over every section; nothing personal is dropped silently. |
+| Cut order | To fit the page budget, cut the lowest-priority optional bullets and shorten details rows (courses, referees on one line) first. Never cut personality, education detail or interests to save space. |
+| Cloned lines | When a new line is cloned from an existing paragraph, clear hidden paragraph marks (w:vanish); a hidden mark merges the new line into the next heading. |
 
 ### Persona facts confirmed 2026-10-05 (Gabriel)
 
@@ -100,3 +104,5 @@ General rules for every role and every executive-linear CV/letter, learned from 
 - Rugby: Team Operations Manager & Coaching Assistant (foreningsarbejde), Copenhagen Wolves RFC (Pan Idræt); World Rugby Level 1 coaching course completed; assists the coaches.
 - Meprolight microdisplay end-of-life: higher-performance replacement at lower unit cost; it needed lead time to test it and build a new interface.
 - Supplier qualification: four countries (Israel, China, Taiwan, Sweden).
+- Education focus: M.Sc. EE - optics, photonics and nanotechnology, in a photonics research group, two peer-reviewed papers; both B.Sc. degrees - optics, VLSI and DSP; MBA - business plan honourable mention at Tsinghua University.
+- Interests: Tai-chi · hiking · cultural exchange (languages, food, board games) · home supervision by three feline strategic napping experts.

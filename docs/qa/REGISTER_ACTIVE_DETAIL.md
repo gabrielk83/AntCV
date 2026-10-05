@@ -977,7 +977,9 @@ _verified: 2026-10-04_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-09-22_
+_verified: 2026-10-05_
+
+**2026-10-05 (CI nightly, verify-first — HEAD 735f6d8f):** re-confirmed intact — mount-hydrate unsol-guard present at `pwa/app.src.js:18765` (`u.set("rationale", t.rationale)` gated by the `!(t.meta.company && !__antcvUnsol(...))` check); `__antcvUnsol` referenced 37× across the bundle; PWA suite green (exit 0). Owner live-verify still owed (targeted→targeted saved-app switch needs the relay — no headless repro in CI). Kept ACTIVE.
 
 **2026-09-22 (CI nightly, verify-first — HEAD 95038553):** re-confirmed — the mount-hydrate unsol-guard is present at `pwa/app.src.js:18763` (`if (t.rationale && !(t.meta && t.meta.company && !window.__antcvUnsol(t.meta.company))) { … u.set("rationale", t.rationale); … bo(t.rationale); }`); `__antcvUnsol` referenced 37× across the bundle. Owner live-verify still owed (saved-app targeted→targeted switch needs the relay — no headless repro in CI). Kept ACTIVE.
 
@@ -996,7 +998,9 @@ _verified: 2026-09-22_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-09-22_
+_verified: 2026-10-05_
+
+**2026-10-05 (CI nightly, verify-first — HEAD 735f6d8f):** re-confirmed intact — `pwa/antcv-analysis-report-pdf-360.js` still carries the `gapStateKey`/`readGapState` content-based helpers (6 refs) and `pwa/test/diag-new2-gap-detail-export.mjs` is present; PWA suite green (exit 0). Owner live-verify still owed (fill a gap detail live → confirm it exports). Kept ACTIVE.
 
 **2026-09-22 (CI nightly, verify-first — HEAD 95038553):** re-confirmed — `pwa/antcv-analysis-report-pdf-360.js` still carries the `gapStateKey`/`readGapState` helpers (content-based scan, newest-ts wins; 6 refs) and `pwa/test/diag-new2-gap-detail-export.mjs` present + green. Owner live-verify still owed (fill a gap detail live → confirm it exports). Kept ACTIVE.
 
@@ -1015,7 +1019,9 @@ _verified: 2026-09-22_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-09-22_
+_verified: 2026-10-05_
+
+**2026-10-05 (CI nightly, verify-first — HEAD 735f6d8f):** re-confirmed intact — MOB-008 fix present: `pwa/antcv-mobile-controls.css` still carries the `overflow-y:auto; -webkit-overflow-scrolling:touch !important` panel rules (8 refs) and `pwa/test/diag-mob008-panel-overflow.mjs` is present; PWA suite green (exit 0). Remaining mobile findings (001-007, MOB-GAP-OPEN) still headless-repro-blocked, owner live-gated. Kept ACTIVE.
 
 **2026-09-22 (CI nightly, verify-first — HEAD 95038553):** re-confirmed — MOB-008 fix intact: `pwa/antcv-mobile-controls.css` still carries the `overflow-y:auto; -webkit-overflow-scrolling:touch !important` panel rules (8 refs) and `pwa/test/diag-mob008-panel-overflow.mjs` present + green. MOB-009 folded into row 59A; remaining mobile findings (001/002/003/004/005/006/007, MOB-GAP-OPEN) still open — headless-repro-blocked, owner live-gated. Kept ACTIVE.
 
@@ -1034,7 +1040,9 @@ _verified: 2026-09-22_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited markers intact, remaining work unchanged & CI-ungated): verify-first against HEAD. Header-banner generator rules SHIPPED remain intact (`bodyTopBorder` + ✉ icon-separated contact confirmed in `workers/docx-worker/src/index.js`, 5 markers). REMAINING = the render-measure loop vs KOMBIT gold + the two Track-C follow-ups (CL `meta.subtitle` double-render; page-2 column-balance → row 61) — all need a real docx-worker render CI cannot do. Kept ACTIVE.
+_verified: 2026-10-05_ — CI E1 re-verify against HEAD 735f6d8f (all cited markers intact, remaining work unchanged & CI-ungated): header-banner generator rules SHIPPED remain intact (`bodyTopBorder` 3 refs + ✉ icon-separated contact 2 refs in `workers/docx-worker/src/index.js`; `workers/docx-worker/test/diag-contact-icons.mjs` present). REMAINING = the render-measure loop vs KOMBIT gold + the two Track-C follow-ups (CL `meta.subtitle` double-render; page-2 column-balance → row 61) — all need a real docx-worker render CI cannot do. Kept ACTIVE.
+
+**2026-09-23 (prior CI E1 re-verify against HEAD 38630d58):** all cited markers intact, remaining work unchanged & CI-ungated. Header-banner generator rules SHIPPED remain intact (`bodyTopBorder` + ✉ icon-separated contact in `workers/docx-worker/src/index.js`). Kept ACTIVE.
 
 **TO-DO SUMMARY row (verbatim):**
 

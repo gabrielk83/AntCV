@@ -80,10 +80,10 @@ citing an old number may mean either row — the ID disambiguates.
 | 61 | `LINE-DISTRIBUTION-GUIDELINES-001` | 2026-10-04 | gen leg + bidirectional Fit-it SHIPPED (LINE-DISTRIBUTION-001, 1.51.2921/2980) — (KOMBIT lessons v1→v7, owner asked to crystallize) — conclusions on line-fill / orphan control, the single mos |
 | 57 | `TARGETED-CV-POLISH-RULES-001` | 2026-10-04 | (owner 2026-07-07, universal rules from a full CV review) — CONTENT: (1) each bul |
 | 59 | `GENERATOR-BASELINE-001` | 2026-10-04 | (owner 2026-07-07, "make the lessons enter the generator baseline") — two things the GE |
-| 63 | `ANALYSIS-STALE-ON-APP-LOAD-001` | 2026-09-22 | / NEW-1 (owner 2026-07-07) — loading a saved application does NOT load ITS JD a |
-| 64 | `ANALYSIS-EXPORT-DROPS-FILLED-ANSWERS-001` | 2026-09-22 | / NEW-2 (owner 2026-07-07) — exporting the JD-analysis PDF omits the  |
-| 58 | `EXPORT-SETTLED-001` | 2026-09-22 | MOBILE-BUGS-2026-07 (owner "Mobile App Bug Findings Report", 2026-07-07) — 9 findings: MOB-001 Danish UI shows |
-| 62 | `HEADER-BANNER-DESIGN-RULES-001` | 2026-09-23 | (owner 2026-07-07, KOMBIT gold) — bake the correct CV/CL header-banner design i |
+| 63 | `ANALYSIS-STALE-ON-APP-LOAD-001` | 2026-10-05 | / NEW-1 (owner 2026-07-07) — loading a saved application does NOT load ITS JD a |
+| 64 | `ANALYSIS-EXPORT-DROPS-FILLED-ANSWERS-001` | 2026-10-05 | / NEW-2 (owner 2026-07-07) — exporting the JD-analysis PDF omits the  |
+| 58 | `EXPORT-SETTLED-001` | 2026-10-05 | MOBILE-BUGS-2026-07 (owner "Mobile App Bug Findings Report", 2026-07-07) — 9 findings: MOB-001 Danish UI shows |
+| 62 | `HEADER-BANNER-DESIGN-RULES-001` | 2026-10-05 | (owner 2026-07-07, KOMBIT gold) — bake the correct CV/CL header-banner design i |
 | 74 | `JD-SWAP-STALE-RATIONALE-001` | 2026-09-23 | LIVE-APP DRIVE (owner 2026-07-08: estimator calibration → generate 4 via the app). Three outcomes: (A) PARITY- |
 | 73 | — | 2026-09-23 | CV REVIEW-4 — LINE-FILL DEEP PASS + accessibility/competency (owner 2026-07-08: "lines are very very uneven",  |
 | 72 | `AI-NOTICE-ANCHOR-FIX-001` | 2026-09-23 | CV REVIEW-3 + worker 1.14.136 (owner 2026-07-08) — "handle as UNIVERSAL for gen/enhance/fix". WORKER (universa |

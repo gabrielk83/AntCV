@@ -4,6 +4,26 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 119 — POSTING-SOFT404-001 — CLOSED 2026-10-05 (job-tracker nightly follow-up, evidence: live probe + test)
+
+_verified: 2026-10-05_
+
+_Found and fixed the same day by the job-tracker nightly follow-up (Gabo-PC, Fable 5.1)._
+
+**Evidence.** The row 113 regen was about to spend a model call on Danfoss / Production Testing Engineer. A direct fetch of `jobs.danfoss.com/job/Production-Testing-Engineer/51342-en_GB/` returned HTTP 200, title "Job Details | Danfoss", no job content and one sentence: "You can't view this job because it's not available at this time." The morning sweep had graded the same URL LIVE (`HTTP 200`): `classify` knew only 404/410 as GONE and a fixed list of closed-ad phrases, and this SuccessFactors wording was in neither.
+
+**OPEN-queue row (verbatim):**
+
+```
+| 119 | `POSTING-SOFT404-001` | 2026-10-05 | (found by the job-tracker nightly follow-up 2026-10-05) - an ATS that answers HTTP 200 for a taken-down req (SuccessFactors: "You can't view this job because it's not available at this time") was graded LIVE by `check-postings.py`, so a dead posting stayed in the list and could take a generation. |
+```
+
+---
+
+**CLOSED 2026-10-05.** `check-postings.py` gains `SOFT_GONE_RE` and one branch in `classify`, after the hard closed phrases: the SuccessFactors sentence grades **GONE**. It is soft evidence on purpose. "At this time" is hedged, so the row needs two strikes on separate days, the same as a real 404, and a hard closed phrase on the same page still wins. `scripts/job-tracker/test_check_postings.py` adds 5 checks on the real `classify`: the sentence with a plain, an entity and a typographic apostrophe is GONE; with "Position has been filled" it is CLOSED; an open JD whose prose says a benefit is "not available at this time" stays LIVE. Negative control: the new branch (line 219) set to `if False:`, 3 checks red, green after restore. Live: the Danfoss URL classifies GONE, and the sweep re-run recorded strike 1/2 on `danfoss-production-testi-4818`. Script-only, no `pwa/` asset, no version number.
+
+---
+
 ## Row 107 — IMPORT-REWRAP-SIBLING-DROP-001 — CLOSED 2026-10-05 (desktop nightly, evidence: real-code test + live bundle verify)
 
 > **Renumbered 2026-08-26: was row 102.** A document written before that date citing "row 102" may mean this row or DEMAND-SEED-SEARCH-TOKEN-MISSING-001. The ID is the key.

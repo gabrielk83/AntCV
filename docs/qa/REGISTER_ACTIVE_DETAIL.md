@@ -2125,6 +2125,8 @@ host with the fixtures: `gen-runner.py run --persist --force --row celare_quantu
 
 **Re-verified 2026-10-05 (job-tracker nightly).** Both fixtures are on Gabo-PC (`cv_skeleton.json` 37 KB, `export_settings.json` 485 KB, written 10-04 20:19). Leg (2) is still owed. Not done unattended: rows `celare_quantum_commu` and `danfoss-production-testi-4818` are `queue=false`, the regen needs `--force`, and a forced run is outside the nightly's eligible set (armed, or never generated). A re-arm alone would not trigger it either: see row 118. REMAINING: owner go-ahead for the nightly to run both with `--force`, or a manual run of the two commands in leg (2).
 
+**Leg (2) half DONE 2026-10-05 (owner go-ahead, same-day follow-up).** Celare: `run --persist --force --row celare_quantum_commu` persisted **app 3508** with the skeleton overlay (cv 16 / cl 9 sections). `export_pdfs.py --apps 3508`: CV 2 pages, CL 1 page, 0 banned dashes, AI notice, sidebar and experience present. The fixture captured from cloud prefs is proven on a real generation. The ⚠ line was removed from the Celare tracker flag. Danfoss was NOT regenerated: the posting (req 51342) is taken down, see CLOSED row 119, and the sweep holds it at GONE strike 1/2. Apps 3505 and 3504 are still in the cloud as low-fidelity leftovers; deleting them is the owner's call. REMAINING: the Danfoss leg is pending the posting. If the next sweep archives the row, the leg is void and this row closes. If the posting returns, run `gen-runner.py run --persist --force --row danfoss-production-testi-4818`.
+
 ---
 
 ---

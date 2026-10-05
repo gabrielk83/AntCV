@@ -68,6 +68,7 @@ General rules for every role and every executive-linear CV/letter, learned from 
 | Rule | Detail |
 |---|---|
 | Body font | Calibri 10.5 pt for body, bullets and table cells; section headings in Trebuchet MS. Calibri is narrower than Arial, so 10.5 pt fits the lines that Arial 10 pt filled. |
+| Tables use body size | Tools & methods, Credentials, Languages & personal and Availability & references tables use the SAME Calibri 10.5 pt as the body (owner raised them from 10 pt), with condensed letter spacing where a cell would wrap. Smaller table text is only a fallback when page 2 has no room. |
 | Character spacing | Fill lines per paragraph with condensed spacing in small steps (−0.1 to −0.8 pt), 99 % character scale on dense lines. This extends the −0.4 pt line-fill limit above for single lines. Never Word "Distribute". |
 | Whole lines | Re-check every bullet after EVERY text edit: a short last line (one word, or under about a third of the width) is a defect. Shorten the clause or condense. |
 | Extending a line | A short bullet is extended by 30-50 characters with stored facts only, never with new claims. |

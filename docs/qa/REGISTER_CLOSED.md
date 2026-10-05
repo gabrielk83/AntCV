@@ -4,6 +4,28 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 107 — IMPORT-REWRAP-SIBLING-DROP-001 — CLOSED 2026-10-05 (desktop nightly, evidence: real-code test + live bundle verify)
+
+> **Renumbered 2026-08-26: was row 102.** A document written before that date citing "row 102" may mean this row or DEMAND-SEED-SEARCH-TOKEN-MISSING-001. The ID is the key.
+
+_verified: 2026-10-05_
+
+_Filed by the desktop nightly 2026-08-26 as a residual of row 18; fixed by the desktop nightly 2026-10-05 (Gabo-PC, Fable 5.1), `1.51.4812-import-rewrap-siblings`._
+
+**Evidence.** Reproduced on the shipped expression: the 1.51.4406 photo-only rewrap, fed an unwrapped blob with all 21 siblings, keeps `photo` and returns `undefined` for the other 20 (negative control in the test). After the fix the real arrow, extracted from `pwa/app.js` and from `pwa/app.src.js`, keeps all 21.
+
+**OPEN-queue row (verbatim):**
+
+```
+| **107** | **IMPORT-REWRAP-SIBLING-DROP-001 (2026-08-26 desktop nightly, residual of row 18).** The settings-import rewrap now carries `photo` across (1.51.4406) but still drops every OTHER top-level sibling an UNWRAPPED personalInfo blob may carry: `language`, `navyColor`, `profileDoc`, `skillsDoc`, `wordsDoc`, `danishDoc`, `memoryDigest`. (`apiKey` / `proxyUrl` are safe — they are disjuncts earlier in the same guard, so a blob carrying them is never rewrapped at all.) Only `photo` had a reported user-visible symptom, so only `photo` was carried; widening the carry-set is a deliberate, separately-testable change and was NOT done blind. No known owner-facing symptom today — filed so the next hand-pasted blob that loses a `navyColor` is diagnosed in one minute instead of one night. Fix shape: extend the same ternary, or hoist the sibling reads above the rewrap. | ACTIVE_BUGS 2026-08-26 top block; `pwa/app.src.js` settings-import block | TO DO — filed 2026-08-26, not started |
+```
+
+---
+
+**CLOSED 2026-10-05.** The rewrap is one arrow that copies the chain's whole top-level read-set onto the wrapper when the value is not null or undefined: the 7 keys the row names plus `memoryDigestHash`, the openai / mistral / gemini keys and models, `lineTargets`, `fontSizes`, `cvTableRatio`, `clTableRatio`, `consensusEnabled`, and `photo` as before. `language` is copied only as a 2-letter string, so a prose `language` field in a hand-written personalInfo cannot become the app language. Fields outside the read-set are not hoisted. Surgical edit in `pwa/app.js`, mirrored in `pwa/app.src.js`. Test `pwa/test/unit/import-rewrap-keeps-photo.test.mjs`: 24 checks on the real code of both bundles, two negative controls, and a lock that every `n.<key>` read between the rewrap and the personalInfo apply is in the carried list, so a new reader added to the chain without a carry fails the suite. Suite 1801/1801, boot smoke OK. Live: deploy run 37296932788 green; served `app.js?v=1.51.4812-import-rewrap-siblings` is byte-identical to the repo and carries the new expression; production boots at 1.51.4812. Not driven: the admin Import click in a signed-in browser; the tab renders only for `is_admin`.
+
+---
+
 ## Row 116 — JOBSRC-STDOUT-ENCODING-001 — CLOSED 2026-10-05 (job-tracker nightly, evidence: live repro + test)
 
 _verified: 2026-10-05_

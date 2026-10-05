@@ -11,7 +11,8 @@ Since dispatch: A2's client leg (same-device stale pointer) SHIPPED — see A2 b
 
 - **Full coverage = the register.** `docs/qa/OPEN_REGISTER.md` is the single source of open work.
   **Since the 2026-08-26 split it is a slim INDEX** — one line per ACTIVE row (number, ticket ID,
-  a single `verified:` date, one line of scope), already sorted **stalest first**; the verbatim
+  a single `verified:` date, one line of scope). It is **not kept sorted**: take the stalest rows
+  from `node scripts/check-register.mjs --stalest 5` (REGISTER-STALEST-SCAN-MISS-001); the verbatim
   row text lives in `REGISTER_ACTIVE_DETAIL.md`, finished rows in `REGISTER_CLOSED.md`, run
   summaries in `REGISTER_RUNLOG.md`. The old "rows 1-45 + the TO-DO summary" phrasing is dead:
   there is no second table, and the ACTIVE set is ~94 rows. Every band below maps to register
@@ -136,8 +137,8 @@ fabrication) — so verifying it live directly helps Band C.
 
 ## BAND E — STANDING COVERAGE (every run, ~30-60 min, never skipped)
 
-**E1 — Register staleness sweep (NIGHTLY_BACKLOG_RECONCILE slot):** take the 3-5 oldest `verified:no`
-rows (currently 1, 3, 9, 14, 16, 20, 35-37) → verify against CURRENT code → close-with-evidence or
+**E1 — Register staleness sweep (NIGHTLY_BACKLOG_RECONCILE slot):** take the 3-5 stalest rows from
+`node scripts/check-register.mjs --stalest 5` (never from table position) → verify against CURRENT code → close-with-evidence or
 refresh + set the date. A run that only closes two stale rows properly is a GOOD run.
 **E2 — Settings-panel stability sweep (row 17):** re-run `diag-personal-panel-probe.mjs`; point it at
 the Layout/Account/Advanced panels; change-gate any writer still churning (Personal is fixed 1.51.128).

@@ -58,3 +58,37 @@ Checks: `pwa/antcv-profile-rules.js` (Layout control + `pwa/test/unit/profile-sl
 - AntCV app, content rules: shipped 1.51.4586 (2026-09-29, VEO-ROLE-LEAK) in `pwa/gold-rules.json` 1.6.0 — target role is the posting's own title (never a partner role named in the ad), example isolation, same-company roles never merged, parallel degrees as two entries, levels/counts as stored, current role first, kernel placement notes obeyed, the banned-word replacements above, standards without clause numbers, Russia clause only on ask, accessibility line (CV only). Example isolation also in `workers/proxy` + `workers/demo-proxy` `prompt-augment.js` — **those two workers still need a workflow_dispatch deploy**.
 - AntCV app, stored facts: kernel v13g (local `Gabriel_personalInfo_modernized_2026-08-20_v13.json`, 2026-09-29) now has Trackman first, Innoviz titles as above, Kanzen closed 2022–2026, Danish B2. **D1 mirror pending** — AntCV generates from D1 until the file is imported.
 - AntCV app, layout: NOT yet — the executive-linear layout is steps 3–5 of `docs/design/EXECUTIVE_LINEAR_LAYOUT_PROPOSAL.md`; only `role.location` + role-line format shipped (1.51.4566).
+
+## Lessons from the Veo Director CV (owner edits, 2026-10-05)
+
+Source: the owner's own Word edits to `CV_Veo_Director_enriched.docx` (AntCV-course-exercises, executive-linear layout) compared with the generated version, plus the owner's corrections in the same session.
+
+### Type and spacing
+
+| Rule | Detail |
+|---|---|
+| Body font | **Calibri 10.5 pt** for body, bullets and table cells (owner replaced Arial 10 pt). Calibri is narrower, so 10.5 pt fits the same lines. Section headings in **Trebuchet MS**. |
+| Character spacing | Line fill is done per paragraph with condensed spacing in small steps: −0.1, −0.2, −0.3, −0.4, −0.5, −0.6 and up to −0.8 pt, with 99 % character scale on dense lines. Extends the −0.4 pt limit above for single lines; still never Word "Distribute". |
+| Whole lines | Re-check after EVERY text edit: a one-word or short second line ("gates.", "product.") is a defect. Shorten the clause or condense; do not leave 1.5 lines. |
+| Extending a line | When a bullet ends short, extend it by 30-50 characters with stored facts (e.g. "battery system design and testing", "fully operating SWIR sight demonstrator"), never with new claims. |
+| Page 2 start | One explicit page-break paragraph before "Professional experience (Cont.)". Never stacked empty spacer paragraphs: when page 1 grew, four spacers spilled to the top of page 2 and pushed the CV to 3 pages. |
+| Document end | Keep exactly one empty paragraph after the last table (1 pt exact line height); a second one creates a blank page 3. |
+
+### Wording
+
+| Rule | Detail |
+|---|---|
+| Tense | Present tense in ALL job bullets, earlier roles included, and in Results lines: Chair, Establish, Present, Own, Lead, Develop, Qualify, Supervise; "cuts rejects", "ships". |
+| Supplier names | Do not name suppliers or contract manufacturers from former employers (NDA risk). Use categories: "global optics, crystal and microdisplay manufacturers", "display, camera-module and image-sensor suppliers". |
+| Audits | Supplier audits: Sirin Labs and Meprolight (led and performed in person). Innoviz: customer audits of Innoviz as a supplier, 2 audits, central contributor, own areas fully owned. |
+| Kanzen offers | "input to nearly 100 client offers, with pricing and decision material for 4 clients". Never "100+" or "4 offers". |
+| Rugby | "Team Operations Manager & Coaching Assistant (foreningsarbejde), Copenhagen Wolves RFC (Pan Idræt)"; World Rugby Level 1 coaching course completed; assists the coaches. Never "coach", "coaching" as the role, or "Assistant Coach". |
+| Standards (camera employers) | EMVA 1288 · ISO 12233 · ISO 15739 · IEC 60529 · IEC 60068 · MIL-STD-810 · CE/RED · ISO 9001, on one line, no explanatory parentheses (from the owner's 2026-09-10 regulatory list). |
+| Supplier qualification | Keep "four countries (Israel, China, Taiwan, Sweden)". |
+
+### Structure
+
+| Rule | Detail |
+|---|---|
+| Details tables | The closing details are three tables, each with its own heading: CREDENTIALS (standards, courses, patent) · LANGUAGES & PERSONAL (languages, rugby, accessibility) · AVAILABILITY & REFERENCES. Not one "Languages, interests & profile details" table. AntCV app change (preview + docx-worker) pending owner approval. |
+| Bullet order | Lead each role with the people and decision signal (budget, hiring, team incl. its manager, change board), technical depth second. |

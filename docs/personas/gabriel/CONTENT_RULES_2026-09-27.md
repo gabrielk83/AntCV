@@ -59,36 +59,44 @@ Checks: `pwa/antcv-profile-rules.js` (Layout control + `pwa/test/unit/profile-sl
 - AntCV app, stored facts: kernel v13g (local `Gabriel_personalInfo_modernized_2026-08-20_v13.json`, 2026-09-29) now has Trackman first, Innoviz titles as above, Kanzen closed 2022–2026, Danish B2. **D1 mirror pending** — AntCV generates from D1 until the file is imported.
 - AntCV app, layout: NOT yet — the executive-linear layout is steps 3–5 of `docs/design/EXECUTIVE_LINEAR_LAYOUT_PROPOSAL.md`; only `role.location` + role-line format shipped (1.51.4566).
 
-## Lessons from the Veo Director CV (owner edits, 2026-10-05)
+## Executive-linear CV rules (owner edits, 2026-10-05)
 
-Source: the owner's own Word edits to `CV_Veo_Director_enriched.docx` (AntCV-course-exercises, executive-linear layout) compared with the generated version, plus the owner's corrections in the same session.
+General rules for every role and every executive-linear CV/letter, learned from the owner's own Word edits to a generated CV (Veo Director of Hardware Engineering, 2026-10-05). Persona facts confirmed in the same session are listed separately at the end.
 
 ### Type and spacing
 
 | Rule | Detail |
 |---|---|
-| Body font | **Calibri 10.5 pt** for body, bullets and table cells (owner replaced Arial 10 pt). Calibri is narrower, so 10.5 pt fits the same lines. Section headings in **Trebuchet MS**. |
-| Character spacing | Line fill is done per paragraph with condensed spacing in small steps: −0.1, −0.2, −0.3, −0.4, −0.5, −0.6 and up to −0.8 pt, with 99 % character scale on dense lines. Extends the −0.4 pt limit above for single lines; still never Word "Distribute". |
-| Whole lines | Re-check after EVERY text edit: a one-word or short second line ("gates.", "product.") is a defect. Shorten the clause or condense; do not leave 1.5 lines. |
-| Extending a line | When a bullet ends short, extend it by 30-50 characters with stored facts (e.g. "battery system design and testing", "fully operating SWIR sight demonstrator"), never with new claims. |
-| Page 2 start | One explicit page-break paragraph before "Professional experience (Cont.)". Never stacked empty spacer paragraphs: when page 1 grew, four spacers spilled to the top of page 2 and pushed the CV to 3 pages. |
-| Document end | Keep exactly one empty paragraph after the last table (1 pt exact line height); a second one creates a blank page 3. |
+| Body font | Calibri 10.5 pt for body, bullets and table cells; section headings in Trebuchet MS. Calibri is narrower than Arial, so 10.5 pt fits the lines that Arial 10 pt filled. |
+| Character spacing | Fill lines per paragraph with condensed spacing in small steps (−0.1 to −0.8 pt), 99 % character scale on dense lines. This extends the −0.4 pt line-fill limit above for single lines. Never Word "Distribute". |
+| Whole lines | Re-check every bullet after EVERY text edit: a short last line (one word, or under about a third of the width) is a defect. Shorten the clause or condense. |
+| Extending a line | A short bullet is extended by 30-50 characters with stored facts only, never with new claims. |
+| Page 2 start | One explicit page-break paragraph before "Professional experience (Cont.)". Never stacked empty spacer paragraphs: they spill to the top of page 2 when page 1 grows. |
+| Document end | Exactly one empty paragraph after the last table (1 pt exact line height); a second one can create a blank last page. |
 
 ### Wording
 
 | Rule | Detail |
 |---|---|
-| Tense | Present tense in ALL job bullets, earlier roles included, and in Results lines: Chair, Establish, Present, Own, Lead, Develop, Qualify, Supervise; "cuts rejects", "ships". |
-| Supplier names | Do not name suppliers or contract manufacturers from former employers (NDA risk). Use categories: "global optics, crystal and microdisplay manufacturers", "display, camera-module and image-sensor suppliers". |
-| Audits | Supplier audits: Sirin Labs and Meprolight (led and performed in person). Innoviz: customer audits of Innoviz as a supplier, 2 audits, central contributor, own areas fully owned. |
-| Kanzen offers | "input to nearly 100 client offers, with pricing and decision material for 4 clients". Never "100+" or "4 offers". |
-| Rugby | "Team Operations Manager & Coaching Assistant (foreningsarbejde), Copenhagen Wolves RFC (Pan Idræt)"; World Rugby Level 1 coaching course completed; assists the coaches. Never "coach", "coaching" as the role, or "Assistant Coach". |
-| Standards (camera employers) | EMVA 1288 · ISO 12233 · ISO 15739 · IEC 60529 · IEC 60068 · MIL-STD-810 · CE/RED · ISO 9001, on one line, no explanatory parentheses (from the owner's 2026-09-10 regulatory list). |
-| Supplier qualification | Keep "four countries (Israel, China, Taiwan, Sweden)". |
+| Tense | Present tense in ALL job bullets, earlier roles included, and in Results lines (Chair, Establish, Present, Own, Lead, Develop, Qualify, Supervise; "cuts", "ships"). |
+| Third-party names | Never name suppliers, contract manufacturers or customers of former employers (NDA risk). Use categories ("display, camera-module and image-sensor suppliers"). |
+| Audit direction | Say which way an audit went: supplier audits (the candidate audited suppliers) vs customer audits (customers audited the candidate's employer as a supplier). Never mix them. |
+| Counts and costs | No "100+"-style inflation; use the stored wording ("nearly 100"). Do not state a cost direction (higher/lower) unless the stored fact says it. |
+| Volunteer roles | Use the stored Danish term (foreningsarbejde). Never upgrade a supporting sports role to "coach" or "Assistant Coach". |
+| Standards | Match the standards list to the employer's domain (e.g. image-sensor and image-quality standards for a camera company), taken only from the candidate's stored list; one line, no explanatory parentheses. |
+| Banned words | Re-run the banned-word scrub after manual edits (a hand edit reintroduced "cross-functional"). |
 
 ### Structure
 
 | Rule | Detail |
 |---|---|
-| Details tables | The closing details are three tables, each with its own heading: CREDENTIALS (standards, courses, patent) · LANGUAGES & PERSONAL (languages, rugby, accessibility) · AVAILABILITY & REFERENCES. Not one "Languages, interests & profile details" table. AntCV app change (preview + docx-worker) pending owner approval. |
+| Details tables | The closing details are three tables, each with its own heading: CREDENTIALS (standards, courses, patents) · LANGUAGES & PERSONAL (languages, sport/interests, accessibility) · AVAILABILITY & REFERENCES. Not one combined "Languages, interests & profile details" table. AntCV app change (preview + docx-worker) pending owner approval. |
 | Bullet order | Lead each role with the people and decision signal (budget, hiring, team incl. its manager, change board), technical depth second. |
+
+### Persona facts confirmed 2026-10-05 (Gabriel)
+
+- Supplier audits: Sirin Labs and Meprolight (led and performed in person). Innoviz: customer audits of Innoviz as a supplier, central contributor, own areas fully owned.
+- Kanzen: input to nearly 100 client offers, with pricing and decision material for 4 clients.
+- Rugby: Team Operations Manager & Coaching Assistant (foreningsarbejde), Copenhagen Wolves RFC (Pan Idræt); World Rugby Level 1 coaching course completed; assists the coaches.
+- Meprolight microdisplay end-of-life: higher-performance replacement at lower unit cost; it needed lead time to test it and build a new interface.
+- Supplier qualification: four countries (Israel, China, Taiwan, Sweden).

@@ -8,7 +8,7 @@ Owner-issued rules from the executive-linear package batch (Terma 1030–1034, H
 |---|---|
 | Current role first | **Project Manager, Hardware Development & Supply — Trackman A/S, Hørsholm (2026 – present)**. Trackman's own language (sponsor Charlotte Doyle, 2026-09-24): *Project Management Assistant (PMA)*, not MDA; *hardware projects*, not modules; *supplier selection* + *supplier agreements*; *2–4 phases*. |
 | Innoviz is two roles | System Architect, Automotive LiDAR (2017–2020) and Change Control Lead & Customer Change Request Manager (2020–2025). Never one 8-year line. |
-| Education | Two separate degrees taken in parallel: **B.Sc. Physics** and **B.Sc. Electrical Engineering**, Tel Aviv University 2000–2005. Never "Dual B.Sc.". Listed as two entries. |
+| Education | Two separate degrees taken in parallel, listed as two entries, Electrical Engineering first: **B.Sc. Electrical Engineering · Tel Aviv University (double degree)** and **B.Sc. Physics · Tel Aviv University (double degree)** (owner wording 2026-10-05). Never "Dual B.Sc." and never one merged line. Years as stored in the kernel. |
 | Publications | **Two** peer-reviewed papers and a conference poster (carbon-nanotube NEMS). Never "three". Google Scholar link: `scholar.google.com/citations?user=E6q1Y34AAAAJ&hl=en`. |
 | Project | AntCV (2026) appears in the closing details table as its own row with a live link `github.com/gabrielk83/AntCV`. |
 | ISO 9001 | Plain "ISO 9001". Never clause numbers (§8.3 / §8.4). |
@@ -94,6 +94,7 @@ General rules for every role and every executive-linear CV/letter, learned from 
 | Bullet order | Lead each role with the people and decision signal (budget, hiring, team incl. its manager, change board), technical depth second. |
 | Education detail | Every degree gets a one-line focus under it (subjects, research group, papers, award), from stored facts, styled like the MBA note line. Never only title + school + years. |
 | Interests | Keep the Interests row in EVERY layout, humour included ("home supervision by three feline strategic napping experts"). Converting two-column to linear must carry over every section; nothing personal is dropped silently. |
+| Enriched CV | An "enriched" CV carries the cover-letter and contact signals itself (profile, bullets, competencies) and is uploaded ALONE when a portal takes one file. Never append a cover-letter page to it. |
 | Cut order | To fit the page budget, cut the lowest-priority optional bullets and shorten details rows (courses, referees on one line) first. Never cut personality, education detail or interests to save space. |
 | Cloned lines | When a new line is cloned from an existing paragraph, clear hidden paragraph marks (w:vanish); a hidden mark merges the new line into the next heading. |
 

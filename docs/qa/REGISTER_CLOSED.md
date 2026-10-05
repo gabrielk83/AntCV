@@ -4,6 +4,68 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 119 — POSTING-SOFT404-001 — CLOSED 2026-10-05 (job-tracker nightly follow-up, evidence: live probe + test)
+
+_verified: 2026-10-05_
+
+_Found and fixed the same day by the job-tracker nightly follow-up (Gabo-PC, Fable 5.1)._
+
+**Evidence.** The row 113 regen was about to spend a model call on Danfoss / Production Testing Engineer. A direct fetch of `jobs.danfoss.com/job/Production-Testing-Engineer/51342-en_GB/` returned HTTP 200, title "Job Details | Danfoss", no job content and one sentence: "You can't view this job because it's not available at this time." The morning sweep had graded the same URL LIVE (`HTTP 200`): `classify` knew only 404/410 as GONE and a fixed list of closed-ad phrases, and this SuccessFactors wording was in neither.
+
+**OPEN-queue row (verbatim):**
+
+```
+| 119 | `POSTING-SOFT404-001` | 2026-10-05 | (found by the job-tracker nightly follow-up 2026-10-05) - an ATS that answers HTTP 200 for a taken-down req (SuccessFactors: "You can't view this job because it's not available at this time") was graded LIVE by `check-postings.py`, so a dead posting stayed in the list and could take a generation. |
+```
+
+---
+
+**CLOSED 2026-10-05.** `check-postings.py` gains `SOFT_GONE_RE` and one branch in `classify`, after the hard closed phrases: the SuccessFactors sentence grades **GONE**. It is soft evidence on purpose. "At this time" is hedged, so the row needs two strikes on separate days, the same as a real 404, and a hard closed phrase on the same page still wins. `scripts/job-tracker/test_check_postings.py` adds 5 checks on the real `classify`: the sentence with a plain, an entity and a typographic apostrophe is GONE; with "Position has been filled" it is CLOSED; an open JD whose prose says a benefit is "not available at this time" stays LIVE. Negative control: the new branch (line 219) set to `if False:`, 3 checks red, green after restore. Live: the Danfoss URL classifies GONE, and the sweep re-run recorded strike 1/2 on `danfoss-production-testi-4818`. Script-only, no `pwa/` asset, no version number.
+
+---
+
+## Row 107 — IMPORT-REWRAP-SIBLING-DROP-001 — CLOSED 2026-10-05 (desktop nightly, evidence: real-code test + live bundle verify)
+
+> **Renumbered 2026-08-26: was row 102.** A document written before that date citing "row 102" may mean this row or DEMAND-SEED-SEARCH-TOKEN-MISSING-001. The ID is the key.
+
+_verified: 2026-10-05_
+
+_Filed by the desktop nightly 2026-08-26 as a residual of row 18; fixed by the desktop nightly 2026-10-05 (Gabo-PC, Fable 5.1), `1.51.4812-import-rewrap-siblings`._
+
+**Evidence.** Reproduced on the shipped expression: the 1.51.4406 photo-only rewrap, fed an unwrapped blob with all 21 siblings, keeps `photo` and returns `undefined` for the other 20 (negative control in the test). After the fix the real arrow, extracted from `pwa/app.js` and from `pwa/app.src.js`, keeps all 21.
+
+**OPEN-queue row (verbatim):**
+
+```
+| **107** | **IMPORT-REWRAP-SIBLING-DROP-001 (2026-08-26 desktop nightly, residual of row 18).** The settings-import rewrap now carries `photo` across (1.51.4406) but still drops every OTHER top-level sibling an UNWRAPPED personalInfo blob may carry: `language`, `navyColor`, `profileDoc`, `skillsDoc`, `wordsDoc`, `danishDoc`, `memoryDigest`. (`apiKey` / `proxyUrl` are safe — they are disjuncts earlier in the same guard, so a blob carrying them is never rewrapped at all.) Only `photo` had a reported user-visible symptom, so only `photo` was carried; widening the carry-set is a deliberate, separately-testable change and was NOT done blind. No known owner-facing symptom today — filed so the next hand-pasted blob that loses a `navyColor` is diagnosed in one minute instead of one night. Fix shape: extend the same ternary, or hoist the sibling reads above the rewrap. | ACTIVE_BUGS 2026-08-26 top block; `pwa/app.src.js` settings-import block | TO DO — filed 2026-08-26, not started |
+```
+
+---
+
+**CLOSED 2026-10-05.** The rewrap is one arrow that copies the chain's whole top-level read-set onto the wrapper when the value is not null or undefined: the 7 keys the row names plus `memoryDigestHash`, the openai / mistral / gemini keys and models, `lineTargets`, `fontSizes`, `cvTableRatio`, `clTableRatio`, `consensusEnabled`, and `photo` as before. `language` is copied only as a 2-letter string, so a prose `language` field in a hand-written personalInfo cannot become the app language. Fields outside the read-set are not hoisted. Surgical edit in `pwa/app.js`, mirrored in `pwa/app.src.js`. Test `pwa/test/unit/import-rewrap-keeps-photo.test.mjs`: 24 checks on the real code of both bundles, two negative controls, and a lock that every `n.<key>` read between the rewrap and the personalInfo apply is in the carried list, so a new reader added to the chain without a carry fails the suite. Suite 1801/1801, boot smoke OK. Live: deploy run 37296932788 green; served `app.js?v=1.51.4812-import-rewrap-siblings` is byte-identical to the repo and carries the new expression; production boots at 1.51.4812. Not driven: the admin Import click in a signed-in browser; the tab renders only for `is_admin`.
+
+---
+
+## Row 116 — JOBSRC-STDOUT-ENCODING-001 — CLOSED 2026-10-05 (job-tracker nightly, evidence: live repro + test)
+
+_verified: 2026-10-05_
+
+_Found by the position-discovery run 2026-10-04; fixed by the job-tracker nightly 2026-10-05 (Gabo-PC, Fable 5.1)._
+
+**Evidence.** Reproduced before the fix, with `PYTHONIOENCODING` unset: `job_sources.py search --q produktchef --source jobindex --limit 5 --json > file` wrote 1451 bytes, and a UTF-8 decode failed at byte 0xf8 (position 360).
+
+**OPEN-queue row (verbatim):**
+
+```
+| 116 | `JOBSRC-STDOUT-ENCODING-001` | 2026-10-04 | (found by the position-discovery run 2026-10-04) — `job_sources.py search --json > file` on Windows writes cp1252 bytes (stdout encoding), so a UTF-8 reader of the file fails on the first Danish letter; workaround `PYTHONIOENCODING=utf-8` |
+```
+
+---
+
+**CLOSED 2026-10-05.** `job_sources.py` `main()` and `discover-positions.py` `main()` now pin stdout to UTF-8 with `sys.stdout.reconfigure(encoding="utf-8")`, the same block `check-postings.py` already carried. All three scripts a routine redirects to a file now write UTF-8 on any console codepage. `scripts/job-tracker/test_job_sources.py` adds 4 checks (16 -> 20): two child processes run the real `main()` with stdout piped and `PYTHONIOENCODING=cp1252`, with only the network call stubbed (`SOURCES`, `get_doc`). The fixture holds "ø" and "ő": unpinned, the first leaves as byte 0xf8 and the second raises in `print()`. Negative control: each `reconfigure` line replaced with `pass` (job_sources.py:232, discover-positions.py:236), 2 checks red each time, green after restore. Live after the fix: the repro command parses as UTF-8 JSON (5 rows), and `discover-positions.py context > file` decodes (313 lines). The `PYTHONIOENCODING=utf-8` workaround is no longer needed. Script-only, no `pwa/` asset, no version number.
+
+---
+
 ## Row 108 — JOBTRACKER-PYTEST-UNWIRED-001 — CLOSED 2026-10-02 (CI cloud nightly, evidence: suite run + guard test)
 
 _verified: 2026-10-02_

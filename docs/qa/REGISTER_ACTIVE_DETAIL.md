@@ -15,7 +15,9 @@ When you finish it: move it to `REGISTER_CLOSED.md`.
 
 ## Row 38 — GEN-BACKGROUND-001
 
-_verified: 2026-09-29_
+_verified: 2026-10-05_
+
+**2026-10-05 (desktop nightly, LIVE attest):** `diag-live-guard-sidecars.mjs` against `antcv.pages.dev` at `1.51.4812-import-rewrap-siblings`, after today's deploy: `antcv-gen-memo.js` (`?v=1.51.134`) and `antcv-gen-job-client.js` (`?v=1.51.132`) served, executed, bytes identical to the repo. REMAINING unchanged: the A/B on a real mobile gen with `antcv:gen-resume=1`, then the owner-gated default flip. Needs a real device. Kept ACTIVE.
 
 **2026-09-29 (desktop nightly, LIVE attest):** the shipped guard is LIVE-ATTESTED on the deployed PWA for the first time: new `pwa/test/diag-live-guard-sidecars.mjs` proves, against `antcv.pages.dev` at `1.51.4606-exec-linear-dash`, that the sidecar was SERVED, that it EXECUTED (global on `window`) and that the served bytes are IDENTICAL to the repo file (EOL-normalized). Until now every re-verify was repo-side only, which cannot distinguish a shipped fix from one that is on disk but never loaded, or from a stale CDN/SW copy under an unbumped `?v`. Both legs pass: `antcv-gen-memo.js` (`?v=1.51.134`, `AntcvGenMemo` + `__antcvGenTrigger`) and `antcv-gen-job-client.js` (`?v=1.51.132`, `AntcvGenJob`). REMAINING unchanged and unchanged in kind: the A/B on a REAL mobile gen with `antcv:gen-resume=1` (background/lock -> foreground auto-resume, mid-run reload resume, output parity against a flag-off gen) and, only if that is clean, the owner-gated proposal to flip the default. Needs a real device — no desktop or headless substitute exists. Kept ACTIVE.
 
@@ -454,7 +456,9 @@ _E1 sweep 2026-09-08 (CI nightly): confirmed in CURRENT code — `__platformRule
 
 ## Row 34 — ROLE-MERGE-STORED-001
 
-_verified: 2026-09-29_
+_verified: 2026-10-05_
+
+**2026-10-05 (desktop nightly, LIVE attest + parity diag):** `antcv-role-merge-stored.js` served, executed, bytes identical, on production `1.51.4812-import-rewrap-siblings` (its `?v` moved with the `app.js` family; the file did not change). Band E4 `diag-results-preview-export-parity.mjs`: OK, preview per-role result equals export per-role result for all 3 roles, 0 page errors. REMAINING unchanged. Kept ACTIVE.
 
 **2026-09-29 (desktop nightly, LIVE attest + parity diag):** the shipped guard is LIVE-ATTESTED on the deployed PWA for the first time: new `pwa/test/diag-live-guard-sidecars.mjs` proves, against `antcv.pages.dev` at `1.51.4606-exec-linear-dash`, that the sidecar was SERVED, that it EXECUTED (global on `window`) and that the served bytes are IDENTICAL to the repo file (EOL-normalized). Until now every re-verify was repo-side only, which cannot distinguish a shipped fix from one that is on disk but never loaded, or from a stale CDN/SW copy under an unbumped `?v`. `antcv-role-merge-stored.js` served at `?v=1.51.3482-sections-storm`, `AntcvRoleMergeStored` live, bytes identical. Export/preview parity re-run green: `diag-results-preview-export-parity.mjs` confirms the preview computes a result for every role the export does and that the per-role strings are identical (one `applyOutcomesMode`). That diag had been reporting RED on a soft check that gated its exit code — fixed this run (see the ACTIVE_BUGS 2026-09-29 block). OWED unchanged: signed-in preview==export byte eyeball on a targeted app. Kept ACTIVE.
 
@@ -574,7 +578,9 @@ _verified: 2026-10-03_
 
 ## Row 39a — AUTOSAVE-NO-DOWNGRADE-001
 
-_verified: 2026-09-29_
+_verified: 2026-10-05_
+
+**2026-10-05 (desktop nightly, LIVE attest):** `antcv-pointer-stale-guard.js` served at `?v=1.51.334-unsol-pillar`, executed, bytes identical, on production `1.51.4812-import-rewrap-siblings`. Relay `/health` returns `auth-38-subtitle-guard-qual-put`, equal to the repo constant. The authed downgrade PUT was not run. The token is valid now (expires 2026-10-11), but the PUT writes to a real application row and a failed guard would blank that row's company. Owner decision listed in the run report: name a scratch application id the nightly may use. REMAINING: that PUT, the same-device stale-pointer A/B, the row 19 two-device test. Kept ACTIVE.
 
 **2026-09-29 (desktop nightly, LIVE attest + relay version match):** the shipped guard is LIVE-ATTESTED on the deployed PWA for the first time: new `pwa/test/diag-live-guard-sidecars.mjs` proves, against `antcv.pages.dev` at `1.51.4606-exec-linear-dash`, that the sidecar was SERVED, that it EXECUTED (global on `window`) and that the served bytes are IDENTICAL to the repo file (EOL-normalized). Until now every re-verify was repo-side only, which cannot distinguish a shipped fix from one that is on disk but never loaded, or from a stale CDN/SW copy under an unbumped `?v`. Leg 2 (client) `antcv-pointer-stale-guard.js` served at `?v=1.51.334-unsol-pillar`, `AntcvPointerStaleGuard` live, bytes identical. Leg 1 (relay) attested a second way: live `/health` on `antcv-access-relay` returns `RELAY_VERSION auth-38-subtitle-guard-qual-put`, which is byte-equal to the in-repo constant, and that source carries the guard (7 `__blockDowngrade`/`__blockCvBlank`/`__blockClBlank` sites) — so the DEPLOYED relay is the build that contains it. The authed downgrade-PUT itself was NOT run: both stored owner credentials are expired (`~/.antcv/browser-session.json` 2026-07-17, `~/.antcv/token` 2026-09-02) and entering a password is prohibited, so a live authed write is owner-gated — and it would mutate the real account. REMAINING: row 19 two-real-device test + the authed downgrade-PUT / same-device stale-pointer A/B. Kept ACTIVE.
 
@@ -596,7 +602,9 @@ _verified: 2026-09-29_
 
 ## Row 41
 
-_verified: 2026-09-29_
+_verified: 2026-10-05_
+
+**2026-10-05 (desktop nightly, LIVE attest):** `antcv-debug-logger.js` served at `?v=1.51.160`, executed, bytes identical, on production `1.51.4812-import-rewrap-siblings`. The probe stays armed. Still no repro; the next live Android crash populates a capture. Kept ACTIVE (instrumented, no repro).
 
 **2026-09-29 (desktop nightly, LIVE attest):** the shipped guard is LIVE-ATTESTED on the deployed PWA for the first time: new `pwa/test/diag-live-guard-sidecars.mjs` proves, against `antcv.pages.dev` at `1.51.4606-exec-linear-dash`, that the sidecar was SERVED, that it EXECUTED (global on `window`) and that the served bytes are IDENTICAL to the repo file (EOL-normalized). Until now every re-verify was repo-side only, which cannot distinguish a shipped fix from one that is on disk but never loaded, or from a stale CDN/SW copy under an unbumped `?v`. `antcv-debug-logger.js` served at `?v=1.51.160`, `AntcvDebug` live, bytes identical, and the widened capture path (`Maximum update depth`) is present in the SERVED bytes — so the probe is armed in production, not just in the repo. Still no repro: #185 here needs a real Android reflow oscillation that a stable headless layout cannot produce. NEXT unchanged: the next live Android crash populates a capture. Kept ACTIVE (instrumented, no repro).
 
@@ -618,7 +626,9 @@ _verified: 2026-09-29_
 
 ## Row 42 — GEN-LANGFAB-001
 
-_verified: 2026-09-29_
+_verified: 2026-10-05_
+
+**2026-10-05 (desktop nightly, LIVE attest):** `antcv-lang-fabrication-guard.js` served at `?v=1.51.136`, executed, bytes identical, on production `1.51.4812-import-rewrap-siblings`. REMAINING unchanged: owner-verify on a fresh generation. Kept ACTIVE.
 
 **2026-09-29 (desktop nightly, LIVE attest):** the shipped guard is LIVE-ATTESTED on the deployed PWA for the first time: new `pwa/test/diag-live-guard-sidecars.mjs` proves, against `antcv.pages.dev` at `1.51.4606-exec-linear-dash`, that the sidecar was SERVED, that it EXECUTED (global on `window`) and that the served bytes are IDENTICAL to the repo file (EOL-normalized). Until now every re-verify was repo-side only, which cannot distinguish a shipped fix from one that is on disk but never loaded, or from a stale CDN/SW copy under an unbumped `?v`. `antcv-lang-fabrication-guard.js` served at `?v=1.51.136`, `AntcvLangFabricationGuard` live, bytes identical. REMAINING unchanged: owner-verify on a FRESH targeted gen (German omitted, Danish B1) — a real LLM generation, which needs the expired owner session. Kept ACTIVE.
 
@@ -640,7 +650,9 @@ _verified: 2026-09-29_
 
 ## Row 43
 
-_verified: 2026-09-29_
+_verified: 2026-10-05_
+
+**2026-10-05 (desktop nightly, LIVE attest):** `antcv-candidate-preview-editor-341.js` served at `?v=1.51.139-ca006-pathc-header-whitelist`, bytes identical, on production `1.51.4812-import-rewrap-siblings`. REMAINING: owner click-through eyeball on a targeted gen preview. Kept ACTIVE.
 
 **2026-09-29 (desktop nightly, LIVE attest):** the shipped guard is LIVE-ATTESTED on the deployed PWA for the first time: new `pwa/test/diag-live-guard-sidecars.mjs` proves, against `antcv.pages.dev` at `1.51.4606-exec-linear-dash`, that the sidecar was SERVED, that it EXECUTED (global on `window`) and that the served bytes are IDENTICAL to the repo file (EOL-normalized). Until now every re-verify was repo-side only, which cannot distinguish a shipped fix from one that is on disk but never loaded, or from a stale CDN/SW copy under an unbumped `?v`. `antcv-candidate-preview-editor-341.js` served at `?v=1.51.139-ca006-pathc-header-whitelist`, bytes identical, and the Path-C whitelist marker (`data-antcv-candidate-band`) is present in the SERVED bytes. Owner click-through eyeball on a targeted gen preview remains the only owed verify. Kept ACTIVE.
 
@@ -662,7 +674,9 @@ _verified: 2026-09-29_
 
 ## Row 44 — JD-ANALYSIS-PRINT-001
 
-_verified: 2026-09-29_
+_verified: 2026-10-05_
+
+**2026-10-05 (desktop nightly, LIVE attest):** `antcv-analysis-report-pdf-360.js` served at `?v=1.51.2072-analysis-cloudconvert`, bytes identical, on production `1.51.4812-import-rewrap-siblings`. REMAINING: owner click-through of "Download analysis (PDF)". Kept ACTIVE.
 
 **2026-09-29 (desktop nightly, LIVE attest):** the shipped guard is LIVE-ATTESTED on the deployed PWA for the first time: new `pwa/test/diag-live-guard-sidecars.mjs` proves, against `antcv.pages.dev` at `1.51.4606-exec-linear-dash`, that the sidecar was SERVED, that it EXECUTED (global on `window`) and that the served bytes are IDENTICAL to the repo file (EOL-normalized). Until now every re-verify was repo-side only, which cannot distinguish a shipped fix from one that is on disk but never loaded, or from a stale CDN/SW copy under an unbumped `?v`. `antcv-analysis-report-pdf-360.js` served at `?v=1.51.2072-analysis-cloudconvert`, bytes identical, and the render-present offscreen-iframe geometry (`left:-99999px`) is present in the SERVED bytes — the exact defect (a `visibility:hidden;0x0` iframe printing the top-level CV preview) cannot be present in production. REMAINING: owner click-through of "Download analysis (PDF)". Kept ACTIVE.
 
@@ -772,7 +786,9 @@ REMAINING: owner live re-verify (no device in CI). Kept ACTIVE.
 
 ## Row 39 — GEN-MODELROLE-001
 
-_verified: 2026-10-04_
+_verified: 2026-10-05_
+
+**2026-10-05 (desktop nightly, VERIFIED still open):** D1 `llm_calls` read through the Cloudflare D1 connector (SELECT only): newest rows are still 2026-09-28 (`claude-sonnet-5` 1, `gemini-2.5-flash` 4, `mistral-large-latest` 4, `gpt-5.4-mini` 9). No production generation since the Opus 5.5 adopt, so no `claude-opus-5-5` row and no role-split evidence yet. Proxy `/health` 200 ×2 at `3.8.4-brand-ink-match`. REMAINING: the telemetry leg, on the first PWA gen. Blocked on: real LLM gen.
 
 **2026-10-04 (desktop nightly, VERIFIED still open):** D1 `llm_calls` (read via the Cloudflare D1 connector; local wrangler now returns 7403) newest row is 2026-09-28 (`claude` / `claude-sonnet-5`, 1 call). No production gen since the Opus 5.5 adopt, so the telemetry leg cannot close yet. `ts` is unix seconds.
 
@@ -977,7 +993,9 @@ _verified: 2026-10-04_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-09-22_
+_verified: 2026-10-05_
+
+**2026-10-05 (CI nightly, verify-first — HEAD 735f6d8f):** re-confirmed intact — mount-hydrate unsol-guard present at `pwa/app.src.js:18765` (`u.set("rationale", t.rationale)` gated by the `!(t.meta.company && !__antcvUnsol(...))` check); `__antcvUnsol` referenced 37× across the bundle; PWA suite green (exit 0). Owner live-verify still owed (targeted→targeted saved-app switch needs the relay — no headless repro in CI). Kept ACTIVE.
 
 **2026-09-22 (CI nightly, verify-first — HEAD 95038553):** re-confirmed — the mount-hydrate unsol-guard is present at `pwa/app.src.js:18763` (`if (t.rationale && !(t.meta && t.meta.company && !window.__antcvUnsol(t.meta.company))) { … u.set("rationale", t.rationale); … bo(t.rationale); }`); `__antcvUnsol` referenced 37× across the bundle. Owner live-verify still owed (saved-app targeted→targeted switch needs the relay — no headless repro in CI). Kept ACTIVE.
 
@@ -996,7 +1014,9 @@ _verified: 2026-09-22_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-09-22_
+_verified: 2026-10-05_
+
+**2026-10-05 (CI nightly, verify-first — HEAD 735f6d8f):** re-confirmed intact — `pwa/antcv-analysis-report-pdf-360.js` still carries the `gapStateKey`/`readGapState` content-based helpers (6 refs) and `pwa/test/diag-new2-gap-detail-export.mjs` is present; PWA suite green (exit 0). Owner live-verify still owed (fill a gap detail live → confirm it exports). Kept ACTIVE.
 
 **2026-09-22 (CI nightly, verify-first — HEAD 95038553):** re-confirmed — `pwa/antcv-analysis-report-pdf-360.js` still carries the `gapStateKey`/`readGapState` helpers (content-based scan, newest-ts wins; 6 refs) and `pwa/test/diag-new2-gap-detail-export.mjs` present + green. Owner live-verify still owed (fill a gap detail live → confirm it exports). Kept ACTIVE.
 
@@ -1015,7 +1035,9 @@ _verified: 2026-09-22_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-09-22_
+_verified: 2026-10-05_
+
+**2026-10-05 (CI nightly, verify-first — HEAD 735f6d8f):** re-confirmed intact — MOB-008 fix present: `pwa/antcv-mobile-controls.css` still carries the `overflow-y:auto; -webkit-overflow-scrolling:touch !important` panel rules (8 refs) and `pwa/test/diag-mob008-panel-overflow.mjs` is present; PWA suite green (exit 0). Remaining mobile findings (001-007, MOB-GAP-OPEN) still headless-repro-blocked, owner live-gated. Kept ACTIVE.
 
 **2026-09-22 (CI nightly, verify-first — HEAD 95038553):** re-confirmed — MOB-008 fix intact: `pwa/antcv-mobile-controls.css` still carries the `overflow-y:auto; -webkit-overflow-scrolling:touch !important` panel rules (8 refs) and `pwa/test/diag-mob008-panel-overflow.mjs` present + green. MOB-009 folded into row 59A; remaining mobile findings (001/002/003/004/005/006/007, MOB-GAP-OPEN) still open — headless-repro-blocked, owner live-gated. Kept ACTIVE.
 
@@ -1034,7 +1056,9 @@ _verified: 2026-09-22_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited markers intact, remaining work unchanged & CI-ungated): verify-first against HEAD. Header-banner generator rules SHIPPED remain intact (`bodyTopBorder` + ✉ icon-separated contact confirmed in `workers/docx-worker/src/index.js`, 5 markers). REMAINING = the render-measure loop vs KOMBIT gold + the two Track-C follow-ups (CL `meta.subtitle` double-render; page-2 column-balance → row 61) — all need a real docx-worker render CI cannot do. Kept ACTIVE.
+_verified: 2026-10-05_ — CI E1 re-verify against HEAD 735f6d8f (all cited markers intact, remaining work unchanged & CI-ungated): header-banner generator rules SHIPPED remain intact (`bodyTopBorder` 3 refs + ✉ icon-separated contact 2 refs in `workers/docx-worker/src/index.js`; `workers/docx-worker/test/diag-contact-icons.mjs` present). REMAINING = the render-measure loop vs KOMBIT gold + the two Track-C follow-ups (CL `meta.subtitle` double-render; page-2 column-balance → row 61) — all need a real docx-worker render CI cannot do. Kept ACTIVE.
+
+**2026-09-23 (prior CI E1 re-verify against HEAD 38630d58):** all cited markers intact, remaining work unchanged & CI-ungated. Header-banner generator rules SHIPPED remain intact (`bodyTopBorder` + ✉ icon-separated contact in `workers/docx-worker/src/index.js`). Kept ACTIVE.
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -1587,7 +1611,9 @@ _verified: 2026-09-26_
 
 ## Row 40
 
-_verified: 2026-09-29_
+_verified: 2026-10-05_
+
+**2026-10-05 (desktop nightly, LIVE attest):** `antcv-outcomes-loss-guard.js` served at `?v=1.51.2200-lang-guard-key`, executed, bytes identical, on production `1.51.4812-import-rewrap-siblings`. Trigger-side test green in the 1801/1801 suite. REMAINING: owner-verify (change the Core Competencies row count, Selected Outcomes survives). Kept ACTIVE.
 
 **2026-09-29 (desktop nightly, LIVE attest):** the shipped guard is LIVE-ATTESTED on the deployed PWA for the first time: new `pwa/test/diag-live-guard-sidecars.mjs` proves, against `antcv.pages.dev` at `1.51.4606-exec-linear-dash`, that the sidecar was SERVED, that it EXECUTED (global on `window`) and that the served bytes are IDENTICAL to the repo file (EOL-normalized). Until now every re-verify was repo-side only, which cannot distinguish a shipped fix from one that is on disk but never loaded, or from a stale CDN/SW copy under an unbumped `?v`. `antcv-outcomes-loss-guard.js` served at `?v=1.51.2200-lang-guard-key`, `AntcvOutcomesGuard` live, bytes identical. Trigger-side test `core-comp-format-preserves-outcomes.test.mjs` green in the 1721/1721 suite. Owner-verify (change the Core Competencies row count, confirm Selected Outcomes survives) still owed — a signed-in live session, which this run could not open. Kept ACTIVE.
 
@@ -1821,7 +1847,9 @@ _verified: 2026-08-26_
 
 > **STANDING regression anchor** — re-run by the nightly diag set every time, not unstarted work.
 
-_verified: 2026-09-30_
+_verified: 2026-10-05_
+
+**2026-10-05 (desktop nightly, Band E2):** `diag-settings-panel-churn.mjs` selftest PASS (the probe sees injected churn on every tab). Personal / Layout / Account / Advanced: 0 mutations per 8 s, 0 page errors, 4 distinct panel fingerprints. Advanced re-run after the `1.51.4812` `app.js` edit: 0.
 
 **2026-09-30 (desktop nightly, E2):** `diag-settings-panel-churn.mjs` at `1.51.4727-close-space`, 8 runs. Selftest 80/80 on every tab. Run 1 (the first full run after the E3 audit): **Personal 257 mutations/8s, FAIL**; Layout/Account/Advanced 0. The next 7 runs (1 Personal-only, 6 full): all four tabs 0. The per-key breakdown of the failing run was not captured (output was tailed). Read: intermittent, first-measured tab only; not reproduced. If it recurs, capture the breakdown before triage.
 
@@ -1863,7 +1891,9 @@ _verified: 2026-10-04_
 
 > **STANDING regression anchor** — re-run by the nightly diag set every time, not unstarted work.
 
-_verified: 2026-09-29_
+_verified: 2026-10-05_
+
+**2026-10-05 (desktop nightly, Band E3):** `diag-panel-button-audit.mjs`: 209 buttons, 0 THROWS, 0 DEAD, 0 page errors (128 active, 13 ui-only, 55 not-visible-or-disabled, 13 skipped-dangerous). Against `PANEL_BUTTON_AUDIT_2026-10-04` (206 buttons): 5 labels changed class between ui-only and active ("Save the current CV/Cover Letter as a new application entry", "Refresh the saved-applications list", "¶ Section", "CJLR for this added field", "Fuse cover letter signals into CV") and 3 more CJLR entries were enumerated as not-visible. The flips were not investigated; none is DEAD or THROWS. Report `PANEL_BUTTON_AUDIT_2026-10-05.md` + `.json`.
 
 **2026-09-29 (desktop nightly, pass-2 re-run):** `diag-panel-button-audit.mjs` on HEAD — **216 buttons: 138 active, 11 ui-only, 53 not-visible/disabled, 14 skipped-dangerous, 0 THROWS, 0 DEAD candidates, 0 page errors.** Pass-2 recovery legs reported 0 recovered (row-hover for not-visible, label-locator retry for unclickable), so the 53 are structurally not-visible in this headless seed rather than pass-2 misses. Artifacts committed: `docs/qa/PANEL_BUTTON_AUDIT_2026-09-29.{json,md}`. The live dangerous-button audit (14 skipped labels incl. the SW unregister and the three Enrich buttons) stays owner-gated — clicking them headlessly against a live session would mutate real content. STANDING.
 
@@ -1959,21 +1989,6 @@ _verified: 2026-10-05_
 ```
 
 ---
-
-## Row 107 — IMPORT-REWRAP-SIBLING-DROP-001
-
-> **Renumbered 2026-08-26: was row 102.** A document written before that date citing "row 102" may mean this row or DEMAND-SEED-SEARCH-TOKEN-MISSING-001. The ID is the key.
-
-_verified: 2026-08-26_
-
-**OPEN-queue row (verbatim):**
-
-```
-| **107** | **IMPORT-REWRAP-SIBLING-DROP-001 (2026-08-26 desktop nightly, residual of row 18).** The settings-import rewrap now carries `photo` across (1.51.4406) but still drops every OTHER top-level sibling an UNWRAPPED personalInfo blob may carry: `language`, `navyColor`, `profileDoc`, `skillsDoc`, `wordsDoc`, `danishDoc`, `memoryDigest`. (`apiKey` / `proxyUrl` are safe — they are disjuncts earlier in the same guard, so a blob carrying them is never rewrapped at all.) Only `photo` had a reported user-visible symptom, so only `photo` was carried; widening the carry-set is a deliberate, separately-testable change and was NOT done blind. No known owner-facing symptom today — filed so the next hand-pasted blob that loses a `navyColor` is diagnosed in one minute instead of one night. Fix shape: extend the same ternary, or hoist the sibling reads above the rewrap. | ACTIVE_BUGS 2026-08-26 top block; `pwa/app.src.js` settings-import block | TO DO — filed 2026-08-26, not started |
-```
-
----
-
 
 ## Row 110 — ANTCV-TOKEN-EXPIRED-2026-09-02-001
 
@@ -2079,7 +2094,7 @@ says so.
 
 ## Row 113 — PERSIST-SKELETON-GATE-001
 
-_verified: 2026-10-04_
+_verified: 2026-10-05_
 
 **Found by the job-tracker nightly 2026-09-30 (Gabo-PC).** `gen-runner.py run --persist` loads the captured
 me() skeleton from `~/.antcv/cv_skeleton.json` and overlays the 8 generated sections onto it. When the file
@@ -2110,6 +2125,10 @@ host with the fixtures: `gen-runner.py run --persist --force --row celare_quantu
 
 **Leg (1) DONE 2026-10-04 (owner-approved, desktop session).** Both fixtures written to `~/.antcv/` on Gabo-PC from the cloud, no browser: `GET /api/prefs` returns the synced PWA prefs, including `sections` (cv 16 / cl 8, the shape the overlay targets) and the style keys. `cv_skeleton.json` = `prefs.sections` with every CL slot tied to the active app (3501 Hamamatsu: greeting, opening, why, who, bring, contribute, closure) reset to `[...]` placeholders, so an empty generated slot is dropped by the final sweep instead of reusing Hamamatsu text. CV slots carry no employer names and are kept. `export_settings.json` = 24 localStorage keys rebuilt from prefs (styleConfig, stylePackage, ratios, fontSizes, personalInfo, photo, signature + CL closing/sign-name with the `antcv:` prefix per `antcv-cl-cloud-sync-extra.js`). Per-app `clSlogan`/`clSloganCtx` left out. Not in prefs, so defaults apply: `antcv:cvLayout`, `antcv:brandV2`, `antcv:itemPages` and similar. Check: `load_skeleton()` OK, styleConfig 51 keys, `export_pdfs.py --apps 3501` renders CV (3 pages, as saved) + CL 1 page, with sidebar, experience and AI notice. Veo app 3500: owner confirmed deleted on purpose; the dead `veo_technologies` pointer is expected. REMAINING: leg (2), regenerate 3505 + 3504.
 
+**Re-verified 2026-10-05 (job-tracker nightly).** Both fixtures are on Gabo-PC (`cv_skeleton.json` 37 KB, `export_settings.json` 485 KB, written 10-04 20:19). Leg (2) is still owed. Not done unattended: rows `celare_quantum_commu` and `danfoss-production-testi-4818` are `queue=false`, the regen needs `--force`, and a forced run is outside the nightly's eligible set (armed, or never generated). A re-arm alone would not trigger it either: see row 118. REMAINING: owner go-ahead for the nightly to run both with `--force`, or a manual run of the two commands in leg (2).
+
+**Leg (2) half DONE 2026-10-05 (owner go-ahead, same-day follow-up).** Celare: `run --persist --force --row celare_quantum_commu` persisted **app 3508** with the skeleton overlay (cv 16 / cl 9 sections). `export_pdfs.py --apps 3508`: CV 2 pages, CL 1 page, 0 banned dashes, AI notice, sidebar and experience present. The fixture captured from cloud prefs is proven on a real generation. The ⚠ line was removed from the Celare tracker flag. Danfoss was NOT regenerated: the posting (req 51342) is taken down, see CLOSED row 119, and the sweep holds it at GONE strike 1/2. Apps 3505 and 3504 are still in the cloud as low-fidelity leftovers; deleting them is the owner's call. REMAINING: the Danfoss leg is pending the posting. If the next sweep archives the row, the leg is void and this row closes. If the posting returns, run `gen-runner.py run --persist --force --row danfoss-production-testi-4818`.
+
 ---
 
 ---
@@ -2130,14 +2149,6 @@ _verified: 2026-10-01_
 
 **Owed:** meter by the model id the response returns (or the body's model) instead of the provider. `app.js` + `app.src.js` + full cache-bust set, in a shift lane. Owner call; not done in a cross-check run.
 
-## Row 116 — JOBSRC-STDOUT-ENCODING-001
-
-_verified: 2026-10-04_
-
-**Found by the position-discovery run 2026-10-04.** `python scripts/job-tracker/job_sources.py search --q "<q>" --source all --json > out.json` on Windows writes the JSON in the console code page (cp1252), not UTF-8. Every Danish letter (ø, æ, å) then fails a UTF-8 parse (`UnicodeDecodeError: 0xf8`), so a consumer reading the file as UTF-8 sees zero ads: the same silent "source was dry" failure mode as JOBSRC-FETCH-001. Characters outside cp1252 would raise inside the fetcher. Workaround used this run: `PYTHONIOENCODING=utf-8`.
-
-**Owed:** reconfigure stdout to UTF-8 in `job_sources.py` main (`sys.stdout.reconfigure(encoding="utf-8")`) or add `--out <file>`; same check for `discover-positions.py` / `check-postings.py` output. Test in `test_job_sources.py`. `scripts/` only, no cache-bust.
-
 ---
 
 ## Row 117 — CLUSTER-GLOBAL-SINGLE-JD-DOMINANCE-001
@@ -2145,3 +2156,13 @@ _verified: 2026-10-04_
 _verified: 2026-10-04_
 
 **Found by the weekly demand-seed run 2026-10-04 (read-only D1 verify).** In `cluster_top_qualifications` under `user_hash='__global_market__'`, real-JD rows (weight_sum 1) outrank every research row (rank-scaled, ceiling 0.4) by design. Measured split after this run's push: `executive` 18 of 20 rows are JD signal with **max jd_count = 1** (one hardware-exec JD: battery management, Capex/Opex, DFM/DFA, mechanics…), so one posting fills the market-wide executive top 18 and research appears only from r19. `pm_process` 20/20 JD (max jd_count 2), `photonics_eng` 20/20 (max 7), `research_phd` 16/20 (max 2). The other five clusters are 100% research. **Why it matters:** `__global_market__` is meant to represent the market; a single JD from one user outranking 180 researched items makes the weekly research invisible in those clusters (this run's executive reorder has no effect on the live rollup) and pumps one employer's niche quals for every executive CV. Not a bug in the writer: `recomputeClusterTop20` orders by `weight_sum DESC` as specified. **Owner decision owed (design, CLUSTER-QUAL-001 §7):** e.g. require `jd_count >= 3` before JD rows can outrank research in the global rollup, or blend (JD weight scaled by min(1, jd_count/N)), or keep per-user JD signal out of `__global_market__`. No code changed this run. Read-only evidence query: `SELECT cluster_id, SUM(weight_sum<=0.4), SUM(weight_sum>0.4), MAX(jd_count) FROM cluster_top_qualifications WHERE user_hash='__global_market__' GROUP BY cluster_id`.
+
+---
+
+## Row 118 — JT-ARMED-ARTIFACT-NO-DRAIN-001
+
+_verified: 2026-10-05_
+
+**Found by the job-tracker nightly 2026-10-05 (Gabo-PC).** `gen-runner.eligible_rows` elects a row only when `force or not has_art`. A row with `queue[uk]=true` and an `artifacts[uk].application_id` is skipped without a word: `gen-runner.py list` prints "no eligible rows" and names it nowhere. The island's `rowQueued()` lets an explicit `queue[uk]` win, so the same row shows under the ⏰ Queued filter and reads as due tonight. Live on doc rev 276: `napatech` (queue true, app 2781, Archive / closed) and `veo_technologies` (queue true, pointer to the deleted app 3500, Submitted). Neither should generate, so nothing was lost tonight. The risk is rows 3504 + 3505 (row 113): their tracker flags tell the owner to re-arm and regenerate, and a re-arm would be ignored the same way. The pointer check is also blind: `has_art` is true for a pointer whose cloud app is gone.
+
+**Owed:** an owner decision on what a clock flag means on a row that already has an application. (a) Report only: `list` prints an "ARMED but has an application, needs `--force`" block, so the nightly report names the row. (b) Treat it as a regen request: the nightly runs that row with `--force`, which spends a model call and creates a second application. (c) A dead pointer plus the flag counts as never generated. Then a test in `test_closed_row_gate.py` on the real `eligible_rows`. Until then a regen is a manual `gen-runner.py run --persist --force --row <uk>`. Also pending: clear the stale `queue=true` on `napatech` and `veo_technologies` (a doc write, not done unattended).

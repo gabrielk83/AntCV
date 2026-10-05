@@ -111,9 +111,68 @@ check("jobbank search filters on key= (soegeord= is ignored since 2026-09)",
 check("dk date parses", js._dk_date("Frist: 07.09.2026"), datetime.date(2026, 9, 7))
 check("dk date rejects junk", js._dk_date("snarest muligt"), None)
 
+# ---- JOBSRC-STDOUT-ENCODING-001: redirected output is UTF-8 on any codepage ---
+# Each child runs the REAL main() with stdout piped and the codepage forced to
+# cp1252 (the Windows default for a redirect), with only the network call stubbed.
+# Unpinned, "ø" leaves as byte 0xf8 and "ő" (outside cp1252) raises in print().
+import json  # noqa: E402
+import subprocess  # noqa: E402
+
+# A red run prints the Danish fixtures; keep the report itself printable.
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+except (AttributeError, ValueError):
+    pass
+
+AD_COMPANY = "Københavns Optik"
+AD_TITLE = "Produktchef til Frø og Kőr"
+
+
+def run_child(script, body):
+    child = "\n".join([
+        "import importlib.util, sys",
+        "spec = importlib.util.spec_from_file_location('m', sys.argv[1])",
+        "m = importlib.util.module_from_spec(spec)",
+        "spec.loader.exec_module(m)"] + body)
+    env = dict(os.environ, PYTHONIOENCODING="cp1252")
+    env.pop("PYTHONUTF8", None)
+    return subprocess.run([sys.executable, "-c", child, os.path.join(HERE, script)],
+                          capture_output=True, env=env)
+
+
+def utf8(raw):
+    try:
+        return raw.decode("utf-8")
+    except UnicodeDecodeError as e:
+        return "NOT UTF-8: %s" % e
+
+
+p = run_child("job_sources.py", [
+    "ad = {'source': 'jobindex', 'title': %a, 'company': %a, 'location': '', 'url': 'u',"
+    " 'posted': '', 'deadline': ''}" % (AD_TITLE, AD_COMPANY),
+    "m.SOURCES = {'jobindex': lambda q, limit: [ad]}",
+    "sys.argv = ['job_sources.py', 'search', '--q', 'x', '--source', 'jobindex', '--json']",
+    "m.main()"])
+check("stdout: search --json exits 0 under a cp1252 console", p.returncode, 0)
+out = utf8(p.stdout)
+try:
+    got = json.loads(out)["rows"][0]["title"]
+except (ValueError, KeyError, IndexError):
+    got = out[:80]
+check("stdout: search --json bytes parse as UTF-8 JSON, letters intact", got, AD_TITLE)
+
+p = run_child("discover-positions.py", [
+    "m.get_doc = lambda: (1, {'rows': [[1, %a, %a, '']], 'urls': {}, 'discovered': {}})"
+    % (AD_COMPANY, AD_TITLE),
+    "sys.argv = ['discover-positions.py', 'context']",
+    "m.main()"])
+check("stdout: discover-positions context exits 0 under a cp1252 console", p.returncode, 0)
+check("stdout: discover-positions context bytes are UTF-8, row text intact",
+      (AD_COMPANY + " | " + AD_TITLE) in utf8(p.stdout), True)
+
 if fails:
     print("FAIL (%d):" % len(fails))
     for f in fails:
         print("  - " + f)
     sys.exit(1)
-print("PASS - job_sources parsers (%d checks)" % 16)
+print("PASS - job_sources parsers (%d checks)" % 20)

@@ -37721,9 +37721,24 @@
                                           "[settings import] unwrapped personalInfo detected; rewrapping. Fields:",
                                           Object.keys(n),
                                         ),
-                                        (n = n.photo
-                                          ? { personalInfo: n, photo: n.photo }
-                                          : { personalInfo: n })),
+                                        /* IMPORT-REWRAP-SIBLING-DROP-001 (register row 107): an unwrapped personalInfo blob keeps every top-level sibling the chain below reads, not only photo. language only as a 2-letter code. */
+                                        (n = ((e) => {
+                                          const t = { personalInfo: e };
+                                          for (const o of [
+                                            "photo", "language", "navyColor",
+                                            "profileDoc", "skillsDoc", "wordsDoc",
+                                            "danishDoc", "memoryDigest", "memoryDigestHash",
+                                            "openaiKey", "openaiProxyUrl", "openaiModel",
+                                            "mistralKey", "mistralModel", "geminiKey",
+                                            "geminiModel", "lineTargets", "fontSizes",
+                                            "cvTableRatio", "clTableRatio", "consensusEnabled",
+                                          ])
+                                            null != e[o] &&
+                                              ("language" !== o ||
+                                                ("string" == typeof e[o] && /^[a-z]{2}$/.test(e[o]))) &&
+                                              (t[o] = e[o]);
+                                          return t;
+                                        })(n))),
                                       n.apiKey && vt(n.apiKey),
                                       n.proxyUrl && xt(n.proxyUrl),
                                       n.openaiKey && Et(n.openaiKey),

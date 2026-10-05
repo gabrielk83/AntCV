@@ -67,10 +67,11 @@ test('linear CV: single column, addendum order, no sidebar table', async () => {
   if (process.env.LINEAR_CV_OUT) fs.writeFileSync(process.env.LINEAR_CV_OUT, buf);
   const xml = unzipEntry(buf, 'word/document.xml').toString('utf8');
   const t = texts(xml);
-  const order = ['PROFILE', 'CORE COMPETENCIES', 'PROFESSIONAL EXPERIENCE', 'EDUCATION', 'TOOLS &amp; METHODS', 'LANGUAGES &amp; ACCESSIBILITY'].map((h) => t.indexOf(h));
+  const order = ['PROFILE', 'CORE COMPETENCIES', 'PROFESSIONAL EXPERIENCE', 'EDUCATION', 'TOOLS &amp; METHODS', 'LANGUAGES &amp; PERSONAL'].map((h) => t.indexOf(h));
   assert.ok(order.every((i) => i >= 0), 'every heading present: ' + JSON.stringify(order));
   assert.deepEqual([...order].sort((a, b) => a - b), order, 'addendum order');
   assert.ok(!/\[Focus area/.test(t), 'bracketed placeholders dropped');
+  assert.ok(!t.includes('LANGUAGES &amp; ACCESSIBILITY'), 'LINEAR-DETAILS-GROUPS-001: the personal table reads its theme name');
 });
 
 test('linear CV: typography rules - 9.5 pt floor, no em dash, cells without a final stop', async () => {
@@ -148,9 +149,11 @@ test('linear CV: short last rows merge; publications and long sections are block
   assert.ok(spans.filter((n) => n === 2).length >= 2, 'odd tool tile and odd degree span 2');
   assert.ok(t.includes('PUBLICATIONS &amp; PATENTS') && t.includes('REGULATORY CONTEXT'), 'blocks keep their own headings');
   assert.ok(t.includes('Std 0: context 0'), 'block rows as "Lead: text"');
-  assert.ok(t.includes('ADDITIONAL DETAILS'), 'one short details heading for 3 labels');
+  // LINEAR-DETAILS-GROUPS-001: one table per theme, "A & B" heading rule per table
+  assert.ok(t.includes('LANGUAGES &amp; PERSONAL') && t.includes('RECOMMENDATIONS'), 'theme tables with short headings');
   assert.ok(!/PUBLICATIONS &amp; PATENTS, /.test(t), 'no long joined heading');
-  assert.ok(t.indexOf('REGULATORY CONTEXT') < t.indexOf('ADDITIONAL DETAILS'), 'details table last');
+  assert.ok(t.indexOf('REGULATORY CONTEXT') < t.indexOf('LANGUAGES &amp; PERSONAL'), 'details tables last');
+  assert.ok(t.indexOf('LANGUAGES &amp; PERSONAL') < t.indexOf('RECOMMENDATIONS'), 'references table after languages');
 });
 
 // owner 2026-09-30: the Accessibility label is left-aligned like every details label
@@ -171,4 +174,23 @@ test('cover letter: closing line spaced 5 pt before and after', async () => {
   assert.ok(i > 0);
   const para = xml.slice(xml.lastIndexOf('<w:p>', i) >= 0 ? xml.lastIndexOf('<w:p', i) : i, i);
   assert.match(para, /<w:spacing [^>]*w:after="100"/); assert.match(para, /<w:spacing [^>]*w:before="100"/);
+});
+
+// LINEAR-DETAILS-GROUPS-001 (owner 2026-10-05 "this can be split to more than one table")
+test('linear CV: details split into credentials, personal, availability & references tables', async () => {
+  const secs = [
+    { id: 'references', title: 'REFERENCES', type: 'labeled_list', loc: 'main', items: [{ l: 'Christian Bigom', v: 'Chair, Pan Idraet' }] },
+    { id: 'availability', title: 'AVAILABILITY', type: 'text', loc: 'main', content: 'Copenhagen; full time, on site' },
+    { id: 'languages', title: 'LANGUAGES', type: 'labeled_list', loc: 'main', items: [{ l: 'Danish', v: 'upper-intermediate' }] },
+    { id: 'standards', title: 'STANDARDS', type: 'text', loc: 'main', content: 'MIL-STD-810, ISO 9001' },
+    { id: 'rugby', title: 'RUGBY', type: 'text', loc: 'main', content: 'Plays and runs team operations' },
+    { id: 'accessibility', title: 'ACCESSIBILITY', type: 'text', loc: 'main', content: 'Hearing impaired' },
+  ];
+  const xml = unzipEntry(await gen({ sections: secs }), 'word/document.xml').toString('utf8');
+  const t = texts(xml);
+  const order = ['STANDARDS', 'LANGUAGES &amp; PERSONAL', 'AVAILABILITY &amp; REFERENCES'].map((h) => t.indexOf(h));
+  assert.ok(order.every((i) => i >= 0), 'three headings: ' + JSON.stringify(order));
+  assert.deepEqual([...order].sort((a, b) => a - b), order, 'credentials, personal, then availability & references');
+  assert.equal((xml.slice(xml.indexOf('>STANDARDS<')).match(/<w:tbl>/g) || []).length, 3, 'one table per heading');
+  assert.ok(!t.includes('ADDITIONAL DETAILS'), 'no catch-all heading');
 });

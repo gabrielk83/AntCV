@@ -154,7 +154,9 @@ test('callout, combined details heading and certificates row', () => {
   assert.ok(css.includes(M + '[data-sid="profile"] > [data-antcv-row-path],') && css.includes('background:#F8FAFC !important;border-left:3pt solid #ffc92b'), 'tinted rows');
   assert.ok(css.includes(M + '[data-sid="profile"]:has(+ [data-sid="work_style"]){') || css.includes(M + '[data-sid="profile"]:has(+ [data-sid="work_style"]),'), 'adjacent profile sections join');
   // one heading over the details rows: first visible details section, export label rule, hidden sections skipped
-  assert.ok(css.includes(M + '[data-sid="languages"]::before{content:"ADDITIONAL DETAILS"'), 'one short heading for 3+ labels');
+  // LINEAR-DETAILS-GROUPS-001: languages, interests and accessibility share the "personal" table
+  assert.ok(css.includes(M + '[data-sid="languages"]::before{content:"LANGUAGES & PERSONAL"'), 'one heading for the personal table');
+  assert.ok(!css.includes('[data-sid="accessibility"]::before'), 'no second heading inside the table');
   assert.ok(!/REGULATORY/.test(css), 'a hidden section is not in the heading');
   assert.ok(css.includes('color:#00746E'), 'heading in the heading colour');
   // certificates: title line + items joined by a bullet
@@ -195,7 +197,7 @@ test('merge: a short last row spans the empty space (tiles, tools, education)', 
   assert.ok(css.includes('[data-sid="education"] > ' + ROW + ':nth-last-child(1 of '), 'odd education count: last item spans');
 });
 
-test('details structure: publications and long sections are blocks; two labels read "A & B"', () => {
+test('details structure: publications and long sections are blocks; a multi-row table reads its theme name', () => {
   const K = sandbox({ cl: [], cv: [] }).ctx.window.__antcvCvLinearKind;
   assert.equal(K({ id: 'pubs', type: 'list_italic', title: 'PUBLICATIONS & PATENTS', items: ['a'] }), 'block');
   assert.equal(K({ id: 'regulatory', type: 'rich_block', title: 'REGULATORY CONTEXT', items: Array.from({ length: 17 }, (_, i) => ({ b: 'x' + i, t: 'y' })) }), 'block');
@@ -207,7 +209,7 @@ test('details structure: publications and long sections are blocks; two labels r
   ] });
   sb.store.set('antcv:cvLayout', 'linear');
   sb.ctx.window.__antcvCvLayoutApply();
-  assert.ok(sb.styleEls['antcv-cv-layout-linear-style'].textContent.includes('content:"LANGUAGES & INTERESTS"'));
+  assert.ok(sb.styleEls['antcv-cv-layout-linear-style'].textContent.includes('content:"LANGUAGES & PERSONAL"'));
 });
 
 test('details one-liners are grouped at the end in linear; other sections keep their order', () => {
@@ -220,7 +222,35 @@ test('details one-liners are grouped at the end in linear; other sections keep t
   ] });
   sb.store.set('antcv:cvLayout', 'linear');
   sb.ctx.window.__antcvCvLayoutApply();
-  assert.deepEqual(sb.cv().map((s) => s.id), ['experience', 'pubs', 'regulatory', 'recommendations', 'languages']);
+  assert.deepEqual(sb.cv().map((s) => s.id), ['experience', 'pubs', 'regulatory', 'languages', 'recommendations'], 'details last, references table after languages');
+  const n = sb.events.length;
+  sb.ctx.window.__antcvCvLayoutApply();
+  assert.equal(sb.events.length, n, 'idempotent');
+});
+
+// LINEAR-DETAILS-GROUPS-001 (owner 2026-10-05 "this can be split to more than one table")
+test('details split into theme tables: order, headings, no joins across tables', () => {
+  const sb = sandbox({ cl: [], cv: [
+    { id: 'experience', type: 'experience', loc: 'main' },
+    { id: 'references', type: 'labeled_list', title: 'REFERENCES', loc: 'main', items: [{}] },
+    { id: 'availability', type: 'text', title: 'AVAILABILITY', loc: 'main', content: 'x' },
+    { id: 'languages', type: 'labeled_list', title: 'LANGUAGES', loc: 'main', items: [{}] },
+    { id: 'standards', type: 'text', title: 'STANDARDS', loc: 'main', content: 'x' },
+    { id: 'rugby', type: 'text', title: 'RUGBY', loc: 'main', content: 'x' },
+    { id: 'accessibility', type: 'text', title: 'ACCESSIBILITY', loc: 'main', content: 'x' },
+    { id: 'misc', type: 'text', title: 'OTHER', loc: 'main', content: 'x' },
+  ] });
+  sb.store.set('antcv:cvLayout', 'linear');
+  sb.ctx.window.__antcvCvLayoutApply();
+  assert.deepEqual(sb.cv().map((s) => s.id), ['experience', 'standards', 'languages', 'rugby', 'accessibility', 'references', 'availability', 'misc']);
+  const css = sb.styleEls['antcv-cv-layout-linear-style'].textContent;
+  const M = '[data-antcv-document-main] > ';
+  for (const [id, h] of [['standards', 'STANDARDS'], ['languages', 'LANGUAGES & PERSONAL'], ['references', 'AVAILABILITY & REFERENCES']]) {
+    assert.ok(css.includes(M + '[data-sid="' + id + '"]::before{content:"' + h + '"'), h);
+  }
+  assert.ok(css.includes(M + '[data-sid="languages"] + [data-sid="rugby"]'), 'rows of one table join');
+  assert.ok(!css.includes(M + '[data-sid="accessibility"] + [data-sid="references"]'), 'tables of different themes do not join');
+  assert.ok(!/::before\{content:"(RUGBY|AVAILABILITY|OTHER)"/.test(css), 'one heading per table');
   const n = sb.events.length;
   sb.ctx.window.__antcvCvLayoutApply();
   assert.equal(sb.events.length, n, 'idempotent');

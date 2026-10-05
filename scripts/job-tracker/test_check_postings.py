@@ -55,6 +55,25 @@ check("WALLED is in neither grade - it can never archive anything",
 check("ERROR is in neither grade",
       ("ERROR" in cp.HARD_VERDICTS, "ERROR" in cp.SOFT_VERDICTS), (False, False))
 
+# ---- POSTING-SOFT404-001: HTTP 200 for a req the ATS has taken down ----------
+# Captured live 2026-10-05 from jobs.danfoss.com req 51342 (SuccessFactors): 200,
+# title "Job Details | Danfoss", no job content, and this one sentence. The sweep
+# read it LIVE. It is soft evidence ("at this time"), so GONE, never CLOSED.
+SF_DOWN = ("<html><head><title> Job Details | Danfoss</title></head><body><div>"
+           "You can%st view this job because it%ss not available at this time."
+           "</div></body></html>")
+check("SuccessFactors taken-down req (200) is GONE",
+      verdict(200, text=SF_DOWN % ("'", "'")), "GONE")
+check("same wording with entity apostrophes is GONE",
+      verdict(200, text=SF_DOWN % ("&#39;", "&#39;")), "GONE")
+check("same wording with typographic apostrophes is GONE",
+      verdict(200, text=SF_DOWN % ("’", "’")), "GONE")
+check("a hard closed phrase on the same page still wins (CLOSED)",
+      verdict(200, text=SF_DOWN % ("'", "'") + "<p>Position has been filled</p>"), "CLOSED")
+# NEGATIVE CONTROL: the words in an open ad's own prose are not evidence.
+check("open JD saying a benefit is 'not available at this time' stays LIVE",
+      verdict(200, text=JD + "<p>Relocation support is not available at this time.</p>"), "LIVE")
+
 # ---- NEGATIVE CONTROLS: none of these may ever be treated as evidence --------
 check("403 bot wall is WALLED, not GONE", verdict(403), "WALLED")
 check("401 is WALLED", verdict(401), "WALLED")

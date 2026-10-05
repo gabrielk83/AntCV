@@ -58,3 +58,51 @@ Checks: `pwa/antcv-profile-rules.js` (Layout control + `pwa/test/unit/profile-sl
 - AntCV app, content rules: shipped 1.51.4586 (2026-09-29, VEO-ROLE-LEAK) in `pwa/gold-rules.json` 1.6.0 — target role is the posting's own title (never a partner role named in the ad), example isolation, same-company roles never merged, parallel degrees as two entries, levels/counts as stored, current role first, kernel placement notes obeyed, the banned-word replacements above, standards without clause numbers, Russia clause only on ask, accessibility line (CV only). Example isolation also in `workers/proxy` + `workers/demo-proxy` `prompt-augment.js` — **those two workers still need a workflow_dispatch deploy**.
 - AntCV app, stored facts: kernel v13g (local `Gabriel_personalInfo_modernized_2026-08-20_v13.json`, 2026-09-29) now has Trackman first, Innoviz titles as above, Kanzen closed 2022–2026, Danish B2. **D1 mirror pending** — AntCV generates from D1 until the file is imported.
 - AntCV app, layout: NOT yet — the executive-linear layout is steps 3–5 of `docs/design/EXECUTIVE_LINEAR_LAYOUT_PROPOSAL.md`; only `role.location` + role-line format shipped (1.51.4566).
+
+## Executive-linear CV rules (owner edits, 2026-10-05)
+
+General rules for every role and every executive-linear CV/letter, learned from the owner's own Word edits to a generated CV (Veo Director of Hardware Engineering, 2026-10-05). Persona facts confirmed in the same session are listed separately at the end.
+
+### Type and spacing
+
+| Rule | Detail |
+|---|---|
+| Body font | Calibri 10.5 pt for body, bullets and table cells; section headings in Trebuchet MS. Calibri is narrower than Arial, so 10.5 pt fits the lines that Arial 10 pt filled. |
+| Character spacing | Fill lines per paragraph with condensed spacing in small steps (−0.1 to −0.8 pt), 99 % character scale on dense lines. This extends the −0.4 pt line-fill limit above for single lines. Never Word "Distribute". |
+| Whole lines | Re-check every bullet after EVERY text edit: a short last line (one word, or under about a third of the width) is a defect. Shorten the clause or condense. |
+| Extending a line | A short bullet is extended by 30-50 characters with stored facts only, never with new claims. |
+| Page 2 start | One explicit page-break paragraph before "Professional experience (Cont.)". Never stacked empty spacer paragraphs: they spill to the top of page 2 when page 1 grows. |
+| Document end | Exactly one empty paragraph after the last table (1 pt exact line height); a second one can create a blank last page. |
+
+### Wording
+
+| Rule | Detail |
+|---|---|
+| Tense | Present tense in ALL job bullets, earlier roles included, and in Results lines (Chair, Establish, Present, Own, Lead, Develop, Qualify, Supervise; "cuts", "ships"). |
+| Third-party names | Never name suppliers, contract manufacturers or customers of former employers (NDA risk). Use categories ("display, camera-module and image-sensor suppliers"). |
+| Audit direction | Say which way an audit went: supplier audits (the candidate audited suppliers) vs customer audits (customers audited the candidate's employer as a supplier). Never mix them. |
+| Counts and costs | No "100+"-style inflation; use the stored wording ("nearly 100"). Do not state a cost direction (higher/lower) unless the stored fact says it. |
+| Volunteer roles | Use the stored Danish term (foreningsarbejde). Never upgrade a supporting sports role to "coach" or "Assistant Coach". |
+| Standards | Match the standards list to the employer's domain (e.g. image-sensor and image-quality standards for a camera company), taken only from the candidate's stored list; one line, no explanatory parentheses. |
+| Banned words | Re-run the banned-word scrub after manual edits (a hand edit reintroduced "cross-functional"). |
+
+### Structure
+
+| Rule | Detail |
+|---|---|
+| Details tables | The closing details are three tables, each with its own heading: CREDENTIALS (standards, courses, patents) · LANGUAGES & PERSONAL (languages, sport/interests, accessibility) · AVAILABILITY & REFERENCES. Not one combined "Languages, interests & profile details" table. AntCV app change (preview + docx-worker) pending owner approval. |
+| Bullet order | Lead each role with the people and decision signal (budget, hiring, team incl. its manager, change board), technical depth second. |
+| Education detail | Every degree gets a one-line focus under it (subjects, research group, papers, award), from stored facts, styled like the MBA note line. Never only title + school + years. |
+| Interests | Keep the Interests row in EVERY layout, humour included ("home supervision by three feline strategic napping experts"). Converting two-column to linear must carry over every section; nothing personal is dropped silently. |
+| Cut order | To fit the page budget, cut the lowest-priority optional bullets and shorten details rows (courses, referees on one line) first. Never cut personality, education detail or interests to save space. |
+| Cloned lines | When a new line is cloned from an existing paragraph, clear hidden paragraph marks (w:vanish); a hidden mark merges the new line into the next heading. |
+
+### Persona facts confirmed 2026-10-05 (Gabriel)
+
+- Supplier audits: Sirin Labs and Meprolight (led and performed in person). Innoviz: customer audits of Innoviz as a supplier, central contributor, own areas fully owned.
+- Kanzen: input to nearly 100 client offers, with pricing and decision material for 4 clients.
+- Rugby: Team Operations Manager & Coaching Assistant (foreningsarbejde), Copenhagen Wolves RFC (Pan Idræt); World Rugby Level 1 coaching course completed; assists the coaches.
+- Meprolight microdisplay end-of-life: higher-performance replacement at lower unit cost; it needed lead time to test it and build a new interface.
+- Supplier qualification: four countries (Israel, China, Taiwan, Sweden).
+- Education focus: M.Sc. EE - optics, photonics and nanotechnology, in a photonics research group, two peer-reviewed papers; both B.Sc. degrees - optics, VLSI and DSP; MBA - business plan honourable mention at Tsinghua University.
+- Interests: Tai-chi · hiking · cultural exchange (languages, food, board games) · home supervision by three feline strategic napping experts.

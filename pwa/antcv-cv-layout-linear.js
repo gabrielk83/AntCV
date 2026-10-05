@@ -32,11 +32,15 @@
  * LINEAR-DETAILS-STRUCTURE-001 - publications and long sections (more than 6 rows) are their own
  * blocks under their own heading; only short one-liners stay in the details table, whose heading
  * is "A & B" for up to two labels, else "Additional Details". Same rules in the docx-worker.
+ * 1.51.4813 (owner 2026-10-05 "this can be split to more than one table"): LINEAR-DETAILS-GROUPS-001 -
+ * the details one-liners form one table PER THEME (credentials; languages & personal; availability &
+ * references, which also takes anything unmatched), each under its own heading: the label for a
+ * one-row table, else the theme name. Same rules in the docx-worker.
  * Letters are untouched (no sidebar). No app.js edit. Kill: antcv:disable-cv-layout-linear=1.
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.4726-linear-merge';
+  var VERSION = '1.51.4813-linear-detail-groups';
   if (window.__antcvCvLayoutLinear === VERSION) return;
   window.__antcvCvLayoutLinear = VERSION;
 
@@ -96,18 +100,20 @@
     pageModelChanged();
     return true;
   }
-  // LINEAR-DETAILS-STRUCTURE-001: the details one-liners form ONE table at the end, as in the export.
-  // Only details sections move (relative order kept); every other section keeps the owner's order.
-  // Idempotent - writes only when a details section sits before a non-details one. Two-column
-  // restores the saved map order, so this never leaks into the two-column layout.
+  // LINEAR-DETAILS-STRUCTURE-001 + LINEAR-DETAILS-GROUPS-001: the details one-liners sit at the end,
+  // as in the export, grouped by theme (stable inside a group). Every other section keeps the owner's
+  // order. Idempotent - writes only when the order changes. Two-column restores the saved map order,
+  // so this never leaks into the two-column layout.
   function detailsLast() {
     var s = readSections();
     if (!s || !Array.isArray(s.cv) || s.cv.length < 2) return false;
     var isD = s.cv.map(function (x) { return !!x && !!x.type && linKind(x) === 'details'; });
-    var seenD = false, bad = false;
-    for (var i = 0; i < isD.length; i++) { if (isD[i]) seenD = true; else if (seenD) { bad = true; break; } }
-    if (!bad) return false;
-    s.cv = s.cv.filter(function (_, j) { return !isD[j]; }).concat(s.cv.filter(function (_, j) { return isD[j]; }));
+    var d = s.cv.map(function (x, j) { return { x: x, j: j }; }).filter(function (o) { return isD[o.j]; })
+      .sort(function (a, b) { return (detailGroup(a.x) - detailGroup(b.x)) || (a.j - b.j); })
+      .map(function (o) { return o.x; });
+    var cv = s.cv.filter(function (_, j) { return !isD[j]; }).concat(d);
+    if (cv.every(function (x, j) { return x === s.cv[j]; })) return false;
+    s.cv = cv;
     writeSections(s, 'cv-layout-linear-details');
     return true;
   }
@@ -164,6 +170,21 @@
     return rowCount(s) >= BLOCK_MIN_ROWS ? 'block' : 'details';
   }
   window.__antcvCvLinearKind = linKind;
+  // LINEAR-DETAILS-GROUPS-001: theme of a details one-liner -> one table per theme, in this order.
+  // Anything unmatched (availability, permit, location, references, ...) lands in the last table.
+  // Mirrors the docx-worker DETAIL_GROUPS.
+  var DETAIL_GROUPS = [
+    [/standard|cert|course|kursus|licen|patent|award|honou?r|membership|clearance/, 'Credentials', 'Kvalifikationer'],
+    [/language|sprog|interest|interesse|hobb|rugby|sport|volunt|frivillig|access|personal|personlig/, 'Languages & Personal', 'Sprog & personligt'],
+    [null, 'Availability & References', 'Tilgængelighed & referencer'],
+  ];
+  var OTHER_GROUP = 2;
+  function detailGroup(s) {
+    var k = (((s && s.id) || '') + ' ' + ((s && s.title) || '')).toLowerCase();
+    for (var i = 0; i < DETAIL_GROUPS.length; i++) if (DETAIL_GROUPS[i][0] && DETAIL_GROUPS[i][0].test(k)) return i;
+    return OTHER_GROUP;
+  }
+  window.__antcvCvLinearDetailGroup = detailGroup;
   // the export's tile/details bar colour: style.accent, else the heading colour
   function accent() {
     try {
@@ -183,17 +204,22 @@
   function cssId(id) { return String(id).replace(/["\\]/g, '\\$&'); }
   // export titleCase (docx-worker buildLinearCvDocument): "LANGUAGES & ACCESSIBILITY" -> "Languages & Accessibility"
   function titleCase(t) { return String(t || '').trim().toLowerCase().replace(/(^|[\s(&/-])([a-zæøåéü])/g, function (m, a, b) { return a + b.toUpperCase(); }); }
-  // the combined details heading, as the export builds it: first four visible labels, "A, B, C & D"
-  function detailsHeading() {
-    var s = readSections(), labels = [], first = null;
+  // one heading per details table, as the export builds it: the label when the table has one row,
+  // else the theme name. Returns [{ id: first visible section of the table, text, group }].
+  function detailsHeadings() {
+    var s = readSections(), groups = {};
     ((s && s.cv) || []).forEach(function (x) {
       if (!x || !x.id || x.on === false || linKind(x) !== 'details') return;
-      if (!first) first = x.id;
-      var l = titleCase(x.title || x.id); if (l) labels.push(l);
+      var g = detailGroup(x);
+      if (!groups[g]) groups[g] = { id: x.id, labels: [], group: g };
+      var l = titleCase(x.title || x.id); if (l) groups[g].labels.push(l);
     });
-    var head = labels.length === 2 ? labels[0] + ' & ' + labels[1] : labels.length === 1 ? labels[0]
-      : (cvLang() === 'da' ? 'Øvrige oplysninger' : 'Additional Details');
-    return first ? { id: first, text: head } : null;
+    var da = cvLang() === 'da';
+    return Object.keys(groups).map(Number).sort(function (a, b) { return a - b; }).map(function (g) {
+      var L = groups[g].labels;
+      var text = L.length === 1 ? L[0] : DETAIL_GROUPS[g][da ? 2 : 1];
+      return { id: groups[g].id, text: text, group: g };
+    });
   }
   function cvLang() {
     try { return String(localStorage.getItem('language') || '').replace(/[^a-z]/gi, '').slice(0, 2).toLowerCase(); } catch (_) { return ''; }
@@ -218,12 +244,12 @@
         P + '[data-antcv-document-sidebar]{display:none !important;}' +
         P + '.antcv-col-splitter{display:none !important;}' +
         P + '[data-antcv-document-main]{width:100% !important;max-width:100% !important;flex:1 1 100% !important;}' +
-        tableCss(P + '[data-antcv-document-main] > ', kindsById(), accent(), detailsHeading(), headStyle());
+        tableCss(P + '[data-antcv-document-main] > ', kindsById(), accent(), detailsHeadings(), headStyle());
       if (st.textContent !== text) st.textContent = text;
     } catch (_) {}
   }
   // 2b. addendum table blocks (10 pt = 13.33 px, 9.5 pt = 12.67 px; fills and hairlines as the export)
-  function tableCss(M, kinds, A, dh, hs) {
+  function tableCss(M, kinds, A, heads, hs) {
     var ids = { tiles: [], tools: [], education: [], details: [], profile: [], certs: [] };
     Object.keys(kinds).forEach(function (id) { if (ids[kinds[id]]) ids[kinds[id]].push(id); });
     // rule(kind, suffix, body): one selector per section id of that kind
@@ -232,8 +258,10 @@
       return ids[kind].map(function (id) { return M + '[data-sid="' + cssId(id) + '"]' + suffix; }).join(',') + '{' + body + '}';
     }
     var HEAD = ' > :first-child:not([data-antcv-row-path])', ROW = '[data-antcv-row-path]:not([data-antcv-group-head])';
+    // rows of one table join (no double hairline); tables of different themes stay apart
+    var grp = {}; ((readSections() || {}).cv || []).forEach(function (x) { if (x && x.id) grp[x.id] = detailGroup(x); });
     var adj = [];
-    ids.details.forEach(function (x) { ids.details.forEach(function (y) { if (x !== y) adj.push(M + '[data-sid="' + cssId(x) + '"] + [data-sid="' + cssId(y) + '"]'); }); });
+    ids.details.forEach(function (x) { ids.details.forEach(function (y) { if (x !== y && grp[x] === grp[y]) adj.push(M + '[data-sid="' + cssId(x) + '"] + [data-sid="' + cssId(y) + '"]'); }); });
     return '' +
       // competency table -> 3 equal tiles per row; header row dropped, no line clamp
       rule('tiles', ' [data-table-resize-wrap] > :not(table)', 'display:none !important;') +
@@ -261,11 +289,13 @@
       rule('education', ' > ' + ROW + ':nth-last-child(1 of ' + ROW + '):nth-child(odd of ' + ROW + ')', 'grid-column:1 / -1 !important;') +
       // details -> label | content rows: tinted label cell with the accent bar, hairline frame
       rule('details', '', 'display:grid !important;grid-template-columns:127px minmax(0,1fr);margin-bottom:0 !important;border:0.5pt solid #E2E8F0;border-left:none;') +
-      (dh ? M + '[data-sid="' + cssId(dh.id) + '"]{border-top:none;margin-top:10px;}' +
+      (heads || []).map(function (dh) {
+        return M + '[data-sid="' + cssId(dh.id) + '"]{border-top:none;margin-top:10px;}' +
         M + '[data-sid="' + cssId(dh.id) + '"]::before{content:"' + cssStr(dh.text.toUpperCase()) + '";grid-column:1 / -1;grid-row:1;display:block;' +
           'font-family:"' + hs.font + '",Arial,sans-serif;font-weight:700;font-size:15px;letter-spacing:0.5px;line-height:1;color:' + hs.color + ';' +
           'padding-bottom:3px;margin-bottom:0;border-bottom:1.5pt solid #777777;}' +
-        M + '[data-sid="' + cssId(dh.id) + '"]' + HEAD + '{grid-row:2 / span 40 !important;}' : '') +
+        M + '[data-sid="' + cssId(dh.id) + '"]' + HEAD + '{grid-row:2 / span 40 !important;}';
+      }).join('') +
       (adj.length ? adj.join(',') + '{border-top:none;}' : '') +
       rule('details', HEAD, 'grid-column:1;grid-row:1 / span 40;margin:0 !important;background:#F8FAFC;border-left:2pt solid ' + A + ';padding:3px 6px;') +
       rule('details', HEAD + ' [data-antcv-section-headline]', 'font-size:12.67px !important;color:#0F172A !important;letter-spacing:0 !important;text-transform:lowercase !important;line-height:1.15 !important;') +

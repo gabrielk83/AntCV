@@ -26291,14 +26291,22 @@ function buildLinearCvDocument(ctx) {
     const l = clean(it && (it.l || it.label || it.b) || ""), v = clean(it && (it.v || it.value || it.t || (Array.isArray(it.seg) ? it.seg.map((g) => g && g.t).join(" ") : "")) || "");
     if (l && v && !isPh(v)) tools.push([l.replace(/:\s*$/, ""), v]);
   }
-  // details rows
+  // details rows. LINEAR-DETAILS-GROUPS-001 (owner 2026-10-05 "this can be split to more than one table"):
+  // one table per theme, each under its own heading, in this order; unmatched -> the last table.
+  // Mirrors pwa/antcv-cv-layout-linear.js DETAIL_GROUPS.
+  const DETAIL_GROUPS = [
+    [/standard|cert|course|kursus|licen|patent|award|honou?r|membership|clearance/, "Credentials", "Kvalifikationer"],
+    [/language|sprog|interest|interesse|hobb|rugby|sport|volunt|frivillig|access|personal|personlig/, "Languages & Personal", "Sprog & personligt"],
+    [null, "Availability & References", "Tilgængelighed & referencer"],
+  ];
+  const detailGroup = (s) => { const k = idt(s); const i = DETAIL_GROUPS.findIndex((g) => g[0] && g[0].test(k)); return i < 0 ? 2 : i; };
   const details = [];
   for (const s of by.details) {
     let txt = "";
     if (s.content) txt = clean(s.content);
     else if (Array.isArray(s.items)) txt = s.items.map(itemText).filter((x) => x && !isPh(x)).join("; ");
     else if (Array.isArray(s.rows)) txt = s.rows.map(itemText).filter(Boolean).join("; ");
-    if (txt && !isPh(txt)) details.push({ label: titleCase(s.title || s.id || ""), content: txt });   // labels left-aligned, Accessibility included (owner 2026-09-30)
+    if (txt && !isPh(txt)) details.push({ label: titleCase(s.title || s.id || ""), content: txt, group: detailGroup(s) });   // labels left-aligned, Accessibility included (owner 2026-09-30)
   }
 
   // ---------------- blocks (port of exec_cv_lib.mjs) ----------------
@@ -26483,15 +26491,16 @@ function buildLinearCvDocument(ctx) {
     children.push(heading(titleCase(s.title || s.id || "")));
     children.push(...paras);
   }
-  if (details.length) {
-    // LINEAR-DETAILS-STRUCTURE-001: one SHORT heading - "A & B" up to two labels, else a generic one
-    const labels = details.map((d) => d.label).filter(Boolean);
-    const lang = String(ctx.lang || "en").toLowerCase().slice(0, 2);
-    const head = labels.length === 2 ? labels[0] + " & " + labels[1] : labels.length === 1 ? labels[0]
-      : (lang === "da" ? "Øvrige oplysninger" : "Additional Details");
+  const lang = String(ctx.lang || "en").toLowerCase().slice(0, 2);
+  for (let g = 0; g < DETAIL_GROUPS.length; g++) {
+    const rows = details.filter((d) => d.group === g);
+    if (!rows.length) continue;
+    // one SHORT heading per table: the label of a one-row table, else the theme name
+    const labels = rows.map((d) => d.label).filter(Boolean);
+    const head = labels.length === 1 ? labels[0] : DETAIL_GROUPS[g][lang === "da" ? 2 : 1];
     children.push(heading(head));
     children.push(new Table({ alignment: AlignmentType.CENTER, layout: "fixed", width: { size: CONTENT_W, type: WidthType.DXA },
-      columnWidths: [LABEL_W, CONTENT_W - LABEL_W], borders: nb, rows: details.map(detailRow) }));
+      columnWidths: [LABEL_W, CONTENT_W - LABEL_W], borders: nb, rows: rows.map(detailRow) }));
   }
 
   // ---------------- document: running header + AI notice on page 2+ only ----------------

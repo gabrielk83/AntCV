@@ -1919,7 +1919,9 @@ _reconcile 2026-09-07 (CI nightly, E3): `diag-panel-button-audit.mjs` RE-RUN on 
 
 > **Renumbered 2026-08-26: was row 40.** A document written before that date citing "row 40" may mean this row or SO-003. The ID is the key.
 
-_verified: 2026-10-04_
+_verified: 2026-10-05_
+
+**2026-10-05 (position-discovery expanded run, re-verified live):** jobindex 40 queries, 209 unique ads, readable. jobbank 40 queries, 260 unique, readable; `--limit 40` still yields 20 per source per query. LinkedIn guest API now serves 10 cards per page (was 20-25): page with `start=0,10,20`; 56 queries gave 633 unique cards. TheHub: WebFetch HTTP 500 on every URL carrying `sorting=mostRecent`; a plain fetch of `/jobs?countryCodes=DK&search=<q>` is readable (10 queries, about 60 cards). Google Jobs returned aggregators plus three named leads, none usable.
 
 **2026-10-04 (position-discovery run, re-verified live):** jobindex 14 queries, 133 unique ads, readable. jobbank 14 queries, 14 distinct result sets, 138 unique: the row-111 `key=` fix holds. LinkedIn guest strongest (18 x 20 cards). TheHub readable via WebFetch (15 jobs). Google Jobs returned aggregators only. Side defect filed as row 116 (stdout encoding of `--json`).
 
@@ -1937,7 +1939,9 @@ _verified: 2026-10-04_
 
 > **Renumbered 2026-08-26: was row 41.** A document written before that date citing "row 41" may mean this row or SO-004. The ID is the key.
 
-_verified: 2026-10-04_
+_verified: 2026-10-05_
+
+**RE-VERIFIED 2026-10-05 (position-discovery expanded run, Gabo-PC).** `check --apply`: 67 probed, 65 LIVE, 0 archived, 1 GONE held at strike 1/2 (Danfoss Production Testing Engineer, HTTP 200 with a not-available notice), 1 ERROR not counted (VML MAP HTTP 500, fifth run in a row).
 
 **RE-VERIFIED 2026-10-04 (job-tracker nightly, Gabo-PC).** `check --apply`: 56 probed, 54 LIVE, 1 archived on first sight (Factbird AI Enablement Coordinator, LinkedIn CLOSED), 1 ERROR not counted (VML MAP HTTP 500).
 

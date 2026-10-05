@@ -230,6 +230,12 @@ def put_doc(doc, base_rev):
 
 
 def main():
+    # JOBSRC-STDOUT-ENCODING-001: `context` prints every tracked company and role.
+    # Redirected on Windows that is cp1252, and a name outside cp1252 raises. Pin it.
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("context").set_defaults(fn=cmd_context)

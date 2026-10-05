@@ -225,6 +225,13 @@ def cmd_search(args):
 
 
 def main():
+    # JOBSRC-STDOUT-ENCODING-001: a routine redirects --json to a file. On Windows stdout
+    # defaults to the console codepage, so "ø" lands as cp1252 byte 0xf8 and the
+    # caller's UTF-8 read fails: zero ads, which reads as "source was dry". Pin it.
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
     ap = argparse.ArgumentParser(description="Fetch listings from jobindex.dk / jobbank.dk")
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("search")

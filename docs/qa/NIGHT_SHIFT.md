@@ -38,6 +38,7 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 
 <!-- SHIFT:BEGIN — one JSON object per line; managed by scripts/shift.mjs, safe to hand-edit a line if a session died without releasing -->
 {"id":"sh_mupev15f_bqmz","started":"2026-10-01T10:48:17.049Z","host":"vm","worktree":null,"branch":"claude/project-thread-cub2nb","range":"1.51.4786-1.51.4790","task":"impact types in result bullets (thread cub2nb)","beat":"2026-10-01T10:48:17.054Z"}
+{"id":"sh_muv3t1v9_db6n","started":"2026-10-05T10:25:25.985Z","host":"Gabo-PC","worktree":"routine-antcv-nightly-muv3giv8","branch":"HEAD","range":"1.51.4812-1.51.4831","task":"antcv-nightly 2026-10-05 (row 107 import-rewrap siblings)","beat":"2026-10-05T10:25:26.038Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

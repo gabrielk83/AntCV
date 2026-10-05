@@ -9,8 +9,12 @@
 // The split fixed the state. This script keeps it fixed. It is cheap, has no dependencies, and
 // runs in the PWA suite via pwa/test/unit/register-hygiene.test.mjs.
 //
-// Usage: node scripts/check-register.mjs [--quiet] [--dir <qa-dir>]
+// Usage: node scripts/check-register.mjs [--quiet] [--dir <qa-dir>] [--stalest [N]]
 // Exit 0 = clean, 1 = violations (each printed with the file and the offending row).
+// --stalest [N] (default 5) prints the N stalest non-STANDING rows, ranked on the verified column.
+// The index is NOT kept sorted, so a sweep that reads it top-down misses old rows that sit low in
+// the table: row 107 stayed at 2026-08-26 for 40 days while E1 rotated over September rows
+// (REGISTER-STALEST-SCAN-MISS-001, 2026-10-05). Take the E1 list from this flag, not from position.
 // --dir points the checks at a different qa directory; the unit test uses it to run every check
 // against deliberately sabotaged copies, so a green run proves the checks can actually fail.
 
@@ -127,6 +131,23 @@ function report() {
 }
 
 if (problems.length) { report(); process.exit(1); }
+
+const stalestArg = process.argv.indexOf('--stalest');
+if (stalestArg > -1) {
+  const n = /^\d+$/.test(process.argv[stalestArg + 1] || '') ? Number(process.argv[stalestArg + 1]) : 5;
+  const key = (r) => {
+    const bare = r.verified.replace(/\*/g, '').trim();
+    return bare === 'never' ? '0000-00-00' : bare;
+  };
+  const ranked = rows
+    .filter((r) => !/_\(STANDING\)_/.test(r.verified))
+    .map((r, i) => ({ r, i }))
+    .sort((a, b) => (key(a.r) < key(b.r) ? -1 : key(a.r) > key(b.r) ? 1 : a.i - b.i))
+    .slice(0, n);
+  for (const { r } of ranked) console.log(`${key(r)}  row ${r.num}  ${r.id && r.id !== '—' ? r.id : '(no id)'}`);
+  process.exit(0);
+}
+
 if (!process.argv.includes('--quiet')) {
   console.log(`register OK — ${rows.length} ACTIVE rows, ${detailNums.size} detail sections, index ${(Buffer.byteLength(index, 'utf8') / 1024).toFixed(1)} KB`);
 }

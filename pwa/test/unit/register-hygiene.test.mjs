@@ -156,6 +156,63 @@ test('catches a missing register file', () => {
   }
 });
 
+// REGISTER-STALEST-SCAN-MISS-001 (2026-10-05): the index is not kept sorted, so the E1 sweep takes
+// its list from --stalest. The first two cases build a tiny register where the OLDEST row sits LAST.
+function stalest(indexRows, args = []) {
+  const dir = mkdtempSync(join(tmpdir(), 'antcv-register-'));
+  try {
+    const idx = '# r\n\n## ACTIVE — stalest first\n\n| # | ID | verified | scope |\n|---|---|---|---|\n' +
+      indexRows.map((r) => '| ' + r[0] + ' | `' + r[1] + '` | ' + r[2] + ' | scope, REMAINING: work |').join('\n') + '\n';
+    const det = indexRows.map((r) => '## Row ' + r[0] + ' — ' + r[1] + '\n\nREMAINING: work\n').join('\n');
+    writeFileSync(join(dir, 'OPEN_REGISTER.md'), idx, 'utf8');
+    writeFileSync(join(dir, 'REGISTER_ACTIVE_DETAIL.md'), det, 'utf8');
+    writeFileSync(join(dir, 'REGISTER_CLOSED.md'), '# closed\n', 'utf8');
+    writeFileSync(join(dir, 'REGISTER_RUNLOG.md'), '# runlog\n', 'utf8');
+    const r = spawnSync(process.execPath, [SCRIPT, '--dir', dir, '--stalest', ...args], { encoding: 'utf8' });
+    return { status: r.status, lines: (r.stdout || '').trim().split(/\r?\n/).filter(Boolean), err: r.stderr || '' };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+test('--stalest ranks on the verified column, not on table position', () => {
+  const r = stalest([
+    ['1', 'NEW-001', '2026-10-01'],
+    ['2', 'MID-001', '2026-09-15'],
+    ['3', 'ANCHOR-001', '2026-07-01 _(STANDING)_'],
+    ['4', 'OLD-001', '2026-08-26'],
+  ], ['2']);
+  assert.equal(r.status, 0, r.err);
+  assert.deepEqual(r.lines, ['2026-08-26  row 4  OLD-001', '2026-09-15  row 2  MID-001'],
+    'oldest row first although it sits last; the STANDING anchor is skipped');
+});
+
+test('--stalest puts a never-verified row first and defaults to 5 rows', () => {
+  const r = stalest([
+    ['1', 'A-001', '2026-10-01'], ['2', 'B-001', '2026-10-02'], ['3', 'C-001', '2026-10-03'],
+    ['4', 'D-001', '2026-10-04'], ['5', 'E-001', '2026-10-05'], ['6', 'F-001', '**never**'],
+  ]);
+  assert.equal(r.status, 0, r.err);
+  assert.equal(r.lines.length, 5);
+  assert.equal(r.lines[0], '0000-00-00  row 6  F-001');
+  assert.equal(r.lines[4], '2026-10-04  row 4  D-001');
+});
+
+test('--stalest on the real register lists only non-STANDING rows in date order', () => {
+  const r = spawnSync(process.execPath, [SCRIPT, '--stalest', '8'], { encoding: 'utf8' });
+  assert.equal(r.status, 0, r.stderr);
+  const lines = r.stdout.trim().split(/\r?\n/);
+  const dates = lines.map((l) => l.slice(0, 10));
+  assert.equal(dates.length, 8);
+  assert.deepEqual(dates, [...dates].sort(), 'ascending by verified date');
+  const index = readFileSync(join(QA, 'OPEN_REGISTER.md'), 'utf8').split(/\r?\n/);
+  for (const l of lines) {
+    const num = l.match(/row (\S+)/)[1];
+    const row = index.find((x) => x.startsWith('| ' + num + ' |'));
+    assert.ok(row && !row.includes('_(STANDING)_'), 'row ' + num + ' is a real, non-STANDING index row');
+  }
+});
+
 test('the split actually happened: index is small, detail carries the prose', () => {
   const idx = readFileSync(join(QA, 'OPEN_REGISTER.md'), 'utf8');
   const det = readFileSync(join(QA, 'REGISTER_ACTIVE_DETAIL.md'), 'utf8');

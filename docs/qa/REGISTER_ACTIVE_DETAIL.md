@@ -2085,7 +2085,7 @@ says so.
 
 ## Row 113 — PERSIST-SKELETON-GATE-001
 
-_verified: 2026-10-04_
+_verified: 2026-10-05_
 
 **Found by the job-tracker nightly 2026-09-30 (Gabo-PC).** `gen-runner.py run --persist` loads the captured
 me() skeleton from `~/.antcv/cv_skeleton.json` and overlays the 8 generated sections onto it. When the file
@@ -2116,6 +2116,8 @@ host with the fixtures: `gen-runner.py run --persist --force --row celare_quantu
 
 **Leg (1) DONE 2026-10-04 (owner-approved, desktop session).** Both fixtures written to `~/.antcv/` on Gabo-PC from the cloud, no browser: `GET /api/prefs` returns the synced PWA prefs, including `sections` (cv 16 / cl 8, the shape the overlay targets) and the style keys. `cv_skeleton.json` = `prefs.sections` with every CL slot tied to the active app (3501 Hamamatsu: greeting, opening, why, who, bring, contribute, closure) reset to `[...]` placeholders, so an empty generated slot is dropped by the final sweep instead of reusing Hamamatsu text. CV slots carry no employer names and are kept. `export_settings.json` = 24 localStorage keys rebuilt from prefs (styleConfig, stylePackage, ratios, fontSizes, personalInfo, photo, signature + CL closing/sign-name with the `antcv:` prefix per `antcv-cl-cloud-sync-extra.js`). Per-app `clSlogan`/`clSloganCtx` left out. Not in prefs, so defaults apply: `antcv:cvLayout`, `antcv:brandV2`, `antcv:itemPages` and similar. Check: `load_skeleton()` OK, styleConfig 51 keys, `export_pdfs.py --apps 3501` renders CV (3 pages, as saved) + CL 1 page, with sidebar, experience and AI notice. Veo app 3500: owner confirmed deleted on purpose; the dead `veo_technologies` pointer is expected. REMAINING: leg (2), regenerate 3505 + 3504.
 
+**Re-verified 2026-10-05 (job-tracker nightly).** Both fixtures are on Gabo-PC (`cv_skeleton.json` 37 KB, `export_settings.json` 485 KB, written 10-04 20:19). Leg (2) is still owed. Not done unattended: rows `celare_quantum_commu` and `danfoss-production-testi-4818` are `queue=false`, the regen needs `--force`, and a forced run is outside the nightly's eligible set (armed, or never generated). A re-arm alone would not trigger it either: see row 118. REMAINING: owner go-ahead for the nightly to run both with `--force`, or a manual run of the two commands in leg (2).
+
 ---
 
 ---
@@ -2136,14 +2138,6 @@ _verified: 2026-10-01_
 
 **Owed:** meter by the model id the response returns (or the body's model) instead of the provider. `app.js` + `app.src.js` + full cache-bust set, in a shift lane. Owner call; not done in a cross-check run.
 
-## Row 116 — JOBSRC-STDOUT-ENCODING-001
-
-_verified: 2026-10-04_
-
-**Found by the position-discovery run 2026-10-04.** `python scripts/job-tracker/job_sources.py search --q "<q>" --source all --json > out.json` on Windows writes the JSON in the console code page (cp1252), not UTF-8. Every Danish letter (ø, æ, å) then fails a UTF-8 parse (`UnicodeDecodeError: 0xf8`), so a consumer reading the file as UTF-8 sees zero ads: the same silent "source was dry" failure mode as JOBSRC-FETCH-001. Characters outside cp1252 would raise inside the fetcher. Workaround used this run: `PYTHONIOENCODING=utf-8`.
-
-**Owed:** reconfigure stdout to UTF-8 in `job_sources.py` main (`sys.stdout.reconfigure(encoding="utf-8")`) or add `--out <file>`; same check for `discover-positions.py` / `check-postings.py` output. Test in `test_job_sources.py`. `scripts/` only, no cache-bust.
-
 ---
 
 ## Row 117 — CLUSTER-GLOBAL-SINGLE-JD-DOMINANCE-001
@@ -2151,3 +2145,13 @@ _verified: 2026-10-04_
 _verified: 2026-10-04_
 
 **Found by the weekly demand-seed run 2026-10-04 (read-only D1 verify).** In `cluster_top_qualifications` under `user_hash='__global_market__'`, real-JD rows (weight_sum 1) outrank every research row (rank-scaled, ceiling 0.4) by design. Measured split after this run's push: `executive` 18 of 20 rows are JD signal with **max jd_count = 1** (one hardware-exec JD: battery management, Capex/Opex, DFM/DFA, mechanics…), so one posting fills the market-wide executive top 18 and research appears only from r19. `pm_process` 20/20 JD (max jd_count 2), `photonics_eng` 20/20 (max 7), `research_phd` 16/20 (max 2). The other five clusters are 100% research. **Why it matters:** `__global_market__` is meant to represent the market; a single JD from one user outranking 180 researched items makes the weekly research invisible in those clusters (this run's executive reorder has no effect on the live rollup) and pumps one employer's niche quals for every executive CV. Not a bug in the writer: `recomputeClusterTop20` orders by `weight_sum DESC` as specified. **Owner decision owed (design, CLUSTER-QUAL-001 §7):** e.g. require `jd_count >= 3` before JD rows can outrank research in the global rollup, or blend (JD weight scaled by min(1, jd_count/N)), or keep per-user JD signal out of `__global_market__`. No code changed this run. Read-only evidence query: `SELECT cluster_id, SUM(weight_sum<=0.4), SUM(weight_sum>0.4), MAX(jd_count) FROM cluster_top_qualifications WHERE user_hash='__global_market__' GROUP BY cluster_id`.
+
+---
+
+## Row 118 — JT-ARMED-ARTIFACT-NO-DRAIN-001
+
+_verified: 2026-10-05_
+
+**Found by the job-tracker nightly 2026-10-05 (Gabo-PC).** `gen-runner.eligible_rows` elects a row only when `force or not has_art`. A row with `queue[uk]=true` and an `artifacts[uk].application_id` is skipped without a word: `gen-runner.py list` prints "no eligible rows" and names it nowhere. The island's `rowQueued()` lets an explicit `queue[uk]` win, so the same row shows under the ⏰ Queued filter and reads as due tonight. Live on doc rev 276: `napatech` (queue true, app 2781, Archive / closed) and `veo_technologies` (queue true, pointer to the deleted app 3500, Submitted). Neither should generate, so nothing was lost tonight. The risk is rows 3504 + 3505 (row 113): their tracker flags tell the owner to re-arm and regenerate, and a re-arm would be ignored the same way. The pointer check is also blind: `has_art` is true for a pointer whose cloud app is gone.
+
+**Owed:** an owner decision on what a clock flag means on a row that already has an application. (a) Report only: `list` prints an "ARMED but has an application, needs `--force`" block, so the nightly report names the row. (b) Treat it as a regen request: the nightly runs that row with `--force`, which spends a model call and creates a second application. (c) A dead pointer plus the flag counts as never generated. Then a test in `test_closed_row_gate.py` on the real `eligible_rows`. Until then a regen is a manual `gen-runner.py run --persist --force --row <uk>`. Also pending: clear the stale `queue=true` on `napatech` and `veo_technologies` (a doc write, not done unattended).

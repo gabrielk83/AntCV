@@ -4,6 +4,26 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 116 — JOBSRC-STDOUT-ENCODING-001 — CLOSED 2026-10-05 (job-tracker nightly, evidence: live repro + test)
+
+_verified: 2026-10-05_
+
+_Found by the position-discovery run 2026-10-04; fixed by the job-tracker nightly 2026-10-05 (Gabo-PC, Fable 5.1)._
+
+**Evidence.** Reproduced before the fix, with `PYTHONIOENCODING` unset: `job_sources.py search --q produktchef --source jobindex --limit 5 --json > file` wrote 1451 bytes, and a UTF-8 decode failed at byte 0xf8 (position 360).
+
+**OPEN-queue row (verbatim):**
+
+```
+| 116 | `JOBSRC-STDOUT-ENCODING-001` | 2026-10-04 | (found by the position-discovery run 2026-10-04) — `job_sources.py search --json > file` on Windows writes cp1252 bytes (stdout encoding), so a UTF-8 reader of the file fails on the first Danish letter; workaround `PYTHONIOENCODING=utf-8` |
+```
+
+---
+
+**CLOSED 2026-10-05.** `job_sources.py` `main()` and `discover-positions.py` `main()` now pin stdout to UTF-8 with `sys.stdout.reconfigure(encoding="utf-8")`, the same block `check-postings.py` already carried. All three scripts a routine redirects to a file now write UTF-8 on any console codepage. `scripts/job-tracker/test_job_sources.py` adds 4 checks (16 -> 20): two child processes run the real `main()` with stdout piped and `PYTHONIOENCODING=cp1252`, with only the network call stubbed (`SOURCES`, `get_doc`). The fixture holds "ø" and "ő": unpinned, the first leaves as byte 0xf8 and the second raises in `print()`. Negative control: each `reconfigure` line replaced with `pass` (job_sources.py:232, discover-positions.py:236), 2 checks red each time, green after restore. Live after the fix: the repro command parses as UTF-8 JSON (5 rows), and `discover-positions.py context > file` decodes (313 lines). The `PYTHONIOENCODING=utf-8` workaround is no longer needed. Script-only, no `pwa/` asset, no version number.
+
+---
+
 ## Row 108 — JOBTRACKER-PYTEST-UNWIRED-001 — CLOSED 2026-10-02 (CI cloud nightly, evidence: suite run + guard test)
 
 _verified: 2026-10-02_

@@ -189,11 +189,17 @@ test('mirror lock: app.src.js remains the rationale home (never regenerate it)',
 
 // ---------------------------------------------------------------- cache bust
 
-test('the changed assets are cache-busted to the same version', () => {
+test('the changed assets are cache-busted to the same version', async () => {
   const m = index.match(/app\.src = 'app\.js\?v=([^']+)'/);
   assert.ok(m, 'app.js carries a ?v');
   const v = m[1];
-  assert.ok(index.includes("window.ANTCV_VERSION = '" + v + "'"), 'the boot seed matches app.js');
+  // The boot seed tracks TARGET_VERSION (the release), not app.js's ?v: app.js only
+  // moves when app.js changes, while the seed moves EVERY release (CLAUDE.md patch
+  // protocol step 8; CACHE-BUST-SET-001 2026-10-06 — the old "seed == app.js" form
+  // was a coincidence of this release and broke on the first sidecar-only bump).
+  const vo = await readFile(here('../../antcv-version-override.js'), 'utf8');
+  const target = /const TARGET_VERSION = '([^']+)'/.exec(vo)[1];
+  assert.ok(index.includes("window.ANTCV_VERSION = '" + target + "'"), 'the boot seed matches TARGET_VERSION ' + target);
   for (const f of ['antcv-copenhagen-v2-001.js', 'antcv-pdf-preview-gate.js', 'antcv-docx-client.js']) {
     assert.ok(index.includes(f + '?v=' + v), f + ' busted to ' + v);
   }

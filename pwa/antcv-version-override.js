@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.4832-edu-detail';
+  const TARGET_VERSION = '1.51.4833-cache-bust-set';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.4832-edu-detail',
     '1.51.4813-linear-detail-groups',
     '1.51.4812-import-rewrap-siblings',
     '1.51.4792-demand-seed-refresh',

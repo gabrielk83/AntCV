@@ -2,6 +2,7 @@
 //
 //   node scripts/check-cache-bust.mjs            # audit current tree for ?v drift
 //   node scripts/check-cache-bust.mjs --range A..B  # assert the QUARTET for a commit range
+//   node scripts/check-cache-bust.mjs --set         # assert CACHE, TARGET_VERSION, boot seed, override ?v are ONE version
 //
 // WHY THIS EXISTS
 // ---------------
@@ -93,6 +94,41 @@ export function rangeOffenders(changedAssets, refsBumped) {
   return [...changedAssets].filter((f) => !bumped.has(f));
 }
 
+
+// SET core (CACHE-BUST-SET-001, 2026-10-06). The --range gate only sees files
+// whose `?v=` line is in index.html. It cannot see the release constants that
+// live INSIDE files: the boot seed `window.ANTCV_VERSION` in index.html, the
+// `?v=` on antcv-version-override.js's own loader line, sw.js CACHE and
+// TARGET_VERSION. PR #379 (1.51.4832) bumped CACHE + TARGET_VERSION and left
+// the seed and the override's own ?v at 1.51.4812: a browser holding the old
+// override kept pinning 4812 while the service worker said 4832. This reads
+// the five values and asserts they are ONE version.
+export function parseReleaseSet({ html, sw, vo }) {
+  const pick = (s, re) => { const m = re.exec(String(s || '')); return m ? m[1] : null; };
+  const staleBlock = pick(vo, /const STALE_VERSIONS\s*=\s*\[([\s\S]*?)\]/);
+  const stale = [];
+  if (staleBlock) { const re = /'([^']+)'/g; let m; while ((m = re.exec(staleBlock))) stale.push(m[1]); }
+  return {
+    cache: pick(sw, /const CACHE\s*=\s*'antcv-([^']+)'/),
+    target: pick(vo, /const TARGET_VERSION\s*=\s*'([^']+)'/),
+    seed: pick(html, /window\.ANTCV_VERSION\s*=\s*'([^']+)'/),
+    voRef: pick(html, /antcv-version-override\.js\?v=([0-9][0-9A-Za-z.\-]*)/),
+    stale,
+  };
+}
+
+// Returns one line per disagreeing constant; [] when the set is one version.
+export function setOffenders(set) {
+  const out = [];
+  const { cache, target, seed, voRef, stale } = set;
+  if (!target) { out.push('antcv-version-override.js: TARGET_VERSION not found'); return out; }
+  if (cache !== target) out.push(`sw.js CACHE 'antcv-${cache}' != TARGET_VERSION '${target}'`);
+  if (seed !== target) out.push(`index.html boot seed window.ANTCV_VERSION '${seed}' != TARGET_VERSION '${target}'`);
+  if (voRef !== target) out.push(`index.html antcv-version-override.js?v=${voRef} != TARGET_VERSION '${target}' (the override's OWN ?v must bump every release)`);
+  if ((stale || []).includes(target)) out.push(`TARGET_VERSION '${target}' is listed in STALE_VERSIONS (self-match loop; list only OLDER versions)`);
+  return out;
+}
+
 // ─── git glue (impure) ──────────────────────────────────────────────────────
 
 function git(args) {
@@ -175,6 +211,23 @@ function runRange(range) {
   return 1;
 }
 
+
+function runSet() {
+  const read = (rel) => readFileSync(join(ROOT, 'pwa', rel), 'utf8');
+  const set = parseReleaseSet({ html: read('index.html'), sw: read('sw.js'), vo: read('antcv-version-override.js') });
+  const offenders = setOffenders(set);
+  if (offenders.length === 0) {
+    console.log(`cache-bust set: OK — sw.js CACHE, TARGET_VERSION, the boot seed and the override's ?v all read ${set.target}.`);
+    return 0;
+  }
+  console.error(`cache-bust set: ${offenders.length} release constant(s) disagree:`);
+  for (const o of offenders) console.error(`  ✗ ${o}`);
+  console.error('\nComplete the set at ONE version: sw.js CACHE + antcv-version-override.js TARGET_VERSION');
+  console.error('(+ the PREVIOUS target into STALE_VERSIONS) + index.html window.ANTCV_VERSION seed');
+  console.error('+ index.html antcv-version-override.js?v=.');
+  return 1;
+}
+
 // ─── CLI ─────────────────────────────────────────────────────────────────────
 
 if (import.meta.url === `file://${process.argv[1]}` ||
@@ -186,6 +239,8 @@ if (import.meta.url === `file://${process.argv[1]}` ||
     const range = argv[ri + 1];
     if (!range) { console.error('--range requires a value like origin/main..HEAD'); process.exit(2); }
     code = runRange(range);
+  } else if (argv.includes('--set')) {
+    code = runSet();
   } else {
     code = runAudit(argv.includes('--strict'));
   }

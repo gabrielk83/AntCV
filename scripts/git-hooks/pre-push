@@ -95,9 +95,27 @@ if [ "$CODE" -eq 1 ]; then
     printf '  1. bump that file'"'"'s ?v= in pwa/index.html\n' >&2
     printf '  2. bump sw.js CACHE\n' >&2
     printf '  3. bump antcv-version-override.js TARGET_VERSION\n' >&2
-    printf '  4. add the PREVIOUS TARGET_VERSION to STALE_VERSIONS (never the new one)\n\n' >&2
+    printf '  4. add the PREVIOUS TARGET_VERSION to STALE_VERSIONS (never the new one)\n' >&2
+    printf '  5. set the index.html window.ANTCV_VERSION seed to the new version\n' >&2
+    printf '  6. bump antcv-version-override.js'"'"'s OWN ?v= in index.html (it changes every release)\n\n' >&2
     printf 'To bypass a false alarm: git push --no-verify\n\n' >&2
     exit 1
+fi
+
+# ── Release-set gate (CACHE-BUST-SET-001, 2026-10-06) — blocks ONLY on exit 1 ──
+# When the push touches pwa/, assert sw.js CACHE, TARGET_VERSION, the index.html
+# boot seed and antcv-version-override.js's OWN ?v agree (one version). The
+# --range gate above cannot see these: they live inside files, not on a ?v line.
+# PR #379 (1.51.4832) shipped with the seed + override ?v left at 1.51.4812.
+if git diff --name-only "$RANGE" -- pwa/ 2>/dev/null | grep -q .; then
+    OUT=$(node "$CHECK" --set 2>&1)
+    CODE=$?
+    if [ "$CODE" -eq 1 ]; then
+        printf '\n\033[31mpre-push: cache-bust release set incomplete — refusing to push.\033[0m\n' >&2
+        printf '%s\n\n' "$OUT" >&2
+        printf 'To bypass a false alarm: git push --no-verify\n\n' >&2
+        exit 1
+    fi
 fi
 
 # ── Soft NIGHT SHIFT reminder (warn only, NEVER blocks) ───────────────────────

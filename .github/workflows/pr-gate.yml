@@ -1,0 +1,44 @@
+# AntCV PR gate (CACHE-BUST-PR-GATE-001, 2026-10-06).
+#
+# WHY: the cache-bust gate lived only in scripts/git-hooks/pre-push, a LOCAL hook.
+# Pull requests opened by claude.ai cloud threads merge through GitHub, so the hook
+# never runs on them. PR #379 (1.51.4832) bumped sw.js CACHE + TARGET_VERSION and
+# left index.html's boot seed and antcv-version-override.js's own ?v at 1.51.4812;
+# #374 → 1.51.4792 had the same seed slip four days earlier. A browser holding the
+# old override keeps pinning the old version while the service worker says the new.
+#
+# This runs the same mechanical checks on every PR against main, plus the PWA suite
+# (which now carries the real-tree release-set lock, pwa/test/unit/cache-bust-set.test.mjs).
+# It reports; making it a REQUIRED check is a branch-protection setting (owner).
+name: AntCV PR gate
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # the range check diffs against the base branch
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install (no scripts — matches nightly.yml)
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Cache-bust range — every changed pwa asset got its ?v bump
+        run: node scripts/check-cache-bust.mjs --range "origin/${{ github.base_ref }}...HEAD"
+      - name: Cache-bust release set — CACHE, TARGET_VERSION, boot seed, override ?v agree
+        run: node scripts/check-cache-bust.mjs --set
+      - name: PWA suite
+        run: node scripts/run-tests.mjs pwa

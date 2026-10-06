@@ -15,6 +15,8 @@ When you finish it: move it to `REGISTER_CLOSED.md`.
 
 ## Row 38 — GEN-BACKGROUND-001
 
+_verified: 2026-10-06_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS, before and after the 1.51.4833 ship). Blocked: real device (background/lock A/B).
+
 _verified: 2026-10-05_
 
 **2026-10-05 (desktop nightly, LIVE attest):** `diag-live-guard-sidecars.mjs` against `antcv.pages.dev` at `1.51.4812-import-rewrap-siblings`, after today's deploy: `antcv-gen-memo.js` (`?v=1.51.134`) and `antcv-gen-job-client.js` (`?v=1.51.132`) served, executed, bytes identical to the repo. REMAINING unchanged: the A/B on a real mobile gen with `antcv:gen-resume=1`, then the owner-gated default flip. Needs a real device. Kept ACTIVE.
@@ -456,6 +458,8 @@ _E1 sweep 2026-09-08 (CI nightly): confirmed in CURRENT code — `__platformRule
 
 ## Row 34 — ROLE-MERGE-STORED-001
 
+_verified: 2026-10-06_ — desktop nightly E4: `diag-results-preview-export-parity.mjs` RESULTS-PREVIEW-EXPORT-PARITY OK (preview per-role result == export per-role result; tier-1 explicit result verbatim; 0 page errors). Live guard sidecar served + identical at `1.51.4812`.
+
 _verified: 2026-10-05_
 
 **2026-10-05 (desktop nightly, LIVE attest + parity diag):** `antcv-role-merge-stored.js` served, executed, bytes identical, on production `1.51.4812-import-rewrap-siblings` (its `?v` moved with the `app.js` family; the file did not change). Band E4 `diag-results-preview-export-parity.mjs`: OK, preview per-role result equals export per-role result for all 3 roles, 0 page errors. REMAINING unchanged. Kept ACTIVE.
@@ -578,6 +582,8 @@ _verified: 2026-10-03_
 
 ## Row 39a — AUTOSAVE-NO-DOWNGRADE-001
 
+_verified: 2026-10-06_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS, before and after the 1.51.4833 ship). The authed downgrade PUT was again not run: no scratch application id. Blocked: owner decision.
+
 _verified: 2026-10-05_
 
 **2026-10-05 (desktop nightly, LIVE attest):** `antcv-pointer-stale-guard.js` served at `?v=1.51.334-unsol-pillar`, executed, bytes identical, on production `1.51.4812-import-rewrap-siblings`. Relay `/health` returns `auth-38-subtitle-guard-qual-put`, equal to the repo constant. The authed downgrade PUT was not run. The token is valid now (expires 2026-10-11), but the PUT writes to a real application row and a failed guard would blank that row's company. Owner decision listed in the run report: name a scratch application id the nightly may use. REMAINING: that PUT, the same-device stale-pointer A/B, the row 19 two-device test. Kept ACTIVE.
@@ -601,6 +607,8 @@ _verified: 2026-10-05_
 ---
 
 ## Row 41
+
+_verified: 2026-10-06_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS, before and after the 1.51.4833 ship). Blocked: real device (Android crash capture).
 
 _verified: 2026-10-05_
 
@@ -626,6 +634,8 @@ _verified: 2026-10-05_
 
 ## Row 42 — GEN-LANGFAB-001
 
+_verified: 2026-10-06_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS, before and after the 1.51.4833 ship). Blocked: real LLM gen.
+
 _verified: 2026-10-05_
 
 **2026-10-05 (desktop nightly, LIVE attest):** `antcv-lang-fabrication-guard.js` served at `?v=1.51.136`, executed, bytes identical, on production `1.51.4812-import-rewrap-siblings`. REMAINING unchanged: owner-verify on a fresh generation. Kept ACTIVE.
@@ -650,6 +660,8 @@ _verified: 2026-10-05_
 
 ## Row 43
 
+_verified: 2026-10-06_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS, before and after the 1.51.4833 ship). Blocked: owner session.
+
 _verified: 2026-10-05_
 
 **2026-10-05 (desktop nightly, LIVE attest):** `antcv-candidate-preview-editor-341.js` served at `?v=1.51.139-ca006-pathc-header-whitelist`, bytes identical, on production `1.51.4812-import-rewrap-siblings`. REMAINING: owner click-through eyeball on a targeted gen preview. Kept ACTIVE.
@@ -673,6 +685,8 @@ _verified: 2026-10-05_
 ---
 
 ## Row 44 — JD-ANALYSIS-PRINT-001
+
+_verified: 2026-10-06_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS, before and after the 1.51.4833 ship). Blocked: owner session.
 
 _verified: 2026-10-05_
 
@@ -785,6 +799,8 @@ REMAINING: owner live re-verify (no device in CI). Kept ACTIVE.
 ---
 
 ## Row 39 — GEN-MODELROLE-001
+
+_verified: 2026-10-06_ — desktop nightly: D1 `llm_calls` newest day is still 2026-09-28 (claude-sonnet-5 1, gemini-2.5-flash 4, mistral-large-latest 4, gpt-5.4-mini 9; wrangler SELECT, read-only). No generation since, so the supervisor→mistral split is not observable. Blocked: real LLM gen (and row 114: the background-job path writes no rows).
 
 _verified: 2026-10-05_
 
@@ -1073,72 +1089,14 @@ _verified: 2026-10-05_ — CI E1 re-verify against HEAD 735f6d8f (all cited mark
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
+_verified: 2026-10-06_ — desktop nightly E1 (Gabo-PC, Fable 5.1): markers `JD-SWAP-STALE-RATIONALE` / `CL-GHOST-COMPANY` 7 in `pwa/app.src.js`; `cl-ghost-hunt.test.mjs` in the green suite (1813/1813). (C) BACKGROUND-STALL still OPEN; blocked: a real foreground mobile generation (owner session). Rows 70-73, its four siblings from the same 2026-07-08 review, were CLOSED today as finished deliverables whose residuals live in rows 61 and 66; this row stays as the only one with its own open leg.
+
 _verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited markers intact, remaining work unchanged & CI-ungated): verify-first against HEAD. (A) estimator left as-is (autofit finding) — DONE. (B) JD-swap stale-rationale clear SHIPPED (1.51.216) confirmed: `JD-SWAP-STALE-RATIONALE`/`CL-GHOST-COMPANY` markers present in `app.src.js` (7), covered by `pwa/test/unit/cl-ghost-hunt.test.mjs` (suite green). (C) BACKGROUND-STALL still OPEN — the SSE-stream throttle on a backgrounded tab is the real mobile first-gen blocker; needs a live foreground gen CI cannot drive. Kept ACTIVE for C + owner's one-gen validation of B.
 
 **TO-DO SUMMARY row (verbatim):**
 
 ```
 | **74** | **LIVE-APP DRIVE (owner 2026-07-08: estimator calibration → generate 4 via the app).** Three outcomes: **(A) PARITY-ESTIMATOR — do NOT flip the ratio-formula.** Built `scripts/calibrate-linefill.py` (Word-COM render vs `Vi` greedy-wrap across ratios/edges). The body table is `tblLayout=autofit`: Word + LibreOffice/CloudConvert size columns to CONTENT and ignore the grid, so the rendered main col is content-driven (~490-540px), NOT ratio-driven — the flagged ratio-formula predicts the ignored grid and would make the common case worse; the fixed constant is the right shape. (Making the formula correct needs a fixed-layout table — overflow risk.) Estimator/line-fill was NOT the 97.5% blocker. **(B) STALE-JD CONTAMINATION — FIXED + DEPLOYED (JD-SWAP-STALE-RATIONALE-001, PWA 1.51.216).** Reproduced live: fetched the NCC JD, generated, the CL targeted the PREVIOUS JD's company ("Sigma Connectivity"). Root: `CL-GHOST-COMPANY-001` pushes the prior run's `yo.supporting_context` into the next gen as "PRIOR RUN CONTEXT (carry forward)"; its guard only covers unsolicited (`!__noJD`), not a NEW-JD swap while `yo` is stale. Fix: clear the rationale (`bo(null)`/`Do(null)`) in the url-fetch AND file-upload JD handlers (matches NEW-1 load-clear); app.src.js + app.js mirrored (`Ft`→`nn`, `bo`→`Do`), cache-bust quintet. **Owner to validate with one foreground generation** (automation can't — see C). **(C) BACKGROUND-STALL [OPEN, the real mobile 97.5% risk].** Generation streams via SSE; when the tab isn't foreground (automation always; mobile app-switch mid-3-6-min-run) the browser throttles the stream and it STALLS (app detects "Tab was backgrounded", froze 3:35→4:35). rAF freeze was fixed (STICKY-LEAK-005) but the network-stream throttle is not. Also: browser file-upload is sandboxed to session-shared files, so PDF JDs can't be fed via automation (URL-fetch works). | (A) DONE — harness committed, estimator left as-is (autofit finding). (B) DONE + deployed 1.51.216 — awaiting owner's one-gen validation. (C) OPEN — the biggest mobile first-gen blocker; heavier fix in the sensitive stream code, diagnostic-first next. Owner generating the 4 foreground on the fixed build. | 
-```
-
----
-
-## Row 73
-
-> Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
-> row, which is part of why it was easy to miss.
-
-_verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited markers intact, remaining work unchanged & CI-ungated): verify-first. The 2026-07-08 CV REVIEW-4 line-fill pass delivered (0 runts, 2 pages, even columns); the word-method + 2-full-line-fill rules are captured in checklist §2 + memory. REMAINING residual = page-2 lower dead-space, which is the float-spine job tracked to row 61 and owed to a real render CI cannot do. Kept ACTIVE as the residual pointer.
-
-**TO-DO SUMMARY row (verbatim):**
-
-```
-| **73** | **CV REVIEW-4 — LINE-FILL DEEP PASS + accessibility/competency (owner 2026-07-08: "lines are very very uneven", green=extend/purple=compress, "97.5% fit is not").** Root method fixed: PyMuPDF `get_text("dict")` FRAGMENTS justified text → switched to a `get_text("words")` line-fill measurement (group words by y-band, fill = last-word-x1 / colwidth). Found every 2-line bullet had a full first line + a stranded short last line (0.12-0.53). **Rewrote ALL experience bullets to EVEN TWO-FULL-LINE paragraphs** (last line ≥0.65) — this evens the lines AND fills the page (an earlier all-1-line pass under-filled page 2 = "not compressed"). Iterated build→render→measure to **0 runts <0.5** both columns. Also: **ACCESSIBILITY moved off page 1** (ordered at the sidebar end); **competency table both Focus labels AND Strengths single-line** (`tableRatio` 0.22→0.36 for the labels + trimmed the longest Strength for the narrower col); interests re-balanced to one reasonable line each; narrow-sidebar single-word runts fixed ("(Toronto)"/"(Teknologisk)"). | DONE 2026-07-08. Verified 0 runts, 2 pages, page-1 full + even, page-2 main ~68% (up from ~40%). Delivered (original names). Rules → checklist §2 + memory line-distribution-guidelines (word-method + 2-full-line-fills-page + accessibility-p2 + competency-both-single-line). **RESIDUAL:** page-2 lower dead-space (sidebar content ends before the page since STANDARDS sits on p1) — the float-spine (row 61) is the real fill; per-payload balancing has limits. | 
-```
-
----
-
-## Row 72 — AI-NOTICE-ANCHOR-FIX-001
-
-> Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
-> row, which is part of why it was easy to miss.
-
-_verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited markers intact, remaining work unchanged & CI-ungated): verify-first against HEAD. Worker fix SHIPPED (1.14.136) confirmed: `__mt = bodyLevel ? 822 : 806` in `workers/docx-worker/src/index.js` (the page-anchored notice lift to pin at the page bottom) intact; HEADING-TABLE-GAP-001 content rules captured in checklist. DEFERRED page-2+ sidebar dead-space needs the FLOAT-SPINE (row 61) + a real CloudConvert render CI cannot do. Kept ACTIVE.
-
-**TO-DO SUMMARY row (verbatim):**
-
-```
-| **72** | **CV REVIEW-3 + worker 1.14.136 (owner 2026-07-08) — "handle as UNIVERSAL for gen/enhance/fix".** WORKER (universal): **AI-NOTICE-ANCHOR-FIX-001** — the inline notice (1.14.135) "regressed to the initial problem" (sat after the last sidebar line); real bug was the page-anchored VML sliding off the page edge → reverted to page-anchored + lifted `__mt` 824→806pt so it PINS at the page bottom fully visible (verified y=820/842). **HEADING-TABLE-GAP-001** — heading after-space → 0 for `type:'table'` sections so the grid hugs the heading (owner: "spacing of 2 after the headline fucks the distance"). CONTENT (payload, now standing rules in checklist+memory): foreningsarbejde not "Volunteer"; Danish = "Intermediate"; REFERENCES generic (owner did NOT expose recommender names — removed Innoviz/Welltec/TAU/Pan-Idræt); publication count owner-set at TWO (not 4); no LinkedIn on the pubs link line (Scholar only); INTERESTS one concise line each (not 3-line sprawl); TOOLS & METHODS restored to 7 kernel GROUPS; competency table `tableRatio` 0.28→0.22 + trimmed Strengths → all 5 rows single-line; role header kept to one line (shortened company). ORPHANS: trimmed the volunteer-header + STANDARDS runts. | DONE 2026-07-08, **deployed docx-worker 1.14.136-ainotice-anchor-heading-gap**. Verified: 2 pages, AI-notice pinned at page bottom (y=820), all 5 competency rows single-line, foreningsarbejde/Intermediate/Two-pubs/generic-refs present, Scholar link only, 0 em-dash. Delivered (PDF original name; docx `_rev4` — original locked). **DEFERRED (#13 "tables to the end of page"): page-2+ sidebar content dead-space** — main has more than the sidebar on p2, so the sidebar empties above the pinned notice. A true fill needs the FLOAT-SPINE; reducing the row-fill slack blind re-triggers PDF-BLANK-PAGE (8-blank-pages incident) and can't be CloudConvert-tested locally. Tracked to row 61 float-spine. | 
-```
-
----
-
-## Row 71 — AI-NOTICE-INLINE-001
-
-> Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
-> row, which is part of why it was easy to miss.
-
-_verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited markers intact, remaining work unchanged & CI-ungated): verify-first against HEAD. Worker fix SHIPPED (1.14.135) confirmed: `ai_wm_side` + `mainTint` tokens present in `workers/docx-worker/src/index.js` (3 markers). CV content rules (9 issues) delivered + captured in checklist §1/§2. RESIDUAL = page-2 sidebar bottom slack (inline notice sits after content, not pinned — acceptable; float-spine/row 61 would pin it). Kept ACTIVE as residual pointer.
-
-**TO-DO SUMMARY row (verbatim):**
-
-```
-| **71** | **CV REVIEW-2 FIXES + worker 1.14.135 (owner 2026-07-08, 9 issues).** All applied + verified on the Trackman CV: **(1)** ACCESSIBILITY must NEVER say "Hearing has not limited my career" (banned in every application) — only "Hearing-impaired; clear visual contact and written follow-up work well". **(2)** AI notice was LOST in Word (the page-anchored VML frame does not render in Word ExportAsFixedFormat for two-column CVs) → **worker AI-NOTICE-INLINE-001: render it as a visible inline italic paragraph at the last-page column bottom** (light-grey on dark sidebar / teal on light main; route via `ai_wm_side`). **(3)** publications too detailed for a PM role → condensed to patent + one-line summary + active-link line. **(4)** EDUCATION abbreviates once ("M.Sc. Electrical Engineering (EE)") then reuses ("B.Sc. EE"). **(5)** every INTERESTS item needs a why/specific, never a bare word. **(6)** dates never "20XX-present" for Gabriel → "20XX-2026". **(7)** ORPHANS — main body ~76 chars/line; RESULTS = 1 line; trimmed the 3 results + reworded REFERENCES to kill single-word tails. **(8)** added RESULTS to the Volunteer + Research-Assistant roles. **(9)** patent NUMBER once (kept in PUBLICATIONS; Sirin says "a patented …" with no number). **Option (a):** `style.mainTint` light-tint token added (worker MAIN-TINT-001); body hyperlinks already work via `[text](url)` markdown (inlineRuns) — no worker change needed. | DONE 2026-07-08, **deployed docx-worker 1.14.135-ainotice-inline-maintint**. CV verified: 2 pages, AI-notice visible (p2 sidebar), 241997 once, 0 em-dash, no "present", hyperlink annots present (Scholar+LinkedIn), main-tint subtle. Delivered to Downloads (PDF original name; docx `_rev3` — original locked). Checklist §1/§2 updated. Residual: page-2 sidebar bottom slack (inline notice sits after content, not pinned to page bottom — acceptable; float-spine would pin it). Also committed the JOB-TRACKER-001 phase-2 files (parallel session landed them as acbe397). | 
-```
-
----
-
-## Row 70
-
-> Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
-> row, which is part of why it was easy to miss.
-
-_verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited markers intact, remaining work unchanged & CI-ungated): verify-first. Delivered CV REBUILD v2 (2 pages, all mandatory sections, gold header) — DONE 2026-07-08; slogan (both-placement, one-visible) + softened-closure rules captured. Of the surfaced worker-feature gaps: (i) main light-brand-TINT is now SHIPPED (row 71 `mainTint`); (ii) body active-hyperlinks tie to row 66 LINKEDIN-CLICK-001; (iii) page-2 sidebar slack → row 61. Kept ACTIVE as pointer to those legs.
-
-**TO-DO SUMMARY row (verbatim):**
-
-```
-| **70** | **CV REBUILD v2 (owner 2026-07-08: "do the CV for my review") + slogan/closure rule refinements.** Trackman CV re-sourced from the master-profile KERNEL (not an export) with the row-66 fixes applied: tabular CORE COMPETENCIES (`type:'table'`, orange header); **Copenhagen Wolves elevated to a VOLUNTEERING & COMMUNITY role** in universal/transferable language (owner: "make all new roles universal"); ACCESSIBILITY section (kernel wording verbatim); INTERESTS bulleted with the CATS punchline LAST (rugby carried by the Volunteering role; "team player" stays unwritten per kernel `never_render_raw`); PUBLICATIONS bulleted (moved to sidebar = kernel location, which also FILLED the dead page-2 sidebar and pulled main from 3→2 pages); REFERENCES moved to the MAIN column end; STANDARDS given an Imaging & optics group (ISO 12233/15739, EMVA 1288, MTF/SFR, IEC 60825). **Slogan rule refined (owner):** support BOTH placements (top OR embedded lead-in), render only ONE visible chosen by the POSTING TONE. **Closure rule refined (owner):** serve the homework/fit read SOFT ("I see … as / to my understanding") and BUILD strength across the paragraph ("the closer I look, the stronger the match") — never the blunt "I understand the priorities behind this role". CL foundation also trimmed 8→6 lines (owner: ≤6). **OPEN worker-feature gaps surfaced by the CV (need a docx-worker change, not payload):** (i) NO main-column light-brand-TINT token (checklist §2 rule 12 "light main tint vs dark sidebar" is unshippable today — main stays white); (ii) body-text ACTIVE HYPERLINKS not wired — Google Scholar / LinkedIn render as plain text in the pubs bullet (header LinkedIn is link-styled); (iii) page-2 sidebar bottom slack ~3.5cm (deliberate anti-blank per sidebar-fill-gap memory; float-spine would close it). | DONE 2026-07-08. CV verified: 2 pages, all mandatory sections present, cats punchline + Wolves role + EMVA/MTF-SFR + 0 em-dash, columns bottom out together, gold header renders. Delivered to Downloads (`CV_…_20260708.pdf`; docx as `_rev2.docx` — original locked open). Awaiting owner review. (i)/(ii) → generator-baseline worker backlog (row 62/66 family); (iii) → row 61 column-balance / float-spine. |
 ```
 
 ---
@@ -1611,6 +1569,8 @@ _verified: 2026-09-26_
 
 ## Row 40
 
+_verified: 2026-10-06_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS, before and after the 1.51.4833 ship). Blocked: owner session.
+
 _verified: 2026-10-05_
 
 **2026-10-05 (desktop nightly, LIVE attest):** `antcv-outcomes-loss-guard.js` served at `?v=1.51.2200-lang-guard-key`, executed, bytes identical, on production `1.51.4812-import-rewrap-siblings`. Trigger-side test green in the 1801/1801 suite. REMAINING: owner-verify (change the Core Competencies row count, Selected Outcomes survives). Kept ACTIVE.
@@ -1847,6 +1807,8 @@ _verified: 2026-08-26_
 
 > **STANDING regression anchor** — re-run by the nightly diag set every time, not unstarted work.
 
+_verified: 2026-10-06_ — desktop nightly E2: `diag-settings-panel-churn.mjs --selftest` PASS (synthetic churn seen on all 4 tabs); Personal / Layout / Account / Advanced 0 mutations per 8 s (budget 5), 0 page errors. PASS.
+
 _verified: 2026-10-05_
 
 **2026-10-05 (desktop nightly, Band E2):** `diag-settings-panel-churn.mjs` selftest PASS (the probe sees injected churn on every tab). Personal / Layout / Account / Advanced: 0 mutations per 8 s, 0 page errors, 4 distinct panel fingerprints. Advanced re-run after the `1.51.4812` `app.js` edit: 0.
@@ -1890,6 +1852,8 @@ _verified: 2026-10-04_
 ## Row 23 — NIGHTLY-PREVIEW-BUTTON-AUDIT-001
 
 > **STANDING regression anchor** — re-run by the nightly diag set every time, not unstarted work.
+
+_verified: 2026-10-06_ — desktop nightly E3: `diag-panel-button-audit.mjs` 212 buttons (209 on 10-05), active 131 / ui-only 10 / not-visible-or-disabled 58 / skipped-dangerous 13, 0 THROWS, 0 DEAD, 0 page errors. Diff vs 10-05 by label: 8 class flips (✕ Close, Switch between saved applications, ↻, Refresh the saved-applications list, textbulletstablelabeled_listlisteducation ui-only→active; Save as new application, CJLR for this added field active→ui-only; "Make It Fit (sidebar)" not-visible→active), 1 label gone ("⇥ Fit"), 0 added. Not investigated beyond the diff; none DEAD or THROWS. `docs/qa/PANEL_BUTTON_AUDIT_2026-10-06.md` + `.json`.
 
 _verified: 2026-10-05_
 

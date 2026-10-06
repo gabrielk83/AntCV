@@ -47,7 +47,8 @@ Since dispatch: A2's client leg (same-device stale pointer) SHIPPED — see A2 b
    app.js CHANGE via mirroring, not a bundle rebuild.**
 4. **Cache-bust quintet** on every pwa asset change: index.html `?v=` (incl. version-override's OWN
    `?v` line + docx-client's module import when touched) + sw.js CACHE + TARGET_VERSION +
-   STALE_VERSIONS (append PREVIOUS, never current) + ANTCV_VERSION seed.
+   STALE_VERSIONS (append PREVIOUS, never current) + ANTCV_VERSION seed. Then
+   `node scripts/check-cache-bust.mjs --set` must pass (CACHE-BUST-SET-001, 2026-10-06).
 5. **Suite green** via `node scripts/run-tests.mjs pwa` (NEVER raw `node --test` — it hangs) +
    `node pwa/test/boot-smoke.mjs` when app.js changed + a render-past-sign-in headless check after an
    app.js integration. Workers deploy via `gh workflow run deploy.yml -f target=<w> -f mode=deploy

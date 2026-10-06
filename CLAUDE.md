@@ -43,6 +43,7 @@ When applying a patch:
 6. Bump `sw.js` `CACHE` constant.
 7. Update `pwa/antcv-version-override.js` `TARGET_VERSION` and extend `STALE_VERSIONS`.
 8. Bump the `window.ANTCV_VERSION = '1.50.x'` seed in `index.html` (the deferred module ~line 326) to the new version — the login gate reads it BEFORE version-override pins TARGET; a stale seed flashes the wrong version on boot (the "1.50.9-babel-fish" bug, fixed 1.50.775).
+9. Run `node scripts/check-cache-bust.mjs --set`. It fails unless `sw.js` CACHE, TARGET_VERSION, the boot seed and version-override's own `?v=` read one version. A pull request skips the pre-push hook, so `.github/workflows/pr-gate.yml` runs the same check on every PR (CACHE-BUST-SET-001, 2026-10-06: PR #379 shipped 1.51.4832 with the seed and the override's `?v` left at 1.51.4812).
 
 ## STALE_VERSIONS invariant (do not violate)
 

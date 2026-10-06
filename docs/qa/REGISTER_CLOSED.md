@@ -4,6 +4,96 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 120 — CACHE-BUST-SET-001 — CLOSED 2026-10-06 (desktop nightly, evidence: negative control on origin/main + live constants after deploy)
+
+_verified: 2026-10-06_
+
+_Found and fixed by the desktop nightly 2026-10-06 (Gabo-PC, Fable 5.1), `1.51.4833-cache-bust-set`, commit `ebb00fff`, lane 1.51.4833-1.51.4852._
+
+**What.** PR #379 (`b6175919`, `1.51.4832-edu-detail`, cloud thread opbo38) bumped `sw.js` CACHE and TARGET_VERSION, bumped `antcv-bullet-targets.js?v`, and left the `index.html` boot seed `window.ANTCV_VERSION` and the `antcv-version-override.js?v=` loader line at `1.51.4812-import-rewrap-siblings`. PR #376 (`1.51.4813`) one day earlier had the same shape (TARGET 4813, seed 4812). `check-cache-bust.mjs --range b6175919~1..b6175919` reports the override as changed without a ?v bump; nothing ran it: the gate lives in the local pre-push hook only, and a PR merges through GitHub. Live before the fix: `sw.js` CACHE 4832, boot seed 4812, override ?v 4812. A browser holding the cached override pins 4812 while the service worker says 4832; the headless `version-live` check passes because a fresh profile has no stale cache, so the live attest cannot see this class.
+
+**Fix.** Set completed at 1.51.4833. `check-cache-bust.mjs --set` (`parseReleaseSet` / `setOffenders`) asserts CACHE, TARGET_VERSION, boot seed and the override's own ?v are one version and that TARGET is not in STALE_VERSIONS. `pwa/test/unit/cache-bust-set.test.mjs`: 7 fixture checks + a real-tree lock (suite 1805 → 1813). Negative control: the pure check on origin/main's three files reports exactly the two #379 offenders. `hdr-type-controls.test.mjs` compared the seed with app.js's ?v (a coincidence of that release, it broke on the first sidecar-only bump); it now compares with TARGET_VERSION. The pre-push hook runs `--set` on any push touching `pwa/`. New `.github/workflows/pr-gate.yml` runs `--range`, `--set` and the PWA suite on every pull_request to main.
+
+**Owner.** Make "AntCV PR gate" a required status check in branch protection. `main` is unprotected today, so the workflow reports but cannot block a merge.
+
+---
+
+## Row 73 — CLOSED 2026-10-06 (desktop nightly E1, evidence: deliverable DONE 2026-07-08; residual lives in row 61)
+
+_verified: 2026-10-06_
+
+**CLOSED 2026-10-06.** The CV REVIEW-4 line-fill pass was delivered 2026-07-08 (0 runts, 2 pages, even columns). Its rules are in `docs/qa/DELIVERABLE_PREFLIGHT_CHECKLIST.md` (word-method, two-full-line fill; verified present at HEAD). The one residual, page-2 lower dead-space, is the float-spine leg tracked by row 61 `LINE-DISTRIBUTION-GUIDELINES-001` (ACTIVE). Three CI sweeps (09-13, 09-22, 09-23) refreshed this row with no change; it carries no work of its own.
+
+> Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
+> row, which is part of why it was easy to miss.
+
+_verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited markers intact, remaining work unchanged & CI-ungated): verify-first. The 2026-07-08 CV REVIEW-4 line-fill pass delivered (0 runts, 2 pages, even columns); the word-method + 2-full-line-fill rules are captured in checklist §2 + memory. REMAINING residual = page-2 lower dead-space, which is the float-spine job tracked to row 61 and owed to a real render CI cannot do. Kept ACTIVE as the residual pointer.
+
+**TO-DO SUMMARY row (verbatim):**
+
+```
+| **73** | **CV REVIEW-4 — LINE-FILL DEEP PASS + accessibility/competency (owner 2026-07-08: "lines are very very uneven", green=extend/purple=compress, "97.5% fit is not").** Root method fixed: PyMuPDF `get_text("dict")` FRAGMENTS justified text → switched to a `get_text("words")` line-fill measurement (group words by y-band, fill = last-word-x1 / colwidth). Found every 2-line bullet had a full first line + a stranded short last line (0.12-0.53). **Rewrote ALL experience bullets to EVEN TWO-FULL-LINE paragraphs** (last line ≥0.65) — this evens the lines AND fills the page (an earlier all-1-line pass under-filled page 2 = "not compressed"). Iterated build→render→measure to **0 runts <0.5** both columns. Also: **ACCESSIBILITY moved off page 1** (ordered at the sidebar end); **competency table both Focus labels AND Strengths single-line** (`tableRatio` 0.22→0.36 for the labels + trimmed the longest Strength for the narrower col); interests re-balanced to one reasonable line each; narrow-sidebar single-word runts fixed ("(Toronto)"/"(Teknologisk)"). | DONE 2026-07-08. Verified 0 runts, 2 pages, page-1 full + even, page-2 main ~68% (up from ~40%). Delivered (original names). Rules → checklist §2 + memory line-distribution-guidelines (word-method + 2-full-line-fills-page + accessibility-p2 + competency-both-single-line). **RESIDUAL:** page-2 lower dead-space (sidebar content ends before the page since STANDARDS sits on p1) — the float-spine (row 61) is the real fill; per-payload balancing has limits. | 
+```
+
+---
+
+## Row 72 — AI-NOTICE-ANCHOR-FIX-001 — CLOSED 2026-10-06 (desktop nightly E1, evidence: worker marker at HEAD + live worker version)
+
+_verified: 2026-10-06_
+
+**CLOSED 2026-10-06.** Worker fix 1.14.136 confirmed at HEAD: `const __mt = bodyLevel ? 822 : 806;` at `workers/docx-worker/src/index.js:23839`. Live `docx-worker /health` → `1.14.174-appline-edit` (≥ 1.14.136, 200). HEADING-TABLE-GAP-001 content rules are in the checklist. The deferred item, page-2+ sidebar dead-space, is row 61 float-spine (ACTIVE). Nothing else remains here.
+
+> Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
+> row, which is part of why it was easy to miss.
+
+_verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited markers intact, remaining work unchanged & CI-ungated): verify-first against HEAD. Worker fix SHIPPED (1.14.136) confirmed: `__mt = bodyLevel ? 822 : 806` in `workers/docx-worker/src/index.js` (the page-anchored notice lift to pin at the page bottom) intact; HEADING-TABLE-GAP-001 content rules captured in checklist. DEFERRED page-2+ sidebar dead-space needs the FLOAT-SPINE (row 61) + a real CloudConvert render CI cannot do. Kept ACTIVE.
+
+**TO-DO SUMMARY row (verbatim):**
+
+```
+| **72** | **CV REVIEW-3 + worker 1.14.136 (owner 2026-07-08) — "handle as UNIVERSAL for gen/enhance/fix".** WORKER (universal): **AI-NOTICE-ANCHOR-FIX-001** — the inline notice (1.14.135) "regressed to the initial problem" (sat after the last sidebar line); real bug was the page-anchored VML sliding off the page edge → reverted to page-anchored + lifted `__mt` 824→806pt so it PINS at the page bottom fully visible (verified y=820/842). **HEADING-TABLE-GAP-001** — heading after-space → 0 for `type:'table'` sections so the grid hugs the heading (owner: "spacing of 2 after the headline fucks the distance"). CONTENT (payload, now standing rules in checklist+memory): foreningsarbejde not "Volunteer"; Danish = "Intermediate"; REFERENCES generic (owner did NOT expose recommender names — removed Innoviz/Welltec/TAU/Pan-Idræt); publication count owner-set at TWO (not 4); no LinkedIn on the pubs link line (Scholar only); INTERESTS one concise line each (not 3-line sprawl); TOOLS & METHODS restored to 7 kernel GROUPS; competency table `tableRatio` 0.28→0.22 + trimmed Strengths → all 5 rows single-line; role header kept to one line (shortened company). ORPHANS: trimmed the volunteer-header + STANDARDS runts. | DONE 2026-07-08, **deployed docx-worker 1.14.136-ainotice-anchor-heading-gap**. Verified: 2 pages, AI-notice pinned at page bottom (y=820), all 5 competency rows single-line, foreningsarbejde/Intermediate/Two-pubs/generic-refs present, Scholar link only, 0 em-dash. Delivered (PDF original name; docx `_rev4` — original locked). **DEFERRED (#13 "tables to the end of page"): page-2+ sidebar content dead-space** — main has more than the sidebar on p2, so the sidebar empties above the pinned notice. A true fill needs the FLOAT-SPINE; reducing the row-fill slack blind re-triggers PDF-BLANK-PAGE (8-blank-pages incident) and can't be CloudConvert-tested locally. Tracked to row 61 float-spine. | 
+```
+
+---
+
+## Row 71 — AI-NOTICE-INLINE-001 — CLOSED 2026-10-06 (desktop nightly E1, evidence: worker markers at HEAD + live worker version)
+
+_verified: 2026-10-06_
+
+**CLOSED 2026-10-06.** Worker fix 1.14.135 confirmed at HEAD: `ai_wm_side` (1) and `mainTint` (2) in `workers/docx-worker/src/index.js`. Live `docx-worker /health` → `1.14.174-appline-edit` (≥ 1.14.135, 200). The 9 CV content rules are in the checklist §1/§2. The residual, page-2 sidebar bottom slack, is row 61 float-spine (ACTIVE).
+
+> Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
+> row, which is part of why it was easy to miss.
+
+_verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited markers intact, remaining work unchanged & CI-ungated): verify-first against HEAD. Worker fix SHIPPED (1.14.135) confirmed: `ai_wm_side` + `mainTint` tokens present in `workers/docx-worker/src/index.js` (3 markers). CV content rules (9 issues) delivered + captured in checklist §1/§2. RESIDUAL = page-2 sidebar bottom slack (inline notice sits after content, not pinned — acceptable; float-spine/row 61 would pin it). Kept ACTIVE as residual pointer.
+
+**TO-DO SUMMARY row (verbatim):**
+
+```
+| **71** | **CV REVIEW-2 FIXES + worker 1.14.135 (owner 2026-07-08, 9 issues).** All applied + verified on the Trackman CV: **(1)** ACCESSIBILITY must NEVER say "Hearing has not limited my career" (banned in every application) — only "Hearing-impaired; clear visual contact and written follow-up work well". **(2)** AI notice was LOST in Word (the page-anchored VML frame does not render in Word ExportAsFixedFormat for two-column CVs) → **worker AI-NOTICE-INLINE-001: render it as a visible inline italic paragraph at the last-page column bottom** (light-grey on dark sidebar / teal on light main; route via `ai_wm_side`). **(3)** publications too detailed for a PM role → condensed to patent + one-line summary + active-link line. **(4)** EDUCATION abbreviates once ("M.Sc. Electrical Engineering (EE)") then reuses ("B.Sc. EE"). **(5)** every INTERESTS item needs a why/specific, never a bare word. **(6)** dates never "20XX-present" for Gabriel → "20XX-2026". **(7)** ORPHANS — main body ~76 chars/line; RESULTS = 1 line; trimmed the 3 results + reworded REFERENCES to kill single-word tails. **(8)** added RESULTS to the Volunteer + Research-Assistant roles. **(9)** patent NUMBER once (kept in PUBLICATIONS; Sirin says "a patented …" with no number). **Option (a):** `style.mainTint` light-tint token added (worker MAIN-TINT-001); body hyperlinks already work via `[text](url)` markdown (inlineRuns) — no worker change needed. | DONE 2026-07-08, **deployed docx-worker 1.14.135-ainotice-inline-maintint**. CV verified: 2 pages, AI-notice visible (p2 sidebar), 241997 once, 0 em-dash, no "present", hyperlink annots present (Scholar+LinkedIn), main-tint subtle. Delivered to Downloads (PDF original name; docx `_rev3` — original locked). Checklist §1/§2 updated. Residual: page-2 sidebar bottom slack (inline notice sits after content, not pinned to page bottom — acceptable; float-spine would pin it). Also committed the JOB-TRACKER-001 phase-2 files (parallel session landed them as acbe397). | 
+```
+
+---
+
+## Row 70 — CLOSED 2026-10-06 (desktop nightly E1, evidence: deliverable DONE 2026-07-08; its three legs live in rows 71, 66, 61)
+
+_verified: 2026-10-06_
+
+**CLOSED 2026-10-06.** CV REBUILD v2 was delivered 2026-07-08. Of the three worker-feature gaps it surfaced: (i) main light-brand tint SHIPPED as `mainTint` (worker 1.14.135, row 71); (ii) body active hyperlinks → row 66 `LINKEDIN-CLICK-001` (ACTIVE); (iii) page-2 sidebar slack → row 61 (ACTIVE). Pure pointer row; nothing to verify here that rows 66 and 61 do not already carry.
+
+> Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
+> row, which is part of why it was easy to miss.
+
+_verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited markers intact, remaining work unchanged & CI-ungated): verify-first. Delivered CV REBUILD v2 (2 pages, all mandatory sections, gold header) — DONE 2026-07-08; slogan (both-placement, one-visible) + softened-closure rules captured. Of the surfaced worker-feature gaps: (i) main light-brand-TINT is now SHIPPED (row 71 `mainTint`); (ii) body active-hyperlinks tie to row 66 LINKEDIN-CLICK-001; (iii) page-2 sidebar slack → row 61. Kept ACTIVE as pointer to those legs.
+
+**TO-DO SUMMARY row (verbatim):**
+
+```
+| **70** | **CV REBUILD v2 (owner 2026-07-08: "do the CV for my review") + slogan/closure rule refinements.** Trackman CV re-sourced from the master-profile KERNEL (not an export) with the row-66 fixes applied: tabular CORE COMPETENCIES (`type:'table'`, orange header); **Copenhagen Wolves elevated to a VOLUNTEERING & COMMUNITY role** in universal/transferable language (owner: "make all new roles universal"); ACCESSIBILITY section (kernel wording verbatim); INTERESTS bulleted with the CATS punchline LAST (rugby carried by the Volunteering role; "team player" stays unwritten per kernel `never_render_raw`); PUBLICATIONS bulleted (moved to sidebar = kernel location, which also FILLED the dead page-2 sidebar and pulled main from 3→2 pages); REFERENCES moved to the MAIN column end; STANDARDS given an Imaging & optics group (ISO 12233/15739, EMVA 1288, MTF/SFR, IEC 60825). **Slogan rule refined (owner):** support BOTH placements (top OR embedded lead-in), render only ONE visible chosen by the POSTING TONE. **Closure rule refined (owner):** serve the homework/fit read SOFT ("I see … as / to my understanding") and BUILD strength across the paragraph ("the closer I look, the stronger the match") — never the blunt "I understand the priorities behind this role". CL foundation also trimmed 8→6 lines (owner: ≤6). **OPEN worker-feature gaps surfaced by the CV (need a docx-worker change, not payload):** (i) NO main-column light-brand-TINT token (checklist §2 rule 12 "light main tint vs dark sidebar" is unshippable today — main stays white); (ii) body-text ACTIVE HYPERLINKS not wired — Google Scholar / LinkedIn render as plain text in the pubs bullet (header LinkedIn is link-styled); (iii) page-2 sidebar bottom slack ~3.5cm (deliberate anti-blank per sidebar-fill-gap memory; float-spine would close it). | DONE 2026-07-08. CV verified: 2 pages, all mandatory sections present, cats punchline + Wolves role + EMVA/MTF-SFR + 0 em-dash, columns bottom out together, gold header renders. Delivered to Downloads (`CV_…_20260708.pdf`; docx as `_rev2.docx` — original locked open). Awaiting owner review. (i)/(ii) → generator-baseline worker backlog (row 62/66 family); (iii) → row 61 column-balance / float-spine. |
+```
+
+---
+
 ## Row 113 — PERSIST-SKELETON-GATE-001 — CLOSED 2026-10-06 (job-tracker nightly, evidence: sweep archive + app 3508)
 
 _verified: 2026-10-06_

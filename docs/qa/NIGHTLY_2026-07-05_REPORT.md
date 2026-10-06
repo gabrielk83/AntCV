@@ -175,3 +175,62 @@ standing coverage — no contradictions.
 - Only edits: `pwa/test/unit/native-print-clip.test.mjs` (test robustness) + doc updates
   (`OPEN_REGISTER.md` rows 9/17/35/36/37/39/39a, `ACTIVE_BUGS.md`, this report). No production asset, no
   app.js, no cache-bust, no worker deploy. main never regressed; rebased-clean before push.
+
+---
+
+## CI NIGHTLY 2026-10-06 (GitHub Actions, unattended, Opus 4.8)
+
+Run: `antcv-nightly` on GitHub Actions (gabrielk83/AntCV), unattended. No in-app Browser
+pane, no signed-in session, no real-LLM gen, no Playwright browser, `ALLOW_DEPLOY=false`.
+Scope was therefore the one band CI can fully execute: **Band E / E1 register staleness
+sweep.** Docs + registers only, pushed direct to main per the CI SAFETY OVERRIDE.
+
+**Baseline:** SYNC FIRST up to date at `de7fec6e`. `node scripts/run-tests.mjs pwa` =
+**1794/1794 green**. `check-register.mjs` OK (90 ACTIVE).
+
+### E1 — staleness sweep (8 rows re-verified, 0 closable in CI, 0 shipped)
+
+The desktop + job-tracker nightlies ran earlier today and closed rows 70-73, so the
+stalest set (`check-register.mjs --stalest`) was rows **65-69 (2026-09-23)** and
+**75/77/81 (2026-09-24)**. All 8 re-verified against HEAD `de7fec6e`, markers intact,
+`verified:` refreshed to 2026-10-06 in the index + detail:
+
+| Row | ID | Marker re-verified | Why not closable in CI |
+|----|----|----|----|
+| 69 | — (CL POLISH v2) | `AI-assisted - author` hyphen footer in docx-worker/src/index.js | standing CL-rule anchor (kept ACTIVE by design) |
+| 67 | CV-CORECOMP-BLANK-001 | `antcv-cl-slogan-control.js` loaded by index.html | convergence verify needs a signed-in 2nd-gen regen |
+| 66 | LINKEDIN-CLICK-001 | `DELIVERABLE_PREFLIGHT_CHECKLIST.md` present | regen/deliverable-gated (re-deliver from kernel) |
+| 65 | PTR-STALE-GUARD-001 | CROSS-DEVICE-GEN-LEAK ×4 app.src.js + `__fahA`/`__fahB` ×2 app.js + diag on disk | legs A-D need live-mobile / live-repro |
+| 68 | JD-SYNC-001 | `origin/brandfit-per-app-scope` @ `fc2477c` (git ls-remote) | owner/desktop/regen-gated |
+| 75 | JOBTRACKER-AUTOFILL-ADDFLOW-VERIFY-001 | **marker-location CORRECTED** (see below) | owner-gated live add-test |
+| 77 | JOBTRACKER-TOP5-PERIODIC-RESCORE-001 | `jobtracker-top5-rescore.test.mjs` present + green | owner-decision gate (periodic re-score not built) |
+| 81 | PHOTO-FUSE-OWNER-VERIFY-001 | `＋ Add photos…` + PW-CJLR guard + diag | owner-gated on-device visual pass |
+
+**Row 75 marker-location correction (filed):** the 2026-09-24 note claimed the
+autofill/enrich flow was "in `pwa/antcv-react-islands.js` (AUTOFILL-TOP5/tier/enrich/refine,
+7 refs)". Those readable tokens are NOT in the built bundle — it was last rebuilt
+2026-09-06 (`ce05d602`) and strips the comment markers. The flow lives in the island
+SOURCE: `src/islands/JobTracker/{JobTracker.tsx,api.ts,rank.ts}` (all match
+`autofill|enrich`). Feature is present + unit-covered; the note's file attribution was
+imprecise, now corrected in the detail row.
+
+### Bands A-D — not advanced (all blocked in this environment)
+
+- **A1 GEN-BACKGROUND-001 / A2 TAB-DEVICE-ISOLATION:** need a real mobile gen A/B and a
+  signed-in two-tab race — no browser/session here.
+- **B1 SO-003 / B2 SO-004:** need headless-browser repro; no Playwright browser in CI.
+- **C1 GEN-LANGFAB / C2 CA-006 / C3 JD-ANALYSIS-PRINT:** shipped already (see this
+  report's earlier section); residual verify is real-LLM-gen-gated.
+- **D1 PERF-001:** needs a CPU profile around export/preview in a real browser.
+- **D2 GEN-MODELROLE-001 live verify:** needs `gh`/relay telemetry access.
+
+### Owner
+
+Nothing new owed by this run. The desktop nightly 2026-10-06 owner list stands:
+(1) make "AntCV PR gate" a required branch-protection check; (2) row 39a scratch
+application id; (3) row 89 worker deploys ×3 still owed; (4) row 115 meter-by-model
+decision.
+
+### Live-verify owed
+
+None — this run shipped no PWA/worker asset, so no post-deploy live-verify is owed.

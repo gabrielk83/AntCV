@@ -88,14 +88,14 @@ citing an old number may mean either row — the ID disambiguates.
 | 58 | `EXPORT-SETTLED-001` | 2026-10-05 | MOBILE-BUGS-2026-07 (owner "Mobile App Bug Findings Report", 2026-07-07) — 9 findings: MOB-001 Danish UI shows |
 | 62 | `HEADER-BANNER-DESIGN-RULES-001` | 2026-10-05 | (owner 2026-07-07, KOMBIT gold) — bake the correct CV/CL header-banner design i |
 | 74 | `JD-SWAP-STALE-RATIONALE-001` | 2026-10-06 | LIVE-APP DRIVE (owner 2026-07-08: estimator calibration → generate 4 via the app). Three outcomes: (A) PARITY- |
-| 69 | — | 2026-09-23 | CL POLISH v2 + SYSTEMIC EM-DASH (owner 2026-07-08 CL review). Three standing CL rules, applied to the Trackman |
-| 67 | `CV-CORECOMP-BLANK-001` | 2026-09-23 | DESKTOP-RUN OPEN QUEUE (owner reconcile 2026-07-08 — these were NOT in the register and would have aged out; m |
-| 66 | `LINKEDIN-CLICK-001` | 2026-09-23 | TRACKMAN-DELIVERABLE-REVIEW-2026-07-08 (owner, on the generated Trackman CV+CL) — a batch of GENERATOR-BASELIN |
-| 65 | `PTR-STALE-GUARD-001` | 2026-09-23 | ANALYSIS+SYNC-BATCH-2026-07-08 (owner report, 5 issues; gap-export CONFIRMED FIXED by NEW-2/row 64): (A) LANG- |
-| 68 | `JD-SYNC-001` | 2026-09-23 | REGISTER-ESCAPE SWEEP (owner 2026-07-08: "look for all scopes of work that escaped the register, incl. incomin |
-| 75 | `JOBTRACKER-AUTOFILL-ADDFLOW-VERIFY-001` | 2026-09-24 | (owner-gated live test) — the manual-add auto-fill flow (deterministic tier on add + async LLM refine: tier up |
-| 77 | `JOBTRACKER-TOP5-PERIODIC-RESCORE-001` | 2026-09-24 | (optional) — Top-5 is re-evaluated on every add/edit (the fit-ranked useMemo). Owner asked whether a PERIODIC  |
-| 81 | `PHOTO-FUSE-OWNER-VERIFY-001` | 2026-09-24 | (owner-gated visual check) — the 1.51.390-393 photo-panel rework (PW-CJLR-PHOTO-LEAK-002 guard + PHOTO-BTN-FUS |
+| 69 | — | 2026-10-06 | CL POLISH v2 + SYSTEMIC EM-DASH (owner 2026-07-08 CL review). Three standing CL rules, applied to the Trackman |
+| 67 | `CV-CORECOMP-BLANK-001` | 2026-10-06 | DESKTOP-RUN OPEN QUEUE (owner reconcile 2026-07-08 — these were NOT in the register and would have aged out; m |
+| 66 | `LINKEDIN-CLICK-001` | 2026-10-06 | TRACKMAN-DELIVERABLE-REVIEW-2026-07-08 (owner, on the generated Trackman CV+CL) — a batch of GENERATOR-BASELIN |
+| 65 | `PTR-STALE-GUARD-001` | 2026-10-06 | ANALYSIS+SYNC-BATCH-2026-07-08 (owner report, 5 issues; gap-export CONFIRMED FIXED by NEW-2/row 64): (A) LANG- |
+| 68 | `JD-SYNC-001` | 2026-10-06 | REGISTER-ESCAPE SWEEP (owner 2026-07-08: "look for all scopes of work that escaped the register, incl. incomin |
+| 75 | `JOBTRACKER-AUTOFILL-ADDFLOW-VERIFY-001` | 2026-10-06 | (owner-gated live test) — the manual-add auto-fill flow (deterministic tier on add + async LLM refine: tier up |
+| 77 | `JOBTRACKER-TOP5-PERIODIC-RESCORE-001` | 2026-10-06 | (optional) — Top-5 is re-evaluated on every add/edit (the fit-ranked useMemo). Owner asked whether a PERIODIC  |
+| 81 | `PHOTO-FUSE-OWNER-VERIFY-001` | 2026-10-06 | (owner-gated visual check) — the 1.51.390-393 photo-panel rework (PW-CJLR-PHOTO-LEAK-002 guard + PHOTO-BTN-FUS |
 | 83 | `JD-REMOVE-OWNER-VERIFY-001` | 2026-09-24 | (owner-gated live check) — JD-REMOVE-STICKY-001 (1.51.395, see the 2026-07-13 CLOSED block) is suite- and pred |
 | 88 | — | 2026-09-24 | OWNER-ROUND-3-BACKLOG (Aimpoint-810 deep review close-out, 2026-07-13; full detail in the ACTIVE_BUGS OWNER-RO |
 | 87 | `OWNER-ROUND-2-RESIDUE-001` | 2026-09-24 | (Aimpoint app-810 review, 2026-07-13, commit 73264c6) — the golden/detection/label/slogan/Scholar fixes landed |

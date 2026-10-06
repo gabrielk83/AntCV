@@ -1106,7 +1106,7 @@ _verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited mark
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited markers intact, remaining work unchanged & CI-ungated): verify-first against HEAD. Systemic em-dash→hyphen SHIPPED (worker 1.14.134) re-confirmed: the `__AINOTICE` footer map in `workers/docx-worker/src/index.js` uses a HYPHEN in all 7 languages (da/es/zh/he/ar/am + the EN default "AI-assisted - author retains responsibility…") — no em-dash in the AI-notice/citation/doc-title path. The three standing CL rules (slogan / centered-signature-brand-ink / mixed-closure) are captured in checklist §3 + memory. Kept ACTIVE as the standing-rule anchor.
+_verified: 2026-10-06_ — CI E1 re-verify against HEAD de7fec6e (all cited markers still intact: `AI-assisted - author` hyphen footer present in `workers/docx-worker/src/index.js`; prior CI E1 2026-09-23 @38630d58): verify-first against HEAD. Systemic em-dash→hyphen SHIPPED (worker 1.14.134) re-confirmed: the `__AINOTICE` footer map in `workers/docx-worker/src/index.js` uses a HYPHEN in all 7 languages (da/es/zh/he/ar/am + the EN default "AI-assisted - author retains responsibility…") — no em-dash in the AI-notice/citation/doc-title path. The three standing CL rules (slogan / centered-signature-brand-ink / mixed-closure) are captured in checklist §3 + memory. Kept ACTIVE as the standing-rule anchor.
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -1121,7 +1121,7 @@ _verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited mark
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited markers intact, remaining work unchanged & CI-ungated): verify-first against HEAD. (B) editable CL slogan SHIPPED — `antcv-cl-slogan-control.js` still loaded by `index.html` (1 ref). (A) convergence verify (CV-CORECOMP-BLANK / CL-BLANK / CV-ACCESS-DROP, 1.51.29, 22 vm tests) still needs a signed-in 2nd-generation regen; (C) preview-dance/perf + (D) regen-gated content + (E) unsolicited-gen quality all need a live desktop browser / real LLM CI lacks. Kept ACTIVE (owner/desktop/regen-gated).
+_verified: 2026-10-06_ — CI E1 re-verify against HEAD de7fec6e (`antcv-cl-slogan-control.js` still loaded by index.html, 1 ref; prior CI E1 2026-09-23 @38630d58): verify-first against HEAD. (B) editable CL slogan SHIPPED — `antcv-cl-slogan-control.js` still loaded by `index.html` (1 ref). (A) convergence verify (CV-CORECOMP-BLANK / CL-BLANK / CV-ACCESS-DROP, 1.51.29, 22 vm tests) still needs a signed-in 2nd-generation regen; (C) preview-dance/perf + (D) regen-gated content + (E) unsolicited-gen quality all need a live desktop browser / real LLM CI lacks. Kept ACTIVE (owner/desktop/regen-gated).
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -1136,7 +1136,7 @@ _verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited mark
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited markers intact, remaining work unchanged & CI-ungated): verify-first. TRACKMAN-DELIVERABLE-REVIEW batch of GENERATOR-BASELINE gaps (CV items a–i, CL items j–o) — root cause was a lossy-export payload bypassing the app belts; prevention doc `DELIVERABLE_PREFLIGHT_CHECKLIST.md` in place. Each item is a generator-baseline requirement that ties rows 57/59/61/54 and can only be closed by a re-deliver from the master kernel through the app belts + a real render — CI cannot regen. Kept ACTIVE (regen/deliverable-gated).
+_verified: 2026-10-06_ — CI E1 re-verify against HEAD de7fec6e (prevention doc `DELIVERABLE_PREFLIGHT_CHECKLIST.md` still present; prior CI E1 2026-09-23 @38630d58): verify-first. TRACKMAN-DELIVERABLE-REVIEW batch of GENERATOR-BASELINE gaps (CV items a–i, CL items j–o) — root cause was a lossy-export payload bypassing the app belts; prevention doc `DELIVERABLE_PREFLIGHT_CHECKLIST.md` in place. Each item is a generator-baseline requirement that ties rows 57/59/61/54 and can only be closed by a re-deliver from the master kernel through the app belts + a real render — CI cannot regen. Kept ACTIVE (regen/deliverable-gated).
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -1151,7 +1151,7 @@ _verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited mark
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited markers intact, remaining work unchanged & CI-ungated): verify-first against HEAD. (E) CROSS-DEVICE-GEN-LEAK-GUARD SHIPPED (1.51.201) re-confirmed: `CROSS-DEVICE-GEN-LEAK` markers in `app.src.js` (4) + the `__fahA`/`__fahB` app.js mirror (2) present, `pwa/test/diag-cross-device-gen-leak-guard.mjs` on disk (suite green). (A) LANG-SWITCH-MOBILE + (B) analysis-export-unsolicited-gate + (C) market-fit/salary JD wiring + (D) panel-upload OCR all need live-mobile / live-repro CI cannot do. Kept ACTIVE for A–D.
+_verified: 2026-10-06_ — CI E1 re-verify against HEAD de7fec6e (prior CI E1 2026-09-23 @38630d58): verify-first against HEAD. (E) CROSS-DEVICE-GEN-LEAK-GUARD SHIPPED (1.51.201) re-confirmed STILL INTACT: `CROSS-DEVICE-GEN-LEAK` markers in `app.src.js` (4) + the `__fahA`/`__fahB` app.js mirror (2) present, `pwa/test/diag-cross-device-gen-leak-guard.mjs` on disk (suite 1794/1794 green). (A) LANG-SWITCH-MOBILE + (B) analysis-export-unsolicited-gate + (C) market-fit/salary JD wiring + (D) panel-upload OCR all need live-mobile / live-repro CI cannot do. Kept ACTIVE for A–D.
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -1166,7 +1166,7 @@ _verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited mark
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited markers intact, remaining work unchanged & CI-ungated): verify-first against HEAD. (A) brandfit WIP PRESERVED re-confirmed: `origin/brandfit-per-app-scope` still exists at `fc2477c` (durable backup survives worktree prune) — NOT merged (behind main, needs rebase+review), live D1 `ALTER TABLE` NOT run (owner fresh-confirm required). (B) content-gen missing fields [regen-gated], (C) coordinator sidebar-inflate watermark, (D) PackagePicker→Layout merge, (E) cluster-demand worker pipeline, (F) cloud/mobile live-verify backlog — all owner/desktop/regen-gated. Kept ACTIVE.
+_verified: 2026-10-06_ — CI E1 re-verify against HEAD de7fec6e (prior CI E1 2026-09-23 @38630d58): verify-first against HEAD. (A) brandfit WIP PRESERVED re-confirmed (`git ls-remote`): `origin/brandfit-per-app-scope` still exists at `fc2477c` (durable backup survives worktree prune) — NOT merged (behind main, needs rebase+review), live D1 `ALTER TABLE` NOT run (owner fresh-confirm required). (B) content-gen missing fields [regen-gated], (C) coordinator sidebar-inflate watermark, (D) PackagePicker→Layout merge, (E) cluster-demand worker pipeline, (F) cloud/mobile live-verify backlog — all owner/desktop/regen-gated. Kept ACTIVE.
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -1178,7 +1178,7 @@ _verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited mark
 
 ## Row 75 — JOBTRACKER-AUTOFILL-ADDFLOW-VERIFY-001
 
-_verified: 2026-09-24_ — CI E1 re-verify against HEAD 88f89001 (cited markers intact, remaining work unchanged & CI-ungated): the deterministic-tier + async-enrich autofill flow is present in `pwa/antcv-react-islands.js` (AUTOFILL-TOP5/tier/enrich/refine, 7 refs) and the jobtracker unit set (`jobtracker-top5-*`, `jobtracker-open-jd-routing`, etc.) is green in the suite (1715/1715). REMAINING = one real URL/PDF add-test end-to-end (reject after) with the owner or a throwaway account — CI cannot drive a live LLM add without writing a junk row to the owner's live tracker. Kept ACTIVE, owner-gated.
+_verified: 2026-10-06_ — CI E1 re-verify against HEAD de7fec6e (prior CI E1 2026-09-24 @88f89001): MARKER-LOCATION CORRECTION — the deterministic-tier + async-enrich autofill flow lives in the island SOURCE (`src/islands/JobTracker/JobTracker.tsx`, `api.ts`, `rank.ts` all match `autofill|enrich`), NOT as readable tokens in the built `pwa/antcv-react-islands.js` (that bundle was last rebuilt 2026-09-06 @ce05d602 and strips the comment markers; the 2026-09-24 note's "7 refs in antcv-react-islands.js" was imprecise about the file). Flow present + the jobtracker unit set (`jobtracker-top5-rescore`, `jobtracker-top5-controls`, etc.) is green in the suite (1794/1794). REMAINING = one real URL/PDF add-test end-to-end (reject after) with the owner or a throwaway account — CI cannot drive a live LLM add without writing a junk row to the owner's live tracker. Kept ACTIVE, owner-gated.
 
 **OPEN-queue row (verbatim):**
 
@@ -1190,7 +1190,7 @@ _verified: 2026-09-24_ — CI E1 re-verify against HEAD 88f89001 (cited markers 
 
 ## Row 77 — JOBTRACKER-TOP5-PERIODIC-RESCORE-001
 
-_verified: 2026-09-24_ — CI E1 re-verify against HEAD 88f89001: the on-add/on-change fit-ranked Top-5 re-rank is present and covered by `pwa/test/unit/jobtracker-top5-rescore.test.mjs` (suite green). The PERIODIC recompute (drift Top-5 with cluster-demand refreshes, not just on add) is deliberately NOT built — it is an OWNER-DECISION gate, not code owed. Kept ACTIVE awaiting owner confirm.
+_verified: 2026-10-06_ — CI E1 re-verify against HEAD de7fec6e (prior CI E1 2026-09-24 @88f89001): the on-add/on-change fit-ranked Top-5 re-rank is present and covered by `pwa/test/unit/jobtracker-top5-rescore.test.mjs` (suite 1794/1794 green). The PERIODIC recompute (drift Top-5 with cluster-demand refreshes, not just on add) is deliberately NOT built — it is an OWNER-DECISION gate, not code owed. Kept ACTIVE awaiting owner confirm.
 
 **OPEN-queue row (verbatim):**
 
@@ -1202,7 +1202,7 @@ _verified: 2026-09-24_ — CI E1 re-verify against HEAD 88f89001: the on-add/on-
 
 ## Row 81 — PHOTO-FUSE-OWNER-VERIFY-001
 
-_verified: 2026-09-24_ — CI E1 re-verify against HEAD 88f89001 (cited markers intact): the 1.51.390-393 photo-panel rework is present — PHOTO-BTN-FUSE-001 + the single "＋ Add photos…" upload control in `pwa/antcv-photo-library.js` (4 refs) and the PW-CJLR-PHOTO-LEAK guard in `pwa/antcv-profile-workstyle-cjlr-238.js` + `pwa/test/diag-pw-cjlr-photo-leak.mjs`; suite green. REMAINING = one on-device visual pass after a hard refresh (legs a–e of the row) — needs a signed-in browser CI lacks. Kept ACTIVE, owner-gated visual check.
+_verified: 2026-10-06_ — CI E1 re-verify against HEAD de7fec6e (cited markers intact; prior CI E1 2026-09-24 @88f89001): the 1.51.390-393 photo-panel rework is present — PHOTO-BTN-FUSE-001 + the single "＋ Add photos…" upload control in `pwa/antcv-photo-library.js` (2 "Add photos" refs) and the PW-CJLR-PHOTO-LEAK guard in `pwa/antcv-profile-workstyle-cjlr-238.js` + `pwa/test/diag-pw-cjlr-photo-leak.mjs`; suite 1794/1794 green. REMAINING = one on-device visual pass after a hard refresh (legs a–e of the row) — needs a signed-in browser CI lacks. Kept ACTIVE, owner-gated visual check.
 
 **OPEN-queue row (verbatim):**
 

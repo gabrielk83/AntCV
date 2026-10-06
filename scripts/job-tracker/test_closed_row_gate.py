@@ -22,7 +22,12 @@ JD = "x " * 400  # comfortably over the 200-char content gate
 fails = []
 
 
+CHECKS = 0
+
+
 def check(name, got, want):
+    global CHECKS
+    CHECKS += 1
     if got != want:
         fails.append("%s\n    got:  %r\n    want: %r" % (name, got, want))
 
@@ -89,9 +94,70 @@ check("live and archived together: only the live one is listed",
       ready(doc([row("live"), row("dead", band="D9D9D9")], {"live": False, "dead": False})),
       ["live"])
 
+# ---- armed_with_app_rows (JT-ARMED-ARTIFACT-NO-DRAIN-001) -------------------
+# A row the owner armed that already has an application is skipped by
+# eligible_rows without a word, while the island shows it as Queued. The list
+# command must NAME it. Report-only: it must stay out of the eligible set.
+import contextlib
+import io
+
+
+def armed(d):
+    return sorted(x["uk"] for x in gr.armed_with_app_rows(d))
+
+
+def doc_art(rows, queue, arts):
+    d = doc(rows, queue)
+    d["artifacts"] = arts
+    return d
+
+
+APP = {"application_id": 2781}
+check("an armed row with an application is NOT eligible (the silent skip)",
+      ukeys(doc_art([row("x")], {"x": True}, {"x": APP})), [])
+check("...and it IS reported by armed_with_app_rows",
+      armed(doc_art([row("x")], {"x": True}, {"x": APP})), ["x"])
+check("--force makes that armed row eligible again (the manual regen path)",
+      ukeys(doc_art([row("x")], {"x": True}, {"x": APP}), force=True), ["x"])
+check("an armed CLOSED row with an application is reported too (stale flag)",
+      armed(doc_art([row("x", status="Archive / closed")], {"x": True}, {"x": APP})), ["x"])
+check("the closed flag is carried on the report",
+      [r["closed"] for r in gr.armed_with_app_rows(
+          doc_art([row("x", status="Archive / closed")], {"x": True}, {"x": APP}))], [True])
+check("an armed row WITHOUT an application is eligible, not reported",
+      armed(doc_art([row("x")], {"x": True}, {})), [])
+check("a default-on row (no queue entry) with an application is not reported",
+      armed(doc_art([row("x")], {}, {"x": APP})), [])
+check("an unarmed (explicit False) row with an application is not reported",
+      armed(doc_art([row("x")], {"x": False}, {"x": APP})), [])
+check("a cv_export_url alone counts as an application",
+      armed(doc_art([row("x")], {"x": True}, {"x": {"cv_export_url": "u"}})), ["x"])
+check("an armed row with an EMPTY artifact entry is not reported",
+      armed(doc_art([row("x")], {"x": True}, {"x": {}})), [])
+
+
+def list_stdout(d):
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        gr.print_armed_summary(d)
+    return buf.getvalue()
+
+
+out = list_stdout(doc_art([row("napa", status="Archive / closed"), row("veo")],
+                          {"napa": True, "veo": True}, {"napa": APP, "veo": {"application_id": 3500}}))
+check("print_armed_summary names the block", "ARMED but already has an application (2)" in out, True)
+check("print_armed_summary names both rows", ("napa" in out) and ("veo" in out), True)
+check("print_armed_summary says how to regen", "--force --row" in out, True)
+check("print_armed_summary marks the closed row's flag as stale", "CLOSED row, flag stale" in out, True)
+check("print_armed_summary carries the app id", "app 3500" in out, True)
+check("print_armed_summary is silent with nothing armed",
+      list_stdout(doc_art([row("x")], {"x": False}, {"x": APP})), "")
+check("print_armed_summary is silent for a plain unarmed backlog",
+      list_stdout(doc([row("x")], {"x": False})), "")
+
 if fails:
     print("FAIL (%d):" % len(fails))
     for f in fails:
         print("  - " + f)
     sys.exit(1)
-print("PASS - closed-row generation gate (20 checks)")
+print("PASS - closed-row generation gate (%d checks)" % CHECKS)

@@ -4,6 +4,61 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 113 — PERSIST-SKELETON-GATE-001 — CLOSED 2026-10-06 (job-tracker nightly, evidence: sweep archive + app 3508)
+
+_verified: 2026-10-06_
+
+**CLOSED 2026-10-06.** The gate shipped 2026-09-30; fixtures captured on Gabo-PC 2026-10-04; Celare regenerated full-fidelity as app 3508 on 2026-10-05 (CV 2 pages, CL 1 page, 0 banned dashes). The last leg, the Danfoss regen, is moot: `check-postings.py check --apply` archived Danfoss / Production Testing Engineer on 2026-10-06, GONE strike 2/2 (SuccessFactors HTTP 200 "not available at this time", first strike 10-05). Leftover: apps 3504 (Danfoss) and 3505 (Celare) are still in the cloud as 4-block flat CVs; deleting them is an owner call in the PWA, not a defect.
+
+**OPEN-queue row (verbatim):**
+
+```
+| 113 | `PERSIST-SKELETON-GATE-001` | 2026-10-05 | (found by the job-tracker nightly 2026-09-30) - gen-runner `--persist` without `~/.antcv/cv_skeleton.json` saved a 4-block flat CV (apps 3504, 3505). Gate SHIPPED; fixtures captured on Gabo-PC 2026-10-04 from cloud prefs; Celare regenerated full-fidelity as app 3508 (2026-10-05); REMAINING: the Danfoss leg, pending the posting (taken down, strike 1/2) |
+```
+
+**ACTIVE detail (verbatim at close):**
+
+_verified: 2026-10-05_
+
+**Found by the job-tracker nightly 2026-09-30 (Gabo-PC).** `gen-runner.py run --persist` loads the captured
+me() skeleton from `~/.antcv/cv_skeleton.json` and overlays the 8 generated sections onto it. When the file
+is missing it printed one warning and persisted anyway: the CV became 4 flat text blocks (profile, outcomes,
+core, specialization), with no experience roles, no sidebar, no furniture. It then set `queue[uk]=false` and
+wrote `artifacts[uk]`, so the tracker showed the row as done. Gabo-PC has never had the fixture (earlier
+full-fidelity runs were on the other machine). Two apps were hit: **3504** Danfoss / Production Testing
+Engineer (2026-09-29, generated outside this routine) and **3505** Celare Quantum Communications / Optical
+Engineer (this run). Both were confirmed with `GET /api/applications/<id>`: 4 cv_sections, all type text.
+`export_pdfs.py` cannot verify them on this host either: `~/.antcv/export_settings.json` is missing too.
+
+**SHIPPED (script-side, no `pwa/` asset, no version number).** `persist_preflight(persist, allow_flat,
+skeleton)` runs in `cmd_run` right after row selection and before any research or model call. Without a
+usable skeleton it prints an ABORT and exits 5, so armed rows stay armed. The `--allow-flat` flag lets
+someone choose the old behaviour on purpose. `--dry` and non-persist runs are not gated. Test
+`scripts/job-tracker/test_persist_skeleton_gate.py` (9 checks) drives the real `cmd_run` with stubbed I/O.
+Negative-controlled: the guard at line 1068 was sabotaged, 3 checks went red, and the restore went green.
+Live proof: `run --persist --force --row celare_quantum_commu` → ABORT, rc=5, no model call.
+
+**REMAINING, owner legs.** (1) Capture `cv_skeleton.json` + `export_settings.json` on Gabo-PC (browser
+localStorage `sections` + the export settings), or copy them from the other machine. (2) Regenerate on a
+host with the fixtures: `gen-runner.py run --persist --force --row celare_quantum_commu` and
+`--row danfoss-production-testi-4818`. Neither app is fit to send as is. Both tracker rows carry a ⚠ note.
+
+**Re-verified 2026-10-01 (job-tracker nightly).** Both fixtures are still missing on Gabo-PC (`~/.antcv/` holds only `keys.env` and `token`). Owner legs unchanged.
+
+**Advanced 2026-10-04 (job-tracker nightly).** Fixtures still missing. Diagnostic for a cloud capture path: a full PWA app (`GET /api/applications/3501`) has the same section ids the overlay targets (cv `profile`, `work_style`, `outcomes`, `core_comp`, `experience`, the sidebar set; cl `greeting` to `closure`). A `skeleton-from-app` command could write the fixture without a browser. Blocker before shipping it: when a generated section comes back empty or as scaffold, `build_structured_sections` keeps the skeleton text (the profile path says so explicitly). With a me() skeleton that is generic default text; with an app-derived skeleton it is another employer's tailored text. The command must reset the job-specific slots (profile, work_style, outcomes, core_comp, every CL slot) to the kernel defaults or me() scaffold first, with a test that drives the overlay on an empty section. `export_settings.json` has no cloud source yet (app `style_config` is a partial candidate). Owner legs unchanged.
+
+**Leg (1) DONE 2026-10-04 (owner-approved, desktop session).** Both fixtures written to `~/.antcv/` on Gabo-PC from the cloud, no browser: `GET /api/prefs` returns the synced PWA prefs, including `sections` (cv 16 / cl 8, the shape the overlay targets) and the style keys. `cv_skeleton.json` = `prefs.sections` with every CL slot tied to the active app (3501 Hamamatsu: greeting, opening, why, who, bring, contribute, closure) reset to `[...]` placeholders, so an empty generated slot is dropped by the final sweep instead of reusing Hamamatsu text. CV slots carry no employer names and are kept. `export_settings.json` = 24 localStorage keys rebuilt from prefs (styleConfig, stylePackage, ratios, fontSizes, personalInfo, photo, signature + CL closing/sign-name with the `antcv:` prefix per `antcv-cl-cloud-sync-extra.js`). Per-app `clSlogan`/`clSloganCtx` left out. Not in prefs, so defaults apply: `antcv:cvLayout`, `antcv:brandV2`, `antcv:itemPages` and similar. Check: `load_skeleton()` OK, styleConfig 51 keys, `export_pdfs.py --apps 3501` renders CV (3 pages, as saved) + CL 1 page, with sidebar, experience and AI notice. Veo app 3500: owner confirmed deleted on purpose; the dead `veo_technologies` pointer is expected. REMAINING: leg (2), regenerate 3505 + 3504.
+
+**Re-verified 2026-10-05 (job-tracker nightly).** Both fixtures are on Gabo-PC (`cv_skeleton.json` 37 KB, `export_settings.json` 485 KB, written 10-04 20:19). Leg (2) is still owed. Not done unattended: rows `celare_quantum_commu` and `danfoss-production-testi-4818` are `queue=false`, the regen needs `--force`, and a forced run is outside the nightly's eligible set (armed, or never generated). A re-arm alone would not trigger it either: see row 118. REMAINING: owner go-ahead for the nightly to run both with `--force`, or a manual run of the two commands in leg (2).
+
+**Leg (2) half DONE 2026-10-05 (owner go-ahead, same-day follow-up).** Celare: `run --persist --force --row celare_quantum_commu` persisted **app 3508** with the skeleton overlay (cv 16 / cl 9 sections). `export_pdfs.py --apps 3508`: CV 2 pages, CL 1 page, 0 banned dashes, AI notice, sidebar and experience present. The fixture captured from cloud prefs is proven on a real generation. The ⚠ line was removed from the Celare tracker flag. Danfoss was NOT regenerated: the posting (req 51342) is taken down, see CLOSED row 119, and the sweep holds it at GONE strike 1/2. Apps 3505 and 3504 are still in the cloud as low-fidelity leftovers; deleting them is the owner's call. REMAINING: the Danfoss leg is pending the posting. If the next sweep archives the row, the leg is void and this row closes. If the posting returns, run `gen-runner.py run --persist --force --row danfoss-production-testi-4818`.
+
+---
+
+---
+
+---
+
 ## Row 102 — DEMAND-SEED-SEARCH-TOKEN-MISSING-001 — CLOSED 2026-10-05 (owner + desktop session, evidence: live relay probes)
 
 _verified: 2026-10-05_

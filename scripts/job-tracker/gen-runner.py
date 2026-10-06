@@ -440,6 +440,48 @@ def print_unqueued_summary(doc):
         print(f"   {r['uk']:32} {r['tier']:6} rank {r['rank']:>3}  "
               f"{str(r['company'])[:26]} / {str(r['role'])[:30]}  ({r['jd_len']} jd)")
 
+def armed_with_app_rows(doc):
+    """JT-ARMED-ARTIFACT-NO-DRAIN-001 (2026-10-06): rows the owner ARMED (queue[uk]
+    truthy) that already carry an application. eligible_rows skips them
+    (`force or not has_art`) and said nothing, while the island's rowQueued()
+    lets the explicit flag win, so the same row shows under the clock-flag
+    filter and reads as due tonight. Live on rev 276-282: napatech (Archive /
+    closed, app 2781) and veo_technologies (Submitted, pointer to the deleted
+    app 3500). Report-only (owner option (a)): a regen stays a manual
+    `run --persist --force --row <uk>`. Closed rows are kept on purpose: the
+    stale flag is the finding. A default-on row (no queue entry) with an
+    application is NOT armed, so it is not listed."""
+    rows = doc.get("rows") or []
+    queue = doc.get("queue") or {}; arts = doc.get("artifacts") or {}
+    out = []
+    for row in rows:
+        uk = row_uk(row)
+        if not queue.get(uk):
+            continue
+        a = arts.get(uk) or {}
+        if not (a.get("cv_export_url") or a.get("application_id")):
+            continue
+        out.append({"uk": uk, "rank": row[0], "company": row[1], "role": row[2],
+                    "status": row[8] if len(row) > 8 else "",
+                    "app": a.get("application_id") or "", "closed": is_closed_row(row)})
+    out.sort(key=lambda r: r["rank"])
+    return out
+
+def print_armed_summary(doc):
+    """One block so an armed row the nightly will never drain is named, not silent."""
+    armed = armed_with_app_rows(doc)
+    if not armed:
+        return
+    print("")
+    print(f"ARMED but already has an application ({len(armed)}) - the clock flag is on, "
+          "so the tracker shows the row as Queued, but the nightly skips a row with an "
+          "artifact. A regen is manual: gen-runner.py run --persist --force --row <uk>. "
+          "Clear the flag in the tracker if no regen is wanted:")
+    for r in armed:
+        tag = "CLOSED row, flag stale" if r["closed"] else f"status {r['status']}"
+        print(f"   {r['uk']:32} rank {r['rank']:>3}  {str(r['company'])[:26]} / "
+              f"{str(r['role'])[:30]}  app {r['app']}  ({tag})")
+
 _DA_STOPWORDS = [" og ", " til ", " for ", " med ", " som ", " er ", " på ", " af ",
                  " ved ", " ikke ", " har ", " vil ", " skal ", " du ", " dig ",
                  " vi ", " vores ", " en ", " et ", " den ", " det "]
@@ -834,6 +876,7 @@ def cmd_list(args):
             print(f"{r['uk']:16} {r['tier']:6} {r['rank']:>4}  {str(r['company'])[:22]} / {str(r['role'])[:26]}  ({len(r['jd'])})")
     if not args.row:
         print_unqueued_summary(doc)
+        print_armed_summary(doc)  # JT-ARMED-ARTIFACT-NO-DRAIN-001
 
 def cmd_run(args):
     os.makedirs(args.out, exist_ok=True)
@@ -995,6 +1038,7 @@ def cmd_run(args):
                 entry["checklist"] = {"summary": chk["summary"], "md": chk["md"], "json": chk["json"]}
     if not args.row:
         print_unqueued_summary(doc)
+        print_armed_summary(doc)  # JT-ARMED-ARTIFACT-NO-DRAIN-001
     idx_path = os.path.join(args.out, "index.json")
     json.dump(results_index, open(idx_path, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     print(f"\nindex -> {idx_path}")

@@ -178,6 +178,47 @@ standing coverage — no contradictions.
 
 ---
 
+## CI NIGHTLY 2026-10-07 (GitHub Actions, unattended, Opus 4.8)
+
+Run: `antcv-nightly` on GitHub Actions (gabrielk83/AntCV), unattended. No in-app Browser
+pane, no signed-in session, no real-LLM gen, no Playwright browser, `ALLOW_DEPLOY=false`.
+Scope was therefore the one band CI can fully execute: **Band E / E1 register staleness
+sweep.** Docs + registers only, pushed direct to main per the CI SAFETY OVERRIDE.
+
+**Baseline:** SYNC FIRST up to date at `dbcaf31c`. `node scripts/run-tests.mjs pwa` =
+**1813/1813 green**. `check-register.mjs` OK (90 ACTIVE).
+
+### E1 — staleness sweep (5 rows re-verified, 0 closable in CI, 0 shipped)
+
+`check-register.mjs --stalest` put the oldest rows at **83/88/87/86 (2026-09-24)** and
+**31 (2026-09-25)**. All 5 re-verified against HEAD `dbcaf31c`, cited markers intact,
+`verified:` refreshed to 2026-10-07 in the index + detail:
+
+| Row | ID | Marker re-verified | Why not closable in CI |
+|----|----|----|----|
+| 83 | JD-REMOVE-OWNER-VERIFY-001 | `JD-REMOVE-STICKY`/tombstone in `pwa/app.src.js` (6 refs) + `jd-remove-tombstone.test.mjs` green | owner live 4-step pass owed (remove/refresh/reopen/read-cloud) |
+| 88 | OWNER-ROUND-3-BACKLOG | docx-worker `1.14.174-appline-edit` + `ROLE-SPLIT-CONT-001` + `fit_page_flow` in `gen-runner.py`/`density_fit.py` | 6 owner-deferred legs (19-app rollout, page-flow y-align, table geometry, render-gated) |
+| 87 | OWNER-ROUND-2-RESIDUE-001 | `brandfit-per-app-scope` still `fc2477c` unmerged (`git ls-remote`) + `ROLE-SPLIT-CONT-001` | 5 legs need regen/brand-persist/signature-upload/deploy |
+| 86 | GOLD-SESSION-FOLLOWUPS-001 | `role_canon` in `scripts/job-tracker/gold_audit.py` (3 refs) | content/regen/owner-gated residue legs |
+| 31 | META-STATE-CORRUPTION-002 | `META-DRIFT-GUARD-002` + `META-DOWNGRADE-GUARD-003` in app.src.js (2× each) + app.js mirror; both guard tests green | remaining leg needs a live poisoned server row |
+
+A sweep that correctly refreshes the stalest rows with current-HEAD evidence is a good
+CI run (NIGHTLY_2026-07-05_PROMPT E1). Nothing closed because every remaining leg is
+owner/regen/deploy/live-gated — CI has none of those.
+
+### Bands A-D — not advanced (same CI blocks as 2026-10-06)
+
+A1/A2 need a real mobile/signed-in A/B; B1/B2 (SO-003/SO-004) need headless-browser
+repro; C1-C3 + D1 need a real-LLM gen / CPU profile; D2 (GEN-MODELROLE live) needs
+`gh`/relay telemetry access.
+
+### Owner / Live-verify
+
+Nothing new owed by this run; prior owner lists stand. No PWA/worker asset shipped, so no
+post-deploy live-verify is owed.
+
+---
+
 ## CI NIGHTLY 2026-10-06 (GitHub Actions, unattended, Opus 4.8)
 
 Run: `antcv-nightly` on GitHub Actions (gabrielk83/AntCV), unattended. No in-app Browser

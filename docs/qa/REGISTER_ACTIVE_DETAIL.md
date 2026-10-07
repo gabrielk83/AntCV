@@ -1214,7 +1214,7 @@ _verified: 2026-10-06_ — CI E1 re-verify against HEAD de7fec6e (cited markers 
 
 ## Row 83 — JD-REMOVE-OWNER-VERIFY-001
 
-_verified: 2026-09-24_ — CI E1 re-verify against HEAD 88f89001 (cited markers intact): JD-REMOVE-STICKY-001 (1.51.395) present — JD-REMOVE-STICKY/tombstone markers in `pwa/app.src.js` (6 refs) + `pwa/test/unit/jd-remove-tombstone.test.mjs` green in the suite. REMAINING = one live 4-step pass (remove→refresh stays removed / reopen re-stages the tombstone / read-from-cloud returns JD / a different JD seeds normally) — needs the live app + relay CI cannot drive. Kept ACTIVE, owner live-verify owed.
+_verified: 2026-10-07_ — CI E1 re-verify against HEAD dbcaf31c (cited markers intact, suite 1813/1813): JD-REMOVE-STICKY-001 (1.51.395) present — JD-REMOVE-STICKY/tombstone markers in `pwa/app.src.js` (6 refs) + `pwa/test/unit/jd-remove-tombstone.test.mjs` green in the suite. (prev CI E1 2026-09-24 HEAD 88f89001, unchanged.) REMAINING = one live 4-step pass (remove→refresh stays removed / reopen re-stages the tombstone / read-from-cloud returns JD / a different JD seeds normally) — needs the live app + relay CI cannot drive. Kept ACTIVE, owner live-verify owed.
 
 **OPEN-queue row (verbatim):**
 
@@ -1226,7 +1226,7 @@ _verified: 2026-09-24_ — CI E1 re-verify against HEAD 88f89001 (cited markers 
 
 ## Row 88
 
-_verified: 2026-09-24_ — CI E1 re-verify against HEAD 88f89001 (round-3 ship intact, owner-deferred legs unchanged): the round-3 worker/gen markers are present — docx-worker `VERSION = "1.14.174-appline-edit"` (past the 1.14.154 of the ship), ROLE-SPLIT-CONT-001 in `workers/docx-worker/src/index.js` (~26918), and `fit_page_flow` wired in both `scripts/job-tracker/gen-runner.py` and `scripts/job-tracker/density_fit.py`. OWNER-DEFERRED / OPEN (all owner-gated / regen / real-render): (a) 19-app rollout, (b) fit-page-flow y-alignment (backlog #49), (c) table-geometry 6630→7689 (backlog #1), (d) client-half bullet_pages forwarding (backlog #2), (e) orphan misdetection + density grow, (f) rows 54/56/59A/62/22. Kept ACTIVE.
+_verified: 2026-10-07_ — CI E1 re-verify against HEAD dbcaf31c (round-3 ship intact, owner-deferred legs unchanged; suite 1813/1813): the round-3 worker/gen markers are present — docx-worker `VERSION = "1.14.174-appline-edit"` (past the 1.14.154 of the ship), ROLE-SPLIT-CONT-001 in `workers/docx-worker/src/index.js`, and `fit_page_flow` wired in both `scripts/job-tracker/gen-runner.py` and `scripts/job-tracker/density_fit.py`. (prev CI E1 2026-09-24 HEAD 88f89001, unchanged.) OWNER-DEFERRED / OPEN (all owner-gated / regen / real-render): (a) 19-app rollout, (b) fit-page-flow y-alignment (backlog #49), (c) table-geometry 6630→7689 (backlog #1), (d) client-half bullet_pages forwarding (backlog #2), (e) orphan misdetection + density grow, (f) rows 54/56/59A/62/22. Kept ACTIVE.
 
 **OPEN-queue row (verbatim):**
 
@@ -1238,7 +1238,7 @@ _verified: 2026-09-24_ — CI E1 re-verify against HEAD 88f89001 (round-3 ship i
 
 ## Row 87 — OWNER-ROUND-2-RESIDUE-001
 
-_verified: 2026-09-24_ — CI E1 re-verify against HEAD 88f89001 (all 5 legs remain diagnosed-not-fixed, gates unchanged): (a) CORE-COMP 3-4 ROWS — grounded per-app table regen, owner-gated, no fabrication; (b) BRAND COLORS — `origin/brandfit-per-app-scope` branch still at `fc2477c`, NOT merged (git ls-remote confirmed); (c) SIGNATURE — needs an actual signature upload (signatureB64 empty); (d) ROLE-SPLIT "(cont.)" — worker ROLE-SPLIT-CONT-001 present (docx-worker index.js ~26918) but the LibreOffice natural-flow cont. header still needs a deploy + CloudConvert test; (e) RUNT LINES — density frontier. Each needs live/regen/deploy CI lacks. Kept ACTIVE.
+_verified: 2026-10-07_ — CI E1 re-verify against HEAD dbcaf31c (all 5 legs remain diagnosed-not-fixed, gates unchanged; suite 1813/1813): (a) CORE-COMP 3-4 ROWS — grounded per-app table regen, owner-gated, no fabrication; (b) BRAND COLORS — `origin/brandfit-per-app-scope` branch still at `fc2477c`, NOT merged (git ls-remote re-confirmed this run); (c) SIGNATURE — needs an actual signature upload (signatureB64 empty); (d) ROLE-SPLIT "(cont.)" — worker ROLE-SPLIT-CONT-001 present (docx-worker index.js) but the LibreOffice natural-flow cont. header still needs a deploy + CloudConvert test; (e) RUNT LINES — density frontier. Each needs live/regen/deploy CI lacks. (prev CI E1 2026-09-24 HEAD 88f89001, unchanged.) Kept ACTIVE.
 
 **OPEN-queue row (verbatim):**
 
@@ -1250,7 +1250,7 @@ _verified: 2026-09-24_ — CI E1 re-verify against HEAD 88f89001 (all 5 legs rem
 
 ## Row 86 — GOLD-SESSION-FOLLOWUPS-001
 
-_verified: 2026-09-24_ — CI E1 re-verify against HEAD 88f89001: leg (f) ROW-82 UNBLOCKED confirmed — the role-canon export audit is wired in `scripts/job-tracker/gold_audit.py` (`role_canon`, 3 refs). Remaining legs are gated: (a) PUBS-AUTHORS-FIRST cosmetic (deterministic sub-rule or hand-edit), (b) RESULTS-NEEDS-TRANSLATION app 792 (translated swaps), (c) PROXY-GOLD-RULES-FETCH (fetch served /gold-rules.json), (d) CORE-COMP-FLOOR backfill (per-app content regen, owner call), (e) STALE-LOCKED-PDFS (owner deletes at leisure). Content/regen/owner-gated — CI cannot regen. Kept ACTIVE.
+_verified: 2026-10-07_ — CI E1 re-verify against HEAD dbcaf31c (suite 1813/1813): leg (f) ROW-82 UNBLOCKED confirmed — the role-canon export audit is wired in `scripts/job-tracker/gold_audit.py` (`role_canon`, 3 refs). (prev CI E1 2026-09-24 HEAD 88f89001, unchanged.) Remaining legs are gated: (a) PUBS-AUTHORS-FIRST cosmetic (deterministic sub-rule or hand-edit), (b) RESULTS-NEEDS-TRANSLATION app 792 (translated swaps), (c) PROXY-GOLD-RULES-FETCH (fetch served /gold-rules.json), (d) CORE-COMP-FLOOR backfill (per-app content regen, owner call), (e) STALE-LOCKED-PDFS (owner deletes at leisure). Content/regen/owner-gated — CI cannot regen. Kept ACTIVE.
 
 **OPEN-queue row (verbatim):**
 
@@ -1427,8 +1427,9 @@ re-armed trap on a signed-in device — not stageable in cloud. Kept ACTIVE — 
 
 ## Row 31 — META-STATE-CORRUPTION-002
 
-_verified: 2026-09-25_
+_verified: 2026-10-07_
 
+_CI nightly 2026-10-07 (E1 sweep, HEAD `dbcaf31c`): re-confirmed — `META-DRIFT-GUARD-002` (2× in `app.src.js`, present in the `app.js` mirror) and `META-DOWNGRADE-GUARD-003` (same) both live; `meta-drift-guard-both-blocks.test.mjs` + `meta-downgrade-guard-autosave.test.mjs` green in the 1813/1813 suite. Remaining leg (repair an already-poisoned server row from its own display name) stays owner-gated — needs a live poisoned row, not fakeable in CI._
 _CI nightly 2026-09-25 (E1 sweep, HEAD `ab2a43c7`): re-confirmed — `META-DRIFT-GUARD-002` (2× in `app.src.js`, present in the `app.js` mirror) and `META-DOWNGRADE-GUARD-003` (same) both live; `meta-drift-guard-both-blocks.test.mjs` + `meta-downgrade-guard-autosave.test.mjs` green in the 1715/1715 suite. Remaining leg (repair an already-poisoned server row from its own display name) stays owner-gated — needs a live poisoned row, not fakeable in CI._
 _CI nightly 2026-09-15 (E1 sweep): both shipped guards confirmed present on `main`; tests green._
 

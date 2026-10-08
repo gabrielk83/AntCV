@@ -1262,7 +1262,9 @@ _verified: 2026-10-07_ — CI E1 re-verify against HEAD dbcaf31c (suite 1813/181
 
 ## Row 89 — MODEL-TABLE-FRESHNESS-001
 
-_verified: 2026-10-01_
+_verified: 2026-10-08_
+
+_2026-10-08 weekly tune (desktop, Fable 5.1): every pin verifies against the four vendor pages (the Mistral marketing page now redirects to docs.mistral.ai/inference/pricing). Four vendor-listed ids were unpriced or resolved to a neighbour: ANTHROPIC-HAIKU55-RATES-2026-10-001 (`claude-haiku-5-5` new, no key → FALLBACK [3,15] = 30x OVER; pinned [0.10,0.50] at the ≤100k-token tier, >100k bills [0.50,2.50]); MISTRAL-LARGE4-RATES-2026-10-001 (`mistral-large-4` / `-4-0`, released 2026-10-06, matched `mistral-large` [0.5,1.5] = 1.36x / 1.39x UNDER vs the sale [0.68,2.09], list [1.36,4.18]; the live pin is safe — `/v1/models` says `mistral-large-latest` → `mistral-large-2512` = Large 3 — and the comment says to add an explicit `mistral-large-latest` key when the alias moves); GPT-CYBER-RATES-2026-10-001 (`gpt-5.5-cyber` sat on the pinned `gpt-5.5` key [5,30], `gpt-5.6-cyber` on `gpt-5` [1.25,10]; both [12.5,75]). `gpt-5.6-sol` [4,20] is promotional "at least through 2026-11-21" (comment only). All three mirrors byte-identical; freshness 36/36 ×2, relay mirror 10/10, every new id asserted out of the default cascades. D1 `llm_provider_costs`: every newest row equals the audited rate; no row for the new ids (correct). No `llm_calls` since 2026-09-28; 30 d recompute 1.349x stored/true, all of it the two pre-fix claude `parse_jd` rows. workers proxy + demo-proxy + access-relay DEPLOYED via deploy.yml runs 37772931509 / 37773485941 / 37773581157, /health 200 ×3, clears the 10-01 owed set. Still deferred to a full audit: `gpt-5.2`, `gpt-5.2-pro`, `gpt-5-pro`, `gpt-5-nano`, `gpt-5.3-codex`, `gpt-5.1` (all → `gpt-5` [1.25,10]); `o4-mini`, `chat-latest`, `gpt-rosalind-research` (FALLBACK). Report: `COST_QUALITY_WEEKLY_2026-10-08.md`._
 
 _2026-10-01 desktop cross-check of the 09-29 tune (Opus 5.5): every pin verifies against the four vendor pages. GEMINI36-37-RATES-2026-10-001: `gemini-3.7-flash` and `gemini-3.6-flash` are new at [0.75,3.75] (promotional to 2026-12-31) and matched no key (FALLBACK [3,15], 4x OVER; strict `null`). Added to all three mirrors; freshness 32/32 ×2, relay mirror 9/9, both ids asserted out of the default gemini cascade. D1 `llm_provider_costs`: every newest row equals the audited rate. No `llm_calls` since 2026-09-28, so neither the D1 fix nor the opus-5-5 pin has a production row yet. Deploy ×3 OWED (no traffic on the new ids). Deferred to a full audit: `gpt-5.2`, `gpt-5.2-pro`, `gpt-5-pro`, `gpt-5-nano` still resolve to `gpt-5` [1.25,10]. Report: `COST_QUALITY_WEEKLY_2026-09-29.md` § Desktop cross-check._
 
@@ -2061,7 +2063,9 @@ _verified: 2026-09-30_
 
 ## Row 115 — PWA-COST-METER-OPUS55-001
 
-_verified: 2026-10-01_
+_verified: 2026-10-08_
+
+_2026-10-08 weekly tune: re-verified, not fixed. `C.claude` / `C.anthropic` still [2,10] (`app.src.js` ~1221), `q()` still pins `claude-opus-5-5` [4,20]. No opus-5-5 row in `llm_calls` yet (no LLM call of any kind since 2026-09-28), so the served model on that path is still unobserved. Owner call unchanged: meter by the returned model id, app.js + cache-bust set in a shift lane._
 
 **Found by the weekly cost-quality desktop cross-check 2026-10-01 (step 1b(ii)).** The PWA `C` map (`pwa/app.src.js` ~1207) prices `anthropic` and `claude` at [2,10], the sonnet-5 rate. The dispatcher sends provider `claude` to `q()` (`app.src.js:1811`), whose request body pins `claude-opus-5-5` [4,20] since `1.51.4666-opus55-adopt`, and meters the call with `C[a]` (`app.src.js:3251`). When opus-5-5 serves the call, the client per-generation meter (GEN-COST-CEILING-001, `window.__antcvGenCost`) and the client-reported `cost_usd` are 2x low, so the cost ceiling trips late. Server telemetry is not affected: `estimateCostUsd()` prices from D1 then `rateForStrict()` and uses the client number only on a miss. The 09-28 calls on this provider logged `claude-sonnet-5`, so the served model depends on the proxy path; the first post-adoption `llm_calls` row will show which.
 

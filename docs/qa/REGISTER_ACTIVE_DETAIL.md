@@ -1884,7 +1884,9 @@ _reconcile 2026-09-07 (CI nightly, E3): `diag-panel-button-audit.mjs` RE-RUN on 
 
 > **Renumbered 2026-08-26: was row 40.** A document written before that date citing "row 40" may mean this row or SO-003. The ID is the key.
 
-_verified: 2026-10-05_
+_verified: 2026-10-08_
+
+**2026-10-08 (position-discovery run, re-verified live):** jobindex 36 queries, jobbank 36 queries, 496 unique ads across both, readable. LinkedIn guest API: 52 queries x 3 pages of 10, 578 unique cards; 4 queries answered HTTP 429 on first pass and succeeded on a re-run after a 15 s pause, so the routine must retry 429s rather than mark the query dry. TheHub: plain `/jobs?search=<q>&location=Copenhagen` readable (12 queries, 59 cards) but the card markup pairs each `href` with the next card's title; read the job page before trusting a card. Google Jobs (3 WebSearch queries) readable, 5 named leads, all dead or unusable on vet.
 
 **2026-10-05 (position-discovery expanded run, re-verified live):** jobindex 40 queries, 209 unique ads, readable. jobbank 40 queries, 260 unique, readable; `--limit 40` still yields 20 per source per query. LinkedIn guest API now serves 10 cards per page (was 20-25): page with `start=0,10,20`; 56 queries gave 633 unique cards. TheHub: WebFetch HTTP 500 on every URL carrying `sorting=mostRecent`; a plain fetch of `/jobs?countryCodes=DK&search=<q>` is readable (10 queries, about 60 cards). Google Jobs returned aggregators plus three named leads, none usable.
 
@@ -1905,6 +1907,8 @@ _verified: 2026-10-05_
 > **Renumbered 2026-08-26: was row 41.** A document written before that date citing "row 41" may mean this row or SO-004. The ID is the key.
 
 _verified: 2026-10-08_
+
+**RE-VERIFIED 2026-10-08 (position-discovery run, Gabo-PC).** `check --apply`: 82 probed, 77 LIVE, 3 archived on first sight (Radiometer Knowledge & AI Transformation Specialist, Ambu Business Analyst / Product Owner, GoLearn.dk AI & Copilot Trainer; all LinkedIn CLOSED), 1 GONE held at strike 1/2 (Factbird Product Manager, LinkedIn HTTP 404), 1 ERROR not counted (VML MAP HTTP 500, still). Archive skip confirmed correct: the Trackman "Project Manager, Hardware" row (employer URL HTTP 404) was archived by the sweep on 2026-08-26 and is outside the probe set; the role re-appeared under a new slug and was proposed as a new row.
 
 **RE-VERIFIED 2026-10-08 (job-tracker nightly, Gabo-PC).** `check --apply`: 79 probed, 77 LIVE, 0 archived, 1 GONE at strike 1/2 (Factbird / Product Manager, LinkedIn HTTP 404), 1 ERROR not counted (VML MAP HTTP 500, seventh run). The write path hit a live 409 and re-probed all 79 rows before landing; that retry shape is fixed as POSTING-409-REPROBE-001 (row 121, CLOSED), the graded-evidence rules are untouched.
 

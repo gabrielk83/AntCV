@@ -18,9 +18,24 @@
  */
 import { chromium } from 'playwright';
 import http from 'node:http';
-import { readFile, stat, writeFile } from 'node:fs/promises';
+import { readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { diffAudits, formatDiff } from './button-audit-diff.mjs';
+
+// AUDIT-DIFF-NOISE-001 (2026-10-08): `--diff <prev.json>` compares this run
+// with an earlier PANEL_BUTTON_AUDIT_<date>.json by label and appends the
+// result to the report. With no path it picks the newest earlier audit in
+// docs/qa. `--no-diff` skips it.
+const argAt = (flag) => { const i = process.argv.indexOf(flag); return i > -1 ? process.argv[i + 1] : null; };
+const DIFF_ARG = argAt('--diff');
+const NO_DIFF = process.argv.includes('--no-diff');
+// Second settle window for the write check (ms). The active/ui-only split asks
+// whether a localStorage write landed after the click; the autosave debounce
+// sometimes lands after the first 600 ms, which made the same button flip
+// between the two verdicts run to run. Only buttons that changed the DOM but
+// showed no write yet pay for it.
+const WRITE_SETTLE_2_MS = 900;
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const REPO = path.resolve(ROOT, '..');
@@ -240,15 +255,24 @@ while (clicks < MAX_CLICKS) {
     }
   }
   await page.waitForTimeout(600);
-  const after = await page.evaluate(() => ({ w: window.__auditWrites.length, m: window.__auditMutations }));
-  const wrote = await page.evaluate((n) => window.__auditWrites.slice(n), before.w);
+  let after = await page.evaluate(() => ({ w: window.__auditWrites.length, m: window.__auditMutations }));
+  let wrote = await page.evaluate((n) => window.__auditWrites.slice(n), before.w);
+  let settleMs = 600;
+  if (!wrote.length && after.m - before.m > 0) {
+    // AUDIT-DIFF-NOISE-001: DOM moved, no write yet — give the debounced
+    // autosave one more window before calling it ui-only.
+    await page.waitForTimeout(WRITE_SETTLE_2_MS);
+    after = await page.evaluate(() => ({ w: window.__auditWrites.length, m: window.__auditMutations }));
+    wrote = await page.evaluate((n) => window.__auditWrites.slice(n), before.w);
+    settleMs += WRITE_SETTLE_2_MS;
+  }
   const threw = pageErrors.length > errBefore ? pageErrors.slice(errBefore) : [];
   const domDelta = after.m - before.m;
   let verdict = 'active';
   if (threw.length) verdict = 'THROWS';
   else if (!wrote.length && domDelta === 0) verdict = 'DEAD';
   else if (!wrote.length && domDelta > 0) verdict = 'ui-only';
-  results.push({ ...next, verdict, writes: [...new Set(wrote)].slice(0, 8), domDelta, errors: threw.slice(0, 2) });
+  results.push({ ...next, verdict, writes: [...new Set(wrote)].slice(0, 8), domDelta, settleMs, errors: threw.slice(0, 2) });
   await page.keyboard.press('Escape').catch(() => {});
   await page.waitForTimeout(120);
 }
@@ -270,6 +294,30 @@ const suspects = allWrites.filter((k) => !IGNORE.test(k)).map((k) => {
 
 const date = new Date().toISOString().slice(0, 10);
 const counts = results.reduce((a, r) => { a[r.verdict] = (a[r.verdict] || 0) + 1; return a; }, {});
+const QA_DIR = path.join(REPO, 'docs', 'qa');
+// AUDIT-DIFF-NOISE-001: find the audit to diff against — the given path, or
+// the newest PANEL_BUTTON_AUDIT_<date>.json in docs/qa dated before today.
+let diffBlock = '';
+if (!NO_DIFF) {
+  let prevPath = DIFF_ARG ? path.resolve(DIFF_ARG) : null;
+  if (!prevPath) {
+    const names = (await readdir(QA_DIR).catch(() => []))
+      .filter((n) => /^PANEL_BUTTON_AUDIT_\d{4}-\d{2}-\d{2}\.json$/.test(n) && n < `PANEL_BUTTON_AUDIT_${date}.json`)
+      .sort();
+    if (names.length) prevPath = path.join(QA_DIR, names[names.length - 1]);
+  }
+  if (prevPath) {
+    try {
+      const prev = JSON.parse(await readFile(prevPath, 'utf8'));
+      diffBlock = formatDiff(diffAudits(prev, results), path.basename(prevPath));
+    } catch (e) {
+      diffBlock = `## Diff vs ${path.basename(prevPath)}\n\n- not diffed: ${String(e && e.message).slice(0, 120)}`;
+    }
+  } else {
+    diffBlock = '## Diff vs previous audit\n\n- no earlier PANEL_BUTTON_AUDIT_*.json found';
+  }
+}
+
 const md = [
   `# Panel/preview button audit — ${date} (NIGHTLY-PREVIEW-BUTTON-AUDIT-001, register row 23)`,
   '',
@@ -291,12 +339,14 @@ const md = [
   `## Skipped (dangerous labels — audited manually only)`,
   ...results.filter((r) => r.verdict === 'skipped-dangerous').map((r) => `- "${r.label}"`),
   '',
+  ...(diffBlock ? [diffBlock, ''] : []),
   `Raw JSON: PANEL_BUTTON_AUDIT_${date}.json`,
 ].join('\n');
 
-await writeFile(path.join(REPO, 'docs', 'qa', `PANEL_BUTTON_AUDIT_${date}.md`), md);
-await writeFile(path.join(REPO, 'docs', 'qa', `PANEL_BUTTON_AUDIT_${date}.json`), JSON.stringify({ date, counts, results, suspects }, null, 1));
+await writeFile(path.join(QA_DIR, `PANEL_BUTTON_AUDIT_${date}.md`), md);
+await writeFile(path.join(QA_DIR, `PANEL_BUTTON_AUDIT_${date}.json`), JSON.stringify({ date, counts, results, suspects }, null, 1));
 console.log(md.split('\n').slice(0, 60).join('\n'));
+if (diffBlock) console.log('\n' + diffBlock);
 console.log(`\nTOTAL ${results.length} buttons | ${JSON.stringify(counts)} | page errors during audit: ${pageErrors.length}`);
 await browser.close();
 server.close();

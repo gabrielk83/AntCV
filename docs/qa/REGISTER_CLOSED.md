@@ -4,6 +4,20 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 121 — POSTING-409-REPROBE-001 — CLOSED 2026-10-08 (job-tracker nightly, evidence: live 409 in the run's own sweep + negative-controlled test on the real cmd_check)
+
+_verified: 2026-10-08_
+
+_Found and fixed the same run by the job-tracker nightly 2026-10-08 (Gabo-PC, Fable 5.1). Script-only: `scripts/job-tracker/check-postings.py` + `test_check_postings.py`, no `pwa/` asset, no cache-bust, no version consumed, no shift claim._
+
+**Evidence.** The step 1b sweep (`check-postings.py check --apply`, 79 rows) printed `409 (rev moved to None), re-checking (attempt 1)...` and then probed all 79 URLs again before its write landed. The relay answers a stale `base_rev` with `{ error: 'conflict', rev, doc }` (`workers/access-relay/src/index.js` ~3963), but `_req` returned `{"error": e.read().decode()[:300]}` on every HTTPError, so the rev and the doc were gone before the caller saw them. `cmd_check` had the whole probe loop inside its 4-attempt retry: each 409 meant one more GET and one more sweep of every posting (LinkedIn rows paced 2 s apart), and after four 409s it fell out of the loop and printed the summary as if the archive had been written. `gen-runner.py` and `job-tracker-sync.py` already parse error bodies as JSON; `discover-positions.py` has the same `[:300]` shape but re-merges from a fresh GET and is out of scope here.
+
+**Fix.** `_req` keeps a JSON error body (non-JSON still comes back as `{error: text}`). `cmd_check` probes once (`probe_rows`), then on 409 takes the body's `rev` + `doc` and replays the already-probed verdicts onto it (`reapply_results`): the strike count is recomputed from THAT doc's `postingcheck` through `next_misses`, so the per-day gate and the other writer's counts hold; a row the other writer archived or removed is dropped from the results. A 409 with no doc (older relay) falls back to one fresh GET, still no re-probe. Four 409s exit non-zero. The per-verdict fold moved into `apply_verdict`, logic unchanged.
+
+**Test.** `test_check_postings.py` 72 -> 87 checks: `_req` with a raised HTTPError (JSON and non-JSON bodies), `reapply_results` (server count 1 -> 2 archives, the other writer's archive untouched, dry run counts without archiving), and the real `cmd_check` with stubbed `probe`/`put_doc`/`get_doc`: 1 probe, 1 GET, PUTs against revs [11, 12], strike 2 and the archive in the replayed doc, the log names rev 12; the bare-409 fallback (2 GETs, 1 probe); four 409s -> SystemExit. Negative control by line index: replay set back to `probe_rows` (:455) -> 3 red; JSON parse set to `None` (:172) -> 1 red; restored green.
+
+---
+
 ## Row 120 — CACHE-BUST-SET-001 — CLOSED 2026-10-06 (desktop nightly, evidence: negative control on origin/main + live constants after deploy)
 
 _verified: 2026-10-06_

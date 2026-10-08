@@ -164,7 +164,17 @@ def _req(path, method="GET", body=None, timeout=60):
         with urllib.request.urlopen(r, timeout=timeout) as resp:
             return resp.status, json.loads(resp.read().decode() or "{}")
     except urllib.error.HTTPError as e:
-        return e.code, {"error": e.read().decode()[:300]}
+        # POSTING-409-REPROBE-001: keep a JSON error body intact. The relay's
+        # 409 carries { error, rev, doc } and the caller replays onto that doc;
+        # str()[:300] used to throw the rev and the doc away ("rev moved to None").
+        raw = e.read().decode()
+        try:
+            body = json.loads(raw or "{}")
+        except ValueError:
+            body = None
+        if not isinstance(body, dict):
+            body = {"error": raw[:300]}
+        return e.code, body
 
 
 def get_doc():
@@ -320,81 +330,133 @@ def next_misses(prev, verdict, today):
 
 # ---------------------------------------------------------------------- main
 
+def apply_verdict(doc, row, uk, verdict, detail, today, apply):
+    """Fold one probe verdict into the doc: strike count, audit entry, archive.
+
+    Returns (misses, would_archive, archived). Works on whatever doc it is given,
+    so the 409 path can replay the same verdicts onto a fresher server doc.
+    """
+    ent = dict(doc["postingcheck"].get(uk) or {})
+    misses, struck = next_misses(ent, verdict, today)
+    ent.update({"misses": misses, "last": today.isoformat(),
+                "last_strike": struck,
+                "status": verdict, "detail": detail[:200]})
+    doc["postingcheck"][uk] = ent
+
+    will_archive = (verdict in HARD_VERDICTS) or (
+        verdict in SOFT_VERDICTS and misses >= STRIKES_TO_ARCHIVE)
+    archived = False
+    if will_archive and apply:
+        archive_row(row, verdict, detail, today)
+        doc["queue"][uk] = False
+        ent["archived_on"] = today.isoformat()
+        archived = True
+    return misses, will_archive, archived
+
+
+def _result(row, uk, url, verdict, detail, misses, will_archive, archived):
+    return {"uk": uk, "company": row[1] if len(row) > 1 else "",
+            "role": row[2] if len(row) > 2 else "", "url": url,
+            "verdict": verdict, "detail": detail[:200],
+            "misses": misses, "archived": archived, "would_archive": will_archive}
+
+
+def reapply_results(doc, results, today, apply):
+    """POSTING-409-REPROBE-001: replay already-probed verdicts onto the doc the
+    relay returned with its 409, instead of probing every URL a second time.
+
+    The verdicts are seconds old; the strike counts are recomputed from THIS
+    doc's postingcheck (next_misses keeps the per-day gate), so nothing the
+    other writer saved is clobbered. A row that left the doc or was archived in
+    between is dropped from the results. Returns the refreshed results.
+    """
+    doc.setdefault("rows", [])
+    doc.setdefault("queue", {})
+    doc.setdefault("postingcheck", {})
+    by_uk = {row_uk(row): row for row in doc["rows"]}
+    out = []
+    for r in results:
+        row = by_uk.get(r["uk"])
+        if row is None or is_archived(row):
+            continue
+        misses, will, did = apply_verdict(doc, row, r["uk"], r["verdict"],
+                                          r["detail"], today, apply)
+        out.append(_result(row, r["uk"], r["url"], r["verdict"], r["detail"],
+                           misses, will, did))
+    return out
+
+
+def probe_rows(doc, args, today):
+    """Probe every live row with a posting URL ONCE; fold the verdicts into doc."""
+    doc.setdefault("rows", [])
+    doc.setdefault("urls", {})
+    doc.setdefault("queue", {})
+    doc.setdefault("postingcheck", {})
+    rows, urls = doc["rows"], doc["urls"]
+    results = []
+    checked = 0
+    last_li = 0.0
+    for row in rows:
+        uk = row_uk(row)
+        url = (urls.get(uk) or "").strip()
+        if not url:
+            continue
+        if is_archived(row):
+            continue
+        if args.only and uk not in args.only.split(","):
+            continue
+        if args.limit and checked >= args.limit:
+            break
+        checked += 1
+
+        target = probe_target(url)
+        if target != url:
+            # LinkedIn rate-limits bursts (429 on most rows when parallel):
+            # space the probes out and back off on 429.
+            gap = LI_DELAY - (time.monotonic() - last_li)
+            if gap > 0:
+                time.sleep(gap)
+            status, final_url, text = probe_with_backoff(target, args.timeout)
+            last_li = time.monotonic()
+        else:
+            status, final_url, text = probe(url, args.timeout)
+        if isinstance(text, str) and text.startswith("__probe_error__"):
+            verdict, detail = "ERROR", text.replace("__probe_error__ ", "")
+        else:
+            verdict, detail = classify(status, final_url, target, text, today)
+
+        misses, will, did = apply_verdict(doc, row, uk, verdict, detail, today, args.apply)
+        results.append(_result(row, uk, url, verdict, detail, misses, will, did))
+    return results
+
+
 def cmd_check(args):
     today = datetime.date.today()
-    results = []
+    rev, doc = get_doc()
+    results = probe_rows(doc, args, today)
 
-    for attempt in range(4):
-        rev, doc = get_doc()
-        doc.setdefault("rows", [])
-        doc.setdefault("urls", {})
-        doc.setdefault("queue", {})
-        doc.setdefault("postingcheck", {})
-        rows, urls = doc["rows"], doc["urls"]
-        results = []
-        archived = []
-
-        checked = 0
-        last_li = 0.0
-        for row in rows:
-            uk = row_uk(row)
-            url = (urls.get(uk) or "").strip()
-            if not url:
-                continue
-            if is_archived(row):
-                continue
-            if args.only and uk not in args.only.split(","):
-                continue
-            if args.limit and checked >= args.limit:
+    if args.apply:
+        c = None
+        for attempt in range(4):
+            c, b = put_doc(doc, rev)
+            if c == 200:
                 break
-            checked += 1
-
-            target = probe_target(url)
-            if target != url:
-                # LinkedIn rate-limits bursts (429 on most rows when parallel):
-                # space the probes out and back off on 429.
-                gap = LI_DELAY - (time.monotonic() - last_li)
-                if gap > 0:
-                    time.sleep(gap)
-                status, final_url, text = probe_with_backoff(target, args.timeout)
-                last_li = time.monotonic()
-            else:
-                status, final_url, text = probe(url, args.timeout)
-            if isinstance(text, str) and text.startswith("__probe_error__"):
-                verdict, detail = "ERROR", text.replace("__probe_error__ ", "")
-            else:
-                verdict, detail = classify(status, final_url, target, text, today)
-
-            ent = dict(doc["postingcheck"].get(uk) or {})
-            misses, struck = next_misses(ent, verdict, today)
-            ent.update({"misses": misses, "last": today.isoformat(),
-                        "last_strike": struck,
-                        "status": verdict, "detail": detail[:200]})
-            doc["postingcheck"][uk] = ent
-
-            will_archive = (verdict in HARD_VERDICTS) or (
-                verdict in SOFT_VERDICTS and misses >= STRIKES_TO_ARCHIVE)
-            if will_archive and args.apply:
-                archive_row(row, verdict, detail, today)
-                doc["queue"][uk] = False
-                ent["archived_on"] = today.isoformat()
-                archived.append(uk)
-
-            results.append({"uk": uk, "company": row[1] if len(row) > 1 else "",
-                            "role": row[2] if len(row) > 2 else "", "url": url,
-                            "verdict": verdict, "detail": detail[:200],
-                            "misses": misses, "archived": bool(will_archive and args.apply),
-                            "would_archive": bool(will_archive)})
-
-        if not args.apply:
-            break
-        c, b = put_doc(doc, rev)
-        if c == 200:
-            break
-        if c == 409:
-            print("  409 (rev moved to %s), re-checking (attempt %d)..." % (b.get("rev"), attempt + 1))
-            continue
-        sys.exit("PUT failed: %s %s" % (c, str(b)[:200]))
+            if c == 409:
+                # Another writer moved the doc while we probed. The 409 body
+                # carries the current { rev, doc }: replay the verdicts onto it,
+                # no second sweep of 80 URLs. An older relay without the body
+                # falls back to one fresh GET.
+                new_rev, new_doc = b.get("rev"), b.get("doc")
+                if not isinstance(new_doc, dict) or new_rev is None:
+                    new_rev, new_doc = get_doc()
+                print("  409 (rev moved to %s), re-applying %d verdict(s) without re-probing (attempt %d)..."
+                      % (new_rev, len(results), attempt + 1))
+                rev, doc = new_rev, new_doc
+                results = reapply_results(doc, results, today, args.apply)
+                continue
+            sys.exit("PUT failed: %s %s" % (c, str(b)[:200]))
+        if c != 200:
+            sys.exit("PUT failed: the doc kept moving (409 x4); nothing written")
 
     counts = {}
     for r in results:

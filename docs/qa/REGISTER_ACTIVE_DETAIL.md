@@ -1904,7 +1904,9 @@ _verified: 2026-10-05_
 
 > **Renumbered 2026-08-26: was row 41.** A document written before that date citing "row 41" may mean this row or SO-004. The ID is the key.
 
-_verified: 2026-10-05_
+_verified: 2026-10-08_
+
+**RE-VERIFIED 2026-10-08 (job-tracker nightly, Gabo-PC).** `check --apply`: 79 probed, 77 LIVE, 0 archived, 1 GONE at strike 1/2 (Factbird / Product Manager, LinkedIn HTTP 404), 1 ERROR not counted (VML MAP HTTP 500, seventh run). The write path hit a live 409 and re-probed all 79 rows before landing; that retry shape is fixed as POSTING-409-REPROBE-001 (row 121, CLOSED), the graded-evidence rules are untouched.
 
 **RE-VERIFIED 2026-10-05 (position-discovery expanded run, Gabo-PC).** `check --apply`: 67 probed, 65 LIVE, 0 archived, 1 GONE held at strike 1/2 (Danfoss Production Testing Engineer, HTTP 200 with a not-available notice), 1 ERROR not counted (VML MAP HTTP 500, fifth run in a row).
 
@@ -2073,7 +2075,7 @@ _verified: 2026-10-04_
 
 ## Row 118 — JT-ARMED-ARTIFACT-NO-DRAIN-001
 
-_verified: 2026-10-06_
+_verified: 2026-10-08_
 
 **Found by the job-tracker nightly 2026-10-05 (Gabo-PC).** `gen-runner.eligible_rows` elects a row only when `force or not has_art`. A row with `queue[uk]=true` and an `artifacts[uk].application_id` is skipped without a word: `gen-runner.py list` prints "no eligible rows" and names it nowhere. The island's `rowQueued()` lets an explicit `queue[uk]` win, so the same row shows under the ⏰ Queued filter and reads as due tonight. Live on doc rev 276: `napatech` (queue true, app 2781, Archive / closed) and `veo_technologies` (queue true, pointer to the deleted app 3500, Submitted). Neither should generate, so nothing was lost tonight. The risk is rows 3504 + 3505 (row 113): their tracker flags tell the owner to re-arm and regenerate, and a re-arm would be ignored the same way. The pointer check is also blind: `has_art` is true for a pointer whose cloud app is gone.
 
@@ -2081,3 +2083,4 @@ _verified: 2026-10-06_
 
 **Advanced 2026-10-06 (job-tracker nightly, Gabo-PC).** Option (a) SHIPPED, script-only: `gen-runner.py` gained `armed_with_app_rows(doc)` and `print_armed_summary(doc)`, called at the end of `list` and of `run`. The block prints "ARMED but already has an application (N)" with uk, rank, company / role, app id and either the tracked status or "CLOSED row, flag stale", plus the manual regen line. The eligible set is unchanged. Live on rev 282 it names `napatech` (app 2781, closed) and `veo_technologies` (app 3500, Submitted). `test_closed_row_gate.py` 20 -> 37 checks on the real functions, negative-controlled (filter line 459 -> `if False:`, 3 red; empty guard line 473 -> `if True:`, 5 red; restored green). REMAINING, owner: options (b) and (c) are a decision, not a default; the dead-pointer check stays offline (no network call in `list`); clearing the stale `queue=true` on `napatech` and `veo_technologies` is a doc write, not done unattended.
 
+**RE-VERIFIED 2026-10-08 (job-tracker nightly, Gabo-PC).** `gen-runner.py list` still prints the ARMED-with-app block for `napatech` (app 2781, CLOSED row, flag stale) and `veo_technologies` (app 3500, Submitted); 0 eligible rows. REMAINING unchanged: owner decision on (b) regen-on-arm / (c) dead pointer = never generated; the two stale flags are a doc write, not done unattended.

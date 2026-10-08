@@ -269,6 +269,143 @@ check("is_archived false for a live tier", cp.is_archived(fresh()), False)
 check("row_uk prefers the explicit key", cp.row_uk(fresh()), "acme")
 check("row_uk falls back to company|role", cp.row_uk([1, "A", "B"]), "A|B")
 
+# ---- POSTING-409-REPROBE-001: a 409 keeps its body, verdicts replay, no re-probe
+import argparse
+import contextlib
+import io
+import json
+import urllib.error
+import urllib.request
+
+
+def _raise_http(code, body):
+    def fake_open(req, timeout=0):
+        raise urllib.error.HTTPError(req.full_url, code, "x", {}, io.BytesIO(body))
+    return fake_open
+
+
+_orig_open, _orig_tok = urllib.request.urlopen, cp._token
+cp._token = lambda: "t"
+try:
+    urllib.request.urlopen = _raise_http(409, b'{"error":"conflict","rev":7,"doc":{"rows":[]}}')
+    c, b = cp._req("/api/job-tracker", "PUT", {"doc": {}, "base_rev": 6})
+    check("409 JSON body is returned intact (rev + doc survive)",
+          (c, b.get("rev"), b.get("doc")), (409, 7, {"rows": []}))
+    urllib.request.urlopen = _raise_http(502, b"<html>bad gateway</html>")
+    c, b = cp._req("/api/job-tracker")
+    check("a non-JSON error body still comes back as {error: text}",
+          (c, b), (502, {"error": "<html>bad gateway</html>"}))
+finally:
+    urllib.request.urlopen, cp._token = _orig_open, _orig_tok
+
+
+def doc_with(rows, pc=None, urls=None):
+    return {"rows": rows, "urls": urls or {}, "queue": {}, "postingcheck": pc or {}}
+
+
+DAYX = datetime.date(2026, 8, 25)
+r_a, r_b = fresh(), fresh()
+r_b[1], r_b[11] = "Beta", "beta"
+res = [{"uk": "acme", "url": U, "verdict": "GONE", "detail": "HTTP 404"},
+       {"uk": "beta", "url": U, "verdict": "GONE", "detail": "HTTP 404"},
+       {"uk": "ghost", "url": U, "verdict": "CLOSED", "detail": "x"}]
+server = doc_with([r_a, cp.archive_row(r_b, "CLOSED", "by the other writer", DAYX)],
+                  {"acme": {"misses": 1, "last_strike": DAYX.isoformat()}})
+out = cp.reapply_results(server, res, TODAY, True)
+check("replay keeps only rows still live in the server doc", [o["uk"] for o in out], ["acme"])
+check("replay recomputes the strike from the SERVER's count (1 -> 2, archives)",
+      (out[0]["misses"], out[0]["archived"], server["rows"][0][12], server["queue"].get("acme")),
+      (2, True, cp.ARCHIVE_BAND, False))
+check("replay leaves the other writer's archive untouched",
+      server["rows"][1][10].startswith("⌛ posting closed 2026-08-25"), True)
+dry = doc_with([fresh()], {"acme": {"misses": 1, "last_strike": DAYX.isoformat()}})
+out = cp.reapply_results(dry, res[:1], TODAY, False)
+check("dry-run replay counts but does not archive",
+      (out[0]["would_archive"], out[0]["archived"], dry["rows"][0][12]), (True, False, "DDEBF7"))
+
+# End to end on the REAL cmd_check: probe -> PUT 409 -> replay -> PUT 200.
+probes, puts, gets = [], [], []
+
+
+def fake_probe(url, timeout):
+    probes.append(url)
+    return 404, url, ""
+
+
+d1 = doc_with([fresh()], urls={"acme": U})
+d2 = doc_with([fresh()], {"acme": {"misses": 1, "last_strike": "2026-08-25"}}, urls={"acme": U})
+
+
+def fake_put(doc, base_rev):
+    puts.append((base_rev, json.loads(json.dumps(doc))))
+    if len(puts) == 1:
+        return 409, {"error": "conflict", "rev": 12, "doc": d2}
+    return 200, {"rev": 13}
+
+
+def fake_get():
+    gets.append(1)
+    return 11, d1
+
+
+ARGS = dict(apply=True, json=False, limit=0, only="", timeout=1)
+_saved = (cp.probe, cp.put_doc, cp.get_doc)
+cp.probe, cp.put_doc, cp.get_doc = fake_probe, fake_put, fake_get
+buf = io.StringIO()
+try:
+    with contextlib.redirect_stdout(buf):
+        cp.cmd_check(argparse.Namespace(**ARGS))
+finally:
+    cp.probe, cp.put_doc, cp.get_doc = _saved
+log = buf.getvalue()
+check("409: the URL was probed ONCE, not swept again", len(probes), 1)
+check("409: no second GET - the 409 body's doc is used", len(gets), 1)
+check("409: the retry PUTs against the 409's rev", [p[0] for p in puts], [11, 12])
+check("409: the replayed doc carries the strike computed from the server's count",
+      puts[1][1]["postingcheck"]["acme"]["misses"], 2)
+check("409: the archive lands in the replayed doc",
+      (puts[1][1]["rows"][0][12], puts[1][1]["queue"]["acme"]), (cp.ARCHIVE_BAND, False))
+check("409: the log line names the real rev", "rev moved to 12" in log, True)
+check("409: the summary reports the archive", "1 archived" in log, True)
+
+# An older relay whose 409 carries no doc: one fresh GET, still no re-probe.
+probes.clear(); puts.clear(); gets.clear()
+
+
+def fake_put_bare(doc, base_rev):
+    puts.append((base_rev, None))
+    return (409, {"error": "conflict"}) if len(puts) == 1 else (200, {})
+
+
+cp.probe, cp.put_doc, cp.get_doc = fake_probe, fake_put_bare, fake_get
+try:
+    with contextlib.redirect_stdout(io.StringIO()):
+        cp.cmd_check(argparse.Namespace(**ARGS))
+finally:
+    cp.probe, cp.put_doc, cp.get_doc = _saved
+check("409 without a body doc falls back to one fresh GET, still no re-probe",
+      (len(gets), len(probes), [p[0] for p in puts]), (2, 1, [11, 11]))
+
+# A doc that never stops moving: exit non-zero, never a silent 'applied'.
+probes.clear(); puts.clear(); gets.clear()
+def fake_put_forever(doc, base_rev):
+    puts.append((base_rev, None))
+    return 409, {"error": "conflict", "rev": 1, "doc": doc_with([fresh()], urls={"acme": U})}
+
+
+cp.probe, cp.put_doc, cp.get_doc = fake_probe, fake_put_forever, fake_get
+rc = None
+try:
+    with contextlib.redirect_stdout(io.StringIO()):
+        try:
+            cp.cmd_check(argparse.Namespace(**ARGS))
+        except SystemExit as e:
+            rc = str(e.code)
+finally:
+    cp.probe, cp.put_doc, cp.get_doc = _saved
+check("four 409s in a row exit with an error, after 4 PUTs and 1 probe",
+      (rc is not None and "409" in rc, len(puts), len(probes)), (True, 4, 1))
+
 if fails:
     print("FAIL (%d):" % len(fails))
     for f in fails:

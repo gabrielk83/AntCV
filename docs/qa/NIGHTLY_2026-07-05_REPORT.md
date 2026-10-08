@@ -178,6 +178,49 @@ standing coverage — no contradictions.
 
 ---
 
+## CI NIGHTLY 2026-10-08 (GitHub Actions, unattended, Opus 4.8)
+
+Run: `antcv-nightly` on GitHub Actions (gabrielk83/AntCV), unattended. No in-app Browser
+pane, no signed-in session, no real-LLM gen, no Playwright browser, `ALLOW_DEPLOY=false`.
+Scope was therefore the one band CI can fully execute: **Band E / E1 register staleness
+sweep.** Docs + registers only, pushed direct to main per the CI SAFETY OVERRIDE.
+
+**Baseline:** SYNC FIRST up to date at `54415990`. `node scripts/run-tests.mjs pwa` =
+**1813/1813 green**. `check-register.mjs` OK.
+
+### E1 — staleness sweep (5 rows re-verified, 0 closable in CI, 0 shipped)
+
+After the 2026-10-06/07 sweeps `check-register.mjs --stalest 5` put the oldest rows at
+**98/99/100/101/19, all 2026-09-25** (the four 2026-07-05 register-escape fixes + the
+JD-scope code leg). All 5 re-verified against HEAD `54415990`, cited markers intact AND
+cited tests re-run green, `verified:` refreshed to 2026-10-08 in the index + detail:
+
+| Row | ID | Marker + test re-verified | Why not closable in CI |
+|----|----|----|----|
+| 98 | BYOK-COST-AUDIT-001 | `total_cost_usd_est` in both `byok-qualify.js` bundles + xAI grok rate rows in `demo-enforcement.js`; byok-cost-audit.test.mjs (+demo mirror) **14/14** | shipped+unreverted; grok rates still flagged for docs.x.ai re-verify |
+| 99 | REG-GROUP-FOLD-NAMED-001 | `NAMED_FOLD` 2× in `pwa/antcv-dup-group-merge.js`; dup-group-merge.test.mjs green | owner sidebar-dancing investigation thread resolution unconfirmed |
+| 100 | GRAB-ZONE-DISMISS-THRESHOLD-001 | both legs in `app.src.js` (`.antcv-panel-grab-zone`, `n - t > 80`, `scroller.scrollTop -= n - ly`); grab-zone test green | live-device confirm owner-gated |
+| 101 | ZOOM-FLOOR-001 | `Math.max(0.1, Math.min(5.2,…))` pinch floor (~21024) + button floor (~52656); zoom-floor.test.mjs green | shipped+unreverted; no residual |
+| 19 | JD-SCOPE-OCC2-GUARD-001 | `shouldAdoptCloudPointer` 2× (`antcv-jd-scope.js` + `app.src.js`); jd-scope-isolation.test.mjs green | two-real-device leg owner-gated |
+
+The four row 98-101 are shipped register-escape fixes (verify-only maintenance); row 19's
+code leg is already closed with a residual owner-gated device leg. None closable in CI —
+every remaining leg is owner/live-device/owner-investigation-gated.
+
+### Bands A-D — not advanced (same CI blocks as 2026-10-06/07)
+
+A1/A2 need a real mobile/signed-in A/B; B1/B2 (SO-003/SO-004) need headless-browser
+repro; C1-C3 + D1 need a real-LLM gen / CPU profile; D2 (GEN-MODELROLE live) needs
+`gh`/relay telemetry access.
+
+### Owner / Live-verify
+
+Nothing new owed by this run; prior owner lists stand (PR-gate required check, row 39a
+scratch app id, row 89 worker deploys ×3, row 115 meter-by-model). No PWA/worker asset
+shipped, so no post-deploy live-verify is owed.
+
+---
+
 ## CI NIGHTLY 2026-10-07 (GitHub Actions, unattended, Opus 4.8)
 
 Run: `antcv-nightly` on GitHub Actions (gabrielk83/AntCV), unattended. No in-app Browser

@@ -15,7 +15,9 @@ When you finish it: move it to `REGISTER_CLOSED.md`.
 
 ## Row 38 — GEN-BACKGROUND-001
 
-_verified: 2026-10-06_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS, before and after the 1.51.4833 ship). Blocked: real device (background/lock A/B).
+_verified: 2026-10-08_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4833-cache-bust-set`; `browser-qa --only version-live,sidecars-live` 2/2). Residual legs unchanged in kind. Blocked on: real device (A/B with `antcv:gen-resume=1`).
+
+**Prior (2026-10-06):** desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS, before and after the 1.51.4833 ship). Blocked: real device (background/lock A/B).
 
 _verified: 2026-10-05_
 
@@ -458,7 +460,9 @@ _E1 sweep 2026-09-08 (CI nightly): confirmed in CURRENT code — `__platformRule
 
 ## Row 34 — ROLE-MERGE-STORED-001
 
-_verified: 2026-10-06_ — desktop nightly E4: `diag-results-preview-export-parity.mjs` RESULTS-PREVIEW-EXPORT-PARITY OK (preview per-role result == export per-role result; tier-1 explicit result verbatim; 0 page errors). Live guard sidecar served + identical at `1.51.4812`.
+_verified: 2026-10-08_ — desktop nightly E4: `diag-results-preview-export-parity.mjs` RESULTS-PREVIEW-EXPORT-PARITY OK (preview per-role result == export per-role result, tier-1 explicit result verbatim, render attribute still in the bundle, 0 page errors). Live attest: `antcv-role-merge-stored-guard` served/executed/identical at `1.51.4833`.
+
+**Prior (2026-10-06):** desktop nightly E4: `diag-results-preview-export-parity.mjs` RESULTS-PREVIEW-EXPORT-PARITY OK (preview per-role result == export per-role result; tier-1 explicit result verbatim; 0 page errors). Live guard sidecar served + identical at `1.51.4812`.
 
 _verified: 2026-10-05_
 
@@ -582,7 +586,9 @@ _verified: 2026-10-03_
 
 ## Row 39a — AUTOSAVE-NO-DOWNGRADE-001
 
-_verified: 2026-10-06_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS, before and after the 1.51.4833 ship). The authed downgrade PUT was again not run: no scratch application id. Blocked: owner decision.
+_verified: 2026-10-08_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4833-cache-bust-set`; `browser-qa --only version-live,sidecars-live` 2/2). Residual legs unchanged in kind. The authed downgrade PUT was not run: no scratch application id. Blocked on: owner decision (scratch app id) + second real device (row 19).
+
+**Prior (2026-10-06):** desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS, before and after the 1.51.4833 ship). The authed downgrade PUT was again not run: no scratch application id. Blocked: owner decision.
 
 _verified: 2026-10-05_
 
@@ -608,7 +614,9 @@ _verified: 2026-10-05_
 
 ## Row 41
 
-_verified: 2026-10-06_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS, before and after the 1.51.4833 ship). Blocked: real device (Android crash capture).
+_verified: 2026-10-08_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4833-cache-bust-set`; `browser-qa --only version-live,sidecars-live` 2/2). Residual legs unchanged in kind. Blocked on: real device (Android #185 repro).
+
+**Prior (2026-10-06):** desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS, before and after the 1.51.4833 ship). Blocked: real device (Android crash capture).
 
 _verified: 2026-10-05_
 
@@ -634,7 +642,9 @@ _verified: 2026-10-05_
 
 ## Row 42 — GEN-LANGFAB-001
 
-_verified: 2026-10-06_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS, before and after the 1.51.4833 ship). Blocked: real LLM gen.
+_verified: 2026-10-08_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4833-cache-bust-set`; `browser-qa --only version-live,sidecars-live` 2/2). Residual legs unchanged in kind. Blocked on: real LLM gen (fresh-gen language check).
+
+**Prior (2026-10-06):** desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS, before and after the 1.51.4833 ship). Blocked: real LLM gen.
 
 _verified: 2026-10-05_
 
@@ -660,7 +670,9 @@ _verified: 2026-10-05_
 
 ## Row 43
 
-_verified: 2026-10-06_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS, before and after the 1.51.4833 ship). Blocked: owner session.
+_verified: 2026-10-08_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4833-cache-bust-set`; `browser-qa --only version-live,sidecars-live` 2/2). Residual legs unchanged in kind. Blocked on: owner session (click-through).
+
+**Prior (2026-10-06):** desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS, before and after the 1.51.4833 ship). Blocked: owner session.
 
 _verified: 2026-10-05_
 
@@ -686,7 +698,9 @@ _verified: 2026-10-05_
 
 ## Row 44 — JD-ANALYSIS-PRINT-001
 
-_verified: 2026-10-06_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS, before and after the 1.51.4833 ship). Blocked: owner session.
+_verified: 2026-10-08_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4833-cache-bust-set`; `browser-qa --only version-live,sidecars-live` 2/2). Residual legs unchanged in kind. Blocked on: owner session (click-through).
+
+**Prior (2026-10-06):** desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS, before and after the 1.51.4833 ship). Blocked: owner session.
 
 _verified: 2026-10-05_
 
@@ -800,7 +814,9 @@ REMAINING: owner live re-verify (no device in CI). Kept ACTIVE.
 
 ## Row 39 — GEN-MODELROLE-001
 
-_verified: 2026-10-06_ — desktop nightly: D1 `llm_calls` newest day is still 2026-09-28 (claude-sonnet-5 1, gemini-2.5-flash 4, mistral-large-latest 4, gpt-5.4-mini 9; wrangler SELECT, read-only). No generation since, so the supervisor→mistral split is not observable. Blocked: real LLM gen (and row 114: the background-job path writes no rows).
+_verified: 2026-10-08_ — desktop nightly: D1 `llm_calls` newest day is still 2026-09-28 (D1 MCP connector read; the wrangler path answered 7403 once, then worked — transient). No gen traffic since the opus-5-5 pin; the split routing cannot be observed. Live proxies carry `MODEL_ROLES` (deployed ×3 by the weekly tune 2026-10-08). Blocked on: real LLM gen.
+
+**Prior (2026-10-06):** desktop nightly: D1 `llm_calls` newest day is still 2026-09-28 (claude-sonnet-5 1, gemini-2.5-flash 4, mistral-large-latest 4, gpt-5.4-mini 9; wrangler SELECT, read-only). No generation since, so the supervisor→mistral split is not observable. Blocked: real LLM gen (and row 114: the background-job path writes no rows).
 
 _verified: 2026-10-05_
 
@@ -1534,7 +1550,9 @@ _CI nightly 2026-09-15 (E1 sweep): `shouldAdoptCloudPointer` present; test green
 
 > **Renumbered 2026-08-26: was row 38.** A document written before that date citing "row 38" may mean this row or GEN-BACKGROUND-001. The ID is the key.
 
-_verified: 2026-09-26_
+_verified: 2026-10-08_
+
+**Re-verify 2026-10-08 (desktop nightly, Gabo-PC, Fable 5.1, HEAD `7e1b4fa8`):** part (b) is further along than the row text says: `workers/proxy/src/multi-llm.js` `ROLE_KEYS` is now `['writer','supervisor','coherence','analysis','kernel']` (the two proxy-side cascades carry a role), both `wrangler.toml` files pin `"analysis":"mistral"` (OPUS55-ADOPT-001, 2026-09-30, deployed ×3 again 2026-10-08 by the weekly tune), and `scripts/relay-cost-quality-tune.mjs` `ROLE_TASKS` maps `analysis` → `analyze_fit`/`parse_jd` and `kernel` → `kernel_extraction`/`extract`, so those telemetry labels are no longer invisible to the tune. Still open and deliberately so: `compress`/`long_context`/`generate` are the raw passthrough and stay outside `MODEL_ROLES` (reordering would 404 — `model-roles.test.mjs` raw-passthrough lock); the compress lever is a CLIENT-side model choice. D1 `llm_calls` newest day is still 2026-09-28 (D1 MCP read), so no role has n≥20 and nothing can flip. Blocked on: real traffic (owner gens).
 
 **Re-verify 2026-09-26 (CI nightly — E1 stalest slot, code-presence on HEAD `fe4b8f7f`):** `workers/proxy/src/multi-llm.js` `ROLE_KEYS`/`roleHeadOrder` present (4 refs); `scripts/relay-cost-quality-tune.mjs` present. Both halves (compress client-lever + analysis addressability) remain owner-gated on real traffic + a same-prompt benchmark; no code owed. Full PWA suite 1715/1715 green.
 
@@ -1550,7 +1568,9 @@ _verified: 2026-09-26_
 
 ## Row 45
 
-_verified: 2026-09-26_
+_verified: 2026-10-08_
+
+**Re-verify 2026-10-08 (desktop nightly, Gabo-PC, Fable 5.1, HEAD `7e1b4fa8`):** `pwa/antcv-pdf-preview-gate.js` openModal loading-shell leg present and served live at `1.51.4833` (live attest); `pwa/test/diag-generate-click-profile.mjs` present. PARTIAL 1.51.158 intact. The setTimeout leg needs a CPU profile around a real export + preview toggle with owner content. Blocked on: real LLM gen / owner session.
 
 **Re-verify 2026-09-26 (CI nightly — E1 stalest slot, code-presence on HEAD `fe4b8f7f`):** `pwa/antcv-pdf-preview-gate.js` openModal loading-shell leg present; `pwa/test/diag-generate-click-profile.mjs` present. PARTIAL 1.51.158 intact; setTimeout leg still needs a live-model profile (BLOCKED in CI). Full PWA suite 1715/1715 green.
 
@@ -1572,7 +1592,9 @@ _verified: 2026-09-26_
 
 ## Row 40
 
-_verified: 2026-10-06_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS, before and after the 1.51.4833 ship). Blocked: owner session.
+_verified: 2026-10-08_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4833-cache-bust-set`; `browser-qa --only version-live,sidecars-live` 2/2). Residual legs unchanged in kind. Blocked on: owner session (cloud-persisted repro).
+
+**Prior (2026-10-06):** desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS, before and after the 1.51.4833 ship). Blocked: owner session.
 
 _verified: 2026-10-05_
 
@@ -1600,7 +1622,9 @@ _verified: 2026-10-05_
 
 ## Row 35 — OVERLAY-EARLY-HALT-001
 
-_verified: 2026-09-26_
+_verified: 2026-10-08_
+
+**Re-verify 2026-10-08 (desktop nightly, Gabo-PC, Fable 5.1, HEAD `7e1b4fa8`):** `__antcvGenCost` heartbeat gate present app.src.js ×10 + app.js ×4; `pwa/test/overlay-watchdog-heartbeat.test.mjs` green in the suite. Shipped 1.51.41 intact and live. The one real 3–6 min regen-confirm stays owner-gated (a real generation on the owner's key). Blocked on: real LLM gen.
 
 **Re-verify 2026-09-26 (CI nightly — E1 stalest slot, code-presence on HEAD `fe4b8f7f`):** `__antcvGenCost` heartbeat gate present in both bundles (app.src.js ×10, app.js ×4). Shipped 1.51.41 intact; live regen-confirm still owed, BLOCKED in CI. Full PWA suite 1715/1715 green.
 
@@ -1622,7 +1646,9 @@ _verified: 2026-09-26_
 
 ## Row 36 — GEN-CORECOMP-BROAD-001
 
-_verified: 2026-09-26_
+_verified: 2026-10-08_
+
+**Re-verify 2026-10-08 (desktop nightly, Gabo-PC, Fable 5.1, HEAD `7e1b4fa8`):** broad core_comp rule inside `__neutralCo` present app.src.js ×5; `pwa/test/unsolicited-corecomp-broad.test.mjs` green in the suite (both-bundle guard). Shipped 1.51.41 intact and live. Blocked on: real LLM gen (regen-confirm).
 
 **Re-verify 2026-09-26 (CI nightly — E1 stalest slot, code-presence on HEAD `fe4b8f7f`):** broad core_comp rule inside `__neutralCo` present (app.src.js ×5); `pwa/test/unsolicited-corecomp-broad.test.mjs` green in the full suite (both-bundle guard validates the app.js minified name). Shipped 1.51.41 intact; live regen-confirm still owed, BLOCKED in CI. Full PWA suite 1715/1715 green.
 
@@ -1644,7 +1670,9 @@ _verified: 2026-09-26_
 
 ## Row 37 — FOCUS-LABEL-EO-001
 
-_verified: 2026-09-26_
+_verified: 2026-10-08_
+
+**Re-verify 2026-10-08 (desktop nightly, Gabo-PC, Fable 5.1, HEAD `7e1b4fa8`):** `FOCUS-LABEL` prompt rule present app.src.js ×2 + app.js ×1; `antcv-core-comp-compress.js` loaded by index.html at `?v=1.51.4812-import-rewrap-siblings`; `pwa/test/unit/core-comp-compress-eo.test.mjs` green in the suite. Shipped 1.51.42/43 intact and live. Blocked on: real LLM gen (regen-confirm).
 
 **Re-verify 2026-09-26 (CI nightly — E1 stalest slot, code-presence on HEAD `fe4b8f7f`):** `FOCUS-LABEL` prompt rule present (app.src.js ×2); `pwa/antcv-core-comp-compress.js` present + `pwa/test/unit/core-comp-compress-eo.test.mjs` green in the full suite. Shipped 1.51.42/43 intact; live regen-confirm still owed. Full PWA suite 1715/1715 green.
 
@@ -1810,7 +1838,9 @@ _verified: 2026-08-26_
 
 > **STANDING regression anchor** — re-run by the nightly diag set every time, not unstarted work.
 
-_verified: 2026-10-06_ — desktop nightly E2: `diag-settings-panel-churn.mjs --selftest` PASS (synthetic churn seen on all 4 tabs); Personal / Layout / Account / Advanced 0 mutations per 8 s (budget 5), 0 page errors. PASS.
+_verified: 2026-10-08_ — desktop nightly E2: `diag-settings-panel-churn.mjs --selftest` PASS (80 synthetic mutations seen on all 4 tabs, 4 distinct fingerprints); Personal / Layout / Account / Advanced 0 mutations per 8 s, 0 page errors, roots attached. PASS.
+
+**Prior (2026-10-06):** desktop nightly E2: `diag-settings-panel-churn.mjs --selftest` PASS (synthetic churn seen on all 4 tabs); Personal / Layout / Account / Advanced 0 mutations per 8 s (budget 5), 0 page errors. PASS.
 
 _verified: 2026-10-05_
 
@@ -1856,7 +1886,9 @@ _verified: 2026-10-04_
 
 > **STANDING regression anchor** — re-run by the nightly diag set every time, not unstarted work.
 
-_verified: 2026-10-06_ — desktop nightly E3: `diag-panel-button-audit.mjs` 212 buttons (209 on 10-05), active 131 / ui-only 10 / not-visible-or-disabled 58 / skipped-dangerous 13, 0 THROWS, 0 DEAD, 0 page errors. Diff vs 10-05 by label: 8 class flips (✕ Close, Switch between saved applications, ↻, Refresh the saved-applications list, textbulletstablelabeled_listlisteducation ui-only→active; Save as new application, CJLR for this added field active→ui-only; "Make It Fit (sidebar)" not-visible→active), 1 label gone ("⇥ Fit"), 0 added. Not investigated beyond the diff; none DEAD or THROWS. `docs/qa/PANEL_BUTTON_AUDIT_2026-10-06.md` + `.json`.
+_verified: 2026-10-08_ — desktop nightly E3 (AUDIT-DIFF-NOISE-001 fixed this run): `diag-panel-button-audit.mjs` run FOUR times at the same HEAD `7e1b4fa8`. Runs 1→2 (old 600 ms settle): 11 labels flipped (active↔ui-only, visible↔not-visible), 1 label gone / 1 added — pure harness nondeterminism, no code change between runs. Fix: a second 900 ms write-settle window for buttons that moved the DOM with no write yet (12 buttons paid it, 3 of them ended `active` instead of `ui-only`), plus a `--diff` leg (`pwa/test/button-audit-diff.mjs`, 7 unit checks) that sorts label changes by meaning and appends a "Diff vs previous" block to the report. Runs 3→4 (new settle both sides): 0 regressions, 0 recoveries, 1 visibility move (CJLR hidden 6→3, state left by an earlier click), 8 active↔ui-only flips (counted, not findings), 0 gone / 0 added. Final run: 209 buttons, 0 THROWS, 0 DEAD, 0 page errors (active 132, ui-only 9, not-visible 55, skipped 13). Open: the 8 residual flips are the same labels each time (✕ Close, Save as new application, Refresh list, Add to sidebar, 👁 Preview, Fuse CL signals, Chat drag handle, ×) — their store write is conditional, not slow; a label-level allowlist would be the next step if the diff block ever hides a real regression. Artifacts `PANEL_BUTTON_AUDIT_2026-10-08.{md,json}`.
+
+**Prior (2026-10-06):** desktop nightly E3: `diag-panel-button-audit.mjs` 212 buttons (209 on 10-05), active 131 / ui-only 10 / not-visible-or-disabled 58 / skipped-dangerous 13, 0 THROWS, 0 DEAD, 0 page errors. Diff vs 10-05 by label: 8 class flips (✕ Close, Switch between saved applications, ↻, Refresh the saved-applications list, textbulletstablelabeled_listlisteducation ui-only→active; Save as new application, CJLR for this added field active→ui-only; "Make It Fit (sidebar)" not-visible→active), 1 label gone ("⇥ Fit"), 0 added. Not investigated beyond the diff; none DEAD or THROWS. `docs/qa/PANEL_BUTTON_AUDIT_2026-10-06.md` + `.json`.
 
 _verified: 2026-10-05_
 

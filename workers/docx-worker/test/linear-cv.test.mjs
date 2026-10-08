@@ -149,11 +149,12 @@ test('linear CV: short last rows merge; publications and long sections are block
   assert.ok(spans.filter((n) => n === 2).length >= 2, 'odd tool tile and odd degree span 2');
   assert.ok(t.includes('PUBLICATIONS &amp; PATENTS') && t.includes('REGULATORY CONTEXT'), 'blocks keep their own headings');
   assert.ok(t.includes('Std 0: context 0'), 'block rows as "Lead: text"');
-  // LINEAR-DETAILS-GROUPS-001: one table per theme, "A & B" heading rule per table
-  assert.ok(t.includes('LANGUAGES &amp; PERSONAL') && t.includes('RECOMMENDATIONS'), 'theme tables with short headings');
+  // LINEAR-DETAILS-GROUPS-001 + ENRICHED-001: one table per theme, each under its theme name
+  assert.ok(t.includes('LANGUAGES &amp; PERSONAL') && t.includes('AVAILABILITY &amp; REFERENCES'), 'theme tables with theme headings');
+  assert.ok(!t.includes('RECOMMENDATIONS') || t.indexOf('AVAILABILITY &amp; REFERENCES') < t.indexOf('Recommendations'), 'a one-row table reads its theme name, the label stays a row');
   assert.ok(!/PUBLICATIONS &amp; PATENTS, /.test(t), 'no long joined heading');
   assert.ok(t.indexOf('REGULATORY CONTEXT') < t.indexOf('LANGUAGES &amp; PERSONAL'), 'details tables last');
-  assert.ok(t.indexOf('LANGUAGES &amp; PERSONAL') < t.indexOf('RECOMMENDATIONS'), 'references table after languages');
+  assert.ok(t.indexOf('LANGUAGES &amp; PERSONAL') < t.indexOf('AVAILABILITY &amp; REFERENCES'), 'references table after languages');
 });
 
 // owner 2026-09-30: the Accessibility label is left-aligned like every details label
@@ -188,9 +189,61 @@ test('linear CV: details split into credentials, personal, availability & refere
   ];
   const xml = unzipEntry(await gen({ sections: secs }), 'word/document.xml').toString('utf8');
   const t = texts(xml);
-  const order = ['STANDARDS', 'LANGUAGES &amp; PERSONAL', 'AVAILABILITY &amp; REFERENCES'].map((h) => t.indexOf(h));
+  const order = ['CREDENTIALS', 'LANGUAGES &amp; PERSONAL', 'AVAILABILITY &amp; REFERENCES'].map((h) => t.indexOf(h));
   assert.ok(order.every((i) => i >= 0), 'three headings: ' + JSON.stringify(order));
   assert.deepEqual([...order].sort((a, b) => a - b), order, 'credentials, personal, then availability & references');
-  assert.equal((xml.slice(xml.indexOf('>STANDARDS<')).match(/<w:tbl>/g) || []).length, 3, 'one table per heading');
-  assert.ok(!t.includes('ADDITIONAL DETAILS'), 'no catch-all heading');
+  assert.equal((xml.slice(xml.indexOf('>CREDENTIALS<')).match(/<w:tbl>/g) || []).length, 3, 'one table per heading');
+  assert.ok(!t.includes('ADDITIONAL DETAILS') && !t.includes('>STANDARDS<'), 'no catch-all heading, no label heading');
+  // LINEAR-DETAILS-ENRICHED-001: row order inside a table follows the enriched CV
+  const rows = ['Languages', 'Rugby', 'Accessibility', 'Availability', 'References'].map((l) => xml.indexOf('>' + l + '<'));
+  assert.ok(rows.every((i) => i > 0), 'rows present: ' + JSON.stringify(rows));
+  assert.deepEqual([...rows].sort((a, b) => a - b), rows, 'languages, rugby, accessibility / availability, references');
+});
+
+// LINEAR-DETAILS-ENRICHED-001 (owner 2026-10-05, CV_Veo_Director_enriched.pdf): CREDENTIALS = Standards, Courses, Patent
+test('linear CV: courses and a stand-alone patent are CREDENTIALS rows, not an education row or a block', async () => {
+  const secs = [
+    { id: 'education', title: 'EDUCATION', type: 'education', loc: 'main', items: [{ deg: 'MBA', sch: 'Technion' }, { deg: 'M.Sc.', sch: 'TAU' }] },
+    { id: 'patent', title: 'PATENT', type: 'text', loc: 'main', content: 'Patent No. 241997: cover-window geometry reducing optical crosstalk.' },
+    { id: 'certs', title: 'CERTIFICATES & COURSES', type: 'list', loc: 'main', items: ['Six Sigma Black Belt (CSSC)', 'BABOK Business Analysis'] },
+    { id: 'standards', title: 'STANDARDS', type: 'text', loc: 'main', content: 'EMVA 1288, ISO 12233, ISO 9001' },
+    { id: 'pubs', title: 'PUBLICATIONS', type: 'list_italic', loc: 'main', items: ['Integration of Suspended Carbon Nanotubes, 2009'] },
+  ];
+  const xml = unzipEntry(await gen({ sections: secs }), 'word/document.xml').toString('utf8');
+  const t = texts(xml);
+  const cred = xml.indexOf('>CREDENTIALS<');
+  assert.ok(cred > 0, 'credentials heading');
+  const eduTbl = xml.slice(xml.indexOf('>EDUCATION<'), cred);
+  assert.ok(!eduTbl.includes('Six Sigma'), 'no courses row under education');
+  const tbl = xml.slice(cred, xml.indexOf('</w:tbl>', cred));
+  for (const l of ['Standards', 'Certificates &amp; Courses', 'Patent']) assert.ok(tbl.includes('>' + l + '<'), l + ' row in the credentials table');
+  const o = ['>Standards<', '>Certificates &amp; Courses<', '>Patent<'].map((l) => tbl.indexOf(l));
+  assert.deepEqual([...o].sort((a, b) => a - b), o, 'standards, courses, patent');
+  assert.ok(tbl.includes('Six Sigma Black Belt (CSSC) • BABOK Business Analysis'), 'courses joined by a bullet');
+  assert.ok(!t.includes('>PATENT<') && t.includes('PUBLICATIONS'), 'patent is a row; publications stay a block');
+});
+
+// LINEAR-CONT-001 (owner 2026-10-05 rule sheet "Page 2 start"): the client's role.page starts page 2 with ONE
+// explicit page break + "PROFESSIONAL EXPERIENCE (CONT.)"; roles stay whole (keepNext on all bullets but the last)
+test('linear CV: forwarded role page -> one page break + "(Cont.)" heading; no page -> none; Danish suffix', async () => {
+  const exp = sections.find((s) => s.id === 'experience');
+  const paged = { ...exp, roles: [exp.roles[0], { ...exp.roles[1], page: 2, bullets: ['First bullet of the role.', 'Second bullet.', 'Last bullet.'] }] };
+  const secs = sections.map((s) => (s.id === 'experience' ? paged : s));
+  const xml = unzipEntry(await gen({ sections: secs }), 'word/document.xml').toString('utf8');
+  const t = texts(xml);
+  assert.ok(t.includes('PROFESSIONAL EXPERIENCE (CONT.)'), 'cont heading');
+  assert.equal((xml.match(/<w:pageBreakBefore\/>/g) || []).length, 1, 'exactly one explicit page break');
+  assert.ok(xml.indexOf('<w:pageBreakBefore/>') < xml.indexOf('(CONT.)') && xml.indexOf('(CONT.)') < xml.indexOf('System Architect'), 'break, heading, then the page-2 role');
+  assert.ok(xml.indexOf('Trackman') < xml.indexOf('<w:pageBreakBefore/>'), 'page-1 role before the break');
+  // the page-2 role's bullets: keepNext on all but the last
+  const b1 = xml.lastIndexOf('<w:p', xml.indexOf('First bullet')), b3 = xml.lastIndexOf('<w:p', xml.indexOf('Last bullet'));
+  assert.ok(xml.slice(b1, xml.indexOf('First bullet')).includes('<w:keepNext/>'), 'first bullet keeps with next');
+  assert.ok(!xml.slice(b3, xml.indexOf('Last bullet')).includes('<w:keepNext/>'), 'last bullet does not');
+  // no forwarded page: no break, no cont heading
+  const plain = unzipEntry(await gen(), 'word/document.xml').toString('utf8');
+  assert.ok(!plain.includes('<w:pageBreakBefore/>') && !texts(plain).includes('(CONT.)'), 'no break without a client page');
+  // Danish: localized suffix and table headings
+  const da = texts(unzipEntry(await gen({ sections: secs, language: 'da' }), 'word/document.xml').toString('utf8'));
+  assert.ok(da.includes('PROFESSIONAL EXPERIENCE (FORTSAT)'), 'Danish cont suffix');
+  assert.ok(da.includes('KVALIFIKATIONER') && da.includes('SPROG &amp; PERSONLIGT'), 'Danish theme headings');
 });

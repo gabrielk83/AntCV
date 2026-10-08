@@ -90,7 +90,7 @@ General rules for every role and every executive-linear CV/letter, learned from 
 
 | Rule | Detail |
 |---|---|
-| Details tables | The closing details are three tables, each with its own heading: CREDENTIALS (standards, courses, patents) · LANGUAGES & PERSONAL (languages, sport/interests, accessibility) · AVAILABILITY & REFERENCES. Not one combined "Languages, interests & profile details" table. AntCV app change (preview + docx-worker) pending owner approval. |
+| Details tables | The closing details are three tables, each with its own heading: CREDENTIALS (standards, courses, patents) · LANGUAGES & PERSONAL (languages, sport/interests, accessibility) · AVAILABILITY & REFERENCES. Not one combined "Languages, interests & profile details" table. Shipped in AntCV 1.51.4873 (preview + docx-worker, `LINEAR-DETAILS-ENRICHED-001`: courses and a stand-alone patent are CREDENTIALS rows, every table reads its theme name, rows in the order above; `LINEAR-CONT-001`: the export opens page 2 with "Professional experience (Cont.)" after one explicit page break from the preview's role page). |
 | Bullet order | Lead each role with the people and decision signal (budget, hiring, team incl. its manager, change board), technical depth second. |
 | Education detail | Every degree gets a one-line focus under it (subjects, research group, papers, award), from stored facts, styled like the MBA note line. Never only title + school + years. |
 | Interests | Keep the Interests row in EVERY layout, humour included ("home supervision by three feline strategic napping experts"). Converting two-column to linear must carry over every section; nothing personal is dropped silently. |

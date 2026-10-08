@@ -159,9 +159,11 @@ test('callout, combined details heading and certificates row', () => {
   assert.ok(!css.includes('[data-sid="accessibility"]::before'), 'no second heading inside the table');
   assert.ok(!/REGULATORY/.test(css), 'a hidden section is not in the heading');
   assert.ok(css.includes('color:#00746E'), 'heading in the heading colour');
-  // certificates: title line + items joined by a bullet
-  assert.ok(css.includes(M + '[data-sid="certs"] > [data-antcv-row-path]{display:inline !important'), 'items inline');
+  // certificates: a CREDENTIALS row (LINEAR-DETAILS-ENRICHED-001) - label cell + items joined by a bullet
+  assert.ok(css.includes(M + '[data-sid="certs"]::before{content:"CREDENTIALS"'), 'courses carry the Credentials heading');
+  assert.ok(css.includes(M + '[data-sid="certs"]{display:flex !important'), 'items flow as one run');
   assert.ok(css.includes('[data-sid="certs"] > [data-antcv-row-path]:not(:last-child)::after{content:"  \\2022  "'), 'bullet separators');
+  assert.ok(!css.includes('margin-top:-6px'), 'no longer hugs education');
 });
 
 // LINEAR-RESYNC-001 (1.51.4707): storage is linear but the preview still renders sidebar sections
@@ -200,6 +202,7 @@ test('merge: a short last row spans the empty space (tiles, tools, education)', 
 test('details structure: publications and long sections are blocks; a multi-row table reads its theme name', () => {
   const K = sandbox({ cl: [], cv: [] }).ctx.window.__antcvCvLinearKind;
   assert.equal(K({ id: 'pubs', type: 'list_italic', title: 'PUBLICATIONS & PATENTS', items: ['a'] }), 'block');
+  assert.equal(K({ id: 'patent', type: 'text', title: 'PATENT', content: 'Patent No. 241997' }), 'details', 'a stand-alone patent is a Credentials row');
   assert.equal(K({ id: 'regulatory', type: 'rich_block', title: 'REGULATORY CONTEXT', items: Array.from({ length: 17 }, (_, i) => ({ b: 'x' + i, t: 'y' })) }), 'block');
   assert.equal(K({ id: 'recommendations', type: 'education', title: 'RECOMMENDATIONS', items: [{ deg: 'References' }] }), 'details');
   assert.equal(K({ id: 'languages', type: 'labeled_list', title: 'LANGUAGES', items: [{}, {}, {}, {}] }), 'details');
@@ -242,15 +245,16 @@ test('details split into theme tables: order, headings, no joins across tables',
   ] });
   sb.store.set('antcv:cvLayout', 'linear');
   sb.ctx.window.__antcvCvLayoutApply();
-  assert.deepEqual(sb.cv().map((s) => s.id), ['experience', 'standards', 'languages', 'rugby', 'accessibility', 'references', 'availability', 'misc']);
+  // LINEAR-DETAILS-ENRICHED-001: availability before references inside the last table
+  assert.deepEqual(sb.cv().map((s) => s.id), ['experience', 'standards', 'languages', 'rugby', 'accessibility', 'availability', 'references', 'misc']);
   const css = sb.styleEls['antcv-cv-layout-linear-style'].textContent;
   const M = '[data-antcv-document-main] > ';
-  for (const [id, h] of [['standards', 'STANDARDS'], ['languages', 'LANGUAGES & PERSONAL'], ['references', 'AVAILABILITY & REFERENCES']]) {
+  for (const [id, h] of [['standards', 'CREDENTIALS'], ['languages', 'LANGUAGES & PERSONAL'], ['availability', 'AVAILABILITY & REFERENCES']]) {
     assert.ok(css.includes(M + '[data-sid="' + id + '"]::before{content:"' + h + '"'), h);
   }
   assert.ok(css.includes(M + '[data-sid="languages"] + [data-sid="rugby"]'), 'rows of one table join');
-  assert.ok(!css.includes(M + '[data-sid="accessibility"] + [data-sid="references"]'), 'tables of different themes do not join');
-  assert.ok(!/::before\{content:"(RUGBY|AVAILABILITY|OTHER)"/.test(css), 'one heading per table');
+  assert.ok(!css.includes(M + '[data-sid="accessibility"] + [data-sid="availability"]'), 'tables of different themes do not join');
+  assert.ok(!/::before\{content:"(STANDARDS|RUGBY|AVAILABILITY|OTHER)"/.test(css), 'one heading per table, the theme name even for a one-row table');
   const n = sb.events.length;
   sb.ctx.window.__antcvCvLayoutApply();
   assert.equal(sb.events.length, n, 'idempotent');

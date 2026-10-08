@@ -36,11 +36,16 @@
  * the details one-liners form one table PER THEME (credentials; languages & personal; availability &
  * references, which also takes anything unmatched), each under its own heading: the label for a
  * one-row table, else the theme name. Same rules in the docx-worker.
+ * 1.51.4873 (owner 2026-10-05 rule sheet, CV_Veo_Director_enriched.pdf): LINEAR-DETAILS-ENRICHED-001 - every table
+ * carries its theme name (CREDENTIALS / LANGUAGES & PERSONAL / AVAILABILITY & REFERENCES), a one-row table too;
+ * courses/certificates are a CREDENTIALS row (no longer a row under Education) and a stand-alone patent section is
+ * a CREDENTIALS row (publications stay a block); rows inside a table keep the enriched order (DETAIL_RANK). The
+ * export adds the "(Cont.)" experience heading + page break (LINEAR-CONT-001, docx-worker). Same rules in the worker.
  * Letters are untouched (no sidebar). No app.js edit. Kill: antcv:disable-cv-layout-linear=1.
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.4813-linear-detail-groups';
+  var VERSION = '1.51.4873-linear-enriched';
   if (window.__antcvCvLayoutLinear === VERSION) return;
   window.__antcvCvLayoutLinear = VERSION;
 
@@ -107,9 +112,9 @@
   function detailsLast() {
     var s = readSections();
     if (!s || !Array.isArray(s.cv) || s.cv.length < 2) return false;
-    var isD = s.cv.map(function (x) { return !!x && !!x.type && linKind(x) === 'details'; });
+    var isD = s.cv.map(function (x) { return !!x && !!x.type && isDetailsKind(linKind(x)); });
     var d = s.cv.map(function (x, j) { return { x: x, j: j }; }).filter(function (o) { return isD[o.j]; })
-      .sort(function (a, b) { return (detailGroup(a.x) - detailGroup(b.x)) || (a.j - b.j); })
+      .sort(function (a, b) { return (detailGroup(a.x) - detailGroup(b.x)) || (detailRank(a.x) - detailRank(b.x)) || (a.j - b.j); })
       .map(function (o) { return o.x; });
     var cv = s.cv.filter(function (_, j) { return !isD[j]; }).concat(d);
     if (cv.every(function (x, j) { return x === s.cv[j]; })) return false;
@@ -165,10 +170,13 @@
     if (Array.isArray(s.rows)) return s.rows.length;
     return s.content ? 1 : 0;
   }
+  // LINEAR-DETAILS-ENRICHED-001: a stand-alone patent section is a Credentials row; publications stay a block
   function detailsOrBlock(s, k) {
-    if (/(^|\s)pubs?(\s|$)|publica|patent|publikation/.test(k)) return 'block';
+    if (/(^|\s)pubs?(\s|$)|publica|publikation/.test(k)) return 'block';
     return rowCount(s) >= BLOCK_MIN_ROWS ? 'block' : 'details';
   }
+  // the details tables hold the one-liners AND the courses/certificates row (a CREDENTIALS row since 1.51.4873)
+  function isDetailsKind(k) { return k === 'details' || k === 'certs'; }
   window.__antcvCvLinearKind = linKind;
   // LINEAR-DETAILS-GROUPS-001: theme of a details one-liner -> one table per theme, in this order.
   // Anything unmatched (availability, permit, location, references, ...) lands in the last table.
@@ -185,6 +193,19 @@
     return OTHER_GROUP;
   }
   window.__antcvCvLinearDetailGroup = detailGroup;
+  // LINEAR-DETAILS-ENRICHED-001: row order inside a theme table - Standards, Courses, Patent / Languages, Rugby,
+  // Interests, Accessibility / Availability, References; unmatched rows follow in stored order. Mirrors the worker.
+  var DETAIL_RANK = [
+    [/standard/, /cert|course|kursus|licen/, /patent/],
+    [/language|sprog/, /rugby|sport|volunt|frivillig/, /interest|interesse|hobb/, /access|tilg/],
+    [/avail|tilg/, /refer|recommend|anbefal/],
+  ];
+  function detailRank(s) {
+    var k = (((s && s.id) || '') + ' ' + ((s && s.title) || '')).toLowerCase(), g = detailGroup(s);
+    for (var i = 0; i < DETAIL_RANK[g].length; i++) if (DETAIL_RANK[g][i].test(k)) return i;
+    return DETAIL_RANK[g].length;
+  }
+  window.__antcvCvLinearDetailRank = detailRank;
   // the export's tile/details bar colour: style.accent, else the heading colour
   function accent() {
     try {
@@ -204,21 +225,18 @@
   function cssId(id) { return String(id).replace(/["\\]/g, '\\$&'); }
   // export titleCase (docx-worker buildLinearCvDocument): "LANGUAGES & ACCESSIBILITY" -> "Languages & Accessibility"
   function titleCase(t) { return String(t || '').trim().toLowerCase().replace(/(^|[\s(&/-])([a-zæøåéü])/g, function (m, a, b) { return a + b.toUpperCase(); }); }
-  // one heading per details table, as the export builds it: the label when the table has one row,
-  // else the theme name. Returns [{ id: first visible section of the table, text, group }].
+  // one heading per details table, as the export builds it: the theme name, a one-row table too
+  // (LINEAR-DETAILS-ENRICHED-001). Returns [{ id: first visible section of the table, text, group }].
   function detailsHeadings() {
     var s = readSections(), groups = {};
     ((s && s.cv) || []).forEach(function (x) {
-      if (!x || !x.id || x.on === false || linKind(x) !== 'details') return;
+      if (!x || !x.id || x.on === false || !isDetailsKind(linKind(x))) return;
       var g = detailGroup(x);
-      if (!groups[g]) groups[g] = { id: x.id, labels: [], group: g };
-      var l = titleCase(x.title || x.id); if (l) groups[g].labels.push(l);
+      if (!groups[g]) groups[g] = { id: x.id, group: g };
     });
     var da = cvLang() === 'da';
     return Object.keys(groups).map(Number).sort(function (a, b) { return a - b; }).map(function (g) {
-      var L = groups[g].labels;
-      var text = L.length === 1 ? L[0] : DETAIL_GROUPS[g][da ? 2 : 1];
-      return { id: groups[g].id, text: text, group: g };
+      return { id: groups[g].id, text: DETAIL_GROUPS[g][da ? 2 : 1], group: g };
     });
   }
   function cvLang() {
@@ -260,8 +278,8 @@
     var HEAD = ' > :first-child:not([data-antcv-row-path])', ROW = '[data-antcv-row-path]:not([data-antcv-group-head])';
     // rows of one table join (no double hairline); tables of different themes stay apart
     var grp = {}; ((readSections() || {}).cv || []).forEach(function (x) { if (x && x.id) grp[x.id] = detailGroup(x); });
-    var adj = [];
-    ids.details.forEach(function (x) { ids.details.forEach(function (y) { if (x !== y && grp[x] === grp[y]) adj.push(M + '[data-sid="' + cssId(x) + '"] + [data-sid="' + cssId(y) + '"]'); }); });
+    var adj = [], tbl = ids.details.concat(ids.certs);
+    tbl.forEach(function (x) { tbl.forEach(function (y) { if (x !== y && grp[x] === grp[y]) adj.push(M + '[data-sid="' + cssId(x) + '"] + [data-sid="' + cssId(y) + '"]'); }); });
     return '' +
       // competency table -> 3 equal tiles per row; header row dropped, no line clamp
       rule('tiles', ' [data-table-resize-wrap] > :not(table)', 'display:none !important;') +
@@ -312,14 +330,16 @@
       (adjOf('profile').length ? adjOf('profile').map(function (p) { return p[0] + ':has(+ ' + p[1] + ')'; }).join(',') + '{margin-bottom:0 !important;}' +
         adjOf('profile').map(function (p) { return p[0] + ':has(+ ' + p[1] + ') > [data-antcv-row-path]:last-child'; }).join(',') + '{border-bottom:none;padding-bottom:2px !important;}' +
         adjOf('profile').map(function (p) { return p[0] + ' + ' + p[1] + ' > [data-antcv-row-path]:first-child'; }).join(',') + '{border-top:none;padding-top:2px !important;}' : '') +
-      // certificates -> a full-width row under education: bold "Title:" then the items joined by " • "
-      rule('certs', '', 'margin-top:-6px !important;text-align:left !important;') +
-      rule('certs', HEAD, 'display:block !important;margin:0 !important;') +
-      rule('certs', HEAD + ' [data-antcv-section-headline]', 'display:block !important;font-family:inherit !important;font-size:13.33px !important;color:#0F172A !important;letter-spacing:0 !important;text-transform:lowercase !important;line-height:1.15 !important;') +
+      // certificates -> a CREDENTIALS row (LINEAR-DETAILS-ENRICHED-001): the label cell on the left, the items
+      // flowing as one run joined by " • " in the content column. Flex (not grid) so the items wrap like text:
+      // the label is pulled into the left padding, later lines start at the content column.
+      rule('certs', '', 'display:flex !important;flex-wrap:wrap;align-items:stretch;margin:0 !important;padding:0 6px 0 127px;border:0.5pt solid #E2E8F0;border-left:none;text-align:left !important;') +
+      rule('certs', '::before', 'flex:0 0 calc(100% + 133px);margin-left:-127px;margin-right:-6px;') +
+      rule('certs', HEAD, 'display:block !important;flex:0 0 127px;margin:0 0 0 -127px !important;background:#F8FAFC;border-left:2pt solid ' + A + ';padding:3px 6px;') +
+      rule('certs', HEAD + ' [data-antcv-section-headline]', 'display:block !important;font-family:inherit !important;font-size:12.67px !important;color:#0F172A !important;letter-spacing:0 !important;text-transform:lowercase !important;line-height:1.15 !important;') +
       rule('certs', HEAD + ' [data-antcv-section-headline]::first-letter', 'text-transform:uppercase;') +
-      rule('certs', HEAD + ' [data-antcv-section-headline]::after', 'content:":";') +
       rule('certs', HEAD + ' > :not([data-antcv-section-headline])', 'display:none !important;') +
-      rule('certs', ' > [data-antcv-row-path]', 'display:inline !important;margin:0 !important;padding:0 !important;font-size:12.67px !important;color:#475569 !important;') +
+      rule('certs', ' > [data-antcv-row-path]', 'flex:0 1 auto;min-width:0;margin:0 !important;padding:2px 0 2px 6px !important;font-size:12.67px !important;line-height:1.1 !important;color:#475569 !important;') +
       rule('certs', ' > [data-antcv-row-path] *', 'font-size:inherit !important;display:inline !important;') +
       rule('certs', ' > [data-antcv-row-path]:not(:last-child)::after', 'content:"  \\2022  ";white-space:pre;color:#94A3B8;');
     // [prev (full selector), next (bare [data-sid])] pairs of two sections of the same kind, for the joins above

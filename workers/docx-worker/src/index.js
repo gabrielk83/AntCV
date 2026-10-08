@@ -26211,7 +26211,9 @@ function buildLinearCvDocument(ctx) {
   // the rest form ONE details table. Mirrors pwa/antcv-cv-layout-linear.js detailsOrBlock().
   const rowCount = (s) => Array.isArray(s.items) ? s.items.filter((x) => x && !x.grp && !x.hr).length
     : Array.isArray(s.rows) ? s.rows.length : (s.content ? 1 : 0);
-  const detailsOrBlock = (s, k) => (/(^|\s)pubs?(\s|$)|publica|patent|publikation/.test(k) || rowCount(s) >= 7) ? "block" : "details";
+  // LINEAR-DETAILS-ENRICHED-001 (owner 2026-10-05, CV_Veo_Director_enriched): a stand-alone PATENT section is a
+  // Credentials row; only publications (and a combined "publications & patents") stay a block.
+  const detailsOrBlock = (s, k) => (/(^|\s)pubs?(\s|$)|publica|publikation/.test(k) || rowCount(s) >= 7) ? "block" : "details";
   const kind = (s) => {
     const k = idt(s);
     if (s.type === "experience") return "experience";
@@ -26266,7 +26268,11 @@ function buildLinearCvDocument(ctx) {
       return m ? [m[1] + ":", m[2]] : ["", t];
     }).filter((b) => b[1] && !isPh(b[1]));
     if (typeof r.results === "string" && r.results.trim()) bl.push([clean(style._resultsLabel || "Results:").replace(/\s+$/, ""), clean(r.results)]);
-    roles.push({ title: clean(r.title), company: clean(r.company), years: clean(r.years).replace(/\s*-\s*$/, " - present"), location: clean(r.location || ""), bullets: bl });
+    // LINEAR-CONT-001: the client forwards role.page (>= 2) from the preview paginator (antcv-docx-client.js
+    // "EFFECTIVE role page"); the linear path reads it to start page 2 with an explicit break + "(Cont.)" heading.
+    const pg = Number(r.page);
+    roles.push({ title: clean(r.title), company: clean(r.company), years: clean(r.years).replace(/\s*-\s*$/, " - present"), location: clean(r.location || ""), bullets: bl,
+      page: Number.isFinite(pg) && pg >= 2 && pg <= 6 ? Math.round(pg) : 1 });
   }
   // education: [degree, school, detail] alternating into two columns
   const edu = [];
@@ -26300,14 +26306,27 @@ function buildLinearCvDocument(ctx) {
     [null, "Availability & References", "Tilgængelighed & referencer"],
   ];
   const detailGroup = (s) => { const k = idt(s); const i = DETAIL_GROUPS.findIndex((g) => g[0] && g[0].test(k)); return i < 0 ? 2 : i; };
+  // LINEAR-DETAILS-ENRICHED-001 (owner 2026-10-05, CV_Veo_Director_enriched.pdf): rows inside a theme table keep
+  // the enriched order - Standards, Courses, Patent / Languages, Rugby, Interests, Accessibility / Availability,
+  // References; unmatched rows follow in their stored order. Mirrors pwa/antcv-cv-layout-linear.js DETAIL_RANK.
+  const DETAIL_RANK = [
+    [/standard/, /cert|course|kursus|licen/, /patent/],
+    [/language|sprog/, /rugby|sport|volunt|frivillig/, /interest|interesse|hobb/, /access|tilg/],
+    [/avail|tilg/, /refer|recommend|anbefal/],
+  ];
+  const detailRank = (s, g) => { const k = idt(s); const i = DETAIL_RANK[g].findIndex((re) => re.test(k)); return i < 0 ? DETAIL_RANK[g].length : i; };
   const details = [];
   for (const s of by.details) {
     let txt = "";
     if (s.content) txt = clean(s.content);
     else if (Array.isArray(s.items)) txt = s.items.map(itemText).filter((x) => x && !isPh(x)).join("; ");
     else if (Array.isArray(s.rows)) txt = s.rows.map(itemText).filter(Boolean).join("; ");
-    if (txt && !isPh(txt)) details.push({ label: titleCase(s.title || s.id || ""), content: txt, group: detailGroup(s) });   // labels left-aligned, Accessibility included (owner 2026-09-30)
+    const g = detailGroup(s);
+    if (txt && !isPh(txt)) details.push({ label: titleCase(s.title || s.id || ""), content: txt, group: g, rank: detailRank(s, g) });   // labels left-aligned, Accessibility included (owner 2026-09-30)
   }
+  // courses / certificates are a CREDENTIALS row ("Courses: a • b • c"), no longer a row under Education
+  if (certs) details.push({ label: titleCase((by.certs[0] && by.certs[0].title) || "Courses"), content: certs, group: 0, rank: 1 });
+  details.sort((a, b) => (a.group - b.group) || (a.rank - b.rank));
 
   // ---------------- blocks (port of exec_cv_lib.mjs) ----------------
   const heading = (title) => new Paragraph({
@@ -26440,13 +26459,23 @@ function buildLinearCvDocument(ctx) {
     items.forEach((t, i) => { const m = t.match(/^([^:.]{3,48}):\s+(.+)$/); children.push(bullet(m ? [m[1] + ":", m[2]] : ["", t], i < items.length - 1)); });
   }
   if (roles.length) {
-    children.push(heading(T(by.experience, "Professional Experience")));
+    const expTitle = T(by.experience, "Professional Experience");
+    children.push(heading(expTitle));
+    // LINEAR-CONT-001 (owner 2026-10-05 rule sheet "Page 2 start"): ONE explicit page-break paragraph before
+    // "PROFESSIONAL EXPERIENCE (CONT.)", never stacked spacers. Roles stay whole: the job line and every bullet
+    // but the last carry keepNext (the WORD-KEEPNEXT-ROW-001 strip applies to two-column page cells only).
+    let expPage = 1;
     for (const r of roles) {
+      if (r.page > expPage) {
+        expPage = r.page;
+        children.push(new Paragraph({ pageBreakBefore: true, spacing: { before: 0, after: 0, line: 1, lineRule: "exact" }, children: [] }));
+        if (!(style && style.contHeadlines === false)) children.push(heading(expTitle + " " + (ctx.contSuffix || "(CONT.)")));
+      }
       children.push(jobHeader(r));
       r.bullets.forEach((b, i) => children.push(bullet(b, i < r.bullets.length - 1)));
     }
   }
-  if (edu.length || certs) {
+  if (edu.length) {
     children.push(heading(T(by.education, "Education")));
     const cell = (blocks, m) => new TableCell({ width: { size: HALF_W, type: WidthType.DXA }, margins: m,
       children: blocks.length ? blocks.map((b, i) => eduBlock(b, i === 0)) : [new Paragraph({ children: [] })] });
@@ -26456,11 +26485,7 @@ function buildLinearCvDocument(ctx) {
         ...(edu.length ? [new TableRow({ children: [cell(eduL, { top: 60, bottom: 60, left: 40, right: 60 }), cell(eduR, { top: 60, bottom: 60, left: 60, right: 40 })] })] : []),
         ...(eduLast ? [new TableRow({ children: [new TableCell({ width: { size: HALF_W * 2, type: WidthType.DXA }, columnSpan: 2,
           margins: { top: 0, bottom: 60, left: 40, right: 40 }, children: [eduBlock(eduLast, true)] })] })] : []),
-        // certifications span BOTH columns as a full-width row (owner 2026-09-27)
-        ...(certs ? [new TableRow({ children: [new TableCell({ width: { size: HALF_W * 2, type: WidthType.DXA }, columnSpan: 2,
-          margins: { top: 40, bottom: 60, left: 40, right: 40 }, children: [new Paragraph({ spacing: { before: 0, after: 0 }, children: [
-            run(titleCase(T(by.certs, "Certifications")) + ":", { bold: true, size: lcSz(10), color: INK }), new TextRun({ break: 1 }),
-            run(noStop(certs), { size: lcSz(9.5), color: SEC }) ] })] })] })] : []),
+        // courses / certificates moved to the CREDENTIALS table (LINEAR-DETAILS-ENRICHED-001, owner 2026-10-05)
       ],
     }));
   }
@@ -26495,10 +26520,9 @@ function buildLinearCvDocument(ctx) {
   for (let g = 0; g < DETAIL_GROUPS.length; g++) {
     const rows = details.filter((d) => d.group === g);
     if (!rows.length) continue;
-    // one SHORT heading per table: the label of a one-row table, else the theme name
-    const labels = rows.map((d) => d.label).filter(Boolean);
-    const head = labels.length === 1 ? labels[0] : DETAIL_GROUPS[g][lang === "da" ? 2 : 1];
-    children.push(heading(head));
+    // every table carries its theme name (CREDENTIALS / LANGUAGES & PERSONAL / AVAILABILITY & REFERENCES), a
+    // one-row table too (LINEAR-DETAILS-ENRICHED-001, owner 2026-10-05: "three tables, each with its own heading")
+    children.push(heading(DETAIL_GROUPS[g][lang === "da" ? 2 : 1]));
     children.push(new Table({ alignment: AlignmentType.CENTER, layout: "fixed", width: { size: CONTENT_W, type: WidthType.DXA },
       columnWidths: [LABEL_W, CONTENT_W - LABEL_W], borders: nb, rows: rows.map(detailRow) }));
   }

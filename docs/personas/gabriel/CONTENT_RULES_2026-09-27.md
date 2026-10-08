@@ -109,3 +109,5 @@ General rules for every role and every executive-linear CV/letter, learned from 
 - Interests: Tai-chi · hiking · cultural exchange (languages, food, board games) · home supervision by three feline strategic napping experts.
 
 Generator twin of the 2026-10-05 structure: `housestyle_pdf_generator/course_cvs_2026-10-01/gen_linear3.py` (`linear_enriched`; first package 1041 microTECH, 2026-10-08).
+
+**Enriched CV scope (owner 2026-10-08):** the enriched CV is used ONLY when the posting or portal will not accept a cover letter (no letter field; an agency asking for "a CV"). Otherwise: plain linear CV + separate letter. In AntCV it is the output of the editor's "Fuse" (cover letter into CV) button - opt-in, never the default export.

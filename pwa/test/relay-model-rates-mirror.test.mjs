@@ -130,6 +130,17 @@ test('the ids shipped since the 09-29 pass are priced ahead of adoption (2026-10
   assert.deepEqual(rateForStrict('gemini-3.8-flash'), [0.75, 3.75]);
 });
 
+test('the ids shipped since the 10-01 pass are priced ahead of adoption (2026-10-08 tune)', async () => {
+  const { rateForStrict } = await import(pathToFileURL(MIRROR).href);
+  assert.deepEqual(rateForStrict('claude-haiku-5-5'), [0.1, 0.5]);    // ANTHROPIC-HAIKU55-RATES-2026-10-001 (was null / fallback [3,15])
+  assert.deepEqual(rateForStrict('mistral-large-4'), [0.68, 2.09]);   // MISTRAL-LARGE4-RATES-2026-10-001 (was mistral-large [0.5,1.5])
+  assert.deepEqual(rateForStrict('mistral-large-4-0'), [0.68, 2.09]);
+  assert.deepEqual(rateForStrict('mistral-large-latest'), [0.5, 1.5]); // the live pin still aliases Large 3 (mistral-large-2512)
+  assert.deepEqual(rateForStrict('gpt-5.5-cyber'), [12.5, 75]);     // GPT-CYBER-RATES-2026-10-001 (was gpt-5.5 [5,30])
+  assert.deepEqual(rateForStrict('gpt-5.6-cyber'), [12.5, 75]);     // (was gpt-5 [1.25,10])
+  assert.deepEqual(rateForStrict('gpt-5.5'), [5, 30]);
+});
+
 test('the strict lookup refuses to guess an unknown model', async () => {
   const { rateForStrict, rateFor } = await import(pathToFileURL(MIRROR).href);
   assert.equal(rateForStrict('some-model-nobody-has-shipped'), null);

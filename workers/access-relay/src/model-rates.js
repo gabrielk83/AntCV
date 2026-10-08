@@ -48,6 +48,12 @@ const RATES = {
   'claude-opus-4-5':     [5.00, 25.00],
   'claude-sonnet-4-6':   [3.00, 15.00],
   'claude-sonnet-4-5':   [3.00, 15.00],
+  // ANTHROPIC-HAIKU55-RATES-2026-10-001 (2026-10-08): Claude Haiku 5.5 is on platform.claude.com/docs/en/about-claude/pricing,
+  // priced by prompt length: [0.10,0.50] for prompts up to 100k tokens, [0.50,2.50] above. The id contains no existing key
+  // ('claude-haiku-4-5' / 'claude-haiku-4' are not substrings of it), so it fell to FALLBACK_RATE [3,15] = 30x OVER on input
+  // and rateForStrict() answered null. Pinned at the <=100k tier: the largest AntCV prompt in llm_calls is ~55k tokens.
+  // Not an AntCV pin. Haiku 3.5 is now listed as retired (first-party); its key stays for older deployed models.
+  'claude-haiku-5-5':    [0.10,  0.50],   // 2026-10-08 <=100k-token tier (>100k-token prompts bill [0.50,2.50])
   'claude-haiku-4-5':    [1.00,  5.00],
   // Anthropic — legacy (kept for older deployed models)
   'claude-3-haiku':      [0.25,  1.25],
@@ -77,9 +83,14 @@ const RATES = {
   'gpt-6-sol':           [2.00, 10.00],  // 2026-09-29
   'gpt-6-luna':          [0.10, 0.50],   // 2026-09-29 cheapest OpenAI text model on the page
   'gpt-5.5-pro':         [30.00, 180.00], // 2026-09-29 MUST stay longer than 'gpt-5.5' (the thorough-tier pin)
+  // GPT-CYBER-RATES-2026-10-001 (2026-10-08): the two Cyber tiers are on developers.openai.com/api/docs/pricing at [12.50,75].
+  // 'gpt-5.5-cyber' sits on the PINNED 'gpt-5.5' key -> [5,30] = 2.5x UNDER; 'gpt-5.6-cyber' matched 'gpt-5' -> [1.25,10] = 10x UNDER
+  // on input, 7.5x on output. Priced for the same reason as the -pro tiers: an id carrying a pin's string must not bill at the pin's rate.
+  'gpt-5.6-cyber':       [12.50, 75.00], // 2026-10-08 restricted-access tier; not an AntCV pin
+  'gpt-5.5-cyber':       [12.50, 75.00], // 2026-10-08 MUST stay longer than 'gpt-5.5'
   'gpt-5.4-pro':         [30.00, 180.00], // 2026-09-29 MUST stay longer than 'gpt-5.4'
   'gpt-6-astra':         [10.00, 50.00],  // 2026-09-10 OpenAI flagship; not an AntCV pin
-  'gpt-5.6-sol':         [4.00, 20.00],  // 2026-09-10
+  'gpt-5.6-sol':         [4.00, 20.00],  // 2026-09-10; page note read 2026-10-08: this is a PROMOTIONAL price "available at least through November 21, 2026" (no post-promo number given) — re-verify at the first tune after that date
   'gpt-5.6-terra':       [2.00, 12.00],  // 2026-09-10
   'gpt-5.6-luna':        [0.20, 1.20],  // 2026-09-10 cheapest of the 5.6 line; the 'gpt-5' fallback OVER-priced it 6.25x
   // GPT55-RATE-2026-09-001 (2026-09-10): gpt-5.5 is [5,30], NOT [30,60]. The [30,60] entry has been in the
@@ -102,6 +113,14 @@ const RATES = {
   // Mistral
   'mistral-small':       [0.15,  0.60],   // Mistral Small 4, verified 2026-08-20 mistral.ai/pricing/api
   'mistral-medium':      [1.50,  7.50],   // Mistral Medium 3.5, verified 2026-08-20 mistral.ai/pricing/api
+  // MISTRAL-LARGE4-RATES-2026-10-001 (2026-10-08): Mistral Large 4 (API ids 'mistral-large-4' / 'mistral-large-4-0', released
+  // 2026-10-06) is on docs.mistral.ai/inference/pricing at a SALE price [0.68,2.09] (list [1.36,4.18]; no end date given).
+  // Both ids contain 'mistral-large', so longest-key-wins handed them Large 3's [0.5,1.5] = 1.36x UNDER on input and 1.39x
+  // UNDER on output (2.7x / 2.8x at list). The live pin is SAFE today: GET /v1/models on 2026-10-08 says 'mistral-large-latest'
+  // aliases 'mistral-large-2512' (Large 3), so the 'mistral-large' key below still prices every AntCV mistral call correctly.
+  // Re-verify BOTH at every tune: the '-latest' alias will move to Large 4 one day (then add an explicit 'mistral-large-latest'
+  // key at the Large 4 rate), and the sale will end.
+  'mistral-large-4':     [0.68,  2.09],   // 2026-10-08 SALE price (list [1.36,4.18]). MUST stay longer than 'mistral-large'. Not an AntCV pin.
   'mistral-large':       [0.50,  1.50],   // Mistral Large 3, verified 2026-08-20 mistral.ai/pricing/api. Was [2,6] (Large 2 era) - 4x over. Substring-matches the live `mistral-large-latest`. LLM-COST-MISTRAL-RATE-001.
   // Gemini
   'gemini-1.5-flash':    [0.075, 0.30],

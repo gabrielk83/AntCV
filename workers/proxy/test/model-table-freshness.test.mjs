@@ -305,3 +305,44 @@ test('the 2026-10-01 Gemini ids are priced but stay OUT of the default gemini ca
     assert.ok(!PROVIDER_MODELS.gemini.includes(id), `${id} adoption is an owner call, not a pricing side effect`);
   }
 });
+
+// ------------------------------------------------------------
+// 2026-10-08 (weekly tune) — ANTHROPIC-HAIKU55-RATES-2026-10-001 + MISTRAL-LARGE4-RATES-2026-10-001.
+//   - "claude-haiku-5-5" -> no key          -> FALLBACK_RATE [3,15] (real [0.10,0.50] at <=100k tokens: 30x OVER on input)
+//   - "mistral-large-4"  -> 'mistral-large' -> [0.5,1.5]            (real SALE [0.68,2.09], list [1.36,4.18]: UNDER-priced)
+// The live mistral pin is unaffected: 'mistral-large-latest' aliases 'mistral-large-2512' (Large 3) per /v1/models 2026-10-08.
+
+test('claude-haiku-5-5 is priced at its <=100k tier instead of inheriting the [3,15] fallback', () => {
+  assert.deepEqual(rateFor('claude-haiku-5-5'), [0.10, 0.50]);
+  assert.ok(RATES_KEYS()['claude-haiku-5-5'], 'explicit key missing');
+  // Neighbours undisturbed.
+  assert.deepEqual(rateFor('claude-haiku-4-5'), [1.00, 5.00]);
+  assert.deepEqual(rateFor('claude-3-5-haiku'), [0.80, 4.00]);
+});
+
+test('mistral-large-4 lifts off the Large 3 key; the live -latest alias still prices as Large 3', () => {
+  assert.deepEqual(rateFor('mistral-large-4'), [0.68, 2.09]);
+  assert.deepEqual(rateFor('mistral-large-4-0'), [0.68, 2.09]);
+  assert.deepEqual(rateFor('mistral-large-latest'), [0.50, 1.50]);
+  assert.deepEqual(rateFor('mistral-large-2512'), [0.50, 1.50]);
+  assert.deepEqual(rateFor('mistral-large-2411'), [0.50, 1.50]);
+});
+
+test('the Cyber tiers lift off the PINNED gpt-5.5 key and the shorter gpt-5 key', () => {
+  assert.deepEqual(rateFor('gpt-5.5-cyber'), [12.50, 75.00]);
+  assert.deepEqual(rateFor('gpt-5.6-cyber'), [12.50, 75.00]);
+  // The pins they sit above are undisturbed.
+  assert.deepEqual(rateFor('gpt-5.5'), [5.00, 30.00]);
+  assert.deepEqual(rateFor('gpt-5.5-pro'), [30.00, 180.00]);
+  assert.deepEqual(rateFor('gpt-5.6-sol'), [4.00, 20.00]);
+});
+
+test('the 2026-10-08 ids are priced but stay OUT of the default cascades', () => {
+  assert.ok(!PROVIDER_MODELS.anthropic.includes('claude-haiku-5-5'), 'haiku-5-5 adoption is an owner call, not a pricing side effect');
+  for (const id of ['gpt-5.5-cyber', 'gpt-5.6-cyber']) {
+    assert.ok(!PROVIDER_MODELS.openai.includes(id), id + ' must stay out of the default openai chain');
+  }
+  for (const id of ['mistral-large-4', 'mistral-large-4-0']) {
+    assert.ok(!PROVIDER_MODELS.mistral.includes(id), id + ' adoption is an owner call, not a pricing side effect');
+  }
+});

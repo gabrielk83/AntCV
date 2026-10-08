@@ -107,3 +107,5 @@ General rules for every role and every executive-linear CV/letter, learned from 
 - Supplier qualification: four countries (Israel, China, Taiwan, Sweden).
 - Education focus: M.Sc. EE - optics, photonics and nanotechnology, in a photonics research group, two peer-reviewed papers; both B.Sc. degrees - optics, VLSI and DSP; MBA - business plan honourable mention at Tsinghua University.
 - Interests: Tai-chi · hiking · cultural exchange (languages, food, board games) · home supervision by three feline strategic napping experts.
+
+Generator twin of the 2026-10-05 structure: `housestyle_pdf_generator/course_cvs_2026-10-01/gen_linear3.py` (`linear_enriched`; first package 1041 microTECH, 2026-10-08).

@@ -433,6 +433,9 @@ def probe_rows(doc, args, today):
 def cmd_check(args):
     today = datetime.date.today()
     rev, doc = get_doc()
+    # REV-TRAIL: the run-log wants "doc rev before -> after" for every sweep,
+    # and the relay answers a 200 PUT with { ok, rev }. Keep both ends.
+    rev_before, rev_after = rev, None
     results = probe_rows(doc, args, today)
 
     if args.apply:
@@ -440,6 +443,7 @@ def cmd_check(args):
         for attempt in range(4):
             c, b = put_doc(doc, rev)
             if c == 200:
+                rev_after = b.get("rev") if isinstance(b, dict) else None
                 break
             if c == 409:
                 # Another writer moved the doc while we probed. The 409 body
@@ -449,8 +453,9 @@ def cmd_check(args):
                 new_rev, new_doc = b.get("rev"), b.get("doc")
                 if not isinstance(new_doc, dict) or new_rev is None:
                     new_rev, new_doc = get_doc()
+                # stderr: with --json the caller parses stdout whole.
                 print("  409 (rev moved to %s), re-applying %d verdict(s) without re-probing (attempt %d)..."
-                      % (new_rev, len(results), attempt + 1))
+                      % (new_rev, len(results), attempt + 1), file=sys.stderr)
                 rev, doc = new_rev, new_doc
                 results = reapply_results(doc, results, today, args.apply)
                 continue
@@ -464,7 +469,9 @@ def cmd_check(args):
 
     if args.json:
         print(json.dumps({"checked": len(results), "counts": counts,
-                          "applied": bool(args.apply), "rows": results},
+                          "applied": bool(args.apply),
+                          "rev_before": rev_before, "rev_after": rev_after,
+                          "rows": results},
                          ensure_ascii=False, indent=1))
         return
 
@@ -481,6 +488,8 @@ def cmd_check(args):
     print("\n%d live, %d archived%s" % (
         live, sum(1 for r in results if r["archived"]),
         "" if args.apply else "  (dry run — pass --apply to write)"))
+    print("doc rev %s%s" % (rev_before,
+                            " -> %s (written)" % rev_after if args.apply else " (not written)"))
 
 
 def main():

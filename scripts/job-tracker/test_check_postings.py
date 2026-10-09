@@ -353,7 +353,7 @@ _saved = (cp.probe, cp.put_doc, cp.get_doc)
 cp.probe, cp.put_doc, cp.get_doc = fake_probe, fake_put, fake_get
 buf = io.StringIO()
 try:
-    with contextlib.redirect_stdout(buf):
+    with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
         cp.cmd_check(argparse.Namespace(**ARGS))
 finally:
     cp.probe, cp.put_doc, cp.get_doc = _saved
@@ -379,7 +379,7 @@ def fake_put_bare(doc, base_rev):
 
 cp.probe, cp.put_doc, cp.get_doc = fake_probe, fake_put_bare, fake_get
 try:
-    with contextlib.redirect_stdout(io.StringIO()):
+    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
         cp.cmd_check(argparse.Namespace(**ARGS))
 finally:
     cp.probe, cp.put_doc, cp.get_doc = _saved
@@ -396,7 +396,7 @@ def fake_put_forever(doc, base_rev):
 cp.probe, cp.put_doc, cp.get_doc = fake_probe, fake_put_forever, fake_get
 rc = None
 try:
-    with contextlib.redirect_stdout(io.StringIO()):
+    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
         try:
             cp.cmd_check(argparse.Namespace(**ARGS))
         except SystemExit as e:
@@ -405,6 +405,41 @@ finally:
     cp.probe, cp.put_doc, cp.get_doc = _saved
 check("four 409s in a row exit with an error, after 4 PUTs and 1 probe",
       (rc is not None and "409" in rc, len(puts), len(probes)), (True, 4, 1))
+
+# REV-TRAIL: the summary and the --json output name the rev read and the rev the
+# relay wrote. The run-log wants "rev before -> after"; the 2026-10-09 nightly had
+# to recover it from the Excel pull because the sweep printed neither.
+def run_check(**over):
+    """Real cmd_check with the stubs above; returns (stdout, stderr)."""
+    probes.clear(); puts.clear(); gets.clear()
+    cp.probe, cp.put_doc, cp.get_doc = fake_probe, fake_put, fake_get
+    out, err = io.StringIO(), io.StringIO()
+    try:
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            cp.cmd_check(argparse.Namespace(**dict(ARGS, **over)))
+    finally:
+        cp.probe, cp.put_doc, cp.get_doc = _saved
+    return out.getvalue(), err.getvalue()
+
+
+log, err = run_check()
+check("apply: the summary names the rev read and the rev written (through the 409)",
+      "doc rev 11 -> 13 (written)" in log, True)
+check("apply: the 409 progress line goes to stderr", "rev moved to 12" in err, True)
+out, err = run_check(json=True)
+check("--json through a 409: stdout is ONE parseable document (409 line on stderr)",
+      (out.lstrip().startswith("{"), "rev moved" in out, "rev moved to 12" in err), (True, False, True))
+try:
+    j = json.loads(out)
+except ValueError:
+    j = {}
+check("--json: rev_before / rev_after carry the same two revs",
+      (j.get("rev_before"), j.get("rev_after"), j.get("applied")), (11, 13, True))
+log, _ = run_check(apply=False)
+check("dry run: the rev read, marked not written, no PUT",
+      ("doc rev 11 (not written)" in log, len(puts)), (True, 0))
+j = json.loads(run_check(apply=False, json=True)[0])
+check("dry run --json: rev_after is null", (j.get("rev_before"), j.get("rev_after")), (11, None))
 
 if fails:
     print("FAIL (%d):" % len(fails))

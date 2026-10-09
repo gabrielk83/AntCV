@@ -4,6 +4,18 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 122 — POSTING-SWEEP-REV-TRAIL-001 — CLOSED 2026-10-09 (job-tracker nightly, evidence: live dry run after the fix + negative-controlled test on the real cmd_check)
+
+_verified: 2026-10-09_
+
+_Found and fixed the same run by the job-tracker nightly 2026-10-09 (Gabo-PC, Fable 5.1). Script-only: `scripts/job-tracker/check-postings.py` + `test_check_postings.py`, no `pwa/` asset, no cache-bust, no version consumed, no shift claim._
+
+**Evidence.** Rule (5) asks every run entry for the doc rev before and after. The step 1b sweep's summary ended at "99 live, 1 archived" and named no rev, so the 10-08 and 10-09 entries recovered the numbers from the Excel pull (`job-tracker-sync.py pull` prints "pulled rev N") and from the other writer's log. `get_doc()` already returns the rev and the relay's 200 PUT answers `{ ok, rev: nextRev, updated_at }` (`workers/access-relay/src/index.js` ~3974); `cmd_check` threw both away. The new test also showed that the 409 progress line (`409 (rev moved to N), re-applying ...`) printed to stdout, so under `--json` a conflict made stdout two documents and `json.loads` raised "Extra data".
+
+**Fix.** `cmd_check` keeps `rev_before` from the GET and `rev_after` from the 200 PUT body; the text summary gains a last line `doc rev R0 -> R1 (written)` on an apply and `doc rev R0 (not written)` on a dry run; `--json` carries `rev_before` and `rev_after` (null on a dry run); the 409 line goes to stderr. Verdict logic, strike counts and the archive edit are untouched.
+
+**Test.** `test_check_postings.py` +6 checks through a `run_check()` helper that drives the real `cmd_check` with the existing `fake_probe` / `fake_put` (409 then 200) / `fake_get` stubs and captures stdout and stderr apart: the summary reads `doc rev 11 -> 13 (written)`; the 409 line is on stderr; the JSON stdout starts with `{` and parses whole with `rev_before 11, rev_after 13, applied true`; the dry run reads `doc rev 11 (not written)` with 0 PUTs; the dry-run JSON has `rev_after null`. The two older 409 scenarios now also redirect stderr. Negative control by line index: `rev_after = None` at check-postings.py:446 -> 2 red; the 409 print back on stdout at :458 -> 3 red; restored green. Live: `check --limit 1 --json` dry run on rev 286 -> `rev_before 286, rev_after null`, 0 bytes on stderr.
+
 ## Row 14 — JD-SCAN-HALLUCINATION-001 — CLOSED 2026-10-09 (desktop nightly E1, evidence: all three legs in both bundles at HEAD and on the served app.js, 17 unit checks green, the "needs real models" caveat predates the ship)
 
 _verified: 2026-10-09_

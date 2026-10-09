@@ -1965,6 +1965,8 @@ confirmed landed, 3 checks go red. All 14 job-tracker python tests green. Live-v
 | 106 | POSTING-OBSOLETE-001 follow-through — wire `check-postings.py --apply` into the twice-weekly discovery run and the nightly, and settle the 4 rows sitting on strike 1 | FIXED 2026-08-26 (sweep + archive + generator belt shipped; 17 rows archived on the first live run). Legs (a) and (b) CLOSED same day: (a) both scheduled-task prompts now run the sweep (discovery step 1a, nightly step 1b) — owner-approved; (b) a second sweep agreed on all four 404s, so Scarlet / GEA / Trackman / spektr archived through the normal two-strike path — **25 rows archived, 52 live**. Remaining: (c) the sweep is script-side only, so "as soon as" means "at the next sweep", not live in the browser — an on-open client check was deliberately NOT added (see the sidecar-observer and rAF-freeze precedents). verified: 2026-08-26 |
 ```
 
+**RE-VERIFIED 2026-10-09 (job-tracker nightly, Gabo-PC).** Sweep `--apply` on 101 rows (the 22 leads of the 10-08 discovery included): 99 LIVE, 1 archived (Factbird / Product Manager, GONE strike 2/2 on separate days, first strike 10-08), 1 ERROR not counted (VML MAP HTTP 500, eighth run in a row), no 409, doc rev 285 -> 286. The sweep now prints the rev it read and the rev it wrote and keeps `--json` stdout to one document after a 409 (POSTING-SWEEP-REV-TRAIL-001, row 122 CLOSED). Open question for the owner: an ERROR streak of eight sweeps on one host never counts by rule; an ERROR-streak gate would be a rule change, not done unattended.
+
 ---
 
 ## Row 110 — ANTCV-TOKEN-EXPIRED-2026-09-02-001
@@ -2067,6 +2069,8 @@ says so.
 | **110** | **ANTCV-TOKEN-EXPIRED-2026-09-02-001 (found by the position-discovery run 2026-09-29).** `~/.antcv/token` expired 2026-09-02T10:23:44Z (issued 08-26, 7-day TTL), unrefreshed 27 days; relay answers `401 {"error":"unauthenticated"}` so every relay-backed routine stops at its AUTH gate. Cause: no routine fired 2026-08-27..2026-09-29 (33-day host-wide gap — routines are desktop-app-local), and the token only self-renews on a routine call made while it is still valid. OWNER: re-save the token from the PWA console. REMAINING: structural fix (machine token for routines, or a preflight pre-expiry warning). | `ROUTINE_HEALTH.jsonl`; ACTIVE_BUGS 2026-09-29 top block | BLOCKED on owner token re-save |
 ```
 
+**RE-VERIFIED 2026-10-09 (job-tracker nightly, Gabo-PC).** `routine-preflight.mjs token` exit 0: the owner re-saved the token since the 10-08 run (expiry moved from 2026-10-12 to 2026-10-15, 6.2 d left at the run); every relay step of the run passed. Dispatch gap 0.8 d. REMAINING: leg (a), a long-lived machine token or a longer relay session TTL; the 7-day credential still dies with any week the app is closed.
+
 ---
 
 ## Row 114 — TELEMETRY-BGJOB-GAP-001
@@ -2108,3 +2112,5 @@ _verified: 2026-10-08_
 **Advanced 2026-10-06 (job-tracker nightly, Gabo-PC).** Option (a) SHIPPED, script-only: `gen-runner.py` gained `armed_with_app_rows(doc)` and `print_armed_summary(doc)`, called at the end of `list` and of `run`. The block prints "ARMED but already has an application (N)" with uk, rank, company / role, app id and either the tracked status or "CLOSED row, flag stale", plus the manual regen line. The eligible set is unchanged. Live on rev 282 it names `napatech` (app 2781, closed) and `veo_technologies` (app 3500, Submitted). `test_closed_row_gate.py` 20 -> 37 checks on the real functions, negative-controlled (filter line 459 -> `if False:`, 3 red; empty guard line 473 -> `if True:`, 5 red; restored green). REMAINING, owner: options (b) and (c) are a decision, not a default; the dead-pointer check stays offline (no network call in `list`); clearing the stale `queue=true` on `napatech` and `veo_technologies` is a doc write, not done unattended.
 
 **RE-VERIFIED 2026-10-08 (job-tracker nightly, Gabo-PC).** `gen-runner.py list` still prints the ARMED-with-app block for `napatech` (app 2781, CLOSED row, flag stale) and `veo_technologies` (app 3500, Submitted); 0 eligible rows. REMAINING unchanged: owner decision on (b) regen-on-arm / (c) dead pointer = never generated; the two stale flags are a doc write, not done unattended.
+
+**RE-VERIFIED 2026-10-09 (job-tracker nightly, Gabo-PC).** `gen-runner.py list` on rev 286 still prints the ARMED-with-app block for `napatech` (app 2781, CLOSED row, flag stale) and `veo_technologies` (app 3500, Submitted); 0 eligible rows, 57 unarmed ready. REMAINING unchanged: owner decision on (b) regen-on-arm / (c) dead pointer = never generated; the two stale flags are a doc write, not done unattended.

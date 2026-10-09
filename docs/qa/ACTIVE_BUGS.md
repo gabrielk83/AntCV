@@ -3962,6 +3962,14 @@ blue-screen guard — serve pwa/, assert 0 console errors + `typeof glDemo`),
   the stale 1.50.166 tree; the browser-QA `palette-mix` gate should be re-pointed at the
   1.50.180 self-heal (it asserts `localStorage.stylePackage` resolves to a registry id — now
   expected to pass).
+  - **CORRECTION 2026-10-09 (CI nightly, live on prod `1.51.4873`):** the `palette-mix` gate still
+    FAILS — `localStorage.stylePackage` stays orphan `"scandinavian"` after a local-seed reload. The
+    RENDER is fixed (render-time `__pkgNorm` resolves it; `body[data-package]=copenhagen-modern`,
+    tone `nordic-minimal`), so there is no user-facing "black mix"; but the PERSISTED-id self-migration
+    is incomplete — the `set("stylePackage", __pkgNorm())` write-back fires only on cloud-restore
+    (app.src.js 17609/23451), never at boot. So "self-heals the stored id" was only ever true on a
+    cloud round-trip. Residual tracked as **PKG-ID-PERSIST-MIGRATE-001 (register row 123)**; low
+    severity, owner-gated init write-back. The gate is correctly RED until that boot write-back lands.
 
 ---
 

@@ -236,7 +236,9 @@ _reconcile 2026-09-07 (CI nightly, E1): WIB-TABLE-DIMS-001 forwarding pipeline I
 
 ## Row 6 — BANNED-WORDS-MERGE-001
 
-_verified: 2026-09-27_
+_verified: 2026-10-09_
+
+_reconcile 2026-10-09 (CI nightly, E1): code-complete state STILL HOLDS on HEAD `d5bda7eb` — both kill-switches `antcv:keep-native-banned` + `antcv:no-kernel-chain` present in `antcv-data-importer.js` (2 hits), island `banned_*` writer present in `antcv-react-islands.js`; full suite 1821/1821 green. Unchanged: OWNER eyeball of the merged banned-words UI + one file of each of the 6 loader types — owner-gated, not verifiable in CI._
 
 _reconcile 2026-09-27 (CI nightly, E1): code-complete state STILL HOLDS on HEAD `0537eb7b` — `antcv:keep-native-banned` + `antcv:no-kernel-chain` kill-switches present in `antcv-data-importer.js`, island `banned_*` writer present in `antcv-react-islands.js`; full suite 1715/1715 green. Unchanged: OWNER eyeball of the merged banned-words UI + one file of each of the 6 loader types — owner-gated, not verifiable in CI._
 
@@ -260,7 +262,9 @@ _reconcile 2026-09-07 (CI nightly, E1): code-complete state CONFIRMED against HE
 
 ## Row 8 — KERNEL-V2-READER-001
 
-_verified: 2026-09-27_
+_verified: 2026-10-09_
+
+_reconcile 2026-10-09 (CI nightly, E1): `pwa/test/unit/kernel-v2-reader.test.mjs` RE-RUN GREEN (5/5) on HEAD `d5bda7eb`; `antcv:ingestedKernel` staged-kernel reader intact in `antcv-kernel-import.js` (both bundles). Unchanged: (a) bullets-path v2-direct migration (safe while autoSync projects v2→workHistory), (c) es/zh + lazy language_view tier (needs real models), (d) §6 P/DOCX/PDF regression parity on an uploaded docx (owner-gated) — none doable in CI._
 
 _reconcile 2026-09-27 (CI nightly, E1): `pwa/test/unit/kernel-v2-reader.test.mjs` RE-RUN GREEN (5/5) on HEAD `0537eb7b`; `antcv:ingestedKernel` staged-kernel reader intact in `antcv-kernel-import.js` (both bundles). Unchanged: (a) bullets-path v2-direct migration (safe while autoSync projects v2→workHistory), (c) es/zh + lazy language_view tier (needs real models), (d) §6 P/DOCX/PDF regression parity on an uploaded docx (owner-gated) — none doable in CI._
 
@@ -284,7 +288,9 @@ _reconcile 2026-09-07 (CI nightly, E1): `pwa/test/unit/kernel-v2-reader.test.mjs
 
 ## Row 12 — AI-NOTICE-LEFT-CLOUDCONVERT-001
 
-_verified: 2026-09-27_
+_verified: 2026-10-09_
+
+_reconcile 2026-10-09 (CI nightly, E1): `pwa/test/unit/ai-notice-position.test.mjs` RE-RUN GREEN (3/3) on HEAD `d5bda7eb`; the page-relative margin-left encoding (0pt/275pt + jc) in `workers/docx-worker/src/index.js` is unchanged. The AI-NOTICE-LEFT anchor bug stays effectively resolved; row lingers only on the docx-baseline "remaining 3" (cjlr-table-export, pageflow-export, spacing-linkedin-export), SEPARATE tests. Recommendation stands: owner move to CLOSED and re-file the 3 baseline gaps under their own IDs if still open._
 
 _reconcile 2026-09-27 (CI nightly, E1): `pwa/test/unit/ai-notice-position.test.mjs` RE-RUN GREEN (3/3) on HEAD `0537eb7b`; the page-relative margin-left encoding (0pt/275pt + jc) in `workers/docx-worker/src/index.js` is unchanged. The AI-NOTICE-LEFT anchor bug stays effectively resolved; row lingers only on the docx-baseline "remaining 3" (cjlr-table-export, pageflow-export, spacing-linkedin-export), which are SEPARATE tests. Recommendation stands: owner move to CLOSED and re-file the 3 baseline gaps under their own IDs if still open._
 
@@ -302,7 +308,9 @@ _reconcile 2026-09-07 (CI nightly, E1): the shipped page-relative margin-left en
 
 ## Row 21 — SETTINGS-ROLLER-RESET-001
 
-_verified: 2026-09-27_
+_verified: 2026-10-09_
+
+_reconcile 2026-10-09 (CI nightly, E1): `pwa/test/diag-settings-history-guard.mjs` RE-RUN GREEN on HEAD `d5bda7eb` (headless, real browser — chromium-headless-shell installed this run) — guarded: openBefore {open:true,sentinel:true} → after {marker:"alive", url:/index.html, open:false, sentinel:true} (Back consumed the sentinel, panel closed, NO reload, sentinel re-armed); kill-switch control: navigated away to /manifest.json, marker GONE (the reset reproduced). `antcv-settings-history-guard.js` + kill-switch `antcv:no-settings-history-guard` present. Unchanged: OWNER live-verify on real roller-side hardware Back button still owed._
 
 _reconcile 2026-09-27 (CI nightly, E1): the fix code is INTACT on HEAD `0537eb7b` — `antcv-settings-history-guard.js` present with kill-switch `antcv:no-settings-history-guard`; full suite 1715/1715 green. NOTE: this env has no chromium (`~/.cache/ms-playwright` absent), so `diag-settings-history-guard.mjs` (headless real browser) could NOT be launched this run — the 2026-09-17 headless GREEN result stands as the last live confirmation. Unchanged: OWNER live-verify on real roller-side hardware Back button still owed._
 
@@ -320,7 +328,9 @@ _reconcile 2026-09-07 (CI nightly, E1): `diag-settings-history-guard.mjs` GREEN 
 
 ## Row 22 — CL-SLOGAN-RICHCONTENT-001
 
-_verified: 2026-09-28_
+_verified: 2026-10-09_
+
+_E1 re-verify 2026-10-09 (CI nightly, HEAD d5bda7eb): phase-1 sidecar `antcv-cl-slogan-element.js` loaded in index.html (1 ref) + kill-switch `antcv:disable-cl-slogan-element` present in the sidecar (2 hits); suite 1821/1821. Phase 2 (real sections.cl rich_block) remains GENUINE OPEN WORK — spec-before-splice, owner-gated._
 
 _E1 re-verify 2026-09-28 (CI nightly, HEAD c9c60887): phase-1 sidecar `antcv-cl-slogan-element.js` loaded in index.html (1 ref) + kill-switch `antcv:disable-cl-slogan-element` present in the sidecar; suite 1721/1721. Phase 2 (real sections.cl rich_block) remains GENUINE OPEN WORK — spec-before-splice, owner-gated._
 
@@ -2114,3 +2124,38 @@ _verified: 2026-10-08_
 **RE-VERIFIED 2026-10-08 (job-tracker nightly, Gabo-PC).** `gen-runner.py list` still prints the ARMED-with-app block for `napatech` (app 2781, CLOSED row, flag stale) and `veo_technologies` (app 3500, Submitted); 0 eligible rows. REMAINING unchanged: owner decision on (b) regen-on-arm / (c) dead pointer = never generated; the two stale flags are a doc write, not done unattended.
 
 **RE-VERIFIED 2026-10-09 (job-tracker nightly, Gabo-PC).** `gen-runner.py list` on rev 286 still prints the ARMED-with-app block for `napatech` (app 2781, CLOSED row, flag stale) and `veo_technologies` (app 3500, Submitted); 0 eligible rows, 57 unarmed ready. REMAINING unchanged: owner decision on (b) regen-on-arm / (c) dead pointer = never generated; the two stale flags are a doc write, not done unattended.
+
+---
+
+## Row 123 — PKG-ID-PERSIST-MIGRATE-001
+
+_verified: 2026-10-09_
+
+**Filed 2026-10-09 (CI nightly, register-escape + status reconcile).** The browser-QA `palette-mix`
+check (PACKAGE-PALETTE-MIX-001) FAILS live on prod `1.51.4873-linear-enriched`
+(`node scripts/browser-qa.mjs --only palette-mix`, run twice, stable):
+`{stylePackage:"scandinavian", dataPackage:"copenhagen-modern", toneRegister:"nordic-minimal",
+lsResolved:false, dataPackageAgrees:false, toneResolved:true}`.
+
+Diagnosis (app.src.js read, HEAD `d5bda7eb`): the user-facing symptom is FIXED — render-time
+`__pkgNorm` (def 16228, read at 19313 etc.) resolves the orphan id to `copenhagen-modern`, so
+`body[data-package]` is correct and the tone resolves to `nordic-minimal`; there is NO "black mix".
+What remains is that the PERSISTED id self-migration FEATURES_REGISTRY claimed under
+APPJS-ID-SCHEME-UNIFY ("self-migrating stylePackage init", CLOSED 1.50.387) is INCOMPLETE: the only
+write-backs `set("stylePackage", __pkgNorm(...))` are on the cloud-restore path (app.src.js 17609)
+and a restore-like path (23451). There is NO boot/init write-back, so a locally-persisted orphan
+`"scandinavian"` (never cloud-round-tripped) stays orphan in `localStorage.stylePackage`. The
+`palette-mix` check seeds a local orphan + plain reload (no cloud restore), which is exactly the
+un-migrated case.
+
+Status reconcile: FEATURES_REGISTRY had PACKAGE-PALETTE-MIX-001 simultaneously "still OPEN" (row at
+FT-VISUAL-PACKAGES) and "CLOSED ... closes the root" (APPJS-ID-SCHEME-UNIFY row), and ACTIVE_BUGS
+(2026-06-06 batch) marked it "FIXED✓ self-healing". Correct state: render FIXED; persisted-id
+self-clean on a non-restore boot is NOT done — tracked here so it stops escaping the register and
+stops being re-discovered by the QA check.
+
+Severity LOW (render always correct via `__pkgNorm`; the orphan id is harmless as long as every read
+path normalizes — which they do). REMAINING, owner-gated (touches app.js init → surgical mirror, not
+done unattended): add an init-time `set("stylePackage", __pkgNorm(get))` write-back so the stored id
+self-cleans on first boot, then re-point / green the `palette-mix` gate. Not urgent — a cosmetic
+storage-layer cleanup, no user impact while the render mitigation holds.

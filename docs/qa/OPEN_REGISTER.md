@@ -50,11 +50,11 @@ citing an old number may mean either row — the ID disambiguates.
 | 82 | `ROLE-CANON-AUDIT-LEG-001` | 2026-10-04 | (follow-up) — export-audit leg NOW WIRED + green (gold_audit.py role_canon_issues, test_gold_residue 18/18); only es/zh eyeball owner-gated |
 | 94 | `CONTENT-LANG-STAMP-001` | 2026-10-01 | CODE SHIPPED 1.51.4446-content-lang-stamp (D1 content_language column + relay whitelist + both app.js legs). R |
 | 25 | `TABLE-GEOMETRY-PARITY-001` | 2026-10-09 | Table geometry parity — diagnose real CloudConvert PDF vs preview measurement |
-| 6 | `BANNED-WORDS-MERGE-001` | 2026-09-27 | Wizard/Settings UX — owner eyeball gate on merged banned-words UI + 6-file loader test |
-| 8 | `KERNEL-V2-READER-001` | 2026-09-27 | Kernel v2 — bullets-path v2 migration, es/zh tier, §6 regression pass on uploaded docx |
-| 12 | `AI-NOTICE-LEFT-CLOUDCONVERT-001` | 2026-09-27 | diag-ai-notice-anchor RED CLOSED (2026-07-03): the WORKER was right — AI-NOTICE-LEFT-CLOUDCONVERT-001 (owner 2 |
-| 21 | `SETTINGS-ROLLER-RESET-001` | 2026-09-27 | FIXED (1.51.90): mechanism CONFIRMED live — history.back() with Settings open was a REAL navigation (side/tilt |
-| 22 | `CL-SLOGAN-RICHCONTENT-001` | 2026-09-28 | CL slogan rich-content phase 2 — real sections.cl rich_block object, dedupe render sites |
+| 6 | `BANNED-WORDS-MERGE-001` | 2026-10-09 | Wizard/Settings UX — owner eyeball gate on merged banned-words UI + 6-file loader test |
+| 8 | `KERNEL-V2-READER-001` | 2026-10-09 | Kernel v2 — bullets-path v2 migration, es/zh tier, §6 regression pass on uploaded docx |
+| 12 | `AI-NOTICE-LEFT-CLOUDCONVERT-001` | 2026-10-09 | diag-ai-notice-anchor RED CLOSED (2026-07-03): the WORKER was right — AI-NOTICE-LEFT-CLOUDCONVERT-001 (owner 2 |
+| 21 | `SETTINGS-ROLLER-RESET-001` | 2026-10-09 | FIXED (1.51.90): mechanism CONFIRMED live — history.back() with Settings open was a REAL navigation (side/tilt |
+| 22 | `CL-SLOGAN-RICHCONTENT-001` | 2026-10-09 | CL slogan rich-content phase 2 — real sections.cl rich_block object, dedupe render sites |
 | 33 | `WHY-RULE-EXPORT-PARITY-001` | 2026-09-28 | Export align parity — name-line + section-headline alignment lost on PDF/DOCX export |
 | 24 | `ANALYTICS-BUTTONS-SESSION-TIMEOUT-001` | 2026-09-28 | Analytics buttons — both sides fixed, needs owner click-through confirm |
 | 26 | `TOOLS-SIDEBAR-COMPRESS-001` | 2026-09-28 | Tools sidebar compress — exact owner gold-text (Instruments/Lab strings) as deterministic rule |
@@ -133,6 +133,7 @@ citing an old number may mean either row — the ID disambiguates.
 | 115 | `PWA-COST-METER-OPUS55-001` | 2026-10-08 | RE-VERIFIED 2026-10-08 (weekly tune: `C.claude` still [2,10], `q()` still pins opus-5-5; no opus-5-5 telemetry row yet, no LLM call since 09-28) · (found by the weekly cost-quality cross-check 2026-10-01) — the PWA `C` map meters provider `claude` at [2,10] (sonnet-5) while `q()` pins `claude-opus-5-5` [4,20] since 1.51.4666, so the client per-gen meter + cost ceiling run 2x low when opus-5-5 serves. Server telemetry unaffected. Fix: meter by returned model id (app.js + cache-bust, shift lane). |
 | 117 | `CLUSTER-GLOBAL-SINGLE-JD-DOMINANCE-001` | 2026-10-04 | (found by the weekly demand-seed run 2026-10-04) — in D1 `__global_market__`, one JD (jd_count 1) holds 18/20 executive rows; pm_process/photonics_eng are 100% JD signal, so weekly research is invisible there. Owner design decision owed (jd_count threshold or blend). |
 | 118 | `JT-ARMED-ARTIFACT-NO-DRAIN-001` | 2026-10-09 | (found by the job-tracker nightly 2026-10-05) - an armed row with an existing application is skipped by `gen-runner` while the island shows it as Queued. Option (a) SHIPPED 2026-10-06: `list` and `run` print an "ARMED but already has an application" block naming the row. REMAINING: owner decision on (b) regen-on-arm / (c) dead pointer = never generated; clear the stale flags on napatech + veo_technologies (doc write) |
+| 123 | `PKG-ID-PERSIST-MIGRATE-001` | 2026-10-09 | (found by CI nightly 2026-10-09, register-escape + status reconcile) — PACKAGE-PALETTE-MIX-001's persisted-id self-migration is INCOMPLETE: `set("stylePackage", __pkgNorm())` write-back fires only on cloud-restore (app.src.js 17609/23451), never at boot, so a locally-persisted orphan `"scandinavian"` stays orphan; render-time `__pkgNorm` (19313) masks it so colours are correct. Live-reproduced on prod 1.51.4873 via `browser-qa --only palette-mix`. Low severity (render correct). REMAINING: owner-gated app.js init-time write-back if the stored id should self-clean. |
 
 ---
 

@@ -15,7 +15,9 @@ When you finish it: move it to `REGISTER_CLOSED.md`.
 
 ## Row 38 — GEN-BACKGROUND-001
 
-_verified: 2026-10-08_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4833-cache-bust-set`; `browser-qa --only version-live,sidecars-live` 2/2). Residual legs unchanged in kind. Blocked on: real device (A/B with `antcv:gen-resume=1`).
+_verified: 2026-10-09_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4873-linear-enriched`; `browser-qa --only version-live,sidecars-live` 2/2; served `index.html` and `app.js` byte-identical to the repo modulo CRLF). Residual legs unchanged in kind. Blocked on: real device (A/B with `antcv:gen-resume=1`).
+
+**Prior (2026-10-08):** desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4833-cache-bust-set`; `browser-qa --only version-live,sidecars-live` 2/2). Residual legs unchanged in kind. Blocked on: real device (A/B with `antcv:gen-resume=1`).
 
 **Prior (2026-10-06):** desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS, before and after the 1.51.4833 ship). Blocked: real device (background/lock A/B).
 
@@ -208,7 +210,9 @@ in CI) + a live translate-persist cycle to verify — carry forward.
 
 ## Row 25 — TABLE-GEOMETRY-PARITY-001
 
-_verified: 2026-09-27_
+_verified: 2026-10-09_
+
+_reconcile 2026-10-09 (desktop nightly, E1, HEAD `45e11297`): forwarding pipeline STILL INTACT — `renderCompetencyTable` + `tableWidthPct`/`tableRatio` present at all five sites (`antcv-docx-client.js` 11 refs, `antcv-table-headers-editable-341.js` 1, `antcv-section-align.js` 7, `antcv-auto-pagebreak-block-001.js` 1, `workers/docx-worker/src/index.js` 9); live docx-worker `1.14.174-appline-edit` = repo, `pdf_via: cloudconvert`. The FIDELITY gap still needs a real CloudConvert PDF diffed against the preview; this run did not spend CloudConvert credits on an unattended export. Blocked on: owner session (real export + eyeball). Suite 1821/1821 at baseline._
 
 _reconcile 2026-09-27 (CI nightly, E1): forwarding pipeline STILL INTACT on HEAD `0537eb7b` — `renderCompetencyTable` + `tableWidthPct`/`tableRatio` confirmed present across all five sites (`antcv-docx-client.js`, `antcv-table-headers-editable-341.js`, `antcv-section-align.js`, `antcv-auto-pagebreak-block-001.js`, `workers/docx-worker/src/index.js`); full suite 1715/1715 green. Unchanged: the FIDELITY gap is a REAL-CloudConvert-PDF render diff (Carlito advance widths, 3pt/7.5pt padding, 2-vs-3 line clamp) that CI cannot produce — owner/desktop real-PDF pass still owed._
 
@@ -460,7 +464,9 @@ _E1 sweep 2026-09-08 (CI nightly): confirmed in CURRENT code — `__platformRule
 
 ## Row 34 — ROLE-MERGE-STORED-001
 
-_verified: 2026-10-08_ — desktop nightly E4: `diag-results-preview-export-parity.mjs` RESULTS-PREVIEW-EXPORT-PARITY OK (preview per-role result == export per-role result, tier-1 explicit result verbatim, render attribute still in the bundle, 0 page errors). Live attest: `antcv-role-merge-stored-guard` served/executed/identical at `1.51.4833`.
+_verified: 2026-10-09_ — desktop nightly E4: `diag-results-preview-export-parity.mjs` RESULTS-PREVIEW-EXPORT-PARITY OK (preview per-role result == export per-role result, tier-1 explicit result verbatim, render attribute still in the bundle, 0 page errors). Live attest: `antcv-role-merge-stored-guard` served/executed/identical at `1.51.4873-linear-enriched`.
+
+**Prior (2026-10-08):** desktop nightly E4: `diag-results-preview-export-parity.mjs` RESULTS-PREVIEW-EXPORT-PARITY OK (preview per-role result == export per-role result, tier-1 explicit result verbatim, render attribute still in the bundle, 0 page errors). Live attest: `antcv-role-merge-stored-guard` served/executed/identical at `1.51.4833`.
 
 **Prior (2026-10-06):** desktop nightly E4: `diag-results-preview-export-parity.mjs` RESULTS-PREVIEW-EXPORT-PARITY OK (preview per-role result == export per-role result; tier-1 explicit result verbatim; 0 page errors). Live guard sidecar served + identical at `1.51.4812`.
 
@@ -586,7 +592,9 @@ _verified: 2026-10-03_
 
 ## Row 39a — AUTOSAVE-NO-DOWNGRADE-001
 
-_verified: 2026-10-08_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4833-cache-bust-set`; `browser-qa --only version-live,sidecars-live` 2/2). Residual legs unchanged in kind. The authed downgrade PUT was not run: no scratch application id. Blocked on: owner decision (scratch app id) + second real device (row 19).
+_verified: 2026-10-09_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4873-linear-enriched`; `browser-qa --only version-live,sidecars-live` 2/2; served `index.html` and `app.js` byte-identical to the repo modulo CRLF). Residual legs unchanged in kind. The authed downgrade PUT was not run: no scratch application id. Blocked on: owner decision (scratch id) and a second real device (row 19).
+
+**Prior (2026-10-08):** desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4833-cache-bust-set`; `browser-qa --only version-live,sidecars-live` 2/2). Residual legs unchanged in kind. The authed downgrade PUT was not run: no scratch application id. Blocked on: owner decision (scratch app id) + second real device (row 19).
 
 **Prior (2026-10-06):** desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS, before and after the 1.51.4833 ship). The authed downgrade PUT was again not run: no scratch application id. Blocked: owner decision.
 
@@ -614,7 +622,9 @@ _verified: 2026-10-05_
 
 ## Row 41
 
-_verified: 2026-10-08_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4833-cache-bust-set`; `browser-qa --only version-live,sidecars-live` 2/2). Residual legs unchanged in kind. Blocked on: real device (Android #185 repro).
+_verified: 2026-10-09_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4873-linear-enriched`; `browser-qa --only version-live,sidecars-live` 2/2; served `index.html` and `app.js` byte-identical to the repo modulo CRLF). Residual legs unchanged in kind. Blocked on: real device (Android #185 repro).
+
+**Prior (2026-10-08):** desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4833-cache-bust-set`; `browser-qa --only version-live,sidecars-live` 2/2). Residual legs unchanged in kind. Blocked on: real device (Android #185 repro).
 
 **Prior (2026-10-06):** desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS, before and after the 1.51.4833 ship). Blocked: real device (Android crash capture).
 
@@ -642,7 +652,9 @@ _verified: 2026-10-05_
 
 ## Row 42 — GEN-LANGFAB-001
 
-_verified: 2026-10-08_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4833-cache-bust-set`; `browser-qa --only version-live,sidecars-live` 2/2). Residual legs unchanged in kind. Blocked on: real LLM gen (fresh-gen language check).
+_verified: 2026-10-09_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4873-linear-enriched`; `browser-qa --only version-live,sidecars-live` 2/2; served `index.html` and `app.js` byte-identical to the repo modulo CRLF). Residual legs unchanged in kind. Blocked on: real LLM gen (fresh-gen language check).
+
+**Prior (2026-10-08):** desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4833-cache-bust-set`; `browser-qa --only version-live,sidecars-live` 2/2). Residual legs unchanged in kind. Blocked on: real LLM gen (fresh-gen language check).
 
 **Prior (2026-10-06):** desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS, before and after the 1.51.4833 ship). Blocked: real LLM gen.
 
@@ -670,7 +682,9 @@ _verified: 2026-10-05_
 
 ## Row 43
 
-_verified: 2026-10-08_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4833-cache-bust-set`; `browser-qa --only version-live,sidecars-live` 2/2). Residual legs unchanged in kind. Blocked on: owner session (click-through).
+_verified: 2026-10-09_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4873-linear-enriched`; `browser-qa --only version-live,sidecars-live` 2/2; served `index.html` and `app.js` byte-identical to the repo modulo CRLF). Residual legs unchanged in kind. Blocked on: owner session (click-through).
+
+**Prior (2026-10-08):** desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4833-cache-bust-set`; `browser-qa --only version-live,sidecars-live` 2/2). Residual legs unchanged in kind. Blocked on: owner session (click-through).
 
 **Prior (2026-10-06):** desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS, before and after the 1.51.4833 ship). Blocked: owner session.
 
@@ -698,7 +712,9 @@ _verified: 2026-10-05_
 
 ## Row 44 — JD-ANALYSIS-PRINT-001
 
-_verified: 2026-10-08_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4833-cache-bust-set`; `browser-qa --only version-live,sidecars-live` 2/2). Residual legs unchanged in kind. Blocked on: owner session (click-through).
+_verified: 2026-10-09_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4873-linear-enriched`; `browser-qa --only version-live,sidecars-live` 2/2; served `index.html` and `app.js` byte-identical to the repo modulo CRLF). Residual legs unchanged in kind. Blocked on: owner session (click-through).
+
+**Prior (2026-10-08):** desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4833-cache-bust-set`; `browser-qa --only version-live,sidecars-live` 2/2). Residual legs unchanged in kind. Blocked on: owner session (click-through).
 
 **Prior (2026-10-06):** desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS, before and after the 1.51.4833 ship). Blocked: owner session.
 
@@ -814,7 +830,9 @@ REMAINING: owner live re-verify (no device in CI). Kept ACTIVE.
 
 ## Row 39 — GEN-MODELROLE-001
 
-_verified: 2026-10-08_ — desktop nightly: D1 `llm_calls` newest day is still 2026-09-28 (D1 MCP connector read; the wrangler path answered 7403 once, then worked — transient). No gen traffic since the opus-5-5 pin; the split routing cannot be observed. Live proxies carry `MODEL_ROLES` (deployed ×3 by the weekly tune 2026-10-08). Blocked on: real LLM gen.
+_verified: 2026-10-09_ — desktop nightly: D1 `llm_calls` newest day is still 2026-09-28 (D1 MCP connector read, 12 newest group rows, `changed_db:false`). No gen traffic since the opus-5-5 pin; the split routing cannot be observed. Live proxies at `3.8.4-brand-ink-match` = repo, access-relay `auth-38-subtitle-guard-qual-put` = repo, docx-worker `1.14.174-appline-edit` = repo. Blocked on: real LLM gen.
+
+**Prior (2026-10-08):** desktop nightly: D1 `llm_calls` newest day is still 2026-09-28 (D1 MCP connector read; the wrangler path answered 7403 once, then worked — transient). No gen traffic since the opus-5-5 pin; the split routing cannot be observed. Live proxies carry `MODEL_ROLES` (deployed ×3 by the weekly tune 2026-10-08). Blocked on: real LLM gen.
 
 **Prior (2026-10-06):** desktop nightly: D1 `llm_calls` newest day is still 2026-09-28 (claude-sonnet-5 1, gemini-2.5-flash 4, mistral-large-latest 4, gpt-5.4-mini 9; wrangler SELECT, read-only). No generation since, so the supervisor→mistral split is not observable. Blocked: real LLM gen (and row 114: the background-job path writes no rows).
 
@@ -1592,7 +1610,9 @@ _verified: 2026-10-08_
 
 ## Row 40
 
-_verified: 2026-10-08_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4833-cache-bust-set`; `browser-qa --only version-live,sidecars-live` 2/2). Residual legs unchanged in kind. Blocked on: owner session (cloud-persisted repro).
+_verified: 2026-10-09_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4873-linear-enriched`; `browser-qa --only version-live,sidecars-live` 2/2; served `index.html` and `app.js` byte-identical to the repo modulo CRLF). Residual legs unchanged in kind. Blocked on: owner session (cloud-persisted repro).
+
+**Prior (2026-10-08):** desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4833-cache-bust-set`; `browser-qa --only version-live,sidecars-live` 2/2). Residual legs unchanged in kind. Blocked on: owner session (cloud-persisted repro).
 
 **Prior (2026-10-06):** desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS, before and after the 1.51.4833 ship). Blocked: owner session.
 
@@ -1694,7 +1714,9 @@ _verified: 2026-10-08_
 
 ## Row 3 — FLOAT-SPINE-001
 
-_verified: 2026-09-26_
+_verified: 2026-10-09_
+
+**Re-verify 2026-10-09 (desktop nightly, Gabo-PC, Fable 5.1, HEAD `45e11297`):** `floatSpine` gate present `workers/docx-worker/src/index.js` ×6 (default-OFF line 24685: `payload.float_spine === true || style.floatSpine === true`) + `pwa/antcv-docx-client.js` ×2; live docx-worker `/health` 200 at `1.14.174-appline-edit` = repo. Owner-visual re-export gate still owed (no reference docx; flag stays OFF). Blocked on: owner session (real CloudConvert export with the flag on). Suite 1821/1821 at baseline.
 
 **Re-verify 2026-09-26 (CI nightly — E1 stalest slot, code-presence on HEAD `fe4b8f7f`):** `floatSpine`/`float_spine` gate present `workers/docx-worker/src/index.js` ×6 + `pwa/antcv-docx-client.js` ×2, default-OFF unchanged; owner-visual re-export gate (no reference docx in CI) still owed. Full PWA suite 1715/1715 green.
 
@@ -1714,31 +1736,11 @@ _verified: 2026-09-26_
 
 ---
 
-## Row 14 — JD-SCAN-HALLUCINATION-001
-
-_verified: 2026-09-26_
-
-**Re-verify 2026-09-26 (CI nightly — E1 stalest slot, code-presence on HEAD `fe4b8f7f`):** JD-scan-hallucination anchors present in `pwa/app.src.js` (`filename_mismatch` / `garbled_skip_llm_for_vision`, 3 refs). Code CLOSED; live model-behaviour leg still owner/live-gated. Full PWA suite 1715/1715 green.
-
-**Re-verify 2026-09-16 (CI nightly — E1 stalest slot, code-presence on HEAD `3f595acf`):** JD-scan-hallucination anchors present pwa/app.src.js (charset hardening / filename echo / garbled->vision route). Code CLOSED; live model-behaviour leg still owner/live-gated. Full PWA suite 1715/1715 green.
-
-**OPEN-queue row (verbatim):**
-
-```
-| 14 | JD-SCAN-HALLUCINATION-001 ingest reorder (garble → vision FIRST; filename↔company check; "used OCR" notice) — **CLOSED 2026-07-04 audit**: all three legs confirmed shipped in both bundles — garble→vision reorder (garbled_skip_llm_for_vision, before the image-only skip), fnEcho filename↔content mismatch check (`filename_mismatch(...)`, 1.51.100), and the "Read visually (OCR)" upload-chip notice. `pwa/test/unit/jd-extract-hardening.test.mjs` + `pdf-garbled-vision-first.test.mjs`, 17/17 passing. The "needs real models/owner present" caveat was written for the reorder itself before it shipped; the two remaining sub-legs (mismatch check, OCR notice) are deterministic string/DOM logic needing no live model call, and the register was simply never updated after 1.51.100/102 landed | ACTIVE_BUGS; ORPHANS_V2 prompt stretch; 1.51.100, 1.51.102 | closed |
-```
-
-**TO-DO SUMMARY twin (verbatim):**
-
-```
-| 14 | JD-scan-hallucination ingest reorder — needs real models + owner present | DONE 1.51.100/102 — see detailed row below. verified: 2026-08-23 (E1 sweep, CI nightly) JD-SCAN-HALLUCINATION-001 anchors RE-CONFIRMED present in `pwa/app.src.js` (charset-statistics hardening ~892, filename↔content echo ~929, garbled-text-layer→vision-OCR route ~1003-1012); code-shipped, live model-behaviour leg still owner/live-gated. |
-```
-
----
-
 ## Row 20 — CONTACT-TRACK-TIGHT-001
 
-_verified: 2026-09-26_
+_verified: 2026-10-09_
+
+**Re-verify 2026-10-09 (desktop nightly, Gabo-PC, Fable 5.1, HEAD `45e11297`):** docx-worker anchors present (`headlineAlign` / `fix_orphans` / `SIRIN-SEMANTICS-001` / `CONTACT-TRACK-TIGHT-001`, 4 refs in `workers/docx-worker/src/index.js`); live docx-worker `1.14.174-appline-edit` = repo, so the shipped legs are what production renders. Stays OWNER-GATED: acceptance needs one Hard Refresh + CL regen + CV re-export eyeballed in a real CloudConvert PDF. Blocked on: owner session. Suite 1821/1821 at baseline.
 
 **Re-verify 2026-09-26 (CI nightly — E1 stalest slot, code-presence on HEAD `fe4b8f7f`):** docx-worker anchors present (`headlineAlign` / `fix_orphans` / `SIRIN-SEMANTICS-001` / `CONTACT-TRACK-TIGHT-001`, 4 refs in `workers/docx-worker/src/index.js`). Stays OWNER-GATED: acceptance needs a real CloudConvert PDF eyeball CI cannot do. Full PWA suite 1715/1715 green.
 
@@ -1754,28 +1756,6 @@ _verified: 2026-09-26_
 
 ```
 | 20 | Owner verify list — 6 sub-items (alignment, sidebar runts, CL spacing, Sirin result, abbreviation, contact tracking) | TO DO |
-```
-
----
-
-## Row 52 — GROUP-EMPTY-HIDE-001
-
-_verified: 2026-09-26_
-
-**Re-verify 2026-09-26 (CI nightly — E1 stalest slot, code-presence on HEAD `fe4b8f7f`):** `__grpHasChild` ×3 app.src.js + minified mirror `__gc` ×3 app.js (occurrence count) + `renderRichBlock` ×7 docx-worker; `pwa/test/unit/group-empty-hide.test.mjs` green in the full suite. Shipped 1.51.194 intact. Full PWA suite 1715/1715 green.
-
-**Re-verify 2026-09-16 (CI nightly — E1 stalest slot, code-presence on HEAD `3f595acf`):** __grpHasChild x3 app.src.js + minified mirror __gc x3 app.js + renderRichBlock x7 docx-worker; group-empty-hide.test.mjs 29/29 green. Shipped 1.51.194 intact. Full PWA suite 1715/1715 green.
-
-**OPEN-queue row (verbatim):**
-
-```
-| **52** | **GROUP-EMPTY-HIDE-001 (owner 2026-07-06, screenshot — TOOLS & METHODS sidebar section):** a labeled-list group whose heading is rendered but which has NO child rows under it must be HIDDEN, not shown as a bare dangling label. Repro from the owner screenshot: a TOOLS & METHODS group shows the "Methods" (and similar Expertise/Tools sub-) heading with nothing beneath it — an orphaned group title occupying a line for no content. Rule: at render/export time, a group with zero visible children (all children hidden, empty, or placeholder-only) is suppressed along with its own heading; a group regains its heading the moment it has ≥1 real child again. Distinct from empty-ROLE hiding (antcv-empty-role-hide.js, memory empty-role-source-fix, which hides on:true roles born blank) and from row 49 (page-breaking a LONG group) — this is the inverse: suppress an EMPTY group. NOT STARTED — scope: find the labeled-list/group render path (TOOLS & METHODS = rich_block group section, see RICHBLOCK-SHAPE-001 + the Hidden-group family 1.51.114-117) in BOTH the app.js preview render AND the docx-worker export so preview/export stay in parity (sanitize-for-export layer per memory export-sanitize-and-preview-parity); prefer a deterministic sidecar belt keyed on "group node has no non-empty/non-placeholder children" over a gen-prompt line. Verify-first: reproduce the empty-group render headlessly, count children, assert the heading is gone when 0 and present when ≥1 | owner 2026-07-06 screenshot | not started — scoped, needs a session |
-```
-
-**TO-DO SUMMARY twin (verbatim):**
-
-```
-| **52** | **GROUP-EMPTY-HIDE-001** (owner 2026-07-06, screenshot) — a labeled-list group (TOOLS & METHODS) with a heading but NO child rows must be hidden (heading + all), not left as a bare dangling label; regains its heading when it has ≥1 real child. Preview + export parity; deterministic belt, not a prompt line. | **SHIPPED 1.51.194** — `__grpHasChild(gi)` look-ahead added IN-RENDER at both sites (preview rich_block map in app.src.js + minified app.js mirror `__gc`; export renderRichBlock in docx-worker); each mirrors its own side's row-drop rules so a group hides iff zero following rows (to the next `{grp}`) render. Test group-empty-hide.test.mjs (29) brace-extracts BOTH real helpers, runs a shared 9-case fixture table, asserts preview↔export parity. Suite 1199/1199; boot-smoke OK; quintet done. **docx-worker DEPLOYED** (run 28832019410, palette/registry tests green) so the export half is live; PWA auto-deployed on push. verified: 2026-08-25 (E1 sweep, CI nightly — stalest un-swept row rotated in; RE-CONFIRMED on current source HEAD `d51376bb`: `__grpHasChild`×3 `pwa/app.src.js`, minified mirror `__gc`×3 `pwa/app.js`, `renderRichBlock`×7 `workers/docx-worker/src/index.js`; guard `pwa/test/unit/group-empty-hide.test.mjs` re-run in isolation 29/29 green; no code change since); prior: verified: 2026-07-31 (E1 sweep, CI nightly — re-verified against current code, was 2026-07-28: helpers still present both bundles + worker: `__grpHasChild`×3 app.src.js, mirror `__gc` app.js, `renderRichBlock`×7 docx-worker; guard `group-empty-hide.test.mjs` 29/29 green; no code change since) |
 ```
 
 ---
@@ -1838,7 +1818,9 @@ _verified: 2026-08-26_
 
 > **STANDING regression anchor** — re-run by the nightly diag set every time, not unstarted work.
 
-_verified: 2026-10-08_ — desktop nightly E2: `diag-settings-panel-churn.mjs --selftest` PASS (80 synthetic mutations seen on all 4 tabs, 4 distinct fingerprints); Personal / Layout / Account / Advanced 0 mutations per 8 s, 0 page errors, roots attached. PASS.
+_verified: 2026-10-09_ — desktop nightly E2: `diag-settings-panel-churn.mjs --selftest` PASS (80 synthetic mutations seen on all 4 tabs, 4 distinct fingerprints); Personal / Layout / Account / Advanced 0 mutations per 8 s, 0 page errors, roots attached. PASS.
+
+**Prior (2026-10-08):** desktop nightly E2: `diag-settings-panel-churn.mjs --selftest` PASS (80 synthetic mutations seen on all 4 tabs, 4 distinct fingerprints); Personal / Layout / Account / Advanced 0 mutations per 8 s, 0 page errors, roots attached. PASS.
 
 **Prior (2026-10-06):** desktop nightly E2: `diag-settings-panel-churn.mjs --selftest` PASS (synthetic churn seen on all 4 tabs); Personal / Layout / Account / Advanced 0 mutations per 8 s (budget 5), 0 page errors. PASS.
 
@@ -1886,7 +1868,9 @@ _verified: 2026-10-04_
 
 > **STANDING regression anchor** — re-run by the nightly diag set every time, not unstarted work.
 
-_verified: 2026-10-08_ — desktop nightly E3 (AUDIT-DIFF-NOISE-001 fixed this run): `diag-panel-button-audit.mjs` run FOUR times at the same HEAD `7e1b4fa8`. Runs 1→2 (old 600 ms settle): 11 labels flipped (active↔ui-only, visible↔not-visible), 1 label gone / 1 added — pure harness nondeterminism, no code change between runs. Fix: a second 900 ms write-settle window for buttons that moved the DOM with no write yet (12 buttons paid it, 3 of them ended `active` instead of `ui-only`), plus a `--diff` leg (`pwa/test/button-audit-diff.mjs`, 7 unit checks) that sorts label changes by meaning and appends a "Diff vs previous" block to the report. Runs 3→4 (new settle both sides): 0 regressions, 0 recoveries, 1 visibility move (CJLR hidden 6→3, state left by an earlier click), 8 active↔ui-only flips (counted, not findings), 0 gone / 0 added. Final run: 209 buttons, 0 THROWS, 0 DEAD, 0 page errors (active 132, ui-only 9, not-visible 55, skipped 13). Open: the 8 residual flips are the same labels each time (✕ Close, Save as new application, Refresh list, Add to sidebar, 👁 Preview, Fuse CL signals, Chat drag handle, ×) — their store write is conditional, not slow; a label-level allowlist would be the next step if the diff block ever hides a real regression. Artifacts `PANEL_BUTTON_AUDIT_2026-10-08.{md,json}`.
+_verified: 2026-10-09_ — desktop nightly E3: `diag-panel-button-audit.mjs` one run at HEAD `45e11297` with the 10-08 settle window + `--diff` leg (default previous = `PANEL_BUTTON_AUDIT_2026-10-08.json`): 210 buttons (209 → 210, same label set), 0 THROWS, 0 DEAD, 0 page errors (active 134, ui-only 7, not-visible 56, skipped 13). Diff: 0 regressions, 0 recoveries, 1 visibility move ("CJLR: cycle left / center / right / justify" hidden 3 → 4, state left by an earlier click), 6 active↔ui-only timing flips (counted, not listed), 0 gone / 0 added. First run of the diff leg after its ship; it behaves as specified. Report `PANEL_BUTTON_AUDIT_2026-10-09.md`.
+
+**Prior (2026-10-08):** desktop nightly E3 (AUDIT-DIFF-NOISE-001 fixed this run): `diag-panel-button-audit.mjs` run FOUR times at the same HEAD `7e1b4fa8`. Runs 1→2 (old 600 ms settle): 11 labels flipped (active↔ui-only, visible↔not-visible), 1 label gone / 1 added — pure harness nondeterminism, no code change between runs. Fix: a second 900 ms write-settle window for buttons that moved the DOM with no write yet (12 buttons paid it, 3 of them ended `active` instead of `ui-only`), plus a `--diff` leg (`pwa/test/button-audit-diff.mjs`, 7 unit checks) that sorts label changes by meaning and appends a "Diff vs previous" block to the report. Runs 3→4 (new settle both sides): 0 regressions, 0 recoveries, 1 visibility move (CJLR hidden 6→3, state left by an earlier click), 8 active↔ui-only flips (counted, not findings), 0 gone / 0 added. Final run: 209 buttons, 0 THROWS, 0 DEAD, 0 page errors (active 132, ui-only 9, not-visible 55, skipped 13). Open: the 8 residual flips are the same labels each time (✕ Close, Save as new application, Refresh list, Add to sidebar, 👁 Preview, Fuse CL signals, Chat drag handle, ×) — their store write is conditional, not slow; a label-level allowlist would be the next step if the diff block ever hides a real regression. Artifacts `PANEL_BUTTON_AUDIT_2026-10-08.{md,json}`.
 
 **Prior (2026-10-06):** desktop nightly E3: `diag-panel-button-audit.mjs` 212 buttons (209 on 10-05), active 131 / ui-only 10 / not-visible-or-disabled 58 / skipped-dangerous 13, 0 THROWS, 0 DEAD, 0 page errors. Diff vs 10-05 by label: 8 class flips (✕ Close, Switch between saved applications, ↻, Refresh the saved-applications list, textbulletstablelabeled_listlisteducation ui-only→active; Save as new application, CJLR for this added field active→ui-only; "Make It Fit (sidebar)" not-visible→active), 1 label gone ("⇥ Fit"), 0 added. Not investigated beyond the diff; none DEAD or THROWS. `docs/qa/PANEL_BUTTON_AUDIT_2026-10-06.md` + `.json`.
 

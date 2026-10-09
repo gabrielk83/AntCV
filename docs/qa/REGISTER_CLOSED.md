@@ -4,6 +4,60 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 14 — JD-SCAN-HALLUCINATION-001 — CLOSED 2026-10-09 (desktop nightly E1, evidence: all three legs in both bundles at HEAD and on the served app.js, 17 unit checks green, the "needs real models" caveat predates the ship)
+
+_verified: 2026-10-09_
+
+**CLOSED 2026-10-09 (desktop nightly, Gabo-PC, Fable 5.1, HEAD `45e11297`).** The deliverable is the ingest reorder: garble→vision first (`garbled_skip_llm_for_vision`), the filename↔content echo check (`filename_mismatch`), and the "Read visually (OCR)" chip. All three are deterministic string/DOM logic. Evidence: `filename_mismatch` ×2 and `garbled_skip_llm_for_vision` ×1 in `pwa/app.src.js` AND in `pwa/app.js`; the served `app.js?v=1.51.4812-import-rewrap-siblings` on antcv.pages.dev is byte-identical to the repo (modulo CRLF) and carries the same counts; `pwa/test/unit/jd-extract-hardening.test.mjs` + `pdf-garbled-vision-first.test.mjs` green in isolation and in the 1821/1821 suite. The row's own 2026-07-04 audit text says the "needs real models + owner present" caveat was written for the reorder before it shipped; no run in three months has named a concrete live leg. Fourteen E1 sweeps re-confirmed code presence with no change. If the owner sees a JD scan hallucinate again, file a NEW row with the file and the output; do not reopen this one.
+
+
+_verified: 2026-09-26_
+
+**Re-verify 2026-09-26 (CI nightly — E1 stalest slot, code-presence on HEAD `fe4b8f7f`):** JD-scan-hallucination anchors present in `pwa/app.src.js` (`filename_mismatch` / `garbled_skip_llm_for_vision`, 3 refs). Code CLOSED; live model-behaviour leg still owner/live-gated. Full PWA suite 1715/1715 green.
+
+**Re-verify 2026-09-16 (CI nightly — E1 stalest slot, code-presence on HEAD `3f595acf`):** JD-scan-hallucination anchors present pwa/app.src.js (charset hardening / filename echo / garbled->vision route). Code CLOSED; live model-behaviour leg still owner/live-gated. Full PWA suite 1715/1715 green.
+
+**OPEN-queue row (verbatim):**
+
+```
+| 14 | JD-SCAN-HALLUCINATION-001 ingest reorder (garble → vision FIRST; filename↔company check; "used OCR" notice) — **CLOSED 2026-07-04 audit**: all three legs confirmed shipped in both bundles — garble→vision reorder (garbled_skip_llm_for_vision, before the image-only skip), fnEcho filename↔content mismatch check (`filename_mismatch(...)`, 1.51.100), and the "Read visually (OCR)" upload-chip notice. `pwa/test/unit/jd-extract-hardening.test.mjs` + `pdf-garbled-vision-first.test.mjs`, 17/17 passing. The "needs real models/owner present" caveat was written for the reorder itself before it shipped; the two remaining sub-legs (mismatch check, OCR notice) are deterministic string/DOM logic needing no live model call, and the register was simply never updated after 1.51.100/102 landed | ACTIVE_BUGS; ORPHANS_V2 prompt stretch; 1.51.100, 1.51.102 | closed |
+```
+
+**TO-DO SUMMARY twin (verbatim):**
+
+```
+| 14 | JD-scan-hallucination ingest reorder — needs real models + owner present | DONE 1.51.100/102 — see detailed row below. verified: 2026-08-23 (E1 sweep, CI nightly) JD-SCAN-HALLUCINATION-001 anchors RE-CONFIRMED present in `pwa/app.src.js` (charset-statistics hardening ~892, filename↔content echo ~929, garbled-text-layer→vision-OCR route ~1003-1012); code-shipped, live model-behaviour leg still owner/live-gated. |
+```
+
+---
+
+## Row 52 — GROUP-EMPTY-HIDE-001 — CLOSED 2026-10-09 (desktop nightly E1, evidence: helper in both bundles + worker at HEAD, served app.js identical, worker live, 29-case preview↔export parity test green)
+
+_verified: 2026-10-09_
+
+**CLOSED 2026-10-09 (desktop nightly, Gabo-PC, Fable 5.1, HEAD `45e11297`).** Shipped 1.51.194 and deployed (docx-worker run 28832019410); the row has been "verified, no change" on eleven sweeps since 2026-07-28 and the owner has not re-reported the dangling heading. Evidence at HEAD: `__grpHasChild` ×3 `pwa/app.src.js`, minified mirror `__gc` ×3 occurrences in `pwa/app.js` (and ×3 in the served `app.js`, byte-identical to the repo modulo CRLF), `renderRichBlock` ×7 `workers/docx-worker/src/index.js`; live docx-worker `/health` 200 at `1.14.174-appline-edit` = repo. `pwa/test/unit/group-empty-hide.test.mjs` brace-extracts both real helpers and asserts preview↔export parity on the shared fixture table; green in isolation (46/46 with the row-14 files) and in the 1821/1821 suite. Owner-verify (non-blocking): open a CV with a TOOLS & METHODS group that has an empty sub-group and confirm the heading is gone in preview and export. A regression is a NEW row.
+
+
+_verified: 2026-09-26_
+
+**Re-verify 2026-09-26 (CI nightly — E1 stalest slot, code-presence on HEAD `fe4b8f7f`):** `__grpHasChild` ×3 app.src.js + minified mirror `__gc` ×3 app.js (occurrence count) + `renderRichBlock` ×7 docx-worker; `pwa/test/unit/group-empty-hide.test.mjs` green in the full suite. Shipped 1.51.194 intact. Full PWA suite 1715/1715 green.
+
+**Re-verify 2026-09-16 (CI nightly — E1 stalest slot, code-presence on HEAD `3f595acf`):** __grpHasChild x3 app.src.js + minified mirror __gc x3 app.js + renderRichBlock x7 docx-worker; group-empty-hide.test.mjs 29/29 green. Shipped 1.51.194 intact. Full PWA suite 1715/1715 green.
+
+**OPEN-queue row (verbatim):**
+
+```
+| **52** | **GROUP-EMPTY-HIDE-001 (owner 2026-07-06, screenshot — TOOLS & METHODS sidebar section):** a labeled-list group whose heading is rendered but which has NO child rows under it must be HIDDEN, not shown as a bare dangling label. Repro from the owner screenshot: a TOOLS & METHODS group shows the "Methods" (and similar Expertise/Tools sub-) heading with nothing beneath it — an orphaned group title occupying a line for no content. Rule: at render/export time, a group with zero visible children (all children hidden, empty, or placeholder-only) is suppressed along with its own heading; a group regains its heading the moment it has ≥1 real child again. Distinct from empty-ROLE hiding (antcv-empty-role-hide.js, memory empty-role-source-fix, which hides on:true roles born blank) and from row 49 (page-breaking a LONG group) — this is the inverse: suppress an EMPTY group. NOT STARTED — scope: find the labeled-list/group render path (TOOLS & METHODS = rich_block group section, see RICHBLOCK-SHAPE-001 + the Hidden-group family 1.51.114-117) in BOTH the app.js preview render AND the docx-worker export so preview/export stay in parity (sanitize-for-export layer per memory export-sanitize-and-preview-parity); prefer a deterministic sidecar belt keyed on "group node has no non-empty/non-placeholder children" over a gen-prompt line. Verify-first: reproduce the empty-group render headlessly, count children, assert the heading is gone when 0 and present when ≥1 | owner 2026-07-06 screenshot | not started — scoped, needs a session |
+```
+
+**TO-DO SUMMARY twin (verbatim):**
+
+```
+| **52** | **GROUP-EMPTY-HIDE-001** (owner 2026-07-06, screenshot) — a labeled-list group (TOOLS & METHODS) with a heading but NO child rows must be hidden (heading + all), not left as a bare dangling label; regains its heading when it has ≥1 real child. Preview + export parity; deterministic belt, not a prompt line. | **SHIPPED 1.51.194** — `__grpHasChild(gi)` look-ahead added IN-RENDER at both sites (preview rich_block map in app.src.js + minified app.js mirror `__gc`; export renderRichBlock in docx-worker); each mirrors its own side's row-drop rules so a group hides iff zero following rows (to the next `{grp}`) render. Test group-empty-hide.test.mjs (29) brace-extracts BOTH real helpers, runs a shared 9-case fixture table, asserts preview↔export parity. Suite 1199/1199; boot-smoke OK; quintet done. **docx-worker DEPLOYED** (run 28832019410, palette/registry tests green) so the export half is live; PWA auto-deployed on push. verified: 2026-08-25 (E1 sweep, CI nightly — stalest un-swept row rotated in; RE-CONFIRMED on current source HEAD `d51376bb`: `__grpHasChild`×3 `pwa/app.src.js`, minified mirror `__gc`×3 `pwa/app.js`, `renderRichBlock`×7 `workers/docx-worker/src/index.js`; guard `pwa/test/unit/group-empty-hide.test.mjs` re-run in isolation 29/29 green; no code change since); prior: verified: 2026-07-31 (E1 sweep, CI nightly — re-verified against current code, was 2026-07-28: helpers still present both bundles + worker: `__grpHasChild`×3 app.src.js, mirror `__gc` app.js, `renderRichBlock`×7 docx-worker; guard `group-empty-hide.test.mjs` 29/29 green; no code change since) |
+```
+
+---
+
 ## Row 121 — POSTING-409-REPROBE-001 — CLOSED 2026-10-08 (job-tracker nightly, evidence: live 409 in the run's own sweep + negative-controlled test on the real cmd_check)
 
 _verified: 2026-10-08_

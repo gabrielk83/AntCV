@@ -354,7 +354,9 @@ _E1 sweep 2026-09-08 (CI nightly): phase 1 (`antcv-cl-slogan-element.js`) confir
 
 ## Row 33 — WHY-RULE-EXPORT-PARITY-001
 
-_verified: 2026-09-28_
+_verified: 2026-10-10_
+
+_E1 re-verify 2026-10-10 (CI nightly): `antcv:nameLineAlign` (4 hits) + `headline_align`/`headlineAlign` markers intact in `antcv-docx-client.js`; `export-align-parity.test.mjs` GREEN 6/6 (suite 1821/1821). CODE-COMPLETE — only remaining step is a signed-in export eyeball; **recommended to owner for CLOSED**._
 
 _E1 re-verify 2026-09-28 (CI nightly, HEAD c9c60887): `antcv:nameLineAlign`/`headline_align`/`headlineAlign` markers intact in `antcv-docx-client.js` (3 hits); `pwa/test/unit/export-align-parity.test.mjs` present + GREEN (suite 1721/1721). CODE-COMPLETE — only remaining step is a signed-in export eyeball; **recommended to owner for CLOSED**._
 
@@ -378,7 +380,9 @@ _E1 sweep 2026-09-08 (CI nightly): all three legs confirmed in CURRENT code — 
 
 ## Row 24 — ANALYTICS-BUTTONS-SESSION-TIMEOUT-001
 
-_verified: 2026-09-28_
+_verified: 2026-10-10_
+
+_E1 re-verify 2026-10-10 (CI nightly): scoped-wipe markers (`/auth/`, `api/prefs`) intact in `antcv-auth.js` (7 hits); `auth-401-wipe-scope.test.mjs` GREEN 5/5 (suite 1821/1821). Client + server both done; only owner three-button click-through after Hard Refresh remains (cloud can't sign in)._
 
 _E1 re-verify 2026-09-28 (CI nightly, HEAD c9c60887): client 401-wipe scope guard `pwa/test/unit/auth-401-wipe-scope.test.mjs` present + GREEN (suite 1721/1721); server secret-pair fix recorded live-verified. Owner three-button click-through (live) is the only remainder — kept ACTIVE (owner gate)._
 
@@ -402,7 +406,9 @@ _E1 sweep 2026-09-08 (CI nightly): client 401-wipe scope guard (`auth-401-wipe-s
 
 ## Row 26 — TOOLS-SIDEBAR-COMPRESS-001
 
-_verified: 2026-09-28_
+_verified: 2026-10-10_
+
+_E1 re-verify 2026-10-10 (CI nightly): belt sidecar `antcv-sidebar-compact-001.js` present; `sidebar_compact` rule intact in `gold-rules.json`; `sidebar-compact.test.mjs` GREEN 8/8 (suite 1821/1821). Deterministic trim belt done; only owner visual eyeball of the unsolicited export sidebar remains._
 
 _E1 re-verify 2026-09-28 (CI nightly, HEAD c9c60887): belt `antcv-sidebar-compact-001.js` loaded in index.html (1 ref), `sidebar_compact` block present in `pwa/gold-rules.json`, `pwa/test/unit/sidebar-compact.test.mjs` GREEN (suite 1721/1721). Owner visual verify of the gold Instruments/Lab strings + the separate SIDEBAR-PACKING token-order belt remain — kept ACTIVE (owner gate)._
 
@@ -426,7 +432,9 @@ _E1 sweep 2026-09-08 (CI nightly): belt present in CURRENT code — `antcv-sideb
 
 ## Row 30 — LLM-IMAGE-ROUTING-001
 
-_verified: 2026-09-28_
+_verified: 2026-10-10_
+
+_E1 re-verify 2026-10-10 (CI nightly): `VISION_BLIND`/`messagesHaveImages`/`filterVisionBlind` intact in BOTH `workers/proxy/src/multi-llm.js` and `workers/demo-proxy/src/multi-llm.js`; `image-routing-ee.test.mjs` GREEN 3/3 (suite 1821/1821). Both proxies carry the filter; adequacy-gate extension to vision calls remains a nice-to-have._
 
 _E1 re-verify 2026-09-28 (CI nightly, HEAD c9c60887): `filterVisionBlind`/`VISION_BLIND` intact in BOTH `workers/proxy/src/multi-llm.js` + `workers/demo-proxy/src/multi-llm.js` (5 hits each); `pwa/test/unit/image-routing-ee.test.mjs` present + GREEN (suite 1721/1721). Only remainder is the optional adequacy-gate extension → CODE-COMPLETE, **recommended to owner for CLOSED**._
 
@@ -450,7 +458,9 @@ _E1 sweep 2026-09-08 (CI nightly): all legs confirmed in CURRENT code — `filte
 
 ## Row 32 — CL-PLATFORM-SIGNALS-001
 
-_verified: 2026-09-28_
+_verified: 2026-10-10_
+
+_E1 re-verify 2026-10-10 (CI nightly): `__platformRule` detector + injection intact in `app.src.js` (3 hits); `cl-platform-signals.test.mjs` GREEN 10/10 (suite 1821/1821). Rule wired in both bundles; regen-gated — needs a signed-in platform-class JD gen to eyeball the CL tone._
 
 _E1 re-verify 2026-09-28 (CI nightly, HEAD c9c60887): `__platformRule` in `app.src.js` (2 hits) / minified `__pr` in `app.js` both-bundle mirror intact; `pwa/test/unit/cl-platform-signals.test.mjs` present + GREEN (suite 1721/1721). CODE-COMPLETE, **recommended to owner for CLOSED**; remaining is a live gen tone-check on a hardware-platform JD (owner, non-code)._
 
@@ -508,7 +518,9 @@ _E1 sweep 2026-09-09 (CI nightly, Opus 4.8): shipped code INTACT against HEAD `3
 
 ## Row 27 — MAIN-RUNT-ORPHAN-SWEEP-001
 
-_verified: 2026-09-29_
+_verified: 2026-10-10_
+
+_E1 sweep 2026-10-10 (CI nightly, Opus 4.8): re-confirmed — all four ORPHAN-PREFLIGHT-V3 sidecars still loaded by `index.html` (`antcv-orphan-export-preflight.js`, `antcv-orphan-measure-bind.js`, `antcv-package-orphan-apply.js`, `antcv-orphan-cloud-persist-385.js`, 1 ref each); full suite 1821/1821 GREEN. STILL OPEN (unchanged, all need a real render/regen CI lacks): (a) work-style tail truncation, (b) page-3 ghost, (c) ~1.5-page real-PDF verify on a FRESH NIL-targeted export._
 
 _E1 sweep 2026-09-29 (CI nightly, Opus 4.8): re-confirmed — all four ORPHAN-PREFLIGHT-V3 sidecars still loaded by `index.html` (`antcv-orphan-export-preflight.js`, `antcv-orphan-measure-bind.js`, `antcv-package-orphan-apply.js`, `antcv-orphan-cloud-persist-385.js`, 1 ref each); full suite 1721/1721 GREEN on HEAD `07a07add`. STILL OPEN (unchanged, all need a real render/regen CI lacks): (a) work-style tail truncation against the owner's stored kernel, (b) page-3 ghost, (c) ~1.5-page real-PDF verify on a FRESH NIL-targeted export._
 
@@ -532,7 +544,9 @@ _E1 sweep 2026-09-09 (CI nightly, Opus 4.8): ORPHAN-PREFLIGHT-V3 sidecars INTACT
 
 ## Row 28 — NIL-GEN-ADAPTATION-001
 
-_verified: 2026-09-29_
+_verified: 2026-10-10_
+
+_E1 sweep 2026-10-10 (CI nightly, Opus 4.8): re-confirmed — `antcv-profile-access-scrub.js` + `antcv-sidebar-relevance-cut.js` both still loaded in `index.html` (1 ref each); full suite 1821/1821 GREEN. REMAINING unchanged: the CV ~1.5pp GEN-LEVEL target (rides row 27's orphan work) is regen-gated — needs a fresh live NIL-targeted generation + real export, which CI cannot run._
 
 _E1 sweep 2026-09-29 (CI nightly, Opus 4.8): re-confirmed — `antcv-profile-access-scrub.js` (PROFILE-ACCESS-SCRUB-001) + `antcv-sidebar-relevance-cut.js` (JD-relevance cut) both still loaded in `index.html` (1 ref each); full suite 1721/1721 GREEN on HEAD `07a07add`. REMAINING is unchanged: the CV ~1.5pp GEN-LEVEL target (rides row 27's orphan work) is regen-gated — it needs a fresh live NIL-targeted generation + real export, which this CI environment cannot run (no models, no signed-in render)._
 
@@ -556,7 +570,9 @@ _E1 sweep 2026-09-09 (CI nightly, Opus 4.8): belts INTACT + loaded — `antcv-pr
 
 ## Row 29 — NIL-TARGETED-STATE-STICK-001
 
-_verified: 2026-09-29_
+_verified: 2026-10-10_
+
+_E1 sweep 2026-10-10 (CI nightly, Opus 4.8): closed legs re-confirmed in current code — `META-DRIFT-GUARD-002` in `app.src.js` (2 refs); `277-SEQUENCE-GUARD-001` in the loaded sidecar `antcv-generate-cloud-sync-277.js` (5 refs); `CL-HYDRATE-EXPORT-GATE-001` in `antcv-docx-client.js` (3 refs). Full suite 1821/1821 GREEN. Leg C (live setItem writer-hunt + auto-save downgrade belt) unchanged OPEN — needs a signed-in session CI lacks._
 
 _E1 sweep 2026-09-29 (CI nightly, Opus 4.8): closed legs re-confirmed in current code on HEAD `07a07add` — `META-DRIFT-GUARD-002` present in `app.js` (mirror, 1 ref) + `app.src.js` (2 refs); `277-SEQUENCE-GUARD-001` lives in the loaded sidecar `antcv-generate-cloud-sync-277.js` (5 refs); `CL-HYDRATE-EXPORT-GATE-001` lives in the loaded `antcv-docx-client.js` (3 refs). Full suite 1721/1721 GREEN. Leg C (the writer hunt — a live setItem probe on 'sections'/'meta' during ONE row selection to catch the pre-gen auto-save that also defeats the 277 staleness guard, + the auto-save downgrade belt) is unchanged OPEN — it needs a live signed-in session, not possible in CI._
 

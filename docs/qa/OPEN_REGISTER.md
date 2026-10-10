@@ -55,15 +55,15 @@ citing an old number may mean either row — the ID disambiguates.
 | 12 | `AI-NOTICE-LEFT-CLOUDCONVERT-001` | 2026-10-09 | diag-ai-notice-anchor RED CLOSED (2026-07-03): the WORKER was right — AI-NOTICE-LEFT-CLOUDCONVERT-001 (owner 2 |
 | 21 | `SETTINGS-ROLLER-RESET-001` | 2026-10-09 | FIXED (1.51.90): mechanism CONFIRMED live — history.back() with Settings open was a REAL navigation (side/tilt |
 | 22 | `CL-SLOGAN-RICHCONTENT-001` | 2026-10-09 | CL slogan rich-content phase 2 — real sections.cl rich_block object, dedupe render sites |
-| 33 | `WHY-RULE-EXPORT-PARITY-001` | 2026-09-28 | Export align parity — name-line + section-headline alignment lost on PDF/DOCX export |
-| 24 | `ANALYTICS-BUTTONS-SESSION-TIMEOUT-001` | 2026-09-28 | Analytics buttons — both sides fixed, needs owner click-through confirm |
-| 26 | `TOOLS-SIDEBAR-COMPRESS-001` | 2026-09-28 | Tools sidebar compress — exact owner gold-text (Instruments/Lab strings) as deterministic rule |
-| 30 | `LLM-IMAGE-ROUTING-001` | 2026-09-28 | LLM image routing — make provider selection image-aware, filter vision-blind providers |
-| 32 | `CL-PLATFORM-SIGNALS-001` | 2026-09-28 | CL platform-signals — hardware-platform JD tone/positioning gen-prompt rule |
+| 33 | `WHY-RULE-EXPORT-PARITY-001` | 2026-10-10 | Export align parity — name-line + section-headline alignment lost on PDF/DOCX export |
+| 24 | `ANALYTICS-BUTTONS-SESSION-TIMEOUT-001` | 2026-10-10 | Analytics buttons — both sides fixed, needs owner click-through confirm |
+| 26 | `TOOLS-SIDEBAR-COMPRESS-001` | 2026-10-10 | Tools sidebar compress — exact owner gold-text (Instruments/Lab strings) as deterministic rule |
+| 30 | `LLM-IMAGE-ROUTING-001` | 2026-10-10 | LLM image routing — make provider selection image-aware, filter vision-blind providers |
+| 32 | `CL-PLATFORM-SIGNALS-001` | 2026-10-10 | CL platform-signals — hardware-platform JD tone/positioning gen-prompt rule |
 | 34 | `ROLE-MERGE-STORED-001` | 2026-10-09 | Export/preview parity sweep — role-merge parity is the owner-escalated top item (rules 46/47 belts SHIPPED 1.5 |
-| 27 | `MAIN-RUNT-ORPHAN-SWEEP-001` | 2026-09-29 | Orphan sweep v3 — work-style tail truncation, page-3 ghost, real-PDF 1.5-page verify |
-| 28 | `NIL-GEN-ADAPTATION-001` | 2026-09-29 | NIL gen adaptation — CV ~1.5-page gen-level target (current export still 5pp) |
-| 29 | `NIL-TARGETED-STATE-STICK-001` | 2026-09-29 | NIL state-stick — leg C: stale-row snapshot restore + auto-save downgraded-meta belt |
+| 27 | `MAIN-RUNT-ORPHAN-SWEEP-001` | 2026-10-10 | Orphan sweep v3 — work-style tail truncation, page-3 ghost, real-PDF 1.5-page verify |
+| 28 | `NIL-GEN-ADAPTATION-001` | 2026-10-10 | NIL gen adaptation — CV ~1.5-page gen-level target (current export still 5pp) |
+| 29 | `NIL-TARGETED-STATE-STICK-001` | 2026-10-10 | NIL state-stick — leg C: stale-row snapshot restore + auto-save downgraded-meta belt |
 | 2 | `LINKIFY-EXPORT-001` | 2026-10-03 | SW-projects line-end overflow leg (hyperlink half already closed) |
 | 39a | `AUTOSAVE-NO-DOWNGRADE-001` | 2026-10-09 | TAB/DEVICE ISOLATION residuals — auto-save poison-writer CLOSED (AUTOSAVE-NO-DOWNGRADE-001) + same-device stal |
 | 41 | — | 2026-10-09 | SO-004 CRASH — React #185 on editor field commits, shared renderer. |

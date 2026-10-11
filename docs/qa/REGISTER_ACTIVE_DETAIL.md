@@ -1385,7 +1385,15 @@ INSERTs** (sonnet-5 [2,10] + gpt-5.5 [5,30]; SQL in the 09-06 report § B).
 
 ## Row 96 — CV-HEADER-BOX-001
 
-_verified: 2026-09-30_
+_verified: 2026-10-11_
+
+**2026-10-11 (CI cloud nightly, E1 staleness sweep — code re-check):** re-verified against CURRENT
+worker code, which HAS changed since the last sweep (several export commits: EXPORT-PAGE-BUDGET-001,
+MAIN-LIST-PAGE-SEGMENTS-001, linear theme tables, shorter header band). The ROUNDED HEADER BOX
+survives all of them: `<v:roundrect id="AntCVHeadBox" …>` now at `workers/docx-worker/src/index.js`
+~23961 and the `headerBox: style._cph && !(cv && linear) ? {…} : null` wiring at ~24770. Mechanism
+intact; remaining legs still live/owner-gated (photo-in-header parity, CV AI-notice→footer, margins,
+preview parity vs the gold docx) — not runnable in cloud CI (no signed-in export). Kept ACTIVE.
 
 **2026-09-30 (CI cloud nightly, E1 staleness sweep — code re-check):** the row was stale at "not
 started (2026-07-17)". The ROUNDED HEADER BOX is in fact SHIPPED in the worker: `postProcessDocx`
@@ -1410,7 +1418,12 @@ signed-in export / gold-docx diff here): photo-anchored-inside-header parity, CV
 
 ## Row 97 — DELIVERABLES-3CO-001
 
-_verified: 2026-09-30_
+_verified: 2026-10-11_
+
+**2026-10-11 (CI cloud nightly, E1 staleness sweep):** unchanged — pure live-regen + D1 JD-data
+check + owner deliverable, output quality gated on row 95 (CV-POLISH-BATCH-001) + the v5 CL work.
+Cloud CI has no signed-in session / live LLM to regenerate CV+CL or to check the Aimpoint/Demant JDs
+in D1, so nothing advanced. Kept ACTIVE — owner/live.
 
 **2026-09-30 (CI cloud nightly, E1 staleness sweep):** no code leg — this row is a pure
 live-regen + D1 JD-data check + owner deliverable, and its output quality is gated on row 95
@@ -1427,7 +1440,15 @@ CV+CL or to verify the Aimpoint/Demant JDs in D1, so nothing was advanced. Kept 
 
 ## Row 95 — CV-POLISH-BATCH-001
 
-_verified: 2026-09-30_
+_verified: 2026-10-11_
+
+**2026-10-11 (CI cloud nightly, E1 staleness sweep — code re-check):** leg (a) Strategic-Expertise
+cell caps STILL enforced in the gen prompt — `pwa/app.src.js` ~3834 (Nordic Minimal: Strategic
+Expertise cell max ~48 chars, one-line rule) and ~4086 (TIGHT CELLS, "never let that cell wrap").
+So the cap exists prompt-side; the owner's "cap not holding" is render/regen. Legs (b) results on one
+role, (c) Project-expertise selection, (d) lab-fab evidence, (e) security-clearance RECOMMENDATIONS
+wording all need a FRESH targeted regen to confirm — not runnable in cloud CI (no signed-in gen).
+Kept ACTIVE.
 
 **2026-09-30 (CI cloud nightly, E1 staleness sweep — code re-check):** leg (a) Strategic-Expertise
 cell caps ARE enforced in the gen prompt — `pwa/app.src.js` ~3834 (Nordic Minimal: CORE
@@ -1448,7 +1469,15 @@ five need a FRESH targeted regen to confirm — not runnable in cloud (no signed
 
 ## Row 92 — EXPORT-PREVIEW-PAGINATION-DIVERGENCE-001
 
-_verified: 2026-09-30_
+_verified: 2026-10-11_
+
+**2026-10-11 (CI cloud nightly, E1 staleness sweep — code re-check):** re-verified after the recent
+worker export rework. The two-map split survives: `sidebarPages`/`mainPages` =
+`trimTrailingEmptyPages(splitChildrenByPage(…))` at `workers/docx-worker/src/index.js` ~25111-25112,
+`numPages = Math.max(sidebarPages.length, mainPages.length, 1)` ~25113, trailing-empty-page trim and
+the last-content-page floor (~25117, 25131-25132) all present. Still NOT reproducible on current
+content (needs the owner's ORIGINAL overflowing REGULATORY-CONTEXT application reloaded, which cloud
+cannot stage); the "do NOT guess a fix" caution stands. Kept ACTIVE — owner-repro gated.
 
 **2026-09-30 (CI cloud nightly, E1 staleness sweep — code re-check):** the worker two-map split is
 intact — `sidebarPages`/`mainPages` split at `workers/docx-worker/src/index.js` ~25099-25101 with
@@ -1469,7 +1498,14 @@ content (a full REGULATORY CONTEXT) reloaded, which cloud has no way to stage. T
 
 ## Row 93 — AUTO-ANALYSE-ON-JD-LOAD-ERROR-001
 
-_verified: 2026-09-30_
+_verified: 2026-10-11_
+
+**2026-10-11 (CI cloud nightly, E1 staleness sweep — code re-check):** sidecar
+`pwa/antcv-analysis-panel-jd-block-356.js` still loaded (1 ref in `index.html`) and still carries
+AUTO-ANALYSE-ON-JD-LOAD-001 (~794) + the OPEN-ANALYSIS-AUTORUN-001 last-JD fingerprint (~86) + the
+slow-poll catching a JD attached after boot (~895). No `__errTrap` in current code (the transient was
+never captured). Unchanged since last sweep; still owner-repro gated — a transient needing a re-armed
+trap on a signed-in device, not stageable in cloud CI. Kept ACTIVE.
 
 **2026-09-30 (CI cloud nightly, E1 staleness sweep — code re-check):** the auto-analyse-on-JD-load
 path is present and hardened — `pwa/antcv-analysis-panel-jd-block-356.js` carries AUTO-ANALYSE-ON-JD-
@@ -2101,7 +2137,16 @@ says so.
 
 ## Row 114 — TELEMETRY-BGJOB-GAP-001
 
-_verified: 2026-09-30_
+_verified: 2026-10-11_
+
+**2026-10-11 (CI cloud nightly, E1 staleness sweep — code re-check):** gap CONFIRMED still open. The
+only `llm_calls` writer remains `insertLlmCall` in `workers/access-relay/src/telemetry.js` (~197);
+`workers/proxy/src` has no `llm_calls` writer (only a comment reference in `demo-enforcement.js`);
+`pwa/antcv-gen-job-client.js` still posts `/job/create` + `/job/step` and emits NO telemetry (its own
+header docstring ~4-5 documents this). So every background-job + routine gen stays invisible to the
+cost-quality tune, row 39 role-split and the Opus 5.5 first-call check. This is an OWNER DESIGN CALL
+(proxy `gen-job.js` posts per-section telemetry, or the job client emits per-section events) — no
+unattended fix. Kept ACTIVE.
 
 **Found by the desktop nightly 2026-09-30 (Gabo-PC).** While checking row 39's telemetry leg, D1 `llm_calls` showed 0 rows after 2026-09-28 21:38 UTC, yet the job-tracker nightly generated and persisted app 3505 (gpt-5-mini, 12/12 sections) the same morning. Cause, verified in code: the only writer of `llm_calls` is `insertLlmCall` in `workers/access-relay/src/telemetry.js`, fed by PWA client telemetry events. `workers/proxy/src` has no `llm_calls` writer. `pwa/antcv-gen-job-client.js` (loaded, `?v=1.51.132`) posts `/job/create` + `/job/step` and emits no telemetry. `scripts/job-tracker/gen-runner.py` uses the same `/job/*` path. So every background-job and routine gen is invisible to the weekly cost-quality tune, to the row 39 role-split check and to the Opus 5.5 first-call check. Not verified: which share of PWA gens take the job path by default.
 

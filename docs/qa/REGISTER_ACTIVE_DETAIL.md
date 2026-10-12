@@ -143,7 +143,16 @@ agent/code work is complete.
 
 ## Row 94 — CONTENT-LANG-STAMP-001
 
-_verified: 2026-10-01_
+_verified: 2026-10-12_
+
+**Re-verify 2026-10-12 (CI nightly — E1 stalest slot, code-presence):** the `content_language` field
+is still present in `pwa/app.js` (2 references) AND in the access-relay (`workers/access-relay/src/index.js`,
+5 references: `shapeApplicationRow` read-back at :2317, the `PUT /api/applications/:id` whitelist leg
+at :3715-3720 with undefined-skip / explicit-null-clears / six-language cap). The
+`1.51.4446-content-lang-stamp` code leg is INTACT on HEAD `641bd181`; `content-lang-stamp.test.mjs`
+green inside suite 1821/1821. REMAINING unchanged: a live generate/translate-persist regen confirming
+the stamp is written and read authoritatively (needs real models — CI cannot drive). Kept ACTIVE,
+model-gated.
 
 **Re-verify 2026-10-01 (CI nightly — E1 stalest slot, code-presence):** the `content_language` field
 is still present in `pwa/app.js` (2 references) AND in the access-relay whitelist
@@ -596,7 +605,15 @@ _E1 sweep 2026-09-09 (CI nightly, Opus 4.8): closed legs CONFIRMED in current co
 
 ## Row 2 — LINKIFY-EXPORT-001
 
-_verified: 2026-10-03_
+_verified: 2026-10-12_
+
+**2026-10-12 (CI nightly, verify-first — HEAD 641bd181):** re-confirmed at current HEAD.
+`sidebar_ratio` derivation present in `workers/docx-worker/src/index.js` [2 refs] (`ctx.mainW`-based
+section widths, legacy `MAIN_W` retained only as fallback); regression lock
+`workers/docx-worker/test/main-column-ratio-width.test.mjs` **re-run, 1/1 PASS**. SCHOLAR-LINK-GATE /
+LINKIFY code still present in `pwa/antcv-docx-client.js` + `pwa/antcv-scholar-links.js`. Content+bullets
+/hyperlink legs stay CLOSED-and-locked; sole residual (per-line font-metric fidelity) still folds into
+row 25 (real-PDF-gated — a render CI cannot do). No regression. Kept ACTIVE.
 
 **2026-10-03 (CI nightly, verify-first — HEAD 6d6dfbe3):** re-confirmed at current HEAD. `SIDEBAR_W`/`sidebar_ratio` derivation present in `workers/docx-worker/src/index.js` (`let __sbRatio = Number(payload.sidebar_ratio)` ~24673, `ctx.mainW`-based section widths ~25215/27597/28168, legacy `MAIN_W` constant retained only as fallback); regression lock `workers/docx-worker/test/main-column-ratio-width.test.mjs` **re-run, 1/1 PASS**. SCHOLAR-LINK-GATE / LINKIFY code still present in `pwa/antcv-docx-client.js` + `pwa/antcv-scholar-links.js`. Content+bullets/hyperlink legs stay CLOSED-and-locked; sole residual (per-line font-metric fidelity) still folds into row 25 (real-PDF-gated — a render CI cannot do). No regression. Kept ACTIVE.
 
@@ -768,7 +785,15 @@ _verified: 2026-10-05_
 
 ## Row 47 — MOBILE-TOPBAR-SAFEAREA-001
 
-_verified: 2026-10-01_
+_verified: 2026-10-12_
+
+**2026-10-12 (CI nightly, verify-first):** fix still intact on HEAD `641bd181` — `.antcv-topbar` top
+safe-area padding (`env(safe-area-inset-top)) 12px 8px 12px`) present in BOTH `pwa/app.src.js` and the
+`pwa/app.js` mirror [1 ref each]; `antcv-topbar-tools-347.js` still loaded in `index.html` [1 ref] and
+its mobile skip is intact (`isMobileWidth = (window.innerWidth||0) <= 900` at :164, still gating the
+`#antcv-pdf-preview-fab` relocation [2 refs]). The redundant `antcv-mobile-export-fab.js` is correctly
+ABSENT from `index.html`. Suite 1821/1821 green. REMAINING: live phone re-verify of the FAB-relocation
+on a real device (owner/desktop-gated — no device in CI). Kept ACTIVE.
 
 **2026-10-01 (CI nightly, verify-first):** fix still intact on HEAD `f6f6f68c` — `.antcv-topbar` top
 safe-area padding (`env(safe-area-inset-top)) 12px 8px 12px`) present in BOTH `pwa/app.src.js` and the
@@ -817,7 +842,14 @@ _verified: 2026-10-03_
 
 ## Row 50 — UPLOAD-SCREEN-TOP-CLIP-001
 
-_verified: 2026-10-01_
+_verified: 2026-10-12_
+
+**2026-10-12 (CI nightly, verify-first):** fix still intact on HEAD `641bd181` — the upload-screen
+`.fade` block still carries `justifyContent:"flex-start"` (the old centering value gone) in the
+`pwa/app.js` mirror, and `pwa/test/unit/upload-screen-top-clip.test.mjs` (scoped `.fade` flex-start
+match + dead-`scrollTop`-ref removal, both bundles) ran green standalone and inside suite 1821/1821.
+No regression. REMAINING: owner live re-verify (with and without an active background generation — no
+device in CI). Kept ACTIVE.
 
 **2026-10-01 (CI nightly, verify-first):** fix still intact on HEAD `f6f6f68c` —
 `pwa/test/unit/upload-screen-top-clip.test.mjs` (scoped `.fade` flex-start match + dead-`scrollTop`-ref
@@ -837,7 +869,14 @@ Kept ACTIVE.
 
 ## Row 51 — PREVIEW-SCROLL-JITTER-001
 
-_verified: 2026-10-01_
+_verified: 2026-10-12_
+
+**2026-10-12 (CI nightly, verify-first):** fix still intact on HEAD `641bd181` —
+`pwa/test/unit/preview-scroll-jitter.test.mjs` ran green standalone and inside suite 1821/1821 (the
+cosmetic deps `Ke, ya` / navyColor+styleConfig still absent from the fit-recompute effect's dependency
+array in both bundles, so a silent brand/font change still can't snap the reader's scroll position;
+doc/language resets preserved). No regression. REMAINING: owner live re-verify (no device in CI). Kept
+ACTIVE.
 
 **2026-10-01 (CI nightly, verify-first):** fix still intact on HEAD `f6f6f68c` —
 `pwa/test/unit/preview-scroll-jitter.test.mjs` green in the 1746/1746 suite (cosmetic deps `Ke, ya`

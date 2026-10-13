@@ -820,7 +820,9 @@ device (owner/desktop-gated — no device in CI). Kept ACTIVE.
 
 ## Row 49 — SIDEBAR-GROUP-PAGE-BREAK-001
 
-_verified: 2026-10-03_
+_verified: 2026-10-13_
+
+**2026-10-13 (CI nightly, E1 staleness sweep — HEAD bbed0033):** still NOT-STARTED and still applicable. The docx-worker's `(CONT.)` continuation mechanism is still SECTION-level only (`CONT_SUFFIX` at `workers/docx-worker/src/index.js:24658`; section headlines re-emit as "… (CONT.)" at :26472 behind a `pageBreakBefore`), not per-GROUP within a sidebar labeled-list section — so a long Focus-Area group can still orphan/truncate rather than carry under a group-level continuation. The worker DID change since the last verify (e69e15c6 "enriched closing tables + (Cont.) page-2 heading" 1.51.4873; acc0d333 "split details table into theme tables" #376), but both touch the MAIN/closing-table path, not the sidebar group break this row tracks; `cantSplit` (12 refs) + `sidebar_ratio` (2 refs) still operate at the section level. `diag-twocol-paged.mjs` green (no regression in the distribution path). Owner-authorized design work in the project's highest-risk area; needs a dedicated diagnostic-first session with a real long-group export (render + worker deploy CI lacks; ALLOW_DEPLOY=false). Kept ACTIVE (scoped, not started).
 
 **2026-10-03 (CI nightly, verify-first — HEAD 6d6dfbe3):** still NOT-STARTED and still applicable — the docx-worker page-DISTRIBUTION algorithm (per-page Table objects, `cantSplit`, `sidebar_ratio` split) in `workers/docx-worker/src/index.js` is unchanged, so a long focus-area group can still be orphaned/truncated instead of carried under "(CONT.)". Owner-authorized design work in the project's highest-risk area; needs a dedicated diagnostic-first session with a real long-group export (a render + worker deploy CI lacks; ALLOW_DEPLOY=false this run) — NOT a speculative unattended patch. Kept ACTIVE (scoped, not started).
 
@@ -931,7 +933,9 @@ _verified: 2026-10-05_
 
 ## Row 53 — CROSS-APP-EXPORT-CONTAMINATION-001
 
-_verified: 2026-10-03_
+_verified: 2026-10-13_
+
+**2026-10-13 (CI nightly, E1 staleness sweep — HEAD bbed0033):** re-confirmed. Leg (a) still SHIPPED via MIRROR-LOAD-001 — marker present **2×** in `pwa/app.src.js`; retired `antcv-export-app-scope-guard` still **0 refs** in `pwa/index.html` (correctly dead on disk). Legs (b)–(f) — CL lang-leak, unrendered placeholders, diacritics, CV partial-lang residue, brand-fit — unchanged/OPEN; all content/gen-quality, live-gen-gated (a real targeted LLM generation CI cannot run). Suite 1821/1821. Kept ACTIVE for legs b–f.
 
 **2026-10-03 (CI nightly, verify-first — HEAD 6d6dfbe3):** re-confirmed. Leg (a) still SHIPPED via MIRROR-LOAD-001 — marker present **2×** in `pwa/app.src.js`; retired `antcv-export-app-scope-guard` still **0 refs** in `pwa/index.html` (correctly dead on disk). Legs (b)–(f) — CL lang-leak, unrendered placeholders, diacritics, CV partial-lang residue, brand-fit — unchanged/OPEN; all content/gen-quality, live-gen-gated (a real targeted LLM generation CI cannot run). Kept ACTIVE for legs b–f.
 
@@ -955,7 +959,9 @@ _verified: 2026-10-03_
 
 ## Row 54 — GEN-JD-TAILOR-KERNEL-RECALL-001
 
-_verified: 2026-10-03_
+_verified: 2026-10-13_
+
+**2026-10-13 (CI nightly, E1 staleness sweep — HEAD bbed0033):** still NOT started — `grep -rl KERNEL-RECALL pwa/ workers/` returns nothing; no commits on the ID. Targeted gen still re-ranks the narrowed set without recalling JD-relevant items (military comms service, Pan Idræt) from the unsolicited kernel. Content-quality; a fix needs a real targeted LLM gen to verify (owner/live-gated, not doable in cloud CI). Kept ACTIVE.
 
 **2026-10-03 (CI nightly, verify-first — HEAD 6d6dfbe3):** still NOT started — `grep -rl KERNEL-RECALL pwa/ workers/` returns nothing; no commits on the ID. Targeted gen still re-ranks the narrowed set without recalling JD-relevant items (military comms service, Pan Idræt) from the unsolicited kernel. Content-quality; a fix needs a real targeted LLM gen to verify (owner/live-gated, not doable in cloud CI). Kept ACTIVE.
 
@@ -979,7 +985,9 @@ _verified: 2026-10-03_
 
 ## Row 55 — TARGETED-OUTPUT-FURNITURE-001
 
-_verified: 2026-10-03_
+_verified: 2026-10-13_
+
+**2026-10-13 (CI nightly, E1 staleness sweep — HEAD bbed0033):** still NOT started — `grep -rl TARGETED-OUTPUT-FURNITURE pwa/ workers/` returns nothing; no commits on the ID. All six furniture legs (a CV header specialization-vs-application line, b fixed-label localization, c JD named-contact greeting, d employer brand-fit, e merged-role title order, f AI-notice localization) remain hand-fixed only. Legs b/e/f are deterministic template transforms that COULD be coded, but they live in the docx export path (worker + `antcv-docx-client.js`) → would need a PR plus a live export verify this cloud run cannot do (no browser pane, ALLOW_DEPLOY=false); not shipped speculatively per owner's "no brickable mid-product". Content/gen-quality; owner/live-gated. Kept ACTIVE.
 
 **2026-10-03 (CI nightly, verify-first — HEAD 6d6dfbe3):** still NOT started — `grep -rl TARGETED-OUTPUT-FURNITURE pwa/ workers/` returns nothing; no commits on the ID. All six furniture legs (a CV header specialization-vs-application line, b fixed-label localization, c JD named-contact greeting, d employer brand-fit, e merged-role title order, f AI-notice localization) remain hand-fixed only. Legs b/e/f are deterministic template transforms that COULD be coded, but they live in the docx export path (worker + `antcv-docx-client.js`) → would need a PR plus a live export live-verify this cloud run cannot do (no browser pane, ALLOW_DEPLOY=false); not shipped speculatively per owner's "no brickable mid-product". Content/gen-quality; owner/live-gated. Kept ACTIVE.
 
@@ -1003,7 +1011,9 @@ _verified: 2026-10-03_
 
 ## Row 56 — GEN-JD-RELEVANCE-TRIM-001
 
-_verified: 2026-10-03_
+_verified: 2026-10-13_
+
+**2026-10-13 (CI nightly, E1 staleness sweep — HEAD bbed0033):** still NOT started — `grep -rl RELEVANCE-TRIM pwa/ workers/` returns nothing; no commits on the ID. Targeted CV still doesn't relevance-gate per-role bullets / hide irrelevant tools (optics/fab bullets + LabVIEW on a software/AI JD). Content-quality, sibling of row 54; needs a real targeted LLM gen to verify (owner/live-gated, not doable in cloud CI). Kept ACTIVE.
 
 **2026-10-03 (CI nightly, verify-first — HEAD 6d6dfbe3):** still NOT started — `grep -rl RELEVANCE-TRIM pwa/ workers/` returns nothing; no commits on the ID. Targeted CV still doesn't relevance-gate per-role bullets / hide irrelevant tools. Content-quality, sibling of row 54; needs a real targeted LLM gen to verify (owner/live-gated, not doable in cloud CI). Kept ACTIVE.
 

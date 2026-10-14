@@ -67,7 +67,12 @@ needs-live-env — carry forward.
 
 ## Row 76 — JOBTRACKER-LLM-REFIT-BUTTON-001
 
-_verified: 2026-10-01_
+_verified: 2026-10-14_
+
+**Re-verify 2026-10-14 (CI nightly — E1 stalest slot):** unchanged on HEAD `9bca15b8` — still a
+deferred OPTIONAL enhancement, not a defect. Deterministic Top-5 fit ranking is by design; the
+on-demand "re-judge fit" LLM button is only worth building if the deterministic tier proves too
+coarse on real edge JDs. No code owed; nothing regressed. Kept ACTIVE (optional, low priority).
 
 **Re-verify 2026-10-01 (CI nightly — E1 stalest slot):** unchanged on HEAD `f6f6f68c` — still a
 deferred OPTIONAL enhancement, not a defect. Deterministic Top-5 fit ranking is by design; the
@@ -100,7 +105,13 @@ too coarse on real edge JDs — no such evidence has surfaced. No code owed; kee
 
 ## Row 82 — ROLE-CANON-AUDIT-LEG-001
 
-_verified: 2026-10-01_
+_verified: 2026-10-14_
+
+**Re-verify 2026-10-14 (CI nightly — E1 stalest slot): CODE LEG STILL DONE.** Re-ran
+`scripts/job-tracker/test_gold_residue.py` on HEAD `9bca15b8` — **18/18 checks pass**;
+`role_canon_issues(cv, lang, gold)` still wired into `run()` as `checks["role_canon"]`
+(`gold_audit.py:22,91-92`). Unchanged; only the owner-gated es/zh canon-wording eyeball remains.
+Kept ACTIVE for that owner pass.
 
 **Re-verify 2026-10-01 (CI nightly — E1 stalest slot): CODE LEG STILL DONE.** Re-ran
 `scripts/job-tracker/test_gold_residue.py` on HEAD `f6f6f68c` — **18/18 checks pass**;
@@ -1037,7 +1048,9 @@ _verified: 2026-10-13_
 
 ## Row 60
 
-_verified: 2026-10-04_
+_verified: 2026-10-14_
+
+**2026-10-14 (CI nightly, E1 staleness sweep — HEAD 9bca15b8):** re-confirmed unchanged — both control sidecars still on disk AND wired in `index.html` (`antcv-header-rule-control.js` leg a, `antcv-cl-slogan-control.js` legs c/d/e/f; 2 refs). The 3 code commits since the last sweep (e69e15c6 linear closing tables, b6175919 EDU-DETAIL, ae90169c import fix) do not touch the panel-control layer. Status: diagnosed (code-map done); leg (d) `clClosingHidden`/`clSignNameHidden` still the genuine gap. All six legs need live-DOM capture + patch and, being auto-deploy-to-prod app changes, a live repro before ship — not doable in CI. Kept ACTIVE.
 
 **2026-10-04 (CI cloud nightly, E1 staleness sweep — HEAD c8356182):** re-confirmed unchanged — both control sidecars still on disk AND wired in `index.html` (`antcv-header-rule-control.js` leg a, `antcv-cl-slogan-control.js` legs c/d/e/f; 2 refs). Status: diagnosed (code-map done); leg (d) `clClosingHidden`/`clSignNameHidden` still the genuine gap. All six legs need live-DOM capture + patch and, being auto-deploy-to-prod app changes, a live repro before ship — not doable in CI. Kept ACTIVE.
 
@@ -1055,7 +1068,9 @@ _verified: 2026-10-04_
 
 ## Row 61 — LINE-DISTRIBUTION-GUIDELINES-001
 
-_verified: 2026-10-04_
+_verified: 2026-10-14_
+
+**2026-10-14 (CI nightly, E1 staleness sweep — HEAD 9bca15b8):** re-confirmed unchanged — guidelines partly BAKED under LINE-DISTRIBUTION-001: `antcv-bullet-targets.js goldDensity()` (4 refs) + `window.__antcvRowFit` (8 refs in app.src.js) both present; the 3 code commits since the last sweep (e69e15c6/b6175919/ae90169c) leave both marker counts unchanged. Remaining guideline points (clean-cut floor pt 10, result-line one-line budget pt 5, multi-language render-measure) still feed the generator orphan-measure work (rows 27/49/59A). Kept ACTIVE as the standing guidelines anchor.
 
 **2026-10-04 (CI cloud nightly, E1 staleness sweep — HEAD c8356182):** re-confirmed unchanged — guidelines partly BAKED under LINE-DISTRIBUTION-001: `antcv-bullet-targets.js goldDensity()` (4 refs) + `window.__antcvRowFit` (8 refs in app.src.js) both present. Remaining guideline points (clean-cut floor pt 10, result-line one-line budget pt 5, multi-language render-measure) still feed the generator orphan-measure work (rows 27/49/59A). Kept ACTIVE as the standing guidelines anchor.
 
@@ -1076,7 +1091,9 @@ _verified: 2026-10-04_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-10-04_
+_verified: 2026-10-14_
+
+**2026-10-14 (CI nightly, E1 staleness sweep — HEAD 9bca15b8):** unchanged — still a set of universal polish rules applied by hand, NOT baked into the generator, except the line-fill/orphan points (4/14/19/22/28/29) which overlap row 61 and are partly served by LINE-DISTRIBUTION-001 (`goldDensity()` 4 refs + `__antcvRowFit` 8 refs re-confirmed present at HEAD). The content/furniture rules remain generator-baseline TODOs. Kept ACTIVE.
 
 **2026-10-04 (CI cloud nightly, E1 staleness sweep — HEAD c8356182):** unchanged — still a set of universal polish rules applied by hand, NOT baked into the generator, except the line-fill/orphan points (4/14/19/22/28/29) which overlap row 61 and are partly served by LINE-DISTRIBUTION-001 (`goldDensity()` 4 refs + `__antcvRowFit` 8 refs re-confirmed present). The content/furniture rules remain generator-baseline TODOs. Kept ACTIVE.
 

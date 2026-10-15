@@ -169,3 +169,60 @@ test('telemetry prices from the table before it trusts the client', () => {
   assert.match(fn, /console\.warn/,
     'falling back to the client-reported cost must be logged, not silent');
 });
+
+// ------------------------------------------------------------
+// 2026-10-15 (weekly tune, owner follow-up) — MODEL-TABLE-SWEEP-2026-10-001.
+// The owner noticed the vendors had shipped more ids than the tune priced; earlier passes
+// deferred anything that was 'not a pin'. This block pins EVERY text id on the four vendor
+// pricing pages (as read 2026-10-15, plus the Mistral /v1/models alias list) to its vendor
+// rate, so a missing key can no longer hide behind a shorter neighbour or the fallback.
+// Re-verify the whole list at every tune; add a row for every id a vendor adds.
+
+const VENDOR_CATALOGUE_2026_10_15 = [
+  // Anthropic — platform.claude.com/docs/en/about-claude/pricing (nothing unpriced this pass)
+  ['claude-fable-5-1', [10, 50]], ['claude-mythos-5-1', [10, 50]], ['claude-fable-5', [10, 50]], ['claude-mythos-5', [10, 50]],
+  ['claude-opus-5-5', [4, 20]], ['claude-opus-5', [5, 25]], ['claude-opus-4-8', [5, 25]], ['claude-opus-4-7', [5, 25]],
+  ['claude-opus-4-6', [5, 25]], ['claude-opus-4-5', [5, 25]], ['claude-opus-4-1', [15, 75]], ['claude-opus-4', [15, 75]],
+  ['claude-sonnet-5-5', [2, 10]], ['claude-sonnet-5', [2, 10]], ['claude-sonnet-4-6', [3, 15]], ['claude-sonnet-4-5', [3, 15]],
+  ['claude-sonnet-4', [3, 15]], ['claude-haiku-5-5', [0.10, 0.50]], ['claude-haiku-4-5', [1, 5]], ['claude-3-5-haiku', [0.80, 4]],
+  // OpenAI — developers.openai.com/api/docs/pricing (standard tier, short context)
+  ['gpt-6-astra', [10, 50]], ['gpt-6.1-sol', [2, 10]], ['gpt-6-luna', [0.10, 0.50]], ['gpt-6-sol', [2, 10]],
+  ['gpt-5.6-sol', [4, 20]], ['gpt-5.6-terra', [2, 12]], ['gpt-5.6-luna', [0.20, 1.20]],
+  ['gpt-5.5', [5, 30]], ['gpt-5.5-pro', [30, 180]], ['gpt-5.4', [2.50, 15]], ['gpt-5.4-mini', [0.75, 4.50]],
+  ['gpt-5.4-nano', [0.20, 1.25]], ['gpt-5.4-pro', [30, 180]], ['gpt-5.2', [1.75, 14]], ['gpt-5.2-pro', [21, 168]],
+  ['gpt-5.1', [1.25, 10]], ['gpt-5', [1.25, 10]], ['gpt-5-mini', [0.25, 2]], ['gpt-5-nano', [0.05, 0.40]], ['gpt-5-pro', [15, 120]],
+  ['gpt-4.1', [2, 8]], ['gpt-4.1-mini', [0.40, 1.60]], ['gpt-4.1-nano', [0.10, 0.40]],
+  ['gpt-4o', [2.50, 10]], ['gpt-4o-2024-05-13', [5, 15]], ['gpt-4o-2024-11-20', [2.50, 10]], ['gpt-4o-mini', [0.15, 0.60]],
+  ['o1', [15, 60]], ['o1-pro', [150, 600]], ['o3-pro', [20, 80]], ['o3', [2, 8]], ['o4-mini', [1.10, 4.40]], ['o3-mini', [1.10, 4.40]],
+  ['gpt-4-turbo-2024-04-09', [10, 30]], ['gpt-4-0613', [30, 60]], ['gpt-3.5-turbo', [0.50, 1.50]], ['gpt-3.5-turbo-0125', [0.50, 1.50]],
+  ['gpt-3.5-turbo-1106', [1, 2]], ['gpt-3.5-turbo-instruct', [1.50, 2]], ['davinci-002', [2, 2]], ['babbage-002', [0.40, 0.40]],
+  ['chat-latest', [5, 30]], ['gpt-5.3-codex', [1.75, 14]], ['gpt-5-search-api', [1.25, 10]],
+  ['gpt-5.6-cyber', [12.50, 75]], ['gpt-5.5-cyber', [12.50, 75]],
+  // Mistral — docs.mistral.ai/inference/pricing, ids from GET /v1/models 2026-10-15
+  ['mistral-large-4', [0.68, 2.09]], ['mistral-large-4-0', [0.68, 2.09]], ['mistral-large-latest', [0.50, 1.50]], ['mistral-large-2512', [0.50, 1.50]],
+  ['mistral-medium-latest', [1.50, 7.50]], ['mistral-medium-2604', [1.50, 7.50]], ['magistral-medium-latest', [1.50, 7.50]],
+  ['mistral-vibe-cli-latest', [1.50, 7.50]], ['mistral-vibe-cli-with-tools', [1.50, 7.50]], ['mistral-vibe-cli-fast', [0.15, 0.60]],
+  ['mistral-small-latest', [0.15, 0.60]], ['mistral-small-2603', [0.15, 0.60]], ['magistral-small-latest', [0.15, 0.60]],
+  ['ministral-14b-2512', [0.20, 0.20]], ['ministral-14b-latest', [0.20, 0.20]], ['ministral-8b-2512', [0.15, 0.15]],
+  ['ministral-8b-latest', [0.15, 0.15]], ['ministral-3b-2512', [0.10, 0.10]], ['ministral-3b-latest', [0.10, 0.10]],
+  ['codestral-2508', [0.30, 0.90]], ['codestral-latest', [0.30, 0.90]], ['mistral-code-latest', [0.30, 0.90]],
+  ['mistral-code-fim-latest', [0.30, 0.90]], ['codestral-embed', [0.15, 0]], ['codestral-embed-2505', [0.15, 0]],
+  ['zai-glm-5-3', [1.40, 4.40]], ['zai-glm-5', [1.40, 4.40]], ['zai-glm-latest', [1.40, 4.40]], ['zai-glm-5-2', [1.40, 4.40]], ['glm-5-2', [1.40, 4.40]],
+  // Gemini — ai.google.dev/gemini-api/docs/pricing (paid tier, base text rate; promo prices as in effect 2026-10-15)
+  ['gemini-4-argon', [2, 10]], ['gemini-3.8-flash', [0.75, 3.75]], ['gemini-3.7-flash', [0.75, 3.75]], ['gemini-3.6-flash', [0.75, 3.75]],
+  ['gemini-3.8-live', [0.75, 4.50]], ['gemini-3.8-live-extended-thinking', [0.75, 4.50]], ['gemini-3.1-flash-live-preview', [0.75, 4.50]],
+  ['gemini-3.5-flash', [1.50, 9]], ['gemini-3.5-flash-lite', [0.30, 2.50]], ['gemini-3.1-flash-lite', [0.25, 1.50]],
+  ['gemini-omni-1.1-flash', [1.50, 9]], ['gemini-omni-flash-preview', [1.50, 9]],
+  ['gemini-3.1-pro-preview', [2, 12]], ['gemini-3.1-pro-preview-customtools', [2, 12]], ['gemini-3-flash-preview', [0.50, 3]],
+  ['gemini-2.5-pro', [1.25, 10]], ['gemini-2.5-flash', [0.30, 2.50]], ['gemini-2.5-flash-lite', [0.10, 0.40]],
+];
+
+test('every text id on the four vendor pricing pages has a strict rate (MODEL-TABLE-SWEEP-2026-10-001)', async () => {
+  const { rateForStrict } = await import(pathToFileURL(MIRROR).href);
+  const bad = [];
+  for (const [id, rate] of VENDOR_CATALOGUE_2026_10_15) {
+    const got = rateForStrict(id);
+    if (!got || got[0] !== rate[0] || got[1] !== rate[1]) bad.push(`${id}: got ${JSON.stringify(got)} want [${rate}]`);
+  }
+  assert.deepEqual(bad, [], 'ids the relay would still mis-meter or hand to the client-cost fallback:\n' + bad.join('\n'));
+});

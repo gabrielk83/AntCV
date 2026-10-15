@@ -349,6 +349,22 @@ this routine changes the *starting* choice based on the week's evidence.
    exact-match row at the OLD rate (step 1b) — on 2026-09-06 the 08-20 sonnet-5 row at [3,15] was still
    winning over the corrected table; the superseding INSERT is owner-gated and is written out in
    `COST_QUALITY_WEEKLY_2026-09-06.md`.
+1a-quater. **CORRECTION from the 2026-10-15 owner follow-up (MODEL-TABLE-SWEEP-2026-10-001) — price the WHOLE
+   catalogue, not the pins.** The owner noticed "multiple new models have been released by Mistral, Gemini,
+   OpenAI and Anthropic" after a pass that had added one id and deferred ~40 others as "not a pin, no traffic".
+   That deferral policy was the gap: every one of them resolved to a wrong neighbour or the [3,15] fallback
+   (`gpt-5-nano` 25x OVER, `gpt-5.2-pro` 17x UNDER, `ministral-*` 20-30x OVER, `magistral-medium-latest` 2x
+   OVER). Rules from now on: (i) **every token-priced text id on each vendor pricing page gets a key** in all
+   three mirrors the same run it appears — "not a pin" is not a reason to defer; (ii) the freshness tests carry
+   a `VENDOR_CATALOGUE_<date>` list that asserts every catalogued id resolves to its vendor rate — extend the
+   list, never trim it; (iii) **probe the live id forms**: Mistral `GET /v1/models` (read-only, owner key in
+   `~/.antcv/keys.env`) is the only source for alias targets (`magistral-medium-latest` → `mistral-medium`,
+   `ministral-14b-2512`, `zai-glm-latest`) — the pricing page shows slugs, not ids; (iv) diff the page
+   MECHANICALLY against the key list (`rateFor(id)` for every page id), not by eye; (v) non-token models
+   (image, TTS, embedding, OCR, robotics) are excluded by rule and the exclusion is written in the table comment;
+   (vi) a retired id sitting in a `PROVIDER_MODELS` cascade tail (2026-10-15: `mistral-large-2411`/`-2407`,
+   `mistral-medium-2312`, `gemini-2.0-flash`, `gemini-1.5-pro`) is an OWNER call per 1a-bis(ii) — report it,
+   do not edit the cascade.
 1b. **COST-SOURCE AUDIT (added 2026-08-20 — COST-SOURCE-AUDIT-GAP-001).** Step 1a audits the
    `demo-enforcement.js` `RATES` tables, which govern the **demo budget cap**. They do NOT produce
    `llm_calls.estimated_cost_usd` — the number every score in step 3 divides by. That number comes

@@ -110,6 +110,33 @@ const RATES = {
   'gpt-4.1-mini':        [0.40,  1.60],
   'gpt-4.1-nano':        [0.10,  0.40],
   'gpt-4.1':             [2.00,  8.00],
+  // MODEL-TABLE-SWEEP-2026-10-001 (2026-10-15, owner: 'multiple new models have been released'): every text id on
+  // developers.openai.com/api/docs/pricing is now keyed. Earlier passes deferred these as 'not a pin'; each one either
+  // resolved to the shorter 'gpt-5' [1.25,10] (gpt-5.2 1.4x UNDER, gpt-5.2-pro 17x UNDER, gpt-5-pro 12x UNDER,
+  // gpt-5-nano 25x OVER, gpt-5.3-codex 1.4x UNDER) or to FALLBACK [3,15] (chat-latest, every o-series id, the
+  // 3.5/4-era snapshots). None is an AntCV pin or in a default cascade; priced so a BYOK/override call meters correctly.
+  'gpt-5.3-codex':       [1.75, 14.00],  // 2026-10-15 Codex tier; MUST stay longer than 'gpt-5'
+  'gpt-5-search-api':    [1.25, 10.00],  // 2026-10-15 same rate as gpt-5 today; explicit so a split cannot drift
+  'gpt-5.2-pro':         [21.00, 168.00], // 2026-10-15 MUST stay longer than 'gpt-5.2'
+  'gpt-5.2':             [1.75, 14.00],  // 2026-10-15 was gpt-5 [1.25,10] = 1.4x UNDER
+  'gpt-5.1':             [1.25, 10.00],  // 2026-10-15 same rate as gpt-5 today; explicit so a split cannot drift
+  'gpt-5-nano':          [0.05,  0.40],  // 2026-10-15 was gpt-5 [1.25,10] = 25x OVER
+  'gpt-5-pro':           [15.00, 120.00], // 2026-10-15 was gpt-5 [1.25,10] = 12x UNDER
+  'chat-latest':         [5.00, 30.00],  // 2026-10-15 the ChatGPT-tuned alias; was FALLBACK
+  'o1-pro':              [150.00, 600.00], // 2026-10-15 MUST stay longer than 'o1'
+  'o3-pro':              [20.00, 80.00], // 2026-10-15 MUST stay longer than 'o3'
+  'o3-mini':             [1.10,  4.40],  // 2026-10-15 MUST stay longer than 'o3'
+  'o4-mini':             [1.10,  4.40],  // 2026-10-15
+  'o1':                  [15.00, 60.00], // 2026-10-15 short key: the catalogue test asserts no other vendor id contains it
+  'o3':                  [2.00,  8.00],  // 2026-10-15 short key: the catalogue test asserts no other vendor id contains it
+  'gpt-4o-2024-05-13':   [5.00, 15.00],  // 2026-10-15 the one dated 4o snapshot priced above gpt-4o; MUST stay longer than 'gpt-4o'
+  'gpt-4-turbo':         [10.00, 30.00], // 2026-10-15 covers gpt-4-turbo-2024-04-09
+  'gpt-4-0613':          [30.00, 60.00], // 2026-10-15 legacy GPT-4 snapshot
+  'gpt-3.5-turbo-instruct': [1.50, 2.00], // 2026-10-15 MUST stay longer than 'gpt-3.5-turbo'
+  'gpt-3.5-turbo-1106':  [1.00,  2.00],  // 2026-10-15 MUST stay longer than 'gpt-3.5-turbo'
+  'gpt-3.5-turbo':       [0.50,  1.50],  // 2026-10-15 covers gpt-3.5-turbo-0125
+  'davinci-002':         [2.00,  2.00],  // 2026-10-15 base completion model
+  'babbage-002':         [0.40,  0.40],  // 2026-10-15 base completion model
   // Mistral
   'mistral-small':       [0.15,  0.60],   // Mistral Small 4, verified 2026-08-20 mistral.ai/pricing/api
   'mistral-medium':      [1.50,  7.50],   // Mistral Medium 3.5, verified 2026-08-20 mistral.ai/pricing/api
@@ -122,6 +149,24 @@ const RATES = {
   // key at the Large 4 rate), and the sale will end.
   'mistral-large-4':     [0.68,  2.09],   // 2026-10-08 SALE price (list [1.36,4.18]). MUST stay longer than 'mistral-large'. Not an AntCV pin.
   'mistral-large':       [0.50,  1.50],   // Mistral Large 3, verified 2026-08-20 mistral.ai/pricing/api. Was [2,6] (Large 2 era) - 4x over. Substring-matches the live `mistral-large-latest`. LLM-COST-MISTRAL-RATE-001.
+  // MODEL-TABLE-SWEEP-2026-10-001 (2026-10-15): the rest of docs.mistral.ai/inference/pricing, with the id forms taken from
+  // a read-only GET /v1/models on 2026-10-15 (54 ids). Findings: 'ministral-*' contains no 'mistral' key (FALLBACK, 20-30x OVER);
+  // 'magistral-medium-latest' / 'magistral-small-latest' are now aliases of mistral-medium / mistral-small but contain
+  // neither key (FALLBACK, 2x OVER / 20x OVER); the 'mistral-vibe-cli-*' and 'mistral-code-*' aliases likewise. The page
+  // lists only GLM 5.3; 'zai-glm-5-2' (retires 2026-10-31) is priced at the 5.3 rate for lack of a published number.
+  // Alias check 2026-10-15: mistral-large-latest -> mistral-large-2512 (Large 3) — the [0.5,1.5] pin still holds.
+  'ministral-14b':       [0.20,  0.20],  // 2026-10-15 Ministral 3 14B (ministral-14b-2512 / -latest)
+  'ministral-8b':        [0.15,  0.15],  // 2026-10-15 Ministral 3 8B (ministral-8b-2512 / -latest); the retired ministral-8b-2410 lands here too
+  'ministral-3b':        [0.10,  0.10],  // 2026-10-15 Ministral 3 3B (ministral-3b-2512 / -latest)
+  'magistral-medium':    [1.50,  7.50],  // 2026-10-15 alias of mistral-medium (Medium 3.5) per /v1/models; retired magistral-medium-25xx land here
+  'magistral-small':     [0.15,  0.60],  // 2026-10-15 alias of mistral-small (Small 4) per /v1/models
+  'mistral-vibe-cli-fast': [0.15, 0.60], // 2026-10-15 alias of mistral-small; MUST stay longer than 'mistral-vibe-cli'
+  'mistral-vibe-cli':    [1.50,  7.50],  // 2026-10-15 alias of mistral-medium (-latest, -with-tools)
+  'codestral-embed':     [0.15,  0.00],  // 2026-10-15 embedding model, no output price; MUST stay longer than 'codestral'
+  'codestral':           [0.30,  0.90],  // 2026-10-15 Codestral 25.08 (codestral-2508 / -latest)
+  'mistral-code':        [0.30,  0.90],  // 2026-10-15 mistral-code-latest / mistral-code-fim-latest alias codestral-2508
+  'zai-glm':             [1.40,  4.40],  // 2026-10-15 Z.ai GLM 5.3 hosted by Mistral (zai-glm-5-3 / zai-glm-5 / zai-glm-latest; 5-2 at the same rate, see above)
+  'glm-5-2':             [1.40,  4.40],  // 2026-10-15 the bare 'glm-5-2' id /v1/models also lists
   // Gemini
   'gemini-1.5-flash':    [0.075, 0.30],
   'gemini-1.5-pro':      [1.25,  5.00],
@@ -152,6 +197,13 @@ const RATES = {
   'gemini-2.5-flash-lite': [0.10, 0.40], // verified 2026-08-20 ai.google.dev/gemini-api/docs/pricing. MUST stay longer than the 2.5-flash key below - longest-key-wins is what keeps Flash-Lite off the Flash rate.
   'gemini-2.5-flash':    [0.30,  2.50],   // verified 2026-08-20 ai.google.dev/gemini-api/docs/pricing. Was [0.10,0.40], which is Flash-LITE's rate - 3x under in, 6.25x under out. LLM-COST-GEMINI-RECONCILE-001.
   'gemini-2.5-pro':      [1.25, 10.00],
+  // MODEL-TABLE-SWEEP-2026-10-001 (2026-10-15): the remaining token-priced text/multimodal ids on
+  // ai.google.dev/gemini-api/docs/pricing. All fell to FALLBACK [3,15]. Image, TTS, embedding, Veo/Lyria and the
+  // robotics ER models are not keyed: they are priced per image / per character / per second, not per text token.
+  'gemini-3-flash':      [0.50,  3.00],  // 2026-10-15 gemini-3-flash-preview (still 'Preview' on the models page); 'gemini-3-flash' is not a substring of any 3.x id
+  'gemini-omni':         [1.50,  9.00],  // 2026-10-15 gemini-omni-1.1-flash + gemini-omni-flash-preview (video output [—,17.50] not modelled)
+  'gemini-3.8-live':     [0.75,  4.50],  // 2026-10-15 text rate of the live models (+ -extended-thinking); audio is [3,12]
+  'gemini-3.1-flash-live': [0.75, 4.50], // 2026-10-15 gemini-3.1-flash-live-preview; NOT a substring match of 'gemini-3.1-flash-lite'
   // xAI Grok — added 2026-07-05 (BYOK-COST-AUDIT-001, owner: the byok-qualify
   // audit never priced a BYOK provider whose model id fell through to
   // FALLBACK_RATE, e.g. any grok-* model — cost silently went untracked).

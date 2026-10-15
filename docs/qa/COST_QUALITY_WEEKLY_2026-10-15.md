@@ -165,3 +165,46 @@ beyond `/health`: no endpoint exposes the rate table and `gemini-4-argon` has no
    model on the opus-5-5 path (row 115), and the `analysis`→mistral head order. Nothing since 09-28.
 6. **Scheduled prompt text** still pins `gpt-5.5 [30,60]`; the table and vendor say [5,30]. Harmless
    (the table wins) but worth correcting in the task store.
+
+## 6. Owner follow-up, same day: full-catalogue sweep — MODEL-TABLE-SWEEP-2026-10-001
+
+Owner, after §1: "notice multiple new models have been released by mistral, gemini, openai and
+anthropic". Correct. §1 priced one id and deferred the rest as "not a pin, no traffic" — the same
+policy every pass since 08-20 had followed. Second pass in worktree
+`~/antcv-worktrees/routine-antcv-relay-cost-quality-tune-mv9pzhg7-sweep` off `origin/main` `911c6d57`.
+
+**Method change.** Re-fetched the four pricing pages and each vendor's models page, probed Mistral
+`GET /v1/models` read-only (54 ids, the only source for alias targets), and diffed every listed text id
+against `rateFor()` mechanically instead of by eye.
+
+| vendor | unpriced or mis-resolved before | keys added | worst error before |
+|---|---|---|---|
+| Anthropic | none — every id on the page keyed (Haiku 5.5 since 10-08) | 0 | — |
+| OpenAI | 20 ids → `gpt-5` [1.25,10] or FALLBACK [3,15] | 22 | `gpt-5-nano` 25x OVER; `gpt-5.2-pro` 17x UNDER; `gpt-5-pro` 12x UNDER; o-series / `chat-latest` fallback |
+| Mistral | 15 live ids → FALLBACK | 13 | `ministral-3b` 30x OVER; `magistral-medium-latest` (alias of Medium 3.5) 2x OVER |
+| Gemini | 7 ids → FALLBACK | 4 | `gemini-3-flash-preview` 6x OVER in; `gemini-omni-*` 2x OVER in |
+
+Keys added — OpenAI: `gpt-5.2` / `gpt-5.2-pro` / `gpt-5.1` / `gpt-5-pro` / `gpt-5-nano` / `gpt-5.3-codex` / `gpt-5-search-api` / `chat-latest` / `o1` / `o1-pro` / `o3` / `o3-pro` / `o3-mini` / `o4-mini` / `gpt-4o-2024-05-13` / `gpt-4-turbo` / `gpt-4-0613` / `gpt-3.5-turbo` (+`-1106`, `-instruct`) / `davinci-002` / `babbage-002`. Mistral: `ministral-14b` / `-8b` / `-3b` / `magistral-medium` / `magistral-small` / `mistral-vibe-cli` (+`-fast`) / `codestral` / `codestral-embed` / `mistral-code` / `zai-glm` / `glm-5-2` (`mistral-large-latest` → `mistral-large-2512`
+= Large 3 confirmed again; `magistral-medium-latest` / `magistral-small-latest` are now plain aliases of
+`mistral-medium` / `mistral-small` and contain neither key). Gemini: `gemini-3-flash` (3-flash-preview) / `gemini-omni` (omni-1.1-flash, omni-flash-preview) / `gemini-3.8-live` / `gemini-3.1-flash-live`. Excluded by rule and
+written in the table comment: image, TTS, embedding (except `codestral-embed`, token-priced), OCR,
+Veo/Lyria, robotics ER — priced per image / character / second, not per text token.
+
+**Tests.** `VENDOR_CATALOGUE_2026_10_15` (~110 ids, every page id with its vendor rate) is asserted in
+`model-table-freshness.test.mjs` (proxy + demo-proxy identical, **42/42** each, +3: catalogue, `o1`/`o3`
+short-key hijack guard, adoption guard) and `pwa/test/relay-model-rates-mirror.test.mjs` (**12/12**, +1,
+strict lookup). Full suite exit 0, ALL PASS. `check-register.mjs` OK.
+
+**Found on the way — row 124 (owner call).** The `PROVIDER_MODELS` fallback tails carry retired ids:
+`mistral-large-2411` / `-2407`, `mistral-medium-2312` (all on Mistral's retired list, absent from
+`/v1/models`), `gemini-2.0-flash`, `gemini-1.5-pro` / `-002` (shut down per the Gemini models page).
+Heads are live, so nothing is broken; a fallback past the head burns a retry on a dead id. Cascade
+edits are adoption (1a-bis(ii)), so not changed here.
+
+**Rule change.** `SCHEDULED_ROUTINES.md` 1a-quater: price the whole token-priced text catalogue every
+run, extend the catalogue list and never trim it, probe live id forms, diff mechanically, report
+retired cascade ids as an owner call.
+
+### 6.1 Deploy
+
+Deploy ×3 OWED at the time of this commit; dispatched one at a time via deploy.yml right after the push, result in a follow-up docs commit.

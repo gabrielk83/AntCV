@@ -1448,6 +1448,8 @@ _verified: 2026-10-07_ — CI E1 re-verify against HEAD dbcaf31c (suite 1813/181
 
 _verified: 2026-10-15_
 
+_2026-10-15 second pass, owner follow-up ("notice multiple new models have been released by mistral, gemini, openai and anthropic") — MODEL-TABLE-SWEEP-2026-10-001. The first pass had priced one id and deferred the rest as "not a pin"; that deferral was the gap. Mechanical diff of every text id on the four pricing pages against `rateFor()`: Anthropic nothing unpriced (Haiku 5.5 was keyed 10-08); OpenAI 22 keys added (`gpt-5.2` / `gpt-5.2-pro` / `gpt-5.1` / `gpt-5-pro` / `gpt-5-nano` / `gpt-5.3-codex` / `gpt-5-search-api` / `chat-latest` / `o1` / `o1-pro` / `o3` / `o3-pro` / `o3-mini` / `o4-mini` / `gpt-4o-2024-05-13` / `gpt-4-turbo` / `gpt-4-0613` / `gpt-3.5-turbo` (+`-1106`, `-instruct`) / `davinci-002` / `babbage-002`; worst: `gpt-5-nano` → gpt-5 25x OVER, `gpt-5.2-pro` 17x UNDER, `gpt-5-pro` 12x UNDER, o-series/chat-latest/legacy → FALLBACK); Mistral 13 keys (`ministral-14b` / `-8b` / `-3b` / `magistral-medium` / `magistral-small` / `mistral-vibe-cli` (+`-fast`) / `codestral` / `codestral-embed` / `mistral-code` / `zai-glm` / `glm-5-2`; id forms from a read-only `GET /v1/models`, 54 ids — `ministral-*` and `magistral-*` contain no `mistral` key so they fell to FALLBACK 20-30x / 2x OVER; `mistral-large-latest` still aliases `mistral-large-2512` = Large 3); Gemini 4 keys (`gemini-3-flash` (3-flash-preview) / `gemini-omni` (omni-1.1-flash, omni-flash-preview) / `gemini-3.8-live` / `gemini-3.1-flash-live`; image/TTS/embedding/robotics excluded by rule, written in the table comment). All three mirrors + `VENDOR_CATALOGUE_2026_10_15` (~110 ids, every one asserted to its vendor rate; `o1`/`o3` short-key hijack guard; adoption guard) in freshness 42/42 ×2 and mirror 12/12; full suite ALL PASS. `PROVIDER_MODELS` unchanged; the retired ids found in its tails are row 124. `SCHEDULED_ROUTINES.md` 1a-quater records the rule: price the whole catalogue every run, probe the live id forms, diff mechanically. Deploy ×3 OWED at commit, dispatched in-run._
+
 _2026-10-15 weekly tune (desktop, Fable 5.1, worktree-isolated): every pin verifies against the four vendor pages; nothing moved since 10-08. One vendor-listed id was unpriced: GEMINI4-ARGON-RATES-2026-10-001 — `gemini-4-argon`, the new Gemini flagship, contains no existing key, so `rateFor()` gave FALLBACK [3,15] (1.5x OVER in and out; real [2,10] introductory, DOUBLES to [4,20] on 2026-12-01) and `rateForStrict()` answered null. Added to all three mirrors with the 12-01 note; freshness 39/39 ×2 (+3: rate, note guard, out-of-cascade), relay mirror 11/11 (+1); full suite ALL PASS. D1 `llm_provider_costs` unchanged (34 rows) and reconciles; no write owed. 30 d recompute 18 calls, stored 1.301x = the one pre-fix claude row of 09-28, everything else to the cent. 7 d EMPTY, no flip. Workers proxy + demo-proxy + access-relay DEPLOYED via deploy.yml runs 38766174548 / 38766290667 / 38766434433 (the relay run from `f65a8fca`, a job-tracker commit touching no `workers/` file), /health 200 ×3; nothing owed on this row beyond the dated re-verifies. Also deferred: `gemini-3-flash-preview` is now labelled legacy and has no key (not a pin, no traffic). Re-verify dates on this row: 2026-11-21 (`gpt-5.6-sol`), 2026-12-01 (`gemini-4-argon`), 2027-01-01 (Gemini 3.x)._
 
 _2026-10-08 weekly tune (desktop, Fable 5.1): every pin verifies against the four vendor pages (the Mistral marketing page now redirects to docs.mistral.ai/inference/pricing). Four vendor-listed ids were unpriced or resolved to a neighbour: ANTHROPIC-HAIKU55-RATES-2026-10-001 (`claude-haiku-5-5` new, no key → FALLBACK [3,15] = 30x OVER; pinned [0.10,0.50] at the ≤100k-token tier, >100k bills [0.50,2.50]); MISTRAL-LARGE4-RATES-2026-10-001 (`mistral-large-4` / `-4-0`, released 2026-10-06, matched `mistral-large` [0.5,1.5] = 1.36x / 1.39x UNDER vs the sale [0.68,2.09], list [1.36,4.18]; the live pin is safe — `/v1/models` says `mistral-large-latest` → `mistral-large-2512` = Large 3 — and the comment says to add an explicit `mistral-large-latest` key when the alias moves); GPT-CYBER-RATES-2026-10-001 (`gpt-5.5-cyber` sat on the pinned `gpt-5.5` key [5,30], `gpt-5.6-cyber` on `gpt-5` [1.25,10]; both [12.5,75]). `gpt-5.6-sol` [4,20] is promotional "at least through 2026-11-21" (comment only). All three mirrors byte-identical; freshness 36/36 ×2, relay mirror 10/10, every new id asserted out of the default cascades. D1 `llm_provider_costs`: every newest row equals the audited rate; no row for the new ids (correct). No `llm_calls` since 2026-09-28; 30 d recompute 1.349x stored/true, all of it the two pre-fix claude `parse_jd` rows. workers proxy + demo-proxy + access-relay DEPLOYED via deploy.yml runs 37772931509 / 37773485941 / 37773581157, /health 200 ×3, clears the 10-01 owed set. Still deferred to a full audit: `gpt-5.2`, `gpt-5.2-pro`, `gpt-5-pro`, `gpt-5-nano`, `gpt-5.3-codex`, `gpt-5.1` (all → `gpt-5` [1.25,10]); `o4-mini`, `chat-latest`, `gpt-rosalind-research` (FALLBACK). Report: `COST_QUALITY_WEEKLY_2026-10-08.md`._
@@ -2376,3 +2378,32 @@ path normalizes — which they do). REMAINING, owner-gated (touches app.js init 
 done unattended): add an init-time `set("stylePackage", __pkgNorm(get))` write-back so the stored id
 self-cleans on first boot, then re-point / green the `palette-mix` gate. Not urgent — a cosmetic
 storage-layer cleanup, no user impact while the render mitigation holds.
+---
+
+## Row 124 — CASCADE-RETIRED-IDS-2026-10-001
+
+_verified: 2026-10-15_
+
+**Filed 2026-10-15 (weekly cost-quality tune, owner follow-up catalogue sweep).** While diffing the
+vendor model pages against the rate table, the `PROVIDER_MODELS` fallback cascades in
+`workers/proxy/src/multi-llm.js` and `workers/demo-proxy/src/multi-llm.js` turned out to carry ids
+the vendors have retired:
+
+- `mistral-large-2411` (Mistral Large 2.1, retired 2026-05-31), `mistral-large-2407` (Large 2.0,
+  retired 2025-03-30), `mistral-medium-2312` (Medium 1.0, retired 2025-06-16) — per
+  docs.mistral.ai models overview "Deprecated and retired"; `GET /v1/models` (2026-10-15, 54 ids)
+  lists none of them. Live equivalents: `mistral-large-2512` (= `mistral-large-latest`),
+  `mistral-medium-2604` (= `mistral-medium-latest`), `mistral-small-2603`.
+- `gemini-2.0-flash`, `gemini-1.5-pro`, `gemini-1.5-pro-002` — under "Previous models" (shut down)
+  on ai.google.dev/gemini-api/docs/models; the 2.5 line is "access limited to past users", the
+  live fast tiers are `gemini-3.6-flash` / `gemini-3.8-flash` / `gemini-3.5-flash-lite`.
+
+Effect: a request that falls past the cascade head reaches a dead id, fails, and burns a retry
+before the next provider — a latency + retry-rate cost that the weekly tune then scores against
+that provider. The head ids (`mistral-large-latest`, `gemini-2.5-pro`/`-flash`) are live, so
+nothing is broken today; this is tail hygiene.
+
+**Owner call (not done by the tune):** per SCHEDULED_ROUTINES 1a-bis(ii), editing `PROVIDER_MODELS`
+is adoption, not pricing. Proposed: replace the three Mistral ids with `mistral-large-2512` +
+`mistral-medium-2604`, replace the Gemini 2.0/1.5 ids with `gemini-3.6-flash` + `gemini-3.5-flash-lite`
+(both keyed in the rate table), keep the current heads. Worker deploy ×2 after. Severity LOW.

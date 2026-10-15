@@ -15,6 +15,10 @@ When you finish it: move it to `REGISTER_CLOSED.md`.
 
 ## Row 38 — GEN-BACKGROUND-001
 
+_verified: 2026-10-15_
+
+**2026-10-15 (desktop nightly live attest, Gabo-PC, Fable 5.1 — HEAD f107e458):** guard sidecars 9/9 served, executed, content-identical (`diag-live-guard-sidecars.mjs`); `browser-qa.mjs version-live,sidecars-live` 2/2 PASS; served `index.html` and `app.js` byte-identical to the repo at `1.51.4913-demand-seed-refresh` / `app.js?v=1.51.4812`. Not exercised end-to-end: the real-mobile background/foreground A/B still needs the owner's phone; the relay token is expired today (row 110). Kept ACTIVE; blocked: real device.
+
 _verified: 2026-10-09_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4873-linear-enriched`; `browser-qa --only version-live,sidecars-live` 2/2; served `index.html` and `app.js` byte-identical to the repo modulo CRLF). Residual legs unchanged in kind. Blocked on: real device (A/B with `antcv:gen-resume=1`).
 
 **Prior (2026-10-08):** desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4833-cache-bust-set`; `browser-qa --only version-live,sidecars-live` 2/2). Residual legs unchanged in kind. Blocked on: real device (A/B with `antcv:gen-resume=1`).
@@ -504,6 +508,10 @@ _E1 sweep 2026-09-08 (CI nightly): confirmed in CURRENT code — `__platformRule
 
 ## Row 34 — ROLE-MERGE-STORED-001
 
+_verified: 2026-10-15_
+
+**2026-10-15 (desktop nightly E4, Gabo-PC, Fable 5.1 — HEAD f107e458):** `diag-results-preview-export-parity.mjs` RESULTS-PREVIEW-EXPORT-PARITY OK, no page errors. Live docx-worker `/health` 200 at the repo version `1.14.174-appline-edit`.
+
 _verified: 2026-10-09_ — desktop nightly E4: `diag-results-preview-export-parity.mjs` RESULTS-PREVIEW-EXPORT-PARITY OK (preview per-role result == export per-role result, tier-1 explicit result verbatim, render attribute still in the bundle, 0 page errors). Live attest: `antcv-role-merge-stored-guard` served/executed/identical at `1.51.4873-linear-enriched`.
 
 **Prior (2026-10-08):** desktop nightly E4: `diag-results-preview-export-parity.mjs` RESULTS-PREVIEW-EXPORT-PARITY OK (preview per-role result == export per-role result, tier-1 explicit result verbatim, render attribute still in the bundle, 0 page errors). Live attest: `antcv-role-merge-stored-guard` served/executed/identical at `1.51.4833`.
@@ -646,6 +654,10 @@ row 25 (real-PDF-gated — a render CI cannot do). No regression. Kept ACTIVE.
 
 ## Row 39a — AUTOSAVE-NO-DOWNGRADE-001
 
+_verified: 2026-10-15_
+
+**2026-10-15 (desktop nightly live attest, Gabo-PC, Fable 5.1 — HEAD f107e458):** served bundle byte-identical to the repo; live access-relay `/health` 200 at the repo version `auth-38-subtitle-guard-qual-put` (deployed again today by the cost-quality tune, run 38766434433, rates-only). The authed downgrade PUT was not run: no scratch application id and the relay token is expired today (row 110). Leg 3 (row 19) still needs a second real device. Kept ACTIVE; blocked: owner decision + owner session.
+
 _verified: 2026-10-09_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4873-linear-enriched`; `browser-qa --only version-live,sidecars-live` 2/2; served `index.html` and `app.js` byte-identical to the repo modulo CRLF). Residual legs unchanged in kind. The authed downgrade PUT was not run: no scratch application id. Blocked on: owner decision (scratch id) and a second real device (row 19).
 
 **Prior (2026-10-08):** desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4833-cache-bust-set`; `browser-qa --only version-live,sidecars-live` 2/2). Residual legs unchanged in kind. The authed downgrade PUT was not run: no scratch application id. Blocked on: owner decision (scratch app id) + second real device (row 19).
@@ -675,6 +687,10 @@ _verified: 2026-10-05_
 ---
 
 ## Row 41
+
+_verified: 2026-10-15_
+
+**2026-10-15 (desktop nightly live attest, Gabo-PC, Fable 5.1 — HEAD f107e458):** served `app.js` byte-identical to the repo; Band E3 button audit 210 buttons, 0 THROWS, 0 DEAD, 0 page errors (no React #185 surfaced headlessly). Kept ACTIVE; blocked: real device / owner repro of the editor field-commit sequence.
 
 _verified: 2026-10-09_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4873-linear-enriched`; `browser-qa --only version-live,sidecars-live` 2/2; served `index.html` and `app.js` byte-identical to the repo modulo CRLF). Residual legs unchanged in kind. Blocked on: real device (Android #185 repro).
 
@@ -706,6 +722,10 @@ _verified: 2026-10-05_
 
 ## Row 42 — GEN-LANGFAB-001
 
+_verified: 2026-10-15_
+
+**2026-10-15 (desktop nightly live attest, Gabo-PC, Fable 5.1 — HEAD f107e458):** served `app.js` byte-identical to the repo. D1 `llm_calls` (wrangler, SELECT only) newest day is still 2026-09-28 — no fresh generation to measure the language-fact belt against. Kept ACTIVE; blocked: real LLM gen.
+
 _verified: 2026-10-09_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4873-linear-enriched`; `browser-qa --only version-live,sidecars-live` 2/2; served `index.html` and `app.js` byte-identical to the repo modulo CRLF). Residual legs unchanged in kind. Blocked on: real LLM gen (fresh-gen language check).
 
 **Prior (2026-10-08):** desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4833-cache-bust-set`; `browser-qa --only version-live,sidecars-live` 2/2). Residual legs unchanged in kind. Blocked on: real LLM gen (fresh-gen language check).
@@ -736,6 +756,10 @@ _verified: 2026-10-05_
 
 ## Row 43
 
+_verified: 2026-10-15_
+
+**2026-10-15 (desktop nightly live attest, Gabo-PC, Fable 5.1 — HEAD f107e458):** served `app.js` byte-identical to the repo; E4 results preview/export parity OK. The Application-label bleed needs a signed-in application load; token expired today (row 110). Kept ACTIVE; blocked: owner session.
+
 _verified: 2026-10-09_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4873-linear-enriched`; `browser-qa --only version-live,sidecars-live` 2/2; served `index.html` and `app.js` byte-identical to the repo modulo CRLF). Residual legs unchanged in kind. Blocked on: owner session (click-through).
 
 **Prior (2026-10-08):** desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4833-cache-bust-set`; `browser-qa --only version-live,sidecars-live` 2/2). Residual legs unchanged in kind. Blocked on: owner session (click-through).
@@ -765,6 +789,10 @@ _verified: 2026-10-05_
 ---
 
 ## Row 44 — JD-ANALYSIS-PRINT-001
+
+_verified: 2026-10-15_
+
+**2026-10-15 (desktop nightly live attest, Gabo-PC, Fable 5.1 — HEAD f107e458):** served `app.js` + `antcv-analysis-report-pdf-360.js` content-identical to the repo (guard-sidecar attest); E3 found the "Download analysis (PDF)" button present and responding (skipped-dangerous class, not clicked). Export doc-type check needs a signed-in analysis; token expired today (row 110). Kept ACTIVE; blocked: owner session.
 
 _verified: 2026-10-09_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4873-linear-enriched`; `browser-qa --only version-live,sidecars-live` 2/2; served `index.html` and `app.js` byte-identical to the repo modulo CRLF). Residual legs unchanged in kind. Blocked on: owner session (click-through).
 
@@ -907,6 +935,10 @@ REMAINING: owner live re-verify (no device in CI). Kept ACTIVE.
 ---
 
 ## Row 39 — GEN-MODELROLE-001
+
+_verified: 2026-10-15_
+
+**2026-10-15 (desktop nightly D2, Gabo-PC, Fable 5.1 — HEAD f107e458):** `MODEL_ROLES` still set in BOTH `workers/proxy/wrangler.toml:54` and `workers/demo-proxy/wrangler.toml:54` (`writer:anthropic, supervisor:mistral, coherence:openai, analysis:mistral`); both proxies were re-deployed today by the cost-quality tune (runs 38766174548 / 38766290667) so the [vars] are live; live `/health` 200 at `3.8.4-brand-ink-match` for both. D1 `llm_calls` (wrangler, SELECT only, 3563 rows read) newest day is still 2026-09-28 (`gpt-5.4-mini` apply_correction / consensus_poll / consensus_reinforce / fuse) — no call since the 09-28 pin, so the supervisor->mistral routing cannot be shown in telemetry yet. Kept ACTIVE; blocked: one real LLM gen.
 
 _verified: 2026-10-09_ — desktop nightly: D1 `llm_calls` newest day is still 2026-09-28 (D1 MCP connector read, 12 newest group rows, `changed_db:false`). No gen traffic since the opus-5-5 pin; the split routing cannot be observed. Live proxies at `3.8.4-brand-ink-match` = repo, access-relay `auth-38-subtitle-guard-qual-put` = repo, docx-worker `1.14.174-appline-edit` = repo. Blocked on: real LLM gen.
 
@@ -1183,6 +1215,10 @@ _verified: 2026-10-15_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
+_verified: 2026-10-15_
+
+**2026-10-15 (desktop nightly E1, Gabo-PC, Fable 5.1 — HEAD f107e458):** re-confirmed with the guards RUN, not just grepped. MOB-008: `pwa/antcv-mobile-controls.css` still carries the panel rules (`overflow-y:auto` 2 refs, `-webkit-overflow-scrolling: touch !important` 4 refs; loaded by `index.html`); `diag-mob008-panel-overflow.mjs` on this host: panel `overflowY:auto`, scrollH 1874 vs clientH 279, scrolls -> MOB008-PANEL-OVERFLOW OK. MOB-009: `diag-mob009-autopages-device-parity.mjs` FAILED on its first run (mobile map carried an extra `certs:{0:2}` sidebar break; desktop `core:{24:2}`, `experience:{0:3}`, `recommendations:{0:3}`) while the E2 Settings-churn Playwright diag was running in parallel; two clean re-runs plus a probe variant that also printed column and section geometry passed with IDENTICAL maps and identical sidebar/section widths and heights (sidebar 262 px, sections 240/491 px, scale 1 vs 0.471). Verdict: a settle-timing artefact of the fixed 9 s wait under contention, not a scale-correction regression. Guard hardened (MOB009-GUARD-SETTLE-001, diag-only): it now waits for `antcv:autoPages` to hold still for 3 s (floor 9 s, cap 30 s) — passes. Remaining MOB-001..007 + MOB-GAP-OPEN unchanged: headless-repro-blocked, owner live-gated (real phone). Kept ACTIVE.
+
 _verified: 2026-10-05_
 
 **2026-10-05 (CI nightly, verify-first — HEAD 735f6d8f):** re-confirmed intact — MOB-008 fix present: `pwa/antcv-mobile-controls.css` still carries the `overflow-y:auto; -webkit-overflow-scrolling:touch !important` panel rules (8 refs) and `pwa/test/diag-mob008-panel-overflow.mjs` is present; PWA suite green (exit 0). Remaining mobile findings (001-007, MOB-GAP-OPEN) still headless-repro-blocked, owner live-gated. Kept ACTIVE.
@@ -1204,6 +1240,10 @@ _verified: 2026-10-05_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
+_verified: 2026-10-15_
+
+**2026-10-15 (desktop nightly E1, Gabo-PC, Fable 5.1 — HEAD f107e458):** re-confirmed intact. `bodyTopBorder` 3 refs and `✉` 2 refs in `workers/docx-worker/src/index.js`; `workers/docx-worker/test/diag-contact-icons.mjs` run on this host: NON-BRIDGE and BRIDGE both `✉=true emailUsesAt=false hasBulletSep=false`, CONTACT-ICONS OK. Live docx-worker `/health` 200 at the repo version `1.14.174-appline-edit`. Remaining = the render-measure loop vs the KOMBIT gold and the two Track-C follow-ups (CL `meta.subtitle` double-render, row 61 column balance); all need a real docx-worker render the owner eyeballs. Kept ACTIVE.
+
 _verified: 2026-10-05_ — CI E1 re-verify against HEAD 735f6d8f (all cited markers intact, remaining work unchanged & CI-ungated): header-banner generator rules SHIPPED remain intact (`bodyTopBorder` 3 refs + ✉ icon-separated contact 2 refs in `workers/docx-worker/src/index.js`; `workers/docx-worker/test/diag-contact-icons.mjs` present). REMAINING = the render-measure loop vs KOMBIT gold + the two Track-C follow-ups (CL `meta.subtitle` double-render; page-2 column-balance → row 61) — all need a real docx-worker render CI cannot do. Kept ACTIVE.
 
 **2026-09-23 (prior CI E1 re-verify against HEAD 38630d58):** all cited markers intact, remaining work unchanged & CI-ungated. Header-banner generator rules SHIPPED remain intact (`bodyTopBorder` + ✉ icon-separated contact in `workers/docx-worker/src/index.js`). Kept ACTIVE.
@@ -1220,6 +1260,10 @@ _verified: 2026-10-05_ — CI E1 re-verify against HEAD 735f6d8f (all cited mark
 
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
+
+_verified: 2026-10-15_
+
+**2026-10-15 (desktop nightly E1, Gabo-PC, Fable 5.1 — HEAD f107e458):** re-confirmed intact. Markers `JD-SWAP-STALE-RATIONALE` 2 + `CL-GHOST-COMPANY` 5 = 7 in `pwa/app.src.js` (the minified `pwa/app.js` carries no comments, so 0 there is expected); `pwa/test/unit/cl-ghost-hunt.test.mjs` in the green suite (1822/1822). Live `app.js` byte-identical to the repo. (C) BACKGROUND-STALL still OPEN. Blocked: a real foreground mobile generation (owner session); the relay token is expired today (row 110), so no authed gen was possible either way. Kept ACTIVE.
 
 _verified: 2026-10-06_ — desktop nightly E1 (Gabo-PC, Fable 5.1): markers `JD-SWAP-STALE-RATIONALE` / `CL-GHOST-COMPANY` 7 in `pwa/app.src.js`; `cl-ghost-hunt.test.mjs` in the green suite (1813/1813). (C) BACKGROUND-STALL still OPEN; blocked: a real foreground mobile generation (owner session). Rows 70-73, its four siblings from the same 2026-07-08 review, were CLOSED today as finished deliverables whose residuals live in rows 61 and 66; this row stays as the only one with its own open leg.
 
@@ -1238,6 +1282,10 @@ _verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited mark
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
+_verified: 2026-10-15_
+
+**2026-10-15 (desktop nightly E1, Gabo-PC, Fable 5.1 — HEAD f107e458):** re-confirmed intact. `__AINOTICE` map at `workers/docx-worker/src/index.js:24646` carries no em-dash in any language; the EN default `AI-assisted - author retains responsibility...` (4 refs) uses a hyphen; the value+citation join `clean()` at `:26189` rewrites an em-dash to ` - `. The 199 remaining em-dashes in the file are comments and regex character classes, not rendered text. Live docx-worker `/health` 200 at `1.14.174-appline-edit`. Kept ACTIVE as the standing-rule anchor.
+
 _verified: 2026-10-06_ — CI E1 re-verify against HEAD de7fec6e (all cited markers still intact: `AI-assisted - author` hyphen footer present in `workers/docx-worker/src/index.js`; prior CI E1 2026-09-23 @38630d58): verify-first against HEAD. Systemic em-dash→hyphen SHIPPED (worker 1.14.134) re-confirmed: the `__AINOTICE` footer map in `workers/docx-worker/src/index.js` uses a HYPHEN in all 7 languages (da/es/zh/he/ar/am + the EN default "AI-assisted - author retains responsibility…") — no em-dash in the AI-notice/citation/doc-title path. The three standing CL rules (slogan / centered-signature-brand-ink / mixed-closure) are captured in checklist §3 + memory. Kept ACTIVE as the standing-rule anchor.
 
 **TO-DO SUMMARY row (verbatim):**
@@ -1252,6 +1300,10 @@ _verified: 2026-10-06_ — CI E1 re-verify against HEAD de7fec6e (all cited mark
 
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
+
+_verified: 2026-10-15_
+
+**2026-10-15 (desktop nightly E1, Gabo-PC, Fable 5.1 — HEAD f107e458):** re-confirmed. (B) editable CL slogan SHIPPED: `antcv-cl-slogan-control.js?v=1.51.746` and `antcv-cl-slogan-element.js?v=1.51.1992` both loaded by `index.html` (2 refs) and the served `index.html` is byte-identical to the repo. (A) convergence verify, (C) preview-dance/perf, (D) regen-gated content, (E) unsolicited-gen quality all still need a signed-in regen or a live desktop session with a real LLM; the relay token is expired today (row 110), so none could be driven. Kept ACTIVE.
 
 _verified: 2026-10-06_ — CI E1 re-verify against HEAD de7fec6e (`antcv-cl-slogan-control.js` still loaded by index.html, 1 ref; prior CI E1 2026-09-23 @38630d58): verify-first against HEAD. (B) editable CL slogan SHIPPED — `antcv-cl-slogan-control.js` still loaded by `index.html` (1 ref). (A) convergence verify (CV-CORECOMP-BLANK / CL-BLANK / CV-ACCESS-DROP, 1.51.29, 22 vm tests) still needs a signed-in 2nd-generation regen; (C) preview-dance/perf + (D) regen-gated content + (E) unsolicited-gen quality all need a live desktop browser / real LLM CI lacks. Kept ACTIVE (owner/desktop/regen-gated).
 
@@ -1746,6 +1798,10 @@ _verified: 2026-10-08_
 
 ## Row 40
 
+_verified: 2026-10-15_
+
+**2026-10-15 (desktop nightly live attest, Gabo-PC, Fable 5.1 — HEAD f107e458):** served `app.js` byte-identical to the repo; suite 1822/1822. The core-comp row-count -> Selected Outcomes repro needs a signed-in session with cloud persistence; token expired today (row 110). Kept ACTIVE; blocked: owner session.
+
 _verified: 2026-10-09_ — desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4873-linear-enriched`; `browser-qa --only version-live,sidecars-live` 2/2; served `index.html` and `app.js` byte-identical to the repo modulo CRLF). Residual legs unchanged in kind. Blocked on: owner session (cloud-persisted repro).
 
 **Prior (2026-10-08):** desktop nightly live attest (Gabo-PC, Fable 5.1): guard sidecar served, executed and content-identical on antcv.pages.dev (`diag-live-guard-sidecars.mjs` 9/9 PASS at live `1.51.4833-cache-bust-set`; `browser-qa --only version-live,sidecars-live` 2/2). Residual legs unchanged in kind. Blocked on: owner session (cloud-persisted repro).
@@ -1954,6 +2010,10 @@ _verified: 2026-08-26_
 
 > **STANDING regression anchor** — re-run by the nightly diag set every time, not unstarted work.
 
+_verified: 2026-10-15_
+
+**2026-10-15 (desktop nightly E2, Gabo-PC, Fable 5.1 — HEAD f107e458):** `diag-settings-panel-churn.mjs —selftest` PASS (synthetic churn seen on all 4 tabs, 4 distinct fingerprints); real run: Personal / Layout / Account / Advanced 0 mutations per 8 s each, 0 page errors, all at rest. PASS.
+
 _verified: 2026-10-09_ — desktop nightly E2: `diag-settings-panel-churn.mjs --selftest` PASS (80 synthetic mutations seen on all 4 tabs, 4 distinct fingerprints); Personal / Layout / Account / Advanced 0 mutations per 8 s, 0 page errors, roots attached. PASS.
 
 **Prior (2026-10-08):** desktop nightly E2: `diag-settings-panel-churn.mjs --selftest` PASS (80 synthetic mutations seen on all 4 tabs, 4 distinct fingerprints); Personal / Layout / Account / Advanced 0 mutations per 8 s, 0 page errors, roots attached. PASS.
@@ -2005,6 +2065,10 @@ _verified: 2026-10-15_
 ## Row 23 — NIGHTLY-PREVIEW-BUTTON-AUDIT-001
 
 > **STANDING regression anchor** — re-run by the nightly diag set every time, not unstarted work.
+
+_verified: 2026-10-15_
+
+**2026-10-15 (desktop nightly E3, Gabo-PC, Fable 5.1 — HEAD f107e458):** `diag-panel-button-audit.mjs` one run: 210 buttons, 0 THROWS, 0 DEAD, 0 page errors (active 132, ui-only 9, not-visible-or-disabled 56, skipped-dangerous 13). Diff vs `PANEL_BUTTON_AUDIT_2026-10-09.json`: 0 regressions, 0 recoveries, 0 visibility changes, 12 active<->ui-only timing flips, 0 gone, 0 added. Report `docs/qa/PANEL_BUTTON_AUDIT_2026-10-15.md` + `.json`.
 
 _verified: 2026-10-09_ — desktop nightly E3: `diag-panel-button-audit.mjs` one run at HEAD `45e11297` with the 10-08 settle window + `--diff` leg (default previous = `PANEL_BUTTON_AUDIT_2026-10-08.json`): 210 buttons (209 → 210, same label set), 0 THROWS, 0 DEAD, 0 page errors (active 134, ui-only 7, not-visible 56, skipped 13). Diff: 0 regressions, 0 recoveries, 1 visibility move ("CJLR: cycle left / center / right / justify" hidden 3 → 4, state left by an earlier click), 6 active↔ui-only timing flips (counted, not listed), 0 gone / 0 added. First run of the diff leg after its ship; it behaves as specified. Report `PANEL_BUTTON_AUDIT_2026-10-09.md`.
 
@@ -2112,6 +2176,8 @@ confirmed landed, 3 checks go red. All 14 job-tracker python tests green. Live-v
 _verified: 2026-10-15_
 
 **2026-10-15 (job-tracker nightly, the 08:45 fire dispatched 18:08 local, desktop Gabo-PC, cross-check only, BLOCKED):** third routine today at this gate. The duplicate-run rule applied (the 10-12 → 10-15 entry was committed 18:05 today), so this was a cross-check run; the cross-check met the 401 itself: `check-postings.py check --limit 1` (dry) and `gen-runner.py list` both fail at the GET with `401 {'error': 'unauthenticated'}`. Workers `/health` 200. Nothing written, no code. Owner re-save owed; leg (a) unchanged. For leg (a): the demand-seed weekly ran its relay legs today on machine tokens (`CSE_PROXY_TOKEN`, `CLUSTER_RESEARCH_TOKEN`) and did not block; the job-tracker doc GET/PUT has no such lane.
+
+**2026-10-15 (desktop nightly, Gabo-PC, Fable 5.1 — third hit today):** `routine-preflight.mjs token` exit 4 at this run's start (expired 2026-10-15T11:12:36Z); every relay-backed and signed-in leg of the band plan was skipped (rows 39a downgrade PUT, 40, 43, 44, 63, 64, 67 regen, 74 foreground gen). Dispatch gap 6.4 d (previous start 2026-10-09T07:22Z): the host slept 10-12 -> 10-15, so the 6-day self-renewal window was missed. Owner: re-save `~/.antcv/token` from the signed-in PWA console. No code change here.
 
 **2026-10-15 (position-discovery, Thursday fire, desktop Gabo-PC, BLOCKED):** `routine-preflight.mjs token` exit 4 — expired 2026-10-15T11:12:36Z (issued 10-08, 7-day TTL), 5 h before the fire. The run stopped at gate 1: no sweep, no context, zero queries, zero leads, no Excel refresh, no push; nothing written. Mechanism confirmed from `ROUTINE_HEALTH.jsonl`: last completed relay call 10-09 07:41Z (job-tracker nightly); the 10-11 and 10-13 fires absent; 10-12 12:02Z three `start` events with the token `expiring` (3 d left), then a host sleep until 10-15 15:52:54Z; this routine's 10-12 session never logged `end`, so the in-window self-renewal never ran. Fourth occurrence of the family. Owner re-save owed; leg (a) remains the only durable fix.
 

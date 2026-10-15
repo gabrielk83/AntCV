@@ -38,7 +38,6 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 
 <!-- SHIFT:BEGIN — one JSON object per line; managed by scripts/shift.mjs, safe to hand-edit a line if a session died without releasing -->
 {"id":"sh_mupev15f_bqmz","started":"2026-10-01T10:48:17.049Z","host":"vm","worktree":null,"branch":"claude/project-thread-cub2nb","range":"1.51.4786-1.51.4790","task":"impact types in result bullets (thread cub2nb)","beat":"2026-10-01T10:48:17.054Z"}
-{"id":"sh_mv9qmbet_ixvl","started":"2026-10-15T16:12:49.422Z","host":"Gabo-PC","worktree":"routine-antcv-nightly-mv9qjzzi","branch":"HEAD","range":"1.51.4933-1.51.4952","task":"antcv-nightly 2026-10-15","beat":"2026-10-15T16:12:49.504Z"}
 {"id":"sh_mv9qzv9x_180v","started":"2026-10-15T16:23:21.703Z","host":"Gabo-PC","worktree":"medsec-cluster","branch":"feat/medical-secretary-cluster","range":"1.51.4953-1.51.4972","task":"medical_secretary cluster: 10th demand-seed cluster (Skåne + East Denmark)","beat":"2026-10-15T16:23:21.795Z"}
 <!-- SHIFT:END -->
 

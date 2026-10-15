@@ -2111,6 +2111,8 @@ confirmed landed, 3 checks go red. All 14 job-tracker python tests green. Live-v
 
 _verified: 2026-10-15_
 
+**2026-10-15 (position-discovery, Thursday fire, desktop Gabo-PC, BLOCKED):** `routine-preflight.mjs token` exit 4 — expired 2026-10-15T11:12:36Z (issued 10-08, 7-day TTL), 5 h before the fire. The run stopped at gate 1: no sweep, no context, zero queries, zero leads, no Excel refresh, no push; nothing written. Mechanism confirmed from `ROUTINE_HEALTH.jsonl`: last completed relay call 10-09 07:41Z (job-tracker nightly); the 10-11 and 10-13 fires absent; 10-12 12:02Z three `start` events with the token `expiring` (3 d left), then a host sleep until 10-15 15:52:54Z; this routine's 10-12 session never logged `end`, so the in-window self-renewal never ran. Fourth occurrence of the family. Owner re-save owed; leg (a) remains the only durable fix.
+
 **2026-10-15 (weekly demand-seed, desktop Gabo-PC):** `~/.antcv/token` expired again — preflight read it as expiring 2026-10-15T11:12:36Z at run start and `routine-preflight.mjs token` returned exit 4 (EXPIRED) by run end. This routine no longer needs it: the search leg ran on the machine token `CSE_PROXY_TOKEN` (`GET /api/cse-search` 200) and the write leg on `CLUSTER_RESEARCH_TOKEN`, so the run completed. Position-discovery and every `/api/research` caller are blocked until the owner re-saves. Leg (a), a long-lived routine token or longer relay TTL, still owed.
 
 **2026-09-29 (position-discovery rerun, corroboration):** the re-saved token carried a full discovery run end to end — sweep, context, envelope read, `discover-positions.py add` PUT, Excel pull — with no 401. Leg (a) still owed.

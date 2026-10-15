@@ -207,4 +207,4 @@ retired cascade ids as an owner call.
 
 ### 6.1 Deploy
 
-Deploy ×3 OWED at the time of this commit; dispatched one at a time via deploy.yml right after the push, result in a follow-up docs commit.
+**DEPLOYED ×3**, one at a time via `deploy.yml` (`mode=deploy`, `confirm=<target>`) after the sweep commit `eb121983` reached `main`: proxy (`cv-proxy`) run 38769211157, demo-proxy (`antcv-demo-proxy`) run 38769334260, access-relay (`antcv-access-relay`) run 38769469911 — every run from `eb121983`, lint + unit-tests + deploy-worker success, `/health` 200 ×3 (`3.8.4-brand-ink-match` ×2, `auth-38-subtitle-guard-qual-put`). The commits that landed on `main` around the dispatches (nightly register, MOB009 guard, two demand-seed shift claims) touch no `workers/` file. As with §4, nothing beyond `/health` is verifiable live until one of the new ids has traffic.

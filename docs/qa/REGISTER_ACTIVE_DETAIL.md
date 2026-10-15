@@ -2107,7 +2107,9 @@ confirmed landed, 3 checks go red. All 14 job-tracker python tests green. Live-v
 
 ## Row 110 — ANTCV-TOKEN-EXPIRED-2026-09-02-001
 
-_verified: 2026-09-29_
+_verified: 2026-10-15_
+
+**2026-10-15 (weekly demand-seed, desktop Gabo-PC):** `~/.antcv/token` expired again — preflight read it as expiring 2026-10-15T11:12:36Z at run start and `routine-preflight.mjs token` returned exit 4 (EXPIRED) by run end. This routine no longer needs it: the search leg ran on the machine token `CSE_PROXY_TOKEN` (`GET /api/cse-search` 200) and the write leg on `CLUSTER_RESEARCH_TOKEN`, so the run completed. Position-discovery and every `/api/research` caller are blocked until the owner re-saves. Leg (a), a long-lived routine token or longer relay TTL, still owed.
 
 **2026-09-29 (position-discovery rerun, corroboration):** the re-saved token carried a full discovery run end to end — sweep, context, envelope read, `discover-positions.py add` PUT, Excel pull — with no 401. Leg (a) still owed.
 
@@ -2241,6 +2243,8 @@ _2026-10-08 weekly tune: re-verified, not fixed. `C.claude` / `C.anthropic` stil
 ## Row 117 — CLUSTER-GLOBAL-SINGLE-JD-DOMINANCE-001
 
 _verified: 2026-10-15_
+
+**2026-10-15 (weekly demand-seed, desktop Gabo-PC, read-only D1 verify after the 10-15 push):** split re-measured with the row's evidence query, unchanged — `executive` 18/20 JD rows (max jd_count 1), `pm_process` 20/20 JD (max 2), `photonics_eng` 20/20 JD (max 7), `research_phd` 16/20 JD (max 2); the other five clusters 100% research. Consequence this run: the `pm_process` r4 wording change reaches only the client SEED, while the `finance` 17→11 promotion is live in the rollup. Owner design decision still owed. No code changed.
 
 **2026-10-15 (CI nightly, E1 staleness sweep — HEAD 035a030e):** unchanged — this is an owner design decision, not a code bug. The writer behaviour the row describes is still by-design in the relay: `recomputeClusterTop20` (`workers/access-relay/src/index.js:2508`) orders `ORDER BY weight_sum DESC, frequency DESC LIMIT 20` (line 2512), and the rank-scaled research weight (ceiling 0.4, `RESEARCH_WEIGHT * (21 - rank) / 20`, line 2604) still sits below a real-JD row's `weight_sum 1`, so one JD can fill a cluster's global top. CI has no relay token, so the live D1 split cannot be re-measured here — the read-only evidence query below stands. Owner design decision (jd_count threshold / blend / exclude per-user JD from `__global_market__`) still owed. Kept ACTIVE.
 

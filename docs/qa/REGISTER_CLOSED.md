@@ -250,6 +250,7 @@ _verified: 2026-10-05_
 - **Desktop:** `CSE_PROXY_TOKEN` set as a Windows User env var and in `~/.antcv/keys.env`. Probe `GET /api/cse-search?q=test` with `x-antcv-cse-token` → `{"ok":true,"source":"brave"}`, 10 items. `CLUSTER_RESEARCH_TOKEN` already accepted 2026-10-04 (400 `no_known_clusters` on an empty body; live push `clusters_updated:9`).
 - **Cloud:** owner replaced the `AIza…` value in the cloud environment's Environment variables with the new `CSE_PROXY_TOKEN` and re-set `CLUSTER_RESEARCH_TOKEN` to the desktop value (both verified against the relay above). First cloud run after 2026-10-05 is the end-to-end confirmation; a 401 there reopens this row.
 - **Hygiene (owner, outside the repo):** revoke the old `AIza…` Google key that sat in the cloud env. Not a blocker: the relay search runs on Brave.
+- **Confirmed 2026-10-15 (weekly demand-seed, desktop Gabo-PC):** first scheduled run after the close. `GET /api/cse-search?q=test` with the desktop `CSE_PROXY_TOKEN` (64-hex) → 200 `{"ok":true,"source":"brave"}`; write probe 400 `no_known_clusters`; live push `clusters_updated:9`. Desktop legs closed end to end. Cloud-run confirmation still pending (next cloud run).
 
 ---
 

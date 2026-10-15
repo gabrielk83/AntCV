@@ -11,8 +11,9 @@
  * data_analytics / consulting / executive / finance / people_soft) are stage-4
  * research-derived from current market postings, refreshed weekly per
  * docs/deployment/google-cse-setup.md (docs/analysis/
- * cluster_top20_research_2026-08-26.json, latest - supersedes the 2026-08-18
- * revision; normal 8-day weekly cadence. 7 of 9 clusters changed, 2
+ * cluster_top20_research_2026-10-15.json, latest - supersedes the 2026-10-04
+ * revision; per-run evidence lives in that file's changes_summary. The
+ * 2026-08-26 refresh, kept here for history: 7 of 9 clusters changed, 2
  * re-confirmed unchanged (research_phd, data_analytics). Theme: the DELIVERY
  * and PLATFORM layers were under-weighted. Three promotions - photonic
  * packaging & assembly 15->9 (2026 is the first year of large-scale silicon-
@@ -49,7 +50,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.4792';
+  var VERSION = '1.51.4913';
   if (window.AntcvClusterDemand && window.AntcvClusterDemand.version === VERSION) return;
 
   // Embedded seed (verbatim ranks/share from the analyst-reviewed JSON). Keeping it
@@ -60,7 +61,7 @@
       [1, "Project management methodology (PMP / Agile / hybrid / lifecycle)", "none"],
       [2, "AI/GenAI tool fluency, agentic workflows & EU AI Act awareness", "ABC"],
       [3, "Stakeholder management, cross-functional coordination, emotional intelligence & conflict resolution", "ABC"],
-      [4, "Business/commercial acumen, go-to-market & financial understanding", "ABC"],
+      [4, "Business/commercial acumen, budget & cost control, go-to-market & financial understanding", "ABC"],
       [5, "Risk identification, assessment & mitigation (risk register)", "ABC"],
       [6, "Change & governance control (incl. compliance)", "AB"],
       [7, "Requirements management & translating needs into specs", "AB"],
@@ -125,7 +126,7 @@
     // ── CLUSTER-QUAL-001 stage 4 (spec 7.6, owner 2026-07-05): the 6 remaining
     // clusters, research-derived from current (2025-2026) market postings +
     // skills reports (Robert Half, LinkedIn, Coursera, CFI, AIHR, Pluralsight,
-    // BLS et al.; sources in docs/analysis/cluster_top20_research_2026-10-04.json).
+    // BLS et al.; sources in docs/analysis/cluster_top20_research_2026-10-15.json).
     // These extend the COLD-START classifier/weighting to all 9 clusters so a
     // targeted JD in software / data / consulting / executive / finance / HR
     // gets real demand weighting from the seed before the user accumulates
@@ -233,13 +234,13 @@
       [8, "ERP & finance systems (SAP / Oracle / NetSuite / Tagetik)", "none"],
       [9, "Budgeting, planning & variance analysis", "none"],
       [10, "Scenario modelling & sensitivity analysis", "none"],
-      [11, "Accounting standards (IFRS / GAAP)", "none"],
-      [12, "Internal controls, audit & compliance (SOX)", "none"],
-      [13, "Regulatory, ESG & sustainability reporting (CSRD)", "BC"],
-      [14, "Commercial & business acumen", "ABC"],
-      [15, "Cash flow & working-capital management", "none"],
-      [16, "Cost analysis & profitability management", "none"],
-      [17, "Professional qualification (CPA / ACCA / CFA / CIMA) or MBA", "none"],
+      [11, "Professional qualification (CPA / ACCA / CFA / CIMA) or MBA", "none"],
+      [12, "Accounting standards (IFRS / GAAP)", "none"],
+      [13, "Internal controls, audit & compliance (SOX)", "none"],
+      [14, "Regulatory, ESG & sustainability reporting (CSRD)", "BC"],
+      [15, "Commercial & business acumen", "ABC"],
+      [16, "Cash flow & working-capital management", "none"],
+      [17, "Cost analysis & profitability management", "none"],
       [18, "Attention to detail & accuracy", "ABC"],
       [19, "Cross-functional collaboration", "ABC"],
       [20, "English fluency (Danish an advantage)", "ABC"]

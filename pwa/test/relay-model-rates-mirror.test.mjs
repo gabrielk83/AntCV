@@ -141,6 +141,13 @@ test('the ids shipped since the 10-01 pass are priced ahead of adoption (2026-10
   assert.deepEqual(rateForStrict('gpt-5.5'), [5, 30]);
 });
 
+test('the ids shipped since the 10-08 pass are priced ahead of adoption (2026-10-15 tune)', async () => {
+  const { rateForStrict } = await import(pathToFileURL(MIRROR).href);
+  assert.deepEqual(rateForStrict('gemini-4-argon'), [2, 10]);         // GEMINI4-ARGON-RATES-2026-10-001 (was null / fallback [3,15]); doubles to [4,20] on 2026-12-01
+  assert.deepEqual(rateForStrict('gemini-3.8-flash'), [0.75, 3.75]);
+  assert.deepEqual(rateForStrict('gemini-2.5-flash'), [0.3, 2.5]);
+});
+
 test('the strict lookup refuses to guess an unknown model', async () => {
   const { rateForStrict, rateFor } = await import(pathToFileURL(MIRROR).href);
   assert.equal(rateForStrict('some-model-nobody-has-shipped'), null);

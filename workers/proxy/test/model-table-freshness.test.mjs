@@ -346,3 +346,28 @@ test('the 2026-10-08 ids are priced but stay OUT of the default cascades', () =>
     assert.ok(!PROVIDER_MODELS.mistral.includes(id), id + ' adoption is an owner call, not a pricing side effect');
   }
 });
+
+// ------------------------------------------------------------
+// 2026-10-15 (weekly tune) — GEMINI4-ARGON-RATES-2026-10-001.
+// Gemini 4 Argon is the new flagship on ai.google.dev at an INTRODUCTORY [2,10] (doubles to [4,20] on 2026-12-01):
+//   - "gemini-4-argon" -> no key -> FALLBACK_RATE [3,15]  (real [2,10], 1.5x OVER in and out)
+
+test('gemini-4-argon is priced at the introductory [2,10] instead of inheriting the [3,15] fallback', () => {
+  assert.deepEqual(rateFor('gemini-4-argon'), [2.00, 10.00]);
+  // Neighbours undisturbed.
+  assert.deepEqual(rateFor('gemini-3.8-flash'), [0.75, 3.75]);
+  assert.deepEqual(rateFor('gemini-2.5-flash'), [0.30, 2.50]);
+  assert.deepEqual(rateFor('gemini-2.5-pro'), [1.25, 10.00]);
+});
+
+test('gemini-4-argon carries its 2026-12-01 price-doubling note (re-verify after that date)', () => {
+  const src = readFileSync(new URL('../src/demo-enforcement.js', import.meta.url), 'utf8');
+  const i = src.indexOf("'gemini-4-argon'");
+  assert.ok(i > 0, 'the gemini-4-argon RATES entry is missing');
+  assert.ok(/2026-12-01/.test(src.slice(i, i + 240)),
+    'the gemini-4-argon entry must keep its 2026-12-01 price-doubling note');
+});
+
+test('gemini-4-argon is priced but stays OUT of the default gemini cascade', () => {
+  assert.ok(!PROVIDER_MODELS.gemini.includes('gemini-4-argon'), 'adoption is an owner call, not a pricing side effect');
+});

@@ -1394,7 +1394,9 @@ _verified: 2026-10-07_ — CI E1 re-verify against HEAD dbcaf31c (suite 1813/181
 
 ## Row 89 — MODEL-TABLE-FRESHNESS-001
 
-_verified: 2026-10-08_
+_verified: 2026-10-15_
+
+_2026-10-15 weekly tune (desktop, Fable 5.1, worktree-isolated): every pin verifies against the four vendor pages; nothing moved since 10-08. One vendor-listed id was unpriced: GEMINI4-ARGON-RATES-2026-10-001 — `gemini-4-argon`, the new Gemini flagship, contains no existing key, so `rateFor()` gave FALLBACK [3,15] (1.5x OVER in and out; real [2,10] introductory, DOUBLES to [4,20] on 2026-12-01) and `rateForStrict()` answered null. Added to all three mirrors with the 12-01 note; freshness 39/39 ×2 (+3: rate, note guard, out-of-cascade), relay mirror 11/11 (+1); full suite ALL PASS. D1 `llm_provider_costs` unchanged (34 rows) and reconciles; no write owed. 30 d recompute 18 calls, stored 1.301x = the one pre-fix claude row of 09-28, everything else to the cent. 7 d EMPTY, no flip. Deploy ×3 OWED at commit, dispatched in-run. Also deferred: `gemini-3-flash-preview` is now labelled legacy and has no key (not a pin, no traffic). Re-verify dates on this row: 2026-11-21 (`gpt-5.6-sol`), 2026-12-01 (`gemini-4-argon`), 2027-01-01 (Gemini 3.x)._
 
 _2026-10-08 weekly tune (desktop, Fable 5.1): every pin verifies against the four vendor pages (the Mistral marketing page now redirects to docs.mistral.ai/inference/pricing). Four vendor-listed ids were unpriced or resolved to a neighbour: ANTHROPIC-HAIKU55-RATES-2026-10-001 (`claude-haiku-5-5` new, no key → FALLBACK [3,15] = 30x OVER; pinned [0.10,0.50] at the ≤100k-token tier, >100k bills [0.50,2.50]); MISTRAL-LARGE4-RATES-2026-10-001 (`mistral-large-4` / `-4-0`, released 2026-10-06, matched `mistral-large` [0.5,1.5] = 1.36x / 1.39x UNDER vs the sale [0.68,2.09], list [1.36,4.18]; the live pin is safe — `/v1/models` says `mistral-large-latest` → `mistral-large-2512` = Large 3 — and the comment says to add an explicit `mistral-large-latest` key when the alias moves); GPT-CYBER-RATES-2026-10-001 (`gpt-5.5-cyber` sat on the pinned `gpt-5.5` key [5,30], `gpt-5.6-cyber` on `gpt-5` [1.25,10]; both [12.5,75]). `gpt-5.6-sol` [4,20] is promotional "at least through 2026-11-21" (comment only). All three mirrors byte-identical; freshness 36/36 ×2, relay mirror 10/10, every new id asserted out of the default cascades. D1 `llm_provider_costs`: every newest row equals the audited rate; no row for the new ids (correct). No `llm_calls` since 2026-09-28; 30 d recompute 1.349x stored/true, all of it the two pre-fix claude `parse_jd` rows. workers proxy + demo-proxy + access-relay DEPLOYED via deploy.yml runs 37772931509 / 37773485941 / 37773581157, /health 200 ×3, clears the 10-01 owed set. Still deferred to a full audit: `gpt-5.2`, `gpt-5.2-pro`, `gpt-5-pro`, `gpt-5-nano`, `gpt-5.3-codex`, `gpt-5.1` (all → `gpt-5` [1.25,10]); `o4-mini`, `chat-latest`, `gpt-rosalind-research` (FALLBACK). Report: `COST_QUALITY_WEEKLY_2026-10-08.md`._
 
@@ -2230,7 +2232,9 @@ unattended fix. Kept ACTIVE.
 
 ## Row 115 — PWA-COST-METER-OPUS55-001
 
-_verified: 2026-10-08_
+_verified: 2026-10-15_
+
+_2026-10-15 weekly tune: re-verified, not fixed. `C.claude` / `C.anthropic` still [2,10] (`app.src.js` ~1221), `q()` still pins `claude-opus-5-5` [4,20]. Still no opus-5-5 row in `llm_calls` (no LLM call of any kind since 2026-09-28, 17 days). Owner call unchanged._
 
 _2026-10-08 weekly tune: re-verified, not fixed. `C.claude` / `C.anthropic` still [2,10] (`app.src.js` ~1221), `q()` still pins `claude-opus-5-5` [4,20]. No opus-5-5 row in `llm_calls` yet (no LLM call of any kind since 2026-09-28), so the served model on that path is still unobserved. Owner call unchanged: meter by the returned model id, app.js + cache-bust set in a shift lane._
 

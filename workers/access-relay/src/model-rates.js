@@ -126,6 +126,10 @@ const RATES = {
   'gemini-1.5-flash':    [0.075, 0.30],
   'gemini-1.5-pro':      [1.25,  5.00],
   'gemini-2.0-flash':    [0.10,  0.40],
+  // GEMINI4-ARGON-RATES-2026-10-001 (2026-10-15): Gemini 4 Argon is the new flagship on ai.google.dev/gemini-api/docs/pricing.
+  // The id contains no existing key, so it fell to FALLBACK_RATE [3,15] = 1.5x OVER in and out (real [2,10]) and
+  // rateForStrict() answered null. Not an AntCV pin; priced so a BYOK/override call meters correctly (1a-bis(iv)).
+  'gemini-4-argon':      [2.00, 10.00],  // 2026-10-15 INTRODUCTORY price; DOUBLES to [4.00, 20.00] on 2026-12-01 — re-verify at the first tune after that date
   // GEMINI3-RATES-2026-09-001 (2026-09-10): the Gemini 3 line is on ai.google.dev/gemini-api/docs/pricing and
   // had no keys — neither id contains an existing key, so both fell to FALLBACK_RATE [3,15]: 4x OVER-price on
   // 3.8-flash and 2x OVER on 3.5-flash. An OVER-price demotes the provider in the weekly tune, so a missing

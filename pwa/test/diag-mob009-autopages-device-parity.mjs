@@ -54,7 +54,21 @@ async function measure(width,height,isMobile){
     localStorage.removeItem('antcv:autoPages');localStorage.removeItem('antcv:autoPagesPreview');
   },sections);
   await page.goto(`http://127.0.0.1:${port}/index.html`,{waitUntil:'load',timeout:30000});
-  await page.waitForTimeout(9000); // measurer is debounced + re-runs; let it settle
+  // MOB009-GUARD-SETTLE-001 (2026-10-15): a fixed 9 s wait produced a false FAIL (mobile
+  // carried an extra certs break) when this guard ran concurrently with another Playwright
+  // diag; two clean re-runs passed. Wait for antcv:autoPages to hold STILL for 3 s instead
+  // (floor 9 s, cap 30 s) so a slow measurer cannot be read mid-plan.
+  await page.waitForTimeout(9000);
+  {
+    let last = await page.evaluate(() => localStorage.getItem('antcv:autoPages') || '');
+    let stillSince = Date.now(); const t0 = Date.now();
+    while (Date.now() - t0 < 21000) {
+      await page.waitForTimeout(500);
+      const cur = await page.evaluate(() => localStorage.getItem('antcv:autoPages') || '');
+      if (cur !== last) { last = cur; stillSince = Date.now(); }
+      else if (Date.now() - stillSince >= 3000) break;
+    }
+  }
   const out=await page.evaluate(()=>{
     const paper=document.querySelector('[data-antcv-preview-paper="true"]');
     let scale=null;if(paper){const r=paper.getBoundingClientRect();scale=paper.offsetWidth?+(r.width/paper.offsetWidth).toFixed(3):null;}

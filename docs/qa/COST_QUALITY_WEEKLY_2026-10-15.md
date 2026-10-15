@@ -134,7 +134,21 @@ Nothing can move on one session a month. The `analysis` pin from 09-29 still has
 
 ## 4. Deploy
 
-Deploy ×3 (proxy, demo-proxy, access-relay) OWED at the time of the code commit; this run dispatches them one at a time via deploy.yml right after the push and records the result in a follow-up docs commit below.
+**DEPLOYED ×3 this run, one at a time via `deploy.yml` (`mode=deploy`, `confirm=<target>`), after the
+code commit `cbe66c2f` was pushed (two rebases: the demand-seed weekly + its shift release landed on
+`main` while this run was committing) and the full suite passed:**
+
+| worker | run | from | result | `/health` after |
+|---|---|---|---|---|
+| proxy (`cv-proxy`) | 38766174548 | `cbe66c2f` | success (lint, unit-tests, deploy-worker) | 200, `3.8.4-brand-ink-match` |
+| demo-proxy (`antcv-demo-proxy`) | 38766290667 | `cbe66c2f` | success | 200, `3.8.4-brand-ink-match` |
+| access-relay (`antcv-access-relay`) | 38766434433 | `f65a8fca` | success | 200, `auth-38-subtitle-guard-qual-put` |
+
+The relay run started from `f65a8fca` because a job-tracker commit (sweep verdict summary on a PUT
+failure) was pushed between dispatches; `git diff --stat cbe66c2f f65a8fca -- workers/` is empty, so
+each deploy shipped exactly the rate-table commit since the 2026-10-08 deploys. Not verified live
+beyond `/health`: no endpoint exposes the rate table and `gemini-4-argon` has no traffic. The first
+`llm_calls` row for it would be the proof (strict lookup non-null, no client-cost fallback warning).
 
 ## 5. Owed / owner calls
 

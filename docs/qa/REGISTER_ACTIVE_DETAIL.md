@@ -2177,6 +2177,8 @@ confirmed landed, 3 checks go red. All 14 job-tracker python tests green. Live-v
 
 _verified: 2026-10-15_
 
+**2026-10-15 (position-discovery rerun, OWNER LEG DONE):** `~/.antcv/token` re-saved by the owner after the blocked 16:06Z fire; preflight `TOKEN OK`, expires 2026-10-22T16:22:35Z (7.0 d). Sweep PUT, two `discover-positions.py add` PUTs and the Excel pull all 200. Leg (a) still owed.
+
 **2026-10-15 (job-tracker nightly, the 08:45 fire dispatched 18:08 local, desktop Gabo-PC, cross-check only, BLOCKED):** third routine today at this gate. The duplicate-run rule applied (the 10-12 → 10-15 entry was committed 18:05 today), so this was a cross-check run; the cross-check met the 401 itself: `check-postings.py check --limit 1` (dry) and `gen-runner.py list` both fail at the GET with `401 {'error': 'unauthenticated'}`. Workers `/health` 200. Nothing written, no code. Owner re-save owed; leg (a) unchanged. For leg (a): the demand-seed weekly ran its relay legs today on machine tokens (`CSE_PROXY_TOKEN`, `CLUSTER_RESEARCH_TOKEN`) and did not block; the job-tracker doc GET/PUT has no such lane.
 
 **2026-10-15 (desktop nightly, Gabo-PC, Fable 5.1 — third hit today):** `routine-preflight.mjs token` exit 4 at this run's start (expired 2026-10-15T11:12:36Z); every relay-backed and signed-in leg of the band plan was skipped (rows 39a downgrade PUT, 40, 43, 44, 63, 64, 67 regen, 74 foreground gen). Dispatch gap 6.4 d (previous start 2026-10-09T07:22Z): the host slept 10-12 -> 10-15, so the 6-day self-renewal window was missed. Owner: re-save `~/.antcv/token` from the signed-in PWA console. No code change here.
@@ -2419,3 +2421,33 @@ nothing is broken today; this is tail hygiene.
 is adoption, not pricing. Proposed: replace the three Mistral ids with `mistral-large-2512` +
 `mistral-medium-2604`, replace the Gemini 2.0/1.5 ids with `gemini-3.6-flash` + `gemini-3.5-flash-lite`
 (both keyed in the rate table), keep the current heads. Worker deploy ×2 after. Severity LOW.
+
+---
+
+
+## Row 126 — DISCOVER-URLKEY-QUERY-001
+
+_verified: 2026-10-15_
+
+> **Renumbered 2026-10-15 at push: filed as row 125, which MEDSEC-CLUSTER-001 took in a concurrent push; the ID is the key.**
+
+**Filed 2026-10-15 (position-discovery rerun, desktop Gabo-PC, Fable 5.1, worktree-isolated).** The run's
+`discover-positions.py add --candidates` reported `SKIPPED 1: FMI / Teknisk projektleder til Forsvarets
+data- og AI-projekter (duplicate/already-proposed)` although no FMI row and no such ledger key existed.
+
+**Cause (code read, not assumed).** `_norm_url` at `scripts/job-tracker/discover-positions.py:75-78` does
+`u.split("#")[0].split("?")[0].rstrip("/")` before lower-casing and host-stripping, so the ledger key of
+`https://candidate.hr-manager.net/ApplicationInit.aspx?cid=3010&ProjectId=171037&DepartmentId=20125&MediaId=4735`
+is `candidate.hr-manager.net/applicationinit.aspx` — identical to the key of the tracked
+`…ApplicationInit.aspx?cid=1694&ProjectId=143818…` ad (context output line 230, a different employer). HR-Manager
+(Talentech) addresses every ad by query string, so the second hr-manager ad ever proposed, and every one
+after it, is silently dropped as a duplicate. Same shape applies to any ATS whose ad identity lives in the
+query (SuccessFactors `career?…&rcm_…`, Workday search links).
+
+**Workaround used this run:** re-added the row with the jobindex mirror URL `https://www.jobindex.dk/vis-job/h1708079`
+(unique path) and the employer URL in `why`; ADDED 1, rev 288 → 289.
+
+**Fix owed (scripts only, no `pwa/` asset, no version):** keep the query for hosts in a small allow-list, or
+keep `ProjectId`/`cid`/`jobId`-class parameters generically; add a regression test with two hr-manager URLs
+that must yield distinct keys and one `utm_`-only query that must still collapse. Owner-gated only by the
+routine's data/docs-only remit; any nightly may ship it.

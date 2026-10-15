@@ -441,6 +441,68 @@ check("dry run: the rev read, marked not written, no PUT",
 j = json.loads(run_check(apply=False, json=True)[0])
 check("dry run --json: rev_after is null", (j.get("rev_before"), j.get("rev_after")), (11, None))
 
+# EVIDENCE-ON-FAILURE: a terminal PUT failure (401 token death, 409 x4) used to
+# sys.exit before the summary, so a probe of 100 URLs left one line of evidence.
+# The 2026-10-12 sweep ran across a three-day host sleep and met a 401 at the PUT.
+# The summary and the --json document still go out; nothing reads as archived.
+
+
+def fake_put_401(doc, base_rev):
+    puts.append((base_rev, None))
+    return 401, {"error": "unauthenticated"}
+
+
+def fake_get_struck():
+    gets.append(1)
+    # A fresh doc per call: the 409 test above archived the row inside d2 itself.
+    return 11, doc_with([fresh()], {"acme": {"misses": 1, "last_strike": "2026-08-25"}},
+                        urls={"acme": U})
+
+
+def run_check_fail(put, get, **over):
+    """Real cmd_check with a failing PUT; returns (stdout, stderr, exit code)."""
+    probes.clear(); puts.clear(); gets.clear()
+    cp.probe, cp.put_doc, cp.get_doc = fake_probe, put, get
+    out, err, rc = io.StringIO(), io.StringIO(), None
+    try:
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            try:
+                cp.cmd_check(argparse.Namespace(**dict(ARGS, **over)))
+            except SystemExit as e:
+                rc = str(e.code)
+    finally:
+        cp.probe, cp.put_doc, cp.get_doc = _saved
+    return out.getvalue(), err.getvalue(), rc
+
+
+log, err, rc = run_check_fail(fake_put_401, fake_get_struck)
+check("401 at the PUT: still exits with the error, after 1 PUT",
+      (rc is not None and "401" in rc, len(puts)), (True, 1))
+check("401 at the PUT: the verdict summary still goes out",
+      ("checked 1 row(s)" in log, "GONE 1" in log), (True, True))
+check("401 at the PUT: the row reads 'would archive', never ARCHIVED",
+      ("would archive" in log, "ARCHIVED" in log), (True, False))
+check("401 at the PUT: the tally says 0 archived, 1 would archive, NOT written",
+      "0 archived  (NOT written: 1 would archive)" in log, True)
+check("401 at the PUT: the rev line names the rev read and the failure",
+      "doc rev 11 (NOT written: PUT failed: 401" in log, True)
+out, err, rc = run_check_fail(fake_put_401, fake_get_struck, json=True)
+check("401 --json: stdout is ONE parseable document", out.lstrip().startswith("{"), True)
+try:
+    j = json.loads(out)
+except ValueError:
+    j = {}
+check("401 --json: applied false, put_error names the 401, rev_after null",
+      (j.get("applied"), "401" in str(j.get("put_error")), j.get("rev_before"), j.get("rev_after")),
+      (False, True, 11, None))
+row0 = (j.get("rows") or [{}])[0]
+check("401 --json: the row is would_archive but not archived",
+      (row0.get("archived"), row0.get("would_archive")), (False, True))
+log, err, rc = run_check_fail(fake_put_forever, fake_get)
+check("409 x4: the summary now precedes the exit",
+      (rc is not None and "409" in rc, "checked 1 row(s)" in log, "doc rev 11 (NOT written" in log),
+      (True, True, True))
+
 if fails:
     print("FAIL (%d):" % len(fails))
     for f in fails:

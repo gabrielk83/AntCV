@@ -4,6 +4,20 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 124 — POSTING-SWEEP-PUT-FAIL-EVIDENCE-001 — CLOSED 2026-10-15 (job-tracker nightly, evidence: the real 401 of the 2026-10-12 sweep + negative-controlled test on the real cmd_check)
+
+_verified: 2026-10-15_
+
+_Found and fixed the same run by the job-tracker nightly dispatched 2026-10-12, finished 2026-10-15 (Gabo-PC, Fable 5.1, worktree-isolated). Script-only: `scripts/job-tracker/check-postings.py` + `test_check_postings.py`, no `pwa/` asset, no cache-bust, no version consumed, no shift claim._
+
+**Evidence.** The step 1b sweep started 2026-10-12T12:02Z with a token good for 3.0 days, the host slept until 2026-10-15T15:52Z, the token expired at 11:12Z, and the PUT answered `401 unauthenticated`. The whole output of a three-day probe run was one line: `PUT failed: 401 {'error': 'unauthenticated'}`. `cmd_check` raised `sys.exit("PUT failed: ...")` inside the PUT loop, before `counts`, the verdict list, the live/archived tally and the `doc rev` line (the 409 x4 branch did the same). So the run-log could not say how many rows were probed, which were LIVE, which would have archived, nor which rev was read, and the verdicts of ~100 HTTP probes were discarded.
+
+**Fix.** A terminal PUT failure (anything but 200 or 409, or the fourth 409) is kept as `put_error` and the loop breaks. Every result's `archived` is reset to False, because nothing reached the relay; `would_archive` stays, so the hard verdicts print as `would archive`. The text summary goes out as usual, the tally reads `N live, 0 archived  (NOT written: M would archive)`, the rev line reads `doc rev R0 (NOT written: PUT failed: 401 ...)`, and `--json` carries `applied: false` and `put_error` in the one stdout document. The script then exits non-zero with the same message on stderr, so callers that read the exit status see what they saw before. Verdict logic, the strike counter and the archive edit are untouched.
+
+**Test.** `test_check_postings.py` +9 checks (102 `check(` lines) through a `run_check_fail(put, get)` helper that drives the real `cmd_check` with a 401 PUT stub and catches the `SystemExit`: exit carries the 401 after exactly one PUT; the summary names `checked 1 row(s)` and `GONE 1`; the row reads `would archive` and never `ARCHIVED`; the tally and the rev line read NOT written; the JSON stdout parses whole with `applied false`, `put_error` naming the 401, `rev_before 11`, `rev_after null`, row `archived false / would_archive true`; the 409 x4 path now prints the summary before its exit. The GET stub builds a fresh one-strike doc per call, because the earlier 409 end-to-end test archives the row inside the shared `d2` (the first draft read `d2` and hit an IndexError on an empty `rows`). **Negative-controlled by line index:** the `archived` reset at `check-postings.py:474` turned into `pass` -> 3 red; the early exit restored at `:467` -> 8 red; the file restored byte-identical (`cmp`) and green. The other 17 job-tracker python files green.
+
+---
+
 ## Row 122 — POSTING-SWEEP-REV-TRAIL-001 — CLOSED 2026-10-09 (job-tracker nightly, evidence: live dry run after the fix + negative-controlled test on the real cmd_check)
 
 _verified: 2026-10-09_

@@ -2211,6 +2211,8 @@ says so.
 
 **RE-VERIFIED 2026-10-09 (job-tracker nightly, Gabo-PC).** `routine-preflight.mjs token` exit 0: the owner re-saved the token since the 10-08 run (expiry moved from 2026-10-12 to 2026-10-15, 6.2 d left at the run); every relay step of the run passed. Dispatch gap 0.8 d. REMAINING: leg (a), a long-lived machine token or a longer relay session TTL; the 7-day credential still dies with any week the app is closed.
 
+**RE-OPENED 2026-10-15 (job-tracker nightly dispatched 2026-10-12, Gabo-PC) — fourth death of the family, and the first one caught in flight.** The run passed its AUTH gate at dispatch (`TOKEN EXPIRING`, 3.0 d left, exp 2026-10-15T11:12:36Z) and started the step 1b sweep; the host then slept from 2026-10-12 to 2026-10-15T15:52Z (System log: wake from a low-power state), the token expired at 11:12Z, and the sweep's PUT answered `401 unauthenticated` 4.7 h after the expiry. Isolated: `/health` 200 on access-relay, cv-proxy and demo-proxy, so the credential alone. `~/.antcv/token` mtime 2026-10-08 13:12 local, the plain 7-day TTL. The ledger shows demand-seed-weekly and position-discovery starting at the same second on 10-12 with no `end`, and relay-cost-quality-tune starting 10-15 15:55Z with `token: expired`; this routine's 10-13 and 10-14 fires never happened. Task 1 stopped at the gate: nothing generated, nothing written, Excel not refreshed. The one-line evidence the dying sweep left is fixed separately (row 124, CLOSED). REMAINING: OWNER re-save (recipe above), and leg (a): the preflight warning did its job three days before the death and could not prevent it, so only a machine token for routines or a longer relay session TTL ends this.
+
 ---
 
 ## Row 114 — TELEMETRY-BGJOB-GAP-001

@@ -438,6 +438,7 @@ def cmd_check(args):
     rev_before, rev_after = rev, None
     results = probe_rows(doc, args, today)
 
+    put_error = None
     if args.apply:
         c = None
         for attempt in range(4):
@@ -459,9 +460,18 @@ def cmd_check(args):
                 rev, doc = new_rev, new_doc
                 results = reapply_results(doc, results, today, args.apply)
                 continue
-            sys.exit("PUT failed: %s %s" % (c, str(b)[:200]))
-        if c != 200:
-            sys.exit("PUT failed: the doc kept moving (409 x4); nothing written")
+            put_error = "PUT failed: %s %s" % (c, str(b)[:200])
+            break
+        if c != 200 and put_error is None:
+            put_error = "PUT failed: the doc kept moving (409 x4); nothing written"
+        if put_error:
+            # EVIDENCE-ON-FAILURE: the probes are done and paid for (the 2026-10-12
+            # sweep ran across a three-day host sleep and met a 401 at the PUT), so
+            # the verdicts still go out below. Nothing reached the relay: no row is
+            # archived, every hard verdict reads "would archive". The exit at the
+            # end carries the error, as before.
+            for r in results:
+                r["archived"] = False
 
     counts = {}
     for r in results:
@@ -469,10 +479,13 @@ def cmd_check(args):
 
     if args.json:
         print(json.dumps({"checked": len(results), "counts": counts,
-                          "applied": bool(args.apply),
+                          "applied": bool(args.apply) and put_error is None,
+                          "put_error": put_error,
                           "rev_before": rev_before, "rev_after": rev_after,
                           "rows": results},
                          ensure_ascii=False, indent=1))
+        if put_error:
+            sys.exit(put_error)
         return
 
     print("checked %d row(s) — %s" % (
@@ -485,11 +498,19 @@ def cmd_check(args):
         print("  [%-7s] %s / %s  -> %s" % (r["verdict"], r["company"], r["role"], mark))
         print("            %s  (%s)" % (r["url"][:100], r["detail"]))
     live = counts.get("LIVE", 0)
+    would = sum(1 for r in results if r["would_archive"])
+    if put_error:
+        tail = "  (NOT written: %d would archive)" % would
+        revline = " (NOT written: %s)" % put_error
+    elif args.apply:
+        tail, revline = "", " -> %s (written)" % rev_after
+    else:
+        tail, revline = "  (dry run — pass --apply to write)", " (not written)"
     print("\n%d live, %d archived%s" % (
-        live, sum(1 for r in results if r["archived"]),
-        "" if args.apply else "  (dry run — pass --apply to write)"))
-    print("doc rev %s%s" % (rev_before,
-                            " -> %s (written)" % rev_after if args.apply else " (not written)"))
+        live, sum(1 for r in results if r["archived"]), tail))
+    print("doc rev %s%s" % (rev_before, revline))
+    if put_error:
+        sys.exit(put_error)
 
 
 def main():

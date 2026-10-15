@@ -4,7 +4,7 @@ Scope: owner request, desktop session on Gabo-PC (Fable 5.1), worktree
 `C:/Users/Karpg/antcv-worktrees/medsec-cluster`, branch `feat/medical-secretary-cluster`.
 Owner: "expand demand seed clusters — include also medical secretary, especially in Skåne and
 East Denmark — needed for a new user. Add also to every demand seed tuning and searches."
-Register row 124. Feature registry increment 41 (FT-MEDSEC-CLUSTER).
+Register row 125 (filed as 124, renumbered: a concurrent push took 124). Feature registry increment 41 (FT-MEDSEC-CLUSTER).
 
 ## What shipped
 
@@ -75,12 +75,12 @@ Register row 124. Feature registry increment 41 (FT-MEDSEC-CLUSTER).
   proxy run 38771415669 success, demo-proxy run 38771534784 success. Relay probe: an unknown
   cluster id still returns `400 no_known_clusters`.
 - D1 push: `{"ok":true,"clusters_updated":10,"total_inserted":247,"unknown":[]}`,
-  `medical_secretary` inserted 20, recomputed. Read-only verify: see register row 124.
+  `medical_secretary` inserted 20, recomputed. Read-only verify: see register row 125.
 - Live on antcv.pages.dev 15 s after the push: `sw.js` CACHE `antcv-1.51.4993-medsec-cluster`,
   `index.html` references `antcv-cluster-demand.js?v=1.51.4993-medsec-cluster`, the served seed
   carries VERSION 1.51.4993 and the `medical_secretary` block with r1 reception & telephone.
 
-## OPEN (carry forward, row 124)
+## OPEN (carry forward, row 125)
 
 - Cloud routine prompt (account-level): paste the same step-1 medical_secretary leg and the
   10-cluster / 200-qual counts. Owner.

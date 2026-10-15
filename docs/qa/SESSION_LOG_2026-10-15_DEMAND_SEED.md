@@ -84,4 +84,8 @@ the cache-bust sidecars, `docs/qa/*`, and D1 through the relay writer. No `app.j
 
 ## Live verify (post-deploy, antcv.pages.dev)
 
-PENDING at write time; filled in below after the push.
+PASS. `sw.js` serves CACHE `antcv-1.51.4913-demand-seed-refresh` (live 30 s after the push);
+`index.html` references `antcv-cluster-demand.js?v=1.51.4913-demand-seed-refresh`, the override `?v=`
+and the boot seed read the same; the served file carries `var VERSION = '1.51.4913'`, the new
+`pm_process` r4 wording and `finance` r11 (professional qualification). Pushed as `dc99506b`;
+shift claim released.

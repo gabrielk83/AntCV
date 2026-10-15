@@ -50,7 +50,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.4913';
+  var VERSION = '1.51.4973';
   if (window.AntcvClusterDemand && window.AntcvClusterDemand.version === VERSION) return;
 
   // Embedded seed (verbatim ranks/share from the analyst-reviewed JSON). Keeping it
@@ -173,10 +173,10 @@
       [13, "Cloud data platforms (BigQuery / Databricks / Azure)", "AB"],
       [14, "Dashboard & KPI reporting", "none"],
       [15, "Critical thinking & problem-solving", "ABC"],
-      [16, "Experiment design & A/B testing", "AB"],
-      [17, "Domain / industry knowledge", "ABC"],
-      [18, "Version control & reproducible analysis (Git)", "AB"],
-      [19, "Data governance, privacy & ethics", "AB"],
+      [16, "Data governance, privacy & ethics", "AB"],
+      [17, "Experiment design & A/B testing", "AB"],
+      [18, "Domain / industry knowledge", "ABC"],
+      [19, "Version control & reproducible analysis (Git)", "AB"],
       [20, "English fluency (Danish an advantage)", "ABC"]
     ] },
     consulting: { label: "Consulting", top20: [
@@ -254,13 +254,13 @@
       [6, "Talent acquisition & full-cycle recruiting, incl. skills-based hiring", "none"],
       [7, "Employee relations & labour-law compliance", "none"],
       [8, "HRIS & people-analytics systems (Workday / SuccessFactors / Oracle / Visier / Power BI)", "none"],
-      [9, "Strategic workforce planning & succession planning", "none"],
+      [9, "Performance management & development", "none"],
       [10, "Coaching, influencing, emotional intelligence & learning agility", "AB"],
       [11, "Change management & organisational development", "AB"],
       [12, "Cross-functional stakeholder management & collaboration", "ABC"],
-      [13, "Performance management & development", "none"],
-      [14, "Learning & development (L&D), incl. AI-enabled learning", "none"],
-      [15, "Compensation, benefits & total rewards", "none"],
+      [13, "Strategic workforce planning & succession planning", "none"],
+      [14, "Compensation, benefits & total rewards", "none"],
+      [15, "Learning & development (L&D), incl. AI-enabled learning", "none"],
       [16, "Culture, employee experience & belonging", "none"],
       [17, "Employer branding & candidate experience", "none"],
       [18, "Diversity, equity, inclusion & belonging", "none"],

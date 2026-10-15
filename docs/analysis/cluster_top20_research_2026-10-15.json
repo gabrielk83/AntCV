@@ -2,20 +2,20 @@
   "source": "Market research (2025-2026 postings + posting-share reports) - CLUSTER-QUAL-001 stage 4 (spec 7.6), weekly refresh",
   "generated": "2026-10-15",
   "supersedes": "docs/analysis/cluster_top20_research_2026-10-04.json",
-  "method": "Nine cluster passes run inline on the desktop (Gabo-PC): built-in WebSearch/WebFetch plus the relay site-scoped search (GET /api/cse-search, CSE_PROXY_TOKEN 64-hex, Brave backend; first run where that machine-token route answered 200 from the desktop). Each pass given the shipped 2026-10-04 top-20 as baseline, constrained to evidence-backed keep/reorder/merge/add/drop. Ranking evidence is posting share only; skills-gap surveys and editorial lists are context, not rank input. Jobindex site-scoped hits (9 queries, dateRestrict=m1) give Danish ROLE evidence only (hosted pages are teaser-only, see the 2026-10-04 method note), so no Danish requirement-level share was available this run. INTERVAL: 11 days after 2026-10-04 (the scheduled Fri 2026-10-09 run deferred to 2026-10-15 by the desktop-app-local trigger).",
-  "note": "2 of 9 clusters changed, 7 re-confirmed unchanged. No adds or drops. pm_process: wording broadening only, r4 now names budget & cost control (Huntr 23,229 PM postings: budget management 13.5%, 2,729 required vs 316 preferred; Seeker 2,177: budgeting 7.3%), ranks untouched. finance: professional qualification (CPA/ACCA/CFA/CIMA/MBA) promoted 17->11, bounded to 6 places (AuditFriendly 2,230 live FP&A postings: CPA 20.3% + CFA 7.7%, third-most-named token behind Excel 49.7% and Power BI 21.2%, ahead of SAP 13.1%, SQL 10%, GAAP 6.7%); items r11-r16 shift down one. Theme: new posting-share datasets confirm the tool/credential layer; AI items hold their ranks because the new PM datasets do not tally AI at all and the product-manager evidence (Qarera, AI 37.0%) still stands.",
+  "method": "Nine cluster passes run inline on the desktop (Gabo-PC): built-in WebSearch/WebFetch plus the relay site-scoped search (GET /api/cse-search, CSE_PROXY_TOKEN 64-hex, Brave backend; first run where that machine-token route answered 200 from the desktop). Each pass given the shipped 2026-10-04 top-20 as baseline, constrained to evidence-backed keep/reorder/merge/add/drop. Ranking evidence is posting share only; skills-gap surveys and editorial lists are context, not rank input. Jobindex site-scoped hits (9 queries, dateRestrict=m1) give Danish ROLE evidence only (hosted pages are teaser-only, see the 2026-10-04 method note), so no Danish requirement-level share was available this run. INTERVAL: 11 days after 2026-10-04 (the scheduled Fri 2026-10-09 run deferred to 2026-10-15 by the desktop-app-local trigger). SECOND PASS (cloud weekly routine): SeekerScore role pages (shares of active postings in a 625,168-posting corpus, updated 2026-10-12; market-wide skills are filtered out, so a move is made only between items present in, or clearly absent from, the same role list): data analyst n=55,107, HR/recruiting n=16,082, financial analyst n=76,403, product manager n=15,981, hardware engineering n=5,109. Financial analyst and product manager pages showed no inversion large enough to move finance or pm_process; hardware engineering is electronics-led and gives no photonics rank input. Plus Kickresume (cross-industry only).",
+  "note": "4 of 9 clusters changed, 5 re-confirmed unchanged. No adds or drops. pm_process: wording broadening only, r4 now names budget & cost control (Huntr 23,229 PM postings: budget management 13.5%, 2,729 required vs 316 preferred; Seeker 2,177: budgeting 7.3%), ranks untouched. finance: professional qualification (CPA/ACCA/CFA/CIMA/MBA) promoted 17->11, bounded to 6 places (AuditFriendly 2,230 live FP&A postings: CPA 20.3% + CFA 7.7%, third-most-named token behind Excel 49.7% and Power BI 21.2%, ahead of SAP 13.1%, SQL 10%, GAAP 6.7%); items r11-r16 shift down one. Theme: new posting-share datasets confirm the tool/credential layer; AI items hold their ranks because the new PM datasets do not tally AI at all and the product-manager evidence (Qarera, AI 37.0%) still stands. SECOND PASS (cloud weekly routine, same date): people_soft performance management 13->9 and total rewards 15->14; data_analytics data governance 19->16. Reorders only, each on a share gap of at least 2x in one SeekerScore posting set (updated 2026-10-12). Kickresume (1.4M US/UK postings, Mar-Aug 2026) confirms management at 44% overall (72% finance, 54% technology) and explicit AI-tool mentions at 0.2%, but has no per-cluster ranks, so no AI item moved.",
   "changes_this_run": [
+    "data_analytics",
     "finance",
+    "people_soft",
     "pm_process"
   ],
   "unchanged_confirmed": [
     "photonics_eng",
     "research_phd",
     "engineering_software",
-    "data_analytics",
     "consulting",
-    "executive",
-    "people_soft"
+    "executive"
   ],
   "share_legend": "ABC=universal transferable skill; AB/AC/BC=shared across two of the three original A/B/C clusters (pm_process/photonics_eng/research_phd) or, for the 6 stage-4 clusters, a demand-universality tier; none=cluster-specific",
   "sources": [
@@ -34,7 +34,13 @@
     "https://online.edgewood.edu/?p=14221",
     "https://managementconsulted.com/media/consulting-firms-are-still-hiring-entry-level-workers-data-shows-but-theyre-looking-for-a-new-set-of-skills/",
     "https://www.mynewsdesk.com/dk/it-branchen/pressreleases/ai-aendrer-arbejdsmarkedet-nye-tal-viser-en-markant-stigende-efterspoergsel-efter-it-kompetencer-i-hele-danmark-3450642",
-    "relay GET /api/cse-search siteSearch=jobindex.dk dateRestrict=m1 (9 role queries, Brave backend)"
+    "relay GET /api/cse-search siteSearch=jobindex.dk dateRestrict=m1 (9 role queries, Brave backend)",
+    "https://www.seekerscore.com/insights/data-analyst-skills-2026",
+    "https://www.seekerscore.com/insights/hr-recruiter-skills-2026",
+    "https://www.seekerscore.com/insights/financial-analyst-skills-2026",
+    "https://www.seekerscore.com/insights/product-manager-skills-2026",
+    "https://www.seekerscore.com/insights/hardware-engineering-skills-2026",
+    "https://www.kickresume.com/en/press/in-demand-skills-2026/"
   ],
   "clusters": {
     "pm_process": {
@@ -485,8 +491,8 @@
     },
     "data_analytics": {
       "label": "Data & Analytics",
-      "changed": false,
-      "changes_summary": "Re-confirmed unchanged. Huntr (25,152 analyst postings, Q1 2026): data analysis 34.3%, SQL 33.5%, communication 31.1%, analytical 26.6%, Python 21.9% (2,254 required / 2,238 preferred), problem-solving 19.7%, data visualisation 17.6%, Excel 15.8%, Tableau 14.1%, project management 13.9%, Power BI 12.6%. SQL r1 confirmed. This dataset puts Python above visualisation (21.9% vs 17.6%, though Tableau+Power BI overlap to 26.7%) while Qarera and AccioJob put BI above Python, so the 10-04 r3 BI / r4 Python order stays: 2 of 4 datasets each way is not evidence for a move. Excel r2 vs Huntr 15.8%: sources still disagree on the SQL/Excel pair, no move. Communication 31.1% supports r11 storytelling staying in the top half.",
+      "changed": true,
+      "changes_summary": "Data governance, privacy & ethics 19->16; experiment design & A/B testing 16->17, domain knowledge 17->18, Git 18->19 (second 2026-10-15 pass, cloud routine). SeekerScore data analyst postings (n=55,107 active, updated 2026-10-12) name data governance in 9.0%; neither A/B testing nor Git is among its 30 role-defining skills (floor 1.1%; product analytics 1.6%). Not moved: SQL/Excel/Python/statistics are filtered from that list as market-wide skills, so r1-r6 stay. Data engineering 14.1% and ETL 10.5% back r8/r12 as placed; Tableau 12.9% / Power BI 12.2% / BI 10.2% back r3. First pass (desktop): Re-confirmed unchanged. Huntr (25,152 analyst postings, Q1 2026): data analysis 34.3%, SQL 33.5%, communication 31.1%, analytical 26.6%, Python 21.9% (2,254 required / 2,238 preferred), problem-solving 19.7%, data visualisation 17.6%, Excel 15.8%, Tableau 14.1%, project management 13.9%, Power BI 12.6%. SQL r1 confirmed. This dataset puts Python above visualisation (21.9% vs 17.6%, though Tableau+Power BI overlap to 26.7%) while Qarera and AccioJob put BI above Python, so the 10-04 r3 BI / r4 Python order stays: 2 of 4 datasets each way is not evidence for a move. Excel r2 vs Huntr 15.8%: sources still disagree on the SQL/Excel pair, no move. Communication 31.1% supports r11 storytelling staying in the top half.",
       "top20": [
         {
           "r": 1,
@@ -565,22 +571,22 @@
         },
         {
           "r": 16,
-          "q": "Experiment design & A/B testing",
+          "q": "Data governance, privacy & ethics",
           "share": "AB"
         },
         {
           "r": 17,
+          "q": "Experiment design & A/B testing",
+          "share": "AB"
+        },
+        {
+          "r": 18,
           "q": "Domain / industry knowledge",
           "share": "ABC"
         },
         {
-          "r": 18,
-          "q": "Version control & reproducible analysis (Git)",
-          "share": "AB"
-        },
-        {
           "r": 19,
-          "q": "Data governance, privacy & ethics",
+          "q": "Version control & reproducible analysis (Git)",
           "share": "AB"
         },
         {
@@ -590,7 +596,8 @@
         }
       ],
       "sources": [
-        "https://huntr.co/resume-skills/analyst"
+        "https://huntr.co/resume-skills/analyst",
+        "https://www.seekerscore.com/insights/data-analyst-skills-2026"
       ]
     },
     "consulting": {
@@ -927,8 +934,8 @@
     },
     "people_soft": {
       "label": "People / HR",
-      "changed": false,
-      "changes_summary": "Re-confirmed unchanged. Deloitte CHRO postings (via Masters Union): leadership & initiative 74%, communication 59%, critical thinking & problem-solving 55% (r5 holds). Salary.com HRBP mentions (via Edgewood, Jun 2026): leadership 8.17%, change management 1.99%, organisational development 1.37%, shares too small to rank against the list. Robert Half: HR demand for critical thinking when applying AI tools (r4/r5). No posting-share evidence for a reorder; HRIS/Workday, Excel/Power BI and labour-law lines already at r3, r7, r8.",
+      "changed": true,
+      "changes_summary": "Two swaps on posting share (second 2026-10-15 pass, cloud routine). SeekerScore HR/recruiting postings (n=16,082 active, updated 2026-10-12): performance management 15.5% vs workforce planning 5.6% / succession planning 5.5%, so performance management & development 13->9 and strategic workforce & succession planning 9->13. Total rewards 12.5% vs learning & development 5.0%, so compensation, benefits & total rewards 15->14 and L&D 14->15. Not moved: coaching (27.1%) and talent acquisition (20.8%) already sit at r10/r6; the corpus mixes recruiter and HRBP postings, which inflates recruiting-family terms. Employee relations (10.7%) stays at r7 because Danish collective-agreement labour law carries it. The source filters out market-wide skills, so r1-r5 are not comparable and stay. First pass (desktop): Re-confirmed unchanged. Deloitte CHRO postings (via Masters Union): leadership & initiative 74%, communication 59%, critical thinking & problem-solving 55% (r5 holds). Salary.com HRBP mentions (via Edgewood, Jun 2026): leadership 8.17%, change management 1.99%, organisational development 1.37%, shares too small to rank against the list. Robert Half: HR demand for critical thinking when applying AI tools (r4/r5). No posting-share evidence for a reorder; HRIS/Workday, Excel/Power BI and labour-law lines already at r3, r7, r8.",
       "top20": [
         {
           "r": 1,
@@ -972,7 +979,7 @@
         },
         {
           "r": 9,
-          "q": "Strategic workforce planning & succession planning",
+          "q": "Performance management & development",
           "share": "none"
         },
         {
@@ -992,17 +999,17 @@
         },
         {
           "r": 13,
-          "q": "Performance management & development",
+          "q": "Strategic workforce planning & succession planning",
           "share": "none"
         },
         {
           "r": 14,
-          "q": "Learning & development (L&D), incl. AI-enabled learning",
+          "q": "Compensation, benefits & total rewards",
           "share": "none"
         },
         {
           "r": 15,
-          "q": "Compensation, benefits & total rewards",
+          "q": "Learning & development (L&D), incl. AI-enabled learning",
           "share": "none"
         },
         {
@@ -1033,7 +1040,8 @@
       ],
       "sources": [
         "https://mastersunion.org/blog/what-skills-does-an-hr-business-partner-or-chro-need-in-2026",
-        "https://online.edgewood.edu/?p=14221"
+        "https://online.edgewood.edu/?p=14221",
+        "https://www.seekerscore.com/insights/hr-recruiter-skills-2026"
       ]
     }
   }

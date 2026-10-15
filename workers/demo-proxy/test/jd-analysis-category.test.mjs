@@ -40,7 +40,7 @@ const ok = (name, cond) => { assert.ok(cond, name); console.log('PASS ' + name);
   ok('explicit unsolicited round-trips', r.category === 'unsolicited');
 }
 
-// 5. any of the 12 real category ids passes through — normalize() itself
+// 5. any of the 13 real category ids passes through — normalize() itself
 // doesn't validate against the fixed set (access-relay's normalizeCategory()
 // is the authoritative validator server-side); this just proves nothing
 // here silently drops or mangles a real value.
@@ -49,6 +49,7 @@ const ok = (name, cond) => { assert.ok(cond, name); console.log('PASS ' + name);
     'engineering_hardware', 'engineering_software', 'product_management',
     'research_phd', 'program_management', 'operations',
     'data_analytics', 'consulting', 'executive', 'finance', 'people_soft',
+    'medical_secretary',
   ];
   ids.forEach((id) => {
     const r = normalize({ category: id });

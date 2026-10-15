@@ -59,12 +59,12 @@ test('latestResearchFile: picks the newest dated file (lexical = chronological)'
   assert.equal(path.basename(picked), all[all.length - 1]);
 });
 
-test('buildPayload: the real latest research file yields a well-formed 9-cluster payload', () => {
+test('buildPayload: the real latest research file yields a well-formed 10-cluster payload', () => {
   const file = latestResearchFile(path.join(REPO_ROOT, 'docs', 'analysis'));
   const json = JSON.parse(fs.readFileSync(file, 'utf8'));
   const { body, clusterCount, total } = buildPayload(json);
-  assert.equal(clusterCount, 9, 'all 9 clusters forwarded');
-  assert.equal(total, 180, '9 clusters x 20 quals');
+  assert.equal(clusterCount, 10, 'all 10 clusters forwarded');
+  assert.equal(total, 200, '10 clusters x 20 quals');
   for (const c of Object.values(body.clusters)) {
     assert.equal(c.top20.length, 20);
     assert.ok(c.top20.every((it) => it.q && it.r >= 1 && it.r <= 20));

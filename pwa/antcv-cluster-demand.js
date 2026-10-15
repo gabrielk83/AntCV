@@ -31,7 +31,9 @@
  * oversight, people_soft adds Oracle/Visier to the HRIS item. No AI item was
  * demoted anywhere; executive AI was NOT promoted, because its evidence is a
  * skills-gap survey rather than posting share) -
- * together the 9 clusters the 12 categories fold into. This is the
+ * together the 9 clusters the 12 categories fold into, plus the 10th cluster
+ * medical_secretary (MEDSEC-CLUSTER-001, 2026-10-15: lægesekretær / SAK /
+ * medicinsk sekreterare, East Denmark + Skåne evidence). This is the
  * cold-start fallback; the live D1 path (antcv-cluster-demand-live.js) overtakes
  * it once real-JD data accumulates.
  * The demand score is wired alongside the numeric-first rule as a secondary key.
@@ -50,7 +52,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.4973';
+  var VERSION = '1.51.4993';
   if (window.AntcvClusterDemand && window.AntcvClusterDemand.version === VERSION) return;
 
   // Embedded seed (verbatim ranks/share from the analyst-reviewed JSON). Keeping it
@@ -266,6 +268,33 @@
       [18, "Diversity, equity, inclusion & belonging", "none"],
       [19, "HR policy & governance", "none"],
       [20, "English fluency (Danish an advantage)", "ABC"]
+    ] },
+    // ── MEDSEC-CLUSTER-001 (owner 2026-10-15): 10th cluster, medical secretary /
+    // lægesekretær / sundhedsadministrativ koordinator / medicinsk sekreterare.
+    // Researched for East Denmark (Region Hovedstaden + Sjælland) and Skåne from
+    // requirement-level ads (JobTech open API + Jobindex hosted ad bodies, n=49).
+    // Classifies via the same keyword overlap; no scoring-code change.
+    medical_secretary: { label: "Medical Secretary / Healthcare Administration", top20: [
+      [1, "Reception, telephone & front-desk patient contact (skranke, patientmottagning)", "none"],
+      [2, "Interdisciplinary teamwork with doctors, nurses & fellow secretaries", "ABC"],
+      [3, "Service-minded, respectful patient communication (imødekommende, gott bemötande)", "ABC"],
+      [4, "Trained medical secretary: sundhedsadministrativ koordinator (SAK) / lægesekretær / medicinsk sekreterare (YH vårdadministration 400p / KY 80p)", "none"],
+      [5, "Journal documentation, dictation transcription & clinical notes (journalføring, diktat, Medspeech)", "none"],
+      [6, "Administrative support to clinicians & clinic management (post, attester, recepter, henvisninger, chefsstöd)", "none"],
+      [7, "Electronic patient-record & practice systems (Sundhedsplatformen / Epic, Melior, PASiS, XMO / Novax / Clinea)", "none"],
+      [8, "Flexibility & readiness for change (forandringsparat, omstillingsparat)", "AB"],
+      [9, "Independent, responsible working & initiative", "ABC"],
+      [10, "Danish / Swedish in speech & writing incl. medical terminology", "none"],
+      [11, "IT literacy & digital work methods (digital post, e-Boks, 1177 e-tjänster)", "AB"],
+      [12, "Coordination of patient pathways & clinic planning (forløbskoordinering)", "none"],
+      [13, "Confidentiality, patient rights & data protection (tavshedspligt, sekretess, GDPR, forvaltningsret)", "none"],
+      [14, "Prior experience as medical secretary in general practice, hospital or psychiatry", "none"],
+      [15, "Patient scheduling & booking: tidsbestilling, indkaldelser / kallelser, visitation", "none"],
+      [16, "Prioritising under pressure & staying calm in a busy clinic (mødestabil, stresstålig)", "ABC"],
+      [17, "Structured, accurate & detail-oriented working (overblik, noggrannhet)", "ABC"],
+      [18, "Referral handling & correspondence with other care providers (henvisninger, remisser)", "none"],
+      [19, "Diagnosis & procedure coding, registration & settlement (ICD / KVÅ / DRG, ydelsesregistrering, afregning)", "none"],
+      [20, "Clinic-assistant tasks in general practice (prøvetagning, blodprøver, EKG, podning)", "none"]
     ] }
   };
   var SHARE_MULT = { ABC: 1.5, AB: 1.2, AC: 1.2, BC: 1.2, none: 1.0 };

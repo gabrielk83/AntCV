@@ -237,10 +237,10 @@ test('unknown cluster id / empty top20 / no D1 are safe no-ops', async () => {
   assert.equal(await insertResearchQualifications({}, CID, [{ r: 1, q: 'x' }], 1), 0, 'no D1 binding -> 0, never throws');
 });
 
-test('KNOWN_CLUSTERS is exactly the 9 clusters the 12 categories fold into', () => {
+test('KNOWN_CLUSTERS is exactly the 10 clusters the 13 categories fold into', () => {
   assert.deepEqual(
     [...KNOWN_CLUSTERS].sort(),
-    ['consulting', 'data_analytics', 'engineering_software', 'executive', 'finance', 'people_soft', 'photonics_eng', 'pm_process', 'research_phd'].sort()
+    ['consulting', 'data_analytics', 'engineering_software', 'executive', 'finance', 'people_soft', 'photonics_eng', 'pm_process', 'research_phd', 'medical_secretary'].sort()
   );
 });
 

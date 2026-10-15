@@ -2341,7 +2341,7 @@ function shapeApplicationRow(row) {
   };
 }
 
-// The 12 fixed categories, plus 'targeted' — anything else gets coerced to 'unsolicited'.
+// The 13 fixed categories (12 + medical_secretary, 2026-10-15), plus 'targeted' — anything else gets coerced to 'unsolicited'.
 // TARGETED-SENTINEL-001 (owner 2026-07-18): the PWA sends category:'targeted' for a
 // real, targeted job whose JD-analysis hasn't produced one of the 12 domain categories
 // yet (app.src.js ~16658: `ra.category || "targeted"`). Coercing that to 'unsolicited'
@@ -2356,7 +2356,7 @@ const CATEGORIES = new Set([
   'engineering_hardware', 'engineering_software', 'product_management',
   'research_phd', 'program_management', 'operations',
   'data_analytics', 'consulting', 'executive',
-  'finance', 'people_soft', 'unsolicited',
+  'finance', 'people_soft', 'medical_secretary', 'unsolicited',
   'targeted',
 ]);
 
@@ -2456,6 +2456,11 @@ const CATEGORY_TO_CLUSTER = {
   executive: 'executive',
   finance: 'finance',
   people_soft: 'people_soft',
+  // MEDSEC-CLUSTER-001 (owner 2026-10-15): 13th category + 10th cluster, 1:1.
+  // Medical secretary / lægesekretær / sundhedsadministrativ koordinator /
+  // medicinsk sekreterare (vårdadministratör). Researched for East Denmark
+  // (Region Hovedstaden + Sjælland, Region Østdanmark from 2027) and Skåne.
+  medical_secretary: 'medical_secretary',
   // 'unsolicited' deliberately has no cluster — a true no-JD application has
   // no qualifications to extract from in the first place.
 };

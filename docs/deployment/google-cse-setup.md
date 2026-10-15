@@ -14,7 +14,7 @@
 > this doc is retained for historical reference only.
 
 
-The client demand seed (`pwa/antcv-cluster-demand.js`, 9 clusters, spec 7.6) is
+The client demand seed (`pwa/antcv-cluster-demand.js`, 10 clusters since 2026-10-15, spec 7.6) is
 kept current by a **weekly tuning** pass that re-researches each cluster's most
 demanded qualifications from live job postings. That research reads current
 postings from the open web plus **Jobindex.dk** (Danish market), **Glassdoor**,
@@ -77,7 +77,7 @@ no Jobindex/Glassdoor site-scoping), so this is an upgrade, not a hard blocker.
 ## 3. Free quota
 
 - The Custom Search JSON API free tier is **100 queries/day**. The weekly tuning
-  job needs roughly **2–4 queries per cluster × 9 clusters ≈ 20–40 queries per
+  job needs roughly **2–4 queries per cluster × 10 clusters ≈ 20–40 queries per
   run**, so once a week is comfortably inside the free tier.
 - Paid tier (if you ever want more) is **$5 per 1,000 queries**, capped at
   10k/day — not needed for weekly tuning.

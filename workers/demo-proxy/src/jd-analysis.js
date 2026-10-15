@@ -46,7 +46,7 @@ Your output MUST be valid JSON matching this exact schema. No prose before or af
   "jd_text": string,
   "supporting_context": string,
   "detected_language": string,
-  "category": "engineering_hardware"|"engineering_software"|"product_management"|"research_phd"|"program_management"|"operations"|"data_analytics"|"consulting"|"executive"|"finance"|"people_soft"|"unsolicited",
+  "category": "engineering_hardware"|"engineering_software"|"product_management"|"research_phd"|"program_management"|"operations"|"data_analytics"|"consulting"|"executive"|"finance"|"people_soft"|"medical_secretary"|"unsolicited",
   "qualifications": [ { "text": string, "weight": 1.0|0.5|0.25 } ],
   "red_flags": string[],
   "assumptions": string[],
@@ -65,7 +65,7 @@ PAGE-NOISE STRIPPING — jd_text, supporting_context, detected_language, categor
 - "jd_text": the job description body only. Strip greetings, session info, recommended-jobs sidebars. Keep everything that describes the role (responsibilities, requirements, team, company info).
 - "supporting_context": role-specific tips or signals from the page that apply ONLY to THIS role — e.g., "The hiring manager Maria values X", "This team is migrating from Y to Z". These help tailoring but are NOT facts about the user. Empty string if none.
 - "detected_language": ISO 639-1 code of jd_text (e.g. "en", "da", "sv", "de", "fr", "es"). Same value goes in the legacy "language" field too. If unintelligible, "unknown".
-- "category": auto-tag based on JD content. One of: engineering_hardware, engineering_software, product_management, research_phd, program_management, operations, data_analytics, consulting, executive, finance, people_soft, unsolicited. If the JD is conspicuously absent (user pasted a company URL with no posting), use "unsolicited". "people_soft" covers HR, talent, L&D, comms, marketing, content, design.
+- "category": auto-tag based on JD content. One of: engineering_hardware, engineering_software, product_management, research_phd, program_management, operations, data_analytics, consulting, executive, finance, people_soft, medical_secretary, unsolicited. If the JD is conspicuously absent (user pasted a company URL with no posting), use "unsolicited". "people_soft" covers HR, talent, L&D, comms, marketing, content, design. "medical_secretary" covers medical secretary / healthcare administration roles: lægesekretær, sundhedsadministrativ koordinator, medicinsk sekreterare, vårdadministratör, medical secretary, health administrative coordinator, clinic/practice secretary, patient-administration and medical-records roles in hospitals, psychiatry, general practice and private clinics.
 - "qualifications" — every distinct skill/qualification/requirement the JD asks for (CLUSTER-QUAL-001), each as a SHORT normalized phrase (e.g. "Stakeholder management", "PMP certification", "Python", not a full sentence). weight: 1.0 for explicitly required/must-have, 0.5 for preferred/nice-to-have-but-named-as-a-plus, 0.25 for a loosely implied or tangential skill. Extract from BOTH "requirements"/"must have" sections AND responsibilities text where a concrete skill is named. Do NOT invent a qualification the JD doesn't actually ask for or imply. [] for a true unsolicited (no JD) run.
 
 CLASSIFICATION RULES:

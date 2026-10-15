@@ -36,6 +36,7 @@ families that share a qualification profile. The June 2026 16-role sample produc
 | `pm_process` | PM / Product / Process Management | project-management, product-management, process/BA, compliance-ops |
 | `photonics_eng` | Photonics / Optical / Test Engineering | optics/photonics, test/characterization, hardware-eng, IP/licensing |
 | `research_phd` | PhD / Research positions | research, academic/phd, data-science-research |
+| `medical_secretary` | Medical Secretary / Healthcare Administration (added 2026-10-15, MEDSEC-CLUSTER-001) | medical_secretary (13th category, 1:1): lægesekretær, sundhedsadministrativ koordinator, medicinsk sekreterare / vårdadministratör. Researched for East Denmark (Region Hovedstaden + Sjælland) and Skåne; evidence Jobindex regional RSS + the JobTech open API. |
 
 **Mapping rule:** maintain a static `CATEGORY_TO_CLUSTER` map in the proxy (one of the 12 → one of N
 cluster ids). Clusters are not hard-coded to three; the table is data-driven so new clusters can be added.

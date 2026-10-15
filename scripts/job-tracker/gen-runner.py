@@ -117,6 +117,7 @@ REAL_CATEGORIES = [
     "engineering_hardware", "engineering_software", "product_management",
     "program_management", "operations", "data_analytics",
     "research_phd", "consulting", "executive", "finance", "people_soft",
+    "medical_secretary",
 ]
 
 # ── auth / http ────────────────────────────────────────────────────
@@ -529,6 +530,10 @@ def guess_category(role, jd):
     # business/technical analyst titles are consulting, NOT engineering — must be
     # decided by the title before the generic 'system'/'engineer' fallback below,
     # or a BA JD that mentions 'system' mis-routes to engineering_hardware.
+    # MEDSEC-CLUSTER-001 (2026-10-15): medical secretary / healthcare administration
+    # routes on the title before anything else (a lægesekretær ad also says
+    # "system", "service" and "koordinator", which would mis-route below).
+    if rhas("lægesekretær", "laegesekretaer", "sundhedsadministrativ", "medicinsk sekreterare", "vårdadministrat", "vardadministrat", "medical secretary", "health administrative coordinator", "läkarsekreterare"): return "medical_secretary"
     if rhas("business analyst", "ba -", " ba ", "ba,", "reinsurance", "consultant", "advisor"): return "consulting"
     if rhas("optical", "optics", "photonic", "engineer", "hardware", "system", "r&d"): return "engineering_hardware"
     # 2) Fallback to combined text for whatever the title did not decide.

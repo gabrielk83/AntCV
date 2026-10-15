@@ -24,8 +24,9 @@ import vm from 'node:vm';
 const src = await readFile(new URL('../../antcv-cluster-demand.js', import.meta.url), 'utf8');
 
 const NINE = ['pm_process', 'photonics_eng', 'research_phd',
-  'engineering_software', 'data_analytics', 'consulting', 'executive', 'finance', 'people_soft'];
-const NEW_SIX = ['engineering_software', 'data_analytics', 'consulting', 'executive', 'finance', 'people_soft'];
+  'engineering_software', 'data_analytics', 'consulting', 'executive', 'finance', 'people_soft',
+  'medical_secretary']; // 10 since MEDSEC-CLUSTER-001 (2026-10-15); the name is historical
+const NEW_SIX = ['engineering_software', 'data_analytics', 'consulting', 'executive', 'finance', 'people_soft', 'medical_secretary'];
 const VALID_SHARE = new Set(['ABC', 'AB', 'AC', 'BC', 'none']);
 
 function load(jdText) {
@@ -40,9 +41,9 @@ function load(jdText) {
   return sandbox.window.AntcvClusterDemand;
 }
 
-test('exposes all 9 clusters, each with exactly 20 ranked items and a valid share flag', () => {
+test('exposes all 10 clusters, each with exactly 20 ranked items and a valid share flag', () => {
   const CD = load('');
-  assert.equal(Object.keys(CD.clusters).length, 9);
+  assert.equal(Object.keys(CD.clusters).length, 10);
   for (const cid of NINE) {
     const cl = CD.clusters[cid];
     assert.ok(cl, `missing cluster ${cid}`);
@@ -56,7 +57,7 @@ test('exposes all 9 clusters, each with exactly 20 ranked items and a valid shar
   }
 });
 
-test('untargeted (unsolicited) scoring spans ALL 9 clusters (owner 2026-07-05 — whole-market demand weighting)', () => {
+test('untargeted (unsolicited) scoring spans ALL 10 clusters (owner 2026-07-05 — whole-market demand weighting)', () => {
   const CD = load(''); // no JD -> unsolicited
   // JSON-compare: activeClusters() returns a vm-realm Array, which
   // assert.deepStrictEqual treats as unequal to a host Array even when
@@ -71,6 +72,7 @@ const CLASSIFY_CASES = {
   executive: 'Chief Operating Officer: own P&L and financial stewardship, set strategic vision and execution, lead high-performing teams, board and investor communication, drive organisational change and transformation, commercial growth, operational excellence, EBITDA and ROI.',
   finance: 'FP&A analyst: build financial models and forecasts, advanced Excel, month-end close and reporting under IFRS, budgeting and variance analysis, work in SAP ERP, scenario modelling, internal controls and audit compliance, CFA or ACCA preferred.',
   people_soft: 'HR Business Partner: full-cycle recruiting and talent acquisition, employee relations and labour law compliance, Workday HRIS and people analytics, performance management, learning and development, change management, compensation and benefits, DEI initiatives.',
+  medical_secretary: 'Lægesekretær / medical secretary to a hospital outpatient clinic: patient administration and booking, journal documentation and dictation transcription in Sundhedsplatformen, diagnosis coding and registration, reception and telephone patient contact, referral handling, coordination of patient pathways, trained sundhedsadministrativ koordinator or medicinsk sekreterare.',
 };
 
 for (const [expected, jd] of Object.entries(CLASSIFY_CASES)) {

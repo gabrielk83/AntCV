@@ -1114,7 +1114,9 @@ _verified: 2026-10-14_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-10-04_
+_verified: 2026-10-15_
+
+**2026-10-15 (CI nightly, E1 staleness sweep — HEAD 035a030e):** unchanged — no code landed since the last sweep (the only commit since was the 10-14 docs refresh). Leg (A) anchors re-confirmed: `__antcvRowFit` present in `pwa/app.src.js` (8 refs), `goldDensity` in `pwa/antcv-bullet-targets.js` (4 refs) + `pwa/test/unit/gold-density-shared.test.mjs`; still open for clean-cut floor + mid-unit-cut/blank-lower-sidebar (rows 27/49). Leg (B) docx integrity FIXED in hand-edit tooling; leg (C) renderer = desktop Word-COM only (not CI). Suite 1821/1821. Kept ACTIVE.
 
 **2026-10-04 (CI cloud nightly, E1 staleness sweep — HEAD c8356182):** unchanged — leg (A) generator pagination/orphan ADVANCED via LINE-DISTRIBUTION-001 (goldDensity + `__antcvRowFit` both re-confirmed present, row 61), still open for clean-cut floor + mid-unit-cut/blank-lower-sidebar (rows 27/49); leg (B) docx integrity FIXED in hand-edit tooling; leg (C) renderer = desktop Word-COM only (not CI). Kept ACTIVE.
 
@@ -1135,7 +1137,9 @@ _verified: 2026-10-04_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-10-05_
+_verified: 2026-10-15_
+
+**2026-10-15 (CI nightly, E1 staleness sweep — HEAD 035a030e):** re-confirmed intact — no code landed since the last sweep. Mount-hydrate unsol-guard still present at `pwa/app.src.js:18765` (`u.set("rationale", t.rationale)`, gated by the `!(t.meta.company && !__antcvUnsol(...))` check at 18790); `__antcvUnsol` referenced 37× across the bundle; app-list open handlers (43355/43435) still overwrite rationale on load. PWA suite 1821/1821. Owner live-verify still owed (targeted→targeted saved-app switch needs the relay — no headless repro in CI). Kept ACTIVE.
 
 **2026-10-05 (CI nightly, verify-first — HEAD 735f6d8f):** re-confirmed intact — mount-hydrate unsol-guard present at `pwa/app.src.js:18765` (`u.set("rationale", t.rationale)` gated by the `!(t.meta.company && !__antcvUnsol(...))` check); `__antcvUnsol` referenced 37× across the bundle; PWA suite green (exit 0). Owner live-verify still owed (targeted→targeted saved-app switch needs the relay — no headless repro in CI). Kept ACTIVE.
 
@@ -1156,7 +1160,9 @@ _verified: 2026-10-05_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-10-05_
+_verified: 2026-10-15_
+
+**2026-10-15 (CI nightly, E1 staleness sweep — HEAD 035a030e):** re-confirmed intact — no code landed since the last sweep. `pwa/antcv-analysis-report-pdf-360.js` still carries the `gapStateKey`/`readGapState` content-based helpers (6 refs); `pwa/test/diag-new2-gap-detail-export.mjs` present (Playwright diag — chromium absent in CI, so it runs only on desktop; it is NOT part of the node `run-tests.mjs pwa` suite, which is 1821/1821 green). Owner live-verify still owed (fill a gap detail live → confirm it exports). Kept ACTIVE.
 
 **2026-10-05 (CI nightly, verify-first — HEAD 735f6d8f):** re-confirmed intact — `pwa/antcv-analysis-report-pdf-360.js` still carries the `gapStateKey`/`readGapState` content-based helpers (6 refs) and `pwa/test/diag-new2-gap-detail-export.mjs` is present; PWA suite green (exit 0). Owner live-verify still owed (fill a gap detail live → confirm it exports). Kept ACTIVE.
 
@@ -1980,7 +1986,9 @@ _reconcile 2026-09-07 (CI nightly, E2): `diag-settings-panels-probe.mjs` RE-RUN 
 
 ## Row 18 — ANITA-PERSONA-NO-PHOTO-001
 
-_verified: 2026-10-04_
+_verified: 2026-10-15_
+
+**2026-10-15 (CI nightly, E1 staleness sweep — HEAD 035a030e):** photo legs re-confirmed locked. `docs/personas/anita/personalInfo.json` still carries the embedded `photo` data URL (61,059 chars, `data:image/jpeg;base64,/9j/…`). The photo-drop guard is now the STRONGER sibling-preserving rewrap (IMPORT-REWRAP-SIBLING-DROP-001, row 107): `app.src.js:37724` comment-marked, the preserved-sibling list `["photo","language","navyColor",…]` present in app.src.js and mirrored in `pwa/app.js:165` (`"photo","language","navyColor"`) — so `photo` survives the unwrapped-blob rewrap along with every other top-level sibling. `pwa/test/unit/import-rewrap-keeps-photo.test.mjs` green within the suite (full PWA suite 1821/1821); app.js integrity OK (`node --check`, `startsWith("(()=>{")`, no `"use strict"`). REMAINING unchanged: the CL foundation/bring/interests leg on a fresh Anita gen needs live models — not doable in CI. Kept ACTIVE.
 
 **2026-10-04 (CI cloud nightly, E1 staleness sweep — HEAD c8356182):** photo legs re-confirmed locked against current code. `docs/personas/anita/personalInfo.json` carries the embedded `photo` field (data URL, 61 KB JPEG). The IMPORT-REWRAP-DROPS-PHOTO-001 guard is present in BOTH bundles — `app.src.js:37725` and `app.js:165` (`n.photo ? { personalInfo: n, photo: n.photo } : …`). `pwa/test/unit/import-rewrap-keeps-photo.test.mjs` 7/7 green; full PWA suite 1773/1773. REMAINING unchanged: the CL foundation/bring/interests leg on a fresh Anita gen needs live models — not doable in CI. Kept ACTIVE.
 
@@ -2232,7 +2240,9 @@ _2026-10-08 weekly tune: re-verified, not fixed. `C.claude` / `C.anthropic` stil
 
 ## Row 117 — CLUSTER-GLOBAL-SINGLE-JD-DOMINANCE-001
 
-_verified: 2026-10-04_
+_verified: 2026-10-15_
+
+**2026-10-15 (CI nightly, E1 staleness sweep — HEAD 035a030e):** unchanged — this is an owner design decision, not a code bug. The writer behaviour the row describes is still by-design in the relay: `recomputeClusterTop20` (`workers/access-relay/src/index.js:2508`) orders `ORDER BY weight_sum DESC, frequency DESC LIMIT 20` (line 2512), and the rank-scaled research weight (ceiling 0.4, `RESEARCH_WEIGHT * (21 - rank) / 20`, line 2604) still sits below a real-JD row's `weight_sum 1`, so one JD can fill a cluster's global top. CI has no relay token, so the live D1 split cannot be re-measured here — the read-only evidence query below stands. Owner design decision (jd_count threshold / blend / exclude per-user JD from `__global_market__`) still owed. Kept ACTIVE.
 
 **Found by the weekly demand-seed run 2026-10-04 (read-only D1 verify).** In `cluster_top_qualifications` under `user_hash='__global_market__'`, real-JD rows (weight_sum 1) outrank every research row (rank-scaled, ceiling 0.4) by design. Measured split after this run's push: `executive` 18 of 20 rows are JD signal with **max jd_count = 1** (one hardware-exec JD: battery management, Capex/Opex, DFM/DFA, mechanics…), so one posting fills the market-wide executive top 18 and research appears only from r19. `pm_process` 20/20 JD (max jd_count 2), `photonics_eng` 20/20 (max 7), `research_phd` 16/20 (max 2). The other five clusters are 100% research. **Why it matters:** `__global_market__` is meant to represent the market; a single JD from one user outranking 180 researched items makes the weekly research invisible in those clusters (this run's executive reorder has no effect on the live rollup) and pumps one employer's niche quals for every executive CV. Not a bug in the writer: `recomputeClusterTop20` orders by `weight_sum DESC` as specified. **Owner decision owed (design, CLUSTER-QUAL-001 §7):** e.g. require `jd_count >= 3` before JD rows can outrank research in the global rollup, or blend (JD weight scaled by min(1, jd_count/N)), or keep per-user JD signal out of `__global_market__`. No code changed this run. Read-only evidence query: `SELECT cluster_id, SUM(weight_sum<=0.4), SUM(weight_sum>0.4), MAX(jd_count) FROM cluster_top_qualifications WHERE user_hash='__global_market__' GROUP BY cluster_id`.
 

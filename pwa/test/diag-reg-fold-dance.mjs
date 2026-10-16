@@ -44,7 +44,10 @@ const SECTIONS = {
 };
 const PI = { name: 'Diag User', wizardCompleted: true };
 
-const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
+// DIAG-REG-FOLD-HOST-PATH-001 (2026-10-16): the launch used to hard-code the cloud sandbox's
+// /opt/pw-browsers/chromium-1194 Linux binary, so this diag could not start anywhere else
+// (desktop: "executable doesn't exist"). Use Playwright's own install like every other diag.
+const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1400, height: 1000 } });
 const errs = []; page.on('pageerror', e => errs.push(String(e && e.message)));
 await page.addInitScript(({ sections, pi }) => {

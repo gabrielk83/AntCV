@@ -49614,7 +49614,26 @@
                         (co(null), Qa(!1), ti("preview"));
                         return;
                       }
-                      const scroller = e.currentTarget.nextElementSibling;
+                      // GRAB-ZONE-SCROLL-TARGET-002 (desktop nightly 2026-10-16, found by the
+                      // headless touch probe pwa/test/diag-mobile-grab-zone-touch.mjs): on the
+                      // Analysis tab the handle's next sibling is the "Generate a CV first"
+                      // placeholder that antcv-analysis-panel-jd-block-356.js hides
+                      // (display:none, data-antcv-jd-empty-hidden) and the real content is the
+                      // sibling AFTER it — so the forward above wrote scrollTop on a hidden node
+                      // and the Analysis panel still would not scroll from the handle, the
+                      // owner's original symptom. Walk forward to the first displayed sibling
+                      // that actually overflows; fall back to the panel itself (overflow-y:auto
+                      // since MOB-008). The Sections tab is unchanged (its content IS the
+                      // direct sibling).
+                      let scroller = e.currentTarget.nextElementSibling;
+                      for (
+                        ;
+                        scroller &&
+                        ("none" === getComputedStyle(scroller).display ||
+                          scroller.scrollHeight <= scroller.clientHeight + 1);
+                        scroller = scroller.nextElementSibling
+                      );
+                      scroller || (scroller = e.currentTarget.parentElement);
                       scroller && ly && (scroller.scrollTop -= n - ly);
                       e.currentTarget.dataset.ly = String(n);
                     },

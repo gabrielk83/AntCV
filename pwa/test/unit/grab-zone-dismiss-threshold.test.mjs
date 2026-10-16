@@ -122,7 +122,7 @@ test('GRAB-ZONE-SCROLL-FORWARD-001: crossing the dismiss threshold reports dismi
 test('source: app.src.js forwards scroll via nextElementSibling.scrollTop near the grab-zone', () => {
   const src = readFileSync(path.join(ROOT, 'app.src.js'), 'utf8');
   const idx = src.indexOf('antcv-panel-grab-zone');
-  const nearby = src.slice(idx, idx + 3200);
+  const nearby = src.slice(idx, idx + 5000); // SCROLL-TARGET-002 comment block sits before the forward
   assert.match(nearby, /nextElementSibling/, 'scroll-forward reads the active tab content via nextElementSibling');
   assert.match(nearby, /scrollTop\s*-=/, 'scroll-forward writes scrollTop by a delta');
 });
@@ -130,7 +130,64 @@ test('source: app.src.js forwards scroll via nextElementSibling.scrollTop near t
 test('source: minified app.js mirrors the scroll-forward fix', () => {
   const src = readFileSync(path.join(ROOT, 'app.js'), 'utf8');
   const idx = src.indexOf('antcv-panel-grab-zone');
-  const nearby = src.slice(idx, idx + 700);
+  const nearby = src.slice(idx, idx + 1200);
   assert.match(nearby, /nextElementSibling/, 'scroll-forward present in app.js (minified mirror)');
   assert.match(nearby, /scrollTop-=/, 'scroll-forward writes scrollTop in app.js (minified mirror)');
+});
+
+/* GRAB-ZONE-SCROLL-TARGET-002 (desktop nightly 2026-10-16, found by the headless touch
+ * probe pwa/test/diag-mobile-grab-zone-touch.mjs): on the Analysis tab the handle's
+ * nextElementSibling is the "Generate a CV first" placeholder that
+ * antcv-analysis-panel-jd-block-356.js hides (display:none), and the real content is the
+ * sibling AFTER it — the SCROLL-FORWARD-001 delta went to a hidden node, so the Analysis
+ * panel still did not scroll from the handle (the owner's original symptom). The forward
+ * now walks to the first displayed sibling that overflows, falling back to the panel. */
+function pickScroller(handle) {
+  let s = handle.nextElementSibling;
+  while (s && (s.display === 'none' || s.scrollHeight <= s.clientHeight + 1)) s = s.nextElementSibling;
+  return s || handle.parentElement;
+}
+const node = (o, next) => ({ display: 'block', clientHeight: 100, scrollHeight: 100, nextElementSibling: next || null, ...o });
+
+test('GRAB-ZONE-SCROLL-TARGET-002: Sections tab — the direct overflowing sibling is still the target', () => {
+  const content = node({ name: 'sections', scrollHeight: 970 });
+  const handle = { nextElementSibling: content, parentElement: node({ name: 'panel' }) };
+  assert.equal(pickScroller(handle).name, 'sections');
+});
+
+test('GRAB-ZONE-SCROLL-TARGET-002: Analysis tab — skips the hidden placeholder and targets the content after it', () => {
+  const content = node({ name: 'analysis', clientHeight: 137, scrollHeight: 218 });
+  const hidden = node({ name: 'jd-empty-hidden', display: 'none', clientHeight: 0, scrollHeight: 0 }, content);
+  const handle = { nextElementSibling: hidden, parentElement: node({ name: 'panel' }) };
+  assert.equal(pickScroller(handle).name, 'analysis');
+});
+
+test('GRAB-ZONE-SCROLL-TARGET-002: a displayed but non-overflowing sibling is skipped too', () => {
+  const content = node({ name: 'tall', scrollHeight: 500 });
+  const flat = node({ name: 'flat' }, content);
+  const handle = { nextElementSibling: flat, parentElement: node({ name: 'panel' }) };
+  assert.equal(pickScroller(handle).name, 'tall');
+});
+
+test('GRAB-ZONE-SCROLL-TARGET-002: nothing scrollable after the handle -> the panel itself (overflow-y:auto since MOB-008)', () => {
+  const handle = { nextElementSibling: node({ name: 'flat' }), parentElement: node({ name: 'panel' }) };
+  assert.equal(pickScroller(handle).name, 'panel');
+});
+
+test('source: app.src.js carries the SCROLL-TARGET-002 walk (display check + panel fallback) near the grab-zone', () => {
+  const src = readFileSync(path.join(ROOT, 'app.src.js'), 'utf8');
+  const idx = src.indexOf('antcv-panel-grab-zone');
+  const nearby = src.slice(idx, idx + 5000);
+  assert.match(nearby, /GRAB-ZONE-SCROLL-TARGET-002/, 'marker comment present');
+  assert.match(nearby, /"none" === getComputedStyle\(scroller\)\.display/, 'hidden-sibling skip present in app.src.js');
+  assert.match(nearby, /scroller \|\| \(scroller = e\.currentTarget\.parentElement\)/, 'panel fallback present in app.src.js');
+});
+
+test('source: minified app.js mirrors the SCROLL-TARGET-002 walk', () => {
+  const src = readFileSync(path.join(ROOT, 'app.js'), 'utf8');
+  const idx = src.indexOf('antcv-panel-grab-zone');
+  const nearby = src.slice(idx, idx + 1200);
+  assert.match(nearby, /"none"===getComputedStyle\(scroller\)\.display/, 'hidden-sibling skip present in app.js');
+  assert.match(nearby, /scroller\|\|\(scroller=e\.currentTarget\.parentElement\)/, 'panel fallback present in app.js');
+  assert.equal(/const scroller=e\.currentTarget\.nextElementSibling;scroller&&ly/.test(nearby), false, 'the old direct-sibling-only forward must be gone');
 });

@@ -72,11 +72,37 @@ def get_doc():
     return b.get("rev"), (b.get("doc") or {})
 
 
+# DISCOVER-URLKEY-QUERY-001 (2026-10-16): query parameters that CARRY the ad's
+# identity. HR-Manager (Talentech) addresses every ad as
+# ApplicationInit.aspx?cid=…&ProjectId=…, SuccessFactors as career?…&career_job_req_id=…,
+# Greenhouse as ?gh_jid=…, Indeed as viewjob?jk=…; dropping the whole query gave every
+# such ad on a host ONE ledger key, so the second ad ever proposed was skipped as a
+# duplicate (FMI / Teknisk projektleder, 2026-10-15). Tracking and channel
+# parameters (utm_*, MediaId, DepartmentId, ref, source) stay OUT of the key so the same
+# ad reached through two channels still collapses to one key.
+_ID_QUERY_KEYS = frozenset({
+    "id", "cid", "projectid", "jobid", "job_id", "jobreqid", "job_req_id",
+    "career_job_req_id", "reqid", "req_id", "requisitionid", "requisition_id",
+    "jk", "gh_jid", "vacancyid", "vacancy_id", "positionid", "position_id",
+    "postingid", "posting_id", "jobnumber", "jobno", "adid", "ad_id", "offerid",
+    "offer_id", "advertid", "advert_id", "npostingtargetid",
+})
+
+
 def _norm_url(u):
     u = (u or "").strip().lower()
     u = re.sub(r"^https?://(www\.)?", "", u)
-    u = u.split("#")[0].split("?")[0].rstrip("/")
-    return u
+    u = u.split("#")[0]
+    path, _, query = u.partition("?")
+    path = path.rstrip("/")
+    keep = []
+    for part in query.split("&"):
+        k, _, v = part.partition("=")
+        if v and k in _ID_QUERY_KEYS:
+            keep.append(k + "=" + v)
+    # A URL with no identifying parameter keys exactly as before (path only), so
+    # every ledger key written before this change still matches.
+    return path + ("?" + "&".join(sorted(keep)) if keep else "")
 
 
 def _norm_cr(company, role):
@@ -109,8 +135,13 @@ def _existing_keys(doc):
     for u in urls.values():
         if u:
             keys.add(_norm_url(u))
-    for k in (doc.get("discovered") or {}):
+    for k, v in (doc.get("discovered") or {}).items():
         keys.add(k)
+        # A ledger entry written before DISCOVER-URLKEY-QUERY-001 holds a path-only
+        # key for a query-addressed ad; its stored url re-keys it under the new rule.
+        u = (v or {}).get("url") if isinstance(v, dict) else None
+        if u:
+            keys.add(_norm_url(u))
     return keys, uks
 
 

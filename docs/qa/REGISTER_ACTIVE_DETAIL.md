@@ -2128,7 +2128,7 @@ _verified: 2026-10-08_
 
 > **Renumbered 2026-08-26: was row 41.** A document written before that date citing "row 41" may mean this row or SO-004. The ID is the key.
 
-_verified: 2026-10-08_
+_verified: 2026-10-16_
 
 **RE-VERIFIED 2026-10-08 (position-discovery run, Gabo-PC).** `check --apply`: 82 probed, 77 LIVE, 3 archived on first sight (Radiometer Knowledge & AI Transformation Specialist, Ambu Business Analyst / Product Owner, GoLearn.dk AI & Copilot Trainer; all LinkedIn CLOSED), 1 GONE held at strike 1/2 (Factbird Product Manager, LinkedIn HTTP 404), 1 ERROR not counted (VML MAP HTTP 500, still). Archive skip confirmed correct: the Trackman "Project Manager, Hardware" row (employer URL HTTP 404) was archived by the sweep on 2026-08-26 and is outside the probe set; the role re-appeared under a new slug and was proposed as a new row.
 
@@ -2173,9 +2173,11 @@ confirmed landed, 3 checks go red. All 14 job-tracker python tests green. Live-v
 
 ---
 
+**RE-VERIFIED 2026-10-16 (job-tracker nightly, Gabo-PC).** Sweep `--apply` on 125 rows: 121 LIVE, 2 archived — Hamamatsu Photonics (via Tessero) / Director of Fiber Technology (LinkedIn 4468238139, "no longer accepting applications", CLOSED on first sight) and VELUX Group / AI Change Lead (jobbank.dk 3125443, HTTP 410, GONE 2/2, first strike by the 10-15 discovery rerun); Milestone Systems / Product Excellence Specialist held at GONE 1/2 (HTTP 410); VML MAP HTTP 500 for the ninth sweep, ERROR never counts. No 409. Doc rev 294 → 295 (written). The per-day gate, the hard/soft grading and the rev trail all behaved.
+
 ## Row 110 — ANTCV-TOKEN-EXPIRED-2026-09-02-001
 
-_verified: 2026-10-15_
+_verified: 2026-10-16_
 
 **2026-10-15 (position-discovery rerun, OWNER LEG DONE):** `~/.antcv/token` re-saved by the owner after the blocked 16:06Z fire; preflight `TOKEN OK`, expires 2026-10-22T16:22:35Z (7.0 d). Sweep PUT, two `discover-positions.py add` PUTs and the Excel pull all 200. Leg (a) still owed.
 
@@ -2289,6 +2291,8 @@ says so.
 
 ---
 
+**RE-VERIFIED 2026-10-16 (job-tracker nightly, Gabo-PC).** `routine-preflight.mjs token` exit 0, 6.0 d left (expires 2026-10-22T16:22:35Z). Full run end to end — sweep PUT, signals PUT (rev 295 → 296), `GET /api/applications`, Excel pull — with no 401. Leg (a) still owed: the next host gap that straddles 10-22 kills it again.
+
 ## Row 114 — TELEMETRY-BGJOB-GAP-001
 
 _verified: 2026-10-11_
@@ -2334,7 +2338,7 @@ _verified: 2026-10-15_
 
 ## Row 118 — JT-ARMED-ARTIFACT-NO-DRAIN-001
 
-_verified: 2026-10-08_
+_verified: 2026-10-16_
 
 **Found by the job-tracker nightly 2026-10-05 (Gabo-PC).** `gen-runner.eligible_rows` elects a row only when `force or not has_art`. A row with `queue[uk]=true` and an `artifacts[uk].application_id` is skipped without a word: `gen-runner.py list` prints "no eligible rows" and names it nowhere. The island's `rowQueued()` lets an explicit `queue[uk]` win, so the same row shows under the ⏰ Queued filter and reads as due tonight. Live on doc rev 276: `napatech` (queue true, app 2781, Archive / closed) and `veo_technologies` (queue true, pointer to the deleted app 3500, Submitted). Neither should generate, so nothing was lost tonight. The risk is rows 3504 + 3505 (row 113): their tracker flags tell the owner to re-arm and regenerate, and a re-arm would be ignored the same way. The pointer check is also blind: `has_art` is true for a pointer whose cloud app is gone.
 
@@ -2347,6 +2351,8 @@ _verified: 2026-10-08_
 **RE-VERIFIED 2026-10-09 (job-tracker nightly, Gabo-PC).** `gen-runner.py list` on rev 286 still prints the ARMED-with-app block for `napatech` (app 2781, CLOSED row, flag stale) and `veo_technologies` (app 3500, Submitted); 0 eligible rows, 57 unarmed ready. REMAINING unchanged: owner decision on (b) regen-on-arm / (c) dead pointer = never generated; the two stale flags are a doc write, not done unattended.
 
 ---
+
+**RE-VERIFIED 2026-10-16 (job-tracker nightly, Gabo-PC).** `gen-runner.py list` on rev 295 prints the ARMED-with-app block for `napatech` only (app 2781, CLOSED row, flag stale); `veo_technologies` is no longer armed (its pointer to the deleted app 3500 is still the one dead pointer in the health check). Options (b)/(c) still wait for the owner; the stale `napatech` flag is a doc write, not done unattended. See also row 127 for the mirror case: a default-ON row with NO artifact that should not drain either.
 
 ## Row 123 — PKG-ID-PERSIST-MIGRATE-001
 
@@ -2424,30 +2430,12 @@ is adoption, not pricing. Proposed: replace the three Mistral ids with `mistral-
 
 ---
 
+## Row 127 — JT-OWNER-PACKAGED-DEFAULT-ON-001
 
-## Row 126 — DISCOVER-URLKEY-QUERY-001
+_verified: 2026-10-16_
 
-_verified: 2026-10-15_
+**Found by the job-tracker nightly 2026-10-16 (Gabo-PC, Fable 5.1, worktree-isolated).** `gen-runner.py list` on rev 295 elected two rows the owner added through the island on 2026-10-15 and packaged by hand the same evening: rank 185 `3shape-optics-engineer-s-4143` (3Shape / Optics Engineer — Scanner Developer, Optics; packages 1043 v1 + v2 in Downloads; status "CV/CL drafted"; next "Apply via careers.3shape.com") and rank 186 `wd-technologist-r-d-engi-0702` (WD / Technologist R&D Engineer — Optical Design & Computational Photonics, Ulm, remote; package 1044 v1 + enriched; status "CV/CL drafted"; next "Easy Apply on LinkedIn"; tier `high`). Neither has a `queue` entry or an artifact, so `eligible_rows` (`q is None and not has_art`) elects both and the island's `rowQueued()` shows both as ⏰ Queued — the same default-ON rule that makes a fresh manual add generate overnight.
 
-> **Renumbered 2026-10-15 at push: filed as row 125, which MEDSEC-CLUSTER-001 took in a concurrent push; the ID is the key.**
+**Why it matters.** An unattended run would have spent an Opus call and a gpt-5-mini call to produce two AntCV applications beside packages the owner finished with v2 corrections the day before — the apps 3504 / 3505 class the owner has been asked to delete since 10-01. The rule cannot distinguish "added, waiting for tonight" from "added, already packaged by hand". The nightly did NOT generate on 10-16 (judgment call, recorded in the run-log); `queue` was left untouched so the island still shows both as Queued until the owner decides.
 
-**Filed 2026-10-15 (position-discovery rerun, desktop Gabo-PC, Fable 5.1, worktree-isolated).** The run's
-`discover-positions.py add --candidates` reported `SKIPPED 1: FMI / Teknisk projektleder til Forsvarets
-data- og AI-projekter (duplicate/already-proposed)` although no FMI row and no such ledger key existed.
-
-**Cause (code read, not assumed).** `_norm_url` at `scripts/job-tracker/discover-positions.py:75-78` does
-`u.split("#")[0].split("?")[0].rstrip("/")` before lower-casing and host-stripping, so the ledger key of
-`https://candidate.hr-manager.net/ApplicationInit.aspx?cid=3010&ProjectId=171037&DepartmentId=20125&MediaId=4735`
-is `candidate.hr-manager.net/applicationinit.aspx` — identical to the key of the tracked
-`…ApplicationInit.aspx?cid=1694&ProjectId=143818…` ad (context output line 230, a different employer). HR-Manager
-(Talentech) addresses every ad by query string, so the second hr-manager ad ever proposed, and every one
-after it, is silently dropped as a duplicate. Same shape applies to any ATS whose ad identity lives in the
-query (SuccessFactors `career?…&rcm_…`, Workday search links).
-
-**Workaround used this run:** re-added the row with the jobindex mirror URL `https://www.jobindex.dk/vis-job/h1708079`
-(unique path) and the employer URL in `why`; ADDED 1, rev 288 → 289.
-
-**Fix owed (scripts only, no `pwa/` asset, no version):** keep the query for hosts in a small allow-list, or
-keep `ProjectId`/`cid`/`jobId`-class parameters generically; add a regression test with two hr-manager URLs
-that must yield distinct keys and one `utm_`-only query that must still collapse. Owner-gated only by the
-routine's data/docs-only remit; any nightly may ship it.
+**Owner decision.** (a) Arm both explicitly (`queue=true`) if an AntCV version is wanted beside 1043 / 1044, else clear the flag on both. (b) Say whether the nightly may treat a tracked status of "CV/CL drafted" / "Submitted" / "Applied", or a 📦 package line in the flag column, as owner-packaged: skip the row, name it in a block like the ARMED one, and generate only on an explicit `queue=true` or `--row`. Script-only once decided (`gen-runner.py` + a negative-controlled test); no `pwa/` asset.

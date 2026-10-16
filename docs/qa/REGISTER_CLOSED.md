@@ -4,6 +4,41 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 126 — DISCOVER-URLKEY-QUERY-001 — CLOSED 2026-10-16 (job-tracker nightly, evidence: negative-controlled test on the real _norm_url / _existing_keys / cmd_add, the FMI two-URL case)
+
+_verified: 2026-10-16_
+
+> **Renumbered 2026-10-15 at push: filed as row 125, which MEDSEC-CLUSTER-001 took in a concurrent push; the ID is the key.**
+
+**Filed 2026-10-15 (position-discovery rerun, desktop Gabo-PC, Fable 5.1, worktree-isolated).** The run's
+`discover-positions.py add --candidates` reported `SKIPPED 1: FMI / Teknisk projektleder til Forsvarets
+data- og AI-projekter (duplicate/already-proposed)` although no FMI row and no such ledger key existed.
+
+**Cause (code read, not assumed).** `_norm_url` at `scripts/job-tracker/discover-positions.py:75-78` does
+`u.split("#")[0].split("?")[0].rstrip("/")` before lower-casing and host-stripping, so the ledger key of
+`https://candidate.hr-manager.net/ApplicationInit.aspx?cid=3010&ProjectId=171037&DepartmentId=20125&MediaId=4735`
+is `candidate.hr-manager.net/applicationinit.aspx` — identical to the key of the tracked
+`…ApplicationInit.aspx?cid=1694&ProjectId=143818…` ad (context output line 230, a different employer). HR-Manager
+(Talentech) addresses every ad by query string, so the second hr-manager ad ever proposed, and every one
+after it, is silently dropped as a duplicate. Same shape applies to any ATS whose ad identity lives in the
+query (SuccessFactors `career?…&rcm_…`, Workday search links).
+
+**Workaround used this run:** re-added the row with the jobindex mirror URL `https://www.jobindex.dk/vis-job/h1708079`
+(unique path) and the employer URL in `why`; ADDED 1, rev 288 → 289.
+
+**Fix owed (scripts only, no `pwa/` asset, no version):** keep the query for hosts in a small allow-list, or
+keep `ProjectId`/`cid`/`jobId`-class parameters generically; add a regression test with two hr-manager URLs
+that must yield distinct keys and one `utm_`-only query that must still collapse. Owner-gated only by the
+routine's data/docs-only remit; any nightly may ship it.
+
+**FIXED 2026-10-16 (job-tracker nightly, Gabo-PC, Fable 5.1, worktree-isolated). Script-only: `scripts/job-tracker/discover-positions.py` + new `test_discover_positions.py`, no `pwa/` asset, no cache-bust, no version consumed, no shift claim.**
+
+**Fix.** `_norm_url` keeps the query parameters that carry an ad's identity — a 30-key allow-list `_ID_QUERY_KEYS` (`cid`, `projectid`, `jobid`, `job_id`, `career_job_req_id`, `reqid`, `requisitionid`, `gh_jid`, `jk`, `id`, `vacancyid`, `positionid`, `postingid`, `jobnumber`, `adid`, `offerid`, `npostingtargetid`, …) — lower-cased and sorted after the path, and drops every other parameter (`utm_*`, `MediaId`, `DepartmentId`, `ref`, `source`), so two HR-Manager ads key apart and one ad reached through two channels keys together. A URL with no identity parameter keys byte-identical to before (path only), so every ledger key written before this change still matches. `_existing_keys` additionally re-keys each ledger entry from its stored `url`, so a legacy path-only entry still blocks its own ad and no longer blocks every other ad on its host.
+
+**Test.** `test_discover_positions.py`, 24 checks, network-free: the two hr-manager URLs (cid 3010 / ProjectId 171037 vs cid 1694 / ProjectId 143818) key apart; `MediaId` / `DepartmentId` stay out; parameter order is irrelevant; a utm-only query collapses to the path; a path-only URL keys exactly as before; Indeed `jk` and the SuccessFactors `career_job_req_id` are identity; an empty id value is ignored; `_existing_keys` on a tracked row, on a legacy ledger entry beside it, and on a ledger-only entry; `cmd_add` end to end on the real function with stubbed `get_doc` / `put_doc`: the FMI ad is ADDED, the tracked hr-manager ad is SKIPPED as duplicate, the new ledger key carries the identity and stores the url, the proposed row is `queue=False`, a second run with the same candidates adds 0 / skips 2. Negative-controlled by line index: the keep-logic (discover-positions.py:101) set to `if False:` → 11 red; the ledger re-key (:143) set to `if False:` → 1 red; file restored byte-identical (`cmp`), green. The file runs under `run-tests.mjs` through its python leg.
+
+---
+
 ## Row 124 — POSTING-SWEEP-PUT-FAIL-EVIDENCE-001 — CLOSED 2026-10-15 (job-tracker nightly, evidence: the real 401 of the 2026-10-12 sweep + negative-controlled test on the real cmd_check)
 
 _verified: 2026-10-15_

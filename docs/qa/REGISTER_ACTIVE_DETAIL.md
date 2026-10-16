@@ -508,7 +508,9 @@ _E1 sweep 2026-09-08 (CI nightly): confirmed in CURRENT code — `__platformRule
 
 ## Row 34 — ROLE-MERGE-STORED-001
 
-_verified: 2026-10-15_
+_verified: 2026-10-16_
+
+**2026-10-16 (desktop nightly E4, Gabo-PC, Fable 5.1 — HEAD f3d3e0c7):** `diag-results-preview-export-parity.mjs` RESULTS-PREVIEW-EXPORT-PARITY OK (preview per-role result == export per-role result, tier-1 explicit result verbatim), no page errors. Live docx-worker `/health` 200 at the repo version `1.14.174-appline-edit`.
 
 **2026-10-15 (desktop nightly E4, Gabo-PC, Fable 5.1 — HEAD f107e458):** `diag-results-preview-export-parity.mjs` RESULTS-PREVIEW-EXPORT-PARITY OK, no page errors. Live docx-worker `/health` 200 at the repo version `1.14.174-appline-edit`.
 
@@ -654,7 +656,9 @@ row 25 (real-PDF-gated — a render CI cannot do). No regression. Kept ACTIVE.
 
 ## Row 39a — AUTOSAVE-NO-DOWNGRADE-001
 
-_verified: 2026-10-15_
+_verified: 2026-10-16_
+
+_Desktop nightly 2026-10-16 (A2 leg 1, Gabo-PC, Fable 5.1): access-relay live at `auth-38-subtitle-guard-qual-put`; the saved token works end to end (`GET /api/me` 200 authenticated, `/api/applications` 200 27.6 KB, `/api/job-tracker` 200) — but the downgrade PUT was NOT run: it writes to a real application row and no scratch application id has been named (owner decision, unchanged since 10-05). Leg 2 same-device A/B needs a signed-in browser session; leg 3 a second physical device._
 
 **2026-10-15 (desktop nightly live attest, Gabo-PC, Fable 5.1 — HEAD f107e458):** served bundle byte-identical to the repo; live access-relay `/health` 200 at the repo version `auth-38-subtitle-guard-qual-put` (deployed again today by the cost-quality tune, run 38766434433, rates-only). The authed downgrade PUT was not run: no scratch application id and the relay token is expired today (row 110). Leg 3 (row 19) still needs a second real device. Kept ACTIVE; blocked: owner decision + owner session.
 
@@ -936,7 +940,9 @@ REMAINING: owner live re-verify (no device in CI). Kept ACTIVE.
 
 ## Row 39 — GEN-MODELROLE-001
 
-_verified: 2026-10-15_
+_verified: 2026-10-16_
+
+_Desktop nightly 2026-10-16 (D2, Gabo-PC, Fable 5.1): both proxies live at `3.8.4-brand-ink-match` (deployed 10-15 by the cost-quality tune, so the `MODEL_ROLES` [vars] are live); D1 `llm_calls` via wrangler (SELECT only, rows_read 3563, rows_written 0) — newest day still **2026-09-28**, no split-routing row to read. Blocked: one real LLM gen._
 
 **2026-10-15 (desktop nightly D2, Gabo-PC, Fable 5.1 — HEAD f107e458):** `MODEL_ROLES` still set in BOTH `workers/proxy/wrangler.toml:54` and `workers/demo-proxy/wrangler.toml:54` (`writer:anthropic, supervisor:mistral, coherence:openai, analysis:mistral`); both proxies were re-deployed today by the cost-quality tune (runs 38766174548 / 38766290667) so the [vars] are live; live `/health` 200 at `3.8.4-brand-ink-match` for both. D1 `llm_calls` (wrangler, SELECT only, 3563 rows read) newest day is still 2026-09-28 (`gpt-5.4-mini` apply_correction / consensus_poll / consensus_reinforce / fuse) — no call since the 09-28 pin, so the supervisor->mistral routing cannot be shown in telemetry yet. Kept ACTIVE; blocked: one real LLM gen.
 
@@ -1653,7 +1659,9 @@ re-armed trap on a signed-in device — not stageable in cloud. Kept ACTIVE — 
 
 ## Row 31 — META-STATE-CORRUPTION-002
 
-_verified: 2026-10-07_
+_verified: 2026-10-16_
+
+_Desktop nightly 2026-10-16 (Gabo-PC, Fable 5.1, HEAD f3d3e0c7): `META-DRIFT-GUARD-002` and `META-DOWNGRADE-GUARD-003` each ×2 in `app.src.js` and present in the `app.js` mirror; `meta-drift-guard-both-blocks.test.mjs` + `meta-downgrade-guard-autosave.test.mjs` green in the 1830/1830 suite; served `app.js` byte-identical to the repo before this run's ship. Remaining leg (repair an already-poisoned server row from its own display name) still needs a live poisoned row — owner-gated._
 
 _CI nightly 2026-10-07 (E1 sweep, HEAD `dbcaf31c`): re-confirmed — `META-DRIFT-GUARD-002` (2× in `app.src.js`, present in the `app.js` mirror) and `META-DOWNGRADE-GUARD-003` (same) both live; `meta-drift-guard-both-blocks.test.mjs` + `meta-downgrade-guard-autosave.test.mjs` green in the 1813/1813 suite. Remaining leg (repair an already-poisoned server row from its own display name) stays owner-gated — needs a live poisoned row, not fakeable in CI._
 _CI nightly 2026-09-25 (E1 sweep, HEAD `ab2a43c7`): re-confirmed — `META-DRIFT-GUARD-002` (2× in `app.src.js`, present in the `app.js` mirror) and `META-DOWNGRADE-GUARD-003` (same) both live; `meta-drift-guard-both-blocks.test.mjs` + `meta-downgrade-guard-autosave.test.mjs` green in the 1715/1715 suite. Remaining leg (repair an already-poisoned server row from its own display name) stays owner-gated — needs a live poisoned row, not fakeable in CI._
@@ -1675,7 +1683,9 @@ _CI nightly 2026-09-15 (E1 sweep): both shipped guards confirmed present on `mai
 
 ## Row 98 — BYOK-COST-AUDIT-001
 
-_verified: 2026-09-25_
+_verified: 2026-10-16_
+
+_Desktop nightly 2026-10-16 (Gabo-PC, Fable 5.1, HEAD f3d3e0c7): `total_cost_usd_est` ×7 in both `workers/{proxy,demo-proxy}/src/byok-qualify.js`, the two copies byte-identical (`diff -q` clean), xAI grok rate rows ×5 in `demo-enforcement.js`; `byok-cost-audit.test.mjs` + mirror green in the 1830/1830 suite; both proxies live at `3.8.4-brand-ink-match` (`/health` 200). Unreverted, no regression._
 
 _CI nightly 2026-09-25 (E1 sweep, HEAD `ab2a43c7`): `total_cost_usd_est` present ×7 in BOTH `workers/proxy/src/byok-qualify.js` and the `workers/demo-proxy` mirror; the two src copies remain byte-identical (`diff -q` clean); `byok-cost-audit.test.mjs` green in the 1715/1715 suite. Unreverted, no regression._
 _CI nightly 2026-09-15 (E1 sweep): same, confirmed present + byte-identical._
@@ -1690,7 +1700,9 @@ _CI nightly 2026-09-15 (E1 sweep): same, confirmed present + byte-identical._
 
 ## Row 99 — REG-GROUP-FOLD-NAMED-001
 
-_verified: 2026-09-25_
+_verified: 2026-10-16_
+
+_Desktop nightly 2026-10-16 (Gabo-PC, Fable 5.1, HEAD f3d3e0c7): `NAMED_FOLD` ×2 in `pwa/antcv-dup-group-merge.js`, loaded by `index.html` (`?v=1.51.173`), `dup-group-merge.test.mjs` green. The row's own diag `pwa/test/diag-reg-fold-dance.mjs` could NOT run on this host: it hard-coded the cloud sandbox's `/opt/pw-browsers/chromium-1194` Linux binary (DIAG-REG-FOLD-HOST-PATH-001, fixed this run: plain `chromium.launch()`). Run after the fix: 0 post-boot sections writes in 15 s, groups = ["Environmental & Durability"], 10 standards preserved, 0 page errors — DIAG PASS, same verdict as PR #333. The owner "sidebar dancing / TOOLS & METHODS page-jump" thread is still unconfirmed (owner live check)._
 
 _CI nightly 2026-09-25 (E1 sweep, HEAD `ab2a43c7`): `NAMED_FOLD` present ×2 in `pwa/antcv-dup-group-merge.js`; `dup-group-merge.test.mjs` green in the 1715/1715 suite. Code leg unreverted. The owner "sidebar dancing" investigation-thread resolution remains unconfirmed — owner-check item, not a code regression (no CI capability to reproduce the live symptom)._
 _CI nightly 2026-09-15 (E1 sweep): `NAMED_FOLD` present; test green._
@@ -1705,7 +1717,9 @@ _CI nightly 2026-09-15 (E1 sweep): `NAMED_FOLD` present; test green._
 
 ## Row 100 — GRAB-ZONE-DISMISS-THRESHOLD-001
 
-_verified: 2026-09-25_
+_verified: 2026-10-16_
+
+_Desktop nightly 2026-10-16 (Gabo-PC, Fable 5.1, worktree-isolated, HEAD f3d3e0c7 → ship `1.51.5013-grab-zone-scroll-target`): FIRST browser exercise of the handler — new headless touch probe `pwa/test/diag-mobile-grab-zone-touch.mjs` boots the real app at 380 px with native TouchEvents on `.antcv-panel-grab-zone`. Threshold leg CONFIRMED (40 px graze keeps the panel, 120 px swipe dismisses). Scroll-forward leg was HALF-BROKEN: on the Sections tab the content is the handle's direct sibling and a 40 px drag moved it 40 px, but on the **Analysis tab** the handle's `nextElementSibling` is the "Generate a CV first" placeholder that `antcv-analysis-panel-jd-block-356.js` hides (display:none, `data-antcv-jd-empty-hidden`) and the real content is the sibling after it — the forward wrote scrollTop on a hidden node and the drag moved the content 0 px, which IS the owner's original "sliding down in the analysis panel is not working" report. **GRAB-ZONE-SCROLL-TARGET-002 FIXED** (surgical `app.js` edit mirrored in `app.src.js`): walk to the first displayed sibling that overflows, fall back to the panel itself; negative control FAIL → OK (Analysis moved 0 → 40 px, Sections unchanged); unit test +6 (18/18), suite 1830/1830, boot smoke OK; new row 128 CLOSED. Real-device confirm stays owner-owed (headless touch ≠ Android scroll arbitration)._
 
 _CI nightly 2026-09-25 (E1 sweep, HEAD `ab2a43c7`): both legs still test-locked and green — `grab-zone-dismiss-threshold.test.mjs` in the 1715/1715 suite. `antcv-panel-grab-zone` present in both `app.src.js` and the `app.js` mirror; `GRAB-ZONE-SCROLL-FORWARD-001` present in `app.src.js` (behaviour, not the comment, is locked in the minified `app.js`). Live-device confirm still owner-owed._
 _CI nightly 2026-09-15 (E1 sweep): both legs test-locked and green; grab-zone present in both bundles._
@@ -1720,7 +1734,9 @@ _CI nightly 2026-09-15 (E1 sweep): both legs test-locked and green; grab-zone pr
 
 ## Row 101 — ZOOM-FLOOR-001
 
-_verified: 2026-09-25_
+_verified: 2026-10-16_
+
+_Desktop nightly 2026-10-16 (Gabo-PC, Fable 5.1, HEAD f3d3e0c7): first in-browser exercise — `diag-mobile-grab-zone-touch.mjs` leg C clicks the live "−" button of the `Preview zoom control` 12× on the real mobile layout: label 46 % → **10 %** (the old 35 % floor would have stopped at 40 %), one "+" → 20 %. Floor confirmed in the real handler, not only in the source grep. Source anchors unchanged (`Math.max(0.1, Math.min(5.2` pinch + button floor in both bundles, `zoom-floor.test.mjs` green). Real-device pinch stays owner-owed._
 
 _CI nightly 2026-09-25 (E1 sweep, HEAD `ab2a43c7`): `0.1` floor still present in both `app.src.js` and the `app.js` mirror (button + pinch); `zoom-floor.test.mjs` green (6 assertions) in the 1715/1715 suite. Zoom-in ceiling unchanged. Unreverted._
 _CI nightly 2026-09-15 (E1 sweep): `0.1` floor present in both bundles; test green._
@@ -2012,7 +2028,9 @@ _verified: 2026-08-26_
 
 > **STANDING regression anchor** — re-run by the nightly diag set every time, not unstarted work.
 
-_verified: 2026-10-15_
+_verified: 2026-10-16_
+
+_Desktop nightly 2026-10-16 (E2, Gabo-PC, Fable 5.1, HEAD f3d3e0c7): `diag-settings-panel-churn.mjs --selftest` PASS (injected churn seen on all 4 tabs); real run Personal / Layout / Account / Advanced = 0 mutations per 8 s, 0 page errors, 4 of 4 distinct panel fingerprints. PASS._
 
 **2026-10-15 (desktop nightly E2, Gabo-PC, Fable 5.1 — HEAD f107e458):** `diag-settings-panel-churn.mjs —selftest` PASS (synthetic churn seen on all 4 tabs, 4 distinct fingerprints); real run: Personal / Layout / Account / Advanced 0 mutations per 8 s each, 0 page errors, all at rest. PASS.
 
@@ -2068,7 +2086,9 @@ _verified: 2026-10-15_
 
 > **STANDING regression anchor** — re-run by the nightly diag set every time, not unstarted work.
 
-_verified: 2026-10-15_
+_verified: 2026-10-16_
+
+_Desktop nightly 2026-10-16 (E3, Gabo-PC, Fable 5.1, HEAD f3d3e0c7): 216 buttons (210 → 216), 0 THROWS, 0 DEAD, 0 page errors (active 132, ui-only 9, not-visible 62, skipped-dangerous 13). Diff vs 10-15: 0 regressions, 0 recoveries, 1 visibility change ("CJLR: cycle left / center / right / justify" hidden 4 → 10 — six more instances of the same label rendered, labels added 0), 4 timing flips, 0 gone / 0 added. Report `PANEL_BUTTON_AUDIT_2026-10-16.md`._
 
 **2026-10-15 (desktop nightly E3, Gabo-PC, Fable 5.1 — HEAD f107e458):** `diag-panel-button-audit.mjs` one run: 210 buttons, 0 THROWS, 0 DEAD, 0 page errors (active 132, ui-only 9, not-visible-or-disabled 56, skipped-dangerous 13). Diff vs `PANEL_BUTTON_AUDIT_2026-10-09.json`: 0 regressions, 0 recoveries, 0 visibility changes, 12 active<->ui-only timing flips, 0 gone, 0 added. Report `docs/qa/PANEL_BUTTON_AUDIT_2026-10-15.md` + `.json`.
 
@@ -2178,6 +2198,8 @@ confirmed landed, 3 checks go red. All 14 job-tracker python tests green. Live-v
 ## Row 110 — ANTCV-TOKEN-EXPIRED-2026-09-02-001
 
 _verified: 2026-10-16_
+
+_Desktop nightly 2026-10-16 (Gabo-PC): preflight TOKEN OK, expires 2026-10-22T16:22:35Z (6.0 d left), `token` exit 0; authed relay GETs 200. DISPATCH GAP 1.0 d. Leg (a) (long-lived machine token / longer TTL) still the only structural fix owed — the next host gap straddling 10-22 kills it again._
 
 **2026-10-15 (position-discovery rerun, OWNER LEG DONE):** `~/.antcv/token` re-saved by the owner after the blocked 16:06Z fire; preflight `TOKEN OK`, expires 2026-10-22T16:22:35Z (7.0 d). Sweep PUT, two `discover-positions.py add` PUTs and the Excel pull all 200. Leg (a) still owed.
 

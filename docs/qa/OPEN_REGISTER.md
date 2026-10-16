@@ -61,12 +61,12 @@ citing an old number may mean either row — the ID disambiguates.
 | 26 | `TOOLS-SIDEBAR-COMPRESS-001` | 2026-10-10 | Tools sidebar compress — exact owner gold-text (Instruments/Lab strings) as deterministic rule |
 | 30 | `LLM-IMAGE-ROUTING-001` | 2026-10-10 | LLM image routing — make provider selection image-aware, filter vision-blind providers |
 | 32 | `CL-PLATFORM-SIGNALS-001` | 2026-10-10 | CL platform-signals — hardware-platform JD tone/positioning gen-prompt rule |
-| 34 | `ROLE-MERGE-STORED-001` | 2026-10-15 | Export/preview parity sweep — role-merge parity is the owner-escalated top item (rules 46/47 belts SHIPPED 1.5 |
+| 34 | `ROLE-MERGE-STORED-001` | 2026-10-16 | Export/preview parity sweep — role-merge parity is the owner-escalated top item (rules 46/47 belts SHIPPED 1.5 |
 | 27 | `MAIN-RUNT-ORPHAN-SWEEP-001` | 2026-10-10 | Orphan sweep v3 — work-style tail truncation, page-3 ghost, real-PDF 1.5-page verify |
 | 28 | `NIL-GEN-ADAPTATION-001` | 2026-10-10 | NIL gen adaptation — CV ~1.5-page gen-level target (current export still 5pp) |
 | 29 | `NIL-TARGETED-STATE-STICK-001` | 2026-10-10 | NIL state-stick — leg C: stale-row snapshot restore + auto-save downgraded-meta belt |
 | 2 | `LINKIFY-EXPORT-001` | 2026-10-12 | SW-projects line-end overflow leg (hyperlink half already closed) |
-| 39a | `AUTOSAVE-NO-DOWNGRADE-001` | 2026-10-15 | TAB/DEVICE ISOLATION residuals — auto-save poison-writer CLOSED (AUTOSAVE-NO-DOWNGRADE-001) + same-device stal |
+| 39a | `AUTOSAVE-NO-DOWNGRADE-001` | 2026-10-16 | TAB/DEVICE ISOLATION residuals — auto-save poison-writer CLOSED (AUTOSAVE-NO-DOWNGRADE-001) + same-device stal |
 | 41 | — | 2026-10-15 | SO-004 CRASH — React #185 on editor field commits, shared renderer. |
 | 42 | `GEN-LANGFAB-001` | 2026-10-15 | fabricated languages (invented German, wrong Danish); deterministic language-fact belt vs ke |
 | 43 | — | 2026-10-15 | CA-006 — Application label bleeds into first role title; guard the write site. |
@@ -75,7 +75,7 @@ citing an old number may mean either row — the ID disambiguates.
 | 49 | `SIDEBAR-GROUP-PAGE-BREAK-001` | 2026-10-13 | (owner, design guidance) — a very long TOOLS & METHODS group (e.g. "Project & del |
 | 50 | `UPLOAD-SCREEN-TOP-CLIP-001` | 2026-10-12 | (owner 2026-07-05, same live session as rows 46-49): the upload screen's EN/gear/Editor header row was still c |
 | 51 | `PREVIEW-SCROLL-JITTER-001` | 2026-10-12 | (owner 2026-07-05, live session, reported as two symptoms: "application analysis panel is stuck again, does no |
-| 39 | `GEN-MODELROLE-001` | 2026-10-15 | code shipped AND MODEL_ROLES set in both wrangler.toml (owner map; coherence now `openai`). Remaining = live-deplo |
+| 39 | `GEN-MODELROLE-001` | 2026-10-16 | code shipped AND MODEL_ROLES set in both wrangler.toml (owner map; coherence now `openai`). Remaining = live-deplo |
 | 53 | `CROSS-APP-EXPORT-CONTAMINATION-001` | 2026-10-13 | leg (a) P0 SHIPPED (1.51.639 scope-guard → reworked MIRROR-LOAD-001 1.51.680); legs b-f open — (owner 2026-07-06, P0 — real export) — target was the KOMBIT "AI-udvikler"  |
 | 54 | `GEN-JD-TAILOR-KERNEL-RECALL-001` | 2026-10-13 | (owner 2026-07-07) — targeted tailoring narrows/compresses to the JD but does  |
 | 55 | `TARGETED-OUTPUT-FURNITURE-001` | 2026-10-13 | (owner 2026-07-07) — targeted-output furniture/personalization defects on the KO |
@@ -107,11 +107,11 @@ citing an old number may mean either row — the ID disambiguates.
 | 95 | `CV-POLISH-BATCH-001` | 2026-10-11 | (owner CV review, desktop session 2026-07-19 — Ibsen 1017 regen). Five CV-quality defects reported against a l |
 | 92 | `EXPORT-PREVIEW-PAGINATION-DIVERGENCE-001` | 2026-10-11 | (owner 2026-07-20; NOT reproduced on current content) — owner's Ibsen PDF: the EXPORT main column breaks after |
 | 93 | `AUTO-ANALYSE-ON-JD-LOAD-ERROR-001` | 2026-10-11 | (owner 2026-07-21, transient — NOT captured) — owner repeatedly hit an "auto-run analysis on JD load" error th |
-| 31 | `META-STATE-CORRUPTION-002` | 2026-10-07 | Poisoned NIL row repair — set row meta from its own display name, guard auto-save |
-| 98 | `BYOK-COST-AUDIT-001` | 2026-10-08 | (2026-07-05, PR #331, register-escape — never given a row). byok-qualify.js's own docstring documented total_c |
-| 99 | `REG-GROUP-FOLD-NAMED-001` | 2026-10-08 | (2026-07-05, PR #331, register-escape). REGULATORY CONTEXT rendered two near-duplicate group headers side by s |
-| 100 | `GRAB-ZONE-DISMISS-THRESHOLD-001` | 2026-10-08 | + GRAB-ZONE-SCROLL-FORWARD-001 (2026-07-05, PR #332 + same-day follow-up, register-escape). Owner (Android): " |
-| 101 | `ZOOM-FLOOR-001` | 2026-10-08 | (2026-07-05, PR #334, register-escape). Owner: "allow Zoom out down to 10-20, currently it is down to 35%… tha |
+| 31 | `META-STATE-CORRUPTION-002` | 2026-10-16 | Poisoned NIL row repair — set row meta from its own display name, guard auto-save |
+| 98 | `BYOK-COST-AUDIT-001` | 2026-10-16 | (2026-07-05, PR #331, register-escape — never given a row). byok-qualify.js's own docstring documented total_c |
+| 99 | `REG-GROUP-FOLD-NAMED-001` | 2026-10-16 | (2026-07-05, PR #331, register-escape). REGULATORY CONTEXT rendered two near-duplicate group headers side by s |
+| 100 | `GRAB-ZONE-DISMISS-THRESHOLD-001` | 2026-10-16 | + GRAB-ZONE-SCROLL-FORWARD-001 (2026-07-05, PR #332 + same-day follow-up, register-escape). Owner (Android): " |
+| 101 | `ZOOM-FLOOR-001` | 2026-10-16 | (2026-07-05, PR #334, register-escape). Owner: "allow Zoom out down to 10-20, currently it is down to 35%… tha |
 | 19 | `JD-SCOPE-OCC2-GUARD-001` | 2026-10-08 | JD-scope isolation — two-real-device test |
 | 103 | `RELAY-TUNE-COVERAGE-GAP-001` | 2026-10-08 | (found by weekly cost-quality tune 2026-07-13): the tune loop is blind to 100% of real traffic and can never f |
 | 45 | — | 2026-10-08 | PERF-001 — multi-second main-thread stalls on export/preview; profile → debounce/memoize. |
@@ -124,9 +124,9 @@ citing an old number may mean either row — the ID disambiguates.
 | 1 | — | 2026-08-26 _(STANDING)_ | Quick-gen page convergence + CV 3-page convergence, export-only pagination parity |
 | 11 | `SIDEBAR-PROMOTE-MARGIN-001` | 2026-08-26 _(STANDING)_ | SIDEBAR-PAGE23-DANCE CLOSED (verified 2026-07-03, headless): diag-sidebar-promote-margin (owner-scale sidebar  |
 | 16 | `SID-FALLBACK-HARDEN-001` | 2026-08-26 _(STANDING)_ | Sidebar TOOLS/REGULATORY justify↔left flap — re-check after hard refresh, diagnose if persists |
-| 17 | `SETTINGS-PERSONAL-STABILIZE-001` | 2026-10-15 _(STANDING)_ | Settings sweep-army cost on Layout/Account/Advanced panels (Personal panel already fixed) |
+| 17 | `SETTINGS-PERSONAL-STABILIZE-001` | 2026-10-16 _(STANDING)_ | Settings sweep-army cost on Layout/Account/Advanced panels (Personal panel already fixed) |
 | 18 | `ANITA-PERSONA-NO-PHOTO-001` | 2026-10-15 | Anita demo residuals — docx-photo + PDF-contact legs ROOT-CAUSED + FIXED 2026-08-26 (desktop nightly, PWA 1.51 |
-| 23 | `NIGHTLY-PREVIEW-BUTTON-AUDIT-001` | 2026-10-15 _(STANDING)_ | Preview-button audit pass 2 (65 not-visible, 23 overlay-obstructed) + live dangerous-button audit |
+| 23 | `NIGHTLY-PREVIEW-BUTTON-AUDIT-001` | 2026-10-16 _(STANDING)_ | Preview-button audit pass 2 (65 not-visible, 23 overlay-obstructed) + live dangerous-button audit |
 | 105 | `JOBSRC-FETCH-001` | 2026-10-08 | follow-through — teach the discovery routine to CALL job_sources.py instead of hand-fetching board search page |
 | 106 | `POSTING-OBSOLETE-001` | 2026-10-16 | ADVANCED 2026-08-27 (job-tracker nightly): the two-strike rule gained the missing per-DAY gate — POSTING-STRIK |
 | 110 | `ANTCV-TOKEN-EXPIRED-2026-09-02-001` | 2026-10-16 | (found by the position-discovery run 2026-09-29, JOB-DISCOVERY-001) — `~/.antcv/token` expired **2026-09-02T10:23:44Z** (issued 08-26, plain 7-day TTL) and has not been re-saved in 27 days, so every relay-backed routine stops at its AUTH gate: `GET /api/job-tracker` -> `401 {"error":"unauthenticated"}`. Recurrence of the CLOSED `ANTCV-TOKEN-EXPIRED-2026-08-14-001`, and the cause is visible in `ROUTINE_HEALTH.jsonl`: **no routine of any kind fired between 2026-08-27 and 2026-09-29 (33 days)** — routines are desktop-app-local, so the app was not running, and the token's `SESSION_REFRESH_WINDOW` self-renewal only extends a token a routine actually calls while it is still valid. OWNER: re-save the token (PWA console on `antcv.pages.dev`: `copy(localStorage.getItem('antcv:auth:token'))` -> paste into `C:\Users\karpg\.antcv\token`, no trailing newline). ADVANCED 2026-09-29 (job-tracker nightly, same evening): **structural leg (b) SHIPPED** — `routine-preflight.mjs start` now decodes the token offline and reports OK / EXPIRING (warns at 3 days left, inside the refresh window) / EXPIRED / MISSING, plus this routine's own dispatch gap; `token` subcommand; 9 network-free negative-controlled tests; both checks advisory so the clean(0)/dirty(3) contract is unchanged. REMAINING: OWNER re-save, and the uptime half — leg (a), a long-lived machine token for routines, or a longer relay session TTL; a warning does not restart a cron, and a 7-day credential on a desktop-app-local routine that can miss a month will keep dying. RE-VERIFIED 2026-10-09 (job-tracker nightly): the token was re-saved by the owner (expires 2026-10-15, 6.2 d left at the run), gate passed; leg (a) still open. RE-OPENED 2026-10-15 (job-tracker nightly): the token died at 11:12Z during a 10-12..10-15 host sleep while the sweep was in flight; PUT 401, workers all 200; Task 1 stopped, nothing written. OWNER: re-save; leg (a) is the only fix left. RE-HIT 2026-10-15 (position-discovery, Thursday fire, same day): preflight `token` exit 4 at the start, run BLOCKED at AUTH, zero searches, zero leads; this routine's 10-11 and 10-13 fires never dispatched and its 10-12 session slept with the host, so it made no relay call that could renew. Owner re-save owed. RE-HIT 2026-10-15 (job-tracker nightly, the 08:45 fire dispatched 18:08 local, cross-check only by the duplicate-run rule): dry sweep and `gen-runner list` both 401 at the GET; workers 200; nothing written. Third routine today at this gate. OWNER LEG DONE 2026-10-15 (position-discovery rerun): token re-saved, preflight `TOKEN OK` expires 2026-10-22T16:22:35Z (7.0 d), full run end to end (sweep, context, 2 adds, Excel) with no 401. Leg (a) still owed: the next host gap that straddles 10-22 kills it again. |

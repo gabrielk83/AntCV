@@ -4,6 +4,19 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 128 — GRAB-ZONE-SCROLL-TARGET-002 — CLOSED 2026-10-16 (desktop nightly, evidence: headless touch probe on the real app, negative control FAIL → OK, 6 unit checks, live served bundle carries the marker)
+
+_verified: 2026-10-16_
+
+_Found and fixed the same run by the desktop nightly 2026-10-16 (Gabo-PC, Fable 5.1, worktree-isolated, lane 1.51.5013-1.51.5032). Ship `1.51.5013-grab-zone-scroll-target`: surgical in-place `pwa/app.js` edit mirrored in `pwa/app.src.js`, cache-bust set (app.js ?v + the 19 lane-version sidecar refs + override ?v + boot seed + sw.js CACHE + TARGET_VERSION, STALE_VERSIONS gained `1.51.4993-medsec-cluster`), `check-cache-bust.mjs --set` OK. Parent rows 100 (GRAB-ZONE-DISMISS-THRESHOLD-001 + GRAB-ZONE-SCROLL-FORWARD-001) and 101 (ZOOM-FLOOR-001) refreshed, not closed — the real-device confirm is still owner-owed._
+
+**Evidence.** Rows 100/101 shipped 2026-07-05 from a code-reading diagnosis and were locked only by source greps. The new probe `pwa/test/diag-mobile-grab-zone-touch.mjs` boots the real app at a 380 px phone viewport, opens the mobile bottom panel and fires native TouchEvents at `.antcv-panel-grab-zone`. Sections tab: the content is the handle's direct sibling (clientHeight 223 / scrollHeight 970), a 40 px drag moved it 40 px — SCROLL-FORWARD-001 works there. Analysis tab: the handle's `nextElementSibling` is the "📊 Generate a CV first to see the analysis." placeholder that `antcv-analysis-panel-jd-block-356.js` hides (`display:none`, `data-antcv-jd-empty-hidden`), and the injected "Analyse against a job description" block (137 / 218) is the sibling AFTER it; the forward wrote `scrollTop` on the hidden node and a 40 px drag moved the content **0 px**. That is the owner's original Android report ("sliding down with finger in the analysis … panel is not working") surviving the 07-05 fix on the Analysis tab. The 80 px dismiss threshold and the 0.1 zoom floor both held in the same probe.
+
+**Fix.** `onTouchMove` now walks forward from the handle to the first sibling that is displayed (`getComputedStyle(...).display !== "none"`) AND overflows (`scrollHeight > clientHeight + 1`), and falls back to the panel element itself (overflow-y:auto since MOB-008) when nothing qualifies. Minified form `let scroller=e.currentTarget.nextElementSibling;for(;scroller&&("none"===getComputedStyle(scroller).display||scroller.scrollHeight<=scroller.clientHeight+1);scroller=scroller.nextElementSibling);scroller||(scroller=e.currentTarget.parentElement);`; `app.js` still starts with `(()=>{`, no `"use strict"`, `new vm.Script` parse gate clean, one anchor occurrence in each bundle. Sections-tab behaviour is unchanged by construction (its content is the first displayed overflowing sibling).
+
+**Test.** Negative control with the patch stashed: A1 Sections OK (moved 40), A2 Analysis FAIL (moved 0), B dismiss OK, C zoom 46 % → 10 % → 20 % OK. After the patch: A1 OK, A2 OK (preset 60 → 20, moved 40), B OK, C OK, 0 page errors. `grab-zone-dismiss-threshold.test.mjs` +6 (18/18): `pickScroller` on Sections / Analysis / displayed-but-flat / nothing-scrollable shapes + source locks for the display check and the panel fallback in both bundles and the old direct-sibling form gone. Suite 1830/1830 (baseline 1824), boot smoke OK.
+
+---
 ## Row 126 — DISCOVER-URLKEY-QUERY-001 — CLOSED 2026-10-16 (job-tracker nightly, evidence: negative-controlled test on the real _norm_url / _existing_keys / cmd_add, the FMI two-URL case)
 
 _verified: 2026-10-16_

@@ -1320,7 +1320,7 @@ _verified: 2026-10-06_ — CI E1 re-verify against HEAD de7fec6e (`antcv-cl-slog
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-10-06_ — CI E1 re-verify against HEAD de7fec6e (prevention doc `DELIVERABLE_PREFLIGHT_CHECKLIST.md` still present; prior CI E1 2026-09-23 @38630d58): verify-first. TRACKMAN-DELIVERABLE-REVIEW batch of GENERATOR-BASELINE gaps (CV items a–i, CL items j–o) — root cause was a lossy-export payload bypassing the app belts; prevention doc `DELIVERABLE_PREFLIGHT_CHECKLIST.md` in place. Each item is a generator-baseline requirement that ties rows 57/59/61/54 and can only be closed by a re-deliver from the master kernel through the app belts + a real render — CI cannot regen. Kept ACTIVE (regen/deliverable-gated).
+_verified: 2026-10-16_ — CI nightly E1 re-verify against HEAD 451fc004 (prevention doc `docs/qa/DELIVERABLE_PREFLIGHT_CHECKLIST.md` still present; suite 1824/1824 green; prior CI E1 2026-10-06 @de7fec6e): verify-first, unchanged — still regen/deliverable-gated (CI cannot regen from the master kernel). TRACKMAN-DELIVERABLE-REVIEW batch of GENERATOR-BASELINE gaps (CV items a–i, CL items j–o) — root cause was a lossy-export payload bypassing the app belts; prevention doc `DELIVERABLE_PREFLIGHT_CHECKLIST.md` in place. Each item is a generator-baseline requirement that ties rows 57/59/61/54 and can only be closed by a re-deliver from the master kernel through the app belts + a real render — CI cannot regen. Kept ACTIVE (regen/deliverable-gated).
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -1335,7 +1335,7 @@ _verified: 2026-10-06_ — CI E1 re-verify against HEAD de7fec6e (prevention doc
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-10-06_ — CI E1 re-verify against HEAD de7fec6e (prior CI E1 2026-09-23 @38630d58): verify-first against HEAD. (E) CROSS-DEVICE-GEN-LEAK-GUARD SHIPPED (1.51.201) re-confirmed STILL INTACT: `CROSS-DEVICE-GEN-LEAK` markers in `app.src.js` (4) + the `__fahA`/`__fahB` app.js mirror (2) present, `pwa/test/diag-cross-device-gen-leak-guard.mjs` on disk (suite 1794/1794 green). (A) LANG-SWITCH-MOBILE + (B) analysis-export-unsolicited-gate + (C) market-fit/salary JD wiring + (D) panel-upload OCR all need live-mobile / live-repro CI cannot do. Kept ACTIVE for A–D.
+_verified: 2026-10-16_ — CI nightly E1 re-verify against HEAD 451fc004 (prior CI E1 2026-10-06 @de7fec6e): verify-first against HEAD. (E) CROSS-DEVICE-GEN-LEAK-GUARD SHIPPED (1.51.201) re-confirmed STILL INTACT: `CROSS-DEVICE-GEN-LEAK` markers in `app.src.js` (4) + the `__fahA`/`__fahB` app.js mirror (2) present, `pwa/test/diag-cross-device-gen-leak-guard.mjs` on disk (suite 1824/1824 green). (A) LANG-SWITCH-MOBILE + (B) analysis-export-unsolicited-gate + (C) market-fit/salary JD wiring + (D) panel-upload OCR all need live-mobile / live-repro CI cannot do. Kept ACTIVE for A–D.
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -1350,7 +1350,7 @@ _verified: 2026-10-06_ — CI E1 re-verify against HEAD de7fec6e (prior CI E1 20
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-10-06_ — CI E1 re-verify against HEAD de7fec6e (prior CI E1 2026-09-23 @38630d58): verify-first against HEAD. (A) brandfit WIP PRESERVED re-confirmed (`git ls-remote`): `origin/brandfit-per-app-scope` still exists at `fc2477c` (durable backup survives worktree prune) — NOT merged (behind main, needs rebase+review), live D1 `ALTER TABLE` NOT run (owner fresh-confirm required). (B) content-gen missing fields [regen-gated], (C) coordinator sidebar-inflate watermark, (D) PackagePicker→Layout merge, (E) cluster-demand worker pipeline, (F) cloud/mobile live-verify backlog — all owner/desktop/regen-gated. Kept ACTIVE.
+_verified: 2026-10-16_ — CI nightly E1 re-verify against HEAD 451fc004 (prior CI E1 2026-10-06 @de7fec6e): verify-first against HEAD. (A) brandfit WIP PRESERVED re-confirmed (`git ls-remote origin brandfit-per-app-scope`): still exists at `fc2477c` (durable backup survives worktree prune) — NOT merged (behind main, needs rebase+review), live D1 `ALTER TABLE` NOT run (owner fresh-confirm required). (B) content-gen missing fields [regen-gated], (C) coordinator sidebar-inflate watermark, (D) PackagePicker→Layout merge, (E) cluster-demand worker pipeline, (F) cloud/mobile live-verify backlog — all owner/desktop/regen-gated. Kept ACTIVE.
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -1362,7 +1362,7 @@ _verified: 2026-10-06_ — CI E1 re-verify against HEAD de7fec6e (prior CI E1 20
 
 ## Row 75 — JOBTRACKER-AUTOFILL-ADDFLOW-VERIFY-001
 
-_verified: 2026-10-06_ — CI E1 re-verify against HEAD de7fec6e (prior CI E1 2026-09-24 @88f89001): MARKER-LOCATION CORRECTION — the deterministic-tier + async-enrich autofill flow lives in the island SOURCE (`src/islands/JobTracker/JobTracker.tsx`, `api.ts`, `rank.ts` all match `autofill|enrich`), NOT as readable tokens in the built `pwa/antcv-react-islands.js` (that bundle was last rebuilt 2026-09-06 @ce05d602 and strips the comment markers; the 2026-09-24 note's "7 refs in antcv-react-islands.js" was imprecise about the file). Flow present + the jobtracker unit set (`jobtracker-top5-rescore`, `jobtracker-top5-controls`, etc.) is green in the suite (1794/1794). REMAINING = one real URL/PDF add-test end-to-end (reject after) with the owner or a throwaway account — CI cannot drive a live LLM add without writing a junk row to the owner's live tracker. Kept ACTIVE, owner-gated.
+_verified: 2026-10-16_ — CI nightly E1 re-verify against HEAD 451fc004 (prior CI E1 2026-10-06 @de7fec6e): verify-first, unchanged. The deterministic-tier + async-enrich autofill flow lives in the island SOURCE (`src/islands/JobTracker/JobTracker.tsx` matches `autofill|enrich`; `api.ts`, `rank.ts` present), NOT as readable tokens in the built `pwa/antcv-react-islands.js` (that bundle was last rebuilt 2026-09-06 @ce05d602 and strips the comment markers; the 2026-09-24 note's "7 refs in antcv-react-islands.js" was imprecise about the file). Flow present + the jobtracker unit set (`jobtracker-top5-rescore`, `jobtracker-top5-controls`, etc.) is green in the suite (1824/1824). REMAINING = one real URL/PDF add-test end-to-end (reject after) with the owner or a throwaway account — CI cannot drive a live LLM add without writing a junk row to the owner's live tracker. Kept ACTIVE, owner-gated.
 
 **OPEN-queue row (verbatim):**
 
@@ -1374,7 +1374,7 @@ _verified: 2026-10-06_ — CI E1 re-verify against HEAD de7fec6e (prior CI E1 20
 
 ## Row 77 — JOBTRACKER-TOP5-PERIODIC-RESCORE-001
 
-_verified: 2026-10-06_ — CI E1 re-verify against HEAD de7fec6e (prior CI E1 2026-09-24 @88f89001): the on-add/on-change fit-ranked Top-5 re-rank is present and covered by `pwa/test/unit/jobtracker-top5-rescore.test.mjs` (suite 1794/1794 green). The PERIODIC recompute (drift Top-5 with cluster-demand refreshes, not just on add) is deliberately NOT built — it is an OWNER-DECISION gate, not code owed. Kept ACTIVE awaiting owner confirm.
+_verified: 2026-10-16_ — CI nightly E1 re-verify against HEAD 451fc004 (prior CI E1 2026-10-06 @de7fec6e): the on-add/on-change fit-ranked Top-5 re-rank is present and covered by `pwa/test/unit/jobtracker-top5-rescore.test.mjs` (suite 1824/1824 green). The PERIODIC recompute (drift Top-5 with cluster-demand refreshes, not just on add) is deliberately NOT built — it is an OWNER-DECISION gate, not code owed. Kept ACTIVE awaiting owner confirm.
 
 **OPEN-queue row (verbatim):**
 
@@ -1386,7 +1386,7 @@ _verified: 2026-10-06_ — CI E1 re-verify against HEAD de7fec6e (prior CI E1 20
 
 ## Row 81 — PHOTO-FUSE-OWNER-VERIFY-001
 
-_verified: 2026-10-06_ — CI E1 re-verify against HEAD de7fec6e (cited markers intact; prior CI E1 2026-09-24 @88f89001): the 1.51.390-393 photo-panel rework is present — PHOTO-BTN-FUSE-001 + the single "＋ Add photos…" upload control in `pwa/antcv-photo-library.js` (2 "Add photos" refs) and the PW-CJLR-PHOTO-LEAK guard in `pwa/antcv-profile-workstyle-cjlr-238.js` + `pwa/test/diag-pw-cjlr-photo-leak.mjs`; suite 1794/1794 green. REMAINING = one on-device visual pass after a hard refresh (legs a–e of the row) — needs a signed-in browser CI lacks. Kept ACTIVE, owner-gated visual check.
+_verified: 2026-10-16_ — CI nightly E1 re-verify against HEAD 451fc004 (cited markers intact; prior CI E1 2026-10-06 @de7fec6e): the 1.51.390-393 photo-panel rework is present — PHOTO-BTN-FUSE-001 + the single "＋ Add photos…" upload control in `pwa/antcv-photo-library.js` (2 "Add photos" refs) and the PW-CJLR-PHOTO-LEAK guard in `pwa/antcv-profile-workstyle-cjlr-238.js` (8 refs) + `pwa/test/diag-pw-cjlr-photo-leak.mjs`; suite 1824/1824 green. REMAINING = one on-device visual pass after a hard refresh (legs a–e of the row) — needs a signed-in browser CI lacks. Kept ACTIVE, owner-gated visual check.
 
 **OPEN-queue row (verbatim):**
 
@@ -1398,7 +1398,7 @@ _verified: 2026-10-06_ — CI E1 re-verify against HEAD de7fec6e (cited markers 
 
 ## Row 83 — JD-REMOVE-OWNER-VERIFY-001
 
-_verified: 2026-10-07_ — CI E1 re-verify against HEAD dbcaf31c (cited markers intact, suite 1813/1813): JD-REMOVE-STICKY-001 (1.51.395) present — JD-REMOVE-STICKY/tombstone markers in `pwa/app.src.js` (6 refs) + `pwa/test/unit/jd-remove-tombstone.test.mjs` green in the suite. (prev CI E1 2026-09-24 HEAD 88f89001, unchanged.) REMAINING = one live 4-step pass (remove→refresh stays removed / reopen re-stages the tombstone / read-from-cloud returns JD / a different JD seeds normally) — needs the live app + relay CI cannot drive. Kept ACTIVE, owner live-verify owed.
+_verified: 2026-10-16_ — CI nightly E1 re-verify against HEAD 451fc004 (cited markers intact, suite 1824/1824): JD-REMOVE-STICKY-001 (1.51.395) present — JD-REMOVE-STICKY/tombstone markers in `pwa/app.src.js` (6 refs) + `pwa/test/unit/jd-remove-tombstone.test.mjs` green in the suite. (prev CI E1 2026-10-07 @dbcaf31c, unchanged.) REMAINING = one live 4-step pass (remove→refresh stays removed / reopen re-stages the tombstone / read-from-cloud returns JD / a different JD seeds normally) — needs the live app + relay CI cannot drive. Kept ACTIVE, owner live-verify owed.
 
 **OPEN-queue row (verbatim):**
 
@@ -1410,7 +1410,7 @@ _verified: 2026-10-07_ — CI E1 re-verify against HEAD dbcaf31c (cited markers 
 
 ## Row 88
 
-_verified: 2026-10-07_ — CI E1 re-verify against HEAD dbcaf31c (round-3 ship intact, owner-deferred legs unchanged; suite 1813/1813): the round-3 worker/gen markers are present — docx-worker `VERSION = "1.14.174-appline-edit"` (past the 1.14.154 of the ship), ROLE-SPLIT-CONT-001 in `workers/docx-worker/src/index.js`, and `fit_page_flow` wired in both `scripts/job-tracker/gen-runner.py` and `scripts/job-tracker/density_fit.py`. (prev CI E1 2026-09-24 HEAD 88f89001, unchanged.) OWNER-DEFERRED / OPEN (all owner-gated / regen / real-render): (a) 19-app rollout, (b) fit-page-flow y-alignment (backlog #49), (c) table-geometry 6630→7689 (backlog #1), (d) client-half bullet_pages forwarding (backlog #2), (e) orphan misdetection + density grow, (f) rows 54/56/59A/62/22. Kept ACTIVE.
+_verified: 2026-10-16_ — CI nightly E1 re-verify against HEAD 451fc004 (round-3 ship intact, owner-deferred legs unchanged; suite 1824/1824): the round-3 worker/gen markers are present — docx-worker `VERSION = "1.14.174-appline-edit"` (past the 1.14.154 of the ship), ROLE-SPLIT-CONT-001 in `workers/docx-worker/src/index.js`, and `fit_page_flow` wired in both `scripts/job-tracker/gen-runner.py` and `scripts/job-tracker/density_fit.py`. (prev CI E1 2026-10-07 @dbcaf31c, unchanged.) OWNER-DEFERRED / OPEN (all owner-gated / regen / real-render): (a) 19-app rollout, (b) fit-page-flow y-alignment (backlog #49), (c) table-geometry 6630→7689 (backlog #1), (d) client-half bullet_pages forwarding (backlog #2), (e) orphan misdetection + density grow, (f) rows 54/56/59A/62/22. Kept ACTIVE.
 
 **OPEN-queue row (verbatim):**
 
@@ -1422,7 +1422,7 @@ _verified: 2026-10-07_ — CI E1 re-verify against HEAD dbcaf31c (round-3 ship i
 
 ## Row 87 — OWNER-ROUND-2-RESIDUE-001
 
-_verified: 2026-10-07_ — CI E1 re-verify against HEAD dbcaf31c (all 5 legs remain diagnosed-not-fixed, gates unchanged; suite 1813/1813): (a) CORE-COMP 3-4 ROWS — grounded per-app table regen, owner-gated, no fabrication; (b) BRAND COLORS — `origin/brandfit-per-app-scope` branch still at `fc2477c`, NOT merged (git ls-remote re-confirmed this run); (c) SIGNATURE — needs an actual signature upload (signatureB64 empty); (d) ROLE-SPLIT "(cont.)" — worker ROLE-SPLIT-CONT-001 present (docx-worker index.js) but the LibreOffice natural-flow cont. header still needs a deploy + CloudConvert test; (e) RUNT LINES — density frontier. Each needs live/regen/deploy CI lacks. (prev CI E1 2026-09-24 HEAD 88f89001, unchanged.) Kept ACTIVE.
+_verified: 2026-10-16_ — CI nightly E1 re-verify against HEAD 451fc004 (all 5 legs remain diagnosed-not-fixed, gates unchanged; suite 1824/1824): (a) CORE-COMP 3-4 ROWS — grounded per-app table regen, owner-gated, no fabrication; (b) BRAND COLORS — `origin/brandfit-per-app-scope` branch still at `fc2477c`, NOT merged (git ls-remote re-confirmed this run); (c) SIGNATURE — needs an actual signature upload (signatureB64 empty); (d) ROLE-SPLIT "(cont.)" — worker ROLE-SPLIT-CONT-001 present (docx-worker index.js) but the LibreOffice natural-flow cont. header still needs a deploy + CloudConvert test; (e) RUNT LINES — density frontier. Each needs live/regen/deploy CI lacks. (prev CI E1 2026-10-07 @dbcaf31c, unchanged.) Kept ACTIVE.
 
 **OPEN-queue row (verbatim):**
 
@@ -1434,7 +1434,7 @@ _verified: 2026-10-07_ — CI E1 re-verify against HEAD dbcaf31c (all 5 legs rem
 
 ## Row 86 — GOLD-SESSION-FOLLOWUPS-001
 
-_verified: 2026-10-07_ — CI E1 re-verify against HEAD dbcaf31c (suite 1813/1813): leg (f) ROW-82 UNBLOCKED confirmed — the role-canon export audit is wired in `scripts/job-tracker/gold_audit.py` (`role_canon`, 3 refs). (prev CI E1 2026-09-24 HEAD 88f89001, unchanged.) Remaining legs are gated: (a) PUBS-AUTHORS-FIRST cosmetic (deterministic sub-rule or hand-edit), (b) RESULTS-NEEDS-TRANSLATION app 792 (translated swaps), (c) PROXY-GOLD-RULES-FETCH (fetch served /gold-rules.json), (d) CORE-COMP-FLOOR backfill (per-app content regen, owner call), (e) STALE-LOCKED-PDFS (owner deletes at leisure). Content/regen/owner-gated — CI cannot regen. Kept ACTIVE.
+_verified: 2026-10-16_ — CI nightly E1 re-verify against HEAD 451fc004 (suite 1824/1824): leg (f) ROW-82 UNBLOCKED confirmed — the role-canon export audit is wired in `scripts/job-tracker/gold_audit.py` (`role_canon`, 3 refs). (prev CI E1 2026-10-07 @dbcaf31c, unchanged.) Remaining legs are gated: (a) PUBS-AUTHORS-FIRST cosmetic (deterministic sub-rule or hand-edit), (b) RESULTS-NEEDS-TRANSLATION app 792 (translated swaps), (c) PROXY-GOLD-RULES-FETCH (fetch served /gold-rules.json), (d) CORE-COMP-FLOOR backfill (per-app content regen, owner call), (e) STALE-LOCKED-PDFS (owner deletes at leisure). Content/regen/owner-gated — CI cannot regen. Kept ACTIVE.
 
 **OPEN-queue row (verbatim):**
 

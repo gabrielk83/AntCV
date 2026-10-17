@@ -1751,8 +1751,9 @@ _CI nightly 2026-09-15 (E1 sweep): `0.1` floor present in both bundles; test gre
 
 ## Row 19 — JD-SCOPE-OCC2-GUARD-001
 
-_verified: 2026-09-25_
+_verified: 2026-10-17_
 
+_CI nightly 2026-10-17 (E1 stalest slot, HEAD `954cce5a`): `shouldAdoptCloudPointer` present (`pwa/antcv-jd-scope.js` ×2 + `pwa/app.src.js` ×1; the `app.js` mirror carries the minified equivalent); `jd-scope-isolation.test.mjs` green in the 1830/1830 suite. Two-real-device leg still owner-gated (physical devices, not fakeable headlessly)._
 _CI nightly 2026-09-25 (E1 sweep, HEAD `ab2a43c7`): `shouldAdoptCloudPointer` present across the pwa sidecars (`antcv-jd-scope.js` ×2 + `app.src.js` ×1; the `app.js` mirror carries the minified equivalent); `jd-scope-isolation.test.mjs` green in the 1715/1715 suite (occ-2 guard behaviour string-locked). Remaining two-real-device leg is owner-gated (physical devices, not fakeable headlessly)._
 _CI nightly 2026-09-15 (E1 sweep): `shouldAdoptCloudPointer` present; test green._
 
@@ -1774,7 +1775,9 @@ _CI nightly 2026-09-15 (E1 sweep): `shouldAdoptCloudPointer` present; test green
 
 > **Renumbered 2026-08-26: was row 38.** A document written before that date citing "row 38" may mean this row or GEN-BACKGROUND-001. The ID is the key.
 
-_verified: 2026-10-08_
+_verified: 2026-10-17_
+
+**Re-verify 2026-10-17 (CI nightly — E1 stalest slot, code-presence on HEAD `954cce5a`):** `workers/proxy/src/multi-llm.js` `ROLE_KEYS`/`roleHeadOrder` present (4 refs); `scripts/relay-cost-quality-tune.mjs` present. Both halves (compress client-lever + analysis addressability) remain owner-gated on real traffic + a same-prompt benchmark; no code owed. Full PWA suite 1830/1830 green.
 
 **Re-verify 2026-10-08 (desktop nightly, Gabo-PC, Fable 5.1, HEAD `7e1b4fa8`):** part (b) is further along than the row text says: `workers/proxy/src/multi-llm.js` `ROLE_KEYS` is now `['writer','supervisor','coherence','analysis','kernel']` (the two proxy-side cascades carry a role), both `wrangler.toml` files pin `"analysis":"mistral"` (OPUS55-ADOPT-001, 2026-09-30, deployed ×3 again 2026-10-08 by the weekly tune), and `scripts/relay-cost-quality-tune.mjs` `ROLE_TASKS` maps `analysis` → `analyze_fit`/`parse_jd` and `kernel` → `kernel_extraction`/`extract`, so those telemetry labels are no longer invisible to the tune. Still open and deliberately so: `compress`/`long_context`/`generate` are the raw passthrough and stay outside `MODEL_ROLES` (reordering would 404 — `model-roles.test.mjs` raw-passthrough lock); the compress lever is a CLIENT-side model choice. D1 `llm_calls` newest day is still 2026-09-28 (D1 MCP read), so no role has n≥20 and nothing can flip. Blocked on: real traffic (owner gens).
 
@@ -1792,7 +1795,9 @@ _verified: 2026-10-08_
 
 ## Row 45
 
-_verified: 2026-10-08_
+_verified: 2026-10-17_
+
+**Re-verify 2026-10-17 (CI nightly — E1 stalest slot, code-presence on HEAD `954cce5a`):** `pwa/antcv-pdf-preview-gate.js` openModal loading-shell leg present (10 markers); `pwa/test/diag-generate-click-profile.mjs` present. PARTIAL 1.51.158 intact; setTimeout leg still needs a live-model CPU profile (BLOCKED in CI). Full PWA suite 1830/1830 green.
 
 **Re-verify 2026-10-08 (desktop nightly, Gabo-PC, Fable 5.1, HEAD `7e1b4fa8`):** `pwa/antcv-pdf-preview-gate.js` openModal loading-shell leg present and served live at `1.51.4833` (live attest); `pwa/test/diag-generate-click-profile.mjs` present. PARTIAL 1.51.158 intact. The setTimeout leg needs a CPU profile around a real export + preview toggle with owner content. Blocked on: real LLM gen / owner session.
 
@@ -1852,7 +1857,9 @@ _verified: 2026-10-05_
 
 ## Row 35 — OVERLAY-EARLY-HALT-001
 
-_verified: 2026-10-08_
+_verified: 2026-10-17_
+
+**Re-verify 2026-10-17 (CI nightly — E1 stalest slot, code-presence on HEAD `954cce5a`):** `__antcvGenCost` heartbeat gate present in both bundles (`pwa/app.src.js` ×10, `pwa/app.js` ×4). Shipped 1.51.41 intact; one real 3–6 min regen-confirm stays owner-gated (real generation on the owner's key), BLOCKED in CI. Full PWA suite 1830/1830 green.
 
 **Re-verify 2026-10-08 (desktop nightly, Gabo-PC, Fable 5.1, HEAD `7e1b4fa8`):** `__antcvGenCost` heartbeat gate present app.src.js ×10 + app.js ×4; `pwa/test/overlay-watchdog-heartbeat.test.mjs` green in the suite. Shipped 1.51.41 intact and live. The one real 3–6 min regen-confirm stays owner-gated (a real generation on the owner's key). Blocked on: real LLM gen.
 
@@ -1876,7 +1883,9 @@ _verified: 2026-10-08_
 
 ## Row 36 — GEN-CORECOMP-BROAD-001
 
-_verified: 2026-10-08_
+_verified: 2026-10-17_
+
+**Re-verify 2026-10-17 (CI nightly — E1 stalest slot, code-presence on HEAD `954cce5a`):** broad core_comp rule inside `__neutralCo` present (`pwa/app.src.js` ×5); `pwa/test/unsolicited-corecomp-broad.test.mjs` green in the full suite (both-bundle guard validates the app.js minified name). Shipped 1.51.41 intact; live regen-confirm still owed, BLOCKED in CI. Full PWA suite 1830/1830 green.
 
 **Re-verify 2026-10-08 (desktop nightly, Gabo-PC, Fable 5.1, HEAD `7e1b4fa8`):** broad core_comp rule inside `__neutralCo` present app.src.js ×5; `pwa/test/unsolicited-corecomp-broad.test.mjs` green in the suite (both-bundle guard). Shipped 1.51.41 intact and live. Blocked on: real LLM gen (regen-confirm).
 
@@ -1900,7 +1909,9 @@ _verified: 2026-10-08_
 
 ## Row 37 — FOCUS-LABEL-EO-001
 
-_verified: 2026-10-08_
+_verified: 2026-10-17_
+
+**Re-verify 2026-10-17 (CI nightly — E1 stalest slot, code-presence on HEAD `954cce5a`):** `FOCUS-LABEL` prompt rule present (`pwa/app.src.js` ×2); `pwa/antcv-core-comp-compress.js` present + `pwa/test/unit/core-comp-compress-eo.test.mjs` green in the full suite. Shipped 1.51.42/43 intact; live regen-confirm still owed, BLOCKED in CI. Full PWA suite 1830/1830 green.
 
 **Re-verify 2026-10-08 (desktop nightly, Gabo-PC, Fable 5.1, HEAD `7e1b4fa8`):** `FOCUS-LABEL` prompt rule present app.src.js ×2 + app.js ×1; `antcv-core-comp-compress.js` loaded by index.html at `?v=1.51.4812-import-rewrap-siblings`; `pwa/test/unit/core-comp-compress-eo.test.mjs` green in the suite. Shipped 1.51.42/43 intact and live. Blocked on: real LLM gen (regen-confirm).
 

@@ -233,6 +233,8 @@ ${bannedListBlock()}`,
 
 OUTPUT: 2-3 tight sentences plus an optional final "Work style: …" clause. Calm, specific, impressive in substance. Numerical metrics are OPTIONAL and should be used sparingly — a profile that reads as impressive through CONCRETE DOMAIN PROSE (specific sectors, technologies, methods) is stronger than one padded with manufactured numbers.
 
+SHAPE (REVIEW-VEO-001, 2026-10-18): the first sentence is the hook and stays (identity plus the strongest concept-to-product proof). Everything after it is at most three lines of what the candidate brings and at most two lines of work style. A profile is EVIDENCE in the present tense: never "I will", "I would" or "As your <title> I will" - promises belong in the cover letter. If the JD states a mission, one clause may connect something true about the candidate (not the product) to it.
+
 Pattern (in order):
 1. IDENTITY — what kind of professional this person is, in their own terms. ("Camera architect and electro-optics engineer")
 2. SCOPE — sectors, technologies, and a single duration anchor if natural. ("with 15+ years in consumer cameras, defence electro-optics, and nanotechnology")
@@ -372,6 +374,15 @@ ${bannedListBlock()}`,
 You are generating part of a cover letter. The candidate's standard CL structure has these sections, in order: WHO I AM, WHAT I BRING (table or paragraph), WHY THIS POSITION, HOW I WOULD CONTRIBUTE (bullets), FOUNDATION (Hands-on / Professionally). Match whichever section the user's prompt asks for.
 
 Closing line is "Kind regards," followed by the candidate's name. Never use "I look forward to hearing from you" or similar filler closings.
+
+LETTER RULES (REVIEW-VEO-001, 2026-10-18):
+- One page with headroom; a dense draft loses about a quarter. Headline in sentence case, never all caps.
+- Do not open every section with "I will": mix "I will" with "I would" and "what I would want to understand first", and include one or two questions the candidate would ask in the first 90 days.
+- Where the JD names stakeholder functions (Product, AI, Finance, Supply Chain, Manufacturing, Legal, senior engineering leadership), one sentence says how the candidate would work with them.
+- Where the JD states a mission or values, one sentence connects something true about the candidate to that mission; echo a value word only where it holds.
+- Leadership targets: one sentence on how the candidate builds a Capex/Opex budget and what they would hire for first, honest about how they have built teams so far.
+- Claim parity: every result uses the SAME attribution wording as the CV ("analysis behind a 10x cost reduction", not "cut the cost tenfold").
+- Do not mention a planned internship or course unless it is explained in one clause (why, and what it shows).
 
 ${noFabricationBlock()}
 

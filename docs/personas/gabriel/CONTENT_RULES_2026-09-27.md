@@ -112,3 +112,20 @@ General rules for every role and every executive-linear CV/letter, learned from 
 Generator twin of the 2026-10-05 structure: `housestyle_pdf_generator/course_cvs_2026-10-01/gen_linear3.py` (`linear_enriched`; first package 1041 microTECH, 2026-10-08).
 
 **Enriched CV scope (owner 2026-10-08):** the enriched CV is used ONLY when the posting or portal will not accept a cover letter (no letter field; an agency asking for "a CV"). Otherwise: plain linear CV + separate letter. In AntCV it is the output of the editor's "Fuse" (cover letter into CV) button - opt-in, never the default export.
+
+## 2026-10-18 - Improve Academy review of the Veo package (Anne) -> rules of record (REVIEW-VEO-001)
+
+The reviewer read page 1 only: education, Meprolight, the patent, supplier qualification and the 2006 start all sit on page 2 of the enriched CV. Fix of record: page 1 carries a footer cue "Page 1 of 2 - continued" (finish_pkgs.ps1); the profile year count must be visible against the roles shown on page 1.
+
+| Rule | Wording of record |
+|---|---|
+| Core-competencies headings | "The role needs" / "What I bring, with proof" (DA "Rollen kræver" / "Det bringer jeg, med belæg"). Rows use the ad's own words on the left, delivery plus proof on the right (VALUE-FOR-ROLE-001). AntCV app labels still read Focus Area / Strategic Expertise - rename tracked as a separate task. |
+| Profile shape | One hook sentence (identity + strongest concept-to-product proof), then at most three lines of What I Bring and two lines of Work style. Never "I will" / "I would" in a CV (gate_html.mjs fails on it); promises belong in the letter. |
+| Role bullets | Same order in every role: owned (people, budget, scope), did, bold Results. At most three bullets plus Results. |
+| Leadership targets | Budget ownership (with the number when on record), hiring and mentoring bullets are mandatory where the source has them (Meprolight SWIR-sight budget, Sirin electro-optics budget, one hire at Kanzen). Influence without line authority (ODM team, matrix board) is said plainly. One line on trade-off calls outside the own speciality reduces the breadth doubt. |
+| Claim parity | Same attribution wording in CV and letter: "analysis behind a 90% (10x) unit-cost reduction", never "cut the cost tenfold". Internal numbers ($8M NRE, ~30% of FY2025 revenue) stay only if the owner confirms they may be used; otherwise drop the share. |
+| Timeline | Kanzen place line states the overlap: "Copenhagen, alongside Innoviz until 2025" (KANZEN_PLACE). Trackman carries the motivation line: internship within the Improve Academy project-management programme (2025 - 2026), staying hands-on after Innoviz. AntCV under Kanzen is two bullets (what shipped, what it shows); no pipeline detail. |
+| Cover letter | Sentence-case headline (clbuild2 warns on caps). About 400 body words (warns above 420). Not every section opens with "I will": mix "I would", "what I would want to understand first", one or two first-90-days questions. One sentence on the stakeholder functions the ad names; one sentence connecting something true about the candidate to the employer's stated mission; leadership targets add a budget-building and first-hire sentence. Trackman only with its one-clause explanation. |
+| AntCV app | Same rules added to the proxy and demo-proxy writing engine (INTEGRITY_RULES cv-no-promises, profile-shape, role-bullet-order, leadership-evidence, claim-parity, timeline-complete, cl-modality-mix, cl-stakeholders-mission, cl-headline-case) and to the cv_profile / cl_general task prompts. |
+
+Not adopted: the margin (sidebar) layout. The linear layout was chosen for ATS parsing and is the owner's design of record; the proof-points idea is served by the Results lines and the competencies table.

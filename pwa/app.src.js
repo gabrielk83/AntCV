@@ -9877,7 +9877,7 @@
                     onClick: () => r(`row:${i}`),
                     disabled: c || l,
                     title:
-                      "Enrich this row — make Strategic Expertise more specific and senior-toned",
+                      'Enrich this row — make the "What I bring, with proof" cell more specific and senior-toned',
                     style: {
                       fontSize: 9,
                       padding: "2px 5px",
@@ -9900,7 +9900,7 @@
                     onClick: () => n(`row:${i}`),
                     disabled: l || c,
                     title:
-                      "Compress this row – tighten Strategic Expertise to fit 2 lines",
+                      'Compress this row – tighten the "What I bring, with proof" cell to fit 2 lines',
                     style: {
                       fontSize: 9,
                       padding: "2px 5px",
@@ -49256,7 +49256,7 @@
                   React.createElement(
                     "div",
                     {
-                      title: "CV table: Focus Area column width",
+                      title: 'CV table: "The role needs" column width',
                       style: { display: "flex", alignItems: "center", gap: 2 },
                     },
                     React.createElement(
@@ -49341,7 +49341,7 @@
                   React.createElement(
                     "div",
                     {
-                      title: "CL table: Focus Area column width",
+                      title: 'CL table: "The role needs" column width',
                       style: { display: "flex", alignItems: "center", gap: 2 },
                     },
                     React.createElement(

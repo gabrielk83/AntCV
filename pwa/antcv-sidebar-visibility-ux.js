@@ -392,8 +392,8 @@
   // ---------- resize undo: sidebar splitter + table column rollers ----------
   var RESIZE_KEYS = {
     cvSidebarRatio: { desc: 'Sidebar resize', title: 'Sidebar width as % of total CV page width' },
-    cvTableRatio: { desc: 'CV table resize', title: 'CV table: Focus Area column width' },
-    clTableRatio: { desc: 'CL table resize', title: 'CL table: Focus Area column width' },
+    cvTableRatio: { desc: 'CV table resize', title: 'CV table: "The role needs" column width' },
+    clTableRatio: { desc: 'CL table resize', title: 'CL table: "The role needs" column width' },
   };
   var resizeSeen = {}, resizePrev = {}, resizeBaselined = false;
   function driveRoller(key, ratio) {

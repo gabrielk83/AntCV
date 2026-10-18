@@ -87,7 +87,7 @@
   function driveReactRoller(ratio) {
     try {
       const isCl = currentRatioKey() === 'clTableRatio';
-      const title = (isCl ? 'CL' : 'CV') + ' table: Focus Area column width';
+      const title = (isCl ? 'CL' : 'CV') + ' table: "The role needs" column width';
       let input = null;
       const wraps = document.querySelectorAll('.antcv-top-sliders [title]');
       for (let i = 0; i < wraps.length; i++) {

@@ -56,7 +56,7 @@
     const fields=Array.from(row.querySelectorAll('input,textarea,[contenteditable="true"]')).filter(visible);
     if(fields.length<2) return false;
     const txt=cleanText(row);
-    return /focus area|strategic expertise/i.test(txt) || fields.some(f=>/focus area|strategic/i.test(f.value||f.placeholder||f.textContent||''));
+    return /focus area|strategic expertise|the role needs|what i bring, with proof/i.test(txt) || fields.some(f=>/focus area|strategic|the role needs|with proof/i.test(f.value||f.placeholder||f.textContent||''));
   }
   // v1.50.943 BOOT-WIB-ROOTCACHE-001: editorRoot ran a full-document
   // querySelectorAll('input,textarea,[contenteditable]') to find the focus-area
@@ -71,18 +71,18 @@
   function editorRootValid(p){
     if(!p||!p.isConnected||inPreviewPaper(p)) return false;
     if(CORE_RX.test(cleanText(p))) return true;
-    const count=Array.from(p.querySelectorAll('input,textarea,[contenteditable="true"]')).filter(x=>/focus area|strategic/i.test(x.value||x.placeholder||x.textContent||'')).length;
+    const count=Array.from(p.querySelectorAll('input,textarea,[contenteditable="true"]')).filter(x=>/focus area|strategic|the role needs|with proof/i.test(x.value||x.placeholder||x.textContent||'')).length;
     return count>=4;
   }
   let __editorRootCache=null;
   function editorRoot(){
     if(__editorRootCache){ if(editorRootValid(__editorRootCache)) return __editorRootCache; __editorRootCache=null; }
-    const seeds=Array.from(document.querySelectorAll('input,textarea,[contenteditable="true"]')).filter(f=>/focus area|strategic expertise/i.test(f.value||f.placeholder||f.textContent||''));
+    const seeds=Array.from(document.querySelectorAll('input,textarea,[contenteditable="true"]')).filter(f=>/focus area|strategic expertise|the role needs|what i bring, with proof/i.test(f.value||f.placeholder||f.textContent||''));
     const seed=seeds[0]; if(!seed) return null;
     let p=seed.parentElement,best=null;
     for(let d=0;p&&d<10;d++,p=p.parentElement){
       const t=cleanText(p);
-      const count=Array.from(p.querySelectorAll('input,textarea,[contenteditable="true"]')).filter(x=>/focus area|strategic/i.test(x.value||x.placeholder||x.textContent||'')).length;
+      const count=Array.from(p.querySelectorAll('input,textarea,[contenteditable="true"]')).filter(x=>/focus area|strategic|the role needs|with proof/i.test(x.value||x.placeholder||x.textContent||'')).length;
       if(count>=4) best=p;
       if(CORE_RX.test(t)){best=p;break;}
     }
@@ -109,7 +109,7 @@
   function findRows(){
     const root=editorRoot(); if(!root) return [];
     if(inPreviewPaper(root)) return []; // root resolved inside preview — refuse
-    const seeds=Array.from(root.querySelectorAll('input,textarea,[contenteditable="true"]')).filter(f=>/focus area/i.test(f.value||f.placeholder||f.textContent||''));
+    const seeds=Array.from(root.querySelectorAll('input,textarea,[contenteditable="true"]')).filter(f=>/focus area|the role needs/i.test(f.value||f.placeholder||f.textContent||''));
     const rows=[];
     seeds.forEach(f=>{const r=directRowForField(f,root); if(r&&visible(r)&&!rows.includes(r)&&!inPreviewPaper(r)) rows.push(r);});
     return rows;
@@ -178,14 +178,14 @@
   function cloneHeaderFor(table,beforeRow){
     const br=document.createElement('tr'); br.setAttribute('data-antcv-core-page-break','1'); br.style.breakBefore='page'; br.style.pageBreakBefore='always'; br.style.height='0';
     const cols=(beforeRow&&beforeRow.children&&beforeRow.children.length)||2; const td=document.createElement('td'); td.colSpan=cols; td.style.height='0'; td.style.padding='0'; td.style.border='0'; br.appendChild(td);
-    const src=Array.from(table.querySelectorAll('tr')).find(r=>/focus area/i.test(cleanText(r))&&/strategic expertise/i.test(cleanText(r)));
+    const src=Array.from(table.querySelectorAll('tr')).find(r=>/focus area|the role needs/i.test(cleanText(r))&&/strategic expertise|what i bring, with proof/i.test(cleanText(r)));
     if(src){const clone=src.cloneNode(true); clone.setAttribute('data-antcv-core-header-clone','1'); clone.querySelectorAll('button,[data-antcv-wib-row-control-host-249]').forEach(x=>x.remove()); if(src.parentNode){src.parentNode.insertBefore(br,beforeRow);src.parentNode.insertBefore(clone,beforeRow);return br;}}
     return br;
   }
   function applyPreview(){
     const sec=previewSection(); if(!sec) return; clearPreview(sec);
     const rows=Array.from(sec.querySelectorAll('tr,li,[data-antcv-row-path^="items."],.cv-item')).filter(visible);
-    const headerRows=rows.filter(r=>/focus area/i.test(cleanText(r))&&/strategic expertise/i.test(cleanText(r)));
+    const headerRows=rows.filter(r=>/focus area|the role needs/i.test(cleanText(r))&&/strategic expertise|what i bring, with proof/i.test(cleanText(r)));
     const bodyRows=rows.filter(r=>/focus area\s*\d/i.test(cleanText(r))&&!headerRows.includes(r));
     function setRowAlign(r,a){r.style.textAlign=a; r.querySelectorAll('td,th,div,span,p,li').forEach(x=>{x.style.textAlign=a;});}
     headerRows.forEach(r=>setRowAlign(r,getAlign(0)));

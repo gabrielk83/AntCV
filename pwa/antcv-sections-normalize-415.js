@@ -2042,6 +2042,40 @@
     return m;
   }
 
+  // CC-HEADERS-PLAIN-001 (REVIEW-VEO-001, 2026-10-18): the course reviewer read the
+  // CORE COMPETENCIES / WHAT I BRING header pair "Focus Area" | "Strategic Expertise"
+  // as cryptic. The house pair is now "The role needs" | "What I bring, with proof"
+  // (DA "Rollen kræver" | "Det bringer jeg, med belæg"). A saved document still
+  // carries the old pair in rows[0]; rewrite it in place (EN + DA, exact cell match,
+  // case-insensitive) so the editor, the preview and the export agree. Data rows
+  // are never touched. app.js also maps the legacy pair at render time, so a
+  // cloud restore that lands after this sweep still previews with the new words.
+  var CC_HEADER_PLAIN = {
+    'focus area': 'The role needs',
+    'strategic expertise': 'What I bring, with proof',
+    'fokusområde': 'Rollen kræver',
+    'strategisk ekspertise': 'Det bringer jeg, med belæg'
+  };
+  function plainCoreCompHeaders(list) {
+    if (!Array.isArray(list)) return null;
+    var changed = false;
+    var out = list.map(function (s) {
+      if (!s || s.type !== 'table' || !Array.isArray(s.rows) || !s.rows.length) return s;
+      var h = s.rows[0];
+      if (!Array.isArray(h)) return s;
+      var hit = false;
+      var nh = h.map(function (c) {
+        var k = String(c == null ? '' : c).trim().toLowerCase();
+        if (Object.prototype.hasOwnProperty.call(CC_HEADER_PLAIN, k)) { hit = true; return CC_HEADER_PLAIN[k]; }
+        return c;
+      });
+      if (!hit) return s;
+      changed = true;
+      return Object.assign({}, s, { rows: [nh].concat(s.rows.slice(1)) });
+    });
+    return changed ? out : null;
+  }
+
   function normalize() {
     // EDIT-GUARD-001 (owner 2026-06-19): defer all normalisation while the user is
     // actively editing — rewriting sections mid-edit re-renders the preview and
@@ -2119,12 +2153,14 @@
       // after canon/dedupe/order have settled, so nothing downstream re-adds the bullets it trims.
       var vcap = condenseVolunteerRoles(cv); if (vcap) { cv = vcap; changed = true; }
       var rhead = shortenRegulatoryHeading(cv); if (rhead) { cv = rhead; changed = true; }
+      var cch = plainCoreCompHeaders(cv); if (cch) { cv = cch; changed = true; }          // CC-HEADERS-PLAIN-001
       // SECTION-PREVIEW-LOC-001 / TYPE-NORMALIZE: also normalise the CL sections'
       // loc + work_style type so imported CL sections render in the preview.
       var cl = Array.isArray(b.cl) ? b.cl : null;
       var clChanged = false;
       if (cl) { var dlc = defaultLoc(cl); if (dlc) { cl = dlc; clChanged = true; } }
       if (cl) { var wic = inlineifyLabeledText(cl, { workStyleOnly: true }); if (wic) { cl = wic; clChanged = true; } }
+      if (cl) { var cclh = plainCoreCompHeaders(cl); if (cclh) { cl = cclh; clChanged = true; } }   // CC-HEADERS-PLAIN-001
       // BABEL-RICHBLOCK-RESIDUE-001 (owner 2026-07-11 screenshot: "Foundation: I
       // connect what I do best…" stayed English inside an otherwise-zh CL): a
       // rich_block accumulated a LATIN duplicate of a lead-in row next to its

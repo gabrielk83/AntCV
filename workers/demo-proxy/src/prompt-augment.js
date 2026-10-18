@@ -193,9 +193,9 @@ This is DIFFERENT from a cover-letter "What I Bring" section. Do not conflate th
 
 Core Competencies is BACKWARD-looking and EVIDENCE-ONLY: every row is a capability the candidate has demonstrated. When a job description is present, SELECT and ORDER the rows by that JD's ranked priorities (V5-FOCUS-PRIORITIES-001 wins over any role-independent framing); never invent or stretch a competency to match a priority.
 
-OUTPUT: a 6-row table. Each row: { Focus Area: 1-3 words, Strategic Expertise: 1-2 sentences }.
-- Focus Area = a technical or methodological domain the candidate has demonstrated ("Camera architecture", "Image quality optimization", "Hardware/software co-design", "Supplier coordination", "Optoelectronic validation", "Production readiness").
-- Strategic Expertise = concrete description of that capability, naming specific tools / standards / scopes where natural ("SNR, dynamic range, and MTF analysis using MATLAB, Imatest, and Qualcomm ISP tools").
+OUTPUT: a 6-row table. Each row: { "The role needs" (left column, 1-3 words), "What I bring, with proof" (right column, 1-2 sentences) }. The row keys stay focus / expertise; only the rendered column labels changed (REVIEW-VEO-001).
+- "The role needs" (focus) = a technical or methodological domain the candidate has demonstrated ("Camera architecture", "Image quality optimization", "Hardware/software co-design", "Supplier coordination", "Optoelectronic validation", "Production readiness").
+- "What I bring, with proof" (expertise) = concrete description of that capability, naming specific tools / standards / scopes where natural ("SNR, dynamic range, and MTF analysis using MATLAB, Imatest, and Qualcomm ISP tools").
 
 Examples (all from approved real output):
   - "Camera architecture | system design from concept to production validation"
@@ -213,9 +213,9 @@ This is DIFFERENT from a CV "Core Competencies" section. Do not conflate them.
 - What I Bring (CL)        = FORWARD-looking. About this specific opportunity. Focus areas are role-aspects drawn from the job description; expertise rows describe how the candidate would deliver on each.
 - Core Competencies (CV)   = backward-looking inventory of capabilities, role-independent. Do NOT produce that here.
 
-OUTPUT: a 4-row table (5 or 6 if the JD is broad). Each row: { Focus Area: 1-4 words, Strategic Expertise: 1-2 sentences }.
-- Focus Area = an aspect of the ROLE/COMPANY drawn from the job description (NOT a generic skill name). Examples: "Image Quality Optimization", "Hardware/Software Co-design", "Manufacturing & Supplier Coordination", "Systematic Problem Resolution", "Functional Safety Compliance", "Customer Change Governance".
-- Strategic Expertise = how this candidate would deliver in that area, citing relevant prior experience but framed as offer ("Hands-on with autofocus systems, SNR/DR analysis, and ISP tuning using Qualcomm tools, Imatest, and structured measurements").
+OUTPUT: a 4-row table (5 or 6 if the JD is broad). Each row: { "The role needs" (left column, 1-4 words), "What I bring, with proof" (right column, 1-2 sentences) }. The row keys stay focus / expertise; only the rendered column labels changed (REVIEW-VEO-001).
+- "The role needs" (focus) = an aspect of the ROLE/COMPANY drawn from the job description (NOT a generic skill name). Examples: "Image Quality Optimization", "Hardware/Software Co-design", "Manufacturing & Supplier Coordination", "Systematic Problem Resolution", "Functional Safety Compliance", "Customer Change Governance".
+- "What I bring, with proof" (expertise) = how this candidate would deliver in that area, citing relevant prior experience but framed as offer ("Hands-on with autofocus systems, SNR/DR analysis, and ISP tuning using Qualcomm tools, Imatest, and structured measurements").
 
 Examples (from approved cover letter for an Optics/Camera Engineer role):
   - "Image Quality Optimization | Hands-on with autofocus systems, SNR/DR analysis, and ISP tuning using Qualcomm tools, Imatest, and structured measurements."
@@ -223,7 +223,7 @@ Examples (from approved cover letter for an Optics/Camera Engineer role):
   - "Manufacturing & Supplier Coordination | ODM partnership management, tolerance analysis, yield optimisation, and production acceptance criteria through structured validation"
   - "Systematic Problem Resolution | Root cause analysis using lab data, measurements, and systematic validation for bring-up, alignment, and performance deviations"
 
-CRITICAL: a Focus Area drawn from the JD is fine. The Strategic Expertise that follows it MUST be grounded in the candidate's actual experience. If the candidate's history doesn't actually cover a focus area you've drawn from the JD, drop that area; do NOT invent fit.
+CRITICAL: a left-column need drawn from the JD is fine. The right-column proof that follows it MUST be grounded in the candidate's actual experience. If the candidate's history doesn't actually cover a focus area you've drawn from the JD, drop that area; do NOT invent fit.
 
 ${noFabricationBlock()}
 

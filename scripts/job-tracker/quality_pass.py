@@ -257,7 +257,7 @@ def rule_core_comp(cv, jd, report):
     # renders only sec['rows'], so the CV shows 3-4; nothing is lost.
     _cap_rows = int((_G.get("caps") or {}).get("core_comp_data_rows", 4))
     _min_rows = int((_G.get("caps") or {}).get("core_comp_data_rows_min", 3))
-    header = rows[0] if rows else ["Focus Area", "Strategic Expertise"]
+    header = rows[0] if rows else ["The role needs", "What I bring, with proof"]   # CC-HEADERS-PLAIN-001
     pool = list(rows[1:]) + list(sec.get("rows_hidden") or [])
     seen, alldata = set(), []
     for r in pool:                            # dedupe by label, keep first (live) text

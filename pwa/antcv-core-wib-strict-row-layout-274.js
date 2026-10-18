@@ -40,7 +40,7 @@
   function panelMatch(p){
     const txt=clean(p.textContent||'');
     if(/cv preview|docx/i.test(txt)) return null;
-    if((isCoreTitle(txt)||isWibTitle(txt)) && /focus\s*area/i.test(txt) && /strategic\s*expertise/i.test(txt) && /\+\s*row/i.test(txt))
+    if((isCoreTitle(txt)||isWibTitle(txt)) && /focus\s*area|the role needs/i.test(txt) && /strategic\s*expertise|what i bring, with proof/i.test(txt) && /\+\s*row/i.test(txt))
       return isCoreTitle(txt)?'core':'wib';
     return null;
   }
@@ -83,7 +83,7 @@
   }
   function rows(root){
     const out=[];
-    const fs=fields(root).filter(f=>/focus\s*area/i.test(fieldText(f)) || /\[?focus\s*area/i.test(fieldText(f)));
+    const fs=fields(root).filter(f=>/focus\s*area|the role needs/i.test(fieldText(f)) || /\[?focus\s*area|the role needs/i.test(fieldText(f)));
     fs.forEach(f=>{const r=rowOfFocus(f,root); if(r&&visible(r)&&!out.includes(r)) out.push(r);});
     return out;
   }

@@ -141,8 +141,8 @@
     page.onclick=function(ev){ev.preventDefault();ev.stopPropagation();if(ev.stopImmediatePropagation)ev.stopImmediatePropagation();setPage(sid,rowIndex,getPage(sid,rowIndex)%4+1);paintPage(page,sid,rowIndex);};
 
     let comp=existing.compress || h.querySelector('[data-antcv-wib264="compress"]');
-    if(!comp) comp=btn('compress','⇥⇤','Fit What I Bring row '+rowIndex+'. Applies to Strategic Expertise only.');
-    comp.title='Fit What I Bring row '+rowIndex+'. Applies to Strategic Expertise only.'; comp.setAttribute('aria-label',comp.title);
+    if(!comp) comp=btn('compress','⇥⇤','Fit What I Bring row '+rowIndex+'. Applies to the "What I bring, with proof" cell only.');
+    comp.title='Fit What I Bring row '+rowIndex+'. Applies to the "What I bring, with proof" cell only.'; comp.setAttribute('aria-label',comp.title);
     comp.onclick=function(ev){ev.preventDefault();ev.stopPropagation();if(ev.stopImmediatePropagation)ev.stopImmediatePropagation(); const fs=Array.from(row.querySelectorAll('input,textarea,[contenteditable="true"]')).filter(visible); setValue(fs[1]||fs[0],compressText(valueOf(fs[1]||fs[0]))); pulse('what-i-bring-compress',{sid,index:rowIndex});};
 
     const cjlr=existing.cjlr, enhance=existing.enhance, eye=existing.eye;

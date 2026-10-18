@@ -218,8 +218,12 @@
     { en: 'ADDITIONAL INFORMATION',
                                   'zh-CN': '附加信息',           es: 'INFORMACIÓN ADICIONAL' },
     { en: 'REGULATORY CONTEXT',   'zh-CN': '监管背景',           es: 'CONTEXTO REGULATORIO' },
-    { en: 'Focus Area',           'zh-CN': '重点领域',           es: 'Área de enfoque' },
-    { en: 'Strategic Expertise',  'zh-CN': '战略专长',           es: 'Experiencia estratégica' },
+    // CC-HEADERS-PLAIN-001 (2026-10-18): plain-words table headers; the legacy
+    // English pair maps to the SAME target words so an old saved header lands right.
+    { en: 'The role needs',       'zh-CN': '岗位要求',           es: 'Lo que exige el puesto' },
+    { en: 'What I bring, with proof', 'zh-CN': '我的贡献与佐证',    es: 'Lo que aporto, con pruebas' },
+    { en: 'Focus Area',           'zh-CN': '岗位要求',           es: 'Lo que exige el puesto' },
+    { en: 'Strategic Expertise',  'zh-CN': '我的贡献与佐证',    es: 'Lo que aporto, con pruebas' },
 
     // === Common labels ====================================================
     { en: 'Languages:',           'zh-CN': '语言：',             es: 'Idiomas:' },

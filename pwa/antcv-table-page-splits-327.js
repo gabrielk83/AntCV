@@ -24,7 +24,7 @@
   function tableRows(table){if(!table)return {headers:[],body:[]};
     const headers=Array.from(table.querySelectorAll('thead tr')).filter(visible);
     let body=Array.from(table.querySelectorAll('tbody tr')).filter(visible);
-    if(!body.length){const all=Array.from(table.querySelectorAll('tr')).filter(visible);if(headers.length){body=all.filter(r=>!headers.includes(r));}else{const first=all.find(r=>/focus\s*area|strategic\s*expertise/i.test(clean(r.textContent)));if(first){headers.push(first);body=all.filter(r=>r!==first);}else body=all;}}
+    if(!body.length){const all=Array.from(table.querySelectorAll('tr')).filter(visible);if(headers.length){body=all.filter(r=>!headers.includes(r));}else{const first=all.find(r=>/focus\s*area|strategic\s*expertise|the role needs|what i bring, with proof/i.test(clean(r.textContent)));if(first){headers.push(first);body=all.filter(r=>r!==first);}else body=all;}}
     return {headers,body};
   }
   function clear(sec){sec.querySelectorAll('[data-antcv-table-page-split="1"]').forEach(n=>n.remove());}
@@ -32,7 +32,7 @@
   function contHeading(title, ref){const h=document.createElement('div');h.setAttribute('data-antcv-table-page-split','1');h.setAttribute('data-antcv-table-cont-heading','1');h.textContent=title+' (Cont.)';
     let color='#00746E', font='Trebuchet MS, Calibri, sans-serif';try{const cs=getComputedStyle(ref);color=cs.color||color;font=cs.fontFamily||font;}catch(_){}
     Object.assign(h.style,{color, fontFamily:font, fontWeight:'700', fontSize:'12pt', marginTop:'4pt', marginBottom:'6pt', borderBottom:'1pt solid '+color, paddingBottom:'2pt'});return h;}
-  function cloneHeader(table){const src=table.querySelector('thead tr')||Array.from(table.querySelectorAll('tr')).find(r=>/focus\s*area|strategic\s*expertise/i.test(clean(r.textContent)))||null;const tr=document.createElement('tr');tr.setAttribute('data-antcv-table-page-split','1');tr.setAttribute('data-antcv-table-header-clone','1');
+  function cloneHeader(table){const src=table.querySelector('thead tr')||Array.from(table.querySelectorAll('tr')).find(r=>/focus\s*area|strategic\s*expertise|the role needs|what i bring, with proof/i.test(clean(r.textContent)))||null;const tr=document.createElement('tr');tr.setAttribute('data-antcv-table-page-split','1');tr.setAttribute('data-antcv-table-header-clone','1');
     if(src){tr.innerHTML=src.innerHTML;Array.from(tr.children).forEach(c=>{c.style.fontWeight='700';});}
     else{const th=document.createElement('th');th.colSpan=2;th.textContent='Continued';tr.appendChild(th);}return tr;}
   function apply(sec){

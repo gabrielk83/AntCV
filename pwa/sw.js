@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.5013-grab-zone-scroll-target';
+const CACHE = 'antcv-1.51.5033-cc-headers-plain';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

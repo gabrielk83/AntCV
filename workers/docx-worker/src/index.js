@@ -28183,11 +28183,31 @@ function bulletParagraphRich(lead, body, ctx, isSidebar, align, keepWithNext, li
   });
 }
 __name(bulletParagraphRich, "bulletParagraphRich");
+// CC-HEADERS-PLAIN-001 (REVIEW-VEO-001, 2026-10-18): the competency / What-I-Bring
+// table header reads "The role needs" | "What I bring, with proof" (DA "Rollen
+// kræver" | "Det bringer jeg, med belæg"). A stored document may still carry the
+// pre-rename pair ("Focus Area" | "Strategic Expertise"); map it at render time
+// so an old saved CV exports with the plain-words header without a re-save.
+const LEGACY_CC_HEADER = {
+  "focus area": "The role needs",
+  "strategic expertise": "What I bring, with proof",
+  "fokusområde": "Rollen kræver",
+  "strategisk ekspertise": "Det bringer jeg, med belæg",
+};
+function legacyCcHeader(header) {
+  if (!Array.isArray(header)) return header;
+  return header.map((cell) => {
+    const k = String(cell == null ? "" : cell).trim().toLowerCase();
+    return Object.prototype.hasOwnProperty.call(LEGACY_CC_HEADER, k) ? LEGACY_CC_HEADER[k] : cell;
+  });
+}
+__name(legacyCcHeader, "legacyCcHeader");
 function renderCompetencyTable(s, ctx) {
   const { style, fs } = ctx;
   const rows = Array.isArray(s.rows) ? s.rows : [];
   if (rows.length === 0) return [];
-  const [header, ...data] = rows;
+  const [header0, ...data] = rows;
+  const header = legacyCcHeader(header0);   // CC-HEADERS-PLAIN-001
   const isCl = ctx.doc === "cl";
   // PREVIEW-PDF-GEOMETRY-001 (owner 2026-06-10): the CV preview renders the
   // competency table FULL main-column width, left-aligned and flush with the
@@ -28211,7 +28231,7 @@ function renderCompetencyTable(s, ctx) {
   const explicitRatio = typeof s.tableRatio === "number" && s.tableRatio > 0.05 && s.tableRatio < 0.95 ? s.tableRatio : null;
   // 1.14.49 TABLE-WRAP-PARITY-001 (owner 2026-06-11: "core competency still
   // different — preview has fewer words in the 3rd line"): measured preview
-  // geometry at 100% A4 = table 512px, Focus Area col 153px (ratio 0.299),
+  // geometry at 100% A4 = table 512px, first ("The role needs", ex Focus Area) col 153px (ratio 0.299),
   // cell padding 6px, expertise text LEFT-aligned. The worker's 0.326 ratio +
   // 8px (120 DXA) margins left the expertise text column ~5% narrower than
   // the preview's, so the export wrapped earlier from line 3 on. Defaults now
@@ -29680,7 +29700,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 // 1.14.67 (owner 2026-06-15): TABLE-RATIO-PARITY-001 - the competency/What-I-Bring
 //   table Focus-Area ratio default 0.30 -> 0.25 to match the live preview
 //   (app.src.js ~4281), so the export's first column is narrower and the
-//   Strategic Expertise cells fit one line. A forwarded s.tableRatio still wins.
+//   expertise ("What I bring, with proof", ex Strategic Expertise) cells fit one line. A forwarded s.tableRatio still wins.
 // 1.14.68 (owner 2026-06-15): COPENHAGEN-BLUE-BRIGHTER-001 - the Copenhagen
 //   candidate band + table header move from dark navy 283556 to a brighter blue
 //   33446F via a new per-package `band` token (getPackageStyle headerBg/

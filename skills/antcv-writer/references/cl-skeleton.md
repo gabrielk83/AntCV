@@ -17,7 +17,7 @@ The cover letter has a fixed five-section body, plus a header and a close. The s
 | `cl_header` | Name, application line, contact details | Block |
 | `cl_opener` | "Dear [Name]," + opening sentence | Salutation + paragraph |
 | `who_i_am` | One paragraph framing the candidate | Paragraph |
-| `what_i_bring` | 2-column table: Focus Area + Strategic Expertise | Table-grid |
+| `what_i_bring` | 2-column table: "The role needs" + "What I bring, with proof" (same header pair as the CV table; REVIEW-VEO-001) | Table-grid |
 | `why_this_position` | Why this role at this company | Paragraph |
 | `how_i_would_contribute` | 3 bullets — concrete contributions | Bullets |
 | `foundation` | Two clauses: hands-on / professionally | Structured paragraph |

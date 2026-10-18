@@ -12,7 +12,8 @@
  * simply skip it (they all gate on type==='table'/rows), and the rich_block editor + preview +
  * worker render it for free.
  *
- * Shape: drop a header row (["Focus Area","Strategic Expertise"]); each data row [label,value] ->
+ * Shape: drop a header row (["The role needs","What I bring, with proof"], or the legacy
+ * ["Focus Area","Strategic Expertise"]); each data row [label,value] ->
  * { b:label, t:value }; prepend a section lead-in { b:"What I bring", t:"" } (the title,
  * sentence-cased) so the section keeps its identity with the headline hidden; headlineOff:true.
  */
@@ -42,7 +43,7 @@
   function looksHeader(row) {
     var a = Array.isArray(row) ? row : [];
     var l = String(a[0] || '').toLowerCase().trim(), v = String(a[1] || '').toLowerCase().trim();
-    return /^(focus area|focus|area)$/.test(l) || /^(strategic expertise|expertise|strategic)$/.test(v);
+    return /^(focus area|focus|area|the role needs|rollen kræver)$/.test(l) || /^(strategic expertise|expertise|strategic|what i bring, with proof|det bringer jeg, med belæg)$/.test(v);
   }
   function convert(list) {
     if (!Array.isArray(list)) return { changed: false, list: list };

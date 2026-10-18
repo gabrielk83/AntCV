@@ -171,14 +171,14 @@ const check = (name, cond, detail = '') => {
     sections: [{
       id: 'core_comp', title: 'CORE COMPETENCIES', type: 'table',
       rows: [
-        ['Focus Area', 'Strategic Expertise'],
+        ['The role needs', 'What I bring, with proof'],
         ['Project leadership', 'Cross-functional teams'],
       ],
       on: true,
     }],
   });
-  // Header cell ("Focus Area") paragraph should have w:jc center.
-  const headerPara = xml.match(/<w:p\b[^>]*>(?:(?!<\/w:p>).)*?Focus Area.*?<\/w:p>/s);
+  // Header cell ("The role needs") paragraph should have w:jc center.
+  const headerPara = xml.match(/<w:p\b[^>]*>(?:(?!<\/w:p>).)*?The role needs.*?<\/w:p>/s);
   check('header cell aligned center',
         !!headerPara && /<w:jc w:val="center"/.test(headerPara[0]),
         headerPara ? headerPara[0].slice(0, 250) : 'no para');

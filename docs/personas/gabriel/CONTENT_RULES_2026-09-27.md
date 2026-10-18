@@ -119,7 +119,7 @@ The reviewer read page 1 only: education, Meprolight, the patent, supplier quali
 
 | Rule | Wording of record |
 |---|---|
-| Core-competencies headings | "The role needs" / "What I bring, with proof" (DA "Rollen kræver" / "Det bringer jeg, med belæg"). Rows use the ad's own words on the left, delivery plus proof on the right (VALUE-FOR-ROLE-001). AntCV app labels: rename in progress in its own session (shift lane 1.51.5033-1.51.5052). |
+| Core-competencies headings | "The role needs" / "What I bring, with proof" (DA "Rollen kræver" / "Det bringer jeg, med belæg"). Rows use the ad's own words on the left, delivery plus proof on the right (VALUE-FOR-ROLE-001). AntCV app, docx worker, sidecars and prompts renamed at 1.51.5033 (CC-HEADERS-PLAIN-001, 2026-10-18); a saved document with the old header pair is migrated on load and mapped at render and export. |
 | Profile shape | One hook sentence (identity + strongest concept-to-product proof), then at most three lines of What I Bring and two lines of Work style. Never "I will" / "I would" in a CV (gate_html.mjs fails on it); promises belong in the letter. |
 | Role bullets | Same order in every role: owned (people, budget, scope), did, bold Results. At most three bullets plus Results. |
 | Leadership targets | Budget ownership (with the number when on record), hiring and mentoring bullets are mandatory where the source has them (Meprolight SWIR-sight budget, Sirin electro-optics budget, one hire at Kanzen). Influence without line authority (ODM team, matrix board) is said plainly. One line on trade-off calls outside the own speciality reduces the breadth doubt. |

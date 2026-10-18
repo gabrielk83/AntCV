@@ -110,7 +110,7 @@
   // filled from the pool to the target — or null if no change is needed.
   function partitionCore(bringRows, coreRows, pool) {
     if (!Array.isArray(bringRows) || !Array.isArray(coreRows)) return null;
-    var header = coreRows.length ? coreRows[0] : ['Focus Area', 'Strategic Expertise'];
+    var header = coreRows.length ? coreRows[0] : ['The role needs', 'What I bring, with proof'];
 
     var bringSet = {};
     for (var i = 1; i < bringRows.length; i++) { var bk = norm(rowFocus(bringRows[i])); if (bk) bringSet[bk] = true; }

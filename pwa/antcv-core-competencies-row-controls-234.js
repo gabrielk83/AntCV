@@ -60,17 +60,17 @@
     if(/Core Competencies/i.test(txt) && txt.length < 80) return false;
     const fields = Array.from(row.querySelectorAll('input,textarea,[contenteditable="true"]'));
     if(fields.length < 2) return false;
-    return fields.some(f => /focus area/i.test((f.value||f.placeholder||f.textContent||''))) || /Focus area\s*\d/i.test(txt);
+    return fields.some(f => /focus area|the role needs/i.test((f.value||f.placeholder||f.textContent||''))) || /Focus area\s*\d/i.test(txt);
   }
 
   function editorContainer(){
     const fields = Array.from(document.querySelectorAll('input,textarea,[contenteditable="true"]')).filter(f=>!isInPreviewPaper(f));
-    const seed = fields.find(f => /focus area/i.test((f.value||f.placeholder||f.textContent||'')));
+    const seed = fields.find(f => /focus area|the role needs/i.test((f.value||f.placeholder||f.textContent||'')));
     if(!seed) return null;
     let p=seed.parentElement, best=null;
     for(let d=0; p && d<9; d++, p=p.parentElement){
       const t=clean(p.textContent);
-      const count=Array.from(p.querySelectorAll('input,textarea,[contenteditable="true"]')).filter(x=>/focus area|strategic/i.test((x.value||x.placeholder||x.textContent||''))).length;
+      const count=Array.from(p.querySelectorAll('input,textarea,[contenteditable="true"]')).filter(x=>/focus area|strategic|the role needs|with proof/i.test((x.value||x.placeholder||x.textContent||''))).length;
       if(count>=4) best=p;
       if(CORE_RX.test(t)) { best=p; break; }
     }
@@ -90,7 +90,7 @@
   function findRows(){
     const root=editorContainer();
     if(!root) return [];
-    const seeds=Array.from(root.querySelectorAll('input,textarea,[contenteditable="true"]')).filter(f=>/focus area/i.test((f.value||f.placeholder||f.textContent||'')));
+    const seeds=Array.from(root.querySelectorAll('input,textarea,[contenteditable="true"]')).filter(f=>/focus area|the role needs/i.test((f.value||f.placeholder||f.textContent||'')));
     const rows=[];
     seeds.forEach(f=>{ const r=directRowForField(f, root); if(r && !rows.includes(r)) rows.push(r); });
     return rows.filter(visible);
@@ -221,7 +221,7 @@
   function cloneHeaderFor(table, row){
     const tr=document.createElement('tr'); tr.setAttribute('data-antcv-core-header-clone','1'); tr.style.breakBefore='page'; tr.style.pageBreakBefore='always';
     let src=table && table.querySelector('thead tr');
-    if(!src) src = table && Array.from(table.querySelectorAll('tr')).find(r => r !== row && /focus area|strategic expertise/i.test(clean(r.textContent)));
+    if(!src) src = table && Array.from(table.querySelectorAll('tr')).find(r => r !== row && /focus area|strategic expertise|the role needs|what i bring, with proof/i.test(clean(r.textContent)));
     if(src){ tr.innerHTML = src.innerHTML; Array.from(tr.children).forEach(c=>{ c.style.fontWeight='700'; c.style.borderBottom='1px solid currentColor'; }); }
     else { const td=document.createElement('td'); td.colSpan=Math.max(1,row.children.length||2); td.textContent='CORE COMPETENCIES (CONT.)'; td.style.fontWeight='700'; tr.appendChild(td); }
     return tr;
@@ -234,7 +234,7 @@
     if(table){
       table.querySelectorAll('thead tr').forEach(r=>{ if(visible(r) && !headerRows.includes(r)) headerRows.push(r); });
       if(!headerRows.length){
-        const first=Array.from(table.querySelectorAll('tr')).find(r=>visible(r) && /focus area|strategic expertise/i.test(clean(r.textContent)));
+        const first=Array.from(table.querySelectorAll('tr')).find(r=>visible(r) && /focus area|strategic expertise|the role needs|what i bring, with proof/i.test(clean(r.textContent)));
         if(first) headerRows.push(first);
       }
     }

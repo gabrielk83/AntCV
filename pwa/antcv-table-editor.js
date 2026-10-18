@@ -44,7 +44,7 @@
       var st = R.useState(0); var bump = st[1];
       function rerender() { bump(function (x) { return x + 1; }); }
 
-      var rows = Array.isArray(e.rows) && e.rows.length ? e.rows : [["Focus Area", "Strategic Expertise"], ["", ""]];
+      var rows = Array.isArray(e.rows) && e.rows.length ? e.rows : [["The role needs", "What I bring, with proof"], ["", ""]];
       var nCols = Math.max(2, (rows[0] && rows[0].length) || 2);
 
       function setRows(next) { d({ rows: next }); }
@@ -121,7 +121,7 @@
             cells.push(h("textarea", {
               key: "c" + c, value: row[c] != null ? row[c] : "", rows: 1,
               onChange: function (x) { setCell(i, c, x.target.value); },
-              placeholder: isHeader ? (c === 0 ? "Focus Area" : "Strategic Expertise") : (c === 0 ? "Focus area" : "Expertise"),
+              placeholder: isHeader ? (c === 0 ? "The role needs" : "What I bring, with proof") : (c === 0 ? "Focus area" : "Expertise"),
               style: { flex: c === 0 ? "0 1 " + Math.round(ratio * 100) + "%" : "1 1 auto", fontSize: isHeader ? 11 : 12, fontWeight: isHeader && hBold ? 700 : 400, fontStyle: isHeader && hItalic ? "italic" : "normal", padding: 5, border: "1px solid #ddd", borderRadius: 3, minWidth: 0, resize: "vertical", boxSizing: "border-box", textAlign: al === "justify" ? "left" : al, opacity: hiddenRow ? 0.5 : 1 }
             }));
           })(c);

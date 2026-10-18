@@ -20,7 +20,7 @@
   }
   function isHeader(row){
     const t=clean(row.textContent).toLowerCase();
-    return /focus area/.test(t) && /strategic expertise/.test(t);
+    return /focus area|the role needs/.test(t) && /strategic expertise|what i bring, with proof/.test(t);
   }
   function removeRedundant(row){
     // These are the controls added by antcv-core-competencies-row-controls inside the row body.

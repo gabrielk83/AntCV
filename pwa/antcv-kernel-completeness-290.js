@@ -153,6 +153,7 @@
     if (effectiveLen(t) < (minLen || 8)) return false;
     if (isPlaceholderString(t)) return false;
     if (t === 'Focus Area' || t === 'Strategic Expertise') return false;
+    if (t === 'The role needs' || t === 'What I bring, with proof') return false;   // CC-HEADERS-PLAIN-001
     if (t.length <= 2) return false;
     return true;
   }
@@ -578,7 +579,7 @@
     parts.push('   - Source: candidate work history in the memory digest. Do NOT invent companies.');
     parts.push('');
     parts.push('4. cv_overrides.core_comp_rows AND cl_overrides.bring_rows');
-    parts.push('   - First row is the literal header ["Focus Area", "Strategic Expertise"].');
+    parts.push('   - First row is the literal header ["The role needs", "What I bring, with proof"].');
     parts.push('   - 3-4 data rows (the gold row spec), each with two non-placeholder strings tailored to the JD; every cell must read complete in at most two rendered lines.');
     parts.push('');
     parts.push('5. cl_overrides.contribute_items');

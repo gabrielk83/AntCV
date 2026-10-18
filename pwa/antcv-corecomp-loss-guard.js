@@ -73,7 +73,8 @@
 
   // A cell is a placeholder if it is empty or starts with "[" (matches the
   // me() skeleton bracket rows and the cl-prose-guard's detector). The literal
-  // header cells "Focus Area" / "Strategic Expertise" live in row 0 and are
+  // header cells "The role needs" / "What I bring, with proof" (legacy "Focus Area" /
+  // "Strategic Expertise") live in row 0 and are
   // skipped before this is consulted.
   function isPlaceholderCell(t) {
     var s = String(t == null ? '' : t).trim();
@@ -112,7 +113,7 @@
   // CORECOMP-DEDUP-ROWS-001 (owner 2026-07-01: "core competencies duplicating row 2 and 4 Optics
   // photonics"): a generation/fusion sometimes emits the same Focus Area row twice.
   function cleanRows(rows) {
-    var header = (Array.isArray(rows) && rows.length) ? rows[0] : ['Focus Area', 'Strategic Expertise'];
+    var header = (Array.isArray(rows) && rows.length) ? rows[0] : ['The role needs', 'What I bring, with proof'];
     var seen = {}, out = [];
     realDataRows(rows).forEach(function (row) {
       var k = rowKey(row);

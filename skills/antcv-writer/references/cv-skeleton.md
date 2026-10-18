@@ -87,7 +87,7 @@ the personality JSON.
 
 **Purpose.** A scannable map of where the candidate's expertise sits, mapped to the role's domains.
 
-**Format.** Default `table-grid`: two columns, "Focus Area" → "Strategic Expertise". Style-specific defaults:
+**Format.** Default `table-grid`: two columns, "The role needs" → "What I bring, with proof" (DA "Rollen kræver" → "Det bringer jeg, med belæg"; REVIEW-VEO-001, 2026-10-18 — the pre-rename pair was "Focus Area" → "Strategic Expertise", still accepted on read). Style-specific defaults:
 
 - `nordic-minimal`, `measured-professional`, `structured-professional`: `table-grid`
 - `achievement-driven`, `cold-outreach`: `bullets` (each line "Focus area — expertise")
@@ -275,7 +275,7 @@ The worker selects a tier based on, in order of priority:
 #### ATS-Modern
 
 - **Native two-column layout permitted** when implemented as proper Word `<w:cols>` section properties — never as tables-for-layout or text boxes. This is enforced by the visual worker downstream.
-- **Tables remain parseable**: each row is a real Word table row (`<w:tr>`), with the first row marked as a header (`<w:tblHeader/>`). The parser-safe separator inside flattenable cells is the hyphen: `Focus Area - Strategic Expertise` (owner 2026-06-12: use `-`, never `—`). Never glyph-only separators.
+- **Tables remain parseable**: each row is a real Word table row (`<w:tr>`), with the first row marked as a header (`<w:tblHeader/>`). The parser-safe separator inside flattenable cells is the hyphen: `The role needs - What I bring, with proof` (owner 2026-06-12: use `-`, never `—`). Never glyph-only separators.
 - **Photo retained**: modern ATS parses around photos without breaking.
 - **System fonts only**: Body font is per-package (Segoe UI for Copenhagen Modern and Delhi Technical, Cambria for Navy Executive, Palatino Linotype for Warm Terracotta and Pampas Contemporary, Verdana for Nordic Frost, Tahoma for Tokyo Precision — all Windows/Mac system fonts with 98 – 99% ATS-Modern parser safety, see `design-packages.md` § Font choices). Heading font is the package's defined heading font. Calibri is the override fallback if a user explicitly chooses it.
 - **Standard section headers**: the style's per-section naming applies, but creative variants are normalised (e.g., "My Journey" → "Work Experience"). The style's `atsBehavior` field controls the mapping.

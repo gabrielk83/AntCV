@@ -4404,7 +4404,7 @@
               on: !0,
               type: "table",
               rows: [
-                ["Focus Area", "Strategic Expertise"],
+                ["The role needs", "What I bring, with proof"],
                 ["[Focus area 1]", "[Strategic expertise — 1 or 2 lines]"],
                 ["[Focus area 2]", "[Strategic expertise — 1 or 2 lines]"],
                 ["[Focus area 3]", "[Strategic expertise — 1 or 2 lines]"],
@@ -4722,7 +4722,7 @@
               on: !0,
               type: "table",
               rows: [
-                ["Focus Area", "Strategic Expertise"],
+                ["The role needs", "What I bring, with proof"],
                 ["[Focus area 1]", "[Strategic expertise — 1 or 2 lines]"],
                 ["[Focus area 2]", "[Strategic expertise — 1 or 2 lines]"],
                 ["[Focus area 3]", "[Strategic expertise — 1 or 2 lines]"],
@@ -5203,8 +5203,12 @@
       "Application:": "Ansøgning:",
       "Results: ": "Resultat: ",
       "AI-assisted document": "AI-assisteret dokument",
-      "Focus Area": "Fokusområde",
-      "Strategic Expertise": "Strategisk ekspertise",
+      // CC-HEADERS-PLAIN-001: legacy keys map to the plain-words Danish pair; the
+      // new keys come AFTER them so the reverse map resolves to the new English.
+      "Focus Area": "Rollen kræver",
+      "Strategic Expertise": "Det bringer jeg, med belæg",
+      "The role needs": "Rollen kræver",
+      "What I bring, with proof": "Det bringer jeg, med belæg",
       "Hands-on:": "Praktisk:",
       "Professionally:": "Professionelt:",
       "Work style:": "Arbejdsstil:",
@@ -5411,8 +5415,10 @@
         "Application:": "Postulación:",
         "Results: ": "Resultado: ",
         "AI-assisted document": "Documento asistido por IA",
-        "Focus Area": "Área de enfoque",
-        "Strategic Expertise": "Experiencia estratégica",
+        "Focus Area": "Lo que exige el puesto",
+        "Strategic Expertise": "Lo que aporto, con pruebas",
+        "The role needs": "Lo que exige el puesto",
+        "What I bring, with proof": "Lo que aporto, con pruebas",
         "Hands-on:": "En la práctica:",
         "Professionally:": "Profesionalmente:",
         "Work style:": "Estilo de trabajo:",
@@ -5498,8 +5504,10 @@
         "Application:": "申请：",
         "Results: ": "成果：",
         "AI-assisted document": "AI辅助生成的文档",
-        "Focus Area": "重点领域",
-        "Strategic Expertise": "核心专长",
+        "Focus Area": "岗位要求",
+        "Strategic Expertise": "我的贡献与佐证",
+        "The role needs": "岗位要求",
+        "What I bring, with proof": "我的贡献与佐证",
         "Hands-on:": "实践经验：",
         "Professionally:": "专业层面：",
         "Work style:": "工作风格：",
@@ -7150,15 +7158,22 @@
             p = c ? 600 : 400,
             u = Math.round(p * d),
             m = p - u,
+            // CC-HEADERS-PLAIN-001 (REVIEW-VEO-001, 2026-10-18): a stored legacy
+            // header pair renders as the plain-words pair. sections-normalize-415
+            // migrates the stored rows; this covers a restore that lands later.
             g = L(
-              (null == (o = null == (t = e.rows) ? void 0 : t[0])
-                ? void 0
-                : o[0]) || "",
+              ((_h) => ("Focus Area" === _h ? "The role needs" : _h))(
+                (null == (o = null == (t = e.rows) ? void 0 : t[0])
+                  ? void 0
+                  : o[0]) || "",
+              ),
             ),
             h = L(
-              (null == (l = null == (i = e.rows) ? void 0 : i[0])
-                ? void 0
-                : l[1]) || "",
+              ((_h) => ("Strategic Expertise" === _h ? "What I bring, with proof" : _h))(
+                (null == (l = null == (i = e.rows) ? void 0 : i[0])
+                  ? void 0
+                  : l[1]) || "",
+              ),
             ),
             y = c
               ? {
@@ -9937,7 +9952,7 @@
                 const t =
                   e.rows && e.rows.length
                     ? e.rows
-                    : [["Focus Area", "Strategic Expertise"]];
+                    : [["The role needs", "What I bring, with proof"]];
                 d({ rows: [...t, t[0].map(() => "")] });
               },
               style: {
@@ -12520,8 +12535,8 @@
       };
     if ("table" === t.type) {
       const n = (null == (o = e.rows) ? void 0 : o[0]) || [
-          "Focus Area",
-          "Strategic Expertise",
+          "The role needs",
+          "What I bring, with proof",
         ],
         a = ((null == (r = e.rows) ? void 0 : r.slice(1)) || []).map((e, n) => {
           const o = (t.rows || [])[n];
@@ -26704,7 +26719,7 @@
               (vr("Fuse CL → CV"), Ra(!0));
               try {
                 const e = "da" === je,
-                  t = `You are a senior CV editor. The candidate has already written a tailored cover letter for a specific job. The cover letter contains concrete, JD-specific signals (named systems, frameworks, decision examples, outcomes). Your job is to update the CV so the same JD-specific signals appear in the CV PROFILE and SELECTED OUTCOMES — so a recruiter who only reads the CV still sees the same fit signal.\nVOICE & TONE — SCANDINAVIAN PROFESSIONAL (applies regardless of output language):\n- Calm, factual, direct. Sentences state what was done — they don't perform.\n- Collaborative, not self-aggrandising. Understated confidence.\n- Even in English, AVOID American resume-speak energy: no "transformative", "passionate", "dynamic", "results-driven", "thought leader", "spearheaded", "championed", "drove change", "moved the needle".\n- Test: would this sound natural said aloud in a calm voice in a meeting in Copenhagen? If no, rewrite.\nRules — ABSOLUTE:\n- Use ONLY content present in the supplied cover letter and current CV. Do NOT invent new claims, numbers, or experience.\n- ANTI-FABRICATION (STRICT): Do NOT invent skills, certifications, regulatory expertise, or domain knowledge that is not EXPLICITLY present in the candidate's existing CV or background. SPECIFICALLY FORBIDDEN to fabricate (unless already in the candidate's CV): GxP, GMP, GLP, GCP, MDR, IVDR, ISO 13485, ISO 14971, ISO 9001, FDA submissions, 510(k), PMA, CE mark, clinical trials, pharmacovigilance, post-market surveillance, biostatistics, regulatory affairs experience, design history files (DHF), device master records (DMR), GAMP 5, IEC 62304, IEC 62366, IEC 61508 (unless candidate has it; ISO 26262 is NOT IEC 61508). If the JD demands a skill the candidate does NOT have, omit the claim or frame it as transferable foundation — do NOT pretend ownership. When in doubt, leave it out.\n- Preserve every number, proper noun, tool name, certification, and standards code from the current CV exactly.\n- Banned words: spearhead, ensure, foster, streamline, strengthen, empower, leverage, drive (as 'drive change'), deliver (vague), enable, robust, comprehensive (without specifics), cutting-edge, state-of-the-art, world-class, leading, impactful, rooted, grounded, committed, passionate, holistic, multi-faceted, cross-functional, tværgående, tværfunktionel, collaborative (filler), central ('played a central role'), journey, dynamic, proactive, agile (unless software context), seamless, bottomline.\n- Banned phrases: key role, pivotal role, end-to-end, proven track record, strong communicator, strong leader, results-driven, strategic mindset, client-focused, customer-centric, mission-driven, "My expertise lies in", "I am known for", "At the heart of my work", "My approach is", "I am passionate about", "I thrive in", "I bring a wealth of experience", "Proven ability to", "I am committed to", "Passionate about driving", "Known for fostering."\n- Banned patterns: opener "In my role…"; "Whether in X or Y…"; "My career has been built on…"; "Across functions and geographies…"; "I have demonstrated the ability to…"; "Ensured alignment of…"; exclamation marks anywhere; filler transitions (moreover, therefore, furthermore — rewrite the sentence instead); vague bullets with no outcome; generic closing "I look forward to hearing from you."\n- Length: profile ≤ 3 sentences. Outcomes ≤ 5 bullets, each ≤ 22 words.\n- Output language: ${e ? "Danish" : "English"}.\nSpecific updates:\n1. profile_content — rewrite the PROFILE so it incorporates 1-2 concrete signals from the cover letter that weren't already in the CV profile. Keep existing strong content; trim or replace the weakest sentence to make room. Stay 2-3 sentences.\n2. outcomes_items — review SELECTED OUTCOMES. If a CL example/signal is missing from outcomes that should be there for this JD, ADD it as a new outcome bullet (and remove the least JD-relevant existing bullet if there are already 5). Keep the {b: "lead verb", t: "rest"} shape. The 'b' field is the leading verb-phrase (1-3 words ending in a noun phrase that completes the meaning, e.g. "Led the Change Control Board", "Reduced cycle time"). USE A VARIETY of leading verbs across the bullets — DO NOT repeat the same verb. Approved verbs (pick freely, mix them up): ${e ? "Ledede, Drev, Etablerede, Styrede, Byggede, Designede, Reducerede, Skar, Skalerede, Kortlagde, Oversatte, Koordinerede, Forhandlede, Løste, Undersøgte, Validerede, Kvalificerede, Forfattede, Ledte, Vejledte, Mentorerede, Omstrukturerede, Initierede, Konfigurerede, Specificerede" : "Led, Owned, Built, Ran, Designed, Architected, Drove, Delivered, Implemented, Established, Shipped, Reduced, Cut, Scaled, Mapped, Translated, Coordinated, Negotiated, Resolved, Investigated, Validated, Qualified, Authored, Chaired, Guided, Mentored, Restructured, Initiated, Configured, Specified, Directed, Supervised"}. NEVER use the same opening verb twice in a row, and NEVER use one verb (e.g., "Directed") for more than 2 of the 5 bullets.\n3. core_comp_rows — only update if a CL-relevant focus area is missing entirely. Otherwise return the CV's existing rows unchanged.\nReturn ONLY valid JSON: {"profile_content":"...","outcomes_items":[{"b":"","t":""},...],"core_comp_rows":[["Focus Area","Strategic Expertise"],["focus","exp"],...]}`,
+                  t = `You are a senior CV editor. The candidate has already written a tailored cover letter for a specific job. The cover letter contains concrete, JD-specific signals (named systems, frameworks, decision examples, outcomes). Your job is to update the CV so the same JD-specific signals appear in the CV PROFILE and SELECTED OUTCOMES — so a recruiter who only reads the CV still sees the same fit signal.\nVOICE & TONE — SCANDINAVIAN PROFESSIONAL (applies regardless of output language):\n- Calm, factual, direct. Sentences state what was done — they don't perform.\n- Collaborative, not self-aggrandising. Understated confidence.\n- Even in English, AVOID American resume-speak energy: no "transformative", "passionate", "dynamic", "results-driven", "thought leader", "spearheaded", "championed", "drove change", "moved the needle".\n- Test: would this sound natural said aloud in a calm voice in a meeting in Copenhagen? If no, rewrite.\nRules — ABSOLUTE:\n- Use ONLY content present in the supplied cover letter and current CV. Do NOT invent new claims, numbers, or experience.\n- ANTI-FABRICATION (STRICT): Do NOT invent skills, certifications, regulatory expertise, or domain knowledge that is not EXPLICITLY present in the candidate's existing CV or background. SPECIFICALLY FORBIDDEN to fabricate (unless already in the candidate's CV): GxP, GMP, GLP, GCP, MDR, IVDR, ISO 13485, ISO 14971, ISO 9001, FDA submissions, 510(k), PMA, CE mark, clinical trials, pharmacovigilance, post-market surveillance, biostatistics, regulatory affairs experience, design history files (DHF), device master records (DMR), GAMP 5, IEC 62304, IEC 62366, IEC 61508 (unless candidate has it; ISO 26262 is NOT IEC 61508). If the JD demands a skill the candidate does NOT have, omit the claim or frame it as transferable foundation — do NOT pretend ownership. When in doubt, leave it out.\n- Preserve every number, proper noun, tool name, certification, and standards code from the current CV exactly.\n- Banned words: spearhead, ensure, foster, streamline, strengthen, empower, leverage, drive (as 'drive change'), deliver (vague), enable, robust, comprehensive (without specifics), cutting-edge, state-of-the-art, world-class, leading, impactful, rooted, grounded, committed, passionate, holistic, multi-faceted, cross-functional, tværgående, tværfunktionel, collaborative (filler), central ('played a central role'), journey, dynamic, proactive, agile (unless software context), seamless, bottomline.\n- Banned phrases: key role, pivotal role, end-to-end, proven track record, strong communicator, strong leader, results-driven, strategic mindset, client-focused, customer-centric, mission-driven, "My expertise lies in", "I am known for", "At the heart of my work", "My approach is", "I am passionate about", "I thrive in", "I bring a wealth of experience", "Proven ability to", "I am committed to", "Passionate about driving", "Known for fostering."\n- Banned patterns: opener "In my role…"; "Whether in X or Y…"; "My career has been built on…"; "Across functions and geographies…"; "I have demonstrated the ability to…"; "Ensured alignment of…"; exclamation marks anywhere; filler transitions (moreover, therefore, furthermore — rewrite the sentence instead); vague bullets with no outcome; generic closing "I look forward to hearing from you."\n- Length: profile ≤ 3 sentences. Outcomes ≤ 5 bullets, each ≤ 22 words.\n- Output language: ${e ? "Danish" : "English"}.\nSpecific updates:\n1. profile_content — rewrite the PROFILE so it incorporates 1-2 concrete signals from the cover letter that weren't already in the CV profile. Keep existing strong content; trim or replace the weakest sentence to make room. Stay 2-3 sentences.\n2. outcomes_items — review SELECTED OUTCOMES. If a CL example/signal is missing from outcomes that should be there for this JD, ADD it as a new outcome bullet (and remove the least JD-relevant existing bullet if there are already 5). Keep the {b: "lead verb", t: "rest"} shape. The 'b' field is the leading verb-phrase (1-3 words ending in a noun phrase that completes the meaning, e.g. "Led the Change Control Board", "Reduced cycle time"). USE A VARIETY of leading verbs across the bullets — DO NOT repeat the same verb. Approved verbs (pick freely, mix them up): ${e ? "Ledede, Drev, Etablerede, Styrede, Byggede, Designede, Reducerede, Skar, Skalerede, Kortlagde, Oversatte, Koordinerede, Forhandlede, Løste, Undersøgte, Validerede, Kvalificerede, Forfattede, Ledte, Vejledte, Mentorerede, Omstrukturerede, Initierede, Konfigurerede, Specificerede" : "Led, Owned, Built, Ran, Designed, Architected, Drove, Delivered, Implemented, Established, Shipped, Reduced, Cut, Scaled, Mapped, Translated, Coordinated, Negotiated, Resolved, Investigated, Validated, Qualified, Authored, Chaired, Guided, Mentored, Restructured, Initiated, Configured, Specified, Directed, Supervised"}. NEVER use the same opening verb twice in a row, and NEVER use one verb (e.g., "Directed") for more than 2 of the 5 bullets.\n3. core_comp_rows — only update if a CL-relevant focus area is missing entirely. Otherwise return the CV's existing rows unchanged.\nReturn ONLY valid JSON: {"profile_content":"...","outcomes_items":[{"b":"","t":""},...],"core_comp_rows":[["The role needs","What I bring, with proof"],["focus","exp"],...]}`,
                   n = `COVER LETTER CONTENT:\n- WHO I AM: ${r}\n- WHY THIS POSITION: ${a}\n- HOW I WOULD CONTRIBUTE: ${i.join(" / ")}\n- FOUNDATION (hands-on): ${l}\n- FOUNDATION (professionally): ${s}\nCURRENT CV CONTENT:\n- PROFILE: ${c}\n- SELECTED OUTCOMES: ${JSON.stringify(d)}\n- CORE COMPETENCIES: ${JSON.stringify(p)}\nReturn the updated JSON now.`,
                   o =
                     '\n\nABSOLUTE: Your response MUST start with the character "{" and contain ONLY a single valid JSON object. NO prose. NO markdown fences. NO commentary. First character: "{". Last character: "}".';
@@ -26777,7 +26792,7 @@
                           ? {
                               ...e,
                               rows: [
-                                ["Focus Area", "Strategic Expertise"],
+                                ["The role needs", "What I bring, with proof"],
                                 ...g.core_comp_rows.slice(1),
                               ],
                             }
@@ -28110,6 +28125,11 @@
                         "expertise",
                         "strategisk ekspertise",
                         "ekspertise",
+                        // CC-HEADERS-PLAIN-001: the plain-words pair (EN + DA)
+                        "the role needs",
+                        "rollen kræver",
+                        "what i bring, with proof",
+                        "det bringer jeg, med belæg",
                       ];
                     return r.includes(n) || r.includes(o) ? e.slice(1) : e;
                   },
@@ -28519,7 +28539,7 @@
                       return {
                         ...e,
                         rows: [
-                          ["Focus Area", "Strategic Expertise"],
+                          ["The role needs", "What I bring, with proof"],
                           ..._ccClean,
                         ],
                       };
@@ -28905,7 +28925,7 @@
                                 // phrase so bring-761 sets it as the "What I bring:" lead-in body.
                                 _bringIntro: F.bring_intro || "",
                                 rows: [
-                                  ["Focus Area", "Strategic Expertise"],
+                                  ["The role needs", "What I bring, with proof"],
                                   ...t(
                                     (
                                       F.bring_rows ||
@@ -44733,8 +44753,8 @@
                                           Array.isArray(e.items)
                                         ) {
                                           const t = [
-                                            "Focus Area",
-                                            "Strategic Expertise",
+                                            "The role needs",
+                                            "What I bring, with proof",
                                           ];
                                           ((e.rows = [
                                             t,

@@ -234,7 +234,9 @@ in CI) + a live translate-persist cycle to verify — carry forward.
 
 ## Row 25 — TABLE-GEOMETRY-PARITY-001
 
-_verified: 2026-10-09_
+_verified: 2026-10-18_
+
+_reconcile 2026-10-18 (CI nightly, E1, HEAD `fe67552f`): forwarding pipeline STILL INTACT — combined `renderCompetencyTable`/`tableWidthPct`/`tableRatio` markers present at all five sites unchanged (`antcv-docx-client.js` 11, `antcv-table-headers-editable-341.js` 1, `antcv-section-align.js` 7, `antcv-auto-pagebreak-block-001.js` 1, `workers/docx-worker/src/index.js` 9); no code delta since 10-09. The FIDELITY gap (real CloudConvert PDF vs preview: Carlito advance widths, 3pt/7.5pt padding, 2-vs-3 line clamp) still needs a real export diff — unattended CI spends no CloudConvert credits. Blocked on: owner session. Suite 1830/1830 green._
 
 _reconcile 2026-10-09 (desktop nightly, E1, HEAD `45e11297`): forwarding pipeline STILL INTACT — `renderCompetencyTable` + `tableWidthPct`/`tableRatio` present at all five sites (`antcv-docx-client.js` 11 refs, `antcv-table-headers-editable-341.js` 1, `antcv-section-align.js` 7, `antcv-auto-pagebreak-block-001.js` 1, `workers/docx-worker/src/index.js` 9); live docx-worker `1.14.174-appline-edit` = repo, `pdf_via: cloudconvert`. The FIDELITY gap still needs a real CloudConvert PDF diffed against the preview; this run did not spend CloudConvert credits on an unattended export. Blocked on: owner session (real export + eyeball). Suite 1821/1821 at baseline._
 
@@ -260,7 +262,9 @@ _reconcile 2026-09-07 (CI nightly, E1): WIB-TABLE-DIMS-001 forwarding pipeline I
 
 ## Row 6 — BANNED-WORDS-MERGE-001
 
-_verified: 2026-10-09_
+_verified: 2026-10-18_
+
+_reconcile 2026-10-18 (CI nightly, E1, HEAD `fe67552f`): code-complete state STILL HOLDS — both kill-switches `antcv:keep-native-banned` + `antcv:no-kernel-chain` present in `antcv-data-importer.js` (2 hits), island `banned_*` writer present in `antcv-react-islands.js` (1 hit); no code delta since 10-09; full suite 1830/1830 green. Unchanged: OWNER eyeball of the merged banned-words UI + one file of each of the 6 loader types — owner-gated, not verifiable in CI._
 
 _reconcile 2026-10-09 (CI nightly, E1): code-complete state STILL HOLDS on HEAD `d5bda7eb` — both kill-switches `antcv:keep-native-banned` + `antcv:no-kernel-chain` present in `antcv-data-importer.js` (2 hits), island `banned_*` writer present in `antcv-react-islands.js`; full suite 1821/1821 green. Unchanged: OWNER eyeball of the merged banned-words UI + one file of each of the 6 loader types — owner-gated, not verifiable in CI._
 
@@ -286,7 +290,9 @@ _reconcile 2026-09-07 (CI nightly, E1): code-complete state CONFIRMED against HE
 
 ## Row 8 — KERNEL-V2-READER-001
 
-_verified: 2026-10-09_
+_verified: 2026-10-18_
+
+_reconcile 2026-10-18 (CI nightly, E1, HEAD `fe67552f`): `pwa/test/unit/kernel-v2-reader.test.mjs` RE-RUN GREEN (5/5); `antcv:ingestedKernel` staged-kernel reader intact in `antcv-kernel-import.js` (2 hits, both bundles). No code delta since 10-09. Unchanged: (a) bullets-path v2-direct migration (safe while autoSync projects v2→workHistory), (c) es/zh + lazy language_view tier (needs real models), (d) §6 P/DOCX/PDF regression parity on an uploaded docx (owner-gated) — none doable in CI._
 
 _reconcile 2026-10-09 (CI nightly, E1): `pwa/test/unit/kernel-v2-reader.test.mjs` RE-RUN GREEN (5/5) on HEAD `d5bda7eb`; `antcv:ingestedKernel` staged-kernel reader intact in `antcv-kernel-import.js` (both bundles). Unchanged: (a) bullets-path v2-direct migration (safe while autoSync projects v2→workHistory), (c) es/zh + lazy language_view tier (needs real models), (d) §6 P/DOCX/PDF regression parity on an uploaded docx (owner-gated) — none doable in CI._
 
@@ -312,7 +318,9 @@ _reconcile 2026-09-07 (CI nightly, E1): `pwa/test/unit/kernel-v2-reader.test.mjs
 
 ## Row 12 — AI-NOTICE-LEFT-CLOUDCONVERT-001
 
-_verified: 2026-10-09_
+_verified: 2026-10-18_
+
+_reconcile 2026-10-18 (CI nightly, E1, HEAD `fe67552f`): `pwa/test/unit/ai-notice-position.test.mjs` RE-RUN GREEN (3/3); the page-relative margin-left encoding (0pt/275pt + jc) in `workers/docx-worker/src/index.js` is unchanged. The AI-NOTICE-LEFT anchor bug stays effectively resolved; row lingers only on the docx-baseline "remaining 3" (cjlr-table-export, pageflow-export, spacing-linkedin-export), SEPARATE tests. Recommendation stands (5th sweep): owner move to CLOSED and re-file the 3 baseline gaps under their own IDs if still open._
 
 _reconcile 2026-10-09 (CI nightly, E1): `pwa/test/unit/ai-notice-position.test.mjs` RE-RUN GREEN (3/3) on HEAD `d5bda7eb`; the page-relative margin-left encoding (0pt/275pt + jc) in `workers/docx-worker/src/index.js` is unchanged. The AI-NOTICE-LEFT anchor bug stays effectively resolved; row lingers only on the docx-baseline "remaining 3" (cjlr-table-export, pageflow-export, spacing-linkedin-export), SEPARATE tests. Recommendation stands: owner move to CLOSED and re-file the 3 baseline gaps under their own IDs if still open._
 
@@ -2137,7 +2145,9 @@ _reconcile 2026-09-07 (CI nightly, E3): `diag-panel-button-audit.mjs` RE-RUN on 
 
 > **Renumbered 2026-08-26: was row 40.** A document written before that date citing "row 40" may mean this row or SO-003. The ID is the key.
 
-_verified: 2026-10-08_
+_verified: 2026-10-18_
+
+_reconcile 2026-10-18 (CI nightly, E1 stalest slot, HEAD `fe67552f`): CODE-PRESENCE verify only (unattended CI cannot run a real board-fetch audit). The fetcher `scripts/job-tracker/job_sources.py` + `scripts/job-tracker/test_job_sources.py` are present on disk; the prompt-leg routing (position-discovery routes jobindex + jobbank through `job_sources.py`) is CLOSED (owner-approved 2026-08-26). The LIVE 4-source audit (jobindex / jobbank / LinkedIn guest / TheHub / Google Jobs readability + the 429-retry and TheHub card-pairing caveats) is owned by the position-discovery routine, last live-verified 2026-10-08 (10 d). No code delta. Suite 1830/1830 green._
 
 **2026-10-08 (position-discovery run, re-verified live):** jobindex 36 queries, jobbank 36 queries, 496 unique ads across both, readable. LinkedIn guest API: 52 queries x 3 pages of 10, 578 unique cards; 4 queries answered HTTP 429 on first pass and succeeded on a re-run after a 15 s pause, so the routine must retry 429s rather than mark the query dry. TheHub: plain `/jobs?search=<q>&location=Copenhagen` readable (12 queries, 59 cards) but the card markup pairs each `href` with the next card's title; read the job page before trusting a card. Google Jobs (3 WebSearch queries) readable, 5 named leads, all dead or unusable on vet.
 

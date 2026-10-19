@@ -4,6 +4,12 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 129 — SETTINGS-ROUTE-NOOP-001 — CLOSED 2026-10-19 (desktop nightly, evidence: real-browser island-path probe original 0/3 → fixed 5/5, history-guard diag 1/3 → 4/4, unit test red on the old bundle)
+
+_verified: 2026-10-19_
+
+_Found and fixed the same run by the desktop nightly 2026-10-19 (Gabo-PC, Opus 5.5, worktree-isolated, lane 1.51.5074-1.51.5093). Ship `1.51.5074-settings-route-fallback`. Found from row 21's E1 slot: `diag-settings-history-guard.mjs` FAILED 2 of 3 runs on this host while CI had one green run the same morning. Mechanism: the React-islands `SettingsRouter` (src/islands/SettingsRouter/SettingsRouter.tsx) replaces `window._antcvOpenSettingsRoute` in a `useEffect`; its `nav.openSettings()` records the intent and calls `window._antcvOpenSettings`, which app.js never sets (it is a render-local const). When the effect ran after app.js's last render the global stayed the island's hook and every caller got a silent no-op; `AntcvReactSettingsRouter.openSettings` was a no-op every time. The ⚙ button was unaffected (it sets app.js state directly). Fix: after `nav.openSettings()`, with no `_antcvOpenSettings`, call app.js's route (live global if app.js re-rendered after the island, else the one it replaced). Both island bundles rebuilt with vite after an identity round-trip gate (unedited source rebuilt byte-identical for core AND panels); core VERSION 1.51.619 → 1.51.5074 so the lazy panels load gets a fresh `?v`. Tests: new `pwa/test/settings-route-fallback.test.mjs` (3 checks, fails on the old bundle), suite 1837/1837, boot smoke OK, E2 churn PASS after the fix. Parent row 21 stays ACTIVE (real roller-side hardware Back eyeball)._
+
 ## Row 128 — GRAB-ZONE-SCROLL-TARGET-002 — CLOSED 2026-10-16 (desktop nightly, evidence: headless touch probe on the real app, negative control FAIL → OK, 6 unit checks, live served bundle carries the marker)
 
 _verified: 2026-10-16_

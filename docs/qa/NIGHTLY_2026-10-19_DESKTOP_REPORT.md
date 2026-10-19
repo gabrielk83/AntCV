@@ -85,3 +85,7 @@ Not advanced. Prior desktop runs verified the shipped code legs; the residuals n
 - Commit `fix(settings): 1.51.5074-settings-route-fallback` — source, both bundles, cache-bust set, unit test.
 - `docs/qa/PANEL_BUTTON_AUDIT_2026-10-19.md` / `.json`.
 - Register: row 129 in `REGISTER_CLOSED.md`, row 21 note in `REGISTER_ACTIVE_DETAIL.md`, top block in `ACTIVE_BUGS.md`, run summary in `REGISTER_RUNLOG.md`.
+
+## Post-push live verify
+
+Pushed `3403f322`. Pages served `sw.js` CACHE `antcv-1.51.5074-settings-route-fallback`, boot seed and `antcv-react-islands.js?v` at the same version; served `antcv-react-islands.js`, `antcv-react-islands-panels.js?v=1.51.5074` (fallback marker present) and `antcv-version-override.js` byte-identical to the repo. `diag-live-guard-sidecars` 9/9 and `browser-qa version-live,sidecars-live` 2/2 after the deploy.

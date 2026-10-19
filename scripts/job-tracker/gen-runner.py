@@ -483,6 +483,58 @@ def print_armed_summary(doc):
         print(f"   {r['uk']:32} rank {r['rank']:>3}  {str(r['company'])[:26]} / "
               f"{str(r['role'])[:30]}  app {r['app']}  ({tag})")
 
+_OWNER_PACKAGED_STATUS = r"cv/cl drafted|drafted|submitted|applied|interview|offer"
+
+def owner_packaged_rows(doc):
+    """JT-OWNER-PACKAGED-DEFAULT-ON-001 (2026-10-19): DEFAULT-ON rows (no queue
+    entry, no artifact, not closed) that the owner already packaged or sent by
+    hand: a tracked status of drafted / submitted / applied / interview / offer,
+    or a package line (U+1F4E6) in the flag column. eligible_rows still elects
+    them (`q is None and not has_art`), so an unattended `run` would spend a
+    model call on a role the owner has applied for with their own CV. Live on
+    rev 304: 3Shape Optics Engineer (rank 185) and WD R&D Engineer (rank 186),
+    both "Submitted" with packages 1043 / 1044. REPORT-ONLY until the owner
+    answers row 127 (b): eligibility is unchanged, the nightly names them."""
+    import re as _re
+    rows = doc.get("rows") or []
+    jd = doc.get("jd") or {}; queue = doc.get("queue") or {}
+    arts = doc.get("artifacts") or {}
+    out = []
+    for row in rows:
+        uk = row_uk(row)
+        if queue.get(uk) is not None or is_closed_row(row):
+            continue
+        a = arts.get(uk) or {}
+        if a.get("cv_export_url") or a.get("application_id"):
+            continue
+        if jd_content_len(jd.get(uk)) <= 200:
+            continue
+        status = str(row[8] if len(row) > 8 else "")
+        flag = str(row[10] if len(row) > 10 else "")
+        hit_status = bool(_re.search(_OWNER_PACKAGED_STATUS, status, _re.I))
+        hit_pkg = "\U0001F4E6" in flag
+        if not (hit_status or hit_pkg):
+            continue
+        out.append({"uk": uk, "rank": row[0], "company": row[1], "role": row[2],
+                    "status": status, "package": hit_pkg})
+    out.sort(key=lambda r: r["rank"])
+    return out
+
+def print_owner_packaged_summary(doc):
+    """Name default-on rows the owner already packaged, so a run cannot draft one silently."""
+    pk = owner_packaged_rows(doc)
+    if not pk:
+        return
+    print("")
+    print(f"OWNER-PACKAGED but default-on ({len(pk)}) - no queue entry and no application, "
+          "so the nightly still elects the row, but the tracker says the owner drafted or "
+          "sent it by hand. Do not generate unless the owner arms it; clear the clock flag "
+          "in the tracker to drop it from the queue (row 127):")
+    for r in pk:
+        tag = f"status {r['status']}" + (", package line" if r["package"] else "")
+        print(f"   {r['uk']:32} rank {r['rank']:>3}  {str(r['company'])[:26]} / "
+              f"{str(r['role'])[:30]}  ({tag})")
+
 _DA_STOPWORDS = [" og ", " til ", " for ", " med ", " som ", " er ", " på ", " af ",
                  " ved ", " ikke ", " har ", " vil ", " skal ", " du ", " dig ",
                  " vi ", " vores ", " en ", " et ", " den ", " det "]
@@ -882,6 +934,7 @@ def cmd_list(args):
     if not args.row:
         print_unqueued_summary(doc)
         print_armed_summary(doc)  # JT-ARMED-ARTIFACT-NO-DRAIN-001
+        print_owner_packaged_summary(doc)  # JT-OWNER-PACKAGED-DEFAULT-ON-001
 
 def cmd_run(args):
     os.makedirs(args.out, exist_ok=True)
@@ -1044,6 +1097,7 @@ def cmd_run(args):
     if not args.row:
         print_unqueued_summary(doc)
         print_armed_summary(doc)  # JT-ARMED-ARTIFACT-NO-DRAIN-001
+        print_owner_packaged_summary(doc)  # JT-OWNER-PACKAGED-DEFAULT-ON-001
     idx_path = os.path.join(args.out, "index.json")
     json.dump(results_index, open(idx_path, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     print(f"\nindex -> {idx_path}")

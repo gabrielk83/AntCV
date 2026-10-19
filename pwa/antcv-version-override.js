@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.5073-unsol-company';
+  const TARGET_VERSION = '1.51.5074-settings-route-fallback';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.5073-unsol-company',
     '1.51.5053-cc-tooltips-plain',
     '1.51.5033-cc-headers-plain',
     '1.51.5013-grab-zone-scroll-target',

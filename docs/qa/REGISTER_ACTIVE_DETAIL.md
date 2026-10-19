@@ -340,7 +340,9 @@ _reconcile 2026-09-07 (CI nightly, E1): the shipped page-relative margin-left en
 
 ## Row 21 — SETTINGS-ROLLER-RESET-001
 
-_verified: 2026-10-09_
+_verified: 2026-10-19_
+
+_reconcile 2026-10-19 (CI nightly, E1): `pwa/test/diag-settings-history-guard.mjs` RE-RUN GREEN on HEAD `d23170cf` (headless, real browser — chromium-headless-shell v1223 installed this run via `npx playwright install`) — guarded: openBefore {open:true,sentinel:true} → after {marker:"alive", url:/index.html, open:false, sentinel:true} (Back consumed the sentinel, panel closed, NO reload, sentinel re-armed); kill-switch control: navigated away to /manifest.json, marker GONE (the reset reproduced). `antcv-settings-history-guard.js` loaded in index.html + kill-switch `antcv:no-settings-history-guard` present. Suite 1834/1834. Unchanged: OWNER live-verify on real roller-side hardware Back button still owed._
 
 _reconcile 2026-10-09 (CI nightly, E1): `pwa/test/diag-settings-history-guard.mjs` RE-RUN GREEN on HEAD `d5bda7eb` (headless, real browser — chromium-headless-shell installed this run) — guarded: openBefore {open:true,sentinel:true} → after {marker:"alive", url:/index.html, open:false, sentinel:true} (Back consumed the sentinel, panel closed, NO reload, sentinel re-armed); kill-switch control: navigated away to /manifest.json, marker GONE (the reset reproduced). `antcv-settings-history-guard.js` + kill-switch `antcv:no-settings-history-guard` present. Unchanged: OWNER live-verify on real roller-side hardware Back button still owed._
 
@@ -360,7 +362,9 @@ _reconcile 2026-09-07 (CI nightly, E1): `diag-settings-history-guard.mjs` GREEN 
 
 ## Row 22 — CL-SLOGAN-RICHCONTENT-001
 
-_verified: 2026-10-09_
+_verified: 2026-10-19_
+
+_E1 re-verify 2026-10-19 (CI nightly, HEAD d23170cf): phase-1 sidecar `antcv-cl-slogan-element.js` loaded in index.html (1 ref) + kill-switch `antcv:disable-cl-slogan-element` present in the sidecar (2 hits); suite 1834/1834. Phase 2 (real sections.cl rich_block) remains GENUINE OPEN WORK — spec-before-splice, owner-gated._
 
 _E1 re-verify 2026-10-09 (CI nightly, HEAD d5bda7eb): phase-1 sidecar `antcv-cl-slogan-element.js` loaded in index.html (1 ref) + kill-switch `antcv:disable-cl-slogan-element` present in the sidecar (2 hits); suite 1821/1821. Phase 2 (real sections.cl rich_block) remains GENUINE OPEN WORK — spec-before-splice, owner-gated._
 
@@ -1943,7 +1947,9 @@ _verified: 2026-10-17_
 
 ## Row 3 — FLOAT-SPINE-001
 
-_verified: 2026-10-09_
+_verified: 2026-10-19_
+
+**Re-verify 2026-10-19 (CI nightly — E1 stalest slot, code-presence on HEAD `d23170cf`):** `floatSpine`/`float_spine` gate present `workers/docx-worker/src/index.js` ×6 + `pwa/antcv-docx-client.js` ×2, default-OFF unchanged; owner-visual re-export gate (no reference docx in CI) still owed. Full PWA suite 1834/1834 green.
 
 **Re-verify 2026-10-09 (desktop nightly, Gabo-PC, Fable 5.1, HEAD `45e11297`):** `floatSpine` gate present `workers/docx-worker/src/index.js` ×6 (default-OFF line 24685: `payload.float_spine === true || style.floatSpine === true`) + `pwa/antcv-docx-client.js` ×2; live docx-worker `/health` 200 at `1.14.174-appline-edit` = repo. Owner-visual re-export gate still owed (no reference docx; flag stays OFF). Blocked on: owner session (real CloudConvert export with the flag on). Suite 1821/1821 at baseline.
 
@@ -1967,7 +1973,9 @@ _verified: 2026-10-09_
 
 ## Row 20 — CONTACT-TRACK-TIGHT-001
 
-_verified: 2026-10-09_
+_verified: 2026-10-19_
+
+**Re-verify 2026-10-19 (CI nightly — E1 stalest slot, code-presence on HEAD `d23170cf`):** docx-worker anchors present (`headlineAlign` / `fix_orphans` / `SIRIN-SEMANTICS-001` / `CONTACT-TRACK-TIGHT-001`, 4 refs in `workers/docx-worker/src/index.js`). Stays OWNER-GATED: acceptance needs one Hard Refresh + CL regen + CV re-export eyeballed in a real CloudConvert PDF CI cannot do. Full PWA suite 1834/1834 green.
 
 **Re-verify 2026-10-09 (desktop nightly, Gabo-PC, Fable 5.1, HEAD `45e11297`):** docx-worker anchors present (`headlineAlign` / `fix_orphans` / `SIRIN-SEMANTICS-001` / `CONTACT-TRACK-TIGHT-001`, 4 refs in `workers/docx-worker/src/index.js`); live docx-worker `1.14.174-appline-edit` = repo, so the shipped legs are what production renders. Stays OWNER-GATED: acceptance needs one Hard Refresh + CL regen + CV re-export eyeballed in a real CloudConvert PDF. Blocked on: owner session. Suite 1821/1821 at baseline.
 
@@ -2399,7 +2407,9 @@ _verified: 2026-10-16_
 
 ## Row 123 — PKG-ID-PERSIST-MIGRATE-001
 
-_verified: 2026-10-09_
+_verified: 2026-10-19_
+
+**Re-verify 2026-10-19 (CI nightly — E1 stalest slot, code-presence on HEAD `d23170cf`):** state UNCHANGED — `set("stylePackage", __pkgNorm(...))` write-backs exist only on the cloud-restore path (app.src.js 17624) and a restore-like path (23466); line 40294 is the raw user-select write (`set("stylePackage", e)`), 20857 is the `__pkgMap[v]` settings path — there is still NO boot/init-time normalising write-back, so a locally-persisted orphan `"scandinavian"` stays orphan. Render stays FIXED via `__pkgNorm` (6 refs). Severity LOW, owner-gated (touches app.js init → surgical mirror, not done unattended). Full PWA suite 1834/1834 green.
 
 **Filed 2026-10-09 (CI nightly, register-escape + status reconcile).** The browser-QA `palette-mix`
 check (PACKAGE-PALETTE-MIX-001) FAILS live on prod `1.51.4873-linear-enriched`

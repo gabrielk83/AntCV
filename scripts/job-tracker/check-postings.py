@@ -328,6 +328,34 @@ def next_misses(prev, verdict, today):
     return misses, struck                            # WALLED / ERROR hold steady
 
 
+def next_error_streak(prev, verdict, today):
+    """POSTING-ERROR-STREAK-001: how long a posting has answered ERROR, for the
+    report only. Returns (err_since, err_days, err_last), or ("", 0, "") once the
+    row answers anything else. ERROR never counts toward an archive (a 5xx or a
+    timeout says nothing about the role); this only names a posting that has been
+    unreachable for days, so the run log stops counting the streak by hand.
+
+    One count per calendar day (two routines sweep on overlap days). A row whose
+    last status was already ERROR before this field existed seeds the streak from
+    that probe's date.
+    """
+    if verdict != "ERROR":
+        return "", 0, ""
+    prev = prev or {}
+    iso = today.isoformat()
+    since = str(prev.get("err_since") or "")
+    days = int(prev.get("err_days") or 0)
+    last = str(prev.get("err_last") or "")
+    if not since:
+        if prev.get("status") == "ERROR" and prev.get("last") and str(prev["last"]) < iso:
+            since, days, last = str(prev["last"]), 1, str(prev["last"])
+        else:
+            since, days, last = iso, 0, ""
+    if last != iso:
+        days += 1
+    return since, days, iso
+
+
 # ---------------------------------------------------------------------- main
 
 def apply_verdict(doc, row, uk, verdict, detail, today, apply):
@@ -338,6 +366,12 @@ def apply_verdict(doc, row, uk, verdict, detail, today, apply):
     """
     ent = dict(doc["postingcheck"].get(uk) or {})
     misses, struck = next_misses(ent, verdict, today)
+    err_since, err_days, err_last = next_error_streak(ent, verdict, today)
+    if err_since:
+        ent.update({"err_since": err_since, "err_days": err_days, "err_last": err_last})
+    else:
+        for k in ("err_since", "err_days", "err_last"):
+            ent.pop(k, None)
     ent.update({"misses": misses, "last": today.isoformat(),
                 "last_strike": struck,
                 "status": verdict, "detail": detail[:200]})
@@ -351,14 +385,16 @@ def apply_verdict(doc, row, uk, verdict, detail, today, apply):
         doc["queue"][uk] = False
         ent["archived_on"] = today.isoformat()
         archived = True
-    return misses, will_archive, archived
+    return misses, will_archive, archived, err_since, err_days
 
 
-def _result(row, uk, url, verdict, detail, misses, will_archive, archived):
+def _result(row, uk, url, verdict, detail, misses, will_archive, archived,
+            err_since="", err_days=0):
     return {"uk": uk, "company": row[1] if len(row) > 1 else "",
             "role": row[2] if len(row) > 2 else "", "url": url,
             "verdict": verdict, "detail": detail[:200],
-            "misses": misses, "archived": archived, "would_archive": will_archive}
+            "misses": misses, "archived": archived, "would_archive": will_archive,
+            "err_since": err_since, "err_days": err_days}
 
 
 def reapply_results(doc, results, today, apply):
@@ -379,10 +415,10 @@ def reapply_results(doc, results, today, apply):
         row = by_uk.get(r["uk"])
         if row is None or is_archived(row):
             continue
-        misses, will, did = apply_verdict(doc, row, r["uk"], r["verdict"],
-                                          r["detail"], today, apply)
+        misses, will, did, es, ed = apply_verdict(doc, row, r["uk"], r["verdict"],
+                                                  r["detail"], today, apply)
         out.append(_result(row, r["uk"], r["url"], r["verdict"], r["detail"],
-                           misses, will, did))
+                           misses, will, did, es, ed))
     return out
 
 
@@ -425,8 +461,8 @@ def probe_rows(doc, args, today):
         else:
             verdict, detail = classify(status, final_url, target, text, today)
 
-        misses, will, did = apply_verdict(doc, row, uk, verdict, detail, today, args.apply)
-        results.append(_result(row, uk, url, verdict, detail, misses, will, did))
+        misses, will, did, es, ed = apply_verdict(doc, row, uk, verdict, detail, today, args.apply)
+        results.append(_result(row, uk, url, verdict, detail, misses, will, did, es, ed))
     return results
 
 
@@ -495,6 +531,8 @@ def cmd_check(args):
             continue
         mark = "ARCHIVED" if r["archived"] else ("would archive" if r["would_archive"]
                                                  else "strike %d/%d" % (r["misses"], STRIKES_TO_ARCHIVE))
+        if r.get("err_days", 0) > 1:
+            mark += ", ERROR %d sweep days since %s" % (r["err_days"], r["err_since"])
         print("  [%-7s] %s / %s  -> %s" % (r["verdict"], r["company"], r["role"], mark))
         print("            %s  (%s)" % (r["url"][:100], r["detail"]))
     live = counts.get("LIVE", 0)

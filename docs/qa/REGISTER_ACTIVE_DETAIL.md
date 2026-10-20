@@ -392,7 +392,9 @@ _E1 sweep 2026-09-08 (CI nightly): phase 1 (`antcv-cl-slogan-element.js`) confir
 
 ## Row 33 — WHY-RULE-EXPORT-PARITY-001
 
-_verified: 2026-10-10_
+_verified: 2026-10-20_
+
+_E1 re-verify 2026-10-20 (CI nightly, HEAD 69824677): `antcv:nameLineAlign` + `headline_align`/`headlineAlign` markers still intact in `antcv-docx-client.js` and `docx-worker/src/index.js`; `export-align-parity.test.mjs` GREEN (full suite 1837/1837). CODE-COMPLETE — only remaining step is a signed-in export eyeball; **recommended to owner for CLOSED**._
 
 _E1 re-verify 2026-10-10 (CI nightly): `antcv:nameLineAlign` (4 hits) + `headline_align`/`headlineAlign` markers intact in `antcv-docx-client.js`; `export-align-parity.test.mjs` GREEN 6/6 (suite 1821/1821). CODE-COMPLETE — only remaining step is a signed-in export eyeball; **recommended to owner for CLOSED**._
 
@@ -418,7 +420,9 @@ _E1 sweep 2026-09-08 (CI nightly): all three legs confirmed in CURRENT code — 
 
 ## Row 24 — ANALYTICS-BUTTONS-SESSION-TIMEOUT-001
 
-_verified: 2026-10-10_
+_verified: 2026-10-20_
+
+_E1 re-verify 2026-10-20 (CI nightly, HEAD 69824677): scoped-wipe markers (`/auth/`, `api/prefs`) still intact in `antcv-auth.js`; `auth-401-wipe-scope.test.mjs` GREEN (full suite 1837/1837). Client + server both done; only owner three-button click-through after Hard Refresh remains (cloud can't sign in) — kept ACTIVE (owner gate)._
 
 _E1 re-verify 2026-10-10 (CI nightly): scoped-wipe markers (`/auth/`, `api/prefs`) intact in `antcv-auth.js` (7 hits); `auth-401-wipe-scope.test.mjs` GREEN 5/5 (suite 1821/1821). Client + server both done; only owner three-button click-through after Hard Refresh remains (cloud can't sign in)._
 
@@ -444,7 +448,9 @@ _E1 sweep 2026-09-08 (CI nightly): client 401-wipe scope guard (`auth-401-wipe-s
 
 ## Row 26 — TOOLS-SIDEBAR-COMPRESS-001
 
-_verified: 2026-10-10_
+_verified: 2026-10-20_
+
+_E1 re-verify 2026-10-20 (CI nightly, HEAD 69824677): belt sidecar `antcv-sidebar-compact-001.js` present; `sidebar_compact` rule still in `gold-rules.json`; `sidebar-compact.test.mjs` GREEN (full suite 1837/1837). Deterministic trim belt done; only owner visual eyeball of the unsolicited export sidebar + the separate SIDEBAR-PACKING token-order belt remain — kept ACTIVE (owner gate)._
 
 _E1 re-verify 2026-10-10 (CI nightly): belt sidecar `antcv-sidebar-compact-001.js` present; `sidebar_compact` rule intact in `gold-rules.json`; `sidebar-compact.test.mjs` GREEN 8/8 (suite 1821/1821). Deterministic trim belt done; only owner visual eyeball of the unsolicited export sidebar remains._
 
@@ -470,7 +476,9 @@ _E1 sweep 2026-09-08 (CI nightly): belt present in CURRENT code — `antcv-sideb
 
 ## Row 30 — LLM-IMAGE-ROUTING-001
 
-_verified: 2026-10-10_
+_verified: 2026-10-20_
+
+_E1 re-verify 2026-10-20 (CI nightly, HEAD 69824677): `VISION_BLIND`/`messagesHaveImages`/`filterVisionBlind` still intact in BOTH `workers/proxy/src/multi-llm.js` and `workers/demo-proxy/src/multi-llm.js`; `image-routing-ee.test.mjs` GREEN (full suite 1837/1837). Both proxies carry the filter; the only remainder is the explicitly-optional adequacy-gate extension to vision calls → CODE-COMPLETE, **recommended to owner for CLOSED**._
 
 _E1 re-verify 2026-10-10 (CI nightly): `VISION_BLIND`/`messagesHaveImages`/`filterVisionBlind` intact in BOTH `workers/proxy/src/multi-llm.js` and `workers/demo-proxy/src/multi-llm.js`; `image-routing-ee.test.mjs` GREEN 3/3 (suite 1821/1821). Both proxies carry the filter; adequacy-gate extension to vision calls remains a nice-to-have._
 
@@ -496,7 +504,9 @@ _E1 sweep 2026-09-08 (CI nightly): all legs confirmed in CURRENT code — `filte
 
 ## Row 32 — CL-PLATFORM-SIGNALS-001
 
-_verified: 2026-10-10_
+_verified: 2026-10-20_
+
+_E1 re-verify 2026-10-20 (CI nightly, HEAD 69824677): `__platformRule` detector + injection still intact in `app.src.js` / minified `__pr` in `app.js` (both-bundle mirror); `cl-platform-signals.test.mjs` GREEN (full suite 1837/1837). Rule wired in both bundles; regen-gated — needs a signed-in platform-class JD gen to eyeball the CL tone (owner, non-code)._
 
 _E1 re-verify 2026-10-10 (CI nightly): `__platformRule` detector + injection intact in `app.src.js` (3 hits); `cl-platform-signals.test.mjs` GREEN 10/10 (suite 1821/1821). Rule wired in both bundles; regen-gated — needs a signed-in platform-class JD gen to eyeball the CL tone._
 

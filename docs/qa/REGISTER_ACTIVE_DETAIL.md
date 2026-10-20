@@ -422,6 +422,8 @@ _E1 sweep 2026-09-08 (CI nightly): all three legs confirmed in CURRENT code — 
 
 _verified: 2026-10-20_
 
+_Desktop live click-through 2026-10-20 (Gabo-PC, saved owner token, new `pwa/test/diag-analytics-buttons-live.mjs`, GETs only): the session-wipe bug is GONE — token survives every click, no "session expired" alert, no reboot into the sign-in gate, "View summary" 200 in 0.8 s with the summary alert. The two EXPORT buttons do not complete: Export JSON hung, then `net::ERR_CONNECTION_RESET`; the buttons stay busy meanwhile, so CSV/summary clicks queue behind it. curl with the same token: export JSON 200 in 36 s at 07:24Z, 200 in 383 s at ~07:40Z. That is a separate defect, filed as row 130 (ANALYTICS-EXPORT-SLOW-001). This row stays ACTIVE until row 130 lands and the owner presses the three buttons once._
+
 _E1 re-verify 2026-10-20 (CI nightly, HEAD 69824677): scoped-wipe markers (`/auth/`, `api/prefs`) still intact in `antcv-auth.js`; `auth-401-wipe-scope.test.mjs` GREEN (full suite 1837/1837). Client + server both done; only owner three-button click-through after Hard Refresh remains (cloud can't sign in) — kept ACTIVE (owner gate)._
 
 _E1 re-verify 2026-10-10 (CI nightly): scoped-wipe markers (`/auth/`, `api/prefs`) intact in `antcv-auth.js` (7 hits); `auth-401-wipe-scope.test.mjs` GREEN 5/5 (suite 1821/1821). Client + server both done; only owner three-button click-through after Hard Refresh remains (cloud can't sign in)._
@@ -449,6 +451,8 @@ _E1 sweep 2026-09-08 (CI nightly): client 401-wipe scope guard (`auth-401-wipe-s
 ## Row 26 — TOOLS-SIDEBAR-COMPRESS-001
 
 _verified: 2026-10-20_
+
+_Desktop live leg 2026-10-20 (Gabo-PC): `antcv-sidebar-compact-001.js` served byte-identical to the repo (CR-stripped md5) at sw `1.51.5074-settings-route-fallback`. Residual gate unchanged._
 
 _E1 re-verify 2026-10-20 (CI nightly, HEAD 69824677): belt sidecar `antcv-sidebar-compact-001.js` present; `sidebar_compact` rule still in `gold-rules.json`; `sidebar-compact.test.mjs` GREEN (full suite 1837/1837). Deterministic trim belt done; only owner visual eyeball of the unsolicited export sidebar + the separate SIDEBAR-PACKING token-order belt remain — kept ACTIVE (owner gate)._
 
@@ -574,6 +578,8 @@ _E1 sweep 2026-09-09 (CI nightly, Opus 4.8): shipped code INTACT against HEAD `3
 
 _verified: 2026-10-10_
 
+_Desktop live leg 2026-10-20 (Gabo-PC): the four ORPHAN-PREFLIGHT-V3 sidecars served byte-identical to the repo at sw `1.51.5074-settings-route-fallback`. Residual gate unchanged._
+
 _E1 sweep 2026-10-10 (CI nightly, Opus 4.8): re-confirmed — all four ORPHAN-PREFLIGHT-V3 sidecars still loaded by `index.html` (`antcv-orphan-export-preflight.js`, `antcv-orphan-measure-bind.js`, `antcv-package-orphan-apply.js`, `antcv-orphan-cloud-persist-385.js`, 1 ref each); full suite 1821/1821 GREEN. STILL OPEN (unchanged, all need a real render/regen CI lacks): (a) work-style tail truncation, (b) page-3 ghost, (c) ~1.5-page real-PDF verify on a FRESH NIL-targeted export._
 
 _E1 sweep 2026-09-29 (CI nightly, Opus 4.8): re-confirmed — all four ORPHAN-PREFLIGHT-V3 sidecars still loaded by `index.html` (`antcv-orphan-export-preflight.js`, `antcv-orphan-measure-bind.js`, `antcv-package-orphan-apply.js`, `antcv-orphan-cloud-persist-385.js`, 1 ref each); full suite 1721/1721 GREEN on HEAD `07a07add`. STILL OPEN (unchanged, all need a real render/regen CI lacks): (a) work-style tail truncation against the owner's stored kernel, (b) page-3 ghost, (c) ~1.5-page real-PDF verify on a FRESH NIL-targeted export._
@@ -600,6 +606,8 @@ _E1 sweep 2026-09-09 (CI nightly, Opus 4.8): ORPHAN-PREFLIGHT-V3 sidecars INTACT
 
 _verified: 2026-10-10_
 
+_Desktop live leg 2026-10-20 (Gabo-PC): `antcv-profile-access-scrub.js` + `antcv-sidebar-relevance-cut.js` served byte-identical to the repo at sw `1.51.5074-settings-route-fallback`. Residual gate unchanged._
+
 _E1 sweep 2026-10-10 (CI nightly, Opus 4.8): re-confirmed — `antcv-profile-access-scrub.js` + `antcv-sidebar-relevance-cut.js` both still loaded in `index.html` (1 ref each); full suite 1821/1821 GREEN. REMAINING unchanged: the CV ~1.5pp GEN-LEVEL target (rides row 27's orphan work) is regen-gated — needs a fresh live NIL-targeted generation + real export, which CI cannot run._
 
 _E1 sweep 2026-09-29 (CI nightly, Opus 4.8): re-confirmed — `antcv-profile-access-scrub.js` (PROFILE-ACCESS-SCRUB-001) + `antcv-sidebar-relevance-cut.js` (JD-relevance cut) both still loaded in `index.html` (1 ref each); full suite 1721/1721 GREEN on HEAD `07a07add`. REMAINING is unchanged: the CV ~1.5pp GEN-LEVEL target (rides row 27's orphan work) is regen-gated — it needs a fresh live NIL-targeted generation + real export, which this CI environment cannot run (no models, no signed-in render)._
@@ -625,6 +633,8 @@ _E1 sweep 2026-09-09 (CI nightly, Opus 4.8): belts INTACT + loaded — `antcv-pr
 ## Row 29 — NIL-TARGETED-STATE-STICK-001
 
 _verified: 2026-10-10_
+
+_Desktop live leg 2026-10-20 (Gabo-PC): `antcv-generate-cloud-sync-277.js` served byte-identical to the repo at sw `1.51.5074-settings-route-fallback`. Residual gate unchanged._
 
 _E1 sweep 2026-10-10 (CI nightly, Opus 4.8): closed legs re-confirmed in current code — `META-DRIFT-GUARD-002` in `app.src.js` (2 refs); `277-SEQUENCE-GUARD-001` in the loaded sidecar `antcv-generate-cloud-sync-277.js` (5 refs); `CL-HYDRATE-EXPORT-GATE-001` in `antcv-docx-client.js` (3 refs). Full suite 1821/1821 GREEN. Leg C (live setItem writer-hunt + auto-save downgrade belt) unchanged OPEN — needs a signed-in session CI lacks._
 
@@ -2508,3 +2518,17 @@ _verified: 2026-10-19_
 **Owner decision.** (a) Arm both explicitly (`queue=true`) if an AntCV version is wanted beside 1043 / 1044, else clear the flag on both. (b) Say whether the nightly may treat a tracked status of "CV/CL drafted" / "Submitted" / "Applied", or a 📦 package line in the flag column, as owner-packaged: skip the row, name it in a block like the ARMED one, and generate only on an explicit `queue=true` or `--row`. Script-only once decided (`gen-runner.py` + a negative-controlled test); no `pwa/` asset.
 
 **ADVANCED 2026-10-19 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated).** Doc rev 304: both rows still default-ON (no `queue` entry, no artifact), and both tracked statuses now read **"Submitted"** (was "CV/CL drafted" on 10-16), with the 📦 package lines intact. The owner applied with packages 1043 / 1044. Not generated again (same judgment as 10-16). Shipped the report-only half of (b): `owner_packaged_rows(doc)` + `print_owner_packaged_summary` in `scripts/job-tracker/gen-runner.py`, printed after the ARMED block in `list` and at the end of `run`. A row is named when it is default-on, not closed, has no application, has a real JD (>200 chars), and carries a drafted / submitted / applied / interview / offer status or a 📦 line in the flag column. `eligible_rows` is UNCHANGED, so an unattended `run` would still draft these rows; the block makes that visible in one line instead of a manual judgment each night. New `test_owner_packaged.py` (19 checks): the live shape is named and still eligible, each signal alone is enough, armed / explicit-False / has-app / closed / stub-JD rows are not named, rank order, the printed block and its silence when empty. Negative-controlled: line 505 `is not None` → `is True` (1 red), line 505 closed clause removed (1 red), line 516 package signal dropped (1 red); restored byte-identical (`cmp`). **Still owed (owner):** (a) clear the ⏰ flag on rows 185 + 186 (both submitted); (b) say yes to turning the block into a skip (generate only on `queue=true` or `--row`), a one-line change in `eligible_rows` plus a test.
+
+---
+
+## Row 130 — ANALYTICS-EXPORT-SLOW-001
+
+_verified: 2026-10-20_
+
+**Found by the desktop nightly 2026-10-20 (Gabo-PC, Opus 5.5) during the row 24 live click-through.** Settings → Admin → Analytics → "⬇ Export JSON" sends `GET /api/analytics/export?format=json&view=sessions` to the relay, which forwards to cv-proxy `/analytics/export`. In headless Chromium on antcv.pages.dev the request hung, then failed with `net::ERR_CONNECTION_RESET`; while it was in flight the three buttons stayed busy. curl with the same owner token: 200 in 36 s (07:24Z), then 200 in **383 s** (~07:40Z), 12 KB body, 779 events, 15 sessions. "View summary" (list only, no value reads) answers in under 1 s.
+
+**Mechanism (code read, not profiled).** `workers/proxy/src/analytics-export.js` `listEventsFor`: after the paginated `kv.list`, it hydrates every candidate with `await kv.get(k.name)` in a serial loop (comment: "parallelism risks rate-limit bursts"). 779 serial KV reads, mostly cold, is the latency. Second risk, unverified: Workers cap KV operations per invocation (1000 on the paid plan); at ~780 events + list calls the export is near that cap, and failed gets are swallowed (`catch → continue`), so past it the export would silently drop events.
+
+**Proposed fix (not done; cv-proxy is the generation path, so the deploy is owner-gated for an unattended run).** (a) Hydrate in bounded batches (`Promise.all` over chunks of ~25) in `analytics-export.js` and the demo-proxy copy; (b) default the sessions view to a time window (e.g. last 30 days via `since`) so the read count stays under the per-invocation cap; (c) client: clear the busy state and show an error on a network failure. Unit test on a fake KV with a call-order/latency probe; then deploy proxy + demo-proxy via deploy.yml and re-run `node pwa/test/diag-analytics-buttons-live.mjs` (expects PASS: three 200s, token kept).
+
+**Owner decision.** Approve (a)+(b) and the two worker deploys, or point to a different export source (D1 telemetry) if KV analytics is being retired. Severity LOW (admin-only).

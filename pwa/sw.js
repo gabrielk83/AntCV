@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.5074-settings-route-fallback';
+const CACHE = 'antcv-1.51.5094-brand-ink-fit';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

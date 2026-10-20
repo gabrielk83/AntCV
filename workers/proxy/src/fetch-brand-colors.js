@@ -202,8 +202,22 @@ function isNonEmployerPage(html) {
 }
 
 
+// BRAND-ATS-ANY-TLD-001 (2026-10-20): Terma's posting lives on
+// career5.successfactors.EU. The set above only knew successfactors.COM, so the
+// .eu host was treated as Terma's OWN domain and SAP SuccessFactors' slate
+// palette (#223548) was returned as Terma's brand. ATS vendors run regional
+// TLDs (.eu, .de, .co.uk ...), so match on the registrable LABEL as well, and
+// cover the ATS hosts common in Danish/Nordic postings.
+const THIRD_PARTY_BOARD_LABELS = new Set([
+  ...[...THIRD_PARTY_BOARD_HOSTS].map((h) => h.split('.')[0]),
+  'sapsf', 'hr-manager', 'emply', 'varbi', 'jobylon', 'thehub', 'reachmee',
+  'webcruiter', 'talentech', 'hrmanager', 'oraclecloud', 'taleo', 'csod',
+]);
+
 function isThirdPartyBoard(hostname) {
-  return THIRD_PARTY_BOARD_HOSTS.has(registrableRoot(hostname.replace(/^www\./, '')));
+  const root = registrableRoot(String(hostname || '').toLowerCase().replace(/^www\./, ''));
+  if (THIRD_PARTY_BOARD_HOSTS.has(root)) return true;
+  return THIRD_PARTY_BOARD_LABELS.has(root.split('.')[0]);
 }
 
 // Legal-suffix strip + slugify. A heuristic, not a lookup service —
@@ -300,6 +314,32 @@ function hslSat(hex) {
 // A greyscale mid-tone (generic theme-color) or a near-white is NOT a brand.
 function isBrandWorthy(hex) { return hslSat(hex) >= 0.15 || relLum(hex) <= 0.06; }
 
+// BRAND-BAND-PICK-001 (2026-10-20): the picked colour paints the WHOLE header
+// band and sidebar. Raw frequency happily crowns a light highlight colour
+// (Terma: yellow buttons #ffc92b over its blue #0d64aa) — a band no real brand
+// uses. Rule: a brand-worthy theme-color still wins outright (Trackman orange,
+// NVIDIA-style light brands that declare themselves). Among stylesheet colours,
+// when the frequency leader is LIGHT (white ink fails AA) and a DARK brand
+// colour (white ink >= 4.5:1) is a near-equal contender (>= 50% of the
+// leader's count, within the top 6), the dark one is the band and the light
+// one becomes the accent. A light brand with no dark contender keeps its own
+// colour and gets black ink (BRAND-INK-MATCH-001 unchanged).
+const BAND_CONTENDERS = 6;
+const BAND_CONTENDER_SHARE = 0.5;
+function carriesWhiteInk(hex) { return contrast(hex, '#FFFFFF') >= 4.5; }
+function pickBand(themeColor, ranked, counts) {
+  if (themeColor && isBrandWorthy(themeColor)) return themeColor;
+  const worthy = ranked.filter(isBrandWorthy);
+  const lead = worthy[0];
+  if (!lead) return null;
+  if (carriesWhiteInk(lead)) return lead;
+  const leadN = counts.get(lead) || 0;
+  const dark = worthy.slice(1, BAND_CONTENDERS).find(
+    (h) => carriesWhiteInk(h) && hslSat(h) >= 0.15 && (counts.get(h) || 0) >= leadN * BAND_CONTENDER_SHARE,
+  );
+  return dark || lead;
+}
+
 // Third-party "Apply with X" / social-share widget colors that ride along on
 // almost EVERY ATS-hosted careers page (Teamtailor, Greenhouse, Workday...),
 // not the employer's own brand. Discovered on Trackman's own careers page:
@@ -385,8 +425,11 @@ async function sampleColorsFromPage(pageUrl, collectSignals = false) {
   // is worse than returning nothing, so refuse to sample one.
   if (isNonEmployerPage(html)) return null;
 
-  const styleBlocks = (html.match(/<style\b[^>]*>[\s\S]*?<\/style>/gi) || []).join('\n');
-  const counts = tallyHexInto(new Map(), styleBlocks + ' ' + html);
+  // BRAND-BAND-PICK-001 (2026-10-20): inline <style> blocks are already part
+  // of `html`; tallying `styleBlocks + html` counted every inline colour twice
+  // and let a small inline highlight (Terma's yellow #ffc92b) outrank the
+  // site's real brand blue from the main stylesheet.
+  const counts = tallyHexInto(new Map(), html);
 
   const sheetUrls = extractStylesheetLinks(html, pageUrl);
   for (const su of sheetUrls) {
@@ -409,13 +452,14 @@ async function sampleColorsFromPage(pageUrl, collectSignals = false) {
   // is skipped so a genuine stylesheet colour wins instead of a dull grey; if nothing
   // is brand-worthy we return null and the caller falls back to the package default.
   const candidates = [themeColor, ...ranked].filter(Boolean);
-  const navy = candidates.find(isBrandWorthy) || null;
+  const navy = pickBand(themeColor, ranked, counts);
   if (!navy) return null;
   const navySource = (themeColor && navy === themeColor) ? 'meta theme-color' : 'stylesheet colors';
   const ink = brandInk(navy);   // legible header text for THIS bg (NVIDIA green -> black)
   // A genuine second color, if the page has one — never duplicate navy as
   // a fake accent, the client's apply path treats accent as optional.
-  const accent = ranked.find((h) => h !== navy && h !== themeColor) || null;
+  const accent = ranked.find((h) => h !== navy && h !== themeColor && isBrandWorthy(h))
+    || ranked.find((h) => h !== navy && h !== themeColor) || null;
 
   return {
     navy, accent, ink, hostname: new URL(pageUrl).hostname, navySource,

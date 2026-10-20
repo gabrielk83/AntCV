@@ -2558,6 +2558,14 @@ def persist_application(doc, r, res, category, language, kernel=None, measure=Fa
                 _v = _hx(slots.get(_src))
                 if _v:
                     _sc[_dst] = _v
+            # BRAND-INK-FIT-001 (2026-10-20): the renderer reads headerNameColor/
+            # headerSpecColor/headerContactColor + sidebarTextColor; headerInk/
+            # sidebarInk alone left the previous brand's ink in place.
+            if _sc.get("headerInk"):
+                for _k in ("headerNameColor", "headerSpecColor", "headerContactColor"):
+                    _sc.setdefault(_k, _sc["headerInk"])
+            if _sc.get("sidebarInk"):
+                _sc.setdefault("sidebarTextColor", _sc["sidebarInk"])
             if _sc:
                 _meta["styleConfig"] = _sc
     c, b = _req(RELAY, "/api/applications", "POST", {

@@ -308,4 +308,37 @@ await withTypedMockFetch([['acmerobotics.com', htmlRoute(CHATTY)]], async () => 
     json.ok === true && json.navy === '#123456');
 });
 
+// 14. BRAND-ATS-ANY-TLD-001: an ATS on a regional TLD (career5.successfactors.EU,
+//     Terma's real posting host) is a job board, NOT the employer's own site —
+//     sampling must fall through to the company name, never return SAP's palette.
+const SF_HTML = '<html><head><title>Career Opportunities</title><style>.x{color:#223548}.y{color:#223548}</style></head><body>' + 'Jobs '.repeat(400) + '</body></html>';
+const TERMA_HTML = '<html><head><meta name="theme-color" content="#ffffff"><title>TERMA</title>' +
+  '<style>.btn{background:#ffc92b}.hl{color:#ffc92b}.tag{border-color:#ffc92b}.y4{fill:#ffc92b}</style></head><body>' + 'Defence and space. '.repeat(200) + '</body></html>';
+const TERMA_CSS = '.hero{background:#0d64aa}.nav{background:#0d64aa}.a{color:#0d64aa}.b{color:#0d64aa}.c{color:#0d64aa}';
+await withTypedMockFetch(
+  [['successfactors.eu', htmlRoute(SF_HTML)],
+   ['terma.com/style.css', cssRoute(TERMA_CSS)],
+   ['terma.com', htmlRoute(TERMA_HTML.replace('</head>', '<link rel="stylesheet" href="/style.css"></head>'))]],
+  async () => {
+    const json = await post({ jdUrl: 'https://career5.successfactors.eu/career?company=termaas&career_job_req_id=1424', companyName: 'Terma' });
+    ok('ats-any-tld: successfactors.eu is treated as a board', !/successfactors/.test(json.sampledHost || ''));
+    ok('ats-any-tld: resolves to the employer host', /terma\.com/.test(json.sampledHost || ''));
+    ok('ats-any-tld: never returns SAP slate', json.navy !== '#223548');
+    // 15. BRAND-BAND-PICK-001: a light highlight (yellow) must not become the band
+    //     when a dark brand blue is a near-equal contender; yellow drops to accent.
+    ok('band-pick: dark brand blue is the band', json.navy === '#0d64aa');
+    ok('band-pick: white ink on the blue band', json.ink === '#FFFFFF');
+    ok('band-pick: the yellow highlight becomes the accent', json.accent === '#ffc92b');
+  },
+);
+
+// 16. A light brand with NO dark contender keeps its own colour + black ink
+//     (BRAND-INK-MATCH-001: NVIDIA green stays green, ink matched).
+const GREEN_HTML = '<html><head><title>Greenco</title><style>.a{color:#76b900}.b{background:#76b900}.c{color:#76b900}</style></head><body>' + 'GPU '.repeat(400) + '</body></html>';
+await withTypedMockFetch([['greenco.com', htmlRoute(GREEN_HTML)]], async () => {
+  const json = await post({ jdUrl: '', companyName: 'Greenco' });
+  ok('band-pick: light brand without dark contender keeps its colour', json.navy === '#76b900');
+  ok('band-pick: light brand gets black ink', json.ink === '#111111');
+});
+
 console.log(`\n${pass} assertions passed.`);

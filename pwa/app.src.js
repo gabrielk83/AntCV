@@ -17888,7 +17888,7 @@
                         } else {
                         if (e.jd_company || e.jd_role)
                           try {
-                            try{var __pg=JSON.parse(localStorage.getItem("antcv:clProseGuard")||"{}")||{};var __ak=(e.jd_company||"")+"|"+(e.jd_role||"")+"|"+String(e.jd_language||localStorage.getItem("language")||"en").replace(/["']/g,"").toLowerCase().slice(0,2);var __b=__pg[__ak]=__pg[__ak]||{};(Array.isArray(e.cl_sections)?e.cl_sections:[]).forEach(function(s){if(s&&["opening","why","who","foundation","contribute","closure","bring"].indexOf(s.id)>=0){var __t=(Array.isArray(s.items)&&s.items[0]&&s.items[0].t)||s.content||"";if(__t&&!/^\s*\[/.test(__t))__b[s.id]=JSON.parse(JSON.stringify(s))}});localStorage.setItem("antcv:clProseGuard",JSON.stringify(__pg))}catch(_){} /*CL-OPENING-SEED-985*/try{var __sc2=(e.meta&&e.meta.styleConfig)||null;if(__sc2&&Object.keys(__sc2).length){localStorage.setItem("antcv:brandV2",JSON.stringify({version:2,slots:{headerBg:__sc2.headerBg,headerInk:__sc2.headerInk||"#ffffff",sidebarBg:__sc2.sidebarBg,sidebarInk:__sc2.sidebarInk||"#1a1a1a",accent:__sc2.accent||__sc2.sidebarLineColor||__sc2.mainHeadColor}}))}else{localStorage.removeItem("antcv:brandV2")}}catch(_){} /*BRANDV2-FOLLOW-APP-001*/lo({
+                            try{var __pg=JSON.parse(localStorage.getItem("antcv:clProseGuard")||"{}")||{};var __ak=(e.jd_company||"")+"|"+(e.jd_role||"")+"|"+String(e.jd_language||localStorage.getItem("language")||"en").replace(/["']/g,"").toLowerCase().slice(0,2);var __b=__pg[__ak]=__pg[__ak]||{};(Array.isArray(e.cl_sections)?e.cl_sections:[]).forEach(function(s){if(s&&["opening","why","who","foundation","contribute","closure","bring"].indexOf(s.id)>=0){var __t=(Array.isArray(s.items)&&s.items[0]&&s.items[0].t)||s.content||"";if(__t&&!/^\s*\[/.test(__t))__b[s.id]=JSON.parse(JSON.stringify(s))}});localStorage.setItem("antcv:clProseGuard",JSON.stringify(__pg))}catch(_){} /*CL-OPENING-SEED-985*/try{var __sc2=(e.meta&&e.meta.styleConfig)||null;if(__sc2&&Object.keys(__sc2).length){localStorage.setItem("antcv:brandV2",JSON.stringify({version:2,slots:{headerBg:__sc2.headerBg,headerInk:(window.__antcvInkFor?window.__antcvInkFor(__sc2.headerBg,__sc2.headerNameColor||__sc2.headerInk):__sc2.headerInk||"#ffffff"),sidebarBg:__sc2.sidebarBg,sidebarInk:(window.__antcvInkFor?window.__antcvInkFor(__sc2.sidebarBg,__sc2.sidebarTextColor||__sc2.sidebarInk):__sc2.sidebarInk||"#1a1a1a"),accent:__sc2.accent||__sc2.sidebarLineColor||__sc2.mainHeadColor}}))}else{localStorage.removeItem("antcv:brandV2")}}catch(_){} /*BRANDV2-FOLLOW-APP-001*/lo({
                               // META-RESTORE-MERGE-001 (1.51.4146): restore the ROW's meta
                               // (cl_slogan/brand/styleConfig survive) and honour the row's own
                               // subtitle. The old 5-key rebuild kept the PREVIOUS app's subtitle
@@ -20589,6 +20589,12 @@
         }),
         wa = (e) => {
           const t = { ...ya, ...e };
+          // BRAND-INK-FIT-001 (2026-10-20): both ink key families (headerInk |
+          // headerName/Spec/ContactColor, sidebarInk | sidebarText/HeadColor) are
+          // made to agree and read on their own bg. A patch that changes the band
+          // re-derives any ink it did not set, so a previous brand's ink can no
+          // longer survive onto a new band (Terma: white ink on a yellow band).
+          try { window.__antcvInkFit && window.__antcvInkFit(t, e); } catch (_) {}
           (ba(t), u.set("styleConfig", t), "custom" !== Sa && ka("custom"));
           try {
             Qn({ styleConfig: t });
@@ -23644,7 +23650,7 @@
                 } else {
                   if (e.jd_company || e.jd_role)
                     try {
-                      try{var __pg=JSON.parse(localStorage.getItem("antcv:clProseGuard")||"{}")||{};var __ak=(e.jd_company||"")+"|"+(e.jd_role||"")+"|"+String(e.jd_language||localStorage.getItem("language")||"en").replace(/["']/g,"").toLowerCase().slice(0,2);var __b=__pg[__ak]=__pg[__ak]||{};(Array.isArray(e.cl_sections)?e.cl_sections:[]).forEach(function(s){if(s&&["opening","why","who","foundation","contribute","closure","bring"].indexOf(s.id)>=0){var __t=(Array.isArray(s.items)&&s.items[0]&&s.items[0].t)||s.content||"";if(__t&&!/^\s*\[/.test(__t))__b[s.id]=JSON.parse(JSON.stringify(s))}});localStorage.setItem("antcv:clProseGuard",JSON.stringify(__pg))}catch(_){} /*CL-OPENING-SEED-985*/try{var __sc2=(e.meta&&e.meta.styleConfig)||null;if(__sc2&&Object.keys(__sc2).length){localStorage.setItem("antcv:brandV2",JSON.stringify({version:2,slots:{headerBg:__sc2.headerBg,headerInk:__sc2.headerInk||"#ffffff",sidebarBg:__sc2.sidebarBg,sidebarInk:__sc2.sidebarInk||"#1a1a1a",accent:__sc2.accent||__sc2.sidebarLineColor||__sc2.mainHeadColor}}))}else{localStorage.removeItem("antcv:brandV2")}}catch(_){} /*BRANDV2-FOLLOW-APP-001*/lo({
+                      try{var __pg=JSON.parse(localStorage.getItem("antcv:clProseGuard")||"{}")||{};var __ak=(e.jd_company||"")+"|"+(e.jd_role||"")+"|"+String(e.jd_language||localStorage.getItem("language")||"en").replace(/["']/g,"").toLowerCase().slice(0,2);var __b=__pg[__ak]=__pg[__ak]||{};(Array.isArray(e.cl_sections)?e.cl_sections:[]).forEach(function(s){if(s&&["opening","why","who","foundation","contribute","closure","bring"].indexOf(s.id)>=0){var __t=(Array.isArray(s.items)&&s.items[0]&&s.items[0].t)||s.content||"";if(__t&&!/^\s*\[/.test(__t))__b[s.id]=JSON.parse(JSON.stringify(s))}});localStorage.setItem("antcv:clProseGuard",JSON.stringify(__pg))}catch(_){} /*CL-OPENING-SEED-985*/try{var __sc2=(e.meta&&e.meta.styleConfig)||null;if(__sc2&&Object.keys(__sc2).length){localStorage.setItem("antcv:brandV2",JSON.stringify({version:2,slots:{headerBg:__sc2.headerBg,headerInk:(window.__antcvInkFor?window.__antcvInkFor(__sc2.headerBg,__sc2.headerNameColor||__sc2.headerInk):__sc2.headerInk||"#ffffff"),sidebarBg:__sc2.sidebarBg,sidebarInk:(window.__antcvInkFor?window.__antcvInkFor(__sc2.sidebarBg,__sc2.sidebarTextColor||__sc2.sidebarInk):__sc2.sidebarInk||"#1a1a1a"),accent:__sc2.accent||__sc2.sidebarLineColor||__sc2.mainHeadColor}}))}else{localStorage.removeItem("antcv:brandV2")}}catch(_){} /*BRANDV2-FOLLOW-APP-001*/lo({
                         // META-RESTORE-MERGE-001 (1.51.4146): see the cold-restore mirror above.
                         ...(e.meta && "object" == typeof e.meta ? e.meta : {}),
                         company: e.jd_company || "",
@@ -27756,6 +27762,18 @@
                   scPatch.headerNameColor = scPatch.headerSpecColor = scPatch.headerContactColor = __ink;
                   scPatch.sidebarTextColor = __ink;
                   scPatch.sidebarHeadColor = __ink;
+                  // BRAND-INK-FIT-001 (2026-10-20): wa() MERGES over the old styleConfig,
+                  // so every brand-owned slot is written here, not just the ones this
+                  // path used to know. Terma kept headerInk/sidebarInk #ffffff, the
+                  // signature/slogan colours and _brandSource from earlier brands.
+                  scPatch.headerInk = __ink;
+                  scPatch.sidebarInk = __ink;
+                  scPatch.accent = accent || navy;
+                  scPatch._brandSource = String(bf.source || "");
+                  // On-paper inks (white CL page): the brand colour that reads on white.
+                  scPatch.sloganColor = scPatch.signatureColor =
+                    [navy, accent].find((x) => x && __ctr(x, "#FFFFFF") >= 4.5) || "#1a1a1a";
+                  scPatch.aiNoticeColor = "#595959";
                 }
                 if (accent && __brandOk) {
                   scPatch.photoBorderColor = accent;

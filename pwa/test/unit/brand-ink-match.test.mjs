@@ -70,7 +70,9 @@ test('mirror lock: worker prefers a real brand over grey theme-color and returns
   const d = await readFile(new URL('../../../workers/demo-proxy/src/fetch-brand-colors.js', import.meta.url), 'utf8');
   for (const [name, src] of [['proxy', w], ['demo-proxy', d]]) {
     assert.ok(src.includes('function isBrandWorthy'), `${name}: brand-worthy picker present`);
-    assert.ok(src.includes('candidates.find(isBrandWorthy)'), `${name}: picks first brand-worthy candidate`);
+    // BRAND-BAND-PICK-001 (2026-10-20): the band pick is pickBand() — brand-worthy
+    // theme-color first, else a dark brand contender over a light highlight (Terma).
+    assert.ok(src.includes('function pickBand') && src.includes('isBrandWorthy(themeColor)'), `${name}: band picker keeps the brand-worthy gate`);
     assert.ok(src.includes('ink: winner.ink'), `${name}: returns matched ink`);
     assert.ok(!src.includes('darken('), `${name}: no longer force-darkens the brand colour`);
   }

@@ -576,7 +576,9 @@ _E1 sweep 2026-09-09 (CI nightly, Opus 4.8): shipped code INTACT against HEAD `3
 
 ## Row 27 — MAIN-RUNT-ORPHAN-SWEEP-001
 
-_verified: 2026-10-10_
+_verified: 2026-10-21_
+
+_E1 sweep 2026-10-21 (CI nightly, Opus 4.8): re-confirmed — all four ORPHAN-PREFLIGHT-V3 sidecars still loaded by `index.html` (`antcv-orphan-export-preflight.js`, `antcv-orphan-measure-bind.js`, `antcv-package-orphan-apply.js`, `antcv-orphan-cloud-persist-385.js`, 1 ref each); full suite 1843/1843 GREEN on HEAD `7af144bf`. STILL OPEN (unchanged, all need a real render/regen CI lacks): (a) work-style tail truncation, (b) page-3 ghost, (c) ~1.5-page real-PDF verify on a FRESH NIL-targeted export._
 
 _Desktop live leg 2026-10-20 (Gabo-PC): the four ORPHAN-PREFLIGHT-V3 sidecars served byte-identical to the repo at sw `1.51.5074-settings-route-fallback`. Residual gate unchanged._
 
@@ -604,7 +606,9 @@ _E1 sweep 2026-09-09 (CI nightly, Opus 4.8): ORPHAN-PREFLIGHT-V3 sidecars INTACT
 
 ## Row 28 — NIL-GEN-ADAPTATION-001
 
-_verified: 2026-10-10_
+_verified: 2026-10-21_
+
+_E1 sweep 2026-10-21 (CI nightly, Opus 4.8): re-confirmed — `antcv-profile-access-scrub.js` + `antcv-sidebar-relevance-cut.js` both still loaded in `index.html` (1 ref each); full suite 1843/1843 GREEN on HEAD `7af144bf`. REMAINING unchanged: the CV ~1.5pp GEN-LEVEL target (rides row 27's orphan work) is regen-gated — needs a fresh live NIL-targeted generation + real export, which CI cannot run._
 
 _Desktop live leg 2026-10-20 (Gabo-PC): `antcv-profile-access-scrub.js` + `antcv-sidebar-relevance-cut.js` served byte-identical to the repo at sw `1.51.5074-settings-route-fallback`. Residual gate unchanged._
 
@@ -632,7 +636,9 @@ _E1 sweep 2026-09-09 (CI nightly, Opus 4.8): belts INTACT + loaded — `antcv-pr
 
 ## Row 29 — NIL-TARGETED-STATE-STICK-001
 
-_verified: 2026-10-10_
+_verified: 2026-10-21_
+
+_E1 sweep 2026-10-21 (CI nightly, Opus 4.8): closed legs re-confirmed in current code — `META-DRIFT-GUARD-002` in `app.src.js` (2 refs); `277-SEQUENCE-GUARD-001` in the loaded sidecar `antcv-generate-cloud-sync-277.js` (5 refs); `CL-HYDRATE-EXPORT-GATE-001` in `antcv-docx-client.js` (3 refs). Full suite 1843/1843 GREEN on HEAD `7af144bf`. Leg C (live setItem writer-hunt + auto-save downgrade belt) unchanged OPEN — needs a signed-in session CI lacks._
 
 _Desktop live leg 2026-10-20 (Gabo-PC): `antcv-generate-cloud-sync-277.js` served byte-identical to the repo at sw `1.51.5074-settings-route-fallback`. Residual gate unchanged._
 
@@ -1553,7 +1559,14 @@ INSERTs** (sonnet-5 [2,10] + gpt-5.5 [5,30]; SQL in the 09-06 report § B).
 
 ## Row 96 — CV-HEADER-BOX-001
 
-_verified: 2026-10-11_
+_verified: 2026-10-21_
+
+**2026-10-21 (CI cloud nightly, E1 staleness sweep — code re-check):** re-verified against CURRENT
+worker code. The ROUNDED HEADER BOX survives: `<v:roundrect id="AntCVHeadBox" …>` present in
+`workers/docx-worker/src/index.js` (1 ref) and the `headerBox:` wiring (1 ref) intact. Full suite
+1843/1843 GREEN on HEAD `7af144bf`. Remaining legs still live/owner-gated (photo-in-header parity,
+CV AI-notice→footer, margins, preview parity vs the gold docx) — not runnable in cloud CI (no
+signed-in export). Kept ACTIVE.
 
 **2026-10-11 (CI cloud nightly, E1 staleness sweep — code re-check):** re-verified against CURRENT
 worker code, which HAS changed since the last sweep (several export commits: EXPORT-PAGE-BUDGET-001,
@@ -1586,7 +1599,12 @@ signed-in export / gold-docx diff here): photo-anchored-inside-header parity, CV
 
 ## Row 97 — DELIVERABLES-3CO-001
 
-_verified: 2026-10-11_
+_verified: 2026-10-21_
+
+**2026-10-21 (CI cloud nightly, E1 staleness sweep):** unchanged — pure live-regen + D1 JD-data
+check + owner deliverable, output quality gated on row 95 (CV-POLISH-BATCH-001) + the v5 CL work.
+Cloud CI has no signed-in session / live LLM to regenerate CV+CL or to check the Aimpoint/Demant JDs
+in D1, so nothing advanced. Kept ACTIVE — owner/live.
 
 **2026-10-11 (CI cloud nightly, E1 staleness sweep):** unchanged — pure live-regen + D1 JD-data
 check + owner deliverable, output quality gated on row 95 (CV-POLISH-BATCH-001) + the v5 CL work.

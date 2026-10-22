@@ -158,7 +158,15 @@ agent/code work is complete.
 
 ## Row 94 — CONTENT-LANG-STAMP-001
 
-_verified: 2026-10-12_
+_verified: 2026-10-22_
+
+**Re-verify 2026-10-22 (CI nightly — E1 stalest slot, code-presence):** the `content_language` field
+is still present in `pwa/app.js` (2 references) AND in the access-relay
+(`workers/access-relay/src/index.js`, 5 references: `shapeApplicationRow` read-back + the
+`PUT /api/applications/:id` whitelist leg with undefined-skip / explicit-null-clears / six-language
+cap). The `1.51.4446-content-lang-stamp` code leg is INTACT on HEAD `9f20c30a`; suite 1843/1843 green.
+REMAINING unchanged: a live generate/translate-persist regen confirming the stamp is written and read
+authoritatively (needs real models — CI cannot drive). Kept ACTIVE, model-gated.
 
 **Re-verify 2026-10-12 (CI nightly — E1 stalest slot, code-presence):** the `content_language` field
 is still present in `pwa/app.js` (2 references) AND in the access-relay (`workers/access-relay/src/index.js`,
@@ -1626,7 +1634,15 @@ CV+CL or to verify the Aimpoint/Demant JDs in D1, so nothing was advanced. Kept 
 
 ## Row 95 — CV-POLISH-BATCH-001
 
-_verified: 2026-10-11_
+_verified: 2026-10-22_
+
+**2026-10-22 (CI cloud nightly, E1 staleness sweep — code re-check):** leg (a) Strategic-Expertise
+cell caps STILL enforced in the gen prompt — `pwa/app.src.js` ~3834 (Nordic Minimal ONE-LINE RULE,
+Strategic Expertise cell max ~48 chars) and ~4086 ((B) TIGHT CELLS, "never let that cell wrap").
+So the cap exists prompt-side; the owner's "cap not holding" is render/regen. Legs (b) results on one
+role, (c) Project-expertise selection, (d) lab-fab evidence, (e) security-clearance RECOMMENDATIONS
+wording all need a FRESH targeted regen to confirm — not runnable in cloud CI (no signed-in gen).
+HEAD `9f20c30a`, suite 1843/1843 green. Kept ACTIVE.
 
 **2026-10-11 (CI cloud nightly, E1 staleness sweep — code re-check):** leg (a) Strategic-Expertise
 cell caps STILL enforced in the gen prompt — `pwa/app.src.js` ~3834 (Nordic Minimal: Strategic
@@ -1655,7 +1671,14 @@ five need a FRESH targeted regen to confirm — not runnable in cloud (no signed
 
 ## Row 92 — EXPORT-PREVIEW-PAGINATION-DIVERGENCE-001
 
-_verified: 2026-10-11_
+_verified: 2026-10-22_
+
+**2026-10-22 (CI cloud nightly, E1 staleness sweep — code re-check):** the two-map split survives on
+HEAD `9f20c30a` — `sidebarPages`/`mainPages` + `__antcvPB` pagination markers present
+(`workers/docx-worker/src/index.js`, 25 marker references) with `numPages = Math.max(...)` and the
+trailing-empty-page trim / last-content-page floor intact. Still NOT reproducible on current content
+(needs the owner's ORIGINAL overflowing REGULATORY-CONTEXT application reloaded, which cloud cannot
+stage); the "do NOT guess a fix" caution stands. Suite 1843/1843 green. Kept ACTIVE — owner-repro gated.
 
 **2026-10-11 (CI cloud nightly, E1 staleness sweep — code re-check):** re-verified after the recent
 worker export rework. The two-map split survives: `sidebarPages`/`mainPages` =
@@ -1684,7 +1707,14 @@ content (a full REGULATORY CONTEXT) reloaded, which cloud has no way to stage. T
 
 ## Row 93 — AUTO-ANALYSE-ON-JD-LOAD-ERROR-001
 
-_verified: 2026-10-11_
+_verified: 2026-10-22_
+
+**2026-10-22 (CI cloud nightly, E1 staleness sweep — code re-check):** sidecar
+`pwa/antcv-analysis-panel-jd-block-356.js` still loaded (1 ref in `index.html`) and still carries the
+AUTO-ANALYSE-ON-JD-LOAD-001 / OPEN-ANALYSIS-AUTORUN-001 path (7 marker references). No `__errTrap` in
+current code (the transient was never captured). Unchanged on HEAD `9f20c30a`, suite 1843/1843 green;
+still owner-repro gated — a transient needing a re-armed trap on a signed-in device, not stageable in
+cloud CI. Kept ACTIVE.
 
 **2026-10-11 (CI cloud nightly, E1 staleness sweep — code re-check):** sidecar
 `pwa/antcv-analysis-panel-jd-block-356.js` still loaded (1 ref in `index.html`) and still carries
@@ -2388,7 +2418,16 @@ says so.
 
 ## Row 114 — TELEMETRY-BGJOB-GAP-001
 
-_verified: 2026-10-11_
+_verified: 2026-10-22_
+
+**2026-10-22 (CI cloud nightly, E1 staleness sweep — code re-check):** gap CONFIRMED still open on HEAD
+`9f20c30a`. The only `llm_calls` writer remains `insertLlmCall` in
+`workers/access-relay/src/telemetry.js`; `workers/proxy/src` has no `llm_calls` writer. The job path
+(`workers/proxy/src/gen-job.js` `/job/create` + `/job/step`) and `pwa/antcv-gen-job-client.js` emit no
+telemetry (the client's own header docstring still documents this). So every background-job + routine
+gen stays invisible to the cost-quality tune, row 39 role-split and the Opus 5.5 first-call check. This
+is an OWNER DESIGN CALL (proxy `gen-job.js` posts per-section telemetry, or the job client emits
+per-section events) — no unattended fix. Suite 1843/1843 green. Kept ACTIVE.
 
 **2026-10-11 (CI cloud nightly, E1 staleness sweep — code re-check):** gap CONFIRMED still open. The
 only `llm_calls` writer remains `insertLlmCall` in `workers/access-relay/src/telemetry.js` (~197);

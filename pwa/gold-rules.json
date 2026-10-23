@@ -1,5 +1,5 @@
 {
-  "version": "1.9.6",
+  "version": "1.9.7",
   "_note": "GOLD RULES - the ONE machine-readable control site for every AntCV generation (owner 2026-07-13). Narrative + enforcement map: docs/qa/GOLD_STANDARD_LOCKER.md. Consumers: pwa/antcv-bullet-targets.js (prompt block on every generation/Fit-it/Enhance call), scripts/job-tracker/{quality_pass,density_fit,measure_density,gen-runner}.py (persist + sweep enforcement). Served at antcv.pages.dev/gold-rules.json so workers can fetch it (proxy prompt-augment wiring = open follow-up). Change values HERE; code reads them.",
   "density": {
     "runt_fraction": 0.6,
@@ -317,7 +317,8 @@
     " - AI NOTICE IN THE FOOTER (AI-NOTICE-FOOTER-001, owner 2026-10-23, restates the 2026-10-01 rule): the 'AI-assisted - author retains responsibility for content' line is page furniture: small type in the footer of the last CV page only, never a section, a row or a line in the body, never between two sections. A cover letter carries it inline at the end or not at all.",
     " - LANGUAGES ORDER (LANGUAGES-ORDER-001, revised 2026-10-23, course reviewer feedback): English first because it is the working language, then Danish, Spanish, Hebrew; other languages follow in their stored order. Levels stay in words.",
     " - EXPERIENCE SPACING (EXPERIENCE-SPACING-001, owner 2026-10-23): roles in Professional Experience are separated by a visible gap (role gap 14 px by default with nordic-minimal or copenhagen-modern, 8 px elsewhere) so each role reads as its own block; the gap is layout, never an empty bullet or a blank line inside a role.",
-    " - REFERENCES SAY HOW (REFERENCES-RELATION-001, owner 2026-10-23): every named reference carries how they know the candidate ('former manager, automotive LiDAR', 'chair of the rugby club'); for a director-level hardware role the first reference is a former manager or senior colleague from hardware work and a club or community reference comes second at most; only referees marked agreed are named; contact details stay on request."
+    " - REFERENCES SAY HOW (REFERENCES-RELATION-001, owner 2026-10-23): every named reference carries how they know the candidate ('former manager, automotive LiDAR', 'chair of the rugby club'); for a director-level hardware role the first reference is a former manager or senior colleague from hardware work and a club or community reference comes second at most; only referees marked agreed are named; contact details stay on request.",
+    " - SPECIAL CATEGORIES (SPECIAL-CATEGORIES-001, owner 2026-10-23, GDPR Art. 9; docs/compliance/EU_AI_ACT_GDPR.md): never infer, add or expand health, disability, religion or belief, political opinion, trade-union membership, ethnic origin, sex life or sexual orientation, or criminal records. Such a fact appears only where the candidate's own source states it and only in the section it came from (an accessibility line the candidate wrote stays as written); never derive one from a name, photo, language, country, club or employer. No CPR or national ID number, no date of birth, marital status or children unless the source states it and the job's country expects it."
   ],
   "banned_words": [
     "spearhead",

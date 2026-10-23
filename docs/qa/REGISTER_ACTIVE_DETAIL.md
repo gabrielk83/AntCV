@@ -1538,7 +1538,9 @@ _verified: 2026-10-16_ — CI nightly E1 re-verify against HEAD 451fc004 (suite 
 
 ## Row 89 — MODEL-TABLE-FRESHNESS-001
 
-_verified: 2026-10-15_
+_verified: 2026-10-23_
+
+_2026-10-23 weekly tune (desktop, Opus 5.5, worktree-isolated): pins verify against all four vendor pages; Anthropic lists nothing unpriced. Mechanical page diff found three errors, fixed in all three mirrors with dated comments: MISTRAL-LARGE4-SALE-END-2026-10-001 (the Large 4 sale ended; `mistral-large-4` / `-4-0` [0.68,2.09] → list [1.36,4.18], was 2x UNDER), ZAI-GLM53-FLASH-RATES-2026-10-001 (new `zai-glm-5-3-flash` [0.15,0.50] matched `zai-glm` [1.4,4.4], 9x OVER), GPT-ROSALIND-RATES-2026-10-001 (new `gpt-rosalind-research` / `-discovery` [5,25] fell to FALLBACK [3,15], strict null). 10-15 catalogue rows for Large 4 corrected to the vendor rate (not trimmed); `VENDOR_CATALOGUE_2026_10_23` added. Freshness 44/44 ×2, mirror 13/13, suite ALL PASS. OpenAI realtime/audio and per-minute ids left unkeyed by rule (owner call: Gemini live precedent). `mistral-large-latest` still aliases Large 3. Report `docs/qa/COST_QUALITY_WEEKLY_2026-10-23.md`._
 
 _2026-10-15 second pass, owner follow-up ("notice multiple new models have been released by mistral, gemini, openai and anthropic") — MODEL-TABLE-SWEEP-2026-10-001. The first pass had priced one id and deferred the rest as "not a pin"; that deferral was the gap. Mechanical diff of every text id on the four pricing pages against `rateFor()`: Anthropic nothing unpriced (Haiku 5.5 was keyed 10-08); OpenAI 22 keys added (`gpt-5.2` / `gpt-5.2-pro` / `gpt-5.1` / `gpt-5-pro` / `gpt-5-nano` / `gpt-5.3-codex` / `gpt-5-search-api` / `chat-latest` / `o1` / `o1-pro` / `o3` / `o3-pro` / `o3-mini` / `o4-mini` / `gpt-4o-2024-05-13` / `gpt-4-turbo` / `gpt-4-0613` / `gpt-3.5-turbo` (+`-1106`, `-instruct`) / `davinci-002` / `babbage-002`; worst: `gpt-5-nano` → gpt-5 25x OVER, `gpt-5.2-pro` 17x UNDER, `gpt-5-pro` 12x UNDER, o-series/chat-latest/legacy → FALLBACK); Mistral 13 keys (`ministral-14b` / `-8b` / `-3b` / `magistral-medium` / `magistral-small` / `mistral-vibe-cli` (+`-fast`) / `codestral` / `codestral-embed` / `mistral-code` / `zai-glm` / `glm-5-2`; id forms from a read-only `GET /v1/models`, 54 ids — `ministral-*` and `magistral-*` contain no `mistral` key so they fell to FALLBACK 20-30x / 2x OVER; `mistral-large-latest` still aliases `mistral-large-2512` = Large 3); Gemini 4 keys (`gemini-3-flash` (3-flash-preview) / `gemini-omni` (omni-1.1-flash, omni-flash-preview) / `gemini-3.8-live` / `gemini-3.1-flash-live`; image/TTS/embedding/robotics excluded by rule, written in the table comment). All three mirrors + `VENDOR_CATALOGUE_2026_10_15` (~110 ids, every one asserted to its vendor rate; `o1`/`o3` short-key hijack guard; adoption guard) in freshness 42/42 ×2 and mirror 12/12; full suite ALL PASS. `PROVIDER_MODELS` unchanged; the retired ids found in its tails are row 124. `SCHEDULED_ROUTINES.md` 1a-quater records the rule: price the whole catalogue every run, probe the live id forms, diff mechanically. Workers proxy + demo-proxy + access-relay DEPLOYED via deploy.yml runs 38769211157 / 38769334260 / 38769469911 (all from eb121983), /health 200 ×3; nothing owed on this row beyond the dated re-verifies._
 
@@ -2482,7 +2484,9 @@ unattended fix. Kept ACTIVE.
 
 ## Row 115 — PWA-COST-METER-OPUS55-001
 
-_verified: 2026-10-15_
+_verified: 2026-10-23_
+
+_2026-10-23 weekly tune: re-verified, not fixed. `C.claude` / `C.anthropic` still [2,10] (`app.src.js` ~1220), `q()` still pins `claude-opus-5-5` [4,20]. The 2026-10-20 session (7 calls) made no claude call, so there is still no opus-5-5 row in `llm_calls`. Owner call unchanged._
 
 _2026-10-15 weekly tune: re-verified, not fixed. `C.claude` / `C.anthropic` still [2,10] (`app.src.js` ~1221), `q()` still pins `claude-opus-5-5` [4,20]. Still no opus-5-5 row in `llm_calls` (no LLM call of any kind since 2026-09-28, 17 days). Owner call unchanged._
 
@@ -2574,7 +2578,9 @@ _verified: 2026-10-15_
 
 ## Row 124 — CASCADE-RETIRED-IDS-2026-10-001
 
-_verified: 2026-10-15_
+_verified: 2026-10-23_
+
+_2026-10-23 weekly tune: re-verified, unchanged. Mistral `GET /v1/models` (63 ids) still lists none of `mistral-large-2411` / `-2407` / `mistral-medium-2312`; the cascade tails still carry them. Owner call._
 
 **Filed 2026-10-15 (weekly cost-quality tune, owner follow-up catalogue sweep).** While diffing the
 vendor model pages against the rate table, the `PROVIDER_MODELS` fallback cascades in

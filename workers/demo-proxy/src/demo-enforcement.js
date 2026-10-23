@@ -174,6 +174,11 @@ const RATES = {
   'gpt-3.5-turbo':       [0.50,  1.50],  // 2026-10-15 covers gpt-3.5-turbo-0125
   'davinci-002':         [2.00,  2.00],  // 2026-10-15 base completion model
   'babbage-002':         [0.40,  0.40],  // 2026-10-15 base completion model
+  // GPT-ROSALIND-RATES-2026-10-001 (2026-10-23): the life-sciences pair gpt-rosalind-research / gpt-rosalind-discovery
+  // (billing from 2026-10-05, trusted-access only). No key matched, so both fell to FALLBACK [3,15] = 1.67x UNDER and
+  // rateForStrict() answered null. The realtime / audio family (gpt-realtime-*, gpt-audio-*) and per-minute gpt-live-1
+  // stay unkeyed by rule: audio-first models, AntCV sends them no text traffic. Owner call if that should change.
+  'gpt-rosalind':        [5.00, 25.00],  // 2026-10-23 covers -research and -discovery
   // Mistral
   'mistral-small':       [0.15,  0.60],   // Mistral Small 4, verified 2026-08-20 mistral.ai/pricing/api
   'mistral-medium':      [1.50,  7.50],   // Mistral Medium 3.5, verified 2026-08-20 mistral.ai/pricing/api
@@ -184,7 +189,10 @@ const RATES = {
   // aliases 'mistral-large-2512' (Large 3), so the 'mistral-large' key below still prices every AntCV mistral call correctly.
   // Re-verify BOTH at every tune: the '-latest' alias will move to Large 4 one day (then add an explicit 'mistral-large-latest'
   // key at the Large 4 rate), and the sale will end.
-  'mistral-large-4':     [0.68,  2.09],   // 2026-10-08 SALE price (list [1.36,4.18]). MUST stay longer than 'mistral-large'. Not an AntCV pin.
+  // MISTRAL-LARGE4-SALE-END-2026-10-001 (2026-10-23): the sale is over. docs.mistral.ai/inference/pricing now shows Large 4 at
+  // list [1.36,4.18]; the [0.68,2.09] sale key was 2x UNDER in and out. /v1/models 2026-10-23: 'mistral-large-latest' still
+  // aliases 'mistral-large-2512' (Large 3), so the live AntCV pin is unaffected.
+  'mistral-large-4':     [1.36,  4.18],   // 2026-10-23 list price (sale [0.68,2.09] ended). MUST stay longer than 'mistral-large'. Not an AntCV pin.
   'mistral-large':       [0.50,  1.50],   // Mistral Large 3, verified 2026-08-20 mistral.ai/pricing/api. Was [2,6] (Large 2 era) - 4x over. Substring-matches the live `mistral-large-latest`. LLM-COST-MISTRAL-RATE-001.
   // MODEL-TABLE-SWEEP-2026-10-001 (2026-10-15): the rest of docs.mistral.ai/inference/pricing, with the id forms taken from
   // a read-only GET /v1/models on 2026-10-15 (54 ids). Findings: 'ministral-*' contains no 'mistral' key (FALLBACK, 20-30x OVER);
@@ -202,6 +210,7 @@ const RATES = {
   'codestral-embed':     [0.15,  0.00],  // 2026-10-15 embedding model, no output price; MUST stay longer than 'codestral'
   'codestral':           [0.30,  0.90],  // 2026-10-15 Codestral 25.08 (codestral-2508 / -latest)
   'mistral-code':        [0.30,  0.90],  // 2026-10-15 mistral-code-latest / mistral-code-fim-latest alias codestral-2508
+  'zai-glm-5-3-flash':   [0.15,  0.50],  // 2026-10-23 Z.ai GLM 5.3 Flash (ZAI-GLM53-FLASH-RATES-2026-10-001); matched 'zai-glm' [1.4,4.4] = 9x OVER. MUST stay longer than 'zai-glm'.
   'zai-glm':             [1.40,  4.40],  // 2026-10-15 Z.ai GLM 5.3 hosted by Mistral (zai-glm-5-3 / zai-glm-5 / zai-glm-latest; 5-2 at the same rate, see above)
   'glm-5-2':             [1.40,  4.40],  // 2026-10-15 the bare 'glm-5-2' id /v1/models also lists
   // Gemini

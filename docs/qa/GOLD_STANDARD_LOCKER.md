@@ -68,3 +68,20 @@ no blank pages, AI notice, spine-to-bottom pixel sample, banned separators on
 rendered glyphs, photo presence, banner = triad, certs cleanliness,
 **glyph-core header-ink contrast**, content completeness (token audit), and
 the density quality metric. Failures are named per file, never smoothed over.
+
+## 6. Reviewer feedback 2026-10-23 (course staff review of the Veo CV v7) and the source split
+
+Owner 2026-10-23: the course reviewer's seven points become defaults, and the writing agents stop reading one source in one shape. `pwa/gold-rules.json` 1.9.6.
+
+| Rule | Enforcement |
+|---|---|
+| PROOF-POINTS-FIRST-001: nordic-minimal / copenhagen-modern default to two columns; the sidebar (left) opens with a PROOF POINTS block of 4-5 numbers that already stand in a Results line or a Core Competencies row | `pwa/antcv-proof-points-sidebar.js` (deterministic, no model call; `layout_defaults`), prompt block |
+| PROOF-POINTS-ORDER-001: proof points and competency rows ranked by what the ad stresses (volume first for DFM / mass production, cost first for a cost ad) | same sidecar (`rank`, `demand`), prompt block |
+| BUDGET-SIZE-001 / SHAREABLE-FIGURES-001: "owned the budget" needs a stored size; internal-reporting figures print only when the stored fact is marked shareable | prompt block, `budget_claims` |
+| PROFILE-LENGTH-001: the profile renders in 10-12 lines, two or three blocks, no block restating the ad | prompt block, `profile.min_lines` / `max_lines` / `blocks` |
+| SCALE-SEMANTIC-001: a scale figure keeps its true object; years of experience counted from one named base | prompt block |
+| AI-NOTICE-FOOTER-001: the AI notice is footer furniture on the last CV page only | prompt block (render already footer-only: antcv-watermark-page-anchor, docx-worker footer) |
+| LANGUAGES-ORDER-001 (revised): English first, then Danish, Spanish, Hebrew | `languages_order`, antcv-languages-concise.js, quality_pass.py |
+| EXPERIENCE-SPACING-001: role gap 14 px by default with nordic-minimal / copenhagen-modern | sidecar sets `styleConfig.roleGap` once; the "CV main · role gap" slider still wins |
+| REFERENCES-RELATION-001: every named reference says how they know the candidate; hardware manager first for a director-level hardware role; only agreed referees | prompt block, `cv_pointers.references` (data: `personalInfo.referees[].relation`) |
+| SOURCE-FRACTURES-001: the supervisor reads the source as a metric ledger + shuffled atomic facts, the coherence reviewer as a ledger + facts by kind, the repair writer as a ledger first; a number no source line carries fails the check before any model is asked (job-ad / company numbers are allowed as company facts only) | `workers/proxy/src/source-fractures.js` + supervisor.js + gen-coherence.js (demo-proxy byte-identical), `test/source-fractures.test.mjs` |

@@ -879,11 +879,12 @@ def rule_role_body_notes(cv, report):
 
 
 def rule_languages_order(cv, report):
-    """LANGUAGES-ORDER-001 (owner 2026-10-01): Danish, English, Spanish,
-    Hebrew; other languages keep their place after them. Order list lives in
-    gold-rules.json languages_order."""
+    """LANGUAGES-ORDER-001 (owner 2026-10-01, revised 2026-10-23: English is
+    the working language): English, Danish, Spanish, Hebrew; other languages
+    keep their place after them. Order list lives in gold-rules.json
+    languages_order."""
     order = (_G.get("languages_order") or {}).get("order") or [
-        ["danish", "dansk"], ["english", "engelsk"], ["spanish", "spansk"], ["hebrew", "hebraisk"]]
+        ["english", "engelsk"], ["danish", "dansk"], ["spanish", "spansk"], ["hebrew", "hebraisk"]]
     def rank(it):
         lab = str((it.get("l") or it.get("b") or "") if isinstance(it, dict) else it).lower()
         for i, names in enumerate(order):
@@ -899,7 +900,7 @@ def rule_languages_order(cv, report):
         new = sorted(items, key=rank)          # stable: unknown languages keep their order
         if new != items:
             s["items"] = new
-            report.append("languages: reordered Danish, English, Spanish, Hebrew (LANGUAGES-ORDER-001)")
+            report.append("languages: reordered English, Danish, Spanish, Hebrew (LANGUAGES-ORDER-001)")
 
 
 def apply_all(cv, cl, jd, kernel, language="en", use_llm=True):

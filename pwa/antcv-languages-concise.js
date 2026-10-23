@@ -18,7 +18,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.4786-lang-order';
+  var VERSION = '1.51.5114-lang-order-en';
   if (window.__antcvLanguagesConcise === VERSION) return;
   window.__antcvLanguagesConcise = VERSION;
 
@@ -82,12 +82,13 @@
   // this would put English proficiency words back (the "languages stayed English
   // under zh" report). Only run in English.
   function nonEnglish() { try { var v = localStorage.getItem('language') || ''; if (v && v.charAt(0) === '"') v = JSON.parse(v); v = String(v || 'en').toLowerCase().replace(/[^a-z]/g, '').slice(0, 2); return !!v && v !== 'en'; } catch (_) { return false; } }
-  // LANGUAGES-ORDER-001 (owner 2026-10-01): Danish first, then English, Spanish, Hebrew;
+  // LANGUAGES-ORDER-001 (owner 2026-10-01, revised 2026-10-23 on the course reviewer's feedback:
+  // English is the working language): English first, then Danish, Spanish, Hebrew;
   // other languages keep their order after them. Mirrors gold-rules.json languages_order and
   // quality_pass.py rule_languages_order. Runs in every output language (labels in en/da/es/he).
   var LANG_ORDER = [
-    ['danish', 'dansk', 'danés', 'danes', 'דנית'],
     ['english', 'engelsk', 'inglés', 'ingles', 'אנגלית'],
+    ['danish', 'dansk', 'danés', 'danes', 'דנית'],
     ['spanish', 'spansk', 'español', 'espanol', 'castellano', 'ספרדית'],
     ['hebrew', 'hebraisk', 'hebræisk', 'hebreo', 'עברית']
   ];

@@ -48,6 +48,12 @@
 
 import { extractJSON } from './jd-analysis.js';
 import { callAnyLLMForText } from './multi-llm.js';  // v3.3.0: round-robin coverage
+// SOURCE-FRACTURES-001 (owner 2026-10-23): the supervisor reads the source as a
+// metric ledger + shuffled atomic facts, not as the prose the writer read, so a
+// slip the writer took from the prose does not look right to the checker too.
+// numberGrounding is the deterministic half: a number with no source line is a
+// fabrication before any model is asked.
+import { buildFractures, viewFor, numberGrounding } from './source-fractures.js';
 
 // ------------------------------------------------------------------
 // Banned-words and banned-phrases for static scan. Kept in sync with
@@ -283,7 +289,9 @@ CRITICAL — what counts as fabrication:
 
 4. EMPLOYER / ROLE CLAIMS — candidate_output names an employer, project, or role not in source_cv.
 
-5. METRIC FABRICATION — candidate_output gives a specific number (years, count, percentage) not in source_cv.
+5. METRIC FABRICATION — candidate_output gives a specific number (years, count, percentage) not in source_cv. When a source_fractures block is present, judge every number against its METRIC LEDGER: a number absent from the ledger is a fabrication (severity HIGH) unless the block lists it as a job-ad or company figure, in which case it may describe the company but never the candidate.
+
+6. BORROWED NEIGHBOUR — a figure, product or employer that IS in the source but is attached to the wrong role, product or result (the source's 20,000 units/week line belongs to one product; attributing it to another is a fabrication). The ATOMIC FACTS in source_fractures are shuffled on purpose: check each claim against the one fact that carries it, never against what happens to sit next to it.
 
 What is NOT fabrication:
 - Rephrasing facts in source using different words
@@ -302,7 +310,7 @@ If candidate_output is empty or near-empty, grounding_score = 100, fabrications 
 
 Output ONLY the JSON object.`;
 
-async function runGroundingCheck(env, { task, candidate_output, source_cv, jd_text }) {
+async function runGroundingCheck(env, { task, candidate_output, source_cv, jd_text, fractures }) {
   // v3.3.0: removed the Anthropic-key early-return — the cascade
   // discovers available keys per provider. If none are configured,
   // callAnyLLMForText returns { ok: false, attempts: [no-key, ...] }
@@ -312,6 +320,10 @@ async function runGroundingCheck(env, { task, candidate_output, source_cv, jd_te
   const cv = (source_cv || '').slice(0, 20000);
   const out = (candidate_output || '').slice(0, 10000);
   const jd = (jd_text || '').slice(0, 10000);
+  // SOURCE-FRACTURES-001: the supervisor's own cut of the source (ledger +
+  // shuffled facts). The seed is the task + output length, so a re-check of
+  // the same text reads the same order, while another section reads another.
+  const fractureView = fractures ? viewFor('supervisor', fractures, task + ':' + out.length).slice(0, 24000) : '';
 
   const userPrompt = [
     `task: ${task || 'unknown'}`,
@@ -325,6 +337,7 @@ async function runGroundingCheck(env, { task, candidate_output, source_cv, jd_te
     '---',
     cv,
     '---',
+    fractureView ? '\nsource_fractures:\n---\n' + fractureView + '\n---' : '',
     jd ? '\njd_text (context only — does NOT ground claims):\n---\n' + jd + '\n---' : '',
   ].filter(Boolean).join('\n');
 
@@ -442,13 +455,16 @@ function buildRepairPrompt(task, candidateOutput, deviations, summary) {
   ].filter(Boolean).join('\n');
 }
 
-async function runAutoRepair(env, { task, candidate_output, source_cv, repairPrompt }) {
+async function runAutoRepair(env, { task, candidate_output, source_cv, repairPrompt, fractures }) {
   // v3.3.0: removed the Anthropic-key early-return — cascade handles it.
 
   // Repair system prompt mirrors prompt-augment.js's no-fabrication
   // block so the repair doesn't introduce new hallucinations.
-  const system = `You are revising a CV/CL section to fix supervisor-flagged issues. Make ONLY the changes needed to address the issues. Do not rewrite sections that weren't flagged. Critically: never introduce new claims that aren't in the source_cv. If an issue is a fabrication, REMOVE the fabricated claim — do not replace it with a different fabrication.
-
+  // SOURCE-FRACTURES-001: the repair writer gets the metric ledger ahead of
+  // the prose, so a replaced number is taken from the ledger, never derived.
+  const repairView = fractures ? viewFor('repair', fractures).slice(0, 16000) : '';
+  const system = `You are revising a CV/CL section to fix supervisor-flagged issues. Make ONLY the changes needed to address the issues. Do not rewrite sections that weren't flagged. Critically: never introduce new claims that aren't in the source_cv. If an issue is a fabrication, REMOVE the fabricated claim — do not replace it with a different fabrication. Every number you keep or add must appear in the METRIC LEDGER below.
+${repairView ? '\n' + repairView + '\n' : ''}
 Source CV (ground truth for all claims):
 ---
 ${(source_cv || '').slice(0, 20000)}
@@ -527,6 +543,7 @@ export async function handleSupervisorCheck(request, env, getCORS) {
   const candidate = (body.candidate_output || '').toString();
   const source = (body.source_cv || '').toString();
   const jd = (body.jd_text || '').toString();
+  const companyText = (body.company_text || '').toString();
   const autoRepair = body.auto_repair === true;
 
   if (!candidate) {
@@ -539,6 +556,22 @@ export async function handleSupervisorCheck(request, env, getCORS) {
   // Stage 1 — static checks (fast)
   const staticResult = runStaticChecks(candidate, task);
 
+  // Stage 1b — SOURCE-FRACTURES-001: deterministic number grounding. Every
+  // number in the output must exist in the source ledger; a job-ad or
+  // company figure is allowed as a company fact only. No model call.
+  let fractures = null;
+  let metricDeviations = [];
+  if (source) {
+    try {
+      fractures = buildFractures({ source_cv: source, jd_text: jd, company_text: companyText });
+      metricDeviations = numberGrounding(candidate, fractures);
+      staticResult.deviations.push(...metricDeviations);
+    } catch (e) {
+      console.warn('[supervisor] fractures failed:', e && e.message);
+      fractures = null;
+    }
+  }
+
   // Stage 2 — grounding check (LLM), only if static checks didn't
   // already give a "high-severity placeholder" verdict (no point
   // grounding-checking a near-empty output).
@@ -546,7 +579,7 @@ export async function handleSupervisorCheck(request, env, getCORS) {
   const placeholderHigh = staticResult.deviations.some(d => d.type === 'placeholder' && d.severity === 'high');
   if (!placeholderHigh && source) {
     groundingResult = await runGroundingCheck(env, {
-      task, candidate_output: candidate, source_cv: source, jd_text: jd,
+      task, candidate_output: candidate, source_cv: source, jd_text: jd, fractures,
     });
   }
 
@@ -568,7 +601,7 @@ export async function handleSupervisorCheck(request, env, getCORS) {
   let repairedOutput = null;
   if (autoRepair && repairPrompt) {
     const rep = await runAutoRepair(env, {
-      task, candidate_output: candidate, source_cv: source, repairPrompt,
+      task, candidate_output: candidate, source_cv: source, repairPrompt, fractures,
     });
     if (rep.ok) repairedOutput = rep.repaired_output;
   }
@@ -597,8 +630,12 @@ export async function handleSupervisorCheck(request, env, getCORS) {
     analytics_event_id: eventId,
     duration_ms: duration,
     grounding_skipped_reason: placeholderHigh ? 'placeholder_output' : (!source ? 'no_source_cv' : null),
+    // SOURCE-FRACTURES-001 telemetry: how the source was cut and what the
+    // deterministic number check found, so the owner can read it per run.
+    fractures: fractures ? { ...fractures.counts, metric_unbacked: metricDeviations.filter(d => d.type === 'metric_unbacked').length,
+      metric_external: metricDeviations.filter(d => d.type === 'metric_external').length } : null,
   }), { status: 200, headers: { 'Content-Type': 'application/json', ...CORS } });
 }
 
 // Re-export the static checks for direct use in tests.
-export { runStaticChecks, buildRepairPrompt };
+export { runStaticChecks, buildRepairPrompt, runGroundingCheck };

@@ -28,6 +28,10 @@
 // in workers/demo-proxy/src.
 
 import { callAnyLLMForJSON } from './multi-llm.js';
+// SOURCE-FRACTURES-001 (owner 2026-10-23): the reviewer gets the source as a
+// metric ledger + facts grouped by kind - a third cut of the same truth, so a
+// number two sections share by copying the writer's slip is still caught.
+import { buildFractures, viewFor } from './source-fractures.js';
 
 const COHERENCE_SYSTEM = `You are a coherence reviewer for a CV + cover letter that was generated section by section. Each section was written independently, so your ONLY job is to find problems that span MORE THAN ONE section. You do NOT rewrite anything. You do NOT judge a single section in isolation (a separate per-section check already did that). You report cross-section issues as structured JSON.
 
@@ -40,6 +44,8 @@ Find three kinds of cross-section problem:
 2. "contradiction" — two sections state facts that cannot both be true: different numbers (years, team size, percentages), different titles/employers/dates, or a claim in one section that the other contradicts. Cover letter vs CV contradictions count.
 
 3. "redundancy" — a section adds nothing new because everything in it is already fully said elsewhere (weaker than repetition; whole-block overlap).
+
+You may also receive SOURCE FRACTURES: the candidate's source cut into a METRIC LEDGER and facts by kind. When two sections disagree, the ledger decides which one is right; a number that two or more sections share but that is absent from the ledger is a "contradiction" with the source - name every section that carries it and give the ledger value (or removal) as the fix.
 
 Rules:
 - Only report issues that involve TWO OR MORE named sections. If something is wrong within a single section, ignore it.
@@ -112,9 +118,19 @@ export async function runCoherenceReview(env, payload) {
     `### section id: ${s.id}  (title: ${s.title || s.id})\n${(s.text || '').slice(0, 4000)}`
   ).join('\n\n');
 
+  // SOURCE-FRACTURES-001: the coherence cut of the source (ledger + facts by
+  // kind). Fail-soft: a fracture error leaves the prompt as before.
+  let fractureBlock = '';
+  try {
+    if (payload && typeof payload.source_cv === 'string' && payload.source_cv.trim()) {
+      const fr = buildFractures({ source_cv: payload.source_cv, jd_text: payload.jd_text || '' });
+      fractureBlock = '\n\n' + viewFor('coherence', fr).slice(0, 20000);
+    }
+  } catch (_) { fractureBlock = ''; }
+
   const userPrompt =
     'Review these sections for CROSS-SECTION problems only (repetition, contradiction, redundancy). ' +
-    'Return the JSON described in the system prompt.\n\n' + sectionBlock;
+    'Return the JSON described in the system prompt.\n\n' + sectionBlock + fractureBlock;
 
   let cascade;
   try {

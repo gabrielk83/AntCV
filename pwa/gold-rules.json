@@ -1,5 +1,5 @@
 {
-  "version": "1.9.5",
+  "version": "1.9.6",
   "_note": "GOLD RULES - the ONE machine-readable control site for every AntCV generation (owner 2026-07-13). Narrative + enforcement map: docs/qa/GOLD_STANDARD_LOCKER.md. Consumers: pwa/antcv-bullet-targets.js (prompt block on every generation/Fit-it/Enhance call), scripts/job-tracker/{quality_pass,density_fit,measure_density,gen-runner}.py (persist + sweep enforcement). Served at antcv.pages.dev/gold-rules.json so workers can fetch it (proxy prompt-augment wiring = open follow-up). Change values HERE; code reads them.",
   "density": {
     "runt_fraction": 0.6,
@@ -75,21 +75,21 @@
     }
   },
   "languages_order": {
-    "_doc": "LANGUAGES-ORDER-001 (owner 2026-10-01): the CV LANGUAGES section lists Danish first, then English, Spanish, Hebrew; any other language follows in its stored order. Each entry lists the label in en/da/es/he so a translated section sorts the same. Consumers: pwa/antcv-languages-concise.js (sortLanguages), scripts/job-tracker/quality_pass.py (rule_languages_order).",
+    "_doc": "LANGUAGES-ORDER-001 (owner 2026-10-01, revised 2026-10-23 on the course reviewer's feedback): the CV LANGUAGES section lists English first because it is the working language, then Danish, Spanish, Hebrew; any other language follows in its stored order. Each entry lists the label in en/da/es/he so a translated section sorts the same. Consumers: pwa/antcv-languages-concise.js (sortLanguages), scripts/job-tracker/quality_pass.py (rule_languages_order).",
     "order": [
-      [
-        "danish",
-        "dansk",
-        "danés",
-        "danes",
-        "דנית"
-      ],
       [
         "english",
         "engelsk",
         "inglés",
         "ingles",
         "אנגלית"
+      ],
+      [
+        "danish",
+        "dansk",
+        "danés",
+        "danes",
+        "דנית"
       ],
       [
         "spanish",
@@ -123,7 +123,7 @@
     "_doc": "CV-POINTERS-001 (owner 2026-10-01, Improve Business Academy slide 'A few (more) pointers'): the six pointers and where AntCV keeps each one.",
     "picture": "header photo on the CV (circular, CV only); docx-worker header + photo controls",
     "course_on_cv": "Improve Business Academy, Effective Job Creation Strategies (2026) is listed in the candidate's Certificates & courses data; certs carry no years in the render (certs.strip_years)",
-    "references": "named referees, 'contact details available upon request' (REFERENCES-ON-REQUEST-001, antcv-references-mode.js); no phone or e-mail",
+    "references": "named referees with how they know the candidate (REFERENCES-RELATION-001), 'contact details available upon request' (REFERENCES-ON-REQUEST-001, antcv-references-mode.js); no phone or e-mail; a hardware manager or senior colleague first for a director-level hardware role",
     "readable_font": "Calibri / Carlito body text; brand.per_app_only keeps decorative palettes off unmarked apps",
     "skills_grouped": "few skills, grouped: hard skills in Core Competencies + Tools & Methods, soft skills in the 'Work style:' line (SKILLS-GROUPED-001 prompt line)",
     "margins": "margins stay at the template value; page_budgets + the density fill band make content fit by compressing inside sections"
@@ -307,7 +307,17 @@
     " - PROFILE IS NEVER A BUZZWORD LIST (PROFILE-NO-BUZZWORD-LIST-001, owner 2026-10-01): every profile sentence has a subject and a real verb and names something concrete (a product, a decision, a result). Never stack 3+ adjectives, trait labels or abstract nouns joined by commas, slashes or bullets (\"Results-driven, detail-oriented, strategic leader\"; \"Stakeholder management, risk, agile, delivery\"). Banned in the profile: results-driven, detail-oriented, self-starter, dynamic, proactive, innovative, motivated, passionate, team player, strong communicator, track record, proven ability, synergy. Test: if a sentence could sit in any other candidate's CV, rewrite it as a behaviour or a result.",
     " - PROFILE HEADING SLOGAN (PROFILE-SLOGAN-001, owner 2026-10-01): return cv_overrides.profile_slogan - the slogan part of the CV profile HEADING, which renders as \"Profile: <slogan>\" (e.g. \"Profile: Make the case before the spec\") so it still reads as the profile section; return the slogan only, without the word Profile. 3-8 words, a headline (no full stop), in the output language, showing you know what THIS employer needs: their product + their need (shape only: 'Make the case before the spec', 'From first prototype to quantum delivery'). It MUST NOT repeat the cover-letter slogan (meta.cl_slogan): share NO content word with it (ignore a/the/of/and/with/for/to/in) and take a different angle - the cl_slogan says who the candidate is to them, the profile_slogan says what their product or team needs. Not a bare job title, not a skills list. Without a JD: the kind of work the candidate does best, in a few words.",
     " - EDUCATION DETAIL (EDU-DETAIL-001, owner 2026-10-05): every degree keeps its stored detail line - the field or specialisation, the thesis and its grade when stored (shape only: 'optics, photonics and nanotechnology; thesis grade 93'). Never drop it to save space; trim experience bullets first. Two degrees taken in parallel stay two entries (STORED-FACTS-001) and each is marked '(double degree)' when the source says so. Interests keep all six items and the personality line (HOUSE-SECTIONS-001); never cut them to hit a page budget.",
-    " - LINEAR CV CLOSING TABLES (LINEAR-DETAILS-ENRICHED-001, owner 2026-10-05, CV_Veo_Director_enriched): in the linear layout the closing details are THREE label | content tables, each under its own heading: CREDENTIALS (Standards, Courses/Certificates, Patent), LANGUAGES & PERSONAL (Languages, Rugby, Interests, Accessibility), AVAILABILITY & REFERENCES (Availability, References); never one combined details table and never a courses row under Education. Keep each of those items its own SHORT section (a one-liner whose section title is the row label) so the layout can place it as a row; never merge them into one block. Page 2 of the experience opens with 'Professional experience (Cont.)' after ONE explicit page break, roles kept whole (LINEAR-CONT-001)."
+    " - LINEAR CV CLOSING TABLES (LINEAR-DETAILS-ENRICHED-001, owner 2026-10-05, CV_Veo_Director_enriched): in the linear layout the closing details are THREE label | content tables, each under its own heading: CREDENTIALS (Standards, Courses/Certificates, Patent), LANGUAGES & PERSONAL (Languages, Rugby, Interests, Accessibility), AVAILABILITY & REFERENCES (Availability, References); never one combined details table and never a courses row under Education. Keep each of those items its own SHORT section (a one-liner whose section title is the row label) so the layout can place it as a row; never merge them into one block. Page 2 of the experience opens with 'Professional experience (Cont.)' after ONE explicit page break, roles kept whole (LINEAR-CONT-001).",
+    " - PROOF POINTS FIRST (PROOF-POINTS-FIRST-001, owner 2026-10-23, course reviewer feedback on the Veo CV): with the nordic-minimal writing style or the copenhagen-modern package the CV is TWO columns by default and the LEFT column (the sidebar) opens with a PROOF POINTS block: 4-5 short lines, each one number taken from the source in the source's own terms (shape only: 'Change cycle ~250 to ~10 days', '20,000 units/week test line'), so the reader meets the numbers in the first ten seconds. The block carries only numbers that already stand in a Results line or a Core Competencies row; never a new figure. The classic full-width heading stack is not the default for these two.",
+    " - PROOF POINT ORDER (PROOF-POINTS-ORDER-001, owner 2026-10-23): rank proof points and Core Competencies rows by what THIS ad stresses, not by habit: an ad that stresses DFM/DFA, mass production, volume or consumer electronics gets the VOLUME numbers first (units per week, units shipped, production lines) and a verification count (requirements verified) steps back; shipped consumer hardware ranks before automotive verification; a cost ad gets cost cuts first; a delivery ad gets cycle times first.",
+    " - BUDGET SIZE (BUDGET-SIZE-001, owner 2026-10-23): 'owned the budget' is credible only with its size: state the stored figure or range ('a budget of about X', 'a six-figure budget') when the source carries one; when the source has no size, write the responsibility without 'owned' ('ran the electro-optics budget') and never invent a figure. An ad that asks to 'build and own Capex/Opex budgets' makes a stored budget size a first-tier proof point, so a missing size is a question for the candidate, not a guess.",
+    " - SHAREABLE FIGURES (SHAREABLE-FIGURES-001, owner 2026-10-23): a figure that reads as internal reporting (a customer programme value, a share of a company's revenue, a customer's name next to a sum) is printed only when the stored fact is marked shareable (public or agreed); otherwise describe the scale without the figure ('a multi-year customer programme'). Never derive a share or a sum the source does not state.",
+    " - PROFILE LENGTH (PROFILE-LENGTH-001, owner 2026-10-23): the whole CV profile (heading, Who I Am, What I Bring, Work style) renders in 10-12 lines of its column, in two or three blocks. The first block is the hook and stays; no later block restates the ad or the first block (the employer's own product list is not a profile sentence); the work-style line carries one behaviour and one proof, never a third summary. When the cap bites, merge blocks; never drop the value sentence.",
+    " - SCALE STATED RIGHT (SCALE-SEMANTIC-001, owner 2026-10-23): a scale figure keeps its true object: 'chair the change board of a 400-person organisation', never 'a 400-person change board'; 'a 7-person ODM team', never '7 ODM partners'. Years of experience are counted from ONE stated base and that base is named ('15+ years in product roles since 2010', or '20 years since a 2006 research post'); never '15+ years' next to a 2006 start without the base.",
+    " - AI NOTICE IN THE FOOTER (AI-NOTICE-FOOTER-001, owner 2026-10-23, restates the 2026-10-01 rule): the 'AI-assisted - author retains responsibility for content' line is page furniture: small type in the footer of the last CV page only, never a section, a row or a line in the body, never between two sections. A cover letter carries it inline at the end or not at all.",
+    " - LANGUAGES ORDER (LANGUAGES-ORDER-001, revised 2026-10-23, course reviewer feedback): English first because it is the working language, then Danish, Spanish, Hebrew; other languages follow in their stored order. Levels stay in words.",
+    " - EXPERIENCE SPACING (EXPERIENCE-SPACING-001, owner 2026-10-23): roles in Professional Experience are separated by a visible gap (role gap 14 px by default with nordic-minimal or copenhagen-modern, 8 px elsewhere) so each role reads as its own block; the gap is layout, never an empty bullet or a blank line inside a role.",
+    " - REFERENCES SAY HOW (REFERENCES-RELATION-001, owner 2026-10-23): every named reference carries how they know the candidate ('former manager, automotive LiDAR', 'chair of the rugby club'); for a director-level hardware role the first reference is a former manager or senior colleague from hardware work and a club or community reference comes second at most; only referees marked agreed are named; contact details stay on request."
   ],
   "banned_words": [
     "spearhead",
@@ -343,10 +353,26 @@
   "tables": {
     "linear_details": {
       "_doc": "LINEAR-DETAILS-ENRICHED-001 (owner 2026-10-05): linear CV closing details = three label | content tables under their own headings; rows in this order. Courses/certificates sit in CREDENTIALS, not under Education; a stand-alone patent is a CREDENTIALS row, publications stay a block. Enforced by pwa/antcv-cv-layout-linear.js (preview) and workers/docx-worker buildLinearCvDocument (export); LINEAR-CONT-001 adds the (Cont.) experience heading + one page break on page 2.",
-      "credentials": ["Standards", "Courses/Certificates", "Patent"],
-      "languages_personal": ["Languages", "Rugby", "Interests", "Accessibility"],
-      "availability_references": ["Availability", "References"],
-      "headings_da": ["Kvalifikationer", "Sprog & personligt", "Tilgængelighed & referencer"]
+      "credentials": [
+        "Standards",
+        "Courses/Certificates",
+        "Patent"
+      ],
+      "languages_personal": [
+        "Languages",
+        "Rugby",
+        "Interests",
+        "Accessibility"
+      ],
+      "availability_references": [
+        "Availability",
+        "References"
+      ],
+      "headings_da": [
+        "Kvalifikationer",
+        "Sprog & personligt",
+        "Tilgængelighed & referencer"
+      ]
     },
     "narrow_cell_cascade": "a table cell rendering 3+ lines, or 2+ lines averaging ~1 word per line, is INVALID (owner 2026-07-13, Tech Mahindra focus-area cell) - hard-compress the label first; widening tableRatio is the second lever if the other column tolerates it",
     "value_2line_basis": "cap tied to the value-column width; recalibrate if table geometry (col ratio / cell margins / font) changes (backlog #1: preview font 13->13.333 + width 6630->7689)"
@@ -513,6 +539,46 @@
     "slogan_shared_content_words_max": 0,
     "first_person": true,
     "opening": "personal (by role)",
-    "after_opening": "company-focused"
+    "after_opening": "company-focused",
+    "max_lines": 12,
+    "min_lines": 10,
+    "blocks": [
+      2,
+      3
+    ]
+  },
+  "layout_defaults": {
+    "_doc": "PROOF-POINTS-FIRST-001 / EXPERIENCE-SPACING-001 (owner 2026-10-23, course reviewer feedback on the Veo CV v7). Defaults for the nordic-minimal writing style and the copenhagen-modern package: two columns, the proof-points block first in the sidebar (left column), the sidebar instead of the classic heading stack, a wider role gap. Consumer: pwa/antcv-proof-points-sidebar.js (deterministic: numbers taken from Results lines and Core Competencies rows only).",
+    "applies_to": {
+      "writing_styles": [
+        "nordic-minimal"
+      ],
+      "packages": [
+        "copenhagen-modern"
+      ]
+    },
+    "layout": "two-column",
+    "proof_points_first": true,
+    "proof_points_lines": [
+      3,
+      5
+    ],
+    "proof_point_max_chars": 64,
+    "proof_point_groups": [
+      "volume",
+      "cost",
+      "time",
+      "quality",
+      "scale"
+    ],
+    "role_gap_px": 14,
+    "role_gap_px_default": 8,
+    "ai_notice": "footer, last CV page, small type"
+  },
+  "budget_claims": {
+    "_doc": "BUDGET-SIZE-001 / SHAREABLE-FIGURES-001 (owner 2026-10-23): a budget claim needs a stored size or range; an internal-reporting figure needs a shareable mark on the stored fact.",
+    "owned_requires_size": true,
+    "no_size_verb": "ran",
+    "shareable_flag": "public"
   }
 }

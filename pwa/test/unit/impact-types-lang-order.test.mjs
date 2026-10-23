@@ -49,17 +49,17 @@ test('the JD-most-asked impact type scores highest', async () => {
   assert.equal(m._impactNorm('anything', null), 0);
 });
 
-test('languages sort Danish, English, Spanish, Hebrew in any output language', () => {
+test('languages sort English, Danish, Spanish, Hebrew in any output language', () => {
   const secs = { cv: [{ id: 'languages', items: [
     { l: 'English', v: 'native / fluent' }, { l: 'Hebrew', v: 'native / fluent' },
     { l: 'Spanish', v: 'professional' }, { l: 'Danish', v: 'intermediate (B2)' }] }] };
   const a = runSidecar(langSrc, secs);
   a.window.AntcvLanguagesConcise.run();
-  assert.deepEqual(a.read().cv[0].items.map((i) => i.l), ['Danish', 'English', 'Spanish', 'Hebrew']);
+  assert.deepEqual(a.read().cv[0].items.map((i) => i.l), ['English', 'Danish', 'Spanish', 'Hebrew']);
   const da = { cv: [{ title: 'Sprog', items: [{ b: 'Engelsk', t: 'x' }, { b: 'Fransk', t: 'y' }, { b: 'Dansk', t: 'z' }] }] };
   const b = runSidecar(langSrc, da, 'da');
   b.window.AntcvLanguagesConcise.run();
-  assert.deepEqual(b.read().cv[0].items.map((i) => i.b), ['Dansk', 'Engelsk', 'Fransk']);
+  assert.deepEqual(b.read().cv[0].items.map((i) => i.b), ['Engelsk', 'Dansk', 'Fransk']);
 });
 
 test('languages order list in the sidecar matches gold-rules', () => {

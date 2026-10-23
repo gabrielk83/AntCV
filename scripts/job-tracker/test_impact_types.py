@@ -7,7 +7,7 @@ Covers:
                               Improvements / Audience; the JD's most-asked type
                               wins when JD relevance ties; a digit still beats
                               no digit for the Results fallback
-  - LANGUAGES-ORDER-001       Danish, English, Spanish, Hebrew; others after
+  - LANGUAGES-ORDER-001       English, Danish, Spanish, Hebrew; others after
   - ROLE-BODY-NOTE-001        the Trackman body says internship, role line kept
 """
 import sys
@@ -67,8 +67,8 @@ cv = [{"id": "languages", "items": [{"l": "English", "v": "native"}, {"l": "Hebr
                                     {"l": "Spanish", "v": "professional"}, {"l": "Danish", "v": "B2"}]}]
 rep = []
 QP.rule_languages_order(cv, rep)
-check("languages: Danish, English, Spanish, Hebrew",
-      [i["l"] for i in cv[0]["items"]] == ["Danish", "English", "Spanish", "Hebrew"])
+check("languages: English, Danish, Spanish, Hebrew",
+      [i["l"] for i in cv[0]["items"]] == ["English", "Danish", "Spanish", "Hebrew"])
 rep2 = []
 QP.rule_languages_order(cv, rep2)
 check("languages: idempotent", rep2 == [])

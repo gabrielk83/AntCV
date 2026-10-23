@@ -118,7 +118,16 @@ consensus_poll leads openai $0.0050/call, consensus_reinforce openai $0.0055/cal
 
 ## 4. Deploy
 
-See §4.1 below (filled after push).
+**DEPLOYED ×3, one at a time via `deploy.yml` (`mode=deploy`, `confirm=<target>`), after the code commit
+`aae19060` reached `main` and the full suite passed:**
+
+| worker | run | from | result | `/health` after |
+|---|---|---|---|---|
+| proxy (`cv-proxy`) | 39920247573 | `aae19060` | success (lint, unit-tests, deploy-worker) | 200, `3.8.4-brand-ink-match` |
+| demo-proxy (`antcv-demo-proxy`) | 39920321039 | `aae19060` | success | 200, `3.8.4-brand-ink-match` |
+| access-relay (`antcv-access-relay`) | 39920395924 | `aae19060` | success | 200, `auth-38-subtitle-guard-qual-put` |
+
+Not verified live beyond `/health`: no endpoint exposes the rate table and none of the three ids has traffic.
 
 ## 5. Owed / owner calls
 

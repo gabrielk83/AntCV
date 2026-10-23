@@ -674,7 +674,14 @@ _E1 sweep 2026-09-09 (CI nightly, Opus 4.8): closed legs CONFIRMED in current co
 
 ## Row 2 — LINKIFY-EXPORT-001
 
-_verified: 2026-10-12_
+_verified: 2026-10-23_
+
+**2026-10-23 (CI nightly, E1 staleness sweep — HEAD 242f6635):** re-confirmed at current HEAD.
+`sidebar_ratio` derivation still present in `workers/docx-worker/src/index.js` [2 refs]; regression
+lock `workers/docx-worker/test/main-column-ratio-width.test.mjs` **re-run, 1/1 PASS**. SCHOLAR-LINK-GATE
+/ LINKIFY code intact in `pwa/antcv-docx-client.js` + `pwa/antcv-scholar-links.js`. Content+bullets /
+hyperlink legs stay CLOSED-and-locked; sole residual (per-line font-metric fidelity) still folds into
+row 25 (real-PDF-gated — a render CI cannot do). Suite 1843/1843 green. No regression. Kept ACTIVE.
 
 **2026-10-12 (CI nightly, verify-first — HEAD 641bd181):** re-confirmed at current HEAD.
 `sidebar_ratio` derivation present in `workers/docx-worker/src/index.js` [2 refs] (`ctx.mainW`-based
@@ -876,7 +883,14 @@ _verified: 2026-10-05_
 
 ## Row 47 — MOBILE-TOPBAR-SAFEAREA-001
 
-_verified: 2026-10-12_
+_verified: 2026-10-23_
+
+**2026-10-23 (CI nightly, E1 staleness sweep — HEAD 242f6635):** fix still intact — `.antcv-topbar` top
+safe-area padding (`env(safe-area-inset-top)) 12px 8px 12px`) present in BOTH `pwa/app.src.js` and the
+`pwa/app.js` mirror [1 ref each]; `antcv-topbar-tools-347.js` still loaded in `index.html` [1 ref]; the
+redundant `antcv-mobile-export-fab.js` correctly ABSENT from `index.html`. Suite 1843/1843 green.
+REMAINING: live phone re-verify of the FAB-relocation on a real device (owner/desktop-gated — no device
+in CI). Kept ACTIVE.
 
 **2026-10-12 (CI nightly, verify-first):** fix still intact on HEAD `641bd181` — `.antcv-topbar` top
 safe-area padding (`env(safe-area-inset-top)) 12px 8px 12px`) present in BOTH `pwa/app.src.js` and the
@@ -911,7 +925,17 @@ device (owner/desktop-gated — no device in CI). Kept ACTIVE.
 
 ## Row 49 — SIDEBAR-GROUP-PAGE-BREAK-001
 
-_verified: 2026-10-13_
+_verified: 2026-10-23_
+
+**2026-10-23 (CI nightly, E1 staleness sweep — HEAD 242f6635):** still NOT-STARTED and still
+applicable. The docx-worker's `(CONT.)` continuation mechanism remains SECTION-level only
+(`CONT_SUFFIX` [2 refs] in `workers/docx-worker/src/index.js`; section headlines re-emit as
+"… (CONT.)" behind a `pageBreakBefore`), not per-GROUP within a sidebar labeled-list section — so a
+long Focus-Area group can still orphan/truncate rather than carry under a group-level continuation.
+No worker change since the last verify touches the sidebar-group break this row tracks. Owner-authorized
+design work in the project's highest-risk area; needs a dedicated diagnostic-first session with a real
+long-group export (render + worker deploy CI lacks; ALLOW_DEPLOY=false) — NOT a speculative unattended
+patch. Kept ACTIVE (scoped, not started).
 
 **2026-10-13 (CI nightly, E1 staleness sweep — HEAD bbed0033):** still NOT-STARTED and still applicable. The docx-worker's `(CONT.)` continuation mechanism is still SECTION-level only (`CONT_SUFFIX` at `workers/docx-worker/src/index.js:24658`; section headlines re-emit as "… (CONT.)" at :26472 behind a `pageBreakBefore`), not per-GROUP within a sidebar labeled-list section — so a long Focus-Area group can still orphan/truncate rather than carry under a group-level continuation. The worker DID change since the last verify (e69e15c6 "enriched closing tables + (Cont.) page-2 heading" 1.51.4873; acc0d333 "split details table into theme tables" #376), but both touch the MAIN/closing-table path, not the sidebar group break this row tracks; `cantSplit` (12 refs) + `sidebar_ratio` (2 refs) still operate at the section level. `diag-twocol-paged.mjs` green (no regression in the distribution path). Owner-authorized design work in the project's highest-risk area; needs a dedicated diagnostic-first session with a real long-group export (render + worker deploy CI lacks; ALLOW_DEPLOY=false). Kept ACTIVE (scoped, not started).
 
@@ -935,7 +959,14 @@ _verified: 2026-10-13_
 
 ## Row 50 — UPLOAD-SCREEN-TOP-CLIP-001
 
-_verified: 2026-10-12_
+_verified: 2026-10-23_
+
+**2026-10-23 (CI nightly, E1 staleness sweep — HEAD 242f6635):** fix still intact — the upload-screen
+`.fade` block still carries `justifyContent:"flex-start"` (the old centering value gone) in the
+`pwa/app.js` mirror, the superseded `el.scrollTop = 0` dead ref stays removed from both bundles, and
+`pwa/test/unit/upload-screen-top-clip.test.mjs` ran **green standalone (4/4)** and inside suite
+1843/1843. No regression. REMAINING: owner live re-verify (with and without an active background
+generation — no device in CI). Kept ACTIVE.
 
 **2026-10-12 (CI nightly, verify-first):** fix still intact on HEAD `641bd181` — the upload-screen
 `.fade` block still carries `justifyContent:"flex-start"` (the old centering value gone) in the
@@ -962,7 +993,14 @@ Kept ACTIVE.
 
 ## Row 51 — PREVIEW-SCROLL-JITTER-001
 
-_verified: 2026-10-12_
+_verified: 2026-10-23_
+
+**2026-10-23 (CI nightly, E1 staleness sweep — HEAD 242f6635):** fix still intact —
+`pwa/test/unit/preview-scroll-jitter.test.mjs` ran **green standalone (3/3)** and inside suite
+1843/1843 (the cosmetic deps `Ke, ya` / navyColor+styleConfig still absent from the fit-recompute
+effect's dependency array in both bundles, so a silent brand/font change still can't snap the reader's
+scroll position; doc/language resets preserved). No regression. REMAINING: owner live re-verify (no
+device in CI). Kept ACTIVE.
 
 **2026-10-12 (CI nightly, verify-first):** fix still intact on HEAD `641bd181` —
 `pwa/test/unit/preview-scroll-jitter.test.mjs` ran green standalone and inside suite 1821/1821 (the

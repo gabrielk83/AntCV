@@ -369,7 +369,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.5094-brand-ink-fit';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.5114-proof-points';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.5134-gdpr-rights';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -411,7 +411,7 @@
           app.src = 'app.js?v=1.51.5094-brand-ink-fit';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.5114-proof-points';
+            vo.src = 'antcv-version-override.js?v=1.51.5134-gdpr-rights';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -757,7 +757,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-preview-paper-memo.js?v=1.51.59" defer></script>
 <script src="antcv-sections-normalize-415.js?v=1.51.5033-cc-headers-plain" defer></script>
 <script src="antcv-demo-watermark.js?v=1.50.340-live-keystate" defer></script>
-<script src="antcv-bullet-targets.js?v=1.51.5114-proof-points" defer></script>
+<script src="antcv-bullet-targets.js?v=1.51.5134-gdpr-rights" defer></script>
 <!-- SIDECAR-CONSOLIDATE G10 (1.50.427): photo-position + photo-pentagon-shape +
      photo-bridge-button merged into ONE file behind a single shared rAF
      scheduler + ONE MutationObserver. The three old files stay on disk,
@@ -1167,7 +1167,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      back up before erasing. Loads AFTER cloud-delete-296 + app.js so its erase
      wrap composes outside the original. Escape: localStorage['antcv:disable-data-export']='1'. -->
 <script src="antcv-quick-contact-collapse.js?v=1.51.2701-quick-contact-scope" defer></script>
-<script src="antcv-data-export-360.js?v=1.50.929" defer></script>
+<script src="antcv-data-export-360.js?v=1.51.5134-gdpr-rights" defer></script>
 <script src="antcv-personal-dedup-hide.js?v=1.50.861" defer></script>
 <script src="antcv-settings-sync-extra.js?v=1.51.381-sig-backfill" defer></script>
   <script src="antcv-babel-relang.js?v=1.51.3742-load-no-retranslate" defer></script>

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AntCV privacy notice</title>
+<!-- GDPR-RIGHTS-001 / PRIVACY-NOTICE-001 (owner 2026-10-23): GDPR Art. 13 notice and
+     EU AI Act Art. 50 transparency text. Source of truth for the facts:
+     docs/compliance/EU_AI_ACT_GDPR.md. Keep the two in step. Static page, no scripts. -->
+<style>
+  :root { --bg:#ffffff; --fg:#1f2933; --muted:#52606d; --line:#d9e2ec; --accent:#0b6e99; --box:#f5f7fa; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0f1720; --fg:#e4e7eb; --muted:#9aa5b1; --line:#323f4b; --accent:#7cc4fa; --box:#18232f; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  main { max-width:760px; margin:0 auto; padding:24px 16px 48px; }
+  h1 { font-size:24px; margin:0 0 4px; }
+  h2 { font-size:17px; margin:28px 0 8px; padding-top:12px; border-top:1px solid var(--line); }
+  p, li { margin:6px 0; }
+  .meta { color:var(--muted); font-size:13px; }
+  .box { background:var(--box); border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin:12px 0; }
+  table { width:100%; border-collapse:collapse; font-size:14px; margin:8px 0; }
+  th, td { text-align:left; vertical-align:top; padding:6px 8px; border-bottom:1px solid var(--line); }
+  th { color:var(--muted); font-weight:600; }
+  .wrap { overflow-x:auto; }
+  a { color:var(--accent); }
+</style>
+</head>
+<body>
+<main>
+<h1>Privacy notice and AI use</h1>
+<p class="meta">AntCV · version 2026-10-23</p>
+
+<div class="box">
+  <strong>Document purpose.</strong> What AntCV does with your data, which AI it uses, who receives your data and how you use your rights (GDPR Art. 13, EU AI Act Art. 50).
+</div>
+
+<h2>1. Who is responsible</h2>
+<p>The operator of AntCV is the data controller for your account, your stored profile and your saved applications.</p>
+<p>Contact: <strong>[operator name and contact e-mail - to be filled in before public launch]</strong>.</p>
+
+<h2>2. What AntCV is, and what it is not</h2>
+<ul>
+  <li>AntCV drafts <em>your own</em> CV and cover letters with generative AI (large language models). You review the text and you are its author.</li>
+  <li>AI text can be wrong, invent facts or carry bias. Check every line before you send it.</li>
+  <li>AntCV is not a recruitment, screening or candidate-ranking tool. It does not decide anything about you and gives no score to an employer. No automated decision with legal or similar effect (GDPR Art. 22) is made.</li>
+  <li>Exported files are marked as AI-assisted: a short notice in the footer and a machine-readable tag in the file properties (EU AI Act Art. 50(2)).</li>
+</ul>
+
+<h2>3. What data, why, and on which legal basis</h2>
+<div class="wrap"><table>
+  <tr><th>Data</th><th>Purpose</th><th>Legal basis</th></tr>
+  <tr><td>E-mail address, sign-in session</td><td>Your account, sign-in codes</td><td>Contract (Art. 6(1)(b))</td></tr>
+  <tr><td>Profile you type or upload: name, contact, work history, education, skills, languages, photo, references</td><td>Draft and lay out your documents</td><td>Contract (Art. 6(1)(b))</td></tr>
+  <tr><td>Job ads and company text you paste</td><td>Tailor a document to that job</td><td>Contract (Art. 6(1)(b))</td></tr>
+  <tr><td>Saved applications, job tracker</td><td>Keep your drafts across devices</td><td>Contract (Art. 6(1)(b))</td></tr>
+  <tr><td>Usage records of AI calls (pseudonymous account hash, provider, model, timing, token counts, error codes; no document text)</td><td>Reliability, cost control, quality checks</td><td>Legitimate interest (Art. 6(1)(f))</td></tr>
+  <tr><td>Your own API keys, when you add them</td><td>Send your requests with your provider account</td><td>Contract (Art. 6(1)(b))</td></tr>
+</table></div>
+<p><strong>Sensitive data.</strong> A CV does not need health, religion, political views, union membership, ethnic origin or sexual orientation (GDPR Art. 9). AntCV never infers or adds them. If you type one in, it appears only where you put it. Leave them out unless the job requires them.</p>
+<p><strong>Other people's data.</strong> When you name referees, ask them first. AntCV prints only their name and how they know you; contact details stay "on request".</p>
+<p><strong>Photo.</strong> Your browser checks which way the photo faces. Only when that check is unsure is the photo sent to a vision model, which answers "left", "right" or "centre". No face recognition, no emotion analysis.</p>
+
+<h2>4. Who receives your data</h2>
+<div class="wrap"><table>
+  <tr><th>Recipient</th><th>Role</th><th>Where</th></tr>
+  <tr><td>Cloudflare</td><td>Hosting, database (D1), key-value store (KV), workers</td><td>Global network, EU and US</td></tr>
+  <tr><td>Anthropic</td><td>Language model (text, photo orientation)</td><td>US</td></tr>
+  <tr><td>OpenAI</td><td>Language model</td><td>US</td></tr>
+  <tr><td>Google</td><td>Language model (Gemini), Google sign-in</td><td>US</td></tr>
+  <tr><td>Mistral AI</td><td>Language model (text, photo orientation)</td><td>EU (France)</td></tr>
+  <tr><td>Resend</td><td>Sign-in codes and the yearly renewal e-mail</td><td>US</td></tr>
+</table></div>
+<ul>
+  <li>Text goes only to the provider that the task uses. The privacy indicator in the app shows which providers were called.</li>
+  <li>With AntCV's shared demo access, the providers act as AntCV's processors under their API data terms, which exclude training models on API input.</li>
+  <li>With your own API key, your own agreement with that provider applies.</li>
+  <li>Transfers to the US rely on the EU-US Data Privacy Framework or standard contractual clauses, as set out in each provider's data processing terms (GDPR Art. 44-46).</li>
+  <li>AntCV does not sell your data and does not share it with employers.</li>
+</ul>
+
+<h2>5. How long data is kept</h2>
+<div class="wrap"><table>
+  <tr><th>Data</th><th>Kept</th></tr>
+  <tr><td>Account, profile, saved applications</td><td>Until you delete them. Each year AntCV asks you to confirm you want to keep them (365 days after the last confirmation).</td></tr>
+  <tr><td>AI usage records</td><td>90 days, then deleted. Aggregated provider health: 30 days.</td></tr>
+  <tr><td>Sign-in session</td><td>7 days. Sign-in codes: 10 minutes.</td></tr>
+  <tr><td>Data in this browser</td><td>Until you clear it or delete your account.</td></tr>
+</table></div>
+
+<h2>6. Your rights</h2>
+<ul>
+  <li><strong>Access and portability</strong> (Art. 15, 20): Settings → Personal → <em>Download my data</em> (this browser) and <em>Copy of my cloud data</em> (everything stored on AntCV's servers, API key values masked).</li>
+  <li><strong>Rectification</strong> (Art. 16): edit your profile at any time.</li>
+  <li><strong>Erasure</strong> (Art. 17): Settings → <em>Delete my account and all data</em> removes your account and every stored row; you can save a copy first.</li>
+  <li><strong>Restriction and objection</strong> (Art. 18, 21), including to the usage records: write to the contact in section 1.</li>
+  <li><strong>Complaint</strong>: to Datatilsynet (Denmark, datatilsynet.dk) or the supervisory authority where you live.</li>
+</ul>
+
+<h2>7. Security</h2>
+<p>Connections are encrypted. Database rows are keyed by a hash of your e-mail address, not the address itself. API keys stay on the server and are never included in a data copy. Exports can be protected with a passphrase. A personal data breach is reported to the supervisory authority within 72 hours where the law requires it.</p>
+</main>
+</body>
+</html>

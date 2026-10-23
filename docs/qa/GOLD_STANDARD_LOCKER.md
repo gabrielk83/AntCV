@@ -85,3 +85,15 @@ Owner 2026-10-23: the course reviewer's seven points become defaults, and the wr
 | EXPERIENCE-SPACING-001: role gap 14 px by default with nordic-minimal / copenhagen-modern | sidecar sets `styleConfig.roleGap` once; the "CV main · role gap" slider still wins |
 | REFERENCES-RELATION-001: every named reference says how they know the candidate; hardware manager first for a director-level hardware role; only agreed referees | prompt block, `cv_pointers.references` (data: `personalInfo.referees[].relation`) |
 | SOURCE-FRACTURES-001: the supervisor reads the source as a metric ledger + shuffled atomic facts, the coherence reviewer as a ledger + facts by kind, the repair writer as a ledger first; a number no source line carries fails the check before any model is asked (job-ad / company numbers are allowed as company facts only) | `workers/proxy/src/source-fractures.js` + supervisor.js + gen-coherence.js (demo-proxy byte-identical), `test/source-fractures.test.mjs` |
+
+## 7. EU AI Act and GDPR (2026-10-23)
+
+Owner 2026-10-23: AntCV follows the EU AI Act and the GDPR. Duty map and open items: `docs/compliance/EU_AI_ACT_GDPR.md`. `pwa/gold-rules.json` 1.9.7.
+
+| Rule | Enforcement |
+|---|---|
+| SPECIAL-CATEGORIES-001: the writer never infers, adds or expands GDPR Art. 9 data (health, belief, politics, union, ethnicity, sex life) or criminal records; such a fact stays only where the candidate wrote it; no ID number, date of birth, marital status or children unless the source states it and the job's country expects it | prompt block |
+| CL-GDPR-CV-001 (existing): an unsolicited letter offers the CV on request instead of attaching it | prompt block |
+| REFERENCES-RELATION-001 (existing): only referees marked agreed are named; contact details on request | prompt block |
+| GDPR-RIGHTS-001: account delete reaches every user-keyed D1 table; `GET /api/prefs/export` returns the server-side copy (API key values masked); the Personal launcher offers "Copy of my cloud data" and links `privacy.html` | `workers/access-relay/src/gdpr-user-data.js` (`USER_TABLES`), `tests/gdpr-user-data.test.mjs` (fails when a new `user_hash` table is not listed), `pwa/antcv-data-export-360.js` |
+| PRIVACY-NOTICE-001: GDPR Art. 13 notice and AI use text | `pwa/privacy.html` |

@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.5139-demand-seed-refresh';
+const CACHE = 'antcv-1.51.5159-gdpr-rights';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

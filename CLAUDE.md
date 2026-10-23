@@ -11,6 +11,7 @@ AntCV is a React PWA that helps a job seeker draft a CV and cover letter, tailor
 1. `README.md` — repo layout and current build state.
 2. `docs/plan/AntCV_Plan_v2_LockedSources.md` — the current correction + implementation + testing plan. Read this end-to-end before suggesting architectural changes.
 3. `docs/design/Unified_Visual_Package_System.docx` and `docs/design/Writing_System_Engine_Specification.docx` — the two locked source documents. When code and a document disagree, the document wins; raise an issue.
+4. `docs/compliance/EU_AI_ACT_GDPR.md` — AntCV's EU AI Act role (provider, not Annex III high-risk) and GDPR duties. A feature that ranks or scores candidates for an employer, a new `user_hash` table, a new LLM provider or a new kind of stored personal data needs that file (and `pwa/privacy.html`) updated in the same change.
 
 ## Owner's communication style
 

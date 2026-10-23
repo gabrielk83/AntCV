@@ -46,12 +46,17 @@ const r = await page.evaluate(() => {
     reviewLabel: review ? (review.textContent || '').trim() : null,
     hasLocked: !!locked,
     reviewCount: document.querySelectorAll('[' + MARK + '="review"]').length,
+    // GDPR-RIGHTS-001: cloud copy button + privacy notice link inside the launcher
+    hasCloudCopy: !!(launcher && launcher.querySelector('[' + MARK + '="cloud-copy"]')),
+    privacyHref: (launcher && launcher.querySelector('[' + MARK + '="privacy-link"]') || {}).getAttribute
+      ? launcher.querySelector('[' + MARK + '="privacy-link"]').getAttribute('href') : null,
   };
 });
 console.log(JSON.stringify(r, null, 1));
-const pass = r.hasLauncher && r.launcherParentIsCol && r.launcherOrder === '-20' &&
+// order -8 since the import button moved into the launcher (antcv-data-export-360.js injectLauncher)
+const pass = r.hasLauncher && r.launcherParentIsCol && r.launcherOrder === '-8' &&
   r.isFirstChild && r.reviewLabel && r.reviewLabel.includes('Review & Edit') &&
-  r.hasLocked && r.reviewCount === 1;
+  r.hasLocked && r.reviewCount === 1 && r.hasCloudCopy && r.privacyHref === 'privacy.html';
 console.log('\nRESULT:', pass ? 'PASS' : 'FAIL');
 if (errs.length) console.log('pageerrors:', errs.slice(0, 3).join(' | '));
 await browser.close();

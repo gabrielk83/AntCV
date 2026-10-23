@@ -56,7 +56,10 @@ import density_fit as DF
 import cl_fit as CLF
 
 try:
-    import fitz
+    try:
+        import pymupdf as fitz  # PyMuPDF >= 1.24; `import fitz` is deprecated (PYMUPDF-IMPORT-001)
+    except ImportError:
+        import fitz
     _HAVE_FITZ = True
 except Exception:
     _HAVE_FITZ = False

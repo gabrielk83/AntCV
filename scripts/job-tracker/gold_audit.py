@@ -63,7 +63,10 @@ def role_canon_issues(cv, lang, gold):
 
 
 def audit_app(app_id, out_dir):
-    import fitz
+    try:
+        import pymupdf as fitz  # PyMuPDF >= 1.24; `import fitz` is deprecated (PYMUPDF-IMPORT-001)
+    except ImportError:
+        import fitz
     gr = MD._gen_runner()
     checks = {}
     c, resp = gr._req(gr.RELAY, f"/api/applications/{app_id}")

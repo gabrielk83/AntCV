@@ -2287,7 +2287,9 @@ _reconcile 2026-10-18 (CI nightly, E1 stalest slot, HEAD `fe67552f`): CODE-PRESE
 
 > **Renumbered 2026-08-26: was row 41.** A document written before that date citing "row 41" may mean this row or SO-004. The ID is the key.
 
-_verified: 2026-10-20_
+_verified: 2026-10-23_
+
+**RE-VERIFIED 2026-10-23 (job-tracker nightly, Gabo-PC).** `check --apply`: 127 probed, 120 LIVE, 4 archived on first sight (Phanofi Senior Photonics Packaging Engineer, 3Shape Group Manager & PM AI-assisted diagnostics, Orifarm AI Business Partner, Black Swans Exist Quantum Engineer; all LinkedIn CLOSED), 1 GONE held at strike 1/2 (Templafy PM Agentic AI, Teamtailor HTTP 410), 2 ERROR not counted, each reported as "ERROR 2 sweep days since 2026-10-20" (VML MAP HTTP 500, ABH Optics via Bloom connect timeout): the streak field from 10-20 works as designed. Rev 311 → 312.
 
 **ADVANCED 2026-10-20 (job-tracker nightly, Gabo-PC) — POSTING-ERROR-STREAK-001.** Sweep: 130 probed, 124 LIVE, 4 archived on first sight (Gubra AI Enablement & Governance Architect, PensionDanmark AI Quality & Performance Specialist, Weibel Scientific Technical Bid Manager Surveillance, HOFOR Sektionsleder AI- & BI-udvikling; all LinkedIn CLOSED), 0 held at strike, 2 ERROR not counted (VML MAP HTTP 500, eleventh sweep; ABH Optics via Bloom read timeout). Rev 304 → 305. **Increment:** the run log counted the VML MAP 500 streak by hand. `next_error_streak(prev, verdict, today)` now stamps `err_since` / `err_days` / `err_last` into `postingcheck[uk]` while a row answers ERROR, one count per calendar day, cleared by any other verdict; a row whose last status was ERROR before the field existed seeds from that probe's date. The summary appends "ERROR N sweep days since D" once N > 1; `--json` rows carry `err_since` / `err_days`. Report only: ERROR still never strikes or archives. New `test_error_streak.py` drives the real `next_error_streak`, `apply_verdict`, `reapply_results` and `cmd_check`; negative-controlled by line index (354 day gate → 11 red, 370 persist → red, 534 summary → 1 red, 342 verdict gate → 7 red), restored byte-identical. Script-side only: no `pwa/` asset, no version, no shift claim.
 
@@ -2512,7 +2514,9 @@ _verified: 2026-10-15_
 
 ## Row 118 — JT-ARMED-ARTIFACT-NO-DRAIN-001
 
-_verified: 2026-10-16_
+_verified: 2026-10-23_
+
+**RE-VERIFIED 2026-10-23 (job-tracker nightly, Gabo-PC).** `gen-runner.py list` on rev 312 still prints the ARMED block with `napatech` (app 2781, CLOSED row, flag stale). Health check: 54 artifact pointers vs 87 cloud apps, 1 dead, `veo_technologies` → app 3500. Unchanged; still waits on the owner.
 
 **Found by the job-tracker nightly 2026-10-05 (Gabo-PC).** `gen-runner.eligible_rows` elects a row only when `force or not has_art`. A row with `queue[uk]=true` and an `artifacts[uk].application_id` is skipped without a word: `gen-runner.py list` prints "no eligible rows" and names it nowhere. The island's `rowQueued()` lets an explicit `queue[uk]` win, so the same row shows under the ⏰ Queued filter and reads as due tonight. Live on doc rev 276: `napatech` (queue true, app 2781, Archive / closed) and `veo_technologies` (queue true, pointer to the deleted app 3500, Submitted). Neither should generate, so nothing was lost tonight. The risk is rows 3504 + 3505 (row 113): their tracker flags tell the owner to re-arm and regenerate, and a re-arm would be ignored the same way. The pointer check is also blind: `has_art` is true for a pointer whose cloud app is gone.
 
@@ -2610,7 +2614,9 @@ is adoption, not pricing. Proposed: replace the three Mistral ids with `mistral-
 
 ## Row 127 — JT-OWNER-PACKAGED-DEFAULT-ON-001
 
-_verified: 2026-10-19_
+_verified: 2026-10-23_
+
+**RE-VERIFIED 2026-10-23 (job-tracker nightly, Gabo-PC).** Rows 185 (3Shape Optics Engineer) and 186 (WD Technologist R&D) still default-on, both "Submitted", both in the OWNER-PACKAGED block. Not generated. Still waits on the owner: clear the flags or answer (b).
 
 **Found by the job-tracker nightly 2026-10-16 (Gabo-PC, Fable 5.1, worktree-isolated).** `gen-runner.py list` on rev 295 elected two rows the owner added through the island on 2026-10-15 and packaged by hand the same evening: rank 185 `3shape-optics-engineer-s-4143` (3Shape / Optics Engineer — Scanner Developer, Optics; packages 1043 v1 + v2 in Downloads; status "CV/CL drafted"; next "Apply via careers.3shape.com") and rank 186 `wd-technologist-r-d-engi-0702` (WD / Technologist R&D Engineer — Optical Design & Computational Photonics, Ulm, remote; package 1044 v1 + enriched; status "CV/CL drafted"; next "Easy Apply on LinkedIn"; tier `high`). Neither has a `queue` entry or an artifact, so `eligible_rows` (`q is None and not has_art`) elects both and the island's `rowQueued()` shows both as ⏰ Queued — the same default-ON rule that makes a fresh manual add generate overnight.
 

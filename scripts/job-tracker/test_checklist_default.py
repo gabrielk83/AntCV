@@ -184,7 +184,10 @@ def test_gen_runner_default_and_optout():
 # ── export_pdfs default hook ────────────────────────────────────────────────
 def test_export_pdfs_default():
     try:
-        import fitz
+        try:
+            import pymupdf as fitz
+        except ImportError:
+            import fitz
     except ImportError:
         print("SKIP export_pdfs test (PyMuPDF missing)"); return
     import export_pdfs as EP

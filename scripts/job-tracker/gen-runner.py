@@ -1909,7 +1909,10 @@ def scrub_for_persist(cv, r, language):
 # if either is missing the loop is skipped (never blocks a persist).
 DOCX_WORKER = os.environ.get("ANTCV_DOCX_WORKER", "https://docx-worker.karp-gabriel-a.workers.dev").rstrip("/")
 try:
-    import fitz  # PyMuPDF
+    try:
+        import pymupdf as fitz  # PyMuPDF >= 1.24; `import fitz` is deprecated (PYMUPDF-IMPORT-001)
+    except ImportError:
+        import fitz
     _HAVE_FITZ = True
 except Exception:
     _HAVE_FITZ = False

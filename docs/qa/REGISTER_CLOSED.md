@@ -4,6 +4,21 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 131 — PYMUPDF-IMPORT-001 — CLOSED 2026-10-23 (job-tracker nightly, evidence: negative-controlled test on the real loaders with the `fitz` alias blocked, 16 red on pre-fix HEAD)
+
+_verified: 2026-10-23_
+
+_Found and fixed the same run by the job-tracker nightly 2026-10-23 (Gabo-PC, Opus 5.5, worktree-isolated). Script-only: no `pwa/` asset, no version, no shift claim._
+
+**Found.** `gen-runner.py list` printed "warning: The `fitz` API is deprecated and will be removed in future. Use `import pymupdf` instead." on stdout (PyMuPDF 1.28.2). Seven job-tracker files still loaded PyMuPDF as `fitz`: module level in `gen-runner.py`, `cl_fit.py`, `cv_fit.py` (inside `try/except Exception` → `_HAVE_FITZ`), function level in `export_pdfs.verify_pdf`, `measure_density.measure`, `density_fit` (column verify) and `gold_audit.audit_app`. Only `course_checklist.py` used `import pymupdf as fitz`.
+
+**Why it matters.** When PyMuPDF drops the alias, the module-level loaders set `_HAVE_FITZ = False` and gen-runner skips the measure-and-fit loop with no error (the documented "missing fitz" fallback), so a nightly persists unmeasured CVs and no test goes red. `verify_pdf` (nightly step 5) and `measure` would raise ImportError.
+
+**Fix.** Every site uses the `course_checklist.py` idiom: `try: import pymupdf as fitz` / `except ImportError: import fitz`. The module-level ones nest it inside the existing `try/except Exception`, so `_HAVE_FITZ` keeps its meaning. `test_checklist_default.py` got the same.
+
+**Test.** New `scripts/job-tracker/test_pymupdf_import.py`: sets `sys.modules["fitz"] = None`, reloads cl_fit / cv_fit / gen-runner and asserts `_HAVE_FITZ` and `fitz is pymupdf`; runs the real `export_pdfs.verify_pdf` and `measure_density.measure` on a generated 2-page PDF; an AST guard fails on any `import fitz` not in the handler of a pymupdf-first try across `scripts/job-tracker/*.py`; a subprocess gen-runner load must print no deprecation line. Pre-fix HEAD: 16 red. Sabotage by line index (gen-runner 1913 → 3 red, export_pdfs 55 → 2, measure_density 398 → 2, cl_fit 44 → 3, density_fit 912 → 1), each restored byte-identical. All 22 job-tracker python tests green; `run-tests.mjs` ALL PASS. Not in run-tests.mjs (row 108).
+
+---
 ## Row 129 — SETTINGS-ROUTE-NOOP-001 — CLOSED 2026-10-19 (desktop nightly, evidence: real-browser island-path probe original 0/3 → fixed 5/5, history-guard diag 1/3 → 4/4, unit test red on the old bundle)
 
 _verified: 2026-10-19_

@@ -394,7 +394,10 @@ def _table_cell_scan(doc, payload, report):
 
 def measure(pdf_bytes, payload, style_budget=None):
     """Measure a rendered PDF against its payload. Returns the report dict."""
-    import fitz
+    try:
+        import pymupdf as fitz  # PyMuPDF >= 1.24; `import fitz` is deprecated (PYMUPDF-IMPORT-001)
+    except ImportError:
+        import fitz
     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
     items = collect_items(payload)
     cols, pages, geo = _column_streams(doc, payload)

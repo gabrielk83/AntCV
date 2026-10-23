@@ -51,7 +51,10 @@ def scan_banned_dashes(pdf_doc):
 
 
 def verify_pdf(pdf_bytes, payload, doc):
-    import fitz
+    try:
+        import pymupdf as fitz  # PyMuPDF >= 1.24; `import fitz` is deprecated (PYMUPDF-IMPORT-001)
+    except ImportError:
+        import fitz
     d = fitz.open(stream=pdf_bytes, filetype="pdf")
     out = {"pages": d.page_count, "blank_pages": [], "notice_last_page": None,
            "spine_bottom": None, "banned_dashes": scan_banned_dashes(d)}

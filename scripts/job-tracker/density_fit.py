@@ -908,7 +908,10 @@ def fit_page_flow(cv, cl, pi, style_config, meta, language, doc="cv", verbose=Tr
     # verify: no empty column on any page; if the stamp made it WORSE, revert
     rep2, pdf2 = _render_measure(cv)
     if rep2 is not None and pdf2 is not None:
-        import fitz
+        try:
+            import pymupdf as fitz  # PyMuPDF >= 1.24; `import fitz` is deprecated (PYMUPDF-IMPORT-001)
+        except ImportError:
+            import fitz
         d = fitz.open(stream=pdf2, filetype="pdf")
         empties = [p + 1 for p in range(d.page_count)
                    if not [w for w in d[p].get_text("words") if w[0] > 228]]

@@ -2263,7 +2263,9 @@ _reconcile 2026-09-07 (CI nightly, E3): `diag-panel-button-audit.mjs` RE-RUN on 
 
 > **Renumbered 2026-08-26: was row 40.** A document written before that date citing "row 40" may mean this row or SO-003. The ID is the key.
 
-_verified: 2026-10-18_
+_verified: 2026-10-23_
+
+**2026-10-23 (position-discovery run, re-verified live):** jobindex 36 queries 671 rows, jobbank 36 queries 629 rows, 501 unique, readable. LinkedIn guest 57 queries x 3 pages, 624 unique cards, 0 bad pages, no 429. TheHub 12 queries, 58 unique, readable. Google Jobs (WebSearch, 2 queries) readable. No source dry or unreadable.
 
 _reconcile 2026-10-18 (CI nightly, E1 stalest slot, HEAD `fe67552f`): CODE-PRESENCE verify only (unattended CI cannot run a real board-fetch audit). The fetcher `scripts/job-tracker/job_sources.py` + `scripts/job-tracker/test_job_sources.py` are present on disk; the prompt-leg routing (position-discovery routes jobindex + jobbank through `job_sources.py`) is CLOSED (owner-approved 2026-08-26). The LIVE 4-source audit (jobindex / jobbank / LinkedIn guest / TheHub / Google Jobs readability + the 429-retry and TheHub card-pairing caveats) is owned by the position-discovery routine, last live-verified 2026-10-08 (10 d). No code delta. Suite 1830/1830 green._
 

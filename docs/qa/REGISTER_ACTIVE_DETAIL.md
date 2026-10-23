@@ -1068,7 +1068,9 @@ _verified: 2026-10-05_
 
 ## Row 53 — CROSS-APP-EXPORT-CONTAMINATION-001
 
-_verified: 2026-10-13_
+_verified: 2026-10-23_
+
+**2026-10-23 (desktop nightly, E1 — HEAD d7495a2b):** verified. MIRROR-LOAD-001 marker 2× in `pwa/app.src.js`; retired `antcv-export-app-scope-guard` 0 refs in `pwa/index.html`. Legs b-f unchanged; a real targeted export is still the gate. Row 55's audit today shows leg (b)'s CL-language furniture partly overlaps FURNITURE-LANG-001. Kept ACTIVE.
 
 **2026-10-13 (CI nightly, E1 staleness sweep — HEAD bbed0033):** re-confirmed. Leg (a) still SHIPPED via MIRROR-LOAD-001 — marker present **2×** in `pwa/app.src.js`; retired `antcv-export-app-scope-guard` still **0 refs** in `pwa/index.html` (correctly dead on disk). Legs (b)–(f) — CL lang-leak, unrendered placeholders, diacritics, CV partial-lang residue, brand-fit — unchanged/OPEN; all content/gen-quality, live-gen-gated (a real targeted LLM generation CI cannot run). Suite 1821/1821. Kept ACTIVE for legs b–f.
 
@@ -1094,7 +1096,9 @@ _verified: 2026-10-13_
 
 ## Row 54 — GEN-JD-TAILOR-KERNEL-RECALL-001
 
-_verified: 2026-10-13_
+_verified: 2026-10-23_
+
+**2026-10-23 (desktop nightly, E1 — HEAD d7495a2b):** verified not started — 0 `KERNEL-RECALL` markers in `pwa/` + `workers/`. Real targeted gen gated. Kept ACTIVE.
 
 **2026-10-13 (CI nightly, E1 staleness sweep — HEAD bbed0033):** still NOT started — `grep -rl KERNEL-RECALL pwa/ workers/` returns nothing; no commits on the ID. Targeted gen still re-ranks the narrowed set without recalling JD-relevant items (military comms service, Pan Idræt) from the unsolicited kernel. Content-quality; a fix needs a real targeted LLM gen to verify (owner/live-gated, not doable in cloud CI). Kept ACTIVE.
 
@@ -1120,7 +1124,9 @@ _verified: 2026-10-13_
 
 ## Row 55 — TARGETED-OUTPUT-FURNITURE-001
 
-_verified: 2026-10-13_
+_verified: 2026-10-23_
+
+**2026-10-23 (desktop nightly, E1 — HEAD d7495a2b) — RE-SCOPED:** the "all six legs hand-fixed only" status is wrong. Code + history: **(b) SHIPPED** — docx-worker application line `"Ansøgning til"` per language (e48dd55a, 2026-07-22); `EU-borger` via loaded `antcv-identity-lang-heal.js` (26a0379d, 2026-07-12). **(f) SHIPPED** — FURNITURE-LANG-001 `__AINOTICE` map da/es/zh/he/ar/am in `workers/docx-worker/src/index.js` (d32f50af, 2026-07-11). **(c) HALF** — `antcv-react-islands.js` tells the CL prompt to greet the hiring manager by name when the tracker row's `hm` field is filled (b31a8704, 2026-07-29); nothing extracts the contact from the JD when `hm` is empty (owner decision). **(a) CV header line type, (d) brand-fit, (e) merged-role title order:** open pending a real targeted export (owner-verify). Verified by code read, not a rendered export. Kept ACTIVE on a/c/d/e.
 
 **2026-10-13 (CI nightly, E1 staleness sweep — HEAD bbed0033):** still NOT started — `grep -rl TARGETED-OUTPUT-FURNITURE pwa/ workers/` returns nothing; no commits on the ID. All six furniture legs (a CV header specialization-vs-application line, b fixed-label localization, c JD named-contact greeting, d employer brand-fit, e merged-role title order, f AI-notice localization) remain hand-fixed only. Legs b/e/f are deterministic template transforms that COULD be coded, but they live in the docx export path (worker + `antcv-docx-client.js`) → would need a PR plus a live export verify this cloud run cannot do (no browser pane, ALLOW_DEPLOY=false); not shipped speculatively per owner's "no brickable mid-product". Content/gen-quality; owner/live-gated. Kept ACTIVE.
 
@@ -1146,7 +1152,9 @@ _verified: 2026-10-13_
 
 ## Row 56 — GEN-JD-RELEVANCE-TRIM-001
 
-_verified: 2026-10-13_
+_verified: 2026-10-23_
+
+**2026-10-23 (desktop nightly, E1 — HEAD d7495a2b):** verified not started — 0 `RELEVANCE-TRIM` markers. Real targeted gen gated. Kept ACTIVE.
 
 **2026-10-13 (CI nightly, E1 staleness sweep — HEAD bbed0033):** still NOT started — `grep -rl RELEVANCE-TRIM pwa/ workers/` returns nothing; no commits on the ID. Targeted CV still doesn't relevance-gate per-role bullets / hide irrelevant tools (optics/fab bullets + LabVIEW on a software/AI JD). Content-quality, sibling of row 54; needs a real targeted LLM gen to verify (owner/live-gated, not doable in cloud CI). Kept ACTIVE.
 

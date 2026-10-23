@@ -76,10 +76,10 @@ citing an old number may mean either row — the ID disambiguates.
 | 50 | `UPLOAD-SCREEN-TOP-CLIP-001` | 2026-10-23 | (owner 2026-07-05, same live session as rows 46-49): the upload screen's EN/gear/Editor header row was still c |
 | 51 | `PREVIEW-SCROLL-JITTER-001` | 2026-10-23 | (owner 2026-07-05, live session, reported as two symptoms: "application analysis panel is stuck again, does no |
 | 39 | `GEN-MODELROLE-001` | 2026-10-16 | code shipped AND MODEL_ROLES set in both wrangler.toml (owner map; coherence now `openai`). Remaining = live-deplo |
-| 53 | `CROSS-APP-EXPORT-CONTAMINATION-001` | 2026-10-13 | leg (a) P0 SHIPPED (1.51.639 scope-guard → reworked MIRROR-LOAD-001 1.51.680); legs b-f open — (owner 2026-07-06, P0 — real export) — target was the KOMBIT "AI-udvikler"  |
-| 54 | `GEN-JD-TAILOR-KERNEL-RECALL-001` | 2026-10-13 | (owner 2026-07-07) — targeted tailoring narrows/compresses to the JD but does  |
-| 55 | `TARGETED-OUTPUT-FURNITURE-001` | 2026-10-13 | (owner 2026-07-07) — targeted-output furniture/personalization defects on the KO |
-| 56 | `GEN-JD-RELEVANCE-TRIM-001` | 2026-10-13 | (owner 2026-07-07) — sibling of row 54: row 54 RECALLS relevant items the narrow set |
+| 53 | `CROSS-APP-EXPORT-CONTAMINATION-001` | 2026-10-23 | leg (a) P0 SHIPPED (1.51.639 scope-guard → reworked MIRROR-LOAD-001 1.51.680); legs b-f open — (owner 2026-07-06, P0 — real export) — target was the KOMBIT "AI-udvikler"  |
+| 54 | `GEN-JD-TAILOR-KERNEL-RECALL-001` | 2026-10-23 | (owner 2026-07-07) — targeted tailoring narrows/compresses to the JD but does  |
+| 55 | `TARGETED-OUTPUT-FURNITURE-001` | 2026-10-23 | (owner 2026-07-07) — targeted-output furniture: legs b (label localization) + f (AI-notice localization) SHIPPED under other tickets, c half (greet-by-name from tracker hm only); a/d/e open, owner-verify on a real targeted export |
+| 56 | `GEN-JD-RELEVANCE-TRIM-001` | 2026-10-23 | (owner 2026-07-07) — sibling of row 54: row 54 RECALLS relevant items the narrow set |
 | 60 | — | 2026-10-14 | PANEL-CONTROLS-2026-07-07 (owner, editor/preview panel controls — 6 legs, diagnostic-first, auto-deploy prod s |
 | 61 | `LINE-DISTRIBUTION-GUIDELINES-001` | 2026-10-14 | gen leg + bidirectional Fit-it SHIPPED (LINE-DISTRIBUTION-001, 1.51.2921/2980) — (KOMBIT lessons v1→v7, owner asked to crystallize) — conclusions on line-fill / orphan control, the single mos |
 | 57 | `TARGETED-CV-POLISH-RULES-001` | 2026-10-14 | (owner 2026-07-07, universal rules from a full CV review) — CONTENT: (1) each bul |

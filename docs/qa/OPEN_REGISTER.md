@@ -47,8 +47,8 @@ citing an old number may mean either row — the ID disambiguates.
 | # | ID | verified | scope |
 |---|---|---|---|
 | 38 | `GEN-BACKGROUND-001` | 2026-10-15 | CLIENT — ENGINE SHIPPED 1.51.132 (antcv-gen-job-client.js, window.AntcvGenJob, 8 tests, ine |
-| 76 | `JOBTRACKER-LLM-REFIT-BUTTON-001` | 2026-10-14 | (deferred enhancement) — the fit SCORE that orders the Top-5 is deterministic by design (ranking stability). O |
-| 82 | `ROLE-CANON-AUDIT-LEG-001` | 2026-10-14 | (follow-up) — export-audit leg NOW WIRED + green (gold_audit.py role_canon_issues, test_gold_residue 18/18); only es/zh eyeball owner-gated |
+| 76 | `JOBTRACKER-LLM-REFIT-BUTTON-001` | 2026-10-24 | (deferred enhancement) — the fit SCORE that orders the Top-5 is deterministic by design (ranking stability). O |
+| 82 | `ROLE-CANON-AUDIT-LEG-001` | 2026-10-24 | (follow-up) — export-audit leg NOW WIRED + green (gold_audit.py role_canon_issues, test_gold_residue 18/18); only es/zh eyeball owner-gated |
 | 94 | `CONTENT-LANG-STAMP-001` | 2026-10-22 | CODE SHIPPED 1.51.4446-content-lang-stamp (D1 content_language column + relay whitelist + both app.js legs). R |
 | 25 | `TABLE-GEOMETRY-PARITY-001` | 2026-10-18 | Table geometry parity — diagnose real CloudConvert PDF vs preview measurement |
 | 6 | `BANNED-WORDS-MERGE-001` | 2026-10-18 | Wizard/Settings UX — owner eyeball gate on merged banned-words UI + 6-file loader test |
@@ -80,9 +80,9 @@ citing an old number may mean either row — the ID disambiguates.
 | 54 | `GEN-JD-TAILOR-KERNEL-RECALL-001` | 2026-10-23 | (owner 2026-07-07) — targeted tailoring narrows/compresses to the JD but does  |
 | 55 | `TARGETED-OUTPUT-FURNITURE-001` | 2026-10-23 | (owner 2026-07-07) — targeted-output furniture: legs b (label localization) + f (AI-notice localization) SHIPPED under other tickets, c half (greet-by-name from tracker hm only); a/d/e open, owner-verify on a real targeted export |
 | 56 | `GEN-JD-RELEVANCE-TRIM-001` | 2026-10-23 | (owner 2026-07-07) — sibling of row 54: row 54 RECALLS relevant items the narrow set |
-| 60 | — | 2026-10-14 | PANEL-CONTROLS-2026-07-07 (owner, editor/preview panel controls — 6 legs, diagnostic-first, auto-deploy prod s |
-| 61 | `LINE-DISTRIBUTION-GUIDELINES-001` | 2026-10-14 | gen leg + bidirectional Fit-it SHIPPED (LINE-DISTRIBUTION-001, 1.51.2921/2980) — (KOMBIT lessons v1→v7, owner asked to crystallize) — conclusions on line-fill / orphan control, the single mos |
-| 57 | `TARGETED-CV-POLISH-RULES-001` | 2026-10-14 | (owner 2026-07-07, universal rules from a full CV review) — CONTENT: (1) each bul |
+| 60 | — | 2026-10-24 | PANEL-CONTROLS-2026-07-07 (owner, editor/preview panel controls — 6 legs, diagnostic-first, auto-deploy prod s |
+| 61 | `LINE-DISTRIBUTION-GUIDELINES-001` | 2026-10-24 | gen leg + bidirectional Fit-it SHIPPED (LINE-DISTRIBUTION-001, 1.51.2921/2980) — (KOMBIT lessons v1→v7, owner asked to crystallize) — conclusions on line-fill / orphan control, the single mos |
+| 57 | `TARGETED-CV-POLISH-RULES-001` | 2026-10-24 | (owner 2026-07-07, universal rules from a full CV review) — CONTENT: (1) each bul |
 | 59 | `GENERATOR-BASELINE-001` | 2026-10-15 | (owner 2026-07-07, "make the lessons enter the generator baseline") — two things the GE |
 | 63 | `ANALYSIS-STALE-ON-APP-LOAD-001` | 2026-10-15 | / NEW-1 (owner 2026-07-07) — loading a saved application does NOT load ITS JD a |
 | 64 | `ANALYSIS-EXPORT-DROPS-FILLED-ANSWERS-001` | 2026-10-15 | / NEW-2 (owner 2026-07-07) — exporting the JD-analysis PDF omits the  |

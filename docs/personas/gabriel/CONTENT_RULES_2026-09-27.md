@@ -130,4 +130,4 @@ The reviewer read page 1 only: education, Meprolight, the patent, supplier quali
 
 Not adopted: the margin (sidebar) layout. The linear layout was chosen for ATS parsing and is the owner's design of record; the proof-points idea is served by the Results lines and the competencies table.
 
-| Accessibility (owner 2026-10-25) | "Hearing impaired; live-transcription glasses caption speech, and clear spoken communication with written follow-ups works well." The glasses caption Danish too; a letter that mentions Danish level or hearing names them. Kernel v13k. |
+| Accessibility (owner 2026-10-25) | "Hearing impaired; live-transcription glasses caption and translate speech, and clear spoken communication with written follow-ups works well." The glasses caption and translate Danish; a letter that mentions Danish level or hearing names them. Kernel v13k. |

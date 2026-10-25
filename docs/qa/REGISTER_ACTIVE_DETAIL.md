@@ -15,6 +15,10 @@ When you finish it: move it to `REGISTER_CLOSED.md`.
 
 ## Row 38 — GEN-BACKGROUND-001
 
+_verified: 2026-10-25_
+
+**Re-verify 2026-10-25 (CI nightly — E1 stalest slot, code-presence; HEAD `255e56e3`):** engine INTACT — `antcv-gen-memo.js` + `antcv-gen-job-client.js` both still loaded in `pwa/index.html` (2 refs); `window.AntcvGenJob` / `window.AntcvGenMemo` / `window.__antcvGenTrigger` still exposed across the sidecars + `app.js` mirror (3 refs); `gen-memo.test.mjs` + `gen-job-client.test.mjs` green (part of the 35/35 targeted run; full suite 1850/1850). The only commit since the 2026-10-24 sweep is the register-doc commit `255e56e3`, no code touched. REMAINING unchanged + NOT verifiable in unattended CI: the owner A/B on a real mobile gen with `antcv:gen-resume=1` (background/lock → foreground auto-resume, mid-run reload resume, output parity vs a flag-off gen), then the owner-gated default flip. Kept ACTIVE; blocked: real device.
+
 _verified: 2026-10-15_
 
 **2026-10-15 (desktop nightly live attest, Gabo-PC, Fable 5.1 — HEAD f107e458):** guard sidecars 9/9 served, executed, content-identical (`diag-live-guard-sidecars.mjs`); `browser-qa.mjs version-live,sidecars-live` 2/2 PASS; served `index.html` and `app.js` byte-identical to the repo at `1.51.4913-demand-seed-refresh` / `app.js?v=1.51.4812`. Not exercised end-to-end: the real-mobile background/foreground A/B still needs the owner's phone; the relay token is expired today (row 110). Kept ACTIVE; blocked: real device.
@@ -760,6 +764,10 @@ _verified: 2026-10-05_
 
 ## Row 41
 
+_verified: 2026-10-25_
+
+**Re-verify 2026-10-25 (CI nightly — E1 stalest slot, code-presence; HEAD `255e56e3`):** the #185 capture PROBE is intact — `antcv-debug-logger.js` still loaded in `pwa/index.html` (1 ref), full suite 1850/1850 green. No code commit since the 2026-10-24 sweep (`255e56e3` is register-doc only). No headless repro is reproducible in CI: #185 in this React-18 prod bundle = "Maximum update depth exceeded", proven to need a real Android reflow oscillation the stable headless layout cannot produce. REMAINING unchanged: waiting on the next live Android crash to populate a capture — a desktop/owner-device leg. Kept ACTIVE (instrumented, no repro).
+
 _verified: 2026-10-15_
 
 **2026-10-15 (desktop nightly live attest, Gabo-PC, Fable 5.1 — HEAD f107e458):** served `app.js` byte-identical to the repo; Band E3 button audit 210 buttons, 0 THROWS, 0 DEAD, 0 page errors (no React #185 surfaced headlessly). Kept ACTIVE; blocked: real device / owner repro of the editor field-commit sequence.
@@ -793,6 +801,10 @@ _verified: 2026-10-05_
 ---
 
 ## Row 42 — GEN-LANGFAB-001
+
+_verified: 2026-10-25_
+
+**Re-verify 2026-10-25 (CI nightly — E1 stalest slot, code-presence; HEAD `255e56e3`):** fix INTACT — `antcv-lang-fabrication-guard.js` still loaded in `pwa/index.html` (1 ref); `lang-fabrication-guard.test.mjs` green (part of the 35/35 targeted run; full suite 1850/1850). No code commit since the 2026-10-24 sweep (`255e56e3` register-doc only). REMAINING unchanged: owner-verify on a FRESH targeted gen (German omitted + Danish B1) — regen-gated, needs a real LLM generation unattended CI cannot run. Kept ACTIVE.
 
 _verified: 2026-10-15_
 
@@ -828,6 +840,10 @@ _verified: 2026-10-05_
 
 ## Row 43
 
+_verified: 2026-10-25_
+
+**Re-verify 2026-10-25 (CI nightly — E1 stalest slot, code-presence; HEAD `255e56e3`):** fix INTACT — `antcv-candidate-preview-editor-341.js` still loaded in `pwa/index.html` (1 ref), the Path-C header-whitelist marker `data-antcv-candidate-band` still present in the sidecar (2 refs); `ca006-pathc-header-guard.test.mjs` green (part of the 35/35 targeted run; full suite 1850/1850). Sidecar-only, no app.js edit; no code commit since the 2026-10-24 sweep. REMAINING: owner click-through eyeball on a targeted gen preview (live, needs owner session). Kept ACTIVE.
+
 _verified: 2026-10-15_
 
 **2026-10-15 (desktop nightly live attest, Gabo-PC, Fable 5.1 — HEAD f107e458):** served `app.js` byte-identical to the repo; E4 results preview/export parity OK. The Application-label bleed needs a signed-in application load; token expired today (row 110). Kept ACTIVE; blocked: owner session.
@@ -861,6 +877,10 @@ _verified: 2026-10-05_
 ---
 
 ## Row 44 — JD-ANALYSIS-PRINT-001
+
+_verified: 2026-10-25_
+
+**Re-verify 2026-10-25 (CI nightly — E1 stalest slot, code-presence; HEAD `255e56e3`):** fix INTACT — `antcv-analysis-report-pdf-360.js` still loaded in `pwa/index.html` (1 ref), the render-present offscreen-iframe geometry (`left:-99999px`) still present in the sidecar (1 ref); `analysis-print-surface.test.mjs` green (part of the 35/35 targeted run; full suite 1850/1850). No code commit since the 2026-10-24 sweep. REMAINING: owner click-through of "Download analysis (PDF)" → confirm it yields the analysis report, not the CV (live, needs owner session). Kept ACTIVE.
 
 _verified: 2026-10-15_
 

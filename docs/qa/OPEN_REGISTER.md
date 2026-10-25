@@ -46,7 +46,7 @@ citing an old number may mean either row — the ID disambiguates.
 
 | # | ID | verified | scope |
 |---|---|---|---|
-| 38 | `GEN-BACKGROUND-001` | 2026-10-15 | CLIENT — ENGINE SHIPPED 1.51.132 (antcv-gen-job-client.js, window.AntcvGenJob, 8 tests, ine |
+| 38 | `GEN-BACKGROUND-001` | 2026-10-25 | CLIENT — ENGINE SHIPPED 1.51.132 (antcv-gen-job-client.js, window.AntcvGenJob, 8 tests, ine |
 | 76 | `JOBTRACKER-LLM-REFIT-BUTTON-001` | 2026-10-24 | (deferred enhancement) — the fit SCORE that orders the Top-5 is deterministic by design (ranking stability). O |
 | 82 | `ROLE-CANON-AUDIT-LEG-001` | 2026-10-24 | (follow-up) — export-audit leg NOW WIRED + green (gold_audit.py role_canon_issues, test_gold_residue 18/18); only es/zh eyeball owner-gated |
 | 94 | `CONTENT-LANG-STAMP-001` | 2026-10-22 | CODE SHIPPED 1.51.4446-content-lang-stamp (D1 content_language column + relay whitelist + both app.js legs). R |
@@ -67,10 +67,10 @@ citing an old number may mean either row — the ID disambiguates.
 | 29 | `NIL-TARGETED-STATE-STICK-001` | 2026-10-21 | NIL state-stick — leg C: stale-row snapshot restore + auto-save downgraded-meta belt |
 | 2 | `LINKIFY-EXPORT-001` | 2026-10-23 | SW-projects line-end overflow leg (hyperlink half already closed) |
 | 39a | `AUTOSAVE-NO-DOWNGRADE-001` | 2026-10-16 | TAB/DEVICE ISOLATION residuals — auto-save poison-writer CLOSED (AUTOSAVE-NO-DOWNGRADE-001) + same-device stal |
-| 41 | — | 2026-10-15 | SO-004 CRASH — React #185 on editor field commits, shared renderer. |
-| 42 | `GEN-LANGFAB-001` | 2026-10-15 | fabricated languages (invented German, wrong Danish); deterministic language-fact belt vs ke |
-| 43 | — | 2026-10-15 | CA-006 — Application label bleeds into first role title; guard the write site. |
-| 44 | `JD-ANALYSIS-PRINT-001` | 2026-10-15 | analysis PDF button exports the CV; fix the export doc-type. |
+| 41 | — | 2026-10-25 | SO-004 CRASH — React #185 on editor field commits, shared renderer. |
+| 42 | `GEN-LANGFAB-001` | 2026-10-25 | fabricated languages (invented German, wrong Danish); deterministic language-fact belt vs ke |
+| 43 | — | 2026-10-25 | CA-006 — Application label bleeds into first role title; guard the write site. |
+| 44 | `JD-ANALYSIS-PRINT-001` | 2026-10-25 | analysis PDF button exports the CV; fix the export doc-type. |
 | 47 | `MOBILE-TOPBAR-SAFEAREA-001` | 2026-10-23 | + MOBILE-TOPBAR-EXPORT-FAB-001 (owner, mobile P0) — top bar unreachable at 100% zoo |
 | 49 | `SIDEBAR-GROUP-PAGE-BREAK-001` | 2026-10-23 | (owner, design guidance) — a very long TOOLS & METHODS group (e.g. "Project & del |
 | 50 | `UPLOAD-SCREEN-TOP-CLIP-001` | 2026-10-23 | (owner 2026-07-05, same live session as rows 46-49): the upload screen's EN/gear/Editor header row was still c |

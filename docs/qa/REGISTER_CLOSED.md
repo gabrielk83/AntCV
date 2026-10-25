@@ -4,6 +4,14 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 132 — JT-HEALTH-CMD-001 — CLOSED 2026-10-25 (job-tracker nightly, evidence: negative-controlled test on the real `dead_pointer_rows` / `cloud_app_ids` / `cmd_health`)
+
+_verified: 2026-10-25_
+
+_Found and fixed the same run by the job-tracker nightly 2026-10-25 (Gabo-PC, Opus 5.5, worktree-isolated). Script-only: no `pwa/` asset, no version, no shift claim._
+
+Step 7 of the nightly (every `artifacts[uk].application_id` resolves to a live cloud app) had no tool, so each run rebuilt the check ad hoc. `gen-runner.py health` now does it: `dead_pointer_rows` compares ids as strings (the doc stores ints and strings), sorts by rank, tags closed rows and lists artifacts with no tracker row as "?"; `cloud_app_ids` returns None on a non-200 or a body with no list; `cmd_health` exits 0 clean, 1 on a dead pointer, 2 when the list cannot be read. Live on rev 315: 54 pointers vs 87 cloud apps, 1 dead (`veo_technologies` → 3500, row 118). `test_health_cmd.py` (20 checks), sabotage by line index: 938 → 10 red, 950 → 1 red (after tightening the test: a 500 carrying a list), 973 → 1 red; restored byte-identical.
+
 ## Row 131 — PYMUPDF-IMPORT-001 — CLOSED 2026-10-23 (job-tracker nightly, evidence: negative-controlled test on the real loaders with the `fitz` alias blocked, 16 red on pre-fix HEAD)
 
 _verified: 2026-10-23_

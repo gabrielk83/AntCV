@@ -47,6 +47,7 @@ python job-tracker-sync.py status           # local rev vs cloud rev; has either
 python job-tracker-sync.py push             # local doc -> D1 (merges on 409)
 python job-tracker-sync.py pull --render     # D1 -> local doc, then rebuild the .xlsx
 python job-tracker-sync.py import-xlsx       # edited .xlsx -> local doc, then push
+python gen-runner.py health                 # every artifacts[uk].application_id resolves? exit 1 = dead pointer, 2 = list failed (JT-HEALTH-CMD-001)
 ```
 
 Typical loops:

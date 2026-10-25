@@ -922,6 +922,57 @@ def sanitize_text(text):
     return t
 
 # ── commands ───────────────────────────────────────────────────────
+def dead_pointer_rows(doc, app_ids):
+    """JT-HEALTH-CMD-001 (2026-10-25): artifacts[uk].application_id values that
+    do not resolve to a live cloud application. The nightly's step 7 health
+    check had no tool; every run rebuilt it ad hoc. app_ids = the ids from GET
+    /api/applications, compared as strings (the doc stores ints and strings).
+    An artifact whose uk has no tracker row is still listed (company "?")."""
+    ids = {str(i) for i in app_ids}
+    byuk = {row_uk(r): r for r in (doc.get("rows") or [])}
+    out = []
+    for uk, a in (doc.get("artifacts") or {}).items():
+        if not isinstance(a, dict) or not a.get("application_id"):
+            continue
+        app = str(a.get("application_id"))
+        if app in ids:
+            continue
+        r = byuk.get(uk)
+        out.append({"uk": uk, "app": app, "rank": r[0] if r else 9999,
+                    "company": r[1] if r else "?", "role": r[2] if r else "?",
+                    "closed": is_closed_row(r) if r else False})
+    out.sort(key=lambda d: (d["rank"], d["uk"]))
+    return out
+
+def cloud_app_ids():
+    """Ids of every live cloud application, or None when the list call fails."""
+    c, b = _req(RELAY, "/api/applications")
+    if c != 200:
+        return None
+    lst = (b or {}).get("applications") if isinstance(b, dict) else b
+    if not isinstance(lst, list):
+        return None
+    return {str(a.get("id")) for a in lst if isinstance(a, dict) and a.get("id") is not None}
+
+def cmd_health(args):
+    """Nightly step 7: every artifacts[uk].application_id must resolve. Exit 1 on
+    a dead pointer, 2 when the applications list cannot be read."""
+    rev, doc = get_doc()
+    ids = cloud_app_ids()
+    if ids is None:
+        print("health: GET /api/applications failed; pointers not checked")
+        sys.exit(2)
+    ptrs = sum(1 for a in (doc.get("artifacts") or {}).values()
+               if isinstance(a, dict) and a.get("application_id"))
+    dead = dead_pointer_rows(doc, ids)
+    print(f"health: rev {rev}, {ptrs} artifact pointers vs {len(ids)} cloud apps, {len(dead)} dead")
+    for d in dead:
+        tag = " (CLOSED row)" if d["closed"] else ""
+        print(f"   {d['uk']:32} rank {d['rank']:>4}  {str(d['company'])[:26]} / "
+              f"{str(d['role'])[:30]}  app {d['app']} not in the cloud{tag}")
+    if dead:
+        sys.exit(1)
+
 def cmd_list(args):
     _, doc = get_doc()
     rows = eligible_rows(doc, set(args.row) if args.row else None)
@@ -2626,9 +2677,11 @@ def main():
         p.add_argument("--no-research", dest="research", action="store_false", help="skip Google-CSE employer research")
         p.add_argument("--no-brand", dest="brand", action="store_false", help="skip the brand-decides site-crawl (colours + spirit/values/tone)")
         p.add_argument("--no-checklist", dest="checklist", action="store_false", help="skip The Checklist (course CV checklist, compendium p 22); it runs by default")
+    sub.add_parser("health", help="check every artifacts[uk].application_id resolves to a live cloud app")
     args = ap.parse_args()
     if args.cmd == "list": cmd_list(args)
     elif args.cmd == "run": cmd_run(args)
+    elif args.cmd == "health": cmd_health(args)
     else: ap.print_help()
 
 if __name__ == "__main__":

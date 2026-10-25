@@ -2563,7 +2563,9 @@ _verified: 2026-10-15_
 
 ## Row 118 — JT-ARMED-ARTIFACT-NO-DRAIN-001
 
-_verified: 2026-10-23_
+_verified: 2026-10-25_
+
+**RE-VERIFIED 2026-10-25 (job-tracker nightly, Gabo-PC).** `gen-runner.py list` on rev 315 still prints the ARMED block with `napatech` (app 2781, CLOSED row, flag stale). The new `gen-runner.py health` (row 132): 54 pointers vs 87 cloud apps, 1 dead, `veo_technologies` → app 3500. Unchanged; still waits on the owner.
 
 **RE-VERIFIED 2026-10-23 (job-tracker nightly, Gabo-PC).** `gen-runner.py list` on rev 312 still prints the ARMED block with `napatech` (app 2781, CLOSED row, flag stale). Health check: 54 artifact pointers vs 87 cloud apps, 1 dead, `veo_technologies` → app 3500. Unchanged; still waits on the owner.
 
@@ -2663,7 +2665,9 @@ is adoption, not pricing. Proposed: replace the three Mistral ids with `mistral-
 
 ## Row 127 — JT-OWNER-PACKAGED-DEFAULT-ON-001
 
-_verified: 2026-10-23_
+_verified: 2026-10-25_
+
+**RE-VERIFIED 2026-10-25 (job-tracker nightly, Gabo-PC).** Rows 185 and 186 still default-on, both "Submitted", both in the OWNER-PACKAGED block on rev 315. Not generated. Still waits on the owner.
 
 **RE-VERIFIED 2026-10-23 (job-tracker nightly, Gabo-PC).** Rows 185 (3Shape Optics Engineer) and 186 (WD Technologist R&D) still default-on, both "Submitted", both in the OWNER-PACKAGED block. Not generated. Still waits on the owner: clear the flags or answer (b).
 

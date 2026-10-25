@@ -1285,6 +1285,10 @@ _verified: 2026-10-24_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
+_verified: 2026-10-25_
+
+**Re-verify 2026-10-25 (desktop nightly E1, Gabo-PC, Opus 5.5 — HEAD `e6ab506a`):** leg (A) anchors present: `__antcvRowFit` 8 refs in `pwa/app.src.js`, `goldDensity` 4 refs in `pwa/antcv-bullet-targets.js`; four app.js commits since 10-15 (CC-HEADERS-PLAIN-001/002, Terma brand fix, mobile grab-zone) touch neither. Clean-cut floor + mid-unit-cut / blank-lower-sidebar (rows 27/49) still open, real-gen gated. Leg (B) fixed in tooling; leg (C) Word-COM not exercised this run. Kept ACTIVE.
+
 _verified: 2026-10-15_
 
 **2026-10-15 (CI nightly, E1 staleness sweep — HEAD 035a030e):** unchanged — no code landed since the last sweep (the only commit since was the 10-14 docs refresh). Leg (A) anchors re-confirmed: `__antcvRowFit` present in `pwa/app.src.js` (8 refs), `goldDensity` in `pwa/antcv-bullet-targets.js` (4 refs) + `pwa/test/unit/gold-density-shared.test.mjs`; still open for clean-cut floor + mid-unit-cut/blank-lower-sidebar (rows 27/49). Leg (B) docx integrity FIXED in hand-edit tooling; leg (C) renderer = desktop Word-COM only (not CI). Suite 1821/1821. Kept ACTIVE.
@@ -1307,6 +1311,10 @@ _verified: 2026-10-15_
 
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
+
+_verified: 2026-10-25_
+
+**Re-verify 2026-10-25 (desktop nightly E1, Gabo-PC, Opus 5.5 — HEAD `e6ab506a`):** guard intact, line moved 18765 -> 18778 (later app.js commits above it): `if (t.rationale && !(t.meta && t.meta.company && !window.__antcvUnsol(t.meta.company)))` gates `u.set("rationale", t.rationale)` at 18780; `__antcvUnsol` 37 refs; saved-app open handlers still clear with `bo(n.rationale || null)` (18992, 42179, 48816). Not live-repro'd: a targeted->targeted switch on the owner's signed-in account writes their live app state, so it stays owner-verify. Kept ACTIVE.
 
 _verified: 2026-10-15_
 
@@ -1331,6 +1339,10 @@ _verified: 2026-10-15_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
+_verified: 2026-10-25_
+
+**Re-verify 2026-10-25 (desktop nightly E1, Gabo-PC, Opus 5.5 — HEAD `e6ab506a`):** desktop-only Playwright guard RUN: `node pwa/test/diag-new2-gap-detail-export.mjs` -> NEW2-GAP-DETAIL-EXPORT OK (MARKER_DETAIL_1/2, MARKER_CORRECTION_1, "How I cover this", covered tick all present in the export HTML). Owner live-verify (fill a gap detail on a real app, export) still owed. Kept ACTIVE.
+
 _verified: 2026-10-15_
 
 **2026-10-15 (CI nightly, E1 staleness sweep — HEAD 035a030e):** re-confirmed intact — no code landed since the last sweep. `pwa/antcv-analysis-report-pdf-360.js` still carries the `gapStateKey`/`readGapState` content-based helpers (6 refs); `pwa/test/diag-new2-gap-detail-export.mjs` present (Playwright diag — chromium absent in CI, so it runs only on desktop; it is NOT part of the node `run-tests.mjs pwa` suite, which is 1821/1821 green). Owner live-verify still owed (fill a gap detail live → confirm it exports). Kept ACTIVE.
@@ -1353,6 +1365,10 @@ _verified: 2026-10-15_
 
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
+
+_verified: 2026-10-25_
+
+**Re-verify 2026-10-25 (desktop nightly E1, Gabo-PC, Opus 5.5 — HEAD `e6ab506a`):** guards RUN on this host, not grepped. `diag-mob008-panel-overflow.mjs`: panel `overflowY:auto`, scrollH 1874 vs clientH 279, scrolls -> MOB008-PANEL-OVERFLOW OK. `diag-mob009-autopages-device-parity.mjs` (settle-hardened guard from 10-15): desktop and mobile maps identical (`core:{24:2}`, `experience:{0:3}`, `recommendations:{0:3}`), scale 1 vs 0.471 -> OK on the first run. MOB-001..007 + MOB-GAP-OPEN unchanged: real-phone gated. Kept ACTIVE.
 
 _verified: 2026-10-15_
 

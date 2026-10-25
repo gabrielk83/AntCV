@@ -83,10 +83,10 @@ citing an old number may mean either row — the ID disambiguates.
 | 60 | — | 2026-10-24 | PANEL-CONTROLS-2026-07-07 (owner, editor/preview panel controls — 6 legs, diagnostic-first, auto-deploy prod s |
 | 61 | `LINE-DISTRIBUTION-GUIDELINES-001` | 2026-10-24 | gen leg + bidirectional Fit-it SHIPPED (LINE-DISTRIBUTION-001, 1.51.2921/2980) — (KOMBIT lessons v1→v7, owner asked to crystallize) — conclusions on line-fill / orphan control, the single mos |
 | 57 | `TARGETED-CV-POLISH-RULES-001` | 2026-10-24 | (owner 2026-07-07, universal rules from a full CV review) — CONTENT: (1) each bul |
-| 59 | `GENERATOR-BASELINE-001` | 2026-10-15 | (owner 2026-07-07, "make the lessons enter the generator baseline") — two things the GE |
-| 63 | `ANALYSIS-STALE-ON-APP-LOAD-001` | 2026-10-15 | / NEW-1 (owner 2026-07-07) — loading a saved application does NOT load ITS JD a |
-| 64 | `ANALYSIS-EXPORT-DROPS-FILLED-ANSWERS-001` | 2026-10-15 | / NEW-2 (owner 2026-07-07) — exporting the JD-analysis PDF omits the  |
-| 58 | `EXPORT-SETTLED-001` | 2026-10-15 | MOBILE-BUGS-2026-07 (owner "Mobile App Bug Findings Report", 2026-07-07) — 9 findings: MOB-001 Danish UI shows |
+| 59 | `GENERATOR-BASELINE-001` | 2026-10-25 | (owner 2026-07-07, "make the lessons enter the generator baseline") — two things the GE |
+| 63 | `ANALYSIS-STALE-ON-APP-LOAD-001` | 2026-10-25 | / NEW-1 (owner 2026-07-07) — loading a saved application does NOT load ITS JD a |
+| 64 | `ANALYSIS-EXPORT-DROPS-FILLED-ANSWERS-001` | 2026-10-25 | / NEW-2 (owner 2026-07-07) — exporting the JD-analysis PDF omits the  |
+| 58 | `EXPORT-SETTLED-001` | 2026-10-25 | MOBILE-BUGS-2026-07 (owner "Mobile App Bug Findings Report", 2026-07-07) — 9 findings: MOB-001 Danish UI shows |
 | 62 | `HEADER-BANNER-DESIGN-RULES-001` | 2026-10-15 | (owner 2026-07-07, KOMBIT gold) — bake the correct CV/CL header-banner design i |
 | 74 | `JD-SWAP-STALE-RATIONALE-001` | 2026-10-15 | LIVE-APP DRIVE (owner 2026-07-08: estimator calibration → generate 4 via the app). Three outcomes: (A) PARITY- |
 | 69 | — | 2026-10-15 | CL POLISH v2 + SYSTEMIC EM-DASH (owner 2026-07-08 CL review). Three standing CL rules, applied to the Trackman |

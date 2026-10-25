@@ -70,4 +70,4 @@ demand-seed PR.
 
 ## Live verify (post-deploy, antcv.pages.dev)
 
-See the register run-log entry for the result.
+PASS on antcv.pages.dev: sw.js CACHE antcv-1.51.5139-demand-seed-refresh, index.html serves antcv-cluster-demand.js?v=1.51.5139-demand-seed-refresh (override ?v and boot seed match), served file VERSION 1.51.5139 with pm_process r6 project planning. Pushed as 931a9b42; shift claim released.

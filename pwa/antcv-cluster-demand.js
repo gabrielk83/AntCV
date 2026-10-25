@@ -11,7 +11,7 @@
  * data_analytics / consulting / executive / finance / people_soft) are stage-4
  * research-derived from current market postings, refreshed weekly per
  * docs/deployment/google-cse-setup.md (docs/analysis/
- * cluster_top20_research_2026-10-15.json, latest - supersedes the 2026-10-04
+ * cluster_top20_research_2026-10-25.json, latest - supersedes the 2026-10-15
  * revision; per-run evidence lives in that file's changes_summary. The
  * 2026-08-26 refresh, kept here for history: 7 of 9 clusters changed, 2
  * re-confirmed unchanged (research_phd, data_analytics). Theme: the DELIVERY
@@ -52,7 +52,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.4993';
+  var VERSION = '1.51.5139';
   if (window.AntcvClusterDemand && window.AntcvClusterDemand.version === VERSION) return;
 
   // Embedded seed (verbatim ranks/share from the analyst-reviewed JSON). Keeping it
@@ -65,11 +65,11 @@
       [3, "Stakeholder management, cross-functional coordination, emotional intelligence & conflict resolution", "ABC"],
       [4, "Business/commercial acumen, budget & cost control, go-to-market & financial understanding", "ABC"],
       [5, "Risk identification, assessment & mitigation (risk register)", "ABC"],
-      [6, "Change & governance control (incl. compliance)", "AB"],
-      [7, "Requirements management & translating needs into specs", "AB"],
-      [8, "Process design, modelling & documentation (BPM / BABOK / BPMN)", "none"],
-      [9, "Process / continuous improvement (Lean / Six Sigma)", "none"],
-      [10, "Project planning, time plans & milestone tracking (Jira / Asana / MS Project / Smartsheet)", "none"],
+      [6, "Project planning, time plans & milestone tracking (Jira / Asana / MS Project / Smartsheet)", "none"],
+      [7, "Change & governance control (incl. compliance)", "AB"],
+      [8, "Requirements management & translating needs into specs", "AB"],
+      [9, "Process design, modelling & documentation (BPM / BABOK / BPMN)", "none"],
+      [10, "Process / continuous improvement (Lean / Six Sigma)", "none"],
       [11, "Product lifecycle management (concept to field)", "none"],
       [12, "Supplier / vendor collaboration & spec management", "AB"],
       [13, "ERP / CRM or system-implementation experience", "AB"],
@@ -128,7 +128,7 @@
     // ── CLUSTER-QUAL-001 stage 4 (spec 7.6, owner 2026-07-05): the 6 remaining
     // clusters, research-derived from current (2025-2026) market postings +
     // skills reports (Robert Half, LinkedIn, Coursera, CFI, AIHR, Pluralsight,
-    // BLS et al.; sources in docs/analysis/cluster_top20_research_2026-10-15.json).
+    // BLS et al.; sources in docs/analysis/cluster_top20_research_2026-10-25.json).
     // These extend the COLD-START classifier/weighting to all 9 clusters so a
     // targeted JD in software / data / consulting / executive / finance / HR
     // gets real demand weighting from the seed before the user accumulates

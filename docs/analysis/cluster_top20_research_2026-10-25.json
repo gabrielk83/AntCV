@@ -1,0 +1,1174 @@
+{
+  "source": "Market research (2025-2026 postings + posting-share reports) - CLUSTER-QUAL-001 stage 4 (spec 7.6), weekly refresh",
+  "generated": "2026-10-25",
+  "supersedes": "cluster_top20_research_2026-10-15.json",
+  "method": "Ten cluster passes run inline on the desktop (Gabo-PC, Opus 5.5, scheduled weekly run): built-in WebSearch/WebFetch plus the relay site-scoped search (GET /api/cse-search, CSE_PROXY_TOKEN 64-hex, Brave backend, siteSearch=jobindex.dk, dateRestrict=m1, 10 queries, all 200). Each pass given the shipped 2026-10-15 top-20 as baseline, constrained to evidence-backed keep/reorder/merge/add/drop. Ranking evidence is posting share only; skills-gap surveys and editorial lists are context, not rank input. Jobindex site-scoped hits give Danish ROLE evidence only. medical_secretary ran its own requirement-level leg: Jobindex RSS (q=lægesekretær and q=sundhedsadministrativ, one page each, 1.2 s delay, UA AntCV-demand-research/1.0; the region-hovedstaden / region-sjaelland .rss paths now return 404, so the national feeds were used and region read from the ad) with hosted jobannonce bodies followed, plus the JobTech open API (q=medicinsk sekreterare, offsets 0/100, Skåne län filter); tallied by a UTF-8 script file.",
+  "note": "Weekly refresh 2026-10-25. One cluster changed (pm_process, one capped reorder), nine re-confirmed. No adds, no drops.",
+  "changes_this_run": [
+    "pm_process: project planning, time plans & milestone tracking promoted 10->6, capped at 4 places; former r6-r9 (change & governance, requirements, process design, continuous improvement) shift down one. SkillSyncer (7,516 PM postings, scans Sep 2024-Sep 2026, updated Sep 2026, CC BY 4.0): budgeting 55%, project planning 39%, finance 32%, PMP 31%, Agile 26%, risk management 16%, governance 15%, change management 14%, stakeholder management 12%. Project planning is the second-most-named line and sat below governance, requirements and process items. Capped because the sample is US-weighted, Huntr (23,229) does not tally planning as a separate line, and no Danish share exists."
+  ],
+  "unchanged_confirmed": [
+    "photonics_eng",
+    "research_phd",
+    "engineering_software",
+    "data_analytics",
+    "consulting",
+    "executive",
+    "finance",
+    "people_soft",
+    "medical_secretary"
+  ],
+  "share_legend": "ABC=universal transferable skill; AB/AC/BC=shared across two of the three original A/B/C clusters (pm_process/photonics_eng/research_phd) or, for the 6 stage-4 clusters, a demand-universality tier; none=cluster-specific",
+  "sources": [
+    "https://huntr.co/resume-skills/project-manager",
+    "https://www.seekerscore.com/insights/project-manager-skills-2026",
+    "https://jobs.auditfriendly.co/fpa-jobs",
+    "https://huntr.co/resume-skills/analyst",
+    "https://www.seekerscore.com/blog/most-requested-software-engineering-skills-2026",
+    "https://economicgraph.linkedin.com/content/dam/me/economicgraph/en-us/PDF/us-software-engineer-talent-landscape-2026.pdf",
+    "https://www.ceipal.com/resources/most-in-demand-job-skills-ceipal-2026-report",
+    "https://asuforlife.asu.edu/careers/photonics-engineers",
+    "https://www.electrooptics.com/article/photonic-talent-trends-reveal-workforce-gaps-shifts-hiring-activity",
+    "https://talentfoot.com/top-csuite-skills-2026/",
+    "https://www.deloitte.com/us/en/insights/topics/business-strategy-growth/new-c-suite-roles-and-responsibility-expansion.html",
+    "https://mastersunion.org/blog/what-skills-does-an-hr-business-partner-or-chro-need-in-2026",
+    "https://online.edgewood.edu/?p=14221",
+    "https://managementconsulted.com/media/consulting-firms-are-still-hiring-entry-level-workers-data-shows-but-theyre-looking-for-a-new-set-of-skills/",
+    "https://www.mynewsdesk.com/dk/it-branchen/pressreleases/ai-aendrer-arbejdsmarkedet-nye-tal-viser-en-markant-stigende-efterspoergsel-efter-it-kompetencer-i-hele-danmark-3450642",
+    "relay GET /api/cse-search siteSearch=jobindex.dk dateRestrict=m1 (9 role queries, Brave backend)",
+    "https://www.seekerscore.com/insights/data-analyst-skills-2026",
+    "https://www.seekerscore.com/insights/hr-recruiter-skills-2026",
+    "https://www.seekerscore.com/insights/financial-analyst-skills-2026",
+    "https://www.seekerscore.com/insights/product-manager-skills-2026",
+    "https://www.seekerscore.com/insights/hardware-engineering-skills-2026",
+    "https://www.kickresume.com/en/press/in-demand-skills-2026/",
+    "https://jobsearch.api.jobtechdev.se/search?q=medicinsk%20sekreterare&limit=100 (offsets 0/100/200; Skåne län filter on workplace_address.region)",
+    "https://www.jobindex.dk/jobsoegning.rss?q=l%C3%A6gesekret%C3%A6r (hosted jobannonce bodies followed, 1.2 s delay)",
+    "https://www.kp.dk/uddannelser/sundhedsadministrativ-koordinator/",
+    "https://www.framtid.se/yrke/vardadministrator/lediga-jobb/region-skane",
+    "https://www.skagenonline.dk/faq/hvordan-bliver-man-laegesekretaer",
+    "https://skillsyncer.com/resume-keywords/project-manager",
+    "https://huntr.co/resume-skills/software-engineer",
+    "https://www.jobindex.dk/jobsoegning.rss?q=l%C3%A6gesekret%C3%A6r",
+    "https://www.jobindex.dk/jobsoegning.rss?q=sundhedsadministrativ",
+    "https://jobsearch.api.jobtechdev.se/search?q=medicinsk%20sekreterare"
+  ],
+  "clusters": {
+    "pm_process": {
+      "label": "PM / Product / Process Management",
+      "changed": true,
+      "changes_summary": "2026-10-25: pm_process: project planning, time plans & milestone tracking promoted 10->6, capped at 4 places; former r6-r9 (change & governance, requirements, process design, continuous improvement) shift down one. SkillSyncer (7,516 PM postings, scans Sep 2024-Sep 2026, updated Sep 2026, CC BY 4.0): budgeting 55%, project planning 39%, finance 32%, PMP 31%, Agile 26%, risk management 16%, governance 15%, change management 14%, stakeholder management 12%. Project planning is the second-most-named line and sat below governance, requirements and process items. Capped because the sample is US-weighted, Huntr (23,229) does not tally planning as a separate line, and no Danish share exists. Re-checked: Huntr 23,229 (risk 23.2% > stakeholder 19.5%), Seeker 2,177; AI r2 holds on the Qarera share (no PM dataset tallies AI). Prior: Wording broadening only, ranks unchanged: r4 now reads \"Business/commercial acumen, budget & cost control, go-to-market & financial understanding\". Evidence: Huntr (23,229 project-manager postings, Jul 2026) budget management 13.5% (2,729 required / 316 preferred); Seeker (2,177 postings, 2026-07-13) budgeting 7.3% plus resource allocation 9.4%. Both datasets name budget as a distinct required line that the old r4 wording did not match. Order checks: Huntr risk 23.2% > stakeholder 19.5%, Seeker stakeholder 15.3% > risk 12.9%, so r3 stakeholder / r5 risk stay (sources disagree). Agile 16.5%/24.3% and Jira 15.2% are mostly PREFERRED (Huntr 1,880 vs 1,723; 2,057 vs 818), consistent with methodology at r1 and the tool stack at r10. Change management 12.2% (Seeker) matches r6. WATCH: neither PM dataset tallies an AI line (Huntr #13 is PMP at 2.2%), while Qarera product-manager postings have AI 37.0%; r2 AI holds on the product-manager evidence and the combined-cluster scope, re-test next run. Jobindex m1: projektleder / technical project manager / project manager ads present (role evidence only).",
+      "top20": [
+        {
+          "r": 1,
+          "q": "Project management methodology (PMP / Agile / hybrid / lifecycle)",
+          "share": "none"
+        },
+        {
+          "r": 2,
+          "q": "AI/GenAI tool fluency, agentic workflows & EU AI Act awareness",
+          "share": "ABC"
+        },
+        {
+          "r": 3,
+          "q": "Stakeholder management, cross-functional coordination, emotional intelligence & conflict resolution",
+          "share": "ABC"
+        },
+        {
+          "r": 4,
+          "q": "Business/commercial acumen, budget & cost control, go-to-market & financial understanding",
+          "share": "ABC"
+        },
+        {
+          "r": 5,
+          "q": "Risk identification, assessment & mitigation (risk register)",
+          "share": "ABC"
+        },
+        {
+          "r": 6,
+          "q": "Project planning, time plans & milestone tracking (Jira / Asana / MS Project / Smartsheet)",
+          "share": "none"
+        },
+        {
+          "r": 7,
+          "q": "Change & governance control (incl. compliance)",
+          "share": "AB"
+        },
+        {
+          "r": 8,
+          "q": "Requirements management & translating needs into specs",
+          "share": "AB"
+        },
+        {
+          "r": 9,
+          "q": "Process design, modelling & documentation (BPM / BABOK / BPMN)",
+          "share": "none"
+        },
+        {
+          "r": 10,
+          "q": "Process / continuous improvement (Lean / Six Sigma)",
+          "share": "none"
+        },
+        {
+          "r": 11,
+          "q": "Product lifecycle management (concept to field)",
+          "share": "none"
+        },
+        {
+          "r": 12,
+          "q": "Supplier / vendor collaboration & spec management",
+          "share": "AB"
+        },
+        {
+          "r": 13,
+          "q": "ERP / CRM or system-implementation experience",
+          "share": "AB"
+        },
+        {
+          "r": 14,
+          "q": "Hardware product development (mechanics/electronics/RF)",
+          "share": "AB"
+        },
+        {
+          "r": 15,
+          "q": "Design verification & validation vs specifications",
+          "share": "AB"
+        },
+        {
+          "r": 16,
+          "q": "International product certification (CE / FCC / UL / EASA-145)",
+          "share": "AB"
+        },
+        {
+          "r": 17,
+          "q": "Audit / compliance & CAPA handling",
+          "share": "AB"
+        },
+        {
+          "r": 18,
+          "q": "Status communication to senior management / board",
+          "share": "ABC"
+        },
+        {
+          "r": 19,
+          "q": "Systems-level thinking & managing complexity in matrix/multi-project environments",
+          "share": "ABC"
+        },
+        {
+          "r": 20,
+          "q": "English fluency (Danish an advantage)",
+          "share": "ABC"
+        }
+      ],
+      "sources": [
+        "https://huntr.co/resume-skills/project-manager",
+        "https://www.seekerscore.com/insights/project-manager-skills-2026",
+        "relay GET /api/cse-search siteSearch=jobindex.dk dateRestrict=m1 (9 role queries, Brave backend)"
+      ]
+    },
+    "photonics_eng": {
+      "label": "Photonics / Optical / Test Engineering",
+      "changed": false,
+      "changes_summary": "2026-10-25 re-confirmed: No new posting-share data: ASU/Lightcast tag order unchanged, EPIC Jobs in Photonics (Sep 2025-Mar 2026) is role-level and behind registration. Relay Jobindex m1: no photonics hosted ads (optometrist / fiber noise). Prior: Re-confirmed unchanged. ASU/Lightcast skill tags for photonics engineers (ordered by posting frequency, no shares): optics, physics, optical engineering, optical systems, EE, MATLAB, ME, Python, electro-optics, systems engineering, OpticStudio, data analysis, simulations, metrology, lasers, NPD, automation, sensors, photonics, test planning. Consistent with r1 systems, r3 characterisation, r4 instrumentation, r10 simulation tools, r11 Python/MATLAB automation. EPIC Sep 2025-Mar 2026: optical, photonics and systems engineers the most-posted roles (unchanged from 10-04). Jobindex m1 photonics/fotonik query returned 0 hosted hits. No posting-share data contradicts the current order.",
+      "top20": [
+        {
+          "r": 1,
+          "q": "Optical / photonics systems engineering (free-space & fiber)",
+          "share": "BC"
+        },
+        {
+          "r": 2,
+          "q": "Photonic integrated circuit (PIC) design / sim / tape-out",
+          "share": "none"
+        },
+        {
+          "r": 3,
+          "q": "Device & sensor / EO characterization",
+          "share": "BC"
+        },
+        {
+          "r": 4,
+          "q": "Optical measurement setups, calibration & instrumentation (DCA / OSA / BERT)",
+          "share": "BC"
+        },
+        {
+          "r": 5,
+          "q": "Laser systems (seed lasers, amplifiers, stabilization)",
+          "share": "none"
+        },
+        {
+          "r": 6,
+          "q": "Silicon-photonics test programs & co-packaged optics for AI interconnects",
+          "share": "none"
+        },
+        {
+          "r": 7,
+          "q": "Test concept development, yield & test-time improvement",
+          "share": "AB"
+        },
+        {
+          "r": 8,
+          "q": "Quantum technology / QPU context awareness",
+          "share": "BC"
+        },
+        {
+          "r": 9,
+          "q": "Manufacturability, photonic packaging & assembly (fiber attach, cleanroom, IPC/ISO)",
+          "share": "AB"
+        },
+        {
+          "r": 10,
+          "q": "Foundry PDKs & simulation tools (COMSOL, Zemax, FDTD/Lumerical)",
+          "share": "BC"
+        },
+        {
+          "r": 11,
+          "q": "Data acquisition, automation & analysis (Python, LabVIEW, MATLAB)",
+          "share": "BC"
+        },
+        {
+          "r": 12,
+          "q": "Requirements capture from customer applications (application engineering)",
+          "share": "AB"
+        },
+        {
+          "r": 13,
+          "q": "Patent & IP generation (invention disclosures, patent filings)",
+          "share": "AB"
+        },
+        {
+          "r": 14,
+          "q": "IP strategy, patent portfolio & licensing frameworks",
+          "share": "none"
+        },
+        {
+          "r": 15,
+          "q": "Multivariate analysis / spectrometer technology",
+          "share": "none"
+        },
+        {
+          "r": 16,
+          "q": "Technical leadership & mentoring engineers",
+          "share": "ABC"
+        },
+        {
+          "r": 17,
+          "q": "Cross-disciplinary R&D collaboration",
+          "share": "ABC"
+        },
+        {
+          "r": 18,
+          "q": "Supplier coordination & quality issues",
+          "share": "AB"
+        },
+        {
+          "r": 19,
+          "q": "Medtech / healthtech / deep-tech domain exposure",
+          "share": "none"
+        },
+        {
+          "r": 20,
+          "q": "English fluency; ~10% travel willingness",
+          "share": "ABC"
+        }
+      ],
+      "sources": [
+        "https://asuforlife.asu.edu/careers/photonics-engineers",
+        "https://www.electrooptics.com/article/photonic-talent-trends-reveal-workforce-gaps-shifts-hiring-activity",
+        "relay GET /api/cse-search siteSearch=jobindex.dk dateRestrict=m1 (9 role queries, Brave backend)"
+      ]
+    },
+    "research_phd": {
+      "label": "PhD / Research positions",
+      "changed": false,
+      "changes_summary": "2026-10-25 re-confirmed: No posting-share data. Relay Jobindex m1: 3 hits (DIAS postdoc call), role-level only. Prior: Re-confirmed unchanged. No requirement-level posting-share data for PhD/postdoc calls this run (the AIP March 2026 employment page and the NBER postdoc chapter are workforce statistics, not requirement tallies). Jobindex m1: DIAS postdoc, MSCA doctoral-network and robotic-3D-printing PhD calls present, teaser-only pages (role evidence).",
+      "top20": [
+        {
+          "r": 1,
+          "q": "Completed M.Sc. (physics / EE / engineering) eligibility",
+          "share": "AC"
+        },
+        {
+          "r": 2,
+          "q": "Independent, structured research-project management",
+          "share": "AC"
+        },
+        {
+          "r": 3,
+          "q": "Peer-reviewed publication record",
+          "share": "none"
+        },
+        {
+          "r": 4,
+          "q": "Experimental design & lab work (optics / spectroscopy)",
+          "share": "BC"
+        },
+        {
+          "r": 5,
+          "q": "Scientific computing & AI/ML tooling (Python/MATLAB, GenAI-assisted workflows)",
+          "share": "BC"
+        },
+        {
+          "r": 6,
+          "q": "Data acquisition, processing & visualisation (large sets)",
+          "share": "BC"
+        },
+        {
+          "r": 7,
+          "q": "Hyperspectral / spectroscopic measurement techniques",
+          "share": "BC"
+        },
+        {
+          "r": 8,
+          "q": "Quantum optics / light-source characterization",
+          "share": "BC"
+        },
+        {
+          "r": 9,
+          "q": "Nanofabrication / cleanroom & hands-on device fabrication",
+          "share": "none"
+        },
+        {
+          "r": 10,
+          "q": "Conference presentation & dissemination",
+          "share": "ABC"
+        },
+        {
+          "r": 11,
+          "q": "Interdisciplinary collaboration with external partners",
+          "share": "ABC"
+        },
+        {
+          "r": 12,
+          "q": "Clear technical communication, clarity & precision",
+          "share": "ABC"
+        },
+        {
+          "r": 13,
+          "q": "Methodological rigour & critical analysis",
+          "share": "BC"
+        },
+        {
+          "r": 14,
+          "q": "Curiosity, initiative & self-ownership of research",
+          "share": "none"
+        },
+        {
+          "r": 15,
+          "q": "Domain expertise in a specified subfield (depth)",
+          "share": "none"
+        },
+        {
+          "r": 16,
+          "q": "Reproducible documentation & version control (LaTeX/Jupyter/git)",
+          "share": "none"
+        },
+        {
+          "r": 17,
+          "q": "Teaching / knowledge dissemination",
+          "share": "none"
+        },
+        {
+          "r": 18,
+          "q": "International research mobility / collaboration",
+          "share": "none"
+        },
+        {
+          "r": 19,
+          "q": "English fluency (+ language test if non-native)",
+          "share": "ABC"
+        },
+        {
+          "r": 20,
+          "q": "Innovation systems / STI policy & technology transfer",
+          "share": "none"
+        }
+      ],
+      "sources": [
+        "relay GET /api/cse-search siteSearch=jobindex.dk dateRestrict=m1 (9 role queries, Brave backend)"
+      ]
+    },
+    "engineering_software": {
+      "label": "Software Engineering",
+      "changed": false,
+      "changes_summary": "2026-10-25 re-confirmed: Huntr 121,788 SE postings (through mid-2026): Python 39%, JavaScript 36%, TypeScript 30%, Java 29%, problem-solving 23%, Docker / AWS 15% and Kubernetes 14% mostly PREFERRED. Consistent with r1 core language and r6/r13 cloud and containers. WATCH: problem-solving (r9) required in 24,451 posts; not moved on one dataset that tags it as a soft skill. Prior: Re-confirmed unchanged. Seeker (231,147 postings, 2026-07-13, languages only): Python 10.7%, SQL 7.7%, Java 4.4%, JavaScript 3.1%, C++ 2.7%, TypeScript 2.6%, matching r1 core-language wording. Seeker 199,361-posting skills cut: cloud the most-named technical skill ahead of ML and platform engineering; Python roles AWS 62%, Docker 48%, SQL 45%. LinkedIn Economic Graph: tech share of US SWE postings 38.4% (Dec 2025), flat. Danish IT-Branchen/Jobindex split (security ~19% > cloud 14.5% > AI/ML 12.3%) still the only Nordic requirement-level data, so secure coding r5 stays ahead of cloud r6 under the Danish-evidence preference. No new evidence for an add or drop.",
+      "top20": [
+        {
+          "r": 1,
+          "q": "Proficiency in a core language (Python / Java / Go / TypeScript)",
+          "share": "none"
+        },
+        {
+          "r": 2,
+          "q": "AI-assisted & agentic coding tools (Copilot / Cursor / Claude Code), LLM/RAG integration",
+          "share": "ABC"
+        },
+        {
+          "r": 3,
+          "q": "System design & scalable architecture",
+          "share": "none"
+        },
+        {
+          "r": 4,
+          "q": "Evaluating & reviewing AI-generated code / agent output",
+          "share": "AB"
+        },
+        {
+          "r": 5,
+          "q": "Secure coding & application security (NIS2 compliance)",
+          "share": "none"
+        },
+        {
+          "r": 6,
+          "q": "Cloud platforms & deployment (AWS / GCP / Azure)",
+          "share": "none"
+        },
+        {
+          "r": 7,
+          "q": "CI/CD pipelines & automated testing",
+          "share": "none"
+        },
+        {
+          "r": 8,
+          "q": "Agile / Scrum delivery & iteration",
+          "share": "AB"
+        },
+        {
+          "r": 9,
+          "q": "Data structures, algorithms & problem-solving",
+          "share": "none"
+        },
+        {
+          "r": 10,
+          "q": "Version control & collaborative workflows (Git)",
+          "share": "AB"
+        },
+        {
+          "r": 11,
+          "q": "Observability, monitoring & debugging",
+          "share": "none"
+        },
+        {
+          "r": 12,
+          "q": "Databases, SQL & data modelling (SQL / NoSQL)",
+          "share": "AB"
+        },
+        {
+          "r": 13,
+          "q": "Containerisation & orchestration (Docker / Kubernetes)",
+          "share": "none"
+        },
+        {
+          "r": 14,
+          "q": "API design & microservices (REST / gRPC)",
+          "share": "none"
+        },
+        {
+          "r": 15,
+          "q": "Infrastructure as code & platform engineering (Terraform / developer portals)",
+          "share": "none"
+        },
+        {
+          "r": 16,
+          "q": "Enterprise platform & SaaS ecosystem engineering (SAP / Oracle / Salesforce / Workday)",
+          "share": "AB"
+        },
+        {
+          "r": 17,
+          "q": "Frontend frameworks (React / TypeScript)",
+          "share": "none"
+        },
+        {
+          "r": 18,
+          "q": "Code review & mentoring engineers",
+          "share": "none"
+        },
+        {
+          "r": 19,
+          "q": "Cross-functional collaboration & clear technical communication (product, design, docs)",
+          "share": "ABC"
+        },
+        {
+          "r": 20,
+          "q": "English fluency (Danish an advantage)",
+          "share": "ABC"
+        }
+      ],
+      "sources": [
+        "https://www.seekerscore.com/blog/most-requested-software-engineering-skills-2026",
+        "https://economicgraph.linkedin.com/content/dam/me/economicgraph/en-us/PDF/us-software-engineer-talent-landscape-2026.pdf",
+        "https://www.mynewsdesk.com/dk/it-branchen/pressreleases/ai-aendrer-arbejdsmarkedet-nye-tal-viser-en-markant-stigende-efterspoergsel-efter-it-kompetencer-i-hele-danmark-3450642"
+      ]
+    },
+    "data_analytics": {
+      "label": "Data & Analytics",
+      "changed": false,
+      "changes_summary": "2026-10-25 re-confirmed: Re-checked Huntr 25,152, AccioJob 328, 365 Data Science 1,071: SQL first, Excel second, BI and Python secondary in every sample. Same sources as 10-15, no move. Prior: Data governance, privacy & ethics 19->16; experiment design & A/B testing 16->17, domain knowledge 17->18, Git 18->19 (second 2026-10-15 pass, cloud routine). SeekerScore data analyst postings (n=55,107 active, updated 2026-10-12) name data governance in 9.0%; neither A/B testing nor Git is among its 30 role-defining skills (floor 1.1%; product analytics 1.6%). Not moved: SQL/Excel/Python/statistics are filtered from that list as market-wide skills, so r1-r6 stay. Data engineering 14.1% and ETL 10.5% back r8/r12 as placed; Tableau 12.9% / Power BI 12.2% / BI 10.2% back r3. First pass (desktop): Re-confirmed unchanged. Huntr (25,152 analyst postings, Q1 2026): data analysis 34.3%, SQL 33.5%, communication 31.1%, analytical 26.6%, Python 21.9% (2,254 required / 2,238 preferred), problem-solving 19.7%, data visualisation 17.6%, Excel 15.8%, Tableau 14.1%, project management 13.9%, Power BI 12.6%. SQL r1 confirmed. This dataset puts Python above visualisation (21.9% vs 17.6%, though Tableau+Power BI overlap to 26.7%) while Qarera and AccioJob put BI above Python, so the 10-04 r3 BI / r4 Python order stays: 2 of 4 datasets each way is not evidence for a move. Excel r2 vs Huntr 15.8%: sources still disagree on the SQL/Excel pair, no move. Communication 31.1% supports r11 storytelling staying in the top half.",
+      "top20": [
+        {
+          "r": 1,
+          "q": "SQL & data querying",
+          "share": "ABC"
+        },
+        {
+          "r": 2,
+          "q": "Excel / spreadsheet modelling",
+          "share": "ABC"
+        },
+        {
+          "r": 3,
+          "q": "Data visualisation & BI (Power BI / Tableau / Looker)",
+          "share": "AC"
+        },
+        {
+          "r": 4,
+          "q": "Python / R for analysis",
+          "share": "AB"
+        },
+        {
+          "r": 5,
+          "q": "Statistics & probability (hypothesis testing)",
+          "share": "AB"
+        },
+        {
+          "r": 6,
+          "q": "Data cleaning, wrangling & quality",
+          "share": "none"
+        },
+        {
+          "r": 7,
+          "q": "AI/agentic tools & prompt engineering for analytics workflows",
+          "share": "ABC"
+        },
+        {
+          "r": 8,
+          "q": "Data pipelines & warehousing (dbt / Snowflake / Spark)",
+          "share": "none"
+        },
+        {
+          "r": 9,
+          "q": "Machine learning & predictive modelling",
+          "share": "AB"
+        },
+        {
+          "r": 10,
+          "q": "Business acumen & translating data to decisions",
+          "share": "ABC"
+        },
+        {
+          "r": 11,
+          "q": "Data storytelling & stakeholder communication",
+          "share": "ABC"
+        },
+        {
+          "r": 12,
+          "q": "ETL / data engineering fundamentals",
+          "share": "none"
+        },
+        {
+          "r": 13,
+          "q": "Cloud data platforms (BigQuery / Databricks / Azure)",
+          "share": "AB"
+        },
+        {
+          "r": 14,
+          "q": "Dashboard & KPI reporting",
+          "share": "none"
+        },
+        {
+          "r": 15,
+          "q": "Critical thinking & problem-solving",
+          "share": "ABC"
+        },
+        {
+          "r": 16,
+          "q": "Data governance, privacy & ethics",
+          "share": "AB"
+        },
+        {
+          "r": 17,
+          "q": "Experiment design & A/B testing",
+          "share": "AB"
+        },
+        {
+          "r": 18,
+          "q": "Domain / industry knowledge",
+          "share": "ABC"
+        },
+        {
+          "r": 19,
+          "q": "Version control & reproducible analysis (Git)",
+          "share": "AB"
+        },
+        {
+          "r": 20,
+          "q": "English fluency (Danish an advantage)",
+          "share": "ABC"
+        }
+      ],
+      "sources": [
+        "https://huntr.co/resume-skills/analyst",
+        "https://www.seekerscore.com/insights/data-analyst-skills-2026"
+      ]
+    },
+    "consulting": {
+      "label": "Consulting",
+      "changed": false,
+      "changes_summary": "2026-10-25 re-confirmed: No posting-share data (LinkedIn Skills on the Rise 2026 consulting list is editorial). Relay Jobindex m1: 10 role-level hits. Prior: Re-confirmed unchanged. Management Consulted (Jun 2026): demand concentrated in AI implementation, digital transformation and data, generalist pay flat; PwC 2026 AI Jobs Barometer: AI-exposed roles ask more for judgement, leadership and strategic decision-making. Both are commentary, not posting shares. All named themes are already r1, r11, r13, r16, r18. No reorder evidence.",
+      "top20": [
+        {
+          "r": 1,
+          "q": "AI-augmented delivery & agentic-AI/GenAI tool fluency (prompt engineering, AI oversight)",
+          "share": "ABC"
+        },
+        {
+          "r": 2,
+          "q": "Structured problem-solving (hypothesis-driven, 80/20)",
+          "share": "AC"
+        },
+        {
+          "r": 3,
+          "q": "Quantitative & financial analysis / modelling",
+          "share": "AB"
+        },
+        {
+          "r": 4,
+          "q": "Client relationship, stakeholder management & trust-building",
+          "share": "ABC"
+        },
+        {
+          "r": 5,
+          "q": "Executive communication & storytelling (slides)",
+          "share": "AB"
+        },
+        {
+          "r": 6,
+          "q": "Data analysis & synthesis (Excel)",
+          "share": "ABC"
+        },
+        {
+          "r": 7,
+          "q": "Project / workstream management",
+          "share": "ABC"
+        },
+        {
+          "r": 8,
+          "q": "Business & commercial judgement",
+          "share": "AC"
+        },
+        {
+          "r": 9,
+          "q": "Presentation & facilitation skills",
+          "share": "ABC"
+        },
+        {
+          "r": 10,
+          "q": "Adaptability & fast learning",
+          "share": "ABC"
+        },
+        {
+          "r": 11,
+          "q": "Change management, implementation & value realisation",
+          "share": "AC"
+        },
+        {
+          "r": 12,
+          "q": "Industry / domain expertise",
+          "share": "none"
+        },
+        {
+          "r": 13,
+          "q": "Strategic thinking & framing",
+          "share": "AC"
+        },
+        {
+          "r": 14,
+          "q": "Analytical rigour & attention to detail",
+          "share": "ABC"
+        },
+        {
+          "r": 15,
+          "q": "Market research & competitive analysis",
+          "share": "AB"
+        },
+        {
+          "r": 16,
+          "q": "AI governance, risk & EU AI Act conformity advisory",
+          "share": "AB"
+        },
+        {
+          "r": 17,
+          "q": "Data visualisation & dashboards (Power BI / Tableau)",
+          "share": "AB"
+        },
+        {
+          "r": 18,
+          "q": "AI output verification & critical judgement (bias, hallucination checks)",
+          "share": "AB"
+        },
+        {
+          "r": 19,
+          "q": "Teamwork & collaboration under pressure",
+          "share": "ABC"
+        },
+        {
+          "r": 20,
+          "q": "English fluency (Danish an advantage)",
+          "share": "ABC"
+        }
+      ],
+      "sources": [
+        "https://managementconsulted.com/media/consulting-firms-are-still-hiring-entry-level-workers-data-shows-but-theyre-looking-for-a-new-set-of-skills/"
+      ]
+    },
+    "executive": {
+      "label": "Executive / Senior Leadership",
+      "changed": false,
+      "changes_summary": "2026-10-25 re-confirmed: Same Talentfoot 2026 figures (95/93/90/82%); Deloitte 46,000 postings and Lightcast CFO data are 2018-2024. No move. Prior: Re-confirmed unchanged. Talentfoot C-suite JD shares are the same source as the 10-04 reorder (strategic leadership 95%, revenue 93%, operational scaling 90%, team 82%, customer 82%, financial acumen 64%, cross-functional 55%, AI literacy 27%). Deloitte 46,000 C-suite postings 2018-2023: skills asked for per established role up more than 20% in five years, shift toward quantitative and risk/regulatory capability, consistent with r12 financial acumen and r13 governance/risk. No newer posting-share data, no move.",
+      "top20": [
+        {
+          "r": 1,
+          "q": "Strategic vision & execution",
+          "share": "AB"
+        },
+        {
+          "r": 2,
+          "q": "Commercial growth & revenue architecture",
+          "share": "none"
+        },
+        {
+          "r": 3,
+          "q": "Stakeholder, board & investor communication",
+          "share": "none"
+        },
+        {
+          "r": 4,
+          "q": "Operational excellence & execution",
+          "share": "AB"
+        },
+        {
+          "r": 5,
+          "q": "Building & leading high-performing teams",
+          "share": "AB"
+        },
+        {
+          "r": 6,
+          "q": "Customer & client centricity / experience ownership",
+          "share": "none"
+        },
+        {
+          "r": 7,
+          "q": "Emotional intelligence & people leadership",
+          "share": "ABC"
+        },
+        {
+          "r": 8,
+          "q": "AI & digital strategy fluency (incl. AI governance, agentic workflow leadership)",
+          "share": "AB"
+        },
+        {
+          "r": 9,
+          "q": "P&L ownership & financial stewardship",
+          "share": "none"
+        },
+        {
+          "r": 10,
+          "q": "Organisational change & transformation leadership",
+          "share": "AB"
+        },
+        {
+          "r": 11,
+          "q": "Coaching, culture, talent development & continuous succession management",
+          "share": "AB"
+        },
+        {
+          "r": 12,
+          "q": "Financial acumen (EBITDA, balance sheet, ROI)",
+          "share": "none"
+        },
+        {
+          "r": 13,
+          "q": "Governance, risk, cybersecurity & AI-governance oversight (ESG/CSRD where in scope)",
+          "share": "none"
+        },
+        {
+          "r": 14,
+          "q": "Judgment & decision-making under ambiguity",
+          "share": "ABC"
+        },
+        {
+          "r": 15,
+          "q": "Cross-functional & enterprise-wide alignment",
+          "share": "AB"
+        },
+        {
+          "r": 16,
+          "q": "Resilience, adaptability & learning agility",
+          "share": "ABC"
+        },
+        {
+          "r": 17,
+          "q": "Negotiation & partnership building",
+          "share": "AB"
+        },
+        {
+          "r": 18,
+          "q": "Vision communication & influence",
+          "share": "AB"
+        },
+        {
+          "r": 19,
+          "q": "Global / multi-market & cross-cultural leadership",
+          "share": "none"
+        },
+        {
+          "r": 20,
+          "q": "English fluency (Danish an advantage)",
+          "share": "ABC"
+        }
+      ],
+      "sources": [
+        "https://talentfoot.com/top-csuite-skills-2026/",
+        "https://www.deloitte.com/us/en/insights/topics/business-strategy-growth/new-c-suite-roles-and-responsibility-expansion.html"
+      ]
+    },
+    "finance": {
+      "label": "Finance",
+      "changed": false,
+      "changes_summary": "2026-10-25 re-confirmed: No new posting-share dataset (search returned single postings only). AuditFriendly FP&A shares from 10-15 stand. Relay Jobindex m1: 6 role-level hits. Prior: Professional qualification (CPA / ACCA / CFA / CIMA) or MBA promoted 17->11, bounded to 6 places; r11-r16 each shift down one (IFRS/GAAP 11->12, SOX 12->13, CSRD 13->14, commercial acumen 14->15, cash flow 15->16, cost analysis 16->17). Evidence: AuditFriendly FP&A index, 2,230 live postings across 1,349 employers (recomputed twice daily, read 2026-10-15): Excel 49.7%, Power BI 21.2%, CPA 20.3%, SAP 13.1%, Oracle 10.3%, SQL 10.0%, Tableau 9.8%, CFA 7.7%, Hyperion 7.6%, GAAP 6.7%. CPA alone is the third-most-named token and CPA+CFA (28%) exceed every ERP or BI token, yet the item sat at r17 below GAAP (6.7%, r11). Placed directly above the accounting-standards item from the same dataset. Capped at 6 places because the sample is US-weighted (CPA is a US licence; Danish FP&A ads ask for cand.merc./HD, no Danish share available). Not moved: r5 data/SQL vs r7 BI (SQL 10% < Power BI 21.2%, but r5 also covers general data analysis, which the dataset does not tally). Excel r1 and r7 BI / r8 ERP re-confirmed. Jobindex m1: one senior financial controller ad (role evidence only).",
+      "top20": [
+        {
+          "r": 1,
+          "q": "Advanced Excel & spreadsheet analysis",
+          "share": "ABC"
+        },
+        {
+          "r": 2,
+          "q": "AI & automation in finance",
+          "share": "ABC"
+        },
+        {
+          "r": 3,
+          "q": "Financial modelling & forecasting (FP&A)",
+          "share": "none"
+        },
+        {
+          "r": 4,
+          "q": "Business partnering & stakeholder communication",
+          "share": "BC"
+        },
+        {
+          "r": 5,
+          "q": "Data analysis, SQL & Python fundamentals",
+          "share": "AB"
+        },
+        {
+          "r": 6,
+          "q": "Financial reporting & month-end close",
+          "share": "none"
+        },
+        {
+          "r": 7,
+          "q": "BI & data visualisation (Power BI / Tableau)",
+          "share": "AB"
+        },
+        {
+          "r": 8,
+          "q": "ERP & finance systems (SAP / Oracle / NetSuite / Tagetik)",
+          "share": "none"
+        },
+        {
+          "r": 9,
+          "q": "Budgeting, planning & variance analysis",
+          "share": "none"
+        },
+        {
+          "r": 10,
+          "q": "Scenario modelling & sensitivity analysis",
+          "share": "none"
+        },
+        {
+          "r": 11,
+          "q": "Professional qualification (CPA / ACCA / CFA / CIMA) or MBA",
+          "share": "none"
+        },
+        {
+          "r": 12,
+          "q": "Accounting standards (IFRS / GAAP)",
+          "share": "none"
+        },
+        {
+          "r": 13,
+          "q": "Internal controls, audit & compliance (SOX)",
+          "share": "none"
+        },
+        {
+          "r": 14,
+          "q": "Regulatory, ESG & sustainability reporting (CSRD)",
+          "share": "BC"
+        },
+        {
+          "r": 15,
+          "q": "Commercial & business acumen",
+          "share": "ABC"
+        },
+        {
+          "r": 16,
+          "q": "Cash flow & working-capital management",
+          "share": "none"
+        },
+        {
+          "r": 17,
+          "q": "Cost analysis & profitability management",
+          "share": "none"
+        },
+        {
+          "r": 18,
+          "q": "Attention to detail & accuracy",
+          "share": "ABC"
+        },
+        {
+          "r": 19,
+          "q": "Cross-functional collaboration",
+          "share": "ABC"
+        },
+        {
+          "r": 20,
+          "q": "English fluency (Danish an advantage)",
+          "share": "ABC"
+        }
+      ],
+      "sources": [
+        "https://jobs.auditfriendly.co/fpa-jobs",
+        "relay GET /api/cse-search siteSearch=jobindex.dk dateRestrict=m1 (9 role queries, Brave backend)"
+      ]
+    },
+    "people_soft": {
+      "label": "People / HR",
+      "changed": false,
+      "changes_summary": "2026-10-25 re-confirmed: No HRBP posting-share dataset found (guides and n=4 portals only). Relay Jobindex m1: 9 role-level hits. Prior: Two swaps on posting share (second 2026-10-15 pass, cloud routine). SeekerScore HR/recruiting postings (n=16,082 active, updated 2026-10-12): performance management 15.5% vs workforce planning 5.6% / succession planning 5.5%, so performance management & development 13->9 and strategic workforce & succession planning 9->13. Total rewards 12.5% vs learning & development 5.0%, so compensation, benefits & total rewards 15->14 and L&D 14->15. Not moved: coaching (27.1%) and talent acquisition (20.8%) already sit at r10/r6; the corpus mixes recruiter and HRBP postings, which inflates recruiting-family terms. Employee relations (10.7%) stays at r7 because Danish collective-agreement labour law carries it. The source filters out market-wide skills, so r1-r5 are not comparable and stay. First pass (desktop): Re-confirmed unchanged. Deloitte CHRO postings (via Masters Union): leadership & initiative 74%, communication 59%, critical thinking & problem-solving 55% (r5 holds). Salary.com HRBP mentions (via Edgewood, Jun 2026): leadership 8.17%, change management 1.99%, organisational development 1.37%, shares too small to rank against the list. Robert Half: HR demand for critical thinking when applying AI tools (r4/r5). No posting-share evidence for a reorder; HRIS/Workday, Excel/Power BI and labour-law lines already at r3, r7, r8.",
+      "top20": [
+        {
+          "r": 1,
+          "q": "HR business partnering & stakeholder advisory",
+          "share": "none"
+        },
+        {
+          "r": 2,
+          "q": "Business acumen & commercial understanding",
+          "share": "ABC"
+        },
+        {
+          "r": 3,
+          "q": "People analytics, data storytelling & data-driven HR",
+          "share": "AB"
+        },
+        {
+          "r": 4,
+          "q": "AI literacy & AI-fluency in HR / recruiting automation",
+          "share": "AB"
+        },
+        {
+          "r": 5,
+          "q": "Critical thinking, complex problem-solving & judgment",
+          "share": "ABC"
+        },
+        {
+          "r": 6,
+          "q": "Talent acquisition & full-cycle recruiting, incl. skills-based hiring",
+          "share": "none"
+        },
+        {
+          "r": 7,
+          "q": "Employee relations & labour-law compliance",
+          "share": "none"
+        },
+        {
+          "r": 8,
+          "q": "HRIS & people-analytics systems (Workday / SuccessFactors / Oracle / Visier / Power BI)",
+          "share": "none"
+        },
+        {
+          "r": 9,
+          "q": "Performance management & development",
+          "share": "none"
+        },
+        {
+          "r": 10,
+          "q": "Coaching, influencing, emotional intelligence & learning agility",
+          "share": "AB"
+        },
+        {
+          "r": 11,
+          "q": "Change management & organisational development",
+          "share": "AB"
+        },
+        {
+          "r": 12,
+          "q": "Cross-functional stakeholder management & collaboration",
+          "share": "ABC"
+        },
+        {
+          "r": 13,
+          "q": "Strategic workforce planning & succession planning",
+          "share": "none"
+        },
+        {
+          "r": 14,
+          "q": "Compensation, benefits & total rewards",
+          "share": "none"
+        },
+        {
+          "r": 15,
+          "q": "Learning & development (L&D), incl. AI-enabled learning",
+          "share": "none"
+        },
+        {
+          "r": 16,
+          "q": "Culture, employee experience & belonging",
+          "share": "none"
+        },
+        {
+          "r": 17,
+          "q": "Employer branding & candidate experience",
+          "share": "none"
+        },
+        {
+          "r": 18,
+          "q": "Diversity, equity, inclusion & belonging",
+          "share": "none"
+        },
+        {
+          "r": 19,
+          "q": "HR policy & governance",
+          "share": "none"
+        },
+        {
+          "r": 20,
+          "q": "English fluency (Danish an advantage)",
+          "share": "ABC"
+        }
+      ],
+      "sources": [
+        "https://mastersunion.org/blog/what-skills-does-an-hr-business-partner-or-chro-need-in-2026",
+        "https://online.edgewood.edu/?p=14221",
+        "https://www.seekerscore.com/insights/hr-recruiter-skills-2026"
+      ]
+    },
+    "medical_secretary": {
+      "label": "Medical Secretary / Healthcare Administration",
+      "changed": false,
+      "changes_summary": "2026-10-25 re-confirmed: Weekly re-tally (requirement level). DK: Jobindex RSS q=lægesekretær + q=sundhedsadministrativ, 31 unique ads; 7 secretary ads with full hosted jobannonce bodies (4 in Region Hovedstaden / Sjælland: Roskilde, Holbæk Sygehus, Region Sjælland reumatologi, Rødovre), plus 10 hospital lægesekretær/SAK ads that are teaser-only (body on hr-manager), every one titled \"lægesekretær eller sundhedsadministrativ koordinator\" or equivalent, which backs the r4 education pin. SE: JobTech q=medicinsk sekreterare, 106 hits, 22 in Skåne län (Region Skåne, Kry, Capio, Praktikertjänst, Prima Vård, Vimera). Pooled n=29. Shares DK/SE/pooled: admin 100/100/100%; reception 100/95/97%; education 71/100/93%; independent 86/95/93%; team 86/91/90%; experience 71/91/86%; journal 43/86/76%; it 43/82/72%; language 14/86/69%; epr 43/73/66%; confidential 14/77/62%; service 71/55/59%; flex 29/64/55%; pathway 71/50/55%; referral 43/59/55%; structure 86/41/52%; coding 57/50/52%; booking 86/32/45%; pressure 57/14/24%; clinicassist 43/5/14%; quality 0/9/7%; ai 0/9/7%. No rank moved: the sample is smaller than 10-15 (n=49), the SE leg largely overlaps it, and the term lists were rebuilt, so gaps under ~20 points are method noise. WATCH: prior experience (r14) 86% pooled vs 55% on 10-15; prioritising under pressure (r16) 24% vs 49%. Quality registers 7% and AI/speech recognition 7% stay out. Prior: NEW cluster (MEDSEC-CLUSTER-001, owner 2026-10-15, for a user targeting East Denmark and Skåne). First top-20, ranked on pooled requirement shares from two requirement-level samples: (SE) JobTech open API, q=medicinsk sekreterare, 115 hits of which 30 in Skåne län (Region Skåne, Kry, Capio, Praktikertjänst, Doktor.se, Prima Vård; vårdcentraler, akutmottagning, ortopedi, BUP, habilitering, njurmedicin), full description.text tallied by script; (DK) Jobindex RSS q=lægesekretær, 20 hosted ads followed to the full jobannonce body, 19 with requirement text (4 in Region Hovedstaden / Sjælland, the rest west or unlocated; mostly almen praksis, speciallægepraksis, Aleris, Privathospitalet Danmark). Pooled n=49. Shares as DK/SE/pooled: r1 reception 63/97/84%; r2 team 63/90/80%; r3 service 68/87/80%; r4 education 37/87/67%; r5 journal 32/90/67%; r6 admin 58/73/67%; r7 epr 58/70/65%; r8 flex 37/80/63%; r9 independent 53/70/63%; r10 language 11/90/59%; r11 it 26/80/59%; r12 pathway 42/70/59%; r13 confidentiality 16/83/57%; r14 experience 53/57/55%; r15 booking 68/40/51%; r16 pressure 42/53/49%; r17 structure 47/50/49%; r18 referral 26/57/45%; r19 coding 11/60/41%; r20 clinicassist 37/0/14%. Dropped below r20: quality 31%. Two documented adjustments: the education item (SAK / lægesekretær / medicinsk sekreterare) is pinned no lower than r8 because every Region Hovedstaden and Region Sjælland hospital ad found names \"uddannet lægesekretær eller sundhedsadministrativ koordinator\" as the requirement while the DK practice sample also accepts klinikassistenter; clinic-assistant tasks (prøvetagning, EKG) are DK-general-practice only and sit at r20. Context: Region Hovedstaden + Region Sjælland merge into Region Østdanmark on 2027-01-01; Region Skåne ads name Melior, PASiS, Medspeech, 1177 and diagnos/KVÅ-kodning as standing duties; Region H ads name Sundhedsplatformen as known or an advantage. The Danish sundhedsadministrativ koordinator education (2.5 years, KP) replaced the lægesekretær education; its modules (sundhedsadministration & koordinering, sundhed & sygdom, kommunikation, jura, teknologi & data) back the education, language, pathway and confidentiality items. HK Kommunal: hospital lægesekretær FTEs down 9.2% (800 positions) since 2015, a supply gap, not a demand signal. Weekly runs re-tally both samples (routine prompt step 1).",
+      "top20": [
+        {
+          "r": 1,
+          "q": "Reception, telephone & front-desk patient contact (skranke, patientmottagning)",
+          "share": "none"
+        },
+        {
+          "r": 2,
+          "q": "Interdisciplinary teamwork with doctors, nurses & fellow secretaries",
+          "share": "ABC"
+        },
+        {
+          "r": 3,
+          "q": "Service-minded, respectful patient communication (imødekommende, gott bemötande)",
+          "share": "ABC"
+        },
+        {
+          "r": 4,
+          "q": "Trained medical secretary: sundhedsadministrativ koordinator (SAK) / lægesekretær / medicinsk sekreterare (YH vårdadministration 400p / KY 80p)",
+          "share": "none"
+        },
+        {
+          "r": 5,
+          "q": "Journal documentation, dictation transcription & clinical notes (journalføring, diktat, Medspeech)",
+          "share": "none"
+        },
+        {
+          "r": 6,
+          "q": "Administrative support to clinicians & clinic management (post, attester, recepter, henvisninger, chefsstöd)",
+          "share": "none"
+        },
+        {
+          "r": 7,
+          "q": "Electronic patient-record & practice systems (Sundhedsplatformen / Epic, Melior, PASiS, XMO / Novax / Clinea)",
+          "share": "none"
+        },
+        {
+          "r": 8,
+          "q": "Flexibility & readiness for change (forandringsparat, omstillingsparat)",
+          "share": "AB"
+        },
+        {
+          "r": 9,
+          "q": "Independent, responsible working & initiative",
+          "share": "ABC"
+        },
+        {
+          "r": 10,
+          "q": "Danish / Swedish in speech & writing incl. medical terminology",
+          "share": "none"
+        },
+        {
+          "r": 11,
+          "q": "IT literacy & digital work methods (digital post, e-Boks, 1177 e-tjänster)",
+          "share": "AB"
+        },
+        {
+          "r": 12,
+          "q": "Coordination of patient pathways & clinic planning (forløbskoordinering)",
+          "share": "none"
+        },
+        {
+          "r": 13,
+          "q": "Confidentiality, patient rights & data protection (tavshedspligt, sekretess, GDPR, forvaltningsret)",
+          "share": "none"
+        },
+        {
+          "r": 14,
+          "q": "Prior experience as medical secretary in general practice, hospital or psychiatry",
+          "share": "none"
+        },
+        {
+          "r": 15,
+          "q": "Patient scheduling & booking: tidsbestilling, indkaldelser / kallelser, visitation",
+          "share": "none"
+        },
+        {
+          "r": 16,
+          "q": "Prioritising under pressure & staying calm in a busy clinic (mødestabil, stresstålig)",
+          "share": "ABC"
+        },
+        {
+          "r": 17,
+          "q": "Structured, accurate & detail-oriented working (overblik, noggrannhet)",
+          "share": "ABC"
+        },
+        {
+          "r": 18,
+          "q": "Referral handling & correspondence with other care providers (henvisninger, remisser)",
+          "share": "none"
+        },
+        {
+          "r": 19,
+          "q": "Diagnosis & procedure coding, registration & settlement (ICD / KVÅ / DRG, ydelsesregistrering, afregning)",
+          "share": "none"
+        },
+        {
+          "r": 20,
+          "q": "Clinic-assistant tasks in general practice (prøvetagning, blodprøver, EKG, podning)",
+          "share": "none"
+        }
+      ],
+      "sources": [
+        "https://jobsearch.api.jobtechdev.se/search?q=medicinsk%20sekreterare&limit=100 (offsets 0/100/200; Skåne län filter on workplace_address.region)",
+        "https://www.jobindex.dk/jobsoegning.rss?q=l%C3%A6gesekret%C3%A6r (hosted jobannonce bodies followed, 1.2 s delay)",
+        "https://www.kp.dk/uddannelser/sundhedsadministrativ-koordinator/",
+        "https://www.framtid.se/yrke/vardadministrator/lediga-jobb/region-skane",
+        "https://www.skagenonline.dk/faq/hvordan-bliver-man-laegesekretaer",
+        "relay GET /api/cse-search siteSearch=jobindex.dk / regionh.dk / skane.se / arbetsformedlingen.se (role context only)"
+      ]
+    }
+  }
+}

@@ -341,6 +341,13 @@ def cmd_import_xlsx():
     cmd_push()
 
 def main():
+    # JT-STDOUT-ENCODING-001: the nightly reads this through a pipe, which on
+    # Windows defaults to cp1252; a Danish company then arrives mangled and a
+    # letter outside cp1252 kills print(). Pin it, as check-postings.py does.
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
     cmd = sys.argv[1] if len(sys.argv) > 1 else "status"
     if cmd == "pull": cmd_pull(render=("--render" in sys.argv), force=("--force" in sys.argv))
     elif cmd == "push": cmd_push()

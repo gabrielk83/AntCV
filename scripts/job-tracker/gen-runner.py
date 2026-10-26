@@ -2658,6 +2658,13 @@ def run_course_checklist(out_dir, r, cv_sections, kernel=None, pages=None, scope
     return rep
 
 def main():
+    # JT-STDOUT-ENCODING-001: the nightly reads this through a pipe, which on
+    # Windows defaults to cp1252; a Danish company then arrives mangled and a
+    # letter outside cp1252 kills print(). Pin it, as check-postings.py does.
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
     ap = argparse.ArgumentParser(description="AntCV job-tracker headless generation runner")
     sub = ap.add_subparsers(dest="cmd")
     for name in ("list", "run"):

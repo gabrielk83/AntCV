@@ -4,6 +4,14 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 133 — JT-STDOUT-ENCODING-001 — CLOSED 2026-10-26 (job-tracker nightly, evidence: negative-controlled test on the real `main()` of gen-runner list/health and job-tracker-sync status under a cp1252 pipe, 7 red on pre-fix HEAD)
+
+_verified: 2026-10-26_
+
+_Found and fixed the same run by the job-tracker nightly 2026-10-26 (Gabo-PC, Opus 5.5, worktree-isolated). Script-only: no `pwa/` asset, no version, no shift claim._
+
+The nightly reads `gen-runner.py list` through a pipe. `gen-runner.py` and `job-tracker-sync.py` never pinned stdout, so on Windows the pipe used cp1252: tonight's `list` read "Lemvigh-M�ller" and "Ingeni�r", and a letter outside cp1252 ("ő", "→") raises UnicodeEncodeError in print() and kills `list` / `run` / `health` / `status`. Both `main()`s now call `sys.stdout.reconfigure(encoding="utf-8")`, the idiom of `check-postings.py`, `job_sources.py`, `discover-positions.py` (row 116, JOBSRC-STDOUT-ENCODING-001). `test_stdout_utf8.py` (7 checks) runs each real `main()` in a child with `PYTHONIOENCODING=cp1252`, network stubbed. Pre-fix 7/7 red (`'charmap' codec can't encode character '\u0151'`). Sabotage by line index: gen-runner 2665 → 5 red, job-tracker-sync 348 → 2 red; restored. Live after the fix: `list` prints "Lemvigh-Müller", "Ingeniør".
+
 ## Row 132 — JT-HEALTH-CMD-001 — CLOSED 2026-10-25 (job-tracker nightly, evidence: negative-controlled test on the real `dead_pointer_rows` / `cloud_app_ids` / `cmd_health`)
 
 _verified: 2026-10-25_

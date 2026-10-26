@@ -2386,7 +2386,9 @@ _reconcile 2026-10-18 (CI nightly, E1 stalest slot, HEAD `fe67552f`): CODE-PRESE
 
 > **Renumbered 2026-08-26: was row 41.** A document written before that date citing "row 41" may mean this row or SO-004. The ID is the key.
 
-_verified: 2026-10-23_
+_verified: 2026-10-26_
+
+**RE-VERIFIED 2026-10-26 (job-tracker nightly, Gabo-PC).** `check --apply`: 141 probed, 136 LIVE, 3 archived on first sight (Weibel Scientific System Engineer, System Architect, Customer Project Manager (radar systems), all LinkedIn "no longer accepting applications"). 0 at strike. 2 ERROR not counted, both at 4 sweep days since 10-20 (VML MAP HTTP 500, ABH Optics timeout). Rev 320 → 321.
 
 **RE-VERIFIED 2026-10-23 (job-tracker nightly, Gabo-PC).** `check --apply`: 127 probed, 120 LIVE, 4 archived on first sight (Phanofi Senior Photonics Packaging Engineer, 3Shape Group Manager & PM AI-assisted diagnostics, Orifarm AI Business Partner, Black Swans Exist Quantum Engineer; all LinkedIn CLOSED), 1 GONE held at strike 1/2 (Templafy PM Agentic AI, Teamtailor HTTP 410), 2 ERROR not counted, each reported as "ERROR 2 sweep days since 2026-10-20" (VML MAP HTTP 500, ABH Optics via Bloom connect timeout): the streak field from 10-20 works as designed. Rev 311 → 312.
 
@@ -2615,7 +2617,9 @@ _verified: 2026-10-25_
 
 ## Row 118 — JT-ARMED-ARTIFACT-NO-DRAIN-001
 
-_verified: 2026-10-25_
+_verified: 2026-10-26_
+
+**RE-VERIFIED 2026-10-26 (job-tracker nightly, Gabo-PC).** `list` on rev 321 still prints the ARMED block with `napatech` (app 2781, CLOSED row). `health`: 54 pointers vs 87 cloud apps, 1 dead, `veo_technologies` → 3500. Still waits on the owner.
 
 **RE-VERIFIED 2026-10-25 (job-tracker nightly, Gabo-PC).** `gen-runner.py list` on rev 315 still prints the ARMED block with `napatech` (app 2781, CLOSED row, flag stale). The new `gen-runner.py health` (row 132): 54 pointers vs 87 cloud apps, 1 dead, `veo_technologies` → app 3500. Unchanged; still waits on the owner.
 
@@ -2719,7 +2723,9 @@ is adoption, not pricing. Proposed: replace the three Mistral ids with `mistral-
 
 ## Row 127 — JT-OWNER-PACKAGED-DEFAULT-ON-001
 
-_verified: 2026-10-25_
+_verified: 2026-10-26_
+
+**RE-VERIFIED 2026-10-26 (job-tracker nightly, Gabo-PC). The class recurred.** Two more hand-packaged rows joined 185 and 186 in the OWNER-PACKAGED block on rev 321: `red_global` (207, "CV drafted") and `deloitte` (208, "CV/CL drafted"), both with a package line, no queue entry, no artifact. None generated. Four rows now wait on the owner's (b) answer.
 
 **RE-VERIFIED 2026-10-25 (job-tracker nightly, Gabo-PC).** Rows 185 and 186 still default-on, both "Submitted", both in the OWNER-PACKAGED block on rev 315. Not generated. Still waits on the owner.
 

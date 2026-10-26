@@ -87,10 +87,10 @@ citing an old number may mean either row — the ID disambiguates.
 | 63 | `ANALYSIS-STALE-ON-APP-LOAD-001` | 2026-10-25 | / NEW-1 (owner 2026-07-07) — loading a saved application does NOT load ITS JD a |
 | 64 | `ANALYSIS-EXPORT-DROPS-FILLED-ANSWERS-001` | 2026-10-25 | / NEW-2 (owner 2026-07-07) — exporting the JD-analysis PDF omits the  |
 | 58 | `EXPORT-SETTLED-001` | 2026-10-25 | MOBILE-BUGS-2026-07 (owner "Mobile App Bug Findings Report", 2026-07-07) — 9 findings: MOB-001 Danish UI shows |
-| 62 | `HEADER-BANNER-DESIGN-RULES-001` | 2026-10-15 | (owner 2026-07-07, KOMBIT gold) — bake the correct CV/CL header-banner design i |
-| 74 | `JD-SWAP-STALE-RATIONALE-001` | 2026-10-15 | LIVE-APP DRIVE (owner 2026-07-08: estimator calibration → generate 4 via the app). Three outcomes: (A) PARITY- |
-| 69 | — | 2026-10-15 | CL POLISH v2 + SYSTEMIC EM-DASH (owner 2026-07-08 CL review). Three standing CL rules, applied to the Trackman |
-| 67 | `CV-CORECOMP-BLANK-001` | 2026-10-15 | DESKTOP-RUN OPEN QUEUE (owner reconcile 2026-07-08 — these were NOT in the register and would have aged out; m |
+| 62 | `HEADER-BANNER-DESIGN-RULES-001` | 2026-10-26 | (owner 2026-07-07, KOMBIT gold) — bake the correct CV/CL header-banner design i |
+| 74 | `JD-SWAP-STALE-RATIONALE-001` | 2026-10-26 | LIVE-APP DRIVE (owner 2026-07-08: estimator calibration → generate 4 via the app). Three outcomes: (A) PARITY- |
+| 69 | — | 2026-10-26 | CL POLISH v2 + SYSTEMIC EM-DASH (owner 2026-07-08 CL review). Three standing CL rules, applied to the Trackman |
+| 67 | `CV-CORECOMP-BLANK-001` | 2026-10-26 | DESKTOP-RUN OPEN QUEUE (owner reconcile 2026-07-08 — these were NOT in the register and would have aged out; m |
 | 66 | `LINKEDIN-CLICK-001` | 2026-10-16 | TRACKMAN-DELIVERABLE-REVIEW-2026-07-08 (owner, on the generated Trackman CV+CL) — a batch of GENERATOR-BASELIN |
 | 65 | `PTR-STALE-GUARD-001` | 2026-10-16 | ANALYSIS+SYNC-BATCH-2026-07-08 (owner report, 5 issues; gap-export CONFIRMED FIXED by NEW-2/row 64): (A) LANG- |
 | 68 | `JD-SYNC-001` | 2026-10-16 | REGISTER-ESCAPE SWEEP (owner 2026-07-08: "look for all scopes of work that escaped the register, incl. incomin |
@@ -115,7 +115,7 @@ citing an old number may mean either row — the ID disambiguates.
 | 19 | `JD-SCOPE-OCC2-GUARD-001` | 2026-10-17 | JD-scope isolation — two-real-device test |
 | 103 | `RELAY-TUNE-COVERAGE-GAP-001` | 2026-10-17 | (found by weekly cost-quality tune 2026-07-13): the tune loop is blind to 100% of real traffic and can never f |
 | 45 | — | 2026-10-17 | PERF-001 — multi-second main-thread stalls on export/preview; profile → debounce/memoize. |
-| 40 | — | 2026-10-15 | SO-003 DATA LOSS — core-comp row-count change wipes Selected Outcomes (cloud-persisted). |
+| 40 | — | 2026-10-26 | SO-003 DATA LOSS — core-comp row-count change wipes Selected Outcomes (cloud-persisted). |
 | 35 | `OVERLAY-EARLY-HALT-001` | 2026-10-17 | NEW — OVERLAY-EARLY-HALT-001 regen-confirm. Shipped 1.51.41 (heartbeat-gated watchdog replacing the fixed 2-mi |
 | 36 | `GEN-CORECOMP-BROAD-001` | 2026-10-17 | NEW — GEN-CORECOMP-BROAD-001 regen-confirm. Shipped 1.51.41 (unsolicited CORE COMPETENCIES broadened to PdM/BA |
 | 37 | `FOCUS-LABEL-EO-001` | 2026-10-17 | NEW — FOCUS-LABEL-EO-001 regen-confirm. Shipped 1.51.42/43 (canonicalised EO focus-area label post-process). N |
@@ -125,7 +125,7 @@ citing an old number may mean either row — the ID disambiguates.
 | 11 | `SIDEBAR-PROMOTE-MARGIN-001` | 2026-08-26 _(STANDING)_ | SIDEBAR-PAGE23-DANCE CLOSED (verified 2026-07-03, headless): diag-sidebar-promote-margin (owner-scale sidebar  |
 | 16 | `SID-FALLBACK-HARDEN-001` | 2026-08-26 _(STANDING)_ | Sidebar TOOLS/REGULATORY justify↔left flap — re-check after hard refresh, diagnose if persists |
 | 17 | `SETTINGS-PERSONAL-STABILIZE-001` | 2026-10-16 _(STANDING)_ | Settings sweep-army cost on Layout/Account/Advanced panels (Personal panel already fixed) |
-| 18 | `ANITA-PERSONA-NO-PHOTO-001` | 2026-10-15 | Anita demo residuals — docx-photo + PDF-contact legs ROOT-CAUSED + FIXED 2026-08-26 (desktop nightly, PWA 1.51 |
+| 18 | `ANITA-PERSONA-NO-PHOTO-001` | 2026-10-26 | Anita demo residuals — docx-photo + PDF-contact legs ROOT-CAUSED + FIXED 2026-08-26 (desktop nightly, PWA 1.51 |
 | 23 | `NIGHTLY-PREVIEW-BUTTON-AUDIT-001` | 2026-10-16 _(STANDING)_ | Preview-button audit pass 2 (65 not-visible, 23 overlay-obstructed) + live dangerous-button audit |
 | 105 | `JOBSRC-FETCH-001` | 2026-10-23 | follow-through — teach the discovery routine to CALL job_sources.py instead of hand-fetching board search page |
 | 106 | `POSTING-OBSOLETE-001` | 2026-10-23 | ADVANCED 2026-08-27 (job-tracker nightly): the two-strike rule gained the missing per-DAY gate — POSTING-STRIK |

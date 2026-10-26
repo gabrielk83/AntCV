@@ -1395,6 +1395,10 @@ _verified: 2026-10-05_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
+_verified: 2026-10-26_
+
+**2026-10-26 (CI nightly, E1 staleness sweep — HEAD 8144ec77):** re-confirmed intact. `bodyTopBorder` 3 refs and `✉` 2 refs in `workers/docx-worker/src/index.js`. Remaining = the render-measure loop vs the KOMBIT gold + the two Track-C follow-ups (CL `meta.subtitle` double-render, row 61 column balance) — all need a real docx-worker render the owner eyeballs; CI has no browser/render path and ALLOW_DEPLOY=false this run. Kept ACTIVE.
+
 _verified: 2026-10-15_
 
 **2026-10-15 (desktop nightly E1, Gabo-PC, Fable 5.1 — HEAD f107e458):** re-confirmed intact. `bodyTopBorder` 3 refs and `✉` 2 refs in `workers/docx-worker/src/index.js`; `workers/docx-worker/test/diag-contact-icons.mjs` run on this host: NON-BRIDGE and BRIDGE both `✉=true emailUsesAt=false hasBulletSep=false`, CONTACT-ICONS OK. Live docx-worker `/health` 200 at the repo version `1.14.174-appline-edit`. Remaining = the render-measure loop vs the KOMBIT gold and the two Track-C follow-ups (CL `meta.subtitle` double-render, row 61 column balance); all need a real docx-worker render the owner eyeballs. Kept ACTIVE.
@@ -1415,6 +1419,10 @@ _verified: 2026-10-05_ — CI E1 re-verify against HEAD 735f6d8f (all cited mark
 
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
+
+_verified: 2026-10-26_
+
+**2026-10-26 (CI nightly, E1 staleness sweep — HEAD 8144ec77):** re-confirmed intact. Markers `JD-SWAP-STALE-RATIONALE` 2 + `CL-GHOST-COMPANY` 5 = 7 in `pwa/app.src.js` (the minified `pwa/app.js` carries no comments, 0 there expected); `pwa/test/unit/cl-ghost-hunt.test.mjs` in the green suite (1849/1849). (C) BACKGROUND-STALL still OPEN — the SSE-stream throttle on a backgrounded tab needs a live foreground generation CI cannot drive. Kept ACTIVE.
 
 _verified: 2026-10-15_
 
@@ -1437,6 +1445,10 @@ _verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited mark
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
+_verified: 2026-10-26_
+
+**2026-10-26 (CI nightly, E1 staleness sweep — HEAD 8144ec77):** re-confirmed intact. `__AINOTICE` map present in `workers/docx-worker/src/index.js` (2 refs); the EN default `AI-assisted - author retains responsibility…` footer uses a HYPHEN (4 refs), no em-dash in the AI-notice/citation/doc-title path. The three standing CL rules (slogan / centered-signature-brand-ink / mixed-closure) remain captured in checklist §3 + memory. Kept ACTIVE as the standing-rule anchor.
+
 _verified: 2026-10-15_
 
 **2026-10-15 (desktop nightly E1, Gabo-PC, Fable 5.1 — HEAD f107e458):** re-confirmed intact. `__AINOTICE` map at `workers/docx-worker/src/index.js:24646` carries no em-dash in any language; the EN default `AI-assisted - author retains responsibility...` (4 refs) uses a hyphen; the value+citation join `clean()` at `:26189` rewrites an em-dash to ` - `. The 199 remaining em-dashes in the file are comments and regex character classes, not rendered text. Live docx-worker `/health` 200 at `1.14.174-appline-edit`. Kept ACTIVE as the standing-rule anchor.
@@ -1455,6 +1467,10 @@ _verified: 2026-10-06_ — CI E1 re-verify against HEAD de7fec6e (all cited mark
 
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
+
+_verified: 2026-10-26_
+
+**2026-10-26 (CI nightly, E1 staleness sweep — HEAD 8144ec77):** re-confirmed. (B) editable CL slogan SHIPPED: `antcv-cl-slogan-control.js` and `antcv-cl-slogan-element.js` both loaded by `index.html` (1 ref each). (A) convergence verify, (C) preview-dance/perf, (D) regen-gated content, (E) unsolicited-gen quality all still need a signed-in regen / live desktop session with a real LLM — not drivable in CI. Kept ACTIVE.
 
 _verified: 2026-10-15_
 
@@ -2006,7 +2022,9 @@ _verified: 2026-10-17_
 
 ## Row 40
 
-_verified: 2026-10-15_
+_verified: 2026-10-26_
+
+**2026-10-26 (CI nightly, E1 staleness sweep — HEAD 8144ec77):** SHIPPED 1.51.138 loss-guard belt re-confirmed present: `pwa/antcv-outcomes-loss-guard.js` on disk; trigger-side invariant test `pwa/test/unit/core-comp-format-preserves-outcomes.test.mjs` green in the full suite (1849/1849). Owner-verify (change the Core Competencies row count, confirm Selected Outcomes survives) still owed — needs a signed-in session with cloud persistence CI cannot open. Kept ACTIVE.
 
 **2026-10-15 (desktop nightly live attest, Gabo-PC, Fable 5.1 — HEAD f107e458):** served `app.js` byte-identical to the repo; suite 1822/1822. The core-comp row-count -> Selected Outcomes repro needs a signed-in session with cloud persistence; token expired today (row 110). Kept ACTIVE; blocked: owner session.
 
@@ -2268,7 +2286,9 @@ _reconcile 2026-09-07 (CI nightly, E2): `diag-settings-panels-probe.mjs` RE-RUN 
 
 ## Row 18 — ANITA-PERSONA-NO-PHOTO-001
 
-_verified: 2026-10-15_
+_verified: 2026-10-26_
+
+**2026-10-26 (CI nightly, E1 staleness sweep — HEAD 8144ec77):** photo legs re-confirmed locked. `docs/personas/anita/personalInfo.json` still carries the embedded `photo` data URL (`data:image/jpeg;base64,/9j/…`). The sibling-preserving rewrap (IMPORT-REWRAP-SIBLING-DROP-001, row 107) is intact: `pwa/app.src.js:37762` comment-marked with the preserved-sibling list `["photo","language","navyColor",…]`, mirrored in `pwa/app.js:165` (`"photo","language","navyColor"`), so `photo` survives the unwrapped-blob rewrap. `pwa/test/unit/import-rewrap-keeps-photo.test.mjs` green within the full PWA suite (1849/1849). REMAINING unchanged: the CL foundation/bring/interests leg on a fresh Anita gen needs live models — not doable in CI. Kept ACTIVE.
 
 **2026-10-15 (CI nightly, E1 staleness sweep — HEAD 035a030e):** photo legs re-confirmed locked. `docs/personas/anita/personalInfo.json` still carries the embedded `photo` data URL (61,059 chars, `data:image/jpeg;base64,/9j/…`). The photo-drop guard is now the STRONGER sibling-preserving rewrap (IMPORT-REWRAP-SIBLING-DROP-001, row 107): `app.src.js:37724` comment-marked, the preserved-sibling list `["photo","language","navyColor",…]` present in app.src.js and mirrored in `pwa/app.js:165` (`"photo","language","navyColor"`) — so `photo` survives the unwrapped-blob rewrap along with every other top-level sibling. `pwa/test/unit/import-rewrap-keeps-photo.test.mjs` green within the suite (full PWA suite 1821/1821); app.js integrity OK (`node --check`, `startsWith("(()=>{")`, no `"use strict"`). REMAINING unchanged: the CL foundation/bring/interests leg on a fresh Anita gen needs live models — not doable in CI. Kept ACTIVE.
 

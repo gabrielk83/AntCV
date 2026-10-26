@@ -61,12 +61,12 @@ citing an old number may mean either row — the ID disambiguates.
 | 26 | `TOOLS-SIDEBAR-COMPRESS-001` | 2026-10-20 | Tools sidebar compress — exact owner gold-text (Instruments/Lab strings) as deterministic rule |
 | 30 | `LLM-IMAGE-ROUTING-001` | 2026-10-20 | LLM image routing — make provider selection image-aware, filter vision-blind providers |
 | 32 | `CL-PLATFORM-SIGNALS-001` | 2026-10-20 | CL platform-signals — hardware-platform JD tone/positioning gen-prompt rule |
-| 34 | `ROLE-MERGE-STORED-001` | 2026-10-16 | Export/preview parity sweep — role-merge parity is the owner-escalated top item (rules 46/47 belts SHIPPED 1.5 |
+| 34 | `ROLE-MERGE-STORED-001` | 2026-10-26 | Export/preview parity sweep — role-merge parity is the owner-escalated top item (rules 46/47 belts SHIPPED 1.5 |
 | 27 | `MAIN-RUNT-ORPHAN-SWEEP-001` | 2026-10-21 | Orphan sweep v3 — work-style tail truncation, page-3 ghost, real-PDF 1.5-page verify |
 | 28 | `NIL-GEN-ADAPTATION-001` | 2026-10-21 | NIL gen adaptation — CV ~1.5-page gen-level target (current export still 5pp) |
 | 29 | `NIL-TARGETED-STATE-STICK-001` | 2026-10-21 | NIL state-stick — leg C: stale-row snapshot restore + auto-save downgraded-meta belt |
 | 2 | `LINKIFY-EXPORT-001` | 2026-10-23 | SW-projects line-end overflow leg (hyperlink half already closed) |
-| 39a | `AUTOSAVE-NO-DOWNGRADE-001` | 2026-10-16 | TAB/DEVICE ISOLATION residuals — auto-save poison-writer CLOSED (AUTOSAVE-NO-DOWNGRADE-001) + same-device stal |
+| 39a | `AUTOSAVE-NO-DOWNGRADE-001` | 2026-10-26 | TAB/DEVICE ISOLATION residuals — auto-save poison-writer CLOSED (AUTOSAVE-NO-DOWNGRADE-001) + same-device stal |
 | 41 | — | 2026-10-25 | SO-004 CRASH — React #185 on editor field commits, shared renderer. |
 | 42 | `GEN-LANGFAB-001` | 2026-10-25 | fabricated languages (invented German, wrong Danish); deterministic language-fact belt vs ke |
 | 43 | — | 2026-10-25 | CA-006 — Application label bleeds into first role title; guard the write site. |
@@ -75,7 +75,7 @@ citing an old number may mean either row — the ID disambiguates.
 | 49 | `SIDEBAR-GROUP-PAGE-BREAK-001` | 2026-10-23 | (owner, design guidance) — a very long TOOLS & METHODS group (e.g. "Project & del |
 | 50 | `UPLOAD-SCREEN-TOP-CLIP-001` | 2026-10-23 | (owner 2026-07-05, same live session as rows 46-49): the upload screen's EN/gear/Editor header row was still c |
 | 51 | `PREVIEW-SCROLL-JITTER-001` | 2026-10-23 | (owner 2026-07-05, live session, reported as two symptoms: "application analysis panel is stuck again, does no |
-| 39 | `GEN-MODELROLE-001` | 2026-10-16 | code shipped AND MODEL_ROLES set in both wrangler.toml (owner map; coherence now `openai`). Remaining = live-deplo |
+| 39 | `GEN-MODELROLE-001` | 2026-10-26 | code shipped AND MODEL_ROLES set in both wrangler.toml (owner map; coherence now `openai`). Remaining = live-deplo |
 | 53 | `CROSS-APP-EXPORT-CONTAMINATION-001` | 2026-10-23 | leg (a) P0 SHIPPED (1.51.639 scope-guard → reworked MIRROR-LOAD-001 1.51.680); legs b-f open — (owner 2026-07-06, P0 — real export) — target was the KOMBIT "AI-udvikler"  |
 | 54 | `GEN-JD-TAILOR-KERNEL-RECALL-001` | 2026-10-23 | (owner 2026-07-07) — targeted tailoring narrows/compresses to the JD but does  |
 | 55 | `TARGETED-OUTPUT-FURNITURE-001` | 2026-10-23 | (owner 2026-07-07) — targeted-output furniture: legs b (label localization) + f (AI-notice localization) SHIPPED under other tickets, c half (greet-by-name from tracker hm only); a/d/e open, owner-verify on a real targeted export |
@@ -91,8 +91,8 @@ citing an old number may mean either row — the ID disambiguates.
 | 74 | `JD-SWAP-STALE-RATIONALE-001` | 2026-10-26 | LIVE-APP DRIVE (owner 2026-07-08: estimator calibration → generate 4 via the app). Three outcomes: (A) PARITY- |
 | 69 | — | 2026-10-26 | CL POLISH v2 + SYSTEMIC EM-DASH (owner 2026-07-08 CL review). Three standing CL rules, applied to the Trackman |
 | 67 | `CV-CORECOMP-BLANK-001` | 2026-10-26 | DESKTOP-RUN OPEN QUEUE (owner reconcile 2026-07-08 — these were NOT in the register and would have aged out; m |
-| 66 | `LINKEDIN-CLICK-001` | 2026-10-16 | TRACKMAN-DELIVERABLE-REVIEW-2026-07-08 (owner, on the generated Trackman CV+CL) — a batch of GENERATOR-BASELIN |
-| 65 | `PTR-STALE-GUARD-001` | 2026-10-16 | ANALYSIS+SYNC-BATCH-2026-07-08 (owner report, 5 issues; gap-export CONFIRMED FIXED by NEW-2/row 64): (A) LANG- |
+| 66 | `LINKEDIN-CLICK-001` | 2026-10-26 | TRACKMAN-DELIVERABLE-REVIEW-2026-07-08 (owner, on the generated Trackman CV+CL) — a batch of GENERATOR-BASELIN |
+| 65 | `PTR-STALE-GUARD-001` | 2026-10-26 | ANALYSIS+SYNC-BATCH-2026-07-08 (owner report, 5 issues; gap-export CONFIRMED FIXED by NEW-2/row 64): (A) LANG- |
 | 68 | `JD-SYNC-001` | 2026-10-16 | REGISTER-ESCAPE SWEEP (owner 2026-07-08: "look for all scopes of work that escaped the register, incl. incomin |
 | 75 | `JOBTRACKER-AUTOFILL-ADDFLOW-VERIFY-001` | 2026-10-16 | (owner-gated live test) — the manual-add auto-fill flow (deterministic tier on add + async LLM refine: tier up |
 | 77 | `JOBTRACKER-TOP5-PERIODIC-RESCORE-001` | 2026-10-16 | (optional) — Top-5 is re-evaluated on every add/edit (the fit-ranked useMemo). Owner asked whether a PERIODIC  |

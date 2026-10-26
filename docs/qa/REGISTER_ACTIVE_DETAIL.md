@@ -561,7 +561,9 @@ _E1 sweep 2026-09-08 (CI nightly): confirmed in CURRENT code — `__platformRule
 
 ## Row 34 — ROLE-MERGE-STORED-001
 
-_verified: 2026-10-16_
+_verified: 2026-10-26_
+
+**Re-verify 2026-10-26 (desktop nightly E1, Gabo-PC, Opus 5.5 — HEAD `3a1e15d2`):** role-merge stored-sections leg INTACT. `antcv-role-merge-stored.js` + `antcv-role-merge-dedup.js` loaded by `index.html` and the LIVE served bytes equal repo (CRLF-normalised sha1 46d293ec / 033718bd). `role-merge-stored.test.mjs` green; E4 `diag-results-preview-export-parity.mjs` OK. Kept ACTIVE as the parity-sweep anchor; no new parity gap found.
 
 **2026-10-16 (desktop nightly E4, Gabo-PC, Fable 5.1 — HEAD f3d3e0c7):** `diag-results-preview-export-parity.mjs` RESULTS-PREVIEW-EXPORT-PARITY OK (preview per-role result == export per-role result, tier-1 explicit result verbatim), no page errors. Live docx-worker `/health` 200 at the repo version `1.14.174-appline-edit`.
 
@@ -728,7 +730,9 @@ row 25 (real-PDF-gated — a render CI cannot do). No regression. Kept ACTIVE.
 
 ## Row 39a — AUTOSAVE-NO-DOWNGRADE-001
 
-_verified: 2026-10-16_
+_verified: 2026-10-26_
+
+**Re-verify 2026-10-26 (desktop nightly E1, Gabo-PC, Opus 5.5 — HEAD `3a1e15d2`):** relay leg: `workers/access-relay/test/diag-app-autosave-downgrade-guard.mjs` 5/5 OK at origin code; live relay `/health` `auth-38-subtitle-guard-qual-put` = repo `RELAY_VERSION`. Client leg: `antcv-pointer-stale-guard.js` live bytes = repo (sha1 521f8dc3), `pointer-stale-guard.test.mjs` green. Remaining unchanged: row 19 two-real-device test (owner, real device).
 
 _Desktop nightly 2026-10-16 (A2 leg 1, Gabo-PC, Fable 5.1): access-relay live at `auth-38-subtitle-guard-qual-put`; the saved token works end to end (`GET /api/me` 200 authenticated, `/api/applications` 200 27.6 KB, `/api/job-tracker` 200) — but the downgrade PUT was NOT run: it writes to a real application row and no scratch application id has been named (owner decision, unchanged since 10-05). Leg 2 same-device A/B needs a signed-in browser session; leg 3 a second physical device._
 
@@ -1059,7 +1063,9 @@ REMAINING: owner live re-verify (no device in CI). Kept ACTIVE.
 
 ## Row 39 — GEN-MODELROLE-001
 
-_verified: 2026-10-16_
+_verified: 2026-10-26_
+
+**Re-verify 2026-10-26 (desktop nightly E1, Gabo-PC, Opus 5.5 — production D1 via wrangler, SELECT only):** `llm_calls` last 14 d = 7 calls, all 2026-10-20 (openai analyze_fit / consensus_poll / consensus_reinforce, mistral parse_jd / consensus_poll, gemini compress / consensus_poll), all success. Multi-provider routing still live; no `generate` writer call in the window, so the writer-role split could not be re-observed (traffic-gated, not code-gated). Proxies `/health` 3.8.4-brand-ink-match = repo.
 
 _Desktop nightly 2026-10-16 (D2, Gabo-PC, Fable 5.1): both proxies live at `3.8.4-brand-ink-match` (deployed 10-15 by the cost-quality tune, so the `MODEL_ROLES` [vars] are live); D1 `llm_calls` via wrangler (SELECT only, rows_read 3563, rows_written 0) — newest day still **2026-09-28**, no split-routing row to read. Blocked: one real LLM gen._
 
@@ -1488,6 +1494,10 @@ _verified: 2026-10-06_ — CI E1 re-verify against HEAD de7fec6e (`antcv-cl-slog
 
 ## Row 66 — LINKEDIN-CLICK-001
 
+_verified: 2026-10-26_
+
+**Re-verify 2026-10-26 (desktop nightly E1, Gabo-PC, Opus 5.5 — HEAD `3a1e15d2`):** prevention doc `docs/qa/DELIVERABLE_PREFLIGHT_CHECKLIST.md` present; live docx-worker `/health` `1.14.175-ai-mark-props` = repo. Items a–o stay regen/deliverable-gated (real LLM gen from the master kernel + owner eyeball). Kept ACTIVE.
+
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
@@ -1502,6 +1512,10 @@ _verified: 2026-10-16_ — CI nightly E1 re-verify against HEAD 451fc004 (preven
 ---
 
 ## Row 65 — PTR-STALE-GUARD-001
+
+_verified: 2026-10-26_
+
+**Re-verify 2026-10-26 (desktop nightly E1, Gabo-PC, Opus 5.5 — HEAD `3a1e15d2`):** (E) `diag-cross-device-gen-leak-guard.mjs` OK (6 `__foreignActiveHijack` sites, 2 app.js mirrors); `CROSS-DEVICE-GEN-LEAK` 4 markers in `app.src.js`. (A) mobile language switch, (B) unsolicited export gate, (C) market-fit/salary JD wiring, (D) panel-upload OCR still need a real phone / live repro. Kept ACTIVE.
 
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.

@@ -1874,7 +1874,9 @@ re-armed trap on a signed-in device — not stageable in cloud. Kept ACTIVE — 
 
 ## Row 31 — META-STATE-CORRUPTION-002
 
-_verified: 2026-10-16_
+_verified: 2026-10-27_
+
+_Desktop nightly 2026-10-27 (Gabo-PC, Opus 5.5, HEAD 37fbb40f): `META-DRIFT-GUARD-002` ×2 and `META-DOWNGRADE-GUARD-003` ×2 in `app.src.js`; both guard tests green in the 1850/1850 suite; served `app.js?v=1.51.5094-brand-ink-fit` = repo. Repair-from-display-name leg still needs a live poisoned row — owner-gated._
 
 _Desktop nightly 2026-10-16 (Gabo-PC, Fable 5.1, HEAD f3d3e0c7): `META-DRIFT-GUARD-002` and `META-DOWNGRADE-GUARD-003` each ×2 in `app.src.js` and present in the `app.js` mirror; `meta-drift-guard-both-blocks.test.mjs` + `meta-downgrade-guard-autosave.test.mjs` green in the 1830/1830 suite; served `app.js` byte-identical to the repo before this run's ship. Remaining leg (repair an already-poisoned server row from its own display name) still needs a live poisoned row — owner-gated._
 
@@ -1898,7 +1900,9 @@ _CI nightly 2026-09-15 (E1 sweep): both shipped guards confirmed present on `mai
 
 ## Row 98 — BYOK-COST-AUDIT-001
 
-_verified: 2026-10-16_
+_verified: 2026-10-27_
+
+_Desktop nightly 2026-10-27 (Gabo-PC, Opus 5.5, HEAD 37fbb40f): `total_cost_usd_est` ×7 in `workers/proxy/src/byok-qualify.js`, proxy and demo-proxy copies byte-identical (`diff -q` clean); cv-proxy + demo-proxy `/health` 200 at `3.8.4-brand-ink-match` = repo. Unreverted._
 
 _Desktop nightly 2026-10-16 (Gabo-PC, Fable 5.1, HEAD f3d3e0c7): `total_cost_usd_est` ×7 in both `workers/{proxy,demo-proxy}/src/byok-qualify.js`, the two copies byte-identical (`diff -q` clean), xAI grok rate rows ×5 in `demo-enforcement.js`; `byok-cost-audit.test.mjs` + mirror green in the 1830/1830 suite; both proxies live at `3.8.4-brand-ink-match` (`/health` 200). Unreverted, no regression._
 
@@ -1915,7 +1919,9 @@ _CI nightly 2026-09-15 (E1 sweep): same, confirmed present + byte-identical._
 
 ## Row 99 — REG-GROUP-FOLD-NAMED-001
 
-_verified: 2026-10-16_
+_verified: 2026-10-27_
+
+_Desktop nightly 2026-10-27 (Gabo-PC, Opus 5.5, HEAD 37fbb40f): `diag-reg-fold-dance.mjs` DIAG PASS — converges to one group, bounded writes, 0 page errors; `NAMED_FOLD` ×2, loaded `?v=1.51.173`. Owner "sidebar dancing" confirm still owner-check._
 
 _Desktop nightly 2026-10-16 (Gabo-PC, Fable 5.1, HEAD f3d3e0c7): `NAMED_FOLD` ×2 in `pwa/antcv-dup-group-merge.js`, loaded by `index.html` (`?v=1.51.173`), `dup-group-merge.test.mjs` green. The row's own diag `pwa/test/diag-reg-fold-dance.mjs` could NOT run on this host: it hard-coded the cloud sandbox's `/opt/pw-browsers/chromium-1194` Linux binary (DIAG-REG-FOLD-HOST-PATH-001, fixed this run: plain `chromium.launch()`). Run after the fix: 0 post-boot sections writes in 15 s, groups = ["Environmental & Durability"], 10 standards preserved, 0 page errors — DIAG PASS, same verdict as PR #333. The owner "sidebar dancing / TOOLS & METHODS page-jump" thread is still unconfirmed (owner live check)._
 
@@ -1932,7 +1938,9 @@ _CI nightly 2026-09-15 (E1 sweep): `NAMED_FOLD` present; test green._
 
 ## Row 100 — GRAB-ZONE-DISMISS-THRESHOLD-001
 
-_verified: 2026-10-16_
+_verified: 2026-10-27_
+
+_Desktop nightly 2026-10-27 (Gabo-PC, Opus 5.5, HEAD 37fbb40f): `diag-mobile-grab-zone-touch.mjs` GRAB-ZONE-TOUCH-HEADLESS OK — A1 Sections + A2 Analysis 40 px graze scroll forward, grab zone kept; B 120 px swipe dismisses; 0 page errors. Real Android confirm still owner-owed._
 
 _Desktop nightly 2026-10-16 (Gabo-PC, Fable 5.1, worktree-isolated, HEAD f3d3e0c7 → ship `1.51.5013-grab-zone-scroll-target`): FIRST browser exercise of the handler — new headless touch probe `pwa/test/diag-mobile-grab-zone-touch.mjs` boots the real app at 380 px with native TouchEvents on `.antcv-panel-grab-zone`. Threshold leg CONFIRMED (40 px graze keeps the panel, 120 px swipe dismisses). Scroll-forward leg was HALF-BROKEN: on the Sections tab the content is the handle's direct sibling and a 40 px drag moved it 40 px, but on the **Analysis tab** the handle's `nextElementSibling` is the "Generate a CV first" placeholder that `antcv-analysis-panel-jd-block-356.js` hides (display:none, `data-antcv-jd-empty-hidden`) and the real content is the sibling after it — the forward wrote scrollTop on a hidden node and the drag moved the content 0 px, which IS the owner's original "sliding down in the analysis panel is not working" report. **GRAB-ZONE-SCROLL-TARGET-002 FIXED** (surgical `app.js` edit mirrored in `app.src.js`): walk to the first displayed sibling that overflows, fall back to the panel itself; negative control FAIL → OK (Analysis moved 0 → 40 px, Sections unchanged); unit test +6 (18/18), suite 1830/1830, boot smoke OK; new row 128 CLOSED. Real-device confirm stays owner-owed (headless touch ≠ Android scroll arbitration)._
 
@@ -1949,7 +1957,9 @@ _CI nightly 2026-09-15 (E1 sweep): both legs test-locked and green; grab-zone pr
 
 ## Row 101 — ZOOM-FLOOR-001
 
-_verified: 2026-10-16_
+_verified: 2026-10-27_
+
+_Desktop nightly 2026-10-27 (Gabo-PC, Opus 5.5, HEAD 37fbb40f): `diag-mobile-grab-zone-touch.mjs` leg C — live "−" button 46 % → 10 % floor, "+" → 20 %. Floor holds in the real handler._
 
 _Desktop nightly 2026-10-16 (Gabo-PC, Fable 5.1, HEAD f3d3e0c7): first in-browser exercise — `diag-mobile-grab-zone-touch.mjs` leg C clicks the live "−" button of the `Preview zoom control` 12× on the real mobile layout: label 46 % → **10 %** (the old 35 % floor would have stopped at 40 %), one "+" → 20 %. Floor confirmed in the real handler, not only in the source grep. Source anchors unchanged (`Math.max(0.1, Math.min(5.2` pinch + button floor in both bundles, `zoom-floor.test.mjs` green). Real-device pinch stays owner-owed._
 
@@ -2446,7 +2456,9 @@ confirmed landed, 3 checks go red. All 14 job-tracker python tests green. Live-v
 
 ## Row 110 — ANTCV-TOKEN-EXPIRED-2026-09-02-001
 
-_verified: 2026-10-16_
+_verified: 2026-10-27_
+
+_Desktop nightly 2026-10-27 (Gabo-PC): preflight TOKEN OK, expires 2026-11-01T19:31:42Z (5.5 d left), `token` exit 0; authed `GET /api/job-tracker` 200. No DISPATCH GAP line (previous start 1.0 d ago). Leg (a) (long-lived machine token / longer TTL) still the only structural fix owed._
 
 _Desktop nightly 2026-10-16 (Gabo-PC): preflight TOKEN OK, expires 2026-10-22T16:22:35Z (6.0 d left), `token` exit 0; authed relay GETs 200. DISPATCH GAP 1.0 d. Leg (a) (long-lived machine token / longer TTL) still the only structural fix owed — the next host gap straddling 10-22 kills it again._
 

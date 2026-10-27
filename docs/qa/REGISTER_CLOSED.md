@@ -4,6 +4,14 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 134 — POSTING-TRANSPORT-RETRY-001 — CLOSED 2026-10-27 (job-tracker nightly, evidence: negative-controlled test on the real `_req` / `get_doc` / `put_doc` / `cmd_check` of check-postings with urlopen stubbed; pre-fix HEAD dies on the same URLError)
+
+_verified: 2026-10-27_
+
+_Found and fixed the same run by the job-tracker nightly 2026-10-27 (Gabo-PC, Opus 5.5, worktree-isolated). Script-only: no `pwa/` asset, no version, no shift claim._
+
+The step 1b sweep died at its first `GET /api/job-tracker` with `URLError [WinError 10054]` (TLS reset) and a traceback, before one URL was probed. `check-postings.py` `_req` caught only `HTTPError`; the same error at the PUT would have discarded every verdict the probes paid for. `_req` now uses gen-runner's idiom (GENRUNNER-TRANSPORT-RETRY-001): a transport error (`TimeoutError`, `URLError`, `ConnectionError`, `OSError`) becomes a synthetic 599. A GET retries twice (2 s, 4 s backoff, logged to stderr). A PUT is not retried, since a dropped PUT may have landed; its 599 takes the existing put_error path, which prints the verdicts as "would archive" and exits with the error. HTTPError body handling moved unchanged to `_http_error`. `test_transport_retry.py` (13 checks): GET reset then 200, GET dead x3 -> 599 and a clean `get_doc` exit, HTTP 409 not retried, PUT reset -> 599 after one attempt, and end to end on the real `cmd_check` (GET reset + 200, probe, PUT reset -> "NOT written: PUT failed: 599", one PUT). Sabotage by line index: 169, 180, 182 each red; restored byte-identical. Live `get_doc()` through the patched `_req`: rev 322, 218 rows.
+
 ## Row 133 — JT-STDOUT-ENCODING-001 — CLOSED 2026-10-26 (job-tracker nightly, evidence: negative-controlled test on the real `main()` of gen-runner list/health and job-tracker-sync status under a cp1252 pipe, 7 red on pre-fix HEAD)
 
 _verified: 2026-10-26_

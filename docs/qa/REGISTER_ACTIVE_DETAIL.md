@@ -2386,7 +2386,7 @@ _reconcile 2026-10-18 (CI nightly, E1 stalest slot, HEAD `fe67552f`): CODE-PRESE
 
 > **Renumbered 2026-08-26: was row 41.** A document written before that date citing "row 41" may mean this row or SO-004. The ID is the key.
 
-_verified: 2026-10-26_
+_verified: 2026-10-27_
 
 **RE-VERIFIED 2026-10-26 (job-tracker nightly, Gabo-PC).** `check --apply`: 141 probed, 136 LIVE, 3 archived on first sight (Weibel Scientific System Engineer, System Architect, Customer Project Manager (radar systems), all LinkedIn "no longer accepting applications"). 0 at strike. 2 ERROR not counted, both at 4 sweep days since 10-20 (VML MAP HTTP 500, ABH Optics timeout). Rev 320 → 321.
 
@@ -2438,6 +2438,11 @@ confirmed landed, 3 checks go red. All 14 job-tracker python tests green. Live-v
 ---
 
 **RE-VERIFIED 2026-10-16 (job-tracker nightly, Gabo-PC).** Sweep `--apply` on 125 rows: 121 LIVE, 2 archived — Hamamatsu Photonics (via Tessero) / Director of Fiber Technology (LinkedIn 4468238139, "no longer accepting applications", CLOSED on first sight) and VELUX Group / AI Change Lead (jobbank.dk 3125443, HTTP 410, GONE 2/2, first strike by the 10-15 discovery rerun); Milestone Systems / Product Excellence Specialist held at GONE 1/2 (HTTP 410); VML MAP HTTP 500 for the ninth sweep, ERROR never counts. No 409. Doc rev 294 → 295 (written). The per-day gate, the hard/soft grading and the rev trail all behaved.
+
+---
+
+**RE-VERIFIED 2026-10-27 (job-tracker nightly, Gabo-PC).** Sweep `--apply` on 138 rows: 132 LIVE, 1 archived (Milestone Systems / Academy Lead – Data & AI Services, LinkedIn CLOSED on first sight), 5 ERROR not counted (VML MAP + ABH Optics HTTP 500, 5 sweep days each; Ibsen, iO, KU Lighthouse one-off transport errors), doc rev 321 -> 322. The first attempt died on a TLS reset at the initial GET; fixed the same run as row 134 (POSTING-TRANSPORT-RETRY-001): `_req` retries a GET twice and turns a transport error into a 599.
+
 
 ## Row 110 — ANTCV-TOKEN-EXPIRED-2026-09-02-001
 
@@ -2617,7 +2622,7 @@ _verified: 2026-10-25_
 
 ## Row 118 — JT-ARMED-ARTIFACT-NO-DRAIN-001
 
-_verified: 2026-10-26_
+_verified: 2026-10-27_
 
 **RE-VERIFIED 2026-10-26 (job-tracker nightly, Gabo-PC).** `list` on rev 321 still prints the ARMED block with `napatech` (app 2781, CLOSED row). `health`: 54 pointers vs 87 cloud apps, 1 dead, `veo_technologies` → 3500. Still waits on the owner.
 
@@ -2638,6 +2643,11 @@ _verified: 2026-10-26_
 ---
 
 **RE-VERIFIED 2026-10-16 (job-tracker nightly, Gabo-PC).** `gen-runner.py list` on rev 295 prints the ARMED-with-app block for `napatech` only (app 2781, CLOSED row, flag stale); `veo_technologies` is no longer armed (its pointer to the deleted app 3500 is still the one dead pointer in the health check). Options (b)/(c) still wait for the owner; the stale `napatech` flag is a doc write, not done unattended. See also row 127 for the mirror case: a default-ON row with NO artifact that should not drain either.
+
+---
+
+**RE-VERIFIED 2026-10-27 (job-tracker nightly, Gabo-PC).** Unchanged: ARMED-with-app block lists `napatech` (app 2781, CLOSED row); `gen-runner.py health` 1 dead pointer, `veo_technologies` -> app 3500. Owner still owes clearing both stale flags.
+
 
 ## Row 123 — PKG-ID-PERSIST-MIGRATE-001
 
@@ -2723,7 +2733,7 @@ is adoption, not pricing. Proposed: replace the three Mistral ids with `mistral-
 
 ## Row 127 — JT-OWNER-PACKAGED-DEFAULT-ON-001
 
-_verified: 2026-10-26_
+_verified: 2026-10-27_
 
 **RE-VERIFIED 2026-10-26 (job-tracker nightly, Gabo-PC). The class recurred.** Two more hand-packaged rows joined 185 and 186 in the OWNER-PACKAGED block on rev 321: `red_global` (207, "CV drafted") and `deloitte` (208, "CV/CL drafted"), both with a package line, no queue entry, no artifact. None generated. Four rows now wait on the owner's (b) answer.
 
@@ -2740,6 +2750,11 @@ _verified: 2026-10-26_
 **ADVANCED 2026-10-19 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated).** Doc rev 304: both rows still default-ON (no `queue` entry, no artifact), and both tracked statuses now read **"Submitted"** (was "CV/CL drafted" on 10-16), with the 📦 package lines intact. The owner applied with packages 1043 / 1044. Not generated again (same judgment as 10-16). Shipped the report-only half of (b): `owner_packaged_rows(doc)` + `print_owner_packaged_summary` in `scripts/job-tracker/gen-runner.py`, printed after the ARMED block in `list` and at the end of `run`. A row is named when it is default-on, not closed, has no application, has a real JD (>200 chars), and carries a drafted / submitted / applied / interview / offer status or a 📦 line in the flag column. `eligible_rows` is UNCHANGED, so an unattended `run` would still draft these rows; the block makes that visible in one line instead of a manual judgment each night. New `test_owner_packaged.py` (19 checks): the live shape is named and still eligible, each signal alone is enough, armed / explicit-False / has-app / closed / stub-JD rows are not named, rank order, the printed block and its silence when empty. Negative-controlled: line 505 `is not None` → `is True` (1 red), line 505 closed clause removed (1 red), line 516 package signal dropped (1 red); restored byte-identical (`cmp`). **Still owed (owner):** (a) clear the ⏰ flag on rows 185 + 186 (both submitted); (b) say yes to turning the block into a skip (generate only on `queue=true` or `--row`), a one-line change in `eligible_rows` plus a test.
 
 ---
+
+---
+
+**RE-VERIFIED 2026-10-27 (job-tracker nightly, Gabo-PC).** OWNER-PACKAGED block still lists 4 rows (185, 186, 207, 208); none generated. Owner decision (b) still open.
+
 
 ## Row 130 — ANALYTICS-EXPORT-SLOW-001
 

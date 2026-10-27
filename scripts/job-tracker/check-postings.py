@@ -155,26 +155,49 @@ def _token():
     return open(p, encoding="utf-8").read().strip()
 
 
-def _req(path, method="GET", body=None, timeout=60):
+# POSTING-TRANSPORT-RETRY-001 (job-tracker nightly 2026-10-27): a TLS reset on
+# the first GET (WinError 10054) killed the sweep with a traceback before one URL
+# was probed. A transport error is now a synthetic 599, the idiom gen-runner's
+# _req uses (GENRUNNER-TRANSPORT-RETRY-001). A GET retries twice. A PUT does not:
+# a dropped PUT may have landed, and a 599 there takes the put_error path, which
+# still prints the verdicts the probes already paid for.
+_TRANSPORT_ERRORS = (TimeoutError, urllib.error.URLError, ConnectionError, OSError)
+
+
+def _req(path, method="GET", body=None, timeout=60, retries=2):
     data = json.dumps(body).encode() if body is not None else None
-    r = urllib.request.Request(RELAY + path, data=data, method=method, headers={
-        "Authorization": "Bearer " + _token(), "User-Agent": _UA,
-        "Origin": "https://antcv.pages.dev", "Content-Type": "application/json"})
-    try:
-        with urllib.request.urlopen(r, timeout=timeout) as resp:
-            return resp.status, json.loads(resp.read().decode() or "{}")
-    except urllib.error.HTTPError as e:
-        # POSTING-409-REPROBE-001: keep a JSON error body intact. The relay's
-        # 409 carries { error, rev, doc } and the caller replays onto that doc;
-        # str()[:300] used to throw the rev and the doc away ("rev moved to None").
-        raw = e.read().decode()
+    tries = retries + 1 if method == "GET" else 1
+    last = "unknown"
+    for attempt in range(tries):
+        r = urllib.request.Request(RELAY + path, data=data, method=method, headers={
+            "Authorization": "Bearer " + _token(), "User-Agent": _UA,
+            "Origin": "https://antcv.pages.dev", "Content-Type": "application/json"})
         try:
-            body = json.loads(raw or "{}")
-        except ValueError:
-            body = None
-        if not isinstance(body, dict):
-            body = {"error": raw[:300]}
-        return e.code, body
+            with urllib.request.urlopen(r, timeout=timeout) as resp:
+                return resp.status, json.loads(resp.read().decode() or "{}")
+        except urllib.error.HTTPError as e:
+            return _http_error(e)
+        except _TRANSPORT_ERRORS as e:
+            last = "%s: %s" % (type(e).__name__, e)
+            if attempt + 1 < tries:
+                print("  [transport] %s %s -> %s; retry %d/%d" % (method, path, last, attempt + 1, retries),
+                      file=sys.stderr)
+                time.sleep(2.0 * (attempt + 1))
+    return 599, {"error": "transport_failed: " + last}
+
+
+def _http_error(e):
+    # POSTING-409-REPROBE-001: keep a JSON error body intact. The relay's
+    # 409 carries { error, rev, doc } and the caller replays onto that doc;
+    # str()[:300] used to throw the rev and the doc away ("rev moved to None").
+    raw = e.read().decode()
+    try:
+        body = json.loads(raw or "{}")
+    except ValueError:
+        body = None
+    if not isinstance(body, dict):
+        body = {"error": raw[:300]}
+    return e.code, body
 
 
 def get_doc():

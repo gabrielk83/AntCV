@@ -112,13 +112,13 @@ citing an old number may mean either row — the ID disambiguates.
 | 99 | `REG-GROUP-FOLD-NAMED-001` | 2026-10-27 | (2026-07-05, PR #331, register-escape). REGULATORY CONTEXT rendered two near-duplicate group headers side by s |
 | 100 | `GRAB-ZONE-DISMISS-THRESHOLD-001` | 2026-10-27 | + GRAB-ZONE-SCROLL-FORWARD-001 (2026-07-05, PR #332 + same-day follow-up, register-escape). Owner (Android): " |
 | 101 | `ZOOM-FLOOR-001` | 2026-10-27 | (2026-07-05, PR #334, register-escape). Owner: "allow Zoom out down to 10-20, currently it is down to 35%… tha |
-| 19 | `JD-SCOPE-OCC2-GUARD-001` | 2026-10-17 | JD-scope isolation — two-real-device test |
-| 103 | `RELAY-TUNE-COVERAGE-GAP-001` | 2026-10-17 | (found by weekly cost-quality tune 2026-07-13): the tune loop is blind to 100% of real traffic and can never f |
-| 45 | — | 2026-10-17 | PERF-001 — multi-second main-thread stalls on export/preview; profile → debounce/memoize. |
+| 19 | `JD-SCOPE-OCC2-GUARD-001` | 2026-10-28 | JD-scope isolation — two-real-device test |
+| 103 | `RELAY-TUNE-COVERAGE-GAP-001` | 2026-10-28 | (found by weekly cost-quality tune 2026-07-13): the tune loop is blind to 100% of real traffic and can never f |
+| 45 | — | 2026-10-28 | PERF-001 — multi-second main-thread stalls on export/preview; profile → debounce/memoize. |
 | 40 | — | 2026-10-26 | SO-003 DATA LOSS — core-comp row-count change wipes Selected Outcomes (cloud-persisted). |
-| 35 | `OVERLAY-EARLY-HALT-001` | 2026-10-17 | NEW — OVERLAY-EARLY-HALT-001 regen-confirm. Shipped 1.51.41 (heartbeat-gated watchdog replacing the fixed 2-mi |
-| 36 | `GEN-CORECOMP-BROAD-001` | 2026-10-17 | NEW — GEN-CORECOMP-BROAD-001 regen-confirm. Shipped 1.51.41 (unsolicited CORE COMPETENCIES broadened to PdM/BA |
-| 37 | `FOCUS-LABEL-EO-001` | 2026-10-17 | NEW — FOCUS-LABEL-EO-001 regen-confirm. Shipped 1.51.42/43 (canonicalised EO focus-area label post-process). N |
+| 35 | `OVERLAY-EARLY-HALT-001` | 2026-10-28 | NEW — OVERLAY-EARLY-HALT-001 regen-confirm. Shipped 1.51.41 (heartbeat-gated watchdog replacing the fixed 2-mi |
+| 36 | `GEN-CORECOMP-BROAD-001` | 2026-10-28 | NEW — GEN-CORECOMP-BROAD-001 regen-confirm. Shipped 1.51.41 (unsolicited CORE COMPETENCIES broadened to PdM/BA |
+| 37 | `FOCUS-LABEL-EO-001` | 2026-10-28 | NEW — FOCUS-LABEL-EO-001 regen-confirm. Shipped 1.51.42/43 (canonicalised EO focus-area label post-process). N |
 | 3 | `FLOAT-SPINE-001` | 2026-10-19 | Floating spine: byte-diff flag-on doc vs reference, add grid equalization + spacer anchor |
 | 20 | `CONTACT-TRACK-TIGHT-001` | 2026-10-19 | Owner verify list — 6 sub-items (alignment, sidebar runts, CL spacing, Sirin result, abbreviation, contact tra |
 | 1 | — | 2026-08-26 _(STANDING)_ | Quick-gen page convergence + CV 3-page convergence, export-only pagination parity |

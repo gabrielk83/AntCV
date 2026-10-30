@@ -2790,3 +2790,17 @@ _verified: 2026-10-20_
 **Proposed fix (not done; cv-proxy is the generation path, so the deploy is owner-gated for an unattended run).** (a) Hydrate in bounded batches (`Promise.all` over chunks of ~25) in `analytics-export.js` and the demo-proxy copy; (b) default the sessions view to a time window (e.g. last 30 days via `since`) so the read count stays under the per-invocation cap; (c) client: clear the busy state and show an error on a network failure. Unit test on a fake KV with a call-order/latency probe; then deploy proxy + demo-proxy via deploy.yml and re-run `node pwa/test/diag-analytics-buttons-live.mjs` (expects PASS: three 200s, token kept).
 
 **Owner decision.** Approve (a)+(b) and the two worker deploys, or point to a different export source (D1 telemetry) if KV analytics is being retired. Severity LOW (admin-only).
+
+## Row 135 — JT-PUT-SLOW-UPLINK-001
+
+_verified: 2026-10-30_
+
+**Found by the position-discovery run 2026-10-30 (Gabo-PC, Opus 5.5).** Two `check-postings.py check --apply` sweeps finished probing and then lost every verdict: the doc PUT failed with `599 {'error': 'transport_failed: URLError: <urlopen error The write operation timed out>'}`. The no-retry PUT path (row 134) worked as designed and printed the 4 verdicts as "would archive", so nothing was corrupted, but ~10 minutes of probing per sweep were thrown away.
+
+**Mechanism (measured).** The relay doc GET is 1,374,012 bytes. Host upload measured 17-33 KB/s that morning (1 MB curl POST to httpbin 32 s, to the relay 30 s). `_req` in `check-postings.py` (timeout=60) and `discover-positions.py` (timeout=60) send the full doc in one PUT; at that rate a single socket write can block past 60 s. The doc grows with every row and stored JD, so the margin shrinks over time. `job-tracker-sync.py` and `gen-runner.py` PUT the same doc and share the exposure (not checked line by line).
+
+**Workaround used.** A scratchpad wrapper that loads the script and raises `_req.__defaults__` timeout to 400 s, then calls `main()`. The third sweep wrote (rev 322 → 323) and `discover-positions.py add` wrote (rev → 324). No repo code changed.
+
+**Proposed fix (not done; the routine may not fix code).** (a) Raise the PUT timeout (e.g. 300 s) for PUTs only, keeping GET at 60 s, in all four scripts; or (b) size-aware: timeout = max(60, bytes / 10 KB/s). Test: stub `urlopen` and assert the timeout passed for a PUT of a 1.4 MB body. Longer term: PATCH-style partial writes so a sweep sends only changed rows.
+
+**Owner decision.** Approve (a) or (b) for the next job-tracker nightly. Severity MEDIUM for routines on a slow uplink: a lost sweep costs a day of strikes, a lost `add` costs the run.

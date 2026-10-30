@@ -4,6 +4,31 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 12 — AI-NOTICE-LEFT-CLOUDCONVERT-001 — CLOSED 2026-10-30 (desktop nightly, evidence: the "remaining 3" docx-baseline diags it was held open on all GREEN, full docx-worker diag baseline 51/51 vs 35/38 when filed)
+
+_verified: 2026-10-30_
+
+_Closed by the desktop nightly 2026-10-30 (Gabo-PC, Opus 5.5, worktree on `608e7059`). The anchor bug was fixed 2026-07-03 and five sweeps recommended closure; the row stayed ACTIVE only on the docx baseline "remaining 3". Re-run here: `workers/docx-worker/test/diag-cjlr-table-export.mjs` CJLR-TABLE-EXPORT OK, `diag-pageflow-export.mjs` PAGEFLOW-EXPORT OK, `diag-spacing-linkedin-export.mjs` SPACING-LINKEDIN-EXPORT OK; every `workers/docx-worker/test/diag-*.mjs` 51/51 exit 0; `pwa/test/unit/ai-notice-position.test.mjs` re-run 3/3 GREEN. Nothing left to re-file. Docs-only close, no version._
+
+_reconcile 2026-10-18 (CI nightly, E1, HEAD `fe67552f`): `pwa/test/unit/ai-notice-position.test.mjs` RE-RUN GREEN (3/3); the page-relative margin-left encoding (0pt/275pt + jc) in `workers/docx-worker/src/index.js` is unchanged. The AI-NOTICE-LEFT anchor bug stays effectively resolved; row lingers only on the docx-baseline "remaining 3" (cjlr-table-export, pageflow-export, spacing-linkedin-export), SEPARATE tests. Recommendation stands (5th sweep): owner move to CLOSED and re-file the 3 baseline gaps under their own IDs if still open._
+
+_reconcile 2026-10-09 (CI nightly, E1): `pwa/test/unit/ai-notice-position.test.mjs` RE-RUN GREEN (3/3) on HEAD `d5bda7eb`; the page-relative margin-left encoding (0pt/275pt + jc) in `workers/docx-worker/src/index.js` is unchanged. The AI-NOTICE-LEFT anchor bug stays effectively resolved; row lingers only on the docx-baseline "remaining 3" (cjlr-table-export, pageflow-export, spacing-linkedin-export), SEPARATE tests. Recommendation stands: owner move to CLOSED and re-file the 3 baseline gaps under their own IDs if still open._
+
+_reconcile 2026-09-27 (CI nightly, E1): `pwa/test/unit/ai-notice-position.test.mjs` RE-RUN GREEN (3/3) on HEAD `0537eb7b`; the page-relative margin-left encoding (0pt/275pt + jc) in `workers/docx-worker/src/index.js` is unchanged. The AI-NOTICE-LEFT anchor bug stays effectively resolved; row lingers only on the docx-baseline "remaining 3" (cjlr-table-export, pageflow-export, spacing-linkedin-export), which are SEPARATE tests. Recommendation stands: owner move to CLOSED and re-file the 3 baseline gaps under their own IDs if still open._
+
+_reconcile 2026-09-17 (CI nightly, E1): `pwa/test/unit/ai-notice-position.test.mjs` RE-RUN GREEN on HEAD `d8e041ea` (3/3, in the 8/8 pass); the page-relative margin-left encoding (0pt/275pt + jc) in `workers/docx-worker/src/index.js` is unchanged. The AI-NOTICE-LEFT anchor bug itself stays effectively resolved; row lingers only on the docx-baseline "remaining 3" (cjlr-table-export, pageflow-export, spacing-linkedin-export), which are SEPARATE tests. Recommendation stands: owner move to CLOSED and re-file the 3 baseline gaps under their own IDs if still open._
+
+_reconcile 2026-09-07 (CI nightly, E1): the shipped page-relative margin-left encoding (0pt/275pt + jc, replacing the LibreOffice-ignored mso-position-horizontal keyword) is CONFIRMED in `workers/docx-worker/src/index.js`; `pwa/test/unit/ai-notice-position.test.mjs` GREEN (3/3) on HEAD `2cc4ba4f`. The AI-NOTICE-LEFT bug itself is effectively resolved; this row stays ACTIVE only because its text still carries the docx-baseline "remaining 3" (cjlr-table-export, pageflow-export, spacing-linkedin-export) — those are SEPARATE tests, not this anchor. Recommend the owner move this row to REGISTER_CLOSED and re-file the 3 baseline gaps under their own IDs if still open._
+
+**OPEN-queue row (verbatim):**
+
+```
+| 12 | ~~diag-ai-notice-anchor RED~~ CLOSED (2026-07-03): the WORKER was right — AI-NOTICE-LEFT-CLOUDCONVERT-001 (owner 2026-07-01) replaced the mso-position-horizontal keyword (LibreOffice ignores it) with an explicit page-relative margin-left offset; the DIAG still asserted the abandoned keyword. Diag updated to the shipped encoding (margin-left 0pt/275pt + jc) → AI-NOTICE-ANCHOR OK; docx baseline now 35/38 (remaining 3: cjlr-table-export, pageflow-export, spacing-linkedin-export) | memory stale-status-deadflags → fixed | 2026-07-03 |
+```
+
+---
+
+
 ## Row 134 — POSTING-TRANSPORT-RETRY-001 — CLOSED 2026-10-27 (job-tracker nightly, evidence: negative-controlled test on the real `_req` / `get_doc` / `put_doc` / `cmd_check` of check-postings with urlopen stubbed; pre-fix HEAD dies on the same URLError)
 
 _verified: 2026-10-27_

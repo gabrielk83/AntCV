@@ -259,7 +259,9 @@ in CI) + a live translate-persist cycle to verify — carry forward.
 
 ## Row 25 — TABLE-GEOMETRY-PARITY-001
 
-_verified: 2026-10-18_
+_verified: 2026-10-30_
+
+_reconcile 2026-10-30 (desktop nightly, E1, HEAD `608e7059`): forwarding pipeline STILL INTACT — `renderCompetencyTable`/`tableWidthPct`/`tableRatio` lines unchanged at all five sites (`antcv-docx-client.js` 11, `antcv-table-headers-editable-341.js` 1, `antcv-section-align.js` 7, `antcv-auto-pagebreak-block-001.js` 1, `workers/docx-worker/src/index.js` 9); `pwa/test/diag-cl-table-dims-export.mjs` GREEN; docx-worker diag baseline 51/51 GREEN; live docx-worker `1.14.175-ai-mark-props` = repo, `pdf_via: cloudconvert`. The FIDELITY gap still needs a real CloudConvert PDF diffed against the preview; this unattended run spent no CloudConvert credits. Blocked on: owner session (real export + eyeball)._
 
 _reconcile 2026-10-18 (CI nightly, E1, HEAD `fe67552f`): forwarding pipeline STILL INTACT — combined `renderCompetencyTable`/`tableWidthPct`/`tableRatio` markers present at all five sites unchanged (`antcv-docx-client.js` 11, `antcv-table-headers-editable-341.js` 1, `antcv-section-align.js` 7, `antcv-auto-pagebreak-block-001.js` 1, `workers/docx-worker/src/index.js` 9); no code delta since 10-09. The FIDELITY gap (real CloudConvert PDF vs preview: Carlito advance widths, 3pt/7.5pt padding, 2-vs-3 line clamp) still needs a real export diff — unattended CI spends no CloudConvert credits. Blocked on: owner session. Suite 1830/1830 green._
 
@@ -287,7 +289,9 @@ _reconcile 2026-09-07 (CI nightly, E1): WIB-TABLE-DIMS-001 forwarding pipeline I
 
 ## Row 6 — BANNED-WORDS-MERGE-001
 
-_verified: 2026-10-18_
+_verified: 2026-10-30_
+
+_reconcile 2026-10-30 (desktop nightly, E1, HEAD `608e7059`): code-complete state STILL HOLDS. ANCHOR CORRECTION: the `antcv:keep-native-banned` kill-switch lives in `pwa/antcv-react-islands.js` (native-summary collapse `ji()`, since 1.51.86 `26459f91`), NOT in `antcv-data-importer.js` — the "2 hits" there that the 09-07..10-18 reconciles counted are both `antcv:no-kernel-chain`. Both switches present; islands bundle loaded by `index.html`. No code delta since 10-09. Unchanged: OWNER eyeball of the merged banned-words UI + one file of each of the 6 loader types._
 
 _reconcile 2026-10-18 (CI nightly, E1, HEAD `fe67552f`): code-complete state STILL HOLDS — both kill-switches `antcv:keep-native-banned` + `antcv:no-kernel-chain` present in `antcv-data-importer.js` (2 hits), island `banned_*` writer present in `antcv-react-islands.js` (1 hit); no code delta since 10-09; full suite 1830/1830 green. Unchanged: OWNER eyeball of the merged banned-words UI + one file of each of the 6 loader types — owner-gated, not verifiable in CI._
 
@@ -315,7 +319,9 @@ _reconcile 2026-09-07 (CI nightly, E1): code-complete state CONFIRMED against HE
 
 ## Row 8 — KERNEL-V2-READER-001
 
-_verified: 2026-10-18_
+_verified: 2026-10-30_
+
+_reconcile 2026-10-30 (desktop nightly, E1, HEAD `608e7059`): `pwa/test/unit/kernel-v2-reader.test.mjs` RE-RUN GREEN (5/5); `antcv:ingestedKernel` reader intact in `antcv-kernel-import.js` (2 hits). No code delta. Unchanged: (a) bullets-path v2-direct migration, (c) es/zh + lazy language_view tier (real models), (d) §6 P/DOCX/PDF regression parity on an uploaded docx (owner-gated)._
 
 _reconcile 2026-10-18 (CI nightly, E1, HEAD `fe67552f`): `pwa/test/unit/kernel-v2-reader.test.mjs` RE-RUN GREEN (5/5); `antcv:ingestedKernel` staged-kernel reader intact in `antcv-kernel-import.js` (2 hits, both bundles). No code delta since 10-09. Unchanged: (a) bullets-path v2-direct migration (safe while autoSync projects v2→workHistory), (c) es/zh + lazy language_view tier (needs real models), (d) §6 P/DOCX/PDF regression parity on an uploaded docx (owner-gated) — none doable in CI._
 
@@ -337,28 +343,6 @@ _reconcile 2026-09-07 (CI nightly, E1): `pwa/test/unit/kernel-v2-reader.test.mjs
 
 ```
 | 8 | Kernel v2 — bullets-path v2 migration, es/zh tier, §6 regression pass on uploaded docx | TO DO |
-```
-
----
-
-## Row 12 — AI-NOTICE-LEFT-CLOUDCONVERT-001
-
-_verified: 2026-10-18_
-
-_reconcile 2026-10-18 (CI nightly, E1, HEAD `fe67552f`): `pwa/test/unit/ai-notice-position.test.mjs` RE-RUN GREEN (3/3); the page-relative margin-left encoding (0pt/275pt + jc) in `workers/docx-worker/src/index.js` is unchanged. The AI-NOTICE-LEFT anchor bug stays effectively resolved; row lingers only on the docx-baseline "remaining 3" (cjlr-table-export, pageflow-export, spacing-linkedin-export), SEPARATE tests. Recommendation stands (5th sweep): owner move to CLOSED and re-file the 3 baseline gaps under their own IDs if still open._
-
-_reconcile 2026-10-09 (CI nightly, E1): `pwa/test/unit/ai-notice-position.test.mjs` RE-RUN GREEN (3/3) on HEAD `d5bda7eb`; the page-relative margin-left encoding (0pt/275pt + jc) in `workers/docx-worker/src/index.js` is unchanged. The AI-NOTICE-LEFT anchor bug stays effectively resolved; row lingers only on the docx-baseline "remaining 3" (cjlr-table-export, pageflow-export, spacing-linkedin-export), SEPARATE tests. Recommendation stands: owner move to CLOSED and re-file the 3 baseline gaps under their own IDs if still open._
-
-_reconcile 2026-09-27 (CI nightly, E1): `pwa/test/unit/ai-notice-position.test.mjs` RE-RUN GREEN (3/3) on HEAD `0537eb7b`; the page-relative margin-left encoding (0pt/275pt + jc) in `workers/docx-worker/src/index.js` is unchanged. The AI-NOTICE-LEFT anchor bug stays effectively resolved; row lingers only on the docx-baseline "remaining 3" (cjlr-table-export, pageflow-export, spacing-linkedin-export), which are SEPARATE tests. Recommendation stands: owner move to CLOSED and re-file the 3 baseline gaps under their own IDs if still open._
-
-_reconcile 2026-09-17 (CI nightly, E1): `pwa/test/unit/ai-notice-position.test.mjs` RE-RUN GREEN on HEAD `d8e041ea` (3/3, in the 8/8 pass); the page-relative margin-left encoding (0pt/275pt + jc) in `workers/docx-worker/src/index.js` is unchanged. The AI-NOTICE-LEFT anchor bug itself stays effectively resolved; row lingers only on the docx-baseline "remaining 3" (cjlr-table-export, pageflow-export, spacing-linkedin-export), which are SEPARATE tests. Recommendation stands: owner move to CLOSED and re-file the 3 baseline gaps under their own IDs if still open._
-
-_reconcile 2026-09-07 (CI nightly, E1): the shipped page-relative margin-left encoding (0pt/275pt + jc, replacing the LibreOffice-ignored mso-position-horizontal keyword) is CONFIRMED in `workers/docx-worker/src/index.js`; `pwa/test/unit/ai-notice-position.test.mjs` GREEN (3/3) on HEAD `2cc4ba4f`. The AI-NOTICE-LEFT bug itself is effectively resolved; this row stays ACTIVE only because its text still carries the docx-baseline "remaining 3" (cjlr-table-export, pageflow-export, spacing-linkedin-export) — those are SEPARATE tests, not this anchor. Recommend the owner move this row to REGISTER_CLOSED and re-file the 3 baseline gaps under their own IDs if still open._
-
-**OPEN-queue row (verbatim):**
-
-```
-| 12 | ~~diag-ai-notice-anchor RED~~ CLOSED (2026-07-03): the WORKER was right — AI-NOTICE-LEFT-CLOUDCONVERT-001 (owner 2026-07-01) replaced the mso-position-horizontal keyword (LibreOffice ignores it) with an explicit page-relative margin-left offset; the DIAG still asserted the abandoned keyword. Diag updated to the shipped encoding (margin-left 0pt/275pt + jc) → AI-NOTICE-ANCHOR OK; docx baseline now 35/38 (remaining 3: cjlr-table-export, pageflow-export, spacing-linkedin-export) | memory stale-status-deadflags → fixed | 2026-07-03 |
 ```
 
 ---

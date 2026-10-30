@@ -58,6 +58,17 @@ def _save_token(t):
         open(p, "w", encoding="utf-8").write(t.strip())
     except Exception: pass
 
+# JT-PUT-SLOW-UPLINK-001 (job-tracker nightly 2026-10-30): the job-tracker doc
+# is ~1.4 MB and this host's uplink measured 17-33 KB/s. Since Python 3.5 the
+# socket timeout bounds the WHOLE sendall, so a fixed timeout lost two sweeps'
+# verdicts at the PUT ('The write operation timed out'). A request body now gets
+# at least len(body) / 10 KB/s seconds; GETs and small bodies keep the floor.
+_UPLINK_FLOOR_BPS = 10 * 1024
+
+
+def _body_timeout(data, timeout):
+    return max(timeout, len(data) / _UPLINK_FLOOR_BPS) if data else timeout
+
 def _req(method, body=None):
     data = json.dumps(body).encode() if body is not None else None
     r = urllib.request.Request(ENDPOINT, data=data, method=method,
@@ -68,7 +79,7 @@ def _req(method, body=None):
                  # present a browser-like UA so the request reaches the worker.
                  "User-Agent": "Mozilla/5.0 (AntCV job-tracker-sync)"})
     try:
-        with urllib.request.urlopen(r, timeout=30) as resp:
+        with urllib.request.urlopen(r, timeout=_body_timeout(data, 30)) as resp:
             _save_token(resp.headers.get("X-Auth-Refresh"))
             return resp.status, json.loads(resp.read().decode() or "{}")
     except urllib.error.HTTPError as e:

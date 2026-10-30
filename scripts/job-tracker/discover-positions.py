@@ -53,13 +53,24 @@ def _token():
     return open(p, encoding="utf-8").read().strip()
 
 
+# JT-PUT-SLOW-UPLINK-001 (job-tracker nightly 2026-10-30): the job-tracker doc
+# is ~1.4 MB and this host's uplink measured 17-33 KB/s. Since Python 3.5 the
+# socket timeout bounds the WHOLE sendall, so a fixed timeout lost two sweeps'
+# verdicts at the PUT ('The write operation timed out'). A request body now gets
+# at least len(body) / 10 KB/s seconds; GETs and small bodies keep the floor.
+_UPLINK_FLOOR_BPS = 10 * 1024
+
+
+def _body_timeout(data, timeout):
+    return max(timeout, len(data) / _UPLINK_FLOOR_BPS) if data else timeout
+
 def _req(path, method="GET", body=None, timeout=60):
     data = json.dumps(body).encode() if body is not None else None
     r = urllib.request.Request(RELAY + path, data=data, method=method, headers={
         "Authorization": "Bearer " + _token(), "User-Agent": _UA,
         "Origin": "https://antcv.pages.dev", "Content-Type": "application/json"})
     try:
-        with urllib.request.urlopen(r, timeout=timeout) as resp:
+        with urllib.request.urlopen(r, timeout=_body_timeout(data, timeout)) as resp:
             return resp.status, json.loads(resp.read().decode() or "{}")
     except urllib.error.HTTPError as e:
         return e.code, {"error": e.read().decode()[:300]}

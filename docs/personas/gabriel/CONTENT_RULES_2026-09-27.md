@@ -94,7 +94,7 @@ General rules for every role and every executive-linear CV/letter, learned from 
 | Details tables | The closing details are three tables, each with its own heading: CREDENTIALS (standards, courses, patents) · LANGUAGES & PERSONAL (languages, sport/interests, accessibility) · AVAILABILITY & REFERENCES. Not one combined "Languages, interests & profile details" table. Shipped in AntCV 1.51.4873 (preview + docx-worker, `LINEAR-DETAILS-ENRICHED-001`: courses and a stand-alone patent are CREDENTIALS rows, every table reads its theme name, rows in the order above; `LINEAR-CONT-001`: the export opens page 2 with "Professional experience (Cont.)" after one explicit page break from the preview's role page). |
 | Bullet order | Lead each role with the people and decision signal (budget, hiring, team incl. its manager, change board), technical depth second. |
 | Education detail | Every degree gets a one-line focus under it (subjects, research group, papers, award), from stored facts, styled like the MBA note line. Never only title + school + years. |
-| Interests | Keep the Interests row in EVERY layout, humour included ("home supervision by three feline strategic napping experts"). Converting two-column to linear must carry over every section; nothing personal is dropped silently. |
+| Interests | Keep the Interests row in EVERY layout, humour included ("home supervision of three feline strategic napping experts"). Converting two-column to linear must carry over every section; nothing personal is dropped silently. |
 | Enriched CV | An "enriched" CV carries the cover-letter and contact signals itself (profile, bullets, competencies) and is uploaded ALONE when a portal takes one file. Never append a cover-letter page to it. |
 | Cut order | To fit the page budget, cut the lowest-priority optional bullets and shorten details rows (courses, referees on one line) first. Never cut personality, education detail or interests to save space. |
 | Cloned lines | When a new line is cloned from an existing paragraph, clear hidden paragraph marks (w:vanish); a hidden mark merges the new line into the next heading. |
@@ -107,7 +107,7 @@ General rules for every role and every executive-linear CV/letter, learned from 
 - Meprolight microdisplay end-of-life: higher-performance replacement at lower unit cost; it needed lead time to test it and build a new interface.
 - Supplier qualification: four countries (Israel, China, Taiwan, Sweden).
 - Education focus: M.Sc. EE - optics, photonics and nanotechnology, in a photonics research group, two peer-reviewed papers; both B.Sc. degrees - optics, VLSI and DSP; MBA - business plan honourable mention at Tsinghua University.
-- Interests: Tai-chi · hiking · cultural exchange (languages, food, board games) · home supervision by three feline strategic napping experts.
+- Interests: Tai-chi · hiking · cultural exchange (languages, food, board games) · home supervision of three feline strategic napping experts.
 
 Generator twin of the 2026-10-05 structure: `housestyle_pdf_generator/course_cvs_2026-10-01/gen_linear3.py` (`linear_enriched`; first package 1041 microTECH, 2026-10-08).
 

@@ -206,6 +206,30 @@ check("gate2: a jobindex url with the full source posting passes",
 check("gate2: a non-jobindex url with no jd is not affected by the teaser rule",
       G(dict(PM, company="Hamamatsu", url="https://www.linkedin.com/jobs/view/1")), None)
 
+# ---- GATE-003 + DEADLINE-RELEVANCE-001 (owner 2026-11-01) ------------------------------
+LEMVIGH_JD = ("Har du erfaring med bygningsautomation, CTS/BMS, KNX eller integrerede bygningssystemer? "
+              "Du har en teknisk baggrund inden for el, automation eller bygningsstyring og erfaring fra f.eks. "
+              "en producent, installatør, systemintegrator.")
+check("gate3: Lemvigh-Mueller building-automation background is rejected",
+      bool(G(dict(PM, company="Lemvigh-Müller", jd=LEMVIGH_JD))), True)
+check("gate3: STIL public-sector IT business analyst with no hardware core is rejected",
+      bool(G({"company": "Styrelsen for It og Læring", "role": "Teknisk forretningsanalytiker med interesse for AI",
+              "why": "Business analyst on critical exam/test IT systems: requirements, testing, stakeholder work"})), True)
+check("gate3: a business analyst at a hardware employer is not touched",
+      G({"company": "Hamamatsu Photonics", "role": "BI Business Analyst", "why": "laser products, supplier data"}), None)
+check("gate3: pay noted below the floor is rejected",
+      bool(G(dict(PM, company="Some Co", fit="State pay scale, likely below the 55k floor (salary risk)"))), True)
+import datetime as _dt
+_past = (_dt.date.today() - _dt.timedelta(days=3)).strftime("%d.%m.%Y")
+_today = _dt.date.today().strftime("%d.%m.%Y")
+_future = (_dt.date.today() + _dt.timedelta(days=20)).strftime("%d.%m.%Y")
+check("deadline: a deadline three days ago is rejected",
+      bool(G(dict(PM, company="Some Co", jd="Ansøgningsfrist: " + _past))), True)
+check("deadline: a deadline TODAY is rejected (owner: same day counts as passed)",
+      bool(G(dict(PM, company="Some Co", jd="Ansøgningsfrist: " + _today))), True)
+check("deadline: a deadline in three weeks passes",
+      G(dict(PM, company="Some Co", jd="Ansøgningsfrist: " + _future)), None)
+
 if fails:
     print("FAIL (%d):" % len(fails))
     for f in fails:

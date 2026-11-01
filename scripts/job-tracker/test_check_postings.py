@@ -503,6 +503,42 @@ check("409 x4: the summary now precedes the exit",
       (rc is not None and "409" in rc, "checked 1 row(s)" in log, "doc rev 11 (NOT written" in log),
       (True, True, True))
 
+# ---- DEADLINE-RELEVANCE-001 (owner 2026-11-01) ---------------------------------
+NOV1 = datetime.date(2026, 11, 1)
+check("deadline: a jobbank deadline of TODAY is EXPIRED (owner: same day counts as passed)",
+      cp.classify(200, DK, DK, "<div>Frist: 01.11.2026</div>", NOV1)[0], "EXPIRED")
+_calls = []
+_probe0 = cp.probe
+
+
+def _no_probe(url, timeout=25):
+    _calls.append(url)
+    return 200, url, "<html>live</html>"
+
+
+cp.probe = _no_probe
+try:
+    _doc = {"rows": [[1, "Skatteforvaltningen", "Business Analyst", "", "", "", "", "", "Identified", "", "", "skat", "E2EFDA"],
+                     [2, "Acme", "Optical PM", "", "", "", "", "", "Identified", "", "", "acme", "E2EFDA"]],
+            "urls": {"skat": "https://www.example.dk/job/1", "acme": "https://www.example.dk/job/2"},
+            "jd": {"skat": "Send en motiveret ansøgning via linket senest den 1. november 2026.",
+                   "acme": "Ansøgningsfrist: 30. november 2026."}}
+    _res = cp.probe_rows(_doc, type("A", (), {"only": "", "limit": 0, "timeout": 5, "apply": True})(), NOV1)
+finally:
+    cp.probe = _probe0
+_by = {r["uk"]: r for r in _res}
+check("deadline: a stored posting text past its deadline is EXPIRED and archived",
+      (_by["skat"]["verdict"], _by["skat"]["archived"]), ("EXPIRED", True))
+check("deadline: the expired row is never probed over the network", _calls, ["https://www.example.dk/job/2"])
+check("deadline: a future deadline in the posting text leaves the row to the normal probe",
+      _by["acme"]["verdict"], "LIVE")
+check("deadline: a row in progress (CV/CL drafted) is never archived by the deadline sweep",
+      cp.is_engaged([1, "Deloitte", "Consultant", "", "", "", "", "", "CV/CL drafted", "", "", "d", "E2EFDA"]), True)
+check("deadline: a row with an outreach flag counts as in progress",
+      cp.is_engaged([1, "Hempel", "PM", "", "", "", "", "", "Identified", "", "📨 approach email", "h", "E2EFDA"]), True)
+check("deadline: a plain proposed row is not in progress",
+      cp.is_engaged([1, "Acme", "PM", "", "", "", "", "", "Identified (posting saved)", "", "🔎 proposed", "a", "E2EFDA"]), False)
+
 if fails:
     print("FAIL (%d):" % len(fails))
     for f in fails:

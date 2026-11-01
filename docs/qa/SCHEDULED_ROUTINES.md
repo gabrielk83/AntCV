@@ -193,6 +193,19 @@ jobindex.dk url whose jd is shorter than `JOBINDEX_MIN_JD` (600 chars). A jobind
 routine must follow it to the employer's or recruiter's posting and pass that text as `jd`, which the
 medical-must check then reads. Same override as GATE-001.
 
+**GATE-003 + DEADLINE-RELEVANCE-001 (2026-11-01) — building automation, public-sector IT analysts, pay floor,
+deadlines.** Owner: Lemvigh-Mueller (building-automation PM wanting a CTS/BMS/KNX installer background) and STIL
+(public-sector exam-systems business analyst) are not fits; Skatteforvaltningen's deadline ("senest den 1. november
+2026") had passed on the day it was still open; "pay attention to due date relevance in the future". `_evidence_gate`
+now also rejects a background phrase naming building automation / installation, a public-sector business-analyst
+title with no hardware core, a why/fit note that pay sits below the envelope floor, and a jd whose stated deadline is
+today or earlier. `deadlines.py` (shared) reads Danish and English deadline wording only right after a deadline cue
+(frist, senest, deadline, apply by, no later than ...), so a start date is never taken for one; a same-day deadline
+counts as passed. `check-postings.py` archives a live row whose STORED posting text states a passed deadline without
+probing it, on any host (page HTML stays host-gated), but never a row the owner is working on (`is_engaged`: drafted,
+packaged, outreach, submitted, interview, or a package / outreach mark on the flag). Tests: `test_deadlines.py`,
+`test_check_postings.py`, `test_discover_positions.py`.
+
 **JOBSRC-THEHUB-001 (2026-11-01) — TheHub now has a deterministic fetcher.** `/jobs?search=` is a
 Nuxt page: the jobs exist only inside the `window.__NUXT__` IIFE (a link scrape finds one), and
 Nuxt hoists repeated strings into the IIFE parameters (`title:c`), which the fetcher resolves.

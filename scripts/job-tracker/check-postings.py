@@ -60,6 +60,9 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import deadlines  # noqa: E402  DEADLINE-RELEVANCE-001: deadline parsing shared with discover-positions.py
+
 RELAY = os.environ.get("ANTCV_RELAY",
                        "https://antcv-access-relay.karp-gabriel-a.workers.dev").rstrip("/")
 _UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -255,7 +258,8 @@ def classify(status, final_url, requested_url, text, today=None):
     if final_url and _ARCHIVE_URL.search(final_url):
         return "EXPIRED", "board moved the ad to its archive (%s)" % final_url[:70]
     dl = _parse_deadline(body, final_url)
-    if dl and dl < today:
+    # DEADLINE-RELEVANCE-001 (owner 2026-11-01): a deadline of TODAY counts as passed.
+    if dl and dl <= today:
         return "EXPIRED", "stated deadline %s has passed" % dl.isoformat()
     for p in DEAD_PHRASES:
         if p in body:
@@ -314,6 +318,18 @@ def probe_with_backoff(url, timeout=25, fetch=None, sleep=time.sleep,
 
 def row_uk(row):
     return row[11] if len(row) > 11 and row[11] else (str(row[1]) + "|" + str(row[2]))
+
+
+# DEADLINE-RELEVANCE-001: a row the owner is working on (drafted, packaged, outreach, submitted, interview)
+# is never archived by the stored-text deadline sweep; on 2026-11-01 Deloitte's deadline was the same day the
+# owner was finishing that application, and Hempel's had passed while the owner wrote to the hiring manager.
+_ENGAGED = re.compile(r"submitted|interview|drafted|applied|offer|rejected|outreach|package|\bcv\b|\bcl\b", re.I)
+
+
+def is_engaged(row):
+    status = str(row[8] if len(row) > 8 else "")
+    flag = str(row[10] if len(row) > 10 else "")
+    return bool(_ENGAGED.search(status)) or "📦" in flag or "📨" in flag
 
 
 def is_archived(row):
@@ -478,6 +494,15 @@ def probe_rows(doc, args, today):
         if args.limit and checked >= args.limit:
             break
         checked += 1
+
+        # DEADLINE-RELEVANCE-001: the stored posting text is the ad's own wording, so a stated deadline there is
+        # trusted on any host (page HTML stays host-gated in classify). Today or earlier archives without a probe.
+        jd_deadline = deadlines.find_deadline(str((doc.get("jd") or {}).get(uk) or ""), today)
+        if deadlines.is_past(jd_deadline, today) and not is_engaged(row):
+            verdict, detail = "EXPIRED", "stated deadline %s has passed (posting text)" % jd_deadline.isoformat()
+            misses, will, did, es, ed = apply_verdict(doc, row, uk, verdict, detail, today, args.apply)
+            results.append(_result(row, uk, url, verdict, detail, misses, will, did, es, ed))
+            continue
 
         target = probe_target(url)
         if target != url:

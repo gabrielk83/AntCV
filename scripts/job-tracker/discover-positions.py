@@ -35,6 +35,9 @@ import re
 import sys
 import urllib.request
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import deadlines  # noqa: E402  DEADLINE-RELEVANCE-001
+
 RELAY = os.environ.get("ANTCV_RELAY", "https://antcv-access-relay.karp-gabriel-a.workers.dev").rstrip("/")
 _UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36"
 
@@ -184,6 +187,12 @@ Also do NOT propose (owner 2026-11-01, round 2; GATE-002):
   - construction-product roles that want a building-industry background (VELUX).
   - medtech roles where medical-device experience is a MUST. Read the full posting: propose
     only when it says "or another regulated industry", nice-to-have, an advantage, or nothing.
+  - roles that want a building-automation / installation background (CTS/BMS, KNX, installer
+    or system integrator; Lemvigh-Mueller, owner 2026-11-01).
+  - public-sector IT business-analyst roles with no hardware or product-engineering core
+    (STIL exam systems, owner 2026-11-01), and roles whose pay sits below the envelope floor.
+  - any posting whose application deadline is TODAY or earlier (DEADLINE-RELEVANCE-001: the
+    owner reads a same-day deadline as passed). Put the deadline in "jd" so add() can see it.
 A jobindex.dk ad is a teaser: open it, follow the link to the employer's or recruiter's own
 posting, and pass THAT full text as "jd". A jobindex url with a teaser-length jd is skipped.
 add() enforces the obvious cases deterministically (see _evidence_gate)."""
@@ -233,6 +242,16 @@ _SOFT = re.compile(r"or (?:an)?other regulated|or (?:a )?similar(?:ly)? regulate
                    r"nice[- ]to[- ]have|advantage|a plus|\bbonus\b|preferabl|ideally|desir|might|"
                    r"\bfordel\b|gerne|\bor\b[^.]{0,40}\b(?:automotive|aerospace|defen[cs]e)", re.I)
 _JOBINDEX = re.compile(r"(?:^|//|\.)jobindex\.dk/", re.I)
+# GATE-003 (owner 2026-11-01, Lemvigh-Mueller): a background in building automation / installation is a
+# building-industry background too.
+_BUILDING_AUTOMATION_NEED = re.compile(
+    r"(?:erfaring|baggrund|experience|background)[^.\n]{0,90}(?:bygningsautomation|bygningsstyring|"
+    r"bygningssystem|building automation|building management system|\bCTS\b|\bBMS\b|\bKNX\b|"
+    r"installat(?:ør|or|ion)|systemintegrator)", re.I)
+# GATE-003 (owner 2026-11-01, STIL): a public-sector IT business-analyst seat with no hardware core.
+_BA_TITLE = re.compile(r"forretningsanalytiker|business analyst|it-analytiker", re.I)
+_PUBLIC = re.compile(r"styrelse|ministeri|kommune|\bregion\b|forvaltning|agency|\bSTIL\b", re.I)
+_BELOW_FLOOR = re.compile(r"below (?:the )?(?:\d+k )?floor|under (?:the )?(?:\d+k )?floor|below (?:the )?envelope", re.I)
 JOBINDEX_MIN_JD = 600
 
 
@@ -268,6 +287,15 @@ def _evidence_gate(c):
     med = _medical_must(str(c.get("jd") or "") + "\n" + str(c.get("fit") or ""))
     if med:
         return "evidence gate: medical-device experience is a must (%r)" % med
+    if _BUILDING_AUTOMATION_NEED.search(body):
+        return "evidence gate: wants a building-automation / installation background (owner: building industry)"
+    if _BA_TITLE.search(title) and _PUBLIC.search(company + " " + title) and not _HW_ONLY.search(body):
+        return "evidence gate: public-sector IT business-analyst role with no hardware core (owner: STIL)"
+    if _BELOW_FLOOR.search(str(c.get("why") or "") + " " + str(c.get("fit") or "")):
+        return "evidence gate: pay noted below the envelope floor"
+    dl = deadlines.find_deadline(str(c.get("jd") or ""))
+    if deadlines.is_past(dl):
+        return "evidence gate: application deadline %s has passed (today counts as passed)" % dl.isoformat()
     if _JOBINDEX.search(str(c.get("url") or "")) and len(str(c.get("jd") or "").strip()) < JOBINDEX_MIN_JD:
         return ("evidence gate: jobindex teaser only - follow the ad to the employer's or recruiter's "
                 "posting and pass its full text as jd")

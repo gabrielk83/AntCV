@@ -132,6 +132,10 @@ Not adopted: the margin (sidebar) layout. The linear layout was chosen for ATS p
 
 | Accessibility (owner 2026-10-25, **superseded 2026-11-01 by COMMS-LINE-001**) | "Hearing impaired; live-transcription glasses caption and translate speech, and clear spoken communication with written follow-ups works well." The glasses caption and translate Danish; a letter that mentions Danish level or hearing names them. Kernel v13k. |
 
+| Snowflake (owner 2026-11-01) | Basic interfacing only: connecting Snowflake to Power BI, cloud services and SharePoint for reporting. Listed in Software tools and as a Kanzen bullet (kernel v13l); shown on data/BI-flavoured targets, never claimed as data engineering or warehouse ownership. |
+
+| Arena PLM (owner 2026-11-01) | Used in the Innoviz Change Request Lead role: change orders, item and BOM revisions, approvals and release, alongside Codebeamer traceability (kernel v13n). Listed in Software tools. Never a PLM-administration or data-model claim. |
+
 ## 2026-11-01 - Communication instead of disability (COMMS-LINE-001)
 
 Source: written advice from Anne (Improve Academy), 2026-11-01. "Hearing impaired" tells the reader nothing about what the candidate can do, so some employers fill the gap with worst-case assumptions. Describe what works instead of the label.

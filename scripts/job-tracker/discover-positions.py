@@ -156,11 +156,79 @@ def _existing_keys(doc):
     return keys, uks
 
 
+# DISCOVERY-EVIDENCE-GATE-001 (owner 2026-11-01). The Dream Envelope's work-task row
+# scores "AI workflow / training / governance" tasks, so discovery proposed ~50 AI-adoption,
+# AI-trainer, AI-governance, newsroom, webshop and banking-product roles that the owner then
+# had to close by hand ("Tryg AI trainer? no fit", "DSB weird fit", "website manager - not
+# relevant"). The envelope stays the owner's; this gate decides what may be PROPOSED.
+EVIDENCE_GATE_TEXT = """\
+## EVIDENCE GATE (owner 2026-11-01) - read before proposing anything
+A role is proposed ONLY when its core work sits in Gabriel's track record:
+  optics / photonics / electro-optics / lasers / fibre; camera, imaging, LiDAR, thermal,
+  radar or other sensors; hardware system architecture and systems engineering; technical
+  or hardware project / product management of PHYSICAL or deep-tech products (medtech,
+  defence, photonics, semiconductor, instruments, consumer hardware); NPI, test,
+  validation and qualification; requirements and change control in regulated hardware.
+The envelope's work-task count NEVER qualifies a role on its own. An AI-workflow /
+digital role qualifies when the posting NEEDS (or lists as nice-to-have) serious product
+management, business analysis, supplier / vendor control, or hardware (owner rule,
+2026-11-01). Without one of those it is a no-fit, however many envelope tasks it ticks.
+Do NOT propose: AI adoption / enablement / governance / trainer / strategist / consultant
+roles; GenAI-build / chatbot roles; webshop, MarTech, website, content or newsroom roles;
+commercial / sales-led product roles without engineering ownership - unless the posting
+carries one of the four qualifiers above.
+add() enforces the obvious cases deterministically (see _evidence_gate)."""
+
+# Title families that are a no-fit UNLESS the posting shows a qualifier (below).
+_NO_CORE = re.compile(
+    r"\bAI[- ](?:trainer|adoption|enablement|governance|engagement|strateg\w*|consult\w*|"
+    r"innovation|track)\b|ai-?konsulent|"
+    r"generative ai|\bgenai\b|chatbot|prompt engineer|deployment strategist|"
+    r"webshop|e-?commerce|martech|website|web manager|\bseo\b|newsroom|redaktionel|"
+    r"enablement program|learning partner|governance specialist", re.I)
+# The owner's four qualifiers: serious product management, business analysis,
+# supplier / vendor control, hardware (and the engineering track it implies).
+_QUALIFIER = re.compile(
+    r"product manag\w*|product owner|business analy\w*|forretningsanaly\w*|"
+    r"supplier|vendor|leverandør|procurement|sourcing|"
+    r"hardware|optic|photon|laser|fib(?:er|re)|sensor|camera|imaging|lidar|radar|electro|"
+    r"mechanic|mechatron|embedded|firmware|system(?:s)? (?:architect|engineer|designer)|"
+    r"medical device|medtech|endoscop|scanner|semiconductor|wafer|\bnpi\b|"
+    r"new product introduction|test engineer|qualification|defen[cs]e|electronic warfare", re.I)
+# Web / MarTech platform roles hide behind neutral titles ("Digital Product Specialist").
+_WEB_BODY = re.compile(r"webshop|martech|\bcdp\b|e-?commerce|website", re.I)
+_HW_ONLY = re.compile(r"hardware|optic|photon|laser|sensor|camera|imaging|electro|mechanic|"
+                      r"embedded|firmware|medical device|semiconductor|\bnpi\b", re.I)
+
+
+def _evidence_gate(c):
+    """Reason string when a candidate is an obvious no-fit, else None.
+    A role fails when its TITLE is in a no-core family AND nothing in title/why/fit/jd
+    shows a hardware / optics / systems / engineering-product core. Override only with
+    {"override_gate": true, "override_reason": "..."}, recorded on the row."""
+    if c.get("override_gate") and str(c.get("override_reason") or "").strip():
+        return None
+    title = str(c.get("role") or "")
+    body = " ".join(str(c.get(k) or "") for k in ("role", "why", "fit", "jd"))
+    if _NO_CORE.search(title) and not _QUALIFIER.search(body):
+        return ("evidence gate: %r is an AI-adoption/web role family with no product-management, "
+                "business-analysis, supplier or hardware need" % title[:60])
+    if re.search(r"\bdigital\b", title, re.I) and _WEB_BODY.search(body) and not _HW_ONLY.search(body):
+        return "evidence gate: %r is a web / MarTech platform role with no hardware core" % title[:60]
+    return None
+
+
 def cmd_context(_):
     _, doc = get_doc()
     rows = doc.get("rows") or []
     urls = doc.get("urls") or {}
     led = doc.get("discovered") or {}
+    print(EVIDENCE_GATE_TEXT)
+    nofit = [r for r in rows if str(r[8] if len(r) > 8 else "").startswith("Archive / not a fit")]
+    if nofit:
+        print("## closed as NOT A FIT by the owner - do not propose similar roles:")
+        for r in nofit:
+            print(f"  - {r[1]} | {r[2]}")
     print(f"# tracker has {len(rows)} rows, {len(led)} discovered-ledger keys")
     print("## already tracked (company | role | location):")
     for row in rows:
@@ -202,6 +270,10 @@ def cmd_add(args):
             if not company or not role:
                 skipped.append((company or url or "?", "missing company/role"))
                 continue
+            gate = _evidence_gate(c)
+            if gate:
+                skipped.append((f"{company} / {role}", gate))
+                continue
             ck_url = _norm_url(url) if url else None
             ck_cr = _norm_cr(company, role)
             if (ck_url and ck_url in keys) or ck_cr in keys:
@@ -224,10 +296,12 @@ def cmd_add(args):
             #              manual add. Proposed-ness shows via group "Proposed" +
             #              the 🔎 flag + a non-closed "Identified" tracked status,
             #              so the lead stays LIVE (Top-5-eligible), never archived.
+            flag = ("🔎 " + why) if why else "🔎 proposed (auto-discovered)"
+            if c.get("override_gate"):
+                flag += "\n⚠ evidence gate overridden: " + str(c.get("override_reason") or "")[:200]
             doc["rows"].append([
                 next_rank, company, role, loc, "", "Proposed", fit, "OPEN",
-                "Identified (posting saved)", "Review",
-                ("🔎 " + why) if why else "🔎 proposed (auto-discovered)", uk, band])
+                "Identified (posting saved)", "Review", flag, uk, band])
             next_rank += 1
             if url:
                 doc["urls"][uk] = url

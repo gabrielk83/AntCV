@@ -131,6 +131,38 @@ check("the proposed row is unarmed (queue=False, the hard safety gate)",
 res2, out2, _ = run_add(st["doc"], cands)
 check("a second run with the same candidates adds nothing", (res2.get("added"), res2.get("skipped")), (0, 2))
 
+# ---- DISCOVERY-EVIDENCE-GATE-001 (owner 2026-11-01): real cases from that day ---------
+G = dp._evidence_gate
+check("gate: AI trainer with chatbot tuning and no PM/BA/supplier/HW need is rejected",
+      bool(G({"role": "AI Trainer, Forretningsudvikling",
+              "why": "Chatbot / AI use-case design, workshops, prompt and answer-quality tuning, rollout"})), True)
+check("gate: AI governance role with no qualifier is rejected",
+      bool(G({"role": "AI Governance Specialist med systemansvar",
+              "why": "AI governance, guidance and processes for responsible AI use; documentation"})), True)
+check("gate: an AI adoption lead is rejected",
+      bool(G({"role": "Senior AI Adoption Lead", "why": "owns the AI adoption programme, training"})), True)
+check("gate: a web / MarTech 'Digital Product Specialist' is rejected",
+      bool(G({"role": "Digital Product Specialist",
+              "why": "Owns webshop, CDP and MarTech day to day: backlog, requirements"})), True)
+check("gate: AI enablement INSIDE hardware R&D passes (owner rule: hardware need)",
+      G({"role": "AI Enablement Specialist - Engineering Productivity",
+         "why": "AI across workflows with mechanical, electronics and optics engineers"}), None)
+check("gate: an AI role that needs serious product management passes (owner rule)",
+      G({"role": "AI Innovation Lead", "jd": "You own the product roadmap as product manager"}), None)
+check("gate: an AI role with supplier / vendor control passes (owner rule)",
+      G({"role": "AI Strategist", "why": "vendor selection and supplier follow-up for AI platforms"}), None)
+check("gate: an ordinary engineering role is never touched",
+      G({"role": "Hardware Solution Architect", "why": "endoscopy camera platforms"}), None)
+check("gate: an explicit override with a reason lets a row through",
+      G({"role": "AI Trainer", "override_gate": True, "override_reason": "owner asked"}), None)
+check("gate: an override WITHOUT a reason does not count",
+      bool(G({"role": "AI Trainer", "override_gate": True})), True)
+res3, out3, st3 = run_add({"rows": [], "urls": {}}, [
+    {"company": "Alka Forsikring", "role": "AI Trainer", "url": "https://x.dk/1", "why": "chatbot tuning"},
+    {"company": "Ambu", "role": "Hardware Solution Architect", "url": "https://x.dk/2", "why": "endoscopy"}])
+check("gate: add() skips the no-fit and adds the engineering row", (res3.get("added"), res3.get("skipped")), (1, 1))
+check("gate: the skip reason names the evidence gate", "evidence gate" in out3, True)
+
 if fails:
     print("FAIL (%d):" % len(fails))
     for f in fails:

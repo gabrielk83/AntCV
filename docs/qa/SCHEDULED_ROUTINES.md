@@ -167,6 +167,19 @@ search (`/jobs/search?keywords=&location=&f_TPR=`) is the strongest of the five 
 54/60/20/12 rows across four queries; TheHub returned 15. Google Jobs was not separately
 exercised that run.
 
+**DISCOVERY-EVIDENCE-GATE-001 (2026-11-01) — the envelope's work-task count no longer qualifies a
+role on its own.** The envelope scores AI-workflow / training / governance tasks ("≥7 = strong fit"),
+so discovery proposed ~50 AI-adoption, AI-trainer, AI-governance, newsroom, web and banking roles
+the owner then closed by hand (Tryg AI Trainer, DSB AI Governance, JP/Politikens Hus newsroom PM,
+EET webshop). Owner rule: an AI-workflow / digital role fits when the posting needs, or lists as
+nice-to-have, **serious product management, business analysis, supplier / vendor control, or
+hardware**. `discover-positions.py context` now prints the gate text and every row the owner closed
+as "Archive / not a fit"; `add` rejects the obvious cases deterministically (`_evidence_gate`: an
+AI-adoption / trainer / governance / web title with none of the four qualifiers in title, why, fit
+or JD, and "digital" web / MarTech platform roles). Override per candidate with
+`{"override_gate": true, "override_reason": "..."}`, which is written onto the row. Tests in
+`test_discover_positions.py`.
+
 **JOBSRC-THEHUB-001 (2026-11-01) — TheHub now has a deterministic fetcher.** `/jobs?search=` is a
 Nuxt page: the jobs exist only inside the `window.__NUXT__` IIFE (a link scrape finds one), and
 Nuxt hoists repeated strings into the IIFE parameters (`title:c`), which the fetcher resolves.

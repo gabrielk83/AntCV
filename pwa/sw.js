@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.5114-proof-points';
+const CACHE = 'antcv-1.51.5134-gdpr-rights';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

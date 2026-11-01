@@ -1,4 +1,4 @@
-/* AntCV data export + delete-save (v1.50.147)
+/* AntCV data export + delete-save (v1.50.147; cloud copy + privacy link 1.51.5134)
  * ============================================================================
  * Implements two owner items from the 2026-06-04 batch triage:
  *
@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.50.929-review-order';
+  var VERSION = '1.51.5134-gdpr-rights';
   if (window.__antcvDataExport360 === VERSION) return;
   window.__antcvDataExport360 = VERSION;
 
@@ -414,6 +414,62 @@
       });
     });
     return b;
+  }
+
+  // ── GDPR-RIGHTS-001 (owner 2026-10-23): copy of the CLOUD data ─────────
+  // "Download my data" covers this browser only. The relay keeps the kernel,
+  // applications, job tracker and telemetry in D1/KV; GET /api/prefs/export
+  // returns all of it (GDPR Art. 15 and 20, API key values masked). Read-only.
+  function exportCloudCopy() {
+    var base = proxyBase();
+    if (!base) return Promise.reject(new Error('Not connected - sign in to fetch your cloud data.'));
+    return fetch(base + '/api/prefs/export', { method: 'GET', credentials: 'include' })
+      .then(function (r) {
+        if (r.status === 401) throw new Error('Sign in first - the cloud copy needs your account.');
+        if (!r.ok) throw new Error('Could not fetch the cloud copy (HTTP ' + r.status + ').');
+        return r.text();
+      })
+      .then(function (text) {
+        var filename = 'antcv-my-cloud-data-' + fileStamp() + '.json';
+        return { ok: true, filename: filename, bytes: downloadBlob(text, filename) };
+      });
+  }
+  window.AntcvCloudDataCopy = exportCloudCopy;
+
+  function buildCloudCopyButton() {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute(UI_MARK, 'cloud-copy');
+    b.textContent = '☁ Copy of my cloud data';
+    b.title = 'Everything AntCV stores for your account on its servers, as one JSON file (GDPR Art. 15 and 20).';
+    b.style.cssText = 'display:block;width:100%;margin:0 0 8px;padding:12px;' +
+      'background:rgba(90,150,230,0.12);border:1px solid rgba(90,150,230,0.5);' +
+      'color:#bcd6ff;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;';
+    b.addEventListener('click', function (e) {
+      e.preventDefault(); e.stopPropagation();
+      b.disabled = true;
+      var prev = b.textContent;
+      b.textContent = '☁ Preparing copy…';
+      exportCloudCopy().then(function (r) {
+        b.textContent = '✓ Saved ' + r.filename;
+        setTimeout(function () { b.textContent = prev; b.disabled = false; }, 2600);
+      }).catch(function (err) {
+        b.textContent = '⚠ ' + ((err && err.message) || 'Copy failed');
+        setTimeout(function () { b.textContent = prev; b.disabled = false; }, 3600);
+      });
+    });
+    return b;
+  }
+
+  function buildPrivacyLink() {
+    var a = document.createElement('a');
+    a.setAttribute(UI_MARK, 'privacy-link');
+    a.href = 'privacy.html';
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = 'Privacy notice and AI use';
+    a.style.cssText = 'display:block;margin:0 0 8px;font-size:12px;color:#9fc3ff;text-align:center;';
+    return a;
   }
 
   // ── REVIEW-DATA-001 (owner 2026-06-18): friendly "Review my data" modal ──
@@ -1233,7 +1289,8 @@
     // Remove any stale privacy-zone / older-build copies before re-homing.
     try {
       var stale = document.querySelectorAll(
-        '[' + UI_MARK + '="review"],[' + UI_MARK + '="locked"],[' + UI_MARK + '="download"],[' + UI_MARK + '="launcher"]');
+        '[' + UI_MARK + '="review"],[' + UI_MARK + '="locked"],[' + UI_MARK + '="download"],[' + UI_MARK + '="launcher"],' +
+        '[' + UI_MARK + '="cloud-copy"],[' + UI_MARK + '="privacy-link"]');
       Array.prototype.forEach.call(stale, function (n) { try { n.remove(); } catch (_) {} });
     } catch (_) {}
     try {
@@ -1245,6 +1302,8 @@
       wrap.style.cssText = 'order:-8;display:flex;flex-direction:column;margin:0 0 6px;';
       wrap.appendChild(buildReviewButton());
       wrap.appendChild(buildLockedButton());
+      wrap.appendChild(buildCloudCopyButton());
+      wrap.appendChild(buildPrivacyLink());
       col.insertBefore(wrap, col.firstChild);
     } catch (_) {}
   }

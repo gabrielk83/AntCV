@@ -28,31 +28,54 @@ Status 2026-10-23. Not legal advice. Law text as amended by the Digital Omnibus 
 
 ## 3. GDPR
 
-AntCV is **controller** for account data, stored settings and stored CV data. LLM providers, Cloudflare and the e-mail sender are **processors** or independent controllers per their terms.
+AntCV is **controller** for account data, stored settings and stored CV data. Cloudflare, the e-mail sender and, with the shared demo keys, the LLM providers are **processors**. With the user's own API key, the user's own agreement with that provider applies. The user-facing text is `pwa/privacy.html` (PRIVACY-NOTICE-001); keep it in step with this table.
 
 | Item | Status | Where |
 |---|---|---|
-| Lawful basis | Contract (Art. 6(1)(b)): the user asks AntCV to draft their documents | - |
-| Information to the user (Art. 13) | **Partial.** The AI notice names the providers and says text goes to the chosen one. No privacy notice page lists controller contact, purposes, retention, processors, transfers and rights | Open: add `pwa/privacy.html` and link it from the AI notice and the sign-in screen |
-| Right of access and portability (Art. 15, 20) | Done | "Download my data" (`pwa/antcv-data-export-360.js`) |
-| Right to erasure (Art. 17) | Done | `DELETE /api/prefs` full-account deletion (`workers/access-relay`) |
-| Storage limitation (Art. 5(1)(e)) | Done | `RETENTION_DAYS` (default 365), reminder e-mail, `/api/prefs/renew` (`workers/access-relay`) |
-| Minimisation | Done for letters | CL-GDPR-CV-001: unsolicited letters offer the CV on request instead of attaching it |
-| Special categories (Art. 9) | Rule | Health, beliefs, union membership and similar appear only if the user typed them; the writing engine never infers or adds them. An accessibility line is the user's own choice |
-| Processors and transfers (Art. 28, 44) | **Open** | List each LLM provider, Cloudflare and the e-mail sender with region and transfer basis in the privacy notice |
-| Security (Art. 32) | Done | API keys server-side in KV, export passphrase option, privacy LED (`pwa/antcv-privacy-led.js`) |
+| Lawful basis | Contract (Art. 6(1)(b)) for account, profile, drafts and job tracker. Legitimate interest (Art. 6(1)(f)) for the pseudonymous AI usage records (`llm_calls`: hash, provider, model, timing, tokens, error class; no document text) | `pwa/privacy.html` section 3 |
+| Information to the user (Art. 13) | **Done 2026-10-23**, one blank: the operator's name and contact e-mail | `pwa/privacy.html`, linked from Settings → Personal ("Privacy notice and AI use") |
+| Right of access and portability (Art. 15, 20) | **Done 2026-10-23** (GDPR-RIGHTS-001). "Download my data" covered the browser only; the server half was missing | `GET /api/prefs/export`: KV prefs (API key values masked), every D1 row keyed by the user's hash, retention status, recipients. Button "Copy of my cloud data" (`pwa/antcv-data-export-360.js`) |
+| Right to erasure (Art. 17) | **Fixed 2026-10-23** (GDPR-RIGHTS-001). `DELETE /api/prefs` named seven tables and left `job_tracker`, `kernel_showcase`, `kernel_showcase_styled`, `kernel_language_view`, `application_fit`, `application_qualification` and legacy per-user `cluster_top_qualifications` rows to ON DELETE CASCADE; four of them have no foreign key, so their rows survived an account delete | `workers/access-relay/src/gdpr-user-data.js` `USER_TABLES`; `tests/gdpr-user-data.test.mjs` fails when a new `user_hash` table is not listed |
+| Storage limitation (Art. 5(1)(e)) | **Partial.** Usage records: 90 days raw, 30 days health (`telemetry.js` `pruneOld`). Account data: yearly renewal prompt (`RETENTION_DAYS` 365, reminder e-mail, `/api/prefs/renew`), but the reminder is sent only when the user signs in, and nothing deletes an account that never returns | Open item 4 |
+| Minimisation | Done | CL-GDPR-CV-001 (CV on request in unsolicited letters); REFERENCES-RELATION-001 (only agreed referees, contact details on request); the photo reaches a vision model only when the local orientation check is unsure (`photo-orientation.js`) |
+| Special categories (Art. 9) | **Rule 2026-10-23** (SPECIAL-CATEGORIES-001) | `pwa/gold-rules.json` 1.9.7 prompt block: never infer, add or expand health, belief, politics, union, ethnicity, sex life, criminal records; no ID number, date of birth, marital status or children unless the source states it and the country expects it |
+| Processors and transfers (Art. 28, 44-46) | **Done in the notice**; contracts to confirm | `pwa/privacy.html` section 4: Cloudflare, Anthropic, OpenAI, Google, Mistral AI (EU), Resend; US transfers under the EU-US Data Privacy Framework or SCCs per each DPA. Open item 5 |
+| No training on user data | **To confirm per provider** | Demo keys must be paid API accounts whose terms exclude training on input. A free-tier Gemini key may be used for product improvement; never put one behind the demo proxy |
+| Security (Art. 32) | Done | API keys server-side in KV and masked in the data copy, rows keyed by e-mail hash, export passphrase option, privacy LED (`pwa/antcv-privacy-led.js`) |
 | Breach (Art. 33) | Process | Report to the supervisory authority (Datatilsynet) within 72 hours where required |
+| Automated decisions (Art. 22) | Not applicable | AntCV makes no decision about the user and gives no score to an employer (see AI-ACT-SCOPE-001) |
+
+### Where the two laws meet in AntCV
+
+```
+              job seeker (data subject, author of the documents)
+                     │ profile, job ad, photo
+                     ▼
+   ┌──────────────── AntCV (GDPR controller · AI Act provider) ────────────────┐
+   │ PWA (browser storage)  ──►  relay: D1 + KV (Cloudflare, processor)        │
+   │        │                                                                  │
+   │        └──► proxy ──► LLM providers (GPAI providers; processors on demo)  │
+   │                                                                           │
+   │ out: CV / letter with visible AI notice + machine-readable AI mark         │
+   └───────────────────────────────────────────────────────────────────────────┘
+                     │ the user sends it (personal use: outside the AI Act)
+                     ▼
+              employer ── ranks candidates with AI? THAT tool is Annex III high-risk,
+                          AntCV is not, as long as AI-ACT-SCOPE-001 holds
+```
 
 ## 4. Open items, in order
 
 1. **C2PA signing live before 2 Dec 2026** (Art. 50(2), Art. 111). Owner: c2pa-worker.
 2. **PDF marking** with the same text as AI-ACT-MARK-001.
-3. **Privacy notice page** (Art. 13) with the processor list (Art. 28).
-4. Record the yearly check of provider terms in section 2.
+3. **Operator name and contact e-mail** in `pwa/privacy.html` section 1 before any public launch (Art. 13(1)(a)).
+4. **Inactive-account deletion**: a scheduled job that deletes accounts not renewed within `RETENTION_DAYS` + 30 days (and sends the reminder from the cron, not only on sign-in). Irreversible, so it ships behind a dry-run log first.
+5. **Provider terms check**, yearly: data processing terms, transfer basis and "no training on API input" for each demo key; record the date here.
+6. AI literacy (Art. 4): one page for anyone who operates AntCV, pointing to this file.
 
 ## Sources
 
 - Regulation (EU) 2024/1689 (AI Act): Art. 3, 4, 5, 25, 50, 53, 111, 113, Annex III. AI Act Explorer and Compliance Checker, artificialintelligenceact.eu.
-- Regulation (EU) 2016/679 (GDPR): Art. 5, 6, 9, 13, 15, 17, 20, 28, 32, 33, 44.
+- Regulation (EU) 2016/679 (GDPR): Art. 5, 6, 9, 13, 15, 16, 17, 18, 20, 21, 22, 28, 32, 33, 44-46.
 - Datatilsynet, fundamental concepts, datatilsynet.dk/english.
 - Improve Business Academy, Applied AI course deck "AI Ethics & Compliance" (2026): dates table and SME checklist.

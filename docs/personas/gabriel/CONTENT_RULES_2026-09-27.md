@@ -131,3 +131,5 @@ The reviewer read page 1 only: education, Meprolight, the patent, supplier quali
 Not adopted: the margin (sidebar) layout. The linear layout was chosen for ATS parsing and is the owner's design of record; the proof-points idea is served by the Results lines and the competencies table.
 
 | Accessibility (owner 2026-10-25) | "Hearing impaired; live-transcription glasses caption and translate speech, and clear spoken communication with written follow-ups works well." The glasses caption and translate Danish; a letter that mentions Danish level or hearing names them. Kernel v13k. |
+
+| Snowflake (owner 2026-11-01) | Basic interfacing only: connecting Snowflake to Power BI, cloud services and SharePoint for reporting. Listed in Software tools and as a Kanzen bullet (kernel v13l); shown on data/BI-flavoured targets, never claimed as data engineering or warehouse ownership. |

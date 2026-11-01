@@ -124,20 +124,54 @@ test('rich_block profile (items[].t — the live NIL row shape) is scrubbed too'
   assert.match(out, /hard changes land/);
 });
 
-// ACCESS-MIDDLE-001 (spec rule 34): canonicalise BOTH extremes to the owner's
-// middle-ground one-liner — name-guarded to Gabriel.
-test('ACCESS-MIDDLE-001: too-short and too-long accessibility rows canonicalise; middle stays; non-Gabriel untouched', () => {
-  const CANON = 'Hearing impaired (cochlear implant); written follow-up works well.';
-  const mk = (v, name) => {
-    const backing = new Map();
-    backing.set('personalInfo', JSON.stringify({ name }));
-    backing.set('sections', JSON.stringify({ cv: [{ id: 'accessibility', type: 'labeled_list', items: [{ l: '', v, labelHidden: true }] }], cl: [] }));
-    const G = load(backing);
-    G.run();
-    return JSON.parse(backing.get('sections')).cv[0].items[0].v;
-  };
-  assert.equal(mk('Hearing impaired.', 'Gabriel Alexander Karp-Gershon'), CANON, 'too short -> canon');
-  assert.equal(mk('Hearing impaired; cochlear implant and hearing aid. Structured communication tools work well; captions, transcripts and written follow-up help', 'Gabriel Alexander Karp-Gershon'), CANON, 'too long -> canon');
-  assert.equal(mk(CANON, 'Gabriel Alexander Karp-Gershon'), CANON, 'canon is stable');
-  assert.equal(mk('Hearing impaired.', 'Anita Demo'), 'Hearing impaired.', 'non-Gabriel persona untouched');
+// COMMS-LINE-001 (owner 2026-11-01, supersedes ACCESS-MIDDLE-001): no disability
+// label on Gabriel's CV; the row is COMMUNICATION and says what works.
+const LINE_EN = 'I work in English and Danish and follow meetings best with live captions and written follow-ups.';
+const GAB = 'Gabriel Alexander Karp-Gershon';
+function runWith(cv, name, lang) {
+  const backing = new Map();
+  backing.set('personalInfo', JSON.stringify({ name }));
+  if (lang) backing.set('language', lang);
+  backing.set('sections', JSON.stringify({ cv, cl: [] }));
+  const G = load(backing);
+  G.run();
+  return { out: JSON.parse(backing.get('sections')).cv, G, backing };
+}
+
+test('COMMS-LINE-001: accessibility section becomes COMMUNICATION with the canonical line (any stored length)', () => {
+  for (const v of [
+    'Hearing impaired.',
+    'Hearing impaired (cochlear implant); written follow-up works well.',
+    'Hearing impaired; live-transcription glasses caption and translate speech, and clear spoken communication with written follow-ups works well.',
+  ]) {
+    const { out } = runWith([{ id: 'accessibility', title: 'ACCESSIBILITY', type: 'labeled_list', items: [{ l: '', v, labelHidden: true }] }], GAB);
+    assert.equal(out[0].id, 'accessibility', 'plumbing id kept');
+    assert.equal(out[0].title, 'COMMUNICATION');
+    assert.equal(out[0].items[0].v, LINE_EN);
+    assert.doesNotMatch(JSON.stringify(out), /hearing|cochlear|impair/i);
+  }
+  const { out: t } = runWith([{ id: 'accessibility', title: 'ACCESSIBILITY', type: 'text', content: 'Hearing impaired.' }], GAB);
+  assert.equal(t[0].content, LINE_EN);
+  assert.equal(t[0].title, 'COMMUNICATION');
+});
+
+test('COMMS-LINE-001: Danish output gets the Danish line and title; ADDITIONAL row relabelled', () => {
+  const { out } = runWith([
+    { id: 'accessibility', title: 'TILGÆNGELIGHED', type: 'text', content: 'Hørehæmmet.' },
+    { id: 'additional', type: 'labeled_list', items: [{ group: 'Accessibility' }, { l: 'Accessibility', v: 'Hearing impaired; captions help.' }, { l: 'Rugby', v: 'Copenhagen Wolves RFC' }] },
+  ], GAB, 'da');
+  assert.equal(out[0].title, 'KOMMUNIKATION');
+  assert.match(out[0].content, /^Jeg arbejder på engelsk og dansk/);
+  assert.equal(out[1].items[0].group, 'Kommunikation');
+  assert.equal(out[1].items[1].l, 'Kommunikation');
+  assert.equal(out[1].items[2].v, 'Copenhagen Wolves RFC', 'other rows untouched');
+});
+
+test('COMMS-LINE-001: idempotent and name-guarded', () => {
+  const { G, backing } = runWith([{ id: 'accessibility', type: 'text', content: 'Hearing impaired.' }], GAB);
+  const after = backing.get('sections');
+  G.run();
+  assert.equal(backing.get('sections'), after, 'second run writes nothing');
+  const { out } = runWith([{ id: 'accessibility', type: 'text', content: 'Hearing impaired.' }], 'Anita Ant');
+  assert.equal(out[0].content, 'Hearing impaired.', 'other personas untouched');
 });

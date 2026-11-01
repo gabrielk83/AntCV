@@ -180,6 +180,19 @@ or JD, and "digital" web / MarTech platform roles). Override per candidate with
 `{"override_gate": true, "override_reason": "..."}`, which is written onto the row. Tests in
 `test_discover_positions.py`.
 
+**DISCOVERY-EVIDENCE-GATE-002 (2026-11-01) — employer families, construction, medical-must, jobindex
+teasers.** Owner round 2: banking, insurance, pension, payments and consumer-telecom employers are not
+relevant whatever the role says (Nykredit, Danske Bank, Nordea, Ikano Bank, Mastercard, YouSee closed by
+hand); investment / infrastructure funds such as CIP stay allowed. VELUX-type construction-product roles
+that want a building-industry background are out. In medtech, a role is proposed only when medical-device
+experience is not a must ("or another regulated industry", nice-to-have, an advantage, or absent).
+`_evidence_gate` now rejects: a `_FINANCE_TELCO` company name; VELUX or a background / experience phrase
+naming construction or building (company boilerplate such as "kunder i byggeriet" does not count); a jd
+sentence with a medical-device term, an experience word and a must marker but no soft marker; and a
+jobindex.dk url whose jd is shorter than `JOBINDEX_MIN_JD` (600 chars). A jobindex ad is a teaser: the
+routine must follow it to the employer's or recruiter's posting and pass that text as `jd`, which the
+medical-must check then reads. Same override as GATE-001.
+
 **JOBSRC-THEHUB-001 (2026-11-01) — TheHub now has a deterministic fetcher.** `/jobs?search=` is a
 Nuxt page: the jobs exist only inside the `window.__NUXT__` IIFE (a link scrape finds one), and
 Nuxt hoists repeated strings into the IIFE parameters (`title:c`), which the fetcher resolves.

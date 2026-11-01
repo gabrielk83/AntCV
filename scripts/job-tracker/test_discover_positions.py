@@ -163,6 +163,49 @@ res3, out3, st3 = run_add({"rows": [], "urls": {}}, [
 check("gate: add() skips the no-fit and adds the engineering row", (res3.get("added"), res3.get("skipped")), (1, 1))
 check("gate: the skip reason names the evidence gate", "evidence gate" in out3, True)
 
+# ---- DISCOVERY-EVIDENCE-GATE-002 (owner 2026-11-01, round 2) ---------------------------
+PM = {"role": "Product Manager", "why": "product roadmap, business analysis, supplier follow-up"}
+for co in ("Nykredit", "Danske Bank", "Nordea Danmark", "Ikano Bank", "Mastercard", "YouSee",
+           "Tryg Forsikring", "PFA Pension"):
+    check("gate2: %s is a banking / insurance / payments / telecom employer" % co,
+          bool(G(dict(PM, company=co))), True)
+check("gate2: CIP (infrastructure fund, owner asked for it) is not a bank",
+      G(dict(PM, company="CIP Fund Solutions")), None)
+check("gate2: a hardware employer with 'Bang' in its name is not a bank",
+      G(dict(PM, company="Bang & Olufsen")), None)
+check("gate2: VELUX is a construction-product employer",
+      bool(G(dict(PM, company="VELUX"))), True)
+check("gate2: a posting that wants a building-industry background is rejected",
+      bool(G(dict(PM, company="Some Co", jd="You have a background in the construction industry."))), True)
+check("gate2: Danish 'erfaring fra byggebranchen' is rejected",
+      bool(G(dict(PM, company="Some Co", jd="Du har erfaring fra byggebranchen og salg."))), True)
+check("gate2: 'byggeriet' in company boilerplate is not a background requirement",
+      G(dict(PM, company="Lemvigh-Müller",
+             jd="Vi hjælper kunder i industrien, byggeriet og installationsbranchen.")), None)
+check("gate2: medical-device experience as a must is rejected",
+      bool(G(dict(PM, company="Medtech A/S",
+                  jd="Requirements. At least 5 years of experience with medical device development is required."))), True)
+check("gate2: Danish 'erfaring med medicinsk udstyr er et krav' is rejected",
+      bool(G(dict(PM, company="Medico ApS", jd="Erfaring med medicinsk udstyr er et krav."))), True)
+check("gate2: 'medical devices or another regulated industry' passes",
+      G(dict(PM, company="Medtech A/S",
+             jd="You have 5+ years of experience from medical devices or another regulated industry.")), None)
+check("gate2: medical experience as nice-to-have passes",
+      G(dict(PM, company="Medtech A/S", jd="Experience with ISO 13485 is an advantage.")), None)
+check("gate2: Coloplast-style 'might also bring' passes",
+      G(dict(PM, company="Coloplast",
+             jd="You might also bring medical device experience, but it is not required")), None)
+check("gate2: a medtech posting that only builds devices (no experience must) passes",
+      G(dict(PM, company="Ambu", jd="You will architect medical devices that must meet IEC 60601.")), None)
+check("gate2: a jobindex url with a teaser-length jd is skipped",
+      bool(G(dict(PM, company="Elma Instruments", url="https://www.jobindex.dk/vis-job/h1712000",
+                  jd="Kommerciel produktchef til måleinstrumenter."))), True)
+check("gate2: a jobindex url with the full source posting passes",
+      G(dict(PM, company="Elma Instruments", url="https://www.jobindex.dk/vis-job/h1712000",
+             jd="Produktansvar for måleinstrumenter, leverandørstyring og sortiment. " * 12)), None)
+check("gate2: a non-jobindex url with no jd is not affected by the teaser rule",
+      G(dict(PM, company="Hamamatsu", url="https://www.linkedin.com/jobs/view/1")), None)
+
 if fails:
     print("FAIL (%d):" % len(fails))
     for f in fails:

@@ -177,6 +177,15 @@ Do NOT propose: AI adoption / enablement / governance / trainer / strategist / c
 roles; GenAI-build / chatbot roles; webshop, MarTech, website, content or newsroom roles;
 commercial / sales-led product roles without engineering ownership - unless the posting
 carries one of the four qualifiers above.
+Also do NOT propose (owner 2026-11-01, round 2; GATE-002):
+  - banking, insurance, pension, payments or consumer-telecom employers (Nykredit, Danske
+    Bank, Nordea, Ikano Bank, Mastercard, YouSee ...), whatever the product-management
+    content. Investment / infrastructure funds such as CIP are NOT banks and stay allowed.
+  - construction-product roles that want a building-industry background (VELUX).
+  - medtech roles where medical-device experience is a MUST. Read the full posting: propose
+    only when it says "or another regulated industry", nice-to-have, an advantage, or nothing.
+A jobindex.dk ad is a teaser: open it, follow the link to the employer's or recruiter's own
+posting, and pass THAT full text as "jd". A jobindex url with a teaser-length jd is skipped.
 add() enforces the obvious cases deterministically (see _evidence_gate)."""
 
 # Title families that are a no-fit UNLESS the posting shows a qualifier (below).
@@ -201,6 +210,41 @@ _HW_ONLY = re.compile(r"hardware|optic|photon|laser|sensor|camera|imaging|electr
                       r"embedded|firmware|medical device|semiconductor|\bnpi\b", re.I)
 
 
+# GATE-002 (owner 2026-11-01): employer families that are a no-fit whatever the role says.
+_FINANCE_TELCO = re.compile(
+    r"\bbank\b|bankdata|nykredit|danske bank|nordea|ikano|jyske|sydbank|spar nord|"
+    r"arbejdernes landsbank|saxo bank|\blunar\b|mastercard|\bvisa\b|\bnets\b|\bnexi\b|"
+    r"forsikring|insurance|\btryg\b|topdanmark|alm\.? brand|\bcodan\b|\bpfa\b|danica|"
+    r"pension|realkredit|totalkredit|\byousee\b|\btelia\b|telenor|\bhi3g\b|\b3 danmark", re.I)
+_CONSTRUCTION_CO = re.compile(r"\bvelux\b", re.I)
+_CONSTRUCTION_NEED = re.compile(
+    r"(?:background|experience|erfaring|baggrund)\s+(?:\w+\s+){0,3}(?:in|from|within|fra|i|med|inden for)\s+"
+    r"(?:the\s+)?(?:construction|building(?:\s+materials)?|bygge\w*)|"
+    r"(?:construction|building)\s+industry\s+(?:background|experience)", re.I)
+# Medical-must: one sentence carrying a medical-experience term, an experience word and a
+# must marker, with no soft marker. "or another regulated industry" / nice-to-have pass.
+_MED_TERM = re.compile(r"medical[- ]device|medtech|medico|medical industry|medicinsk udstyr|"
+                       r"iso 13485|iec 62304|\b(?:eu )?mdr\b|21 cfr 820|life[- ]science", re.I)
+_EXP_WORD = re.compile(r"experience|background|track record|knowledge|years|erfaring|baggrund|"
+                       r"kendskab|\bår\b", re.I)
+_MUST = re.compile(r"required|requirement|\bmust\b|essential|mandatory|minimum|at least|"
+                   r"\d+\+?\s*years|necessary|\bkrav\b|skal have|forudsætning|nødvendig", re.I)
+_SOFT = re.compile(r"or (?:an)?other regulated|or (?:a )?similar(?:ly)? regulated|regulated industr|"
+                   r"nice[- ]to[- ]have|advantage|a plus|\bbonus\b|preferabl|ideally|desir|might|"
+                   r"\bfordel\b|gerne|\bor\b[^.]{0,40}\b(?:automotive|aerospace|defen[cs]e)", re.I)
+_JOBINDEX = re.compile(r"(?:^|//|\.)jobindex\.dk/", re.I)
+JOBINDEX_MIN_JD = 600
+
+
+def _medical_must(text):
+    """The first sentence that makes medical-device experience a must, else None."""
+    for sent in re.split(r"[.;\n•]+", text or ""):
+        if _MED_TERM.search(sent) and _EXP_WORD.search(sent) and _MUST.search(sent) \
+                and not _SOFT.search(sent):
+            return sent.strip()[:90]
+    return None
+
+
 def _evidence_gate(c):
     """Reason string when a candidate is an obvious no-fit, else None.
     A role fails when its TITLE is in a no-core family AND nothing in title/why/fit/jd
@@ -215,6 +259,18 @@ def _evidence_gate(c):
                 "business-analysis, supplier or hardware need" % title[:60])
     if re.search(r"\bdigital\b", title, re.I) and _WEB_BODY.search(body) and not _HW_ONLY.search(body):
         return "evidence gate: %r is a web / MarTech platform role with no hardware core" % title[:60]
+    company = str(c.get("company") or "")
+    if _FINANCE_TELCO.search(company):
+        return ("evidence gate: %r is a banking / insurance / payments / consumer-telecom employer "
+                "(owner: not relevant)" % company[:50])
+    if _CONSTRUCTION_CO.search(company) or _CONSTRUCTION_NEED.search(body):
+        return "evidence gate: construction-product role that wants a building-industry background"
+    med = _medical_must(str(c.get("jd") or "") + "\n" + str(c.get("fit") or ""))
+    if med:
+        return "evidence gate: medical-device experience is a must (%r)" % med
+    if _JOBINDEX.search(str(c.get("url") or "")) and len(str(c.get("jd") or "").strip()) < JOBINDEX_MIN_JD:
+        return ("evidence gate: jobindex teaser only - follow the ad to the employer's or recruiter's "
+                "posting and pass its full text as jd")
     return None
 
 

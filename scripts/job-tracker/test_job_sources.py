@@ -107,6 +107,40 @@ check("negative control: the fixture contains no <a href> job links at all",
 check("jobbank search filters on key= (soegeord= is ignored since 2026-09)",
       js.JOBBANK_SEARCH.format(q="optik"), "https://www.jobbank.dk/job/?key=optik")
 
+# ---- JOBSRC-THEHUB-001: thehub.io jobs live in the __NUXT__ payload --------------
+# Trimmed from the real /jobs?search= page of 2026-11-01. The trap: Nuxt hoists repeated
+# values into the IIFE parameters, so the 2nd job reads title:c and company name:d, and
+# the strings sit in the argument list at the very end. Only one job is a real <a href>.
+THEHUB_HTML = ('<html><body><a href="/jobs/6abb9356b84a86d63d038c39">x</a><script>'
+    'window.__NUXT__=(function(a,b,c,d){return {state:{jobs:{jobs:{total:2,limit:15,page:1,docs:['
+    '{saved:a,company:{logoImage:{path:"\\u002Ffiles\\u002Fa.png",id:"653f5a6f9b2d0f68a45ebbfa"},'
+    'founded:"2022",name:"proprty.ai",key:"proprtyai",id:"64e625cd8740836a73707dd9"},'
+    'views:{week:9030,total:35440},isFeatured:b,isRemote:a,'
+    'location:{address:"Copenhagen, Denmark",locality:"Copenhagen",country:"Denmark"},'
+    'title:"Data Engineer \\u002F Backend Developer",key:"data-engineer",id:"6abb9356b84a86d63d038c39"},'
+    '{saved:a,company:{logoImage:{path:"\\u002Ffiles\\u002Fb.png",id:"686e254af437729986876af4"},'
+    'founded:"2024",name:d,key:"dalea",id:"686e379c86599299a3cafde5"},'
+    'views:{week:4891,total:6624},isFeatured:a,isRemote:a,'
+    'location:{address:"Aarhus, Denmark",locality:"Aarhus",country:"Denmark"},'
+    'title:c,key:"pm-1",id:"6ad2047798808f4c168f8553"}]}}}}}'
+    '(false,true,"Project Manager","Dalea"));</script></body></html>')
+h = js.parse_thehub_html(THEHUB_HTML)
+check("thehub: both payload jobs found (a link scrape finds ONE)", len(h), 2)
+check("thehub: literal title decoded (\\u002F -> /)", h[0]["title"], "Data Engineer / Backend Developer")
+check("thehub: company is the company block's name, not the logo/company id", h[0]["company"], "proprty.ai")
+check("thehub: url uses the JOB id (last id), not the company id",
+      h[0]["url"], "https://thehub.io/jobs/6abb9356b84a86d63d038c39")
+check("thehub: hoisted title resolved from the IIFE arguments", h[1]["title"], "Project Manager")
+check("thehub: hoisted company name resolved", h[1]["company"], "Dalea")
+check("thehub: location from the location block", h[1]["location"], "Aarhus, Denmark")
+check("thehub: no payload -> no rows (never invents)", js.parse_thehub_html("<html>no nuxt</html>"), [])
+check("negative control: the fixture has ONE <a href> job link but two jobs",
+      len(re.findall(r'<a[^>]+href="/jobs/[0-9a-f]{24}', THEHUB_HTML)), 1)
+check("thehub search is DK-scoped", js.THEHUB_SEARCH.format(q="optik"),
+      "https://thehub.io/jobs?search=optik&countryCode=DK")
+check("sources: thehub registered; LinkedIn and careerhound deliberately absent",
+      sorted(js.SOURCES), ["jobbank", "jobindex", "thehub"])
+
 # ---- deadline helper --------------------------------------------------------
 check("dk date parses", js._dk_date("Frist: 07.09.2026"), datetime.date(2026, 9, 7))
 check("dk date rejects junk", js._dk_date("snarest muligt"), None)

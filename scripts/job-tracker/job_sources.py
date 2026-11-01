@@ -186,9 +186,136 @@ def search_jobbank(q: str, limit: int = 50) -> list:
     return parse_jobbank_html(fetch(JOBBANK_SEARCH.format(q=urllib.parse.quote(q))))[:limit]
 
 
-# ------------------------------------------------------------------------ cli
+# ---------------------------------------------------------------------- thehub
+# JOBSRC-THEHUB-001 (owner 2026-11-01): thehub.io (the Nordic startup board, formerly
+# thehub.dk). /jobs?search= is a Nuxt page: the result set is server-rendered, but only
+# inside the window.__NUXT__ IIFE, not as HTML cards (a link scrape finds ONE job). Nuxt
+# hoists repeated values into the IIFE's parameters, so a field can read title:aF and the
+# string lives in the argument list at the end. We resolve those. Public page, robots.txt
+# allows /jobs, and the site terms carry no automated-access clause (checked 2026-11-01);
+# one request per query, no login.
 
-SOURCES = {"jobindex": search_jobindex, "jobbank": search_jobbank}
+THEHUB_SEARCH = "https://thehub.io/jobs?search={q}&countryCode=DK"
+_JS_STR = r'"(?:[^"\\]|\\.)*"'
+_JS_VAL = r'(?:' + _JS_STR + r'|[A-Za-z_$][\w$]*)'
+
+
+def _js_split_top(s: str) -> list:
+    """Split a JS argument list on commas at depth 0, respecting strings."""
+    out, depth, cur, i, n = [], 0, [], 0, len(s)
+    while i < n:
+        ch = s[i]
+        if ch == '"':
+            m = re.match(_JS_STR, s[i:])
+            cur.append(m.group(0)); i += len(m.group(0)); continue
+        if ch in "[{(":
+            depth += 1
+        elif ch in "]})":
+            depth -= 1
+        if ch == "," and depth == 0:
+            out.append("".join(cur).strip()); cur = []
+        else:
+            cur.append(ch)
+        i += 1
+    if "".join(cur).strip():
+        out.append("".join(cur).strip())
+    return out
+
+
+def _js_unquote(tok: str) -> str:
+    try:
+        return json.loads(tok)
+    except ValueError:
+        return tok.strip('"')
+
+
+def _nuxt_bindings(page: str) -> dict:
+    """Map the IIFE's parameter names to their string arguments."""
+    m = re.search(r"__NUXT__=\(function\(([^)]*)\)\{", page)
+    if not m:
+        return {}
+    params = [p.strip() for p in m.group(1).split(",")]
+    end = page.find("</script>", m.end())
+    tail = page[m.end():end]
+    k = tail.rfind("}(")
+    if k < 0:
+        return {}
+    args = _js_split_top(tail[k + 2:].rstrip(";").rstrip(")"))
+    return {p: _js_unquote(a) for p, a in zip(params, args) if a.startswith('"')}
+
+
+def _js_field(obj: str, name: str, env: dict) -> str:
+    m = re.search(r"(?:^|[{,])" + re.escape(name) + r":(" + _JS_VAL + r")", obj)
+    if not m:
+        return ""
+    v = m.group(1)
+    return _js_unquote(v) if v.startswith('"') else (env.get(v, "") or "")
+
+
+def _top_objects(arr: str) -> list:
+    """'{..},{..}' -> list of top-level object strings (brace depth, string-aware)."""
+    out, depth, start, i, n = [], 0, None, 0, len(arr)
+    while i < n:
+        ch = arr[i]
+        if ch == '"':
+            i += len(re.match(_JS_STR, arr[i:]).group(0)); continue
+        if ch == "{":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0 and start is not None:
+                out.append(arr[start:i + 1]); start = None
+        elif ch == "]" and depth == 0:
+            break
+        i += 1
+    return out
+
+
+def parse_thehub_html(page: str) -> list:
+    """jobs.jobs.docs[] in the __NUXT__ payload -> rows."""
+    env = _nuxt_bindings(page)
+    a = page.find("jobs:{jobs:{")
+    d = page.find("docs:[", a) if a >= 0 else -1
+    if d < 0:
+        return []
+    out = []
+    for obj in _top_objects(page[d + len("docs:["):]):
+        comp = re.search(r"company:(\{.*?\}),views:", obj, re.S)
+        company = _js_field(comp.group(1), "name", env) if comp else ""
+        rest = obj[comp.end():] if comp else obj
+        loc = re.search(r"location:(\{[^{}]*\})", rest)
+        job_id = re.findall(r'(?:^|[{,])id:"([0-9a-f]{24})"', rest)
+        title = _js_field(rest, "title", env)
+        if not title or not job_id:
+            continue
+        out.append({
+            "source": "thehub", "title": title, "company": company,
+            "location": _js_field(loc.group(1), "address", env) if loc else "",
+            "url": "https://thehub.io/jobs/" + job_id[-1],
+            "posted": "", "deadline": "",
+        })
+    return out
+
+
+def search_thehub(q: str, limit: int = 50) -> list:
+    return parse_thehub_html(fetch(THEHUB_SEARCH.format(q=urllib.parse.quote(q))))[:limit]
+
+
+# ------------------------------------------------------------------------ cli
+# Not added as account-backed fetchers, on purpose (owner asked 2026-11-01; checked that day):
+#   LinkedIn     the discovery routine already reads the PUBLIC guest search (no login,
+#                SCHEDULED_ROUTINES.md). Driving the owner's own session/token is not added:
+#                the User Agreement bans automated access, and the account is what gets
+#                restricted.
+#   careerhound  terms s.7 prohibit "scrape, mine, or use automated tools to access Career
+#                Hound without our written permission". The permission must come from Career
+#                Hound, not the account holder. Paid, login-only data; revisit only with that
+#                permission in writing, and then read the owner's token from a file the owner
+#                writes (never pasted into a session), like ~/.antcv/token.
+
+SOURCES = {"jobindex": search_jobindex, "jobbank": search_jobbank, "thehub": search_thehub}
 
 
 def cmd_search(args):
@@ -232,11 +359,11 @@ def main():
         sys.stdout.reconfigure(encoding="utf-8")
     except (AttributeError, ValueError):
         pass
-    ap = argparse.ArgumentParser(description="Fetch listings from jobindex.dk / jobbank.dk")
+    ap = argparse.ArgumentParser(description="Fetch listings from jobindex.dk / jobbank.dk / thehub.io")
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("search")
     s.add_argument("--q", required=True)
-    s.add_argument("--source", default="all", choices=["all", "jobindex", "jobbank"])
+    s.add_argument("--source", default="all", choices=["all"] + list(SOURCES))
     s.add_argument("--limit", type=int, default=50)
     s.add_argument("--json", action="store_true")
     s.set_defaults(fn=cmd_search)

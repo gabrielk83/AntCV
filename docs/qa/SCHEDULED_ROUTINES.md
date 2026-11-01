@@ -167,6 +167,19 @@ search (`/jobs/search?keywords=&location=&f_TPR=`) is the strongest of the five 
 54/60/20/12 rows across four queries; TheHub returned 15. Google Jobs was not separately
 exercised that run.
 
+**JOBSRC-THEHUB-001 (2026-11-01) — TheHub now has a deterministic fetcher.** `/jobs?search=` is a
+Nuxt page: the jobs exist only inside the `window.__NUXT__` IIFE (a link scrape finds one), and
+Nuxt hoists repeated strings into the IIFE parameters (`title:c`), which the fetcher resolves.
+`--source thehub` (or `all`) reads `https://thehub.io/jobs?search=<q>&countryCode=DK`; robots.txt
+allows `/jobs` and the terms carry no automated-access clause.
+
+**Account-backed sources the owner asked for (2026-11-01), and why they are not automated:**
+LinkedIn stays on the public guest search above; driving the owner's own session is against the
+LinkedIn User Agreement and puts the account at risk. Career Hound (careerhound.io) terms s.7
+forbid automated access "without our written permission" — permission from Career Hound, not
+from the account holder. Until Career Hound grants it in writing, Career Hound results reach the
+tracker only as postings the owner saves by hand.
+
 **POSTING-OBSOLETE-001 — obsolete postings were never detected, so dead roles never left the list.**
 
 Run this on every discovery run and every job-tracker nightly, BEFORE proposing or generating:

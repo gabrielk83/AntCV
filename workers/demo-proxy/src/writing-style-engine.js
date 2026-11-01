@@ -124,7 +124,7 @@ const INTEGRITY_RULES = [
   'punctuation-dash: Use the plain hyphen "-" for year ranges, compound pauses, and table separators. NEVER output an em dash ("—") anywhere - it is treated as a banned token and triggers a rewrite.',
   'patent-number-integrity: Every patent entry in publications/patents keeps its patent number verbatim. Never drop the number for brevity.',
   'work-style-people-close: The WORK STYLE section always ENDS with a people skill (e.g. clear written follow-ups, calm under disagreement, direct one-to-one communication) - never a process or tooling point.',
-  'accessibility-explicit: If the candidate data carries an accessibility item, state explicitly that the request concerns a hearing-impaired person. Never an unspecified accommodation line.',
+  'communication-what-works (COMMS-LINE-001, owner 2026-11-01, supersedes accessibility-explicit): If the candidate data carries an accessibility item, the CV row is titled Communication and says what works (languages, live captions, written follow-ups). Never a diagnosis or disability label (hearing impaired, deaf, cochlear implant, disability). A cover letter carries no such line.',
   'specialization-catchy: A specialization/subtitle line is simple and catchy, at most three concepts (pattern: "Processes • Products • People"). Unsolicited applications always carry the candidate\'s stored specialization line.',
   // Improve Academy review of the Veo package (2026-10-18, REVIEW-VEO-001) - scan-ability, evidence and honesty rules.
   'cv-no-promises: A CV states evidence in the present tense. Never write "I will", "I would" or "As your <title> I will" in a CV profile, table or bullet; promises and plans belong in the cover letter.',

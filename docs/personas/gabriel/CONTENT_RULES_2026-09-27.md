@@ -14,7 +14,7 @@ Owner-issued rules from the executive-linear package batch (Terma 1030–1034, H
 | ISO 9001 | Plain "ISO 9001". Never clause numbers (§8.3 / §8.4). |
 | "team player" | Exactly once per document, only next to the rugby line ("Operations manager (foreningsarbejde) at Pan Idræt – literally a team player" / letter: "literally, as operations manager of an inclusive rugby club"). Work-style sentences use other wording. |
 | Russia clause | "no ties to Russia or Russian-allied states" only when the ad strictly asks. Default: omit. |
-| Hearing line | CV: the Accessibility row (centred label). Letters in the executive style: never. Employers who ask for no health data (Hamamatsu): drop the row from the CV too. |
+| Hearing line | Superseded 2026-11-01 by COMMS-LINE-001 (see the end of this file): CV row titled **Communication**, no disability label. Letters: never. Employers who ask for no health data (Hamamatsu): drop the row from the CV too. |
 | Interests | Rugby line, then a full-width 3-column strip: Tai-chi · Cultural exchange (Languages, food, board games) · Hiking. |
 | Banned words | The `workers/proxy/src/writing-style-engine.js` en list, plus: collaborative → team-based, cross-functional → multi-disciplinary, end-to-end → from start to finish, leading → running. Scrub must preserve capitals. |
 | Results by impact type | Owner 2026-10-01 (Improve Academy, "looking for impact"): every Results line and achievement bullet is one of four types. **Performance**: what rose or fell (time, cost, quality, efficiency, delivery), with its number. **Deliverables**: what was built or completed, with a count or scope. **Improvements**: what works better (faster, clearer, standardised). **Business and target audience**: who benefited, at what scale. Per job, the type the ad asks for most gets weight in choosing results, after JD relevance; motivation lines stay. Spread types across roles. `RESULTS-IMPACT-TYPES-001` in `pwa/gold-rules.json`. |
@@ -130,8 +130,24 @@ The reviewer read page 1 only: education, Meprolight, the patent, supplier quali
 
 Not adopted: the margin (sidebar) layout. The linear layout was chosen for ATS parsing and is the owner's design of record; the proof-points idea is served by the Results lines and the competencies table.
 
-| Accessibility (owner 2026-10-25) | "Hearing impaired; live-transcription glasses caption and translate speech, and clear spoken communication with written follow-ups works well." The glasses caption and translate Danish; a letter that mentions Danish level or hearing names them. Kernel v13k. |
+| Accessibility (owner 2026-10-25, **superseded 2026-11-01 by COMMS-LINE-001**) | "Hearing impaired; live-transcription glasses caption and translate speech, and clear spoken communication with written follow-ups works well." The glasses caption and translate Danish; a letter that mentions Danish level or hearing names them. Kernel v13k. |
 
 | Snowflake (owner 2026-11-01) | Basic interfacing only: connecting Snowflake to Power BI, cloud services and SharePoint for reporting. Listed in Software tools and as a Kanzen bullet (kernel v13l); shown on data/BI-flavoured targets, never claimed as data engineering or warehouse ownership. |
 
 | Arena PLM (owner 2026-11-01) | Used in the Innoviz Change Request Lead role: change orders, item and BOM revisions, approvals and release, alongside Codebeamer traceability (kernel v13n). Listed in Software tools. Never a PLM-administration or data-model claim. |
+
+## 2026-11-01 - Communication instead of disability (COMMS-LINE-001)
+
+Source: written advice from Anne (Improve Academy), 2026-11-01. "Hearing impaired" tells the reader nothing about what the candidate can do, so some employers fill the gap with worst-case assumptions. Describe what works instead of the label.
+
+| Rule | Wording of record |
+|---|---|
+| CV row | Title **Communication** (da *Kommunikation*, es *Comunicación*). EN: "I work in English and Danish and follow meetings best with live captions and written follow-ups." DA: "Jeg arbejder på engelsk og dansk og følger møder bedst med liveundertekster og skriftlig opfølgning." Stored section id stays `accessibility`; the label and text change. |
+| Never in a CV | "hearing impaired", "hearing-impaired", "deaf", "cochlear implant", "disability". Replaces the 2026-06-12 "accessibility items state the impairment" rule and the 2026-10-25 line. |
+| Cover letter | No hearing or communication-needs line (unchanged). |
+| Neutral option | When an employer asks for no health data, or the owner wants the CV fully neutral, drop the Communication row; nothing about it goes into the CV. |
+| When to disclose | No general duty to disclose. Default: raise it when invited to interview, as logistics with a solution. |
+| Interview request (template) | "Thank you for the invitation. I follow conversations best with live captions. Could we hold the interview in Teams with captions on, and could you send the agenda in writing beforehand? I am happy to help with the set-up." |
+| Work support (for later) | The Danish scheme for compensation to disabled persons in employment can fund up to 20 h/week of interpreting (e.g. a writing interpreter) or personal assistance in full-time work; applied for with the employer through the municipality's jobcenter, usually paid to the employer. Interpreter funding for interviews: ask the municipality or Den Nationale Tolkemyndighed. |
+
+Enforcement: `pwa/antcv-profile-access-scrub.js` (COMMS-LINE-001, Gabriel name-guarded, preview + export read the stored sections), `pwa/gold-rules.json` 1.9.7 (`communication`, prompt_block), `workers/proxy` + `workers/demo-proxy` `writing-style-engine.js` (communication-what-works; **both need a workflow_dispatch deploy**). Kernel: the stored `personalInfo.accessibility` text (v13k) still holds the old wording; the scrub overrides it at render, and the D1/kernel line should be updated to the EN line above at the next kernel import.

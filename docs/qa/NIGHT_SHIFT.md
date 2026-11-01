@@ -39,6 +39,7 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 <!-- SHIFT:BEGIN — one JSON object per line; managed by scripts/shift.mjs, safe to hand-edit a line if a session died without releasing -->
 {"id":"sh_mupev15f_bqmz","started":"2026-10-01T10:48:17.049Z","host":"vm","worktree":null,"branch":"claude/project-thread-cub2nb","range":"1.51.4786-1.51.4790","task":"impact types in result bullets (thread cub2nb)","beat":"2026-10-01T10:48:17.054Z"}
 {"id":"sh_mvxxueka_85pz","started":"2026-11-01T14:41:32.224Z","host":"vm","worktree":"AntCV-shift-c7g5wx","branch":"HEAD","range":"1.51.5159-1.51.5161","task":"land GDPR rights PR #386 on main (merged into a stale base, thread c7g5wx)","beat":"2026-11-01T14:41:32.230Z"}
+{"id":"sh_mvy03k56_a7zn","started":"2026-11-01T15:44:38.625Z","host":"Gabo-PC","worktree":"AntCV-discovery-gate","branch":"discovery-gate","range":"1.51.5182-1.51.5201","task":"DISCOVERY-EVIDENCE-GATE-001: evidence gate in discover-positions.py (scripts + docs only)","beat":"2026-11-01T15:44:38.672Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

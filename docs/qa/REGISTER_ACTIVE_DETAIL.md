@@ -2615,7 +2615,9 @@ _2026-10-08 weekly tune: re-verified, not fixed. `C.claude` / `C.anthropic` stil
 
 ## Row 117 — CLUSTER-GLOBAL-SINGLE-JD-DOMINANCE-001
 
-_verified: 2026-10-25_
+_verified: 2026-11-02_
+
+**2026-11-02 (weekly demand-seed, cloud routine):** NOT re-measured. The Cloudflare-Developer-Platform connector is not authorized in the cloud session, so the read-only split query did not run. The 11-02 D1 push re-wrote identical research ranks (10 clusters, 247 rows), so the 10-25 split stands. Owner decision still owed.
 
 **2026-10-25 (weekly demand-seed, desktop Gabo-PC, read-only D1 verify after the 10-25 push):** split re-measured as rows with weight_sum ≥ 1 — `executive` 15/20 (max jd_count 1), `pm_process` 20/20 (max 2), `photonics_eng` 20/20 (max 8), `research_phd` 14/20 (max 2); the other six clusters 100% research. This run's only change (`pm_process` project planning 10→6) therefore reaches the client SEED only. Owner design decision still owed.
 
@@ -2694,7 +2696,9 @@ storage-layer cleanup, no user impact while the render mitigation holds.
 
 ## Row 125 — MEDSEC-CLUSTER-001
 
-_verified: 2026-10-25_
+_verified: 2026-11-02_
+
+**2026-11-02 (weekly demand-seed, cloud routine): cluster re-confirmed on a DK-only sample; new OPEN leg (4) cloud egress allowlist.** Jobindex RSS `q=lægesekretær` + `q=sundhedsadministrativ`: 33 items, 22 secretary/SAK titles, 4 full jobannonce bodies (DK n=4, 2 in Region Hovedstaden). The cloud environment's egress proxy refuses `jobsearch.api.jobtechdev.se` (SE Skåne leg did not run) and `sundhedsjobs.dk` (where Region H / Sjælland hospital ads keep their bodies), so the cloud leg cannot reach requirement-level hospital or Skåne data. 13 of 16 hospital titles name the lægesekretær / SAK education (r4 pin holds). Owner: add `jobsearch.api.jobtechdev.se`, `sundhedsjobs.dk` and `antcv.pages.dev` to the routine environment's network allowlist. Regional `.rss` paths still 404 (leg from 10-25 carried).
 
 **2026-10-25 (first scheduled weekly run on 10 clusters, desktop Gabo-PC): leg (2) CLOSED.** The medical_secretary leg ran unattended end to end: DK Jobindex RSS + hosted bodies (7 secretary ads, 4 in Region Hovedstaden / Sjælland, plus 10 hospital SAK teasers), SE JobTech (22 Skåne län ads), pooled n=29, tallied by a UTF-8 script; cluster re-confirmed, D1 push carried it (10 clusters, 247 inserted). NEW finding: `https://www.jobindex.dk/jobsoegning/region-hovedstaden.rss` and `.../region-sjaelland.rss` return 404 (also `storkoebenhavn` / `sjaelland` slugs); the national `jobsoegning.rss?q=lægesekretær` works, so the run used it plus `q=sundhedsadministrativ` and read region from the ad. Owner: update the stored routine prompt (desktop SKILL.md + cloud) to name the national feeds. Region H / Sjælland hospital ads are teaser-only on Jobindex (body on hr-manager), so the East-DK hospital requirement sample stays thin. Legs (1) cloud prompt and (3) Region Østdanmark 2027 still open.
 

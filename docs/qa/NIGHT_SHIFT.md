@@ -39,6 +39,7 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 <!-- SHIFT:BEGIN — one JSON object per line; managed by scripts/shift.mjs, safe to hand-edit a line if a session died without releasing -->
 {"id":"sh_mupev15f_bqmz","started":"2026-10-01T10:48:17.049Z","host":"vm","worktree":null,"branch":"claude/project-thread-cub2nb","range":"1.51.4786-1.51.4790","task":"impact types in result bullets (thread cub2nb)","beat":"2026-10-01T10:48:17.054Z"}
 {"id":"sh_mvxxueka_85pz","started":"2026-11-01T14:41:32.224Z","host":"vm","worktree":"AntCV-shift-c7g5wx","branch":"HEAD","range":"1.51.5159-1.51.5161","task":"land GDPR rights PR #386 on main (merged into a stale base, thread c7g5wx)","beat":"2026-11-01T14:41:32.230Z"}
+{"id":"sh_mvznpefj_530h","started":"2026-11-02T19:33:14.994Z","host":"Gabo-PC","worktree":"routine-antcv-nightly-mvznnrc7","branch":"nightly-2026-11-02","range":"1.51.5222-1.51.5241","task":"antcv-nightly 2026-11-02","beat":"2026-11-02T19:33:15.037Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

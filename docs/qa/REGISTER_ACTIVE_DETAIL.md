@@ -349,7 +349,9 @@ _reconcile 2026-09-07 (CI nightly, E1): `pwa/test/unit/kernel-v2-reader.test.mjs
 
 ## Row 21 — SETTINGS-ROLLER-RESET-001
 
-_verified: 2026-10-19_
+_verified: 2026-11-02_
+
+_reconcile 2026-11-02 (desktop nightly, E1, HEAD `19584eb9`): `diag-settings-history-guard.mjs` RE-RUN GREEN (real headless Chromium): guarded openBefore {open:true,sentinel:true} → after {marker:"alive", open:false, sentinel:true}; kill-switch control marker GONE. Guard + kill-switch `antcv:no-settings-history-guard` present, loaded once in index.html. Blocked: owner live verify on a real device._
 
 _desktop nightly 2026-10-19 (Gabo-PC): `diag-settings-history-guard.mjs` FAILED 2 of 3 runs at baseline — not the guard: the open call before Back was a silent no-op (no panel, no sentinel). Root cause filed and fixed as row 129 SETTINGS-ROUTE-NOOP-001 (`1.51.5074-settings-route-fallback`); after the fix the diag is 4/4 OK on this host. Guard itself unchanged and intact. Unchanged: OWNER live-verify on real roller-side hardware Back button still owed._
 
@@ -373,7 +375,9 @@ _reconcile 2026-09-07 (CI nightly, E1): `diag-settings-history-guard.mjs` GREEN 
 
 ## Row 22 — CL-SLOGAN-RICHCONTENT-001
 
-_verified: 2026-10-19_
+_verified: 2026-11-02_
+
+_reconcile 2026-11-02 (desktop nightly, E1, HEAD `19584eb9`): phase-1 sidecar `antcv-cl-slogan-element.js` loaded in index.html (1 ref), kill-switch `antcv:disable-cl-slogan-element` 2 hits; suite 1860/1860. Phase 2 (real sections.cl rich_block) still GENUINE OPEN WORK, spec-before-splice, owner-gated._
 
 _E1 re-verify 2026-10-19 (CI nightly, HEAD d23170cf): phase-1 sidecar `antcv-cl-slogan-element.js` loaded in index.html (1 ref) + kill-switch `antcv:disable-cl-slogan-element` present in the sidecar (2 hits); suite 1834/1834. Phase 2 (real sections.cl rich_block) remains GENUINE OPEN WORK — spec-before-splice, owner-gated._
 
@@ -2157,7 +2161,9 @@ _verified: 2026-10-28_
 
 ## Row 3 — FLOAT-SPINE-001
 
-_verified: 2026-10-19_
+_verified: 2026-11-02_
+
+_reconcile 2026-11-02 (desktop nightly, E1, HEAD `19584eb9`): `floatSpine`/`float_spine` on 6 lines of `workers/docx-worker/src/index.js` (default-OFF line 24685 unchanged) + `antcv-docx-client.js` opt-in `antcv:float-spine` (line 1261); live docx-worker `1.14.175-ai-mark-props` /health 200. Blocked: owner visual re-export (no reference docx)._
 
 **Re-verify 2026-10-19 (CI nightly — E1 stalest slot, code-presence on HEAD `d23170cf`):** `floatSpine`/`float_spine` gate present `workers/docx-worker/src/index.js` ×6 + `pwa/antcv-docx-client.js` ×2, default-OFF unchanged; owner-visual re-export gate (no reference docx in CI) still owed. Full PWA suite 1834/1834 green.
 
@@ -2183,7 +2189,9 @@ _verified: 2026-10-19_
 
 ## Row 20 — CONTACT-TRACK-TIGHT-001
 
-_verified: 2026-10-19_
+_verified: 2026-11-02_
+
+_reconcile 2026-11-02 (desktop nightly, E1, HEAD `19584eb9`): docx-worker anchors present (`headlineAlign` ×3 + `CONTACT-TRACK-TIGHT-001` ×1 = the same 4 refs); live docx-worker `1.14.175-ai-mark-props`, no docx-worker commit since 10-29. Blocked: owner Hard Refresh + CL regen + real CloudConvert PDF eyeball._
 
 **Re-verify 2026-10-19 (CI nightly — E1 stalest slot, code-presence on HEAD `d23170cf`):** docx-worker anchors present (`headlineAlign` / `fix_orphans` / `SIRIN-SEMANTICS-001` / `CONTACT-TRACK-TIGHT-001`, 4 refs in `workers/docx-worker/src/index.js`). Stays OWNER-GATED: acceptance needs one Hard Refresh + CL regen + CV re-export eyeballed in a real CloudConvert PDF CI cannot do. Full PWA suite 1834/1834 green.
 
@@ -2660,7 +2668,9 @@ _verified: 2026-10-27_
 
 ## Row 123 — PKG-ID-PERSIST-MIGRATE-001
 
-_verified: 2026-10-19_
+_verified: 2026-11-02_
+
+_reconcile 2026-11-02 (desktop nightly, E1, HEAD `19584eb9`): state UNCHANGED live: `browser-qa --only palette-mix` FAIL on prod `1.51.5202` with the known shape {stylePackage:"scandinavian", dataPackage:"copenhagen-modern", lsResolved:false, toneResolved:true}. `__pkgNorm` 6 refs, 2 restore-path write-backs, still no boot-time write-back. Render correct. Not patched: the row marks the app.js init edit owner-gated._
 
 **Re-verify 2026-10-19 (CI nightly — E1 stalest slot, code-presence on HEAD `d23170cf`):** state UNCHANGED — `set("stylePackage", __pkgNorm(...))` write-backs exist only on the cloud-restore path (app.src.js 17624) and a restore-like path (23466); line 40294 is the raw user-select write (`set("stylePackage", e)`), 20857 is the `__pkgMap[v]` settings path — there is still NO boot/init-time normalising write-back, so a locally-persisted orphan `"scandinavian"` stays orphan. Render stays FIXED via `__pkgNorm` (6 refs). Severity LOW, owner-gated (touches app.js init → surgical mirror, not done unattended). Full PWA suite 1834/1834 green.
 
@@ -2794,3 +2804,27 @@ _verified: 2026-10-30_
 **Progress 2026-10-30 (job-tracker nightly, Gabo-PC, Opus 5.5).** Reproduced: sweep 1 on pre-fix code probed 136 rows and lost the PUT to `The write operation timed out`. Shipped option (b) client-side: `_body_timeout(data, timeout)` in `check-postings.py`, `discover-positions.py`, `job-tracker-sync.py`, `gen-runner.py`; a body gets max(floor, len / 10 KB/s) seconds, GETs and small bodies unchanged. `test_put_timeout.py` (16 checks) drives the four real `_req`; pre-fix 4 red; negative-controlled by line index (cp 187/176, dp 73, sync 82, gr 173), each red, restored byte-identical. Not live-proven: sweep 2 on patched code lost its PUT to `getaddrinfo failed` (DNS drop), and a 1 MB curl POST to the relay then died at 77 s, 6.2 KB/s, exit 55. At that rate the 1.37 MB PUT needs ~220 s and can fail regardless of the client timeout. **Remaining:** a smaller write (per-row PATCH endpoint on the relay so a sweep sends only changed rows; needs a worker deploy, owner's call). Row stays OPEN.
 
 **Owner decision.** ~~Approve (a) or (b) for the next job-tracker nightly.~~ (b) shipped 2026-10-30. Now: approve a per-row PATCH on the relay, or accept that the sweep writes only on a fast uplink. Severity MEDIUM for routines on a slow uplink: a lost sweep costs a day of strikes, a lost `add` costs the run.
+
+## Row 136 — CI-NIGHTLY-CREDIT-EXHAUSTED-001
+
+_verified: 2026-11-02_
+
+**Found by the desktop nightly 2026-11-02 (Gabo-PC, Opus 5.5).** The GitHub Actions nightly (`.github/workflows/nightly.yml`, `anthropics/claude-code-action`, `--model claude-opus-4-8`) has failed every day since 2026-10-29. Last green run: 2026-10-28 (`40657423612`).
+
+**Evidence.** The `claude-execution-output` artifact of each failed run ends with an assistant message `Credit balance is too low` and `terminal_reason: api_error`:
+
+| run | date | turns | cost |
+|---|---|---|---|
+| `40842376276` | 10-29 | 15 | $0.88 (ran out mid-run) |
+| `41027848381` | 10-30 | 1 | $0 |
+| `41184555558` | 10-31 | 1 | $0 |
+| `41292364347` | 11-01 | 1 | $0 |
+| `41421138029` | 11-02 | 1 | $0 |
+
+The 10-30 desktop report saw the 10-29 failure as "cause not visible in the log": the action hides full output; the cause is only in the artifact.
+
+**Impact.** No CI nightly report, E1 staleness sweep or CI-side band work since 10-28. The desktop nightly is the only band coverage. `nightly.yml` is the only workflow that reads `ANTHROPIC_API_KEY`. Not checked: whether the same Anthropic account funds a production Claude key in cv-proxy (secrets not readable here); if it does, Claude-routed generations would fail the same way.
+
+**Owner action.** Top up the Anthropic Console account behind the `ANTHROPIC_API_KEY` repo secret, or rotate the secret to a funded key. Then `gh workflow run nightly.yml` once and confirm green. Close this row on the first green scheduled run.
+
+**Optional hardening (not done).** A post-step in `nightly.yml` that greps the execution artifact for `Credit balance` and prints it as `::error::` so the cause shows in the run summary.

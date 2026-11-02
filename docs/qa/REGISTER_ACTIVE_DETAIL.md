@@ -2791,7 +2791,7 @@ _verified: 2026-10-20_
 
 ## Row 135 — JT-PUT-SLOW-UPLINK-001
 
-_verified: 2026-10-30_
+_verified: 2026-11-02_
 
 **Found by the position-discovery run 2026-10-30 (Gabo-PC, Opus 5.5).** Two `check-postings.py check --apply` sweeps finished probing and then lost every verdict: the doc PUT failed with `599 {'error': 'transport_failed: URLError: <urlopen error The write operation timed out>'}`. The no-retry PUT path (row 134) worked as designed and printed the 4 verdicts as "would archive", so nothing was corrupted, but ~10 minutes of probing per sweep were thrown away.
 
@@ -2828,3 +2828,16 @@ The 10-30 desktop report saw the 10-29 failure as "cause not visible in the log"
 **Owner action.** Top up the Anthropic Console account behind the `ANTHROPIC_API_KEY` repo secret, or rotate the secret to a funded key. Then `gh workflow run nightly.yml` once and confirm green. Close this row on the first green scheduled run.
 
 **Optional hardening (not done).** A post-step in `nightly.yml` that greps the execution artifact for `Credit balance` and prints it as `::error::` so the cause shows in the run summary.
+
+**Progress 2026-11-02 (position-discovery, Gabo-PC, Opus 5.5).** All three relay PUTs of this run landed first time on the body-scaled timeout (sweep rev 355 → 356, two `add` passes → rev 360); no transport error. Still open for the slow-uplink case; owner call unchanged.
+
+## Row 137 — DISCOVERY-MED-MUST-EXAMPLE-001
+
+_verified: 2026-11-02_
+
+**Found by the position-discovery run 2026-11-01 (Sunday 22:00 fire, ran past midnight; Gabo-PC, Opus 5.5).** `discover-positions.py add` skipped two leads on evidence-gate false positives.
+
+1. **Subra / Technical Project Manager, New Factory** — skipped as `medical-device experience is a must`. The sentence: "5–10 years of experience with managing complex technical projects in a manufacturing setting, such as pharma, medtech, or electronics." `_medical_must` needs `_MED_TERM` (medtech) + `_EXP_WORD` (experience) + `_MUST` (the `\d+\+?\s*years` branch) and no `_SOFT` match. `_SOFT` has no example-list case ("such as", "e.g.", "for example", "or electronics"). The owner rule (GATE-002) is: skip only when medical-device experience is a must. Here medtech is one of three examples. Re-added with `override_gate` + `override_reason`, recorded on the row.
+2. **Hamamatsu Photonics / NPI Engineer** — skipped as `pay noted below the envelope floor`. `_BELOW_FLOOR` matched "below the envelope's specialist/manager framing" in the routine's own `why` text (a title remark, not pay). Re-added with the `why` reworded. Lower risk: the regex is wider than its name.
+
+**Owed:** (a) an example-list clause in `_SOFT`, or require the must-word to govern the medical term rather than a sibling "years", with a test on the Subra sentence and a negative control on a real must sentence; (b) narrow `_BELOW_FLOOR` to pay context (pay / salary / løn / DKK near the match). Script-only, no `pwa/` asset.

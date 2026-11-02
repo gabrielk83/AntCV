@@ -1802,7 +1802,8 @@ def _is_early(r):
 def _select_and_summarize(roles, jdkw, keep=6, language="en"):
     """Keep the top JD-ranked roles in full; collapse the dropped EARLY roles into
     one 'Earlier career' entry so breadth is preserved, not lost. Recent roles that
-    lose on relevance just drop. Earlier career always sorts last. <=keep total."""
+    lose on relevance just drop. Earlier career sorts by its end year (last on a
+    tie). <=keep total."""
     if len(roles) <= keep:
         return roles
     scored = _score_roles(roles, jdkw)
@@ -1818,8 +1819,14 @@ def _select_and_summarize(roles, jdkw, keep=6, language="en"):
         result = [t[0] for t in detailed] + [ec]
     else:
         result = [t[0] for t in (forced + rest[:max(0, keep - len(forced))])]  # no early tail -> keep `keep` detailed
-    # reverse-chronological, Earlier career pinned last
-    return sorted(result[:keep], key=lambda r: (1 if r.get("id") == "earlier-career" else 0, -_yr(r.get("years"))))
+    return sorted(result[:keep], key=_role_order_key)
+
+def _role_order_key(r):
+    """EARLIER-CAREER-CHRONO-001: newest end year first. The Earlier career summary
+    sorts by its own end year like any role and goes last only on a tie, so a
+    full role older than the summary (IDF 2001-2003 under "2005 - 2014") stays
+    below it and the CV reads reverse-chronologically."""
+    return (-_yr(r.get("years")), 1 if r.get("id") == "earlier-career" else 0)
 
 def _fit_role(role, jdkw, max_bullets=3, cap=148, demand=None):
     bl = role.get("bullets") or []

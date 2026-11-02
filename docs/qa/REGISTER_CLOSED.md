@@ -4,6 +4,14 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 138 — EARLIER-CAREER-CHRONO-001 — CLOSED 2026-11-02 (job-tracker nightly, evidence: negative-controlled test on the real `_select_and_summarize`; 3 red on pre-fix HEAD)
+
+_verified: 2026-11-02_
+
+_Found and fixed the same run by the job-tracker nightly 2026-11-02 (Gabo-PC, Opus 5.5, worktree-isolated). Script-only: no `pwa/` asset, no version, no shift claim._
+
+PEAK Wind app 3527 printed "Computer Systems Administrator | IDF 2001 - 2003" above "Earlier career 2005 - 2014"; the course checklist failed Chronological order with start years [2022, 2017, 2017, 2014, 2001, 2010, 2010, 2006]. `gen-runner.py` `_select_and_summarize` keeps the JD-relevant roles in full (IDF won on IT / users / backup terms) and collapses the other early roles into one summary, then sorted with key (is-summary, -end-year): the summary was pinned last whatever its dates. The sort now uses `_role_order_key` = (-end-year, is-summary): the summary sorts by its end year like any role and goes last only on a tie or when it is the oldest entry. `test_earlier_career_order.py` (6 checks): the 3527 role shape orders [2026, 2025, 2020, 2017, 2014 summary, 2003]; a control without an older full role keeps the summary last; a same-year tie puts the full role first. Pre-fix: 3 red. Negative controls by line index: 1829 (key back to summary-first) → 2 red; 1822 (key → constant) → 2 red; restored byte-identical (`cmp`). 28 job-tracker python files green, `run-tests.mjs` ALL PASS. Not live-proven: app 3527 was generated before the fix and was not regenerated.
+
 ## Row 12 — AI-NOTICE-LEFT-CLOUDCONVERT-001 — CLOSED 2026-10-30 (desktop nightly, evidence: the "remaining 3" docx-baseline diags it was held open on all GREEN, full docx-worker diag baseline 51/51 vs 35/38 when filed)
 
 _verified: 2026-10-30_

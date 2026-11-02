@@ -2805,6 +2805,20 @@ _verified: 2026-11-02_
 
 **Owner decision.** ~~Approve (a) or (b) for the next job-tracker nightly.~~ (b) shipped 2026-10-30. Now: approve a per-row PATCH on the relay, or accept that the sweep writes only on a fast uplink. Severity MEDIUM for routines on a slow uplink: a lost sweep costs a day of strikes, a lost `add` costs the run.
 
+**Re-verified 2026-11-02 (job-tracker nightly, Gabo-PC).** The sweep PUT wrote rev 356 → 357 on the first try, and gen-runner's persist + writeback PUTs returned 200 (rev 361). Uplink not measured. Row stays open on the PATCH decision.
+
+## Row 139 — JT-EARLIER-CAREER-RESULTS-DUP-001
+
+_verified: 2026-11-02_
+
+**Found by the job-tracker nightly 2026-11-02 (Gabo-PC, Opus 5.5).** PEAK Wind app 3527 (`export_pdfs.py`) renders the Earlier career block as three one-line roles (Meprolight 2010 - 2014, Security Guard 2010, Research & Teaching Assistant 2006 - 2010) and then "Results: Electro-Optics Team Leader & R&D Electro-Optics Engineer, Meprolight, IWI Group (2010 - 2014) - Supervised characterisation and qualification." The Meprolight line is printed twice.
+
+**What is known.** In `gen-runner.py`, `_earlier_career` returns `results: None` and `compact_jd_aware` skips `_fit_role` for the `earlier-career` id, so the compaction step does not write it. The Results line uses the merged-title wording of kernel role `mepro-tl-2` (in `~/.antcv/cv_skeleton.json`), while the bullet uses the `_ROLE_MERGE` title "R&D Electro-Optics Engineer / Team Leader". Candidates: the skeleton overlay ("overlaid: cv=16 sections"), the density loop, or the renderer filling an empty result from a covered role.
+
+**Next step.** Diagnostic first: dump app 3527's stored `experience.roles[earlier-career]` from the cloud and compare it with the gen-runner output before and after the skeleton overlay. Fix where the line is added; the test drives that function.
+
+**Severity.** LOW-MEDIUM: one duplicated line on every CV with an Earlier career block, visible to a recruiter.
+
 ## Row 136 — CI-NIGHTLY-CREDIT-EXHAUSTED-001
 
 _verified: 2026-11-02_

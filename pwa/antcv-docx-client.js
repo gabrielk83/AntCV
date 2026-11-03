@@ -1095,6 +1095,10 @@ export function buildPayload({
           else if (targeted) { out.slogan_hidden = true; return out; }
           const al = String(localStorage.getItem('antcv:clSloganAlign') || 'center').replace(/["']/g, '').toLowerCase();
           out.slogan_align = (al === 'left' || al === 'right' || al === 'center') ? al : 'center';
+          // SLOGAN-CASE-001 (owner 2026-11-03, CL-ACADEMY-001): forward the headline case the
+          // preview uses ('sentence' by default, 'caps' = the opt-back) so the worker prints the
+          // same text. A worker without SLOGAN-CASE-001 ignores the field and keeps capitals.
+          try { if (typeof window !== 'undefined' && typeof window.__antcvSloganCaseMode === 'function') out.slogan_case = window.__antcvSloganCaseMode(); } catch (_) {}
           // APPLINE-EDIT-001 (owner 2026-07-29): the application line is editable in the
           // preview now, over the standalone antcv:clAppLine override. Forward it so the
           // DOCX/PDF prints what the owner typed instead of re-composing "Application for

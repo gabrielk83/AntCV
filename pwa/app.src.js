@@ -2487,7 +2487,34 @@
       return __antcvSloganDeDangle(cut);
     } catch (_) { return String(s == null ? "" : s); }
   }
-  try { if (typeof window !== "undefined") { window.__antcvSloganCap = __antcvSloganCap; window.__antcvSloganDeDangle = __antcvSloganDeDangle; } } catch (_) {}
+  // SLOGAN-CASE-001 (owner 2026-11-03, CL-ACADEMY-001): the cover-letter headline renders in
+  // SENTENCE CASE, the academy letter format ("Smart locks that households trust and buy").
+  // antcv:clSloganCase = 'caps' opts back to capitals; with no stored choice, turning the
+  // academy format off (antcv:disable-cl-academy-format) restores capitals too. Sentence case
+  // keeps the author's casing (acronyms, company names), lowers a legacy ALL-CAPS slogan, then
+  // capitalises the first letter of each " • " segment. Shared by both preview renders and the
+  // slogan panels; the docx-client forwards the mode as meta.slogan_case and the worker's
+  // sloganCased() runs the same steps, so preview == export.
+  function __antcvSloganCaseMode() {
+    try {
+      var v = String(localStorage.getItem("antcv:clSloganCase") || "").replace(/["']/g, "").toLowerCase();
+      if (v === "caps" || v === "sentence") return v;
+      return localStorage.getItem("antcv:disable-cl-academy-format") === "1" ? "caps" : "sentence";
+    } catch (_) { return "sentence"; }
+  }
+  function __antcvSloganCased(s, mode) {
+    var t = String(s == null ? "" : s);
+    if ((mode || __antcvSloganCaseMode()) === "caps") return t.toUpperCase();
+    if (t === t.toUpperCase()) t = t.toLowerCase();
+    return t.split(" • ").map(function (p) {
+      for (var i = 0; i < p.length; i++) {
+        var c = p.charAt(i);
+        if (c.toUpperCase() !== c.toLowerCase()) return p.slice(0, i) + c.toUpperCase() + p.slice(i + 1);
+      }
+      return p;
+    }).join(" • ");
+  }
+  try { if (typeof window !== "undefined") { window.__antcvSloganCap = __antcvSloganCap; window.__antcvSloganDeDangle = __antcvSloganDeDangle; window.__antcvSloganCaseMode = __antcvSloganCaseMode; window.__antcvSloganCased = __antcvSloganCased; } } catch (_) {}
   // CL-APP-SUBTITLE-NO-DOUBLE-COMPANY-001 (owner 2026-07-22, 3Shape screenshot): the
   // "Application: <role> - <company>" band appended the company to a role that ALREADY
   // ended in "- <company>" (the scraped jd_role often bakes the employer into the
@@ -30514,7 +30541,7 @@
               })(),
               g = 5;
             P =
-              `<table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${(() => { try { if (window.__antcvSloganStandaloneHidden ? window.__antcvSloganStandaloneHidden() : localStorage.getItem("antcv:clSloganHidden") === "1") return ""; var __uns = window.__antcvSloganUnsolActive ? window.__antcvSloganUnsolActive(io) : false; var st = __uns ? "" : String((io && io.cl_slogan) || "").trim(); if (!st || /^\[/.test(st)) { st = String(localStorage.getItem("antcv:clSlogan") || "").trim(); if (st && window.__antcvSloganLangGate && !window.__antcvSloganLangGate(st)) st = ""; if (st && __uns && window.__antcvSloganOverrideIsGen && window.__antcvSloganOverrideIsGen(st, io)) st = ""; } if ((!st || /^\[/.test(st)) && __uns) st = String(io.subtitle || "").trim(); st = st.replace(/\s*\|\s*/g, " • ").trim(); if (window.__antcvSloganCap) st = window.__antcvSloganCap(st); if (!st || /^\[/.test(st)) return ""; var sa = String(localStorage.getItem("antcv:clSloganAlign") || "center").replace(/["']/g, "").toLowerCase(); if (sa !== "left" && sa !== "right" && sa !== "center" && sa !== "justify") sa = "center"; return '<p style="font-family:\'Cabin\',' + d + ';font-size:' + __antcvFontPt("sloganSize", 11) + 'pt;font-weight:700;letter-spacing:' + __antcvTrkPtOf("sloganTrack", 0.08, __antcvFontPt("sloganSize", 11)).toFixed(3) + 'pt;text-align:' + sa + ';color:var(--brand-slogan-color,' + (t.mainLineColor || "#01746E") + ');margin:0 0 12pt">' + st.toUpperCase() + '</p>'; } catch (_) { return ""; } })()}${(() => { try { var __al = window.__antcvAppLineText ? window.__antcvAppLineText(io) : ""; if (!__al) return ""; return '<div style="font-family:\'Cabin\',' + d + ';font-size:' + __antcvFontPt("applicationSize", 10.5) + 'pt;font-weight:600;letter-spacing:' + __antcvTrkPtOf("applicationTrack", 0.02, __antcvFontPt("applicationSize", 10.5)).toFixed(3) + 'pt;text-align:center;color:var(--brand-slogan-color,' + (t.mainLineColor || "#01746E") + ');margin:0 0 12pt">' + __al + '</div>'; } catch (_) { return ""; } })()}${l.map(b).join("")}${u}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table>` +
+              `<table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${(() => { try { if (window.__antcvSloganStandaloneHidden ? window.__antcvSloganStandaloneHidden() : localStorage.getItem("antcv:clSloganHidden") === "1") return ""; var __uns = window.__antcvSloganUnsolActive ? window.__antcvSloganUnsolActive(io) : false; var st = __uns ? "" : String((io && io.cl_slogan) || "").trim(); if (!st || /^\[/.test(st)) { st = String(localStorage.getItem("antcv:clSlogan") || "").trim(); if (st && window.__antcvSloganLangGate && !window.__antcvSloganLangGate(st)) st = ""; if (st && __uns && window.__antcvSloganOverrideIsGen && window.__antcvSloganOverrideIsGen(st, io)) st = ""; } if ((!st || /^\[/.test(st)) && __uns) st = String(io.subtitle || "").trim(); st = st.replace(/\s*\|\s*/g, " • ").trim(); if (window.__antcvSloganCap) st = window.__antcvSloganCap(st); if (!st || /^\[/.test(st)) return ""; var sa = String(localStorage.getItem("antcv:clSloganAlign") || "center").replace(/["']/g, "").toLowerCase(); if (sa !== "left" && sa !== "right" && sa !== "center" && sa !== "justify") sa = "center"; return '<p style="font-family:\'Cabin\',' + d + ';font-size:' + __antcvFontPt("sloganSize", 11) + 'pt;font-weight:700;letter-spacing:' + __antcvTrkPtOf("sloganTrack", 0.08, __antcvFontPt("sloganSize", 11)).toFixed(3) + 'pt;text-align:' + sa + ';color:var(--brand-slogan-color,' + (t.mainLineColor || "#01746E") + ');margin:0 0 12pt">' + __antcvSloganCased(st) + '</p>'; } catch (_) { return ""; } })()}${(() => { try { var __al = window.__antcvAppLineText ? window.__antcvAppLineText(io) : ""; if (!__al) return ""; return '<div style="font-family:\'Cabin\',' + d + ';font-size:' + __antcvFontPt("applicationSize", 10.5) + 'pt;font-weight:600;letter-spacing:' + __antcvTrkPtOf("applicationTrack", 0.02, __antcvFontPt("applicationSize", 10.5)).toFixed(3) + 'pt;text-align:center;color:var(--brand-slogan-color,' + (t.mainLineColor || "#01746E") + ');margin:0 0 12pt">' + __al + '</div>'; } catch (_) { return ""; } })()}${l.map(b).join("")}${u}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table>` +
               (c
                 ? `<div style="page-break-before:always;mso-page-break-before:always;break-before:page"><table width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="${n}" style="width:100%;border-collapse:collapse;background:${n};page-break-after:avoid;mso-page-break-after:avoid"><tr><td bgcolor="${n}" style="background:${n};padding:14pt 16pt 8pt;text-align:center;border-bottom:1pt solid ${S}">${N}${_}${$}</td></tr></table><table width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse"><tr><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td><td style="padding:6pt 0 14pt;vertical-align:top">${b(c)}${m}</td><td width="${g}" style="width:${g}pt;min-width:${g}pt;padding:0;line-height:0;font-size:0">&thinsp;</td></tr></table></div>`
                 : "");
@@ -47529,7 +47556,10 @@
                         // a re-render reset it to the model and reverted an applied correction.
                         // Manage it via a model-changed-only ref (never clobber a focused/just-
                         // committed edit) — the correction survives until onBlur commits it.
-                        ref: (el) => { if (!el) return; const __sv = (st === st.toUpperCase() && /[a-zA-Z]/.test(st)) ? (st.charAt(0).toUpperCase() + st.slice(1).toLowerCase()) : st; if (el.__antcvSloganV === __sv) return; if (document.activeElement === el) return; el.__antcvSloganV = __sv; if (el.textContent !== __sv) el.textContent = __sv; },
+                        // SLOGAN-CASE-001: sentence mode shows the headline exactly as the export
+                        // prints it (no textTransform); caps mode keeps the natural-case DOM text
+                        // under the uppercase LOOK, as before.
+                        ref: (el) => { if (!el) return; const __sv = __antcvSloganCaseMode() === "caps" ? ((st === st.toUpperCase() && /[a-zA-Z]/.test(st)) ? (st.charAt(0).toUpperCase() + st.slice(1).toLowerCase()) : st) : __antcvSloganCased(st, "sentence"); if (el.__antcvSloganV === __sv) return; if (document.activeElement === el) return; el.__antcvSloganV = __sv; if (el.textContent !== __sv) el.textContent = __sv; },
                         title: "Click to edit the positioning line",
                         onBlur: (ev) => { try { let __nv = window.__antcvEditableText ? window.__antcvEditableText(ev.currentTarget) : String(ev.currentTarget.textContent || "").trim(); if (__nv === "Positioning line") __nv = ""; if (__nv !== String(localStorage.getItem("antcv:clSlogan") || "")) { try { vr("slogan"); } catch (_) {} if (__nv) localStorage.setItem("antcv:clSlogan", __nv); else localStorage.removeItem("antcv:clSlogan"); window.dispatchEvent(new CustomEvent("antcv:sections-updated", { detail: { reason: "cl-slogan-inline" } })); } } catch (_) {} },
                         style: {
@@ -47549,7 +47579,7 @@
                           color: "var(--brand-slogan-color, " + ((ya && ya.mainLineColor) || "#00746E") + ")",
                           margin: "0 0 12px",
                           cursor: "text",
-                          textTransform: "uppercase",
+                          textTransform: __antcvSloganCaseMode() === "caps" ? "uppercase" : "none",
                           // SLOGAN-EDIT-EMPTY-001: the prompt reads as a hint, not as content.
                           opacity: __slPh ? 0.45 : 1,
                         },

@@ -82,6 +82,17 @@ id = "4524070751e04a30834b7ee46df98e2e"
 binding = "ANT_ANALYTIC_ENGINE"
 dataset = "ant_analytic_events"
 
+# ---------- D1 (LLM-LOG-SERVER-001) ----------
+#
+# The same ant_memory database the access relay uses. Used for ONE thing here: INSERT rows into
+# llm_calls for LLM calls made on this Worker (JD analysis, supervisor, coherence, kernel, gen-job
+# sections, script-driven /v1/messages). Optional: without the binding the logger is a no-op.
+# The relay owns the schema (workers/access-relay/schema-telemetry.sql); nothing here migrates it.
+[[d1_databases]]
+binding = "DB"
+database_name = "ant_memory"
+database_id = "499c3de9-8371-428a-9b9f-5d695d58e32b"
+
 # ---------- Secrets to set via `npx wrangler secret put …` ----------
 #
 # Provider API keys (only set the ones you actually use):

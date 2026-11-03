@@ -1688,6 +1688,7 @@ def _why_repair(text, company, role, jd, log=None):
         req = urllib.request.Request(
             _DF.PROXY + "/v1/messages", data=json.dumps(body).encode(),
             headers={"Content-Type": "application/json", "x-provider": "anthropic",
+                     "x-antcv-source": "gen-runner",
                      "User-Agent": UA, "Origin": ORIGIN, "Authorization": "Bearer " + _token()})
         with urllib.request.urlopen(req, timeout=180) as r:
             new = _DF._sse_text(r.read().decode("utf-8", "replace")).strip().strip('"')

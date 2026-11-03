@@ -83,7 +83,7 @@ General rules for every role and every executive-linear CV/letter, learned from 
 | Third-party names | Never name suppliers, contract manufacturers or customers of former employers (NDA risk). Use categories ("display, camera-module and image-sensor suppliers"). |
 | Audit direction | Say which way an audit went: supplier audits (the candidate audited suppliers) vs customer audits (customers audited the candidate's employer as a supplier). Never mix them. |
 | Counts and costs | No "100+"-style inflation; use the stored wording ("nearly 100"). Do not state a cost direction (higher/lower) unless the stored fact says it. |
-| Volunteer roles | Use the stored Danish term (foreningsarbejde). Never upgrade a supporting sports role to "coach" or "Assistant Coach". |
+| Volunteer roles | Label the row "Foreningsarbejde: Rugby team Operations Manager ..." (owner 2026-11-03). Never upgrade a supporting sports role to "coach" or "Assistant Coach". |
 | Standards | Match the standards list to the employer's domain (e.g. image-sensor and image-quality standards for a camera company), taken only from the candidate's stored list; one line, no explanatory parentheses. |
 | Banned words | Re-run the banned-word scrub after manual edits (a hand edit reintroduced "cross-functional"). |
 
@@ -103,7 +103,7 @@ General rules for every role and every executive-linear CV/letter, learned from 
 
 - Supplier audits: Sirin Labs and Meprolight (led and performed in person). Innoviz: customer audits of Innoviz as a supplier, central contributor, own areas fully owned.
 - Kanzen: input to nearly 100 client offers, with pricing and decision material for 4 clients.
-- Rugby: Team Operations Manager & Coaching Assistant (foreningsarbejde), Copenhagen Wolves RFC (Pan Idræt); World Rugby Level 1 coaching course completed; assists the coaches.
+- Foreningsarbejde: Rugby team Operations Manager & Coaching Assistant, Copenhagen Wolves RFC (Pan Idræt); World Rugby Level 1 coaching course completed; assists the coaches. (RUGBY-ROW-001, owner 2026-11-03: the row label is always "Foreningsarbejde" and the text opens "Rugby team Operations Manager", in English and Danish CVs; never "Rugby: Team Operations Manager".)
 - Meprolight microdisplay end-of-life: higher-performance replacement at lower unit cost; it needed lead time to test it and build a new interface.
 - Supplier qualification: four countries (Israel, China, Taiwan, Sweden).
 - Education focus: M.Sc. EE - optics, photonics and nanotechnology, in a photonics research group, two peer-reviewed papers; both B.Sc. degrees - optics, VLSI and DSP; MBA - business plan honourable mention at Tsinghua University.

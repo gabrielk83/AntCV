@@ -1,6 +1,7 @@
 import { insertLlmCall, aggregateHealth, getLatestHealth, pruneOld, insertQualitySignal } from './telemetry.js';
+import { rowWriteMismatch } from './row-write-guard.js';
 
-const VERSION='1.3.13';
+const VERSION='1.3.14';
 // antcv-access-relay — auth + hardening
 // =====================================
 // Public-facing relay with built-in user authentication.
@@ -3595,7 +3596,7 @@ async function handleApiApplicationById(request, env, idStr) {
   let owned;
   try {
     owned = await env.DB.prepare(
-      'SELECT user_hash, cv_sections, cl_sections, jd_company, updated_at FROM application WHERE id = ?'
+      'SELECT user_hash, cv_sections, cl_sections, jd_company, jd_role, updated_at FROM application WHERE id = ?'
     ).bind(appId).first();
   } catch (e) {
     return jsonResponse(
@@ -3678,6 +3679,23 @@ async function handleApiApplicationById(request, env, idStr) {
           409, request, env, refresh
         );
       }
+    }
+    // APP-ROW-WRITE-GUARD-001 (owner 2026-11-03, D1 3524): the ASSA ABLOY editor state was
+    // PUT into the Ambu row by a client auto-sync aimed at a stale active-row id. Refuse a
+    // CONTENT write (sections / meta) whose employer AND role both differ from this row's;
+    // nothing in the body is trustworthy then, so nothing is written. Renames (jd_company /
+    // jd_role only) and body.allow_company_change === true pass. See row-write-guard.js.
+    const __foreign = rowWriteMismatch(owned, body);
+    if (__foreign) {
+      try {
+        console.log('[apps] APP-ROW-WRITE-GUARD-001: refused PUT of ' + JSON.stringify(__foreign.company) + ' / ' +
+          JSON.stringify(__foreign.role) + ' content into app ' + appId + ' (' + JSON.stringify(owned.jd_company) + ' / ' +
+          JSON.stringify(owned.jd_role) + ')');
+      } catch (_) { /* logging must never break the guard */ }
+      return jsonResponse(
+        { error: 'company_mismatch', application_id: appId, jd_company: owned.jd_company, jd_role: owned.jd_role },
+        409, request, env, refresh
+      );
     }
     // AUTOSAVE-NO-DOWNGRADE-001 (register row 29/31 leg C, owner 2026-07-04 "the fuck?"
     // Trackman revert): the client auto-saves the active app on every row switch /

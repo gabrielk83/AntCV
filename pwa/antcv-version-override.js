@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.5242-app-integrity';
+  const TARGET_VERSION = '1.51.5282-row-write-guard';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.5242-app-integrity',
     '1.51.5202-tracker-merge-3way',
     '1.51.5139-demand-seed-refresh',
     '1.51.5114-proof-points',

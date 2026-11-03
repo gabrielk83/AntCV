@@ -17275,6 +17275,11 @@
           try {
             a = JSON.parse(r);
           } catch (e) {}
+          // APP-ROW-WRITE-GUARD-001 (1.51.5282): learn each row's employer + role from every
+          // relay response (antcv-app-row-write-guard.js) so update() can check the target row.
+          try {
+            o.ok && window.__antcvLearnRows && window.__antcvLearnRows(a);
+          } catch (e) {}
           if (!o.ok) {
             const t = (a && (a.error || a.message)) || "HTTP " + o.status;
             // 1.50.311: a 401/unauthenticated on a BACKGROUND cloud call (e.g. the
@@ -17331,6 +17336,13 @@
           });
         },
         update(e, t) {
+          // APP-ROW-WRITE-GUARD-001 (1.51.5282, D1 3524): refuse a content write whose employer
+          // AND role both differ from the target row's — the ASSA ABLOY editor state landed in
+          // the Ambu row because the auto-sync trusted the antcv:activeAppCompany stamp.
+          try {
+            const __g = window.__antcvRowWriteGuard && window.__antcvRowWriteGuard(e, t);
+            if (__g) return Promise.reject(__g);
+          } catch (_) {}
           return this._call("/api/applications/" + e, {
             method: "PUT",
             body: JSON.stringify((function (p) { /* CONTENT-LANG-STAMP-001 (register row 94, 2026-08-27): every writer of cv_sections/cl_sections reaches the server through this ONE method, so stamp the language the content is actually written in here, once, from the sections being written. Before this it was persisted nowhere: jd_language holds the JOB DESCRIPTION's language, and three consumers (the app-switch/boot selector, the babel-relang heal, export) each re-derived the CONTENT language by script-sniffing - a Latin (en/da/es) document falls outside the wide-script detector, so the selector fell back to jd_language and could pin a ribbon the content is NOT in, which drove babel-relang to LLM-re-translate a correct document. Only a CONFIDENT detection is stamped (__antcvContentLang returns "" when unsure), and a partial write with no sections is left alone, so this can never clear a stored value. Non-mutating - the caller's payload object is untouched. */ try { if (!p || "object" != typeof p) return p; if ("content_language" in p) return p; var __cvs = Array.isArray(p.cv_sections) ? p.cv_sections : null, __cls = Array.isArray(p.cl_sections) ? p.cl_sections : null; if (!__cvs && !__cls) return p; if ("function" != typeof window.__antcvContentLang) return p; var __L = String(window.__antcvContentLang(__cvs || [], __cls || []) || "").toLowerCase(); if (["en", "da", "es", "zh", "he", "am"].indexOf(__L) >= 0) return Object.assign({}, p, { content_language: __L }); } catch (_) {} return p; })(t || {})),

@@ -103,6 +103,8 @@ General rules for every role and every executive-linear CV/letter, learned from 
 
 - Supplier audits: Sirin Labs and Meprolight (led and performed in person). Innoviz: customer audits of Innoviz as a supplier, central contributor, own areas fully owned.
 - Kanzen: input to nearly 100 client offers, with pricing and decision material for 4 clients.
+- **Cover letter is a letter, never a copy of the CV (LETTER-NOT-CV-001, owner 2026-11-03):** one column under a letterhead (photo, name, target title, contact line); no side panel, no proof points, no languages block.
+- **One-file portals (ONE-FILE-PORTAL-001, owner 2026-11-03):** when an employer accepts a single upload (e.g. Hamamatsu Workday), send the CV only and fold the letter's argument into an enriched profile ("Why this role", two or three lines). No letter+CV combined document.
 - Foreningsarbejde: Rugby team Operations Manager & Coaching Assistant, Copenhagen Wolves RFC (Pan Idræt); World Rugby Level 1 coaching course completed; assists the coaches. (RUGBY-ROW-001, owner 2026-11-03: the row label is always "Foreningsarbejde" and the text opens "Rugby team Operations Manager", in English and Danish CVs; never "Rugby: Team Operations Manager".)
 - Meprolight microdisplay end-of-life: higher-performance replacement at lower unit cost; it needed lead time to test it and build a new interface.
 - Supplier qualification: four countries (Israel, China, Taiwan, Sweden).

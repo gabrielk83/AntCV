@@ -138,8 +138,8 @@ check("negative control: the fixture has ONE <a href> job link but two jobs",
       len(re.findall(r'<a[^>]+href="/jobs/[0-9a-f]{24}', THEHUB_HTML)), 1)
 check("thehub search is DK-scoped", js.THEHUB_SEARCH.format(q="optik"),
       "https://thehub.io/jobs?search=optik&countryCode=DK")
-check("sources: thehub registered; LinkedIn and careerhound deliberately absent",
-      sorted(js.SOURCES), ["jobbank", "jobindex", "thehub"])
+check("sources: thehub and careerhound (permission 2026-11-02) registered; LinkedIn deliberately absent",
+      sorted(js.SOURCES), ["careerhound", "jobbank", "jobindex", "thehub"])
 
 # ---- deadline helper --------------------------------------------------------
 check("dk date parses", js._dk_date("Frist: 07.09.2026"), datetime.date(2026, 9, 7))
@@ -204,9 +204,62 @@ check("stdout: discover-positions context exits 0 under a cp1252 console", p.ret
 check("stdout: discover-positions context bytes are UTF-8, row text intact",
       (AD_COMPANY + " | " + AD_TITLE) in utf8(p.stdout), True)
 
+# ---- JOBSRC-CAREERHOUND-001 (permission from Career Hound 2026-11-02) -------------------
+import tempfile  # noqa: E402
+
+FEED = json.dumps({"page": 1, "jobs": [
+    {"id": 7, "title": "Hardware Project Manager", "company": {"name": "Acme Optics"},
+     "location": "Copenhagen", "url": "/jobs/7", "postedAt": "2026-11-02T08:00:00Z"},
+    {"id": 8, "jobTitle": "Barista", "companyName": "Cafe", "applyUrl": "https://cafe.example/apply"},
+]})
+rows = js.parse_careerhound(FEED, "application/json")
+check("careerhound: JSON feed rows parsed", len(rows), 2)
+check("careerhound: relative url made absolute, nested company name, date cut to the day",
+      (rows[0]["url"], rows[0]["company"], rows[0]["posted"]),
+      ("https://www.careerhound.io/jobs/7", "Acme Optics", "2026-11-02"))
+NEXT = ('<html><script id="__NEXT_DATA__" type="application/json">'
+        + json.dumps({"props": {"pageProps": {"results": [{"title": "Optical Engineer", "company": "Lumen",
+                                                          "url": "https://lumen.example/j/1"}]}}})
+        + '</script></html>')
+check("careerhound: __NEXT_DATA__ page parsed", [r["title"] for r in js.parse_careerhound(NEXT, "text/html")],
+      ["Optical Engineer"])
+FLIGHT = ('<script>self.__next_f.push([1,"' + json.dumps('5:' + json.dumps(
+    {"jobs": [{"title": "NPI Engineer", "employer": "Photon", "link": "https://p.example/2"}]}))[1:-1] + '"])</script>')
+check("careerhound: app-router flight chunk parsed", [r["company"] for r in js.parse_careerhound(FLIGHT, "text/html")],
+      ["Photon"])
+check("careerhound: query filters on title or company words",
+      [r["title"] for r in js.search_careerhound("hardware manager", cookie="x=y",
+                                                 getter=lambda c: (200, "https://www.careerhound.io/api/view-jobs",
+                                                                   "application/json", FEED))],
+      ["Hardware Project Manager"])
+try:
+    js.search_careerhound("x", cookie="x=y", getter=lambda c: (200, "https://www.careerhound.io/login", "text/html", ""))
+    expired = None
+except js.CareerHoundAuthError as e:
+    expired = "refresh" in str(e)
+check("careerhound: landing on /login is reported as an expired session", expired, True)
+with tempfile.TemporaryDirectory() as td:
+    f = os.path.join(td, "careerhound_session")
+    with open(f, "w", encoding="utf-8") as fh:
+        fh.write("abc123\n")
+    check("careerhound: a bare cookie value gets the NextAuth cookie name",
+          js.careerhound_cookie(f), "__Secure-next-auth.session-token=abc123")
+    check("careerhound: missing session file -> None", js.careerhound_cookie(os.path.join(td, "nope")), None)
+_src, _acc = js.SOURCES, js.ACCOUNT_SOURCES
+js.SOURCES = {"jobindex": lambda q, n: [], "careerhound": lambda q, n: (_ for _ in ()).throw(RuntimeError("called"))}
+js.ACCOUNT_SOURCES = {"careerhound": lambda: None}
+import io  # noqa: E402
+from contextlib import redirect_stdout  # noqa: E402
+buf = io.StringIO()
+with redirect_stdout(buf):
+    js.cmd_search(type("A", (), {"source": "all", "q": "pm", "limit": 5, "json": True})())
+js.SOURCES, js.ACCOUNT_SOURCES = _src, _acc
+check("careerhound: 'all' skips the account source when no session file exists",
+      json.loads(buf.getvalue())["errors"], [])
+
 if fails:
     print("FAIL (%d):" % len(fails))
     for f in fails:
         print("  - " + f)
     sys.exit(1)
-print("PASS - job_sources parsers (%d checks)" % 20)
+print("PASS - job_sources parsers (%d checks)" % sum(1 for ln in open(__file__, encoding="utf-8") if ln.lstrip().startswith("check(")))

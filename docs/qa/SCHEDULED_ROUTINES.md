@@ -206,6 +206,20 @@ probing it, on any host (page HTML stays host-gated), but never a row the owner 
 packaged, outreach, submitted, interview, or a package / outreach mark on the flag). Tests: `test_deadlines.py`,
 `test_check_postings.py`, `test_discover_positions.py`.
 
+**JOBSRC-CAREERHOUND-001 (2026-11-03) — Career Hound, with Career Hound's written permission.** Career
+Hound's terms (s.7) forbid automated access without their written permission; Roman
+(roman@careerhound.io) gave it on 2 Nov 2026 for the owner's personal tracking. `job_sources.py`
+now has a `careerhound` source that reads the owner's OWN feed (`/api/view-jobs`) with the owner's
+NextAuth session cookie. **Owner setup, once (and again when it expires, about monthly):** sign in at
+careerhound.io with the e-mailed login link, pick a job category, open DevTools > Application >
+Cookies > www.careerhound.io, copy the value of `__Secure-next-auth.session-token` and save it as
+the only content of `~/.antcv/careerhound_session`. Nobody else handles the value; the fetcher reads
+it and sends it only to careerhound.io. `--source all` includes Career Hound only when that file
+exists; a redirect to /login or /select-category is reported as an expired session. First run:
+`python scripts/job-tracker/job_sources.py careerhound-probe` prints only the response shape (no job
+text, no cookie) so the parser can be confirmed; the parser already reads JSON feeds, `__NEXT_DATA__`
+pages and app-router flight chunks. Scope: one request per run, personal tracking only.
+
 **JOBSRC-THEHUB-001 (2026-11-01) — TheHub now has a deterministic fetcher.** `/jobs?search=` is a
 Nuxt page: the jobs exist only inside the `window.__NUXT__` IIFE (a link scrape finds one), and
 Nuxt hoists repeated strings into the IIFE parameters (`title:c`), which the fetcher resolves.

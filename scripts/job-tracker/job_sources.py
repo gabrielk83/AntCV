@@ -29,6 +29,7 @@ Network-free unit test: scripts/job-tracker/test_job_sources.py
 """
 import argparse
 import datetime
+import os
 import html
 import json
 import re
@@ -309,17 +310,188 @@ def search_thehub(q: str, limit: int = 50) -> list:
 #                SCHEDULED_ROUTINES.md). Driving the owner's own session/token is not added:
 #                the User Agreement bans automated access, and the account is what gets
 #                restricted.
-#   careerhound  terms s.7 prohibit "scrape, mine, or use automated tools to access Career
-#                Hound without our written permission". The permission must come from Career
-#                Hound, not the account holder. Paid, login-only data; revisit only with that
-#                permission in writing, and then read the owner's token from a file the owner
-#                writes (never pasted into a session), like ~/.antcv/token.
+#   careerhound  ADDED 2026-11-03 (JOBSRC-CAREERHOUND-001) below, now that Career Hound has given
+#                the written permission its terms s.7 require: Roman <roman@careerhound.io>,
+#                2 Nov 2026, reply to "Permission request: personal automated access to my own
+#                Career Hound results": "you have our permission to proceed for your personal
+#                tracking". Scope: the owner's OWN results, personal tracking only, one polite
+#                request per run. Not for other users, not for resale, no bulk crawling.
 
-SOURCES = {"jobindex": search_jobindex, "jobbank": search_jobbank, "thehub": search_thehub}
+
+# -------------------------------------------------------------------- careerhound
+# Career Hound (careerhound.io) is a Next.js app with password-free e-mail login (NextAuth). The
+# owner's own job feed sits behind the session: /api/view-jobs answers 307 -> /select-category
+# without one. Auth = the owner's NextAuth session cookie, which the OWNER copies from the browser
+# (DevTools > Application > Cookies > www.careerhound.io > __Secure-next-auth.session-token) into
+# ~/.antcv/careerhound_session. It is read here and sent only to careerhound.io; never printed,
+# logged or pasted into a session. Sessions expire (NextAuth default ~30 days): a redirect to
+# /login or /select-category means "refresh the cookie" (or pick a category once in the browser).
+CAREERHOUND_BASE = "https://www.careerhound.io"
+CAREERHOUND_FEED = CAREERHOUND_BASE + "/api/view-jobs"
+CAREERHOUND_COOKIE = "__Secure-next-auth.session-token"
+CAREERHOUND_SESSION_FILE = os.path.join(os.path.expanduser("~"), ".antcv", "careerhound_session")
+_CH_TITLE = ("title", "jobTitle", "job_title", "position", "name")
+_CH_COMPANY = ("company", "companyName", "company_name", "employer", "employerName", "organization")
+_CH_LOCATION = ("location", "locationName", "city", "locations", "jobLocation")
+_CH_URL = ("url", "link", "applyUrl", "apply_url", "jobUrl", "job_url", "redirectUrl", "href")
+_CH_POSTED = ("posted", "postedAt", "datePosted", "date_posted", "publishedAt", "createdAt")
+
+
+class CareerHoundAuthError(RuntimeError):
+    pass
+
+
+def careerhound_cookie(path: str = CAREERHOUND_SESSION_FILE):
+    """The owner's session cookie as a Cookie header value, or None when the file is missing."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            v = f.read().strip()
+    except OSError:
+        return None
+    if not v:
+        return None
+    return v if "=" in v else CAREERHOUND_COOKIE + "=" + v
+
+
+def _ch_pick(d: dict, keys) -> str:
+    for k in keys:
+        v = d.get(k)
+        if isinstance(v, dict):
+            v = v.get("name") or v.get("title") or v.get("label") or ""
+        if isinstance(v, list):
+            v = ", ".join(str(x.get("name") if isinstance(x, dict) else x) for x in v if x)
+        if isinstance(v, (str, int, float)) and str(v).strip():
+            return str(v).strip()
+    return ""
+
+
+def _ch_jobs_in(obj, out, depth=0):
+    """Walk any JSON shape; every dict with a title-like and a url- or company-like field is a job."""
+    if depth > 12:
+        return
+    if isinstance(obj, dict):
+        if _ch_pick(obj, _CH_TITLE) and (_ch_pick(obj, _CH_URL) or _ch_pick(obj, _CH_COMPANY)):
+            out.append(obj)
+            return
+        for v in obj.values():
+            _ch_jobs_in(v, out, depth + 1)
+    elif isinstance(obj, list):
+        for v in obj:
+            _ch_jobs_in(v, out, depth + 1)
+
+
+def _ch_json_blobs(page: str) -> list:
+    """JSON documents inside a Next.js page: __NEXT_DATA__, and app-router flight chunks."""
+    blobs = []
+    m = re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', page, re.S)
+    if m:
+        try:
+            blobs.append(json.loads(m.group(1)))
+        except ValueError:
+            pass
+    for chunk in re.findall(r'self\.__next_f\.push\(\[1,"(.*?)"\]\)', page, re.S):
+        try:
+            text = json.loads('"' + chunk + '"')
+        except ValueError:
+            continue
+        for line in text.splitlines():
+            body = line.split(":", 1)[1] if re.match(r"^[0-9a-f]+:", line) else line
+            if body[:1] in "[{":
+                try:
+                    blobs.append(json.loads(body))
+                except ValueError:
+                    pass
+    return blobs
+
+
+def parse_careerhound(body: str, content_type: str = "") -> list:
+    """Rows from a Career Hound feed response, JSON or a rendered Next.js page."""
+    raw = []
+    if "json" in content_type or body.lstrip()[:1] in "[{":
+        try:
+            _ch_jobs_in(json.loads(body), raw)
+        except ValueError:
+            pass
+    if not raw:
+        for blob in _ch_json_blobs(body):
+            _ch_jobs_in(blob, raw)
+    out, seen = [], set()
+    for j in raw:
+        url = _ch_pick(j, _CH_URL)
+        if url.startswith("/"):
+            url = CAREERHOUND_BASE + url
+        row = {"source": "careerhound", "title": _text(_ch_pick(j, _CH_TITLE)),
+               "company": _text(_ch_pick(j, _CH_COMPANY)), "location": _text(_ch_pick(j, _CH_LOCATION)),
+               "url": url, "posted": _ch_pick(j, _CH_POSTED)[:10], "deadline": ""}
+        key = row["url"] or (row["title"], row["company"])
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(row)
+    return out
+
+
+def _careerhound_get(cookie: str, timeout: int = 45):
+    req = urllib.request.Request(CAREERHOUND_FEED, headers={
+        "User-Agent": _UA + " AntCV-personal-tracker (owner-authorised, Career Hound permission 2026-11-02)",
+        "Accept": "application/json,text/html;q=0.9,*/*;q=0.8",
+        "Cookie": cookie,
+    })
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return resp.status, resp.geturl(), resp.headers.get("Content-Type", ""), _decode(resp.read())
+
+
+def search_careerhound(q: str, limit: int = 50, cookie=None, getter=None) -> list:
+    """The owner's own Career Hound feed. q filters titles/companies (any word); '*' or '' keeps all."""
+    cookie = cookie or careerhound_cookie()
+    if not cookie:
+        raise CareerHoundAuthError("no session file at %s (see the setup note in job_sources.py)"
+                                   % CAREERHOUND_SESSION_FILE)
+    status, final_url, ctype, body = (getter or _careerhound_get)(cookie)
+    if re.search(r"/(login|select-category)\b", final_url or ""):
+        raise CareerHoundAuthError("session expired or no category selected (landed on %s): refresh "
+                                   "the cookie file or pick a category once in the browser" % final_url)
+    rows = parse_careerhound(body, ctype)
+    words = [w for w in re.split(r"\W+", (q or "").lower()) if len(w) > 2]
+    if words and q.strip() != "*":
+        rows = [r for r in rows if any(w in (r["title"] + " " + r["company"]).lower() for w in words)]
+    return rows[:limit]
+
+
+def cmd_careerhound_probe(args):
+    """Shape-only report of the owner's feed (no job text, no cookie): to finish the parser on the
+    first authenticated run."""
+    cookie = careerhound_cookie()
+    if not cookie:
+        sys.exit("no session file at %s" % CAREERHOUND_SESSION_FILE)
+    status, final_url, ctype, body = _careerhound_get(cookie)
+
+    def shape(o, d=0):
+        if d > 3:
+            return "..."
+        if isinstance(o, dict):
+            return {k: shape(v, d + 1) for k, v in list(o.items())[:25]}
+        if isinstance(o, list):
+            return [shape(o[0], d + 1), "x%d" % len(o)] if o else []
+        return type(o).__name__
+
+    print(json.dumps({"status": status, "final_path": urllib.parse.urlparse(final_url).path,
+                      "content_type": ctype, "bytes": len(body),
+                      "json_shape": shape(json.loads(body)) if body.lstrip()[:1] in "[{" else None,
+                      "next_blobs": len(_ch_json_blobs(body)),
+                      "jobs_parsed": len(parse_careerhound(body, ctype))}, indent=1))
+
+
+SOURCES = {"jobindex": search_jobindex, "jobbank": search_jobbank, "thehub": search_thehub,
+           "careerhound": search_careerhound}
+# account-backed sources join "all" only when the owner's session file exists
+ACCOUNT_SOURCES = {"careerhound": careerhound_cookie}
 
 
 def cmd_search(args):
     names = list(SOURCES) if args.source == "all" else [args.source]
+    if args.source == "all":
+        names = [n for n in names if n not in ACCOUNT_SOURCES or ACCOUNT_SOURCES[n]()]
     rows, errs = [], []
     for name in names:
         try:
@@ -359,7 +531,7 @@ def main():
         sys.stdout.reconfigure(encoding="utf-8")
     except (AttributeError, ValueError):
         pass
-    ap = argparse.ArgumentParser(description="Fetch listings from jobindex.dk / jobbank.dk / thehub.io")
+    ap = argparse.ArgumentParser(description="Fetch listings from jobindex.dk / jobbank.dk / thehub.io / careerhound.io")
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("search")
     s.add_argument("--q", required=True)
@@ -367,6 +539,8 @@ def main():
     s.add_argument("--limit", type=int, default=50)
     s.add_argument("--json", action="store_true")
     s.set_defaults(fn=cmd_search)
+    pr = sub.add_parser("careerhound-probe", help="shape-only report of the owner's Career Hound feed")
+    pr.set_defaults(fn=cmd_careerhound_probe)
     args = ap.parse_args()
     args.fn(args)
 

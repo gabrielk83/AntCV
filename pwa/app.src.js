@@ -27392,7 +27392,15 @@
                   type: "text",
                   text:
                     "PRIOR RUN CONTEXT (carry these JD-specific signals forward; do not contradict them):\n\n" +
-                    yo.supporting_context.trim(),
+                    // ENVELOPE-PRECEDENCE-001 (1.51.5242): the JD role family sets positioning; the
+                    // Dream Envelope only calibrates (antcv-role-positioning-guard.js).
+                    ((s) => {
+                      try {
+                        return (window.__antcvEnvelopePrecedence && window.__antcvEnvelopePrecedence(s)) || s;
+                      } catch (e) {
+                        return s;
+                      }
+                    })(yo.supporting_context.trim()),
                 });
             } catch (e) {}
             m.push({
@@ -29367,6 +29375,13 @@
                 foundation: "done",
                 closure: "done",
               }),
+              // APP-CONTENT-OWNER-001 (1.51.5242): tell antcv-app-content-owner-guard.js which
+              // application this content was generated for (app.js: the meta var is U).
+              (() => {
+                try {
+                  window.dispatchEvent(new CustomEvent("antcv:generation-complete", { detail: { company: (D && D.company) || "", role: (D && D.role) || "" } }));
+                } catch (e) {}
+              })(),
               Gr("generation_complete", {
                 duration_ms: Date.now() - r,
                 language: je,
@@ -52243,6 +52258,8 @@
                             );
                           }
                         } catch (e) {
+                          // EXPORT-CONTENT-GATE-001 (1.51.5242): a refused export is final — no browser-print fallback.
+                          if (e && e.placeholderGate) return;
                           if (
                             (console.warn(
                               "[pdf] server export failed, falling back to client print:",
@@ -52312,6 +52329,8 @@
                                 void (e = "worker")
                               );
                             } catch (n) {
+                              // EXPORT-CONTENT-GATE-001 (1.51.5242): a refused export is final — no inline-DOCX fallback.
+                              if (n && n.placeholderGate) return;
                               (console.warn(
                                 "[DOCX] Worker export failed, falling back to inline:",
                                 n,

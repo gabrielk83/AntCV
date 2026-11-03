@@ -11,6 +11,7 @@ import {
 import { computeTier, orderTop5 } from './rank';
 import { isClosedRow, passesTierFilter } from './rowVisibility';
 import { top5ClickAction } from './top5controls';
+import { ENVELOPE_HEADING, positioningLine } from './openRouting';
 import { CLUSTER_REFRESH_MS, reconcileSnapshot, shouldRefetchOnFocus } from './clusterRefresh';
 
 const NAVY = '#1F3864';
@@ -778,7 +779,8 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
       if (String(nt.why || '').trim()) tf.push('Why this role for the candidate (their OWN words — weave the genuine motivation into WHY-THIS-POSITION; do not quote verbatim): ' + String(nt.why).trim());
       const targetFacts = tf.length ? '\n\nTARGET FACTS (calibration only — use to set altitude, emphasis and tone; NEVER copy verbatim into the CV or cover letter, and never state the salary figure or the tier):\n• ' + tf.join('\n• ') : '';
       const hmDirective = hmName ? '\n\nHIRING MANAGER: ' + hmName + ' — address the cover-letter greeting to this person by name (e.g. "Dear ' + hmName + ',"), not the generic hiring team.' : '';
-      const supporting = 'TARGET-ROLE GUIDELINES (Dream Envelope):\n' + envText + hmDirective
+      // ENVELOPE-PRECEDENCE-001: the posting's role family positions the CV/CL; the envelope only calibrates (openRouting.ts).
+      const supporting = positioningLine(String(row[2] || '')) + ENVELOPE_HEADING + '\n' + envText + hmDirective
         + targetFacts
         // RESEARCH-MERGE-001: one merged, deduped research block (JD role intel
         // + web company research) instead of two blocks restating each other.

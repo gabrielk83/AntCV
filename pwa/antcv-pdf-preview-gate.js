@@ -834,8 +834,10 @@ ${inlineStyles}
               closeModal();
             });
         }).catch((e) => {
-          try { console.warn('[pdf-preview-gate] direct server PDF unavailable/failed, browser print:', e && e.message); } catch (_) {}
           restore();
+          // EXPORT-CONTENT-GATE-001 (1.51.5242): a refused export is final — no browser-print fallback.
+          if (e && e.placeholderGate) return;
+          try { console.warn('[pdf-preview-gate] direct server PDF unavailable/failed, browser print:', e && e.message); } catch (_) {}
           iframePrint();
         });
         return;
@@ -1110,7 +1112,7 @@ ${inlineStyles}
         var payload = buildExportPayloadFromStorage();
         Promise.resolve(p ? window._antcvShrinkPhoto(payload.photo).catch(function () { return payload.photo; }) : payload.photo)
           .then(function (ph) { payload.photo = ph; return window.exportDocxViaWorker(payload); })
-          .catch(function (e) { try { console.warn('[pdf-preview-gate] DOCX export failed', e && e.message); } catch (_) {} alert('DOCX export failed: ' + (e && e.message || e)); });
+          .catch(function (e) { if (e && e.placeholderGate) return; try { console.warn('[pdf-preview-gate] DOCX export failed', e && e.message); } catch (_) {} alert('DOCX export failed: ' + (e && e.message || e)); });
         return;
       } catch (e) { try { console.warn('[pdf-preview-gate] DOCX direct call threw', e && e.message); } catch (_) {} }
     }

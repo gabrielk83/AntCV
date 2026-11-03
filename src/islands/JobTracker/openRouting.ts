@@ -44,15 +44,31 @@ export function extractOwnerSignals(supportingContext: string): string {
 // deliberately NOT a parameter: it structurally cannot enter this string — it
 // travels in the separate jd_text field. ownerSig is the ONLY free-text the
 // owner typed for the row; it is the only thing restore routes back to signals.
+// ENVELOPE-PRECEDENCE-001 (owner 2026-11-01, D1 3525): the envelope is CALIBRATION, never
+// positioning. Under the old "TARGET-ROLE GUIDELINES" heading the model took the envelope
+// title ("Technical Product Manager / AI Workflow") as the candidate's identity and a
+// Product Manager CV opened "IT professional with 15+ years". The posting's own role
+// family sets the profile identity, subtitle and headline; the envelope sets altitude.
+export const ENVELOPE_HEADING = 'TARGET-ROLE CALIBRATION (Dream Envelope - calibration only, never positioning):';
+export function positioningLine(role: string): string {
+  const r = String(role || '').trim();
+  return 'POSITIONING PRECEDENCE (ENVELOPE-PRECEDENCE-001): the JOB DESCRIPTION sets the positioning'
+    + (r ? ' - this posting is "' + r + '"' : '') + '. The CV profile identity sentence, the subtitle, the profile slogan and the'
+    + ' cover-letter headline name THIS role family; the envelope below only calibrates seniority, title band, location, mobility'
+    + ' and compensation altitude. Never adopt an envelope title as the candidate\'s identity, and never open a targeted profile'
+    + ' with the unsolicited "IT professional" line.\n\n';
+}
+
 export function assembleSupportingContext(parts: {
   envText: string;
+  role?: string;
   targetFacts?: string;
   researchBlock?: string;
   ownerSig?: string;
   brandFitLine?: string;
 }): string {
   return (
-    'TARGET-ROLE GUIDELINES (Dream Envelope):\n' + (parts.envText || '') +
+    positioningLine(parts.role || '') + ENVELOPE_HEADING + '\n' + (parts.envText || '') +
     (parts.targetFacts || '') +
     (parts.researchBlock || '') +
     (parts.ownerSig ? '\n\n' + OWNER_SIGNALS_HEADING + ':\n' + parts.ownerSig : '') +

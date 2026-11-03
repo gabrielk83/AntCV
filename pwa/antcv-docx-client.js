@@ -378,9 +378,29 @@ async function runOrphanPreflight(payload) {
 // hydration gate already tried and failed to fix. Kill:
 // localStorage['antcv:disable-placeholder-gate']='1' (shared switch — this is
 // the same feature family).
+//
+// EXPORT-CONTENT-GATE-001 (owner 2026-11-01, D1 3524 Ambu / 3525 ASSA ABLOY): the gate is
+// now a HARD block, not a confirm(). The owner exported an unfilled template letter and
+// another application's letter; a confirm is one click from shipping it. Detection lives
+// in antcv-export-content-gate.js (template / instruction text in any CV or CL section,
+// a letter that never names the company, content owned by another application); the
+// local table + CL-id check below is the fallback when that sidecar is not loaded. The
+// thrown error carries placeholderGate=true so app.js does NOT fall back to browser
+// print / inline DOCX. Blank "CV Template" / "Cover Letter Template" downloads are exempt.
 function placeholderGate(payload) {
   try {
     if (typeof localStorage !== 'undefined' && localStorage.getItem('antcv:disable-placeholder-gate') === '1') return;
+    if (/template/i.test(String((payload && payload.filename) || ''))) return;
+    const gate = (typeof window !== 'undefined') && window.AntcvExportContentGate;
+    if (gate && typeof gate.checkPayload === 'function'
+        && localStorage.getItem('antcv:disable-export-content-gate') !== '1') {
+      const res = gate.checkPayload(payload);
+      if (res && !res.ok) {
+        try { gate.showBlock(res); } catch (_) {}
+        const e = new Error(gate.message(res)); e.placeholderGate = true; e.reasons = res.reasons; throw e;
+      }
+      return;
+    }
     const secs = (payload && payload.sections) || [];
     const isPh = (v) => /^\s*\[[^\]]{2,80}\]\s*$/.test(String(v == null ? '' : v));
     let phTables = 0;
@@ -399,11 +419,11 @@ function placeholderGate(payload) {
     }
     if (!phTables && !phClSections) return;
     const msg = phClSections
-      ? 'This cover letter still contains PLACEHOLDER text (e.g. "Dear [Hiring Team / Name]") in ' + phClSections
-        + ' section(s) — the generation did not complete. Export anyway?'
-      : 'This document contains a PLACEHOLDER table ("[Focus area 1]" rows) — a failed/stale generation snapshot. Export anyway?';
-    const ok = (typeof confirm === 'function') ? confirm(msg) : true;
-    if (!ok) { const e = new Error('Export cancelled: placeholder content detected — regenerate first.'); e.placeholderGate = true; throw e; }
+      ? 'Export blocked: this cover letter still contains PLACEHOLDER text (e.g. "Dear [Hiring Team / Name]") in ' + phClSections
+        + ' section(s) — the generation did not complete. Generate for this application, then export again.'
+      : 'Export blocked: this document contains a PLACEHOLDER table ("[Focus area 1]" rows) — a failed/stale generation snapshot. Generate first.';
+    try { if (typeof alert === 'function') alert(msg); } catch (_) {}
+    const e = new Error(msg + ' (placeholder content detected — regenerate first)'); e.placeholderGate = true; throw e;
   } catch (e) { if (e && e.placeholderGate) throw e; /* detector errors never block */ }
 }
 
@@ -1334,7 +1354,16 @@ function hydrateClProse(list, doc, meta) {
     try {
       const g = JSON.parse(localStorage.getItem('antcv:clProseGuard') || 'null');
       const key = String(m.company || '').trim() + '|' + String(m.role || '').trim();
-      if (g && typeof g === 'object' && g[key] && typeof g[key] === 'object') bucket = g[key];
+      // LANG-GUARD-KEY-001 parity: the guard files buckets under company|role|lang; the
+      // lang-less key is the pre-1.51 legacy shape.
+      const lang = String(localStorage.getItem('language') || 'en').replace(/["']/g, '').toLowerCase().slice(0, 2) || 'en';
+      const b = g && typeof g === 'object' ? (g[key + '|' + lang] || g[key]) : null;
+      if (b && typeof b === 'object') bucket = b;
+      // CL-GUARD-COMPANY-001: a bucket whose prose never names the targeted company was
+      // captured from another application's letter — never hydrate from it.
+      const cm = (typeof window !== 'undefined') && window.AntcvCompanyMatch;
+      if (bucket && cm && cm.isTargeted(m.company)
+          && !cm.names(JSON.stringify(Object.keys(bucket).filter((k) => k.charAt(0) !== '_').map((k) => bucket[k])), m.company)) bucket = null;
     } catch (_) {}
     const metaText = { opening: m.opening, greeting: m.greeting };
     let hydrated = 0;

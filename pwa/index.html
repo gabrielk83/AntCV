@@ -62,6 +62,11 @@
        localStorage + the optional AntcvJdScope.deviceId() above; must load before
        app.js reads window.AntcvPointerStaleGuard at cold-restore. -->
   <script src="antcv-pointer-stale-guard.js?v=1.51.334-unsol-pillar"></script>
+  <!-- COMPANY-MATCH-001 (1.51.5242, owner 2026-11-01, D1 3524/3525): ONE pure "which application
+       does this text belong to" matcher shared by the prose-loss guard, the content-owner guard,
+       the export content gate and the docx-client hydrate gate. Synchronous so it exists before
+       any of them runs. -->
+  <script src="antcv-company-match.js?v=1.51.5242-app-integrity"></script>
   <!-- BOOT-STORM-DAMP-001: coalesce bursts of antcv:sections-updated so the boot storm
        doesn't peg the main thread (the "gate hangs / refresh twice" freeze). Loaded FIRST
        so its listener registers before any other; kill switch antcv:disable-storm-damp. -->
@@ -367,9 +372,9 @@
   })();
 </script>
 <script type="module">
-  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.5094-brand-ink-fit';
+  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.5242-app-integrity';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.5202-tracker-merge-3way';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.5242-app-integrity';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -408,10 +413,10 @@
         auth.src = 'antcv-auth.js?v=1.51.92-analytics-401-scope';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.51.5094-brand-ink-fit';
+          app.src = 'app.js?v=1.51.5242-app-integrity';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.5202-tracker-merge-3way';
+            vo.src = 'antcv-version-override.js?v=1.51.5242-app-integrity';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -757,7 +762,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-preview-paper-memo.js?v=1.51.59" defer></script>
 <script src="antcv-sections-normalize-415.js?v=1.51.5033-cc-headers-plain" defer></script>
 <script src="antcv-demo-watermark.js?v=1.50.340-live-keystate" defer></script>
-<script src="antcv-bullet-targets.js?v=1.51.5200-comms-line" defer></script>
+<script src="antcv-bullet-targets.js?v=1.51.5242-app-integrity" defer></script>
 <!-- SIDECAR-CONSOLIDATE G10 (1.50.427): photo-position + photo-pentagon-shape +
      photo-bridge-button merged into ONE file behind a single shared rAF
      scheduler + ONE MutationObserver. The three old files stay on disk,
@@ -789,7 +794,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      Sidecar-owned DOM. Kill: antcv:disable-style-kernels-table. -->
 <script src="antcv-app-history-style-kernels.js?v=1.51.349-kernel-table-time" defer></script>
 <script src="antcv-preview-header-tokens.js?v=1.50.41" defer></script>
-<script src="antcv-copenhagen-v2-001.js?v=1.51.5094-brand-ink-fit" defer></script>
+<script src="antcv-copenhagen-v2-001.js?v=1.51.5242-app-integrity" defer></script>
 <!-- CL-NO-PHOTO-001 (preview): hide the candidate headshot inside the band on the cover letter (export already suppresses it) -->
 <script src="antcv-cl-no-photo-001.js?v=1.51.2561-cl-spec-center" defer></script>
 <!-- HEADER-ELEM-COLORS-001: per-element BRAND colours (name/spec/contact/slogan/application) from brandV2 -->
@@ -806,7 +811,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      style (var(--package-base) cascade), matching the DOCX. Companion to
      preview-header-tokens (which deliberately skips the sidebar). -->
 <script src="antcv-sidebar-bg-token.js?v=1.51.883-editable-marks" defer></script>
-<script src="antcv-pdf-preview-gate.js?v=1.51.5094-brand-ink-fit" defer></script>
+<script src="antcv-pdf-preview-gate.js?v=1.51.5242-app-integrity" defer></script>
 <!-- EXPORT-SETTLED-001: defer the FIRST export until the doc is settled (cloud-restore + migrations
      converged) so it isn't stale — the real fix for "refresh twice for a good PDF". -->
 <script src="antcv-export-settled-gate.js?v=1.51.14" defer></script>
@@ -935,9 +940,9 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      intervals). Verified: 211's CSS replicates each 206/207/208 rule; no
      external consumer of their APIs/attrs. Review: docs/refactor/SIDECAR_CONSOLIDATION_REVIEW.md -->
 <script src="antcv-section-panel-211.js?v=1.51.1224-headline-cjlr2" defer></script>
-<script src="antcv-roles-richblock-adapter.js?v=1.51.5094-brand-ink-fit" defer></script>
+<script src="antcv-roles-richblock-adapter.js?v=1.51.5242-app-integrity" defer></script>
 <!-- ROLE-LOCATION-001 (1.51.4566): role.location + role-line format control (classic | meta) in PAGE FLOW; store antcv:roleLineFormat read by the roles adapter + docx-client. Kill antcv:disable-role-line-format -->
-<script src="antcv-role-line-format.js?v=1.51.5094-brand-ink-fit" defer></script>
+<script src="antcv-role-line-format.js?v=1.51.5242-app-integrity" defer></script>
 <script src="antcv-references-mode.js?v=1.51.5013-grab-zone-scroll-target" defer></script>
 <script src="antcv-cv-layout-linear.js?v=1.51.4913-demand-seed-refresh" defer></script>
 <script src="antcv-cl-close-space.js?v=1.51.5013-grab-zone-scroll-target" defer></script>
@@ -962,7 +967,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <!-- RICH-BLOCK-001 (2026-06-22): editor surface for the universal composite section
      type:"rich_block" (headline/rule toggles + section CJLR + {lead-in, body} rows with
      per-row CJLR/Page/Enhance/Fit/Delete). app.js delegates to window.AntcvRichBlockEditor. -->
-<script src="antcv-rich-block-editor.js?v=1.51.5094-brand-ink-fit" defer></script>
+<script src="antcv-rich-block-editor.js?v=1.51.5242-app-integrity" defer></script>
 <!-- TABLE-TYPE-001 (2026-06-23): editor surface for the universal `table` type (CORE COMPETENCIES /
      WHAT I BRING + any 2-col table): whole-table CJLR/enhance/fit, heading/rule toggles, header-row
      CJLR (fixes the missing-header-CJLR + alignment-drift report) + header B/I, column-ratio,
@@ -1179,7 +1184,22 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
   <script src="antcv-parallel-translation-keep.js?v=1.51.2290-relay-auth-fix" defer></script>
   <script src="antcv-identity-lang-heal.js?v=1.51.397-matrix-rowspec" defer></script>
 <script src="antcv-cl-cloud-sync-extra.js?v=1.51.381-sig-backfill" defer></script>
-<script src="antcv-cl-prose-loss-guard-985.js?v=1.51.4024-cl-open-brandfix" defer></script>
+<script src="antcv-cl-prose-loss-guard-985.js?v=1.51.5242-app-integrity" defer></script>
+<!-- APP-CONTENT-OWNER-001 (1.51.5242, owner 2026-11-01, D1 3524 Ambu): stamps the tailored CV/CL sections with the
+     application they were generated for (antcv:generation-complete from app.js); content owned by another application
+     dims the preview, shows a banner and blocks export. Kill antcv:disable-content-owner-guard -->
+<script src="antcv-app-content-owner-guard.js?v=1.51.5242-app-integrity" defer></script>
+<!-- EXPORT-CONTENT-GATE-001 (1.51.5242, D1 3525 ASSA ABLOY): HARD export block on template / instruction text, a letter
+     that never names the company, the unsolicited profile on a targeted role, or content owned by another application.
+     Capture-phase on every export button; antcv-docx-client placeholderGate is the backstop. Kill antcv:disable-export-content-gate -->
+<script src="antcv-export-content-gate.js?v=1.51.5242-app-integrity" defer></script>
+<!-- ENVELOPE-PRECEDENCE-001 / ROLE-SUBTITLE-001 / TOOLS-RELEVANCE-001 (1.51.5242): JD role family sets positioning (the
+     Dream Envelope only calibrates), role-specific subtitle instead of the stored slogan on targeted apps, lab instruments
+     hidden for non-research roles. Kill antcv:disable-role-positioning-guard -->
+<script src="antcv-role-positioning-guard.js?v=1.51.5242-app-integrity" defer></script>
+<!-- CL-ACADEMY-001 (1.51.5242): academy letter default - "Kind regards," sign-off, no hearing / captions line in the
+     letter (the shape itself is gold-rules prompt_block CL-ACADEMY-001). Kill antcv:disable-cl-academy-format -->
+<script src="antcv-cl-academy-format.js?v=1.51.5242-app-integrity" defer></script>
 <!-- GEN-UNSOL-STALE-JD-001 Patch D: scrub a KNOWN PRIOR targeted company from unsolicited prose (employer names protected). Kill antcv:disable-unsol-company-scrub. -->
 <script src="antcv-unsol-company-scrub.js?v=1.51.334-unsol-pillar" defer></script>
 <!-- SIDEBAR-RELEVANCE-CUT-001 (spec rules 11/15/19/25/27/32 + 38): deterministic JD-relevance cut over tools/certs/regulatory in stored sections — hidden never deleted, exempt Interests/Languages/Accessibility, one-shot per app+JD. Kill antcv:disable-sidebar-relevance-cut. -->
@@ -1212,7 +1232,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      SettingsRouter, wizardState). See docs/plan/AntCV_Plan_v2_LockedSources.md
      §7 Pass 1. -->
       <script src="antcv-357-loader.js?v=1.50.400" defer></script>
-      <script src="antcv-react-islands.js?v=1.51.5202-tracker-merge-3way" defer></script>
+      <script src="antcv-react-islands.js?v=1.51.5242-app-integrity" defer></script>
       <!-- v1.50.164: auto-apply the correct palette when the stored package is the
            legacy orphan default ("scandinavian"), by pressing the Copenhagen Modern
            button — fixes the permanent palette mix on load without a manual click. -->

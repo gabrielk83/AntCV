@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.5202-tracker-merge-3way';
+const CACHE = 'antcv-1.51.5242-app-integrity';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

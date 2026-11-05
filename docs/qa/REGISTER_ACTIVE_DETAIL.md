@@ -1619,7 +1619,9 @@ _verified: 2026-10-27_ — CI nightly E1 re-verify against HEAD 65ce36e0: leg (f
 
 ## Row 89 — MODEL-TABLE-FRESHNESS-001
 
-_verified: 2026-10-23_
+_verified: 2026-11-05_
+
+_2026-11-05 weekly tune (desktop, Opus 5.5, worktree-isolated): pins verify against all four vendor pages; Anthropic lists nothing unpriced. Mechanical diff of 87 page ids found five errors, fixed in all three mirrors with dated comments: MISTRAL-LARGE4-RATE-2026-11-001 (`mistral-large-4` / `-4-0` [1.36,4.18] → [0.70,2.10], was ~2x OVER; third price in four weeks), OPENAI-GPT6-TERRA-ROSALIND-RATES-2026-11-001 (`gpt-6.1-terra` [1,5] was FALLBACK 3x OVER; `gpt-6-rosalind` [15,75] was FALLBACK 5x UNDER), DEEPSEEK-V41-FLASH-RATES-2026-11-001 (Mistral-hosted `deepseek-v4-1-flash-1017` + page slug `deepseek-v4-flash-1017` [0.30,1.20], was FALLBACK 10x OVER), GEMINI-NATIVE-AUDIO-RATES-2026-11-001 (`gemini-2.5-flash-native-audio-preview-12-2025` text [0.50,2.00], was on the 2.5-flash key). Tests 46/46 ×2 + mirror 14/14; suite ALL PASS. `mistral-large-latest` still = Large 3 (/v1/models). Noted, not a table error today: from 2026-12-01 Google routes `gemini-2.5-flash` → `gemini-3.5-flash-lite` (same rate) and `gemini-2.5-pro` → `gemini-3.8-flash` ([0.75,3.75]); `gpt-5.6-sol` promo ends 2026-11-30. Report `docs/qa/COST_QUALITY_WEEKLY_2026-11-05.md`._
 
 _2026-10-23 weekly tune (desktop, Opus 5.5, worktree-isolated): pins verify against all four vendor pages; Anthropic lists nothing unpriced. Mechanical page diff found three errors, fixed in all three mirrors with dated comments: MISTRAL-LARGE4-SALE-END-2026-10-001 (the Large 4 sale ended; `mistral-large-4` / `-4-0` [0.68,2.09] → list [1.36,4.18], was 2x UNDER), ZAI-GLM53-FLASH-RATES-2026-10-001 (new `zai-glm-5-3-flash` [0.15,0.50] matched `zai-glm` [1.4,4.4], 9x OVER), GPT-ROSALIND-RATES-2026-10-001 (new `gpt-rosalind-research` / `-discovery` [5,25] fell to FALLBACK [3,15], strict null). 10-15 catalogue rows for Large 4 corrected to the vendor rate (not trimmed); `VENDOR_CATALOGUE_2026_10_23` added. Freshness 44/44 ×2, mirror 13/13, suite ALL PASS. OpenAI realtime/audio and per-minute ids left unkeyed by rule (owner call: Gemini live precedent). `mistral-large-latest` still aliases Large 3. Report `docs/qa/COST_QUALITY_WEEKLY_2026-10-23.md`._
 
@@ -2607,7 +2609,9 @@ unattended fix. Kept ACTIVE.
 
 ## Row 115 — PWA-COST-METER-OPUS55-001
 
-_verified: 2026-10-23_
+_verified: 2026-11-05_
+
+_2026-11-05 weekly tune: re-verified, not fixed. `C.claude` / `C.anthropic` still [2,10], `q()` still pins `claude-opus-5-5` [4,20]. The 11-03 session (6 calls) made no claude call; no claude row in 30 d. Owner call unchanged._
 
 _2026-10-23 weekly tune: re-verified, not fixed. `C.claude` / `C.anthropic` still [2,10] (`app.src.js` ~1220), `q()` still pins `claude-opus-5-5` [4,20]. The 2026-10-20 session (7 calls) made no claude call, so there is still no opus-5-5 row in `llm_calls`. Owner call unchanged._
 
@@ -2722,7 +2726,9 @@ _verified: 2026-11-02_
 
 ## Row 124 — CASCADE-RETIRED-IDS-2026-10-001
 
-_verified: 2026-10-23_
+_verified: 2026-11-05_
+
+_2026-11-05 weekly tune: re-verified, tails unchanged. Related vendor change: from 2026-12-01 Google routes every `gemini-2.5-pro` request to `gemini-3.8-flash` and every `gemini-2.5-flash` request to `gemini-3.5-flash-lite`, so `gemini-2.5-pro` in a tail stops being the model it names. Owner call unchanged._
 
 _2026-10-23 weekly tune: re-verified, unchanged. Mistral `GET /v1/models` (63 ids) still lists none of `mistral-large-2411` / `-2407` / `mistral-medium-2312`; the cascade tails still carry them. Owner call._
 

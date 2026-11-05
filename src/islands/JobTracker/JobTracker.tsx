@@ -14,8 +14,8 @@ import { top5ClickAction } from './top5controls';
 import { ENVELOPE_HEADING, positioningLine } from './openRouting';
 import { CLUSTER_REFRESH_MS, reconcileSnapshot, shouldRefetchOnFocus } from './clusterRefresh';
 import {
-  SUBMITTED, INTERVIEW, INTERVIEW_STAGES, MAX_FOLLOWUPS, localDay, recordStatus, interviewStage, statusSince,
-  followUpState, stampSubmitted, setSubmitted, logSent, financialsView,
+  SUBMITTED, INTERVIEW, INTERVIEW_STAGES, MAX_FOLLOWUPS, localDay, interviewStage, statusSince,
+  followUpState, stampSubmitted, setSubmitted, logSent, financialsView, recordStatusIn, statusHistoryOf,
 } from './outcomes';
 
 const NAVY = '#1F3864';
@@ -290,7 +290,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     setDocState({ ...doc, rows: (doc.rows || []).map((r) => { if (r[11] !== uk) return r; const c = r.slice() as Row; c[idx] = value; return c; }) });
     setDirty(true);
   }
-  // OUTCOME-RECORD-001: a status change is dated into history[uk]; a row turning
+  // OUTCOME-RECORD-001: a status change is dated into status_history[uk]; a row turning
   // Submitted gets a submitted date in followups[uk] (same 'first-seen' stamp as
   // followups.py) unless it has one. Like every cell edit, Save persists it.
   function setStatus(uk: string, status: string): void {
@@ -299,14 +299,14 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     setDocState({
       ...doc,
       rows: (doc.rows || []).map((r) => { if (r[11] !== uk) return r; const c = r.slice() as Row; c[8] = status; return c; }),
-      history: recordStatus(doc.history, uk, status, day),
+      status_history: recordStatusIn(doc, uk, status, day),
       ...(status === SUBMITTED ? { followups: stampSubmitted(doc.followups, uk, day) } : {}),
     });
     setDirty(true);
   }
   function setStage(uk: string, stage: string): void {
     if (!doc || !stage) return;
-    setDocState({ ...doc, history: recordStatus(doc.history, uk, INTERVIEW, localDay(), stage) }); setDirty(true);
+    setDocState({ ...doc, status_history: recordStatusIn(doc, uk, INTERVIEW, localDay(), stage) }); setDirty(true);
   }
   function setSubmittedOn(uk: string, day: string): void {
     if (!doc) return;
@@ -908,7 +908,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
         : (String(row[1]) + '|' + String(row[2])).toLowerCase().replace(/[^a-z0-9|]+/g, '');
       const discovered = { ...(doc.discovered || {}), [key]: { ...((doc.discovered || {})[key] || {}), status: 'rejected', reason: reason.trim(), uk, company: row[1], role: row[2], url } };
       const next = { ...doc, envelope: env, rows: rowsNext, discovered, pin: { ...(doc.pin || {}), [uk]: false }, park: { ...(doc.park || {}), [uk]: false },
-        history: recordStatus(doc.history, uk, 'Archive / closed', localDay()) };
+        status_history: recordStatusIn(doc, uk, 'Archive / closed', localDay()) };
       if (await persist(next, true)) setNote('Rejected ' + row[1] + ' → envelope learning (' + dim + '); discovery won\'t re-propose it.');
     } catch (e) { setErr(String((e as Error).message || e)); }
     finally { setBusyKey(null); }
@@ -988,7 +988,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
                           style={{ background: 'transparent', border: hasJd ? 'none' : '1px dashed #b7c2d4', borderRadius: 4, cursor: 'pointer', fontSize: hasJd ? 14 : 10.5, color: '#556', padding: hasJd ? 0 : '1px 3px', lineHeight: 1.4 }}>{hasJd ? '✅' : '＋ JD'}</button>
                       </td>
                       <td style={cell}><select value={r[8]} onChange={(e) => setStatus(uk, e.target.value)} style={{ fontSize: 12, width: '100%' }}>{TRACKED_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}{!TRACKED_STATUSES.includes(r[8]) && r[8] ? <option value={r[8]}>{r[8]}</option> : null}</select>
-                        <OutcomeCell status={r[8]} hist={(doc?.history || {})[uk]} fu={(doc?.followups || {})[uk]}
+                        <OutcomeCell status={r[8]} hist={statusHistoryOf(doc, uk)} fu={(doc?.followups || {})[uk]}
                           onStage={(s) => setStage(uk, s)} onSubmitted={(d) => setSubmittedOn(uk, d)} onSent={() => markFollowupSent(uk)} /></td>
                       <td style={cell}><textarea value={r[9]} onChange={(e) => editRow(uk, 9, e.target.value)} onFocus={() => setExpandRow(uk)} rows={expandRow === uk ? 5 : 2} style={ta} /></td>
                       <td style={cell}><textarea value={r[10]} onChange={(e) => editRow(uk, 10, e.target.value)} onFocus={() => setExpandRow(uk)} rows={expandRow === uk ? 5 : 2} style={ta} /></td>

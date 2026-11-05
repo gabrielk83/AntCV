@@ -7,8 +7,8 @@
 // Three top-level doc maps carry that now (the relay keeps unknown keys; so does
 // normalizeDoc, which spreads ...doc):
 //
-//   history[uk]    = [{status, date: YYYY-MM-DD, stage?}]   appended by the island on a
-//                    status change; Interview entries carry a stage label
+//   status_history[uk] = [{status, date: YYYY-MM-DD, stage?}]   appended by the island on
+//                    a status change; Interview entries carry a stage label
 //   followups[uk]  = {submitted, submitted_source: 'first-seen'|'owner', sent: [dates],
 //                    thanks: [dates]}                         followups.py (FOLLOWUP-001)
 //                    and the island
@@ -17,6 +17,12 @@
 // The follow-up rule mirrors followups.py `due`: status Submitted, QUIET_DAYS since the
 // submitted date or the last follow-up sent, fewer than MAX_FOLLOWUPS sent. Keep the two
 // in step.
+//
+// OUTCOME-RECORD-002 (2026-11-05): 1.51.5342 wrote the status map to `history`. The first
+// tracker design (JOB-TRACKER-001, schema.sql) kept a workbook `history[]` ARRAY under that
+// key, and a doc that still holds one would lose it on the first dated change. The map is
+// `status_history` now; `history` is never written. statusHistoryOf() still reads a
+// map-shaped `history` so entries saved by 1.51.5342 are not dropped.
 
 export interface HistoryEntry { status: string; date: string; stage?: string; }
 export interface FollowupRec { submitted?: string; submitted_source?: string; sent?: string[]; thanks?: string[]; [k: string]: unknown; }
@@ -82,6 +88,22 @@ export function recordStatus(history: unknown, uk: string, status: string, date:
   else list.push(entry);
   map[uk] = list;
   return map;
+}
+
+/** A row's dated status list: status_history[uk], else a map-shaped legacy `history[uk]`. */
+export function statusHistoryOf(doc: { status_history?: unknown; history?: unknown } | null | undefined, uk: string): HistoryEntry[] {
+  const sh = doc && isRec(doc.status_history) ? historyList(doc.status_history[uk]) : [];
+  if (sh.length) return sh;
+  return doc && isRec(doc.history) ? historyList(doc.history[uk]) : [];
+}
+
+/** recordStatus on the doc: returns the new status_history map, seeded from statusHistoryOf. */
+export function recordStatusIn(doc: { status_history?: unknown; history?: unknown } | null | undefined, uk: string,
+  status: string, date: string, stage = ''): Record<string, HistoryEntry[]> {
+  const map = { ...(doc && isRec(doc.status_history) ? doc.status_history : {}) } as Record<string, HistoryEntry[]>;
+  const base = statusHistoryOf(doc, uk);
+  if (base.length) map[uk] = base;
+  return recordStatus(map, uk, status, date, stage);
 }
 
 /** The current Interview stage: the newest stage in the trailing run of Interview entries. */

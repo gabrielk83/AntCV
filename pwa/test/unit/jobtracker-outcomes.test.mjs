@@ -1,6 +1,6 @@
 // jobtracker-outcomes.test.mjs
 // OUTCOME-RECORD-001 (2026-11-05): the Job Tracker records outcomes. A status change is
-// dated into history[uk] (Interview entries carry a stage), terminal outcomes (Hired,
+// dated into status_history[uk] (Interview entries carry a stage), terminal outcomes (Hired,
 // Offer declined, No response, Withdrawn) are closed, a Submitted row shows its
 // submitted-on date and a follow-up-due badge from followups[uk] (written by
 // followups.py too), and the Top-5 card shows financials[uk].summary with its CHECK note.
@@ -12,7 +12,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   recordStatus, interviewStage, statusSince, followUpState, stampSubmitted, setSubmitted, logSent,
-  financialsView, dayOf, daysBetween, localDay, historyList, INTERVIEW_STAGES,
+  financialsView, dayOf, daysBetween, localDay, historyList, INTERVIEW_STAGES, statusHistoryOf, recordStatusIn,
 } from '../../../src/islands/JobTracker/outcomes.ts';
 import { closedBucket, isClosedRow, visBucket } from '../../../src/islands/JobTracker/rowVisibility.ts';
 import { mergeDocs, MERGE_MAPS } from '../../../src/islands/JobTracker/mergeDocs.ts';
@@ -140,28 +140,61 @@ test('financials: the CHECK note is split out so truncation never hides it', () 
   assert.equal(financialsView('junk'), null);
 });
 
+// ---- OUTCOME-RECORD-002: the legacy `history` key ----------------------------------
+// The first tracker design (JOB-TRACKER-001) kept a workbook history[] ARRAY in the doc.
+// 1.51.5342 wrote the status map over that key; the map is status_history now.
+const LEGACY = [{ week: '2026-W27', note: 'workbook history sheet row' }];
+
+test('a legacy history array survives a dated status change', () => {
+  const doc = { rows: [row('Submitted')], history: LEGACY };
+  const sh = recordStatusIn(doc, 'a', 'Interview', '2026-11-05');
+  assert.deepEqual(sh.a, [{ status: 'Interview', date: '2026-11-05' }]);
+  assert.deepEqual(doc.history, LEGACY);
+  assert.deepEqual(statusHistoryOf(doc, 'a'), []);
+});
+
+test('entries 1.51.5342 saved under a map-shaped history are still read and carried over', () => {
+  const doc = { history: { a: [{ status: 'Submitted', date: '2026-11-05' }] } };
+  assert.deepEqual(statusHistoryOf(doc, 'a'), [{ status: 'Submitted', date: '2026-11-05' }]);
+  assert.deepEqual(recordStatusIn(doc, 'a', 'Interview', '2026-11-06', '1st').a.map((e) => e.status), ['Submitted', 'Interview']);
+  const both = { status_history: { a: [{ status: 'Offer', date: '2026-11-07' }] }, history: doc.history };
+  assert.deepEqual(recordStatusIn(both, 'a', 'Hired', '2026-11-08').a.map((e) => e.status), ['Offer', 'Hired'], 'status_history wins');
+  assert.deepEqual(recordStatusIn({}, 'b', 'Submitted', '2026-11-05'), { b: [{ status: 'Submitted', date: '2026-11-05' }] });
+});
+
+test('a conflict rebase never turns an array into an object', () => {
+  const base = { rows: [], history: LEGACY, urls: { a: 'u' } };
+  const local = { rows: [], history: LEGACY, urls: { a: 'u', b: 'v' } };
+  const server = { rows: [], history: [...LEGACY, { week: '2026-W28' }], urls: { a: 'u' } };
+  const out = mergeDocs(server, local, base);
+  assert.ok(Array.isArray(out.history));
+  assert.deepEqual(out.history, server.history);
+  assert.deepEqual(out.urls, { a: 'u', b: 'v' });
+});
+
 // ---- 409 rebase -----------------------------------------------------------------
 test('a conflict rebase keeps history and follow-ups written elsewhere', () => {
-  assert.ok(MERGE_MAPS.includes('history') && MERGE_MAPS.includes('followups'));
+  assert.ok(MERGE_MAPS.includes('status_history') && MERGE_MAPS.includes('followups'));
+  assert.ok(!MERGE_MAPS.includes('history'), 'the legacy workbook key is never merged as a map');
   const r = row('Submitted');
-  const base = { rows: [r], history: { a: [{ status: 'Submitted', date: '2026-10-20' }] },
+  const base = { rows: [r], status_history: { a: [{ status: 'Submitted', date: '2026-10-20' }] },
     followups: { a: { submitted: '2026-10-20', submitted_source: 'first-seen', sent: [] } } };
   // followups.py logged a follow-up; the island's tab set the real submitted date and moved the row on.
   const server = { ...base, followups: { a: { ...base.followups.a, sent: ['2026-11-01'] } } };
   const local = { rows: [row('Interview')],
-    history: { a: [...base.history.a, { status: 'Interview', date: '2026-11-05' }] },
+    status_history: { a: [...base.status_history.a, { status: 'Interview', date: '2026-11-05' }] },
     followups: { a: { submitted: '2026-10-18', submitted_source: 'owner', sent: [] } } };
   const out = mergeDocs(server, local, base);
   assert.deepEqual(out.followups.a, { submitted: '2026-10-18', submitted_source: 'owner', sent: ['2026-11-01'] });
-  assert.deepEqual(out.history.a, local.history.a);
+  assert.deepEqual(out.status_history.a, local.status_history.a);
   assert.equal(out.rows[0][8], 'Interview');
 });
 
 test('a conflict rebase interleaves history entries both sides added, by date', () => {
-  const base = { rows: [], history: { a: [{ status: 'Submitted', date: '2026-10-20' }] } };
-  const server = { rows: [], history: { a: [...base.history.a, { status: 'Interview', date: '2026-11-02', stage: '1st' }] } };
-  const local = { rows: [], history: { a: [...base.history.a, { status: 'Interview', date: '2026-11-09', stage: '2nd' }] } };
-  assert.deepEqual(mergeDocs(server, local, base).history.a.map((e) => e.date), ['2026-10-20', '2026-11-02', '2026-11-09']);
+  const base = { rows: [], status_history: { a: [{ status: 'Submitted', date: '2026-10-20' }] } };
+  const server = { rows: [], status_history: { a: [...base.status_history.a, { status: 'Interview', date: '2026-11-02', stage: '1st' }] } };
+  const local = { rows: [], status_history: { a: [...base.status_history.a, { status: 'Interview', date: '2026-11-09', stage: '2nd' }] } };
+  assert.deepEqual(mergeDocs(server, local, base).status_history.a.map((e) => e.date), ['2026-10-20', '2026-11-02', '2026-11-09']);
 });
 
 // ---- wiring ---------------------------------------------------------------------
@@ -170,6 +203,7 @@ test('JobTracker.tsx: the status select dates the change instead of a bare cell 
   assert.match(tsx, /<select value=\{r\[8\]\} onChange=\{\(e\) => setStatus\(uk, e\.target\.value\)\}/);
   assert.doesNotMatch(tsx, /editRow\(uk, 8,/);
   assert.match(tsx, /<OutcomeCell status=\{r\[8\]\}/);
-  assert.match(tsx, /history: recordStatus\(doc\.history, uk, 'Archive \/ closed', localDay\(\)\)/, 'Reject is dated too');
+  assert.match(tsx, /status_history: recordStatusIn\(doc, uk, 'Archive \/ closed', localDay\(\)\)/, 'Reject is dated too');
+  assert.doesNotMatch(tsx, /[^_]history: /, 'the island never writes the legacy history key');
   assert.match(tsx, /financialsView\(\(doc\?\.financials \|\| \{\}\)\[uk\]\)/);
 });

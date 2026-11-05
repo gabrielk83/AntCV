@@ -37,6 +37,16 @@ test('CPH-SPEC-ONE-LINE-001b: an explicit owner size is a ceiling - shrunk to on
   assert.equal(fit(300), null);
 });
 
+test('CPH-FIT-SOURCE-KEY-001: the fit pass reads the canonical fontSizes key, legacy mirror as fallback', () => {
+  const i = src.indexOf('CPH-FIT-SOURCE-KEY-001');
+  assert.ok(i >= 0, 'ticket marker');
+  const reader = src.slice(i, i + 1600);
+  assert.ok(reader.includes("(typeof window.__antcvFontPrefs === 'function')"), 'canonical prefs API first');
+  assert.ok(reader.includes("JSON.parse(localStorage.getItem('fontSizes') || 'null')"), 'canonical fontSizes key');
+  assert.ok(reader.includes('__fsOv = __canonF;'), 'fit pass uses the canonical sizes');
+  assert.ok(reader.includes("__fsOv = (__scP && __scP.fontSizes) || {};"), 'legacy mirror kept as fallback');
+});
+
 test('worked example: 489 px at 16 px inside a 370 px cap lands on 11.5 px, one line', () => {
   const Ws1 = 489, sfs = 16, specMaxW = 370, nameAllow = 0.92 * 500;
   const allow = Math.min(nameAllow, specMaxW - 4);

@@ -33,7 +33,7 @@
 (function () {
   'use strict';
   if (window.__antcvCopenhagenV2) return;
-  window.__antcvCopenhagenV2 = '1.51.5625-spec-owner-ceiling';
+  window.__antcvCopenhagenV2 = '1.51.5645-fit-source-key';
 
   var FLAG = 'antcv:copenhagen-v2';
   var STYLE_ID = 'antcv-copenhagen-v2-style';
@@ -276,12 +276,26 @@
           // styleConfig.fontSizes) win over the auto-fit on every line. The
           // same rule runs worker-side (__cphNameFit, docx-worker 1.14.166)
           // for export parity-by-rule.
+          // CPH-FIT-SOURCE-KEY-001 (owner 2026-11-05, live #3525: the specialisation stayed at
+          // the panel's 12 pt on two lines although the fitted size was 11.5 px): this fit pass
+          // read the legacy styleConfig.fontSizes mirror (normally ABSENT) while the CSS
+          // emission below reads the CANONICAL top-level fontSizes key (HDR-TYPE-SOURCE-KEY-001,
+          // 2026-07-29, which fixed only the emission). So the pass solved with "no owner size"
+          // and the emission then blocked the result as owner-set - every panel-sized band line
+          // was fit-blind. Same canonical-first reader as __fsOv0, legacy mirror as fallback.
           var __fsOv = {};
           try {
-            var __scRaw = localStorage.getItem('styleConfig');
-            var __scP = __scRaw ? JSON.parse(__scRaw) : null;
-            if (typeof __scP === 'string') __scP = JSON.parse(__scP);
-            __fsOv = (__scP && __scP.fontSizes) || {};
+            var __canonF = (typeof window.__antcvFontPrefs === 'function')
+              ? window.__antcvFontPrefs()
+              : (JSON.parse(localStorage.getItem('fontSizes') || 'null') || null);
+            if (__canonF && typeof __canonF === 'object' && Object.keys(__canonF).length) {
+              __fsOv = __canonF;
+            } else {
+              var __scRaw = localStorage.getItem('styleConfig');
+              var __scP = __scRaw ? JSON.parse(__scRaw) : null;
+              if (typeof __scP === 'string') __scP = JSON.parse(__scP);
+              __fsOv = (__scP && __scP.fontSizes) || {};
+            }
           } catch (_) { __fsOv = {}; }
           var __pt2px = function (pt) { return pt * 96 / 72; };
           if (__sane && __Wn > 150) {

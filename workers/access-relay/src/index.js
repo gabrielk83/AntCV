@@ -36,7 +36,7 @@ const VERSION='1.3.14';
 // Required binding (declare in wrangler.toml):
 //   KV_BINDING        KV namespace (stores OTPs, rate counters, prefs, signals)
 
-const RELAY_VERSION = 'auth-38-subtitle-guard-qual-put';
+const RELAY_VERSION = 'auth-39-erase-complete';
 const SESSION_TTL_SECONDS    = 7 * 24 * 60 * 60;       // 7 days
 // Refresh whenever the token has < 6 days left (i.e. it's more than 1 day old),
 // so ANY request past the first day rotates it to a fresh 7-day token via the
@@ -1777,28 +1777,12 @@ async function handleApiPrefs(request, env) {
       result.details.kv = null;
     }
 
-    // 2) D1 core wipe — applications, language views (via application
-    //    subquery), active_application pointer, and user_kernel.
-    //    Atomic batch; either all succeed or none do.
+    // 2) D1 core wipe — every per-user table (USER_ERASE_STATEMENTS,
+    //    ACCOUNT-ERASE-COMPLETE-001). Atomic batch; either all succeed or
+    //    none do. Per-table counts; null = table not created on this DB.
     if (d1Available) {
       try {
-        const coreBatch = await env.DB.batch([
-          env.DB.prepare(
-            'DELETE FROM language_view WHERE application_id IN (SELECT id FROM application WHERE user_hash = ?)'
-          ).bind(userHash),
-          env.DB.prepare('DELETE FROM application WHERE user_hash = ?').bind(userHash),
-          env.DB.prepare('DELETE FROM active_application WHERE user_hash = ?').bind(userHash),
-          env.DB.prepare('DELETE FROM active_application_device WHERE user_hash = ?').bind(userHash), // PARALLEL-GEN-POINTER-002
-          env.DB.prepare('DELETE FROM user_kernel WHERE user_hash = ?').bind(userHash),
-        ]);
-        const ch = (i) => (coreBatch[i] && coreBatch[i].meta && coreBatch[i].meta.changes) || 0;
-        result.details.d1_core = {
-          language_view:             ch(0),
-          application:               ch(1),
-          active_application:        ch(2),
-          active_application_device: ch(3),
-          user_kernel:               ch(4),
-        };
+        result.details.d1_core = await eraseUserD1(env, userHash);
       } catch (e) {
         result.details.d1_core = { error: String(e && e.message || e) };
         hadErrors = true;
@@ -2261,6 +2245,68 @@ async function userHashFromEmail(email) {
   let bin = '';
   for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
   return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '').slice(0, 32);
+}
+
+// ACCOUNT-ERASE-COMPLETE-001 (2026-11-05, GDPR Art. 17): every D1 row keyed
+// to one user, leaf-first. Both full wipes (DELETE /api/prefs, DELETE
+// /api/profile/kernel) run this list. Before, they deleted only five core
+// tables, and job_tracker (contacts, salaries, notes, JD text), both
+// showcase tables, kernel_language_view, application_fit and the user's
+// qualification rows survived an account delete. FK cascade does not cover
+// the gap: the live cluster tables have no FK (see CLUSTER-DEMAND-GLOBAL-001
+// below), the lazy kernel_showcase_styled / kernel_language_view DDL
+// declares none, and v2.5.3 saw application rows survive a user_kernel
+// delete.
+//
+// application_qualification and cluster_top_qualifications rows under the
+// user's own hash are personal: JD extractions tied to their applications,
+// and legacy per-user top-20 rollups. Rows under GLOBAL_USER_HASH stay. They
+// hold the weekly research rows (no application link) and the market-wide
+// top-20, which carries no user_hash or application_id. That rollup is
+// recomputed on the next JD extract in the cluster and on every weekly
+// research refresh, so it then drops the erased user's counts.
+//
+// Entry: [table, sql, tables the statement needs]. Add a new per-user table
+// here, before user_kernel.
+const USER_ERASE_STATEMENTS = [
+  ['language_view', 'DELETE FROM language_view WHERE application_id IN (SELECT id FROM application WHERE user_hash = ?)', ['language_view', 'application']],
+  ['application_fit', 'DELETE FROM application_fit WHERE user_hash = ?'],
+  ['application_snapshot', 'DELETE FROM application_snapshot WHERE user_hash = ?'], // OUTCOME-RECORD-002: submitted CV/CL/JD, lazily created
+  ['application_qualification', 'DELETE FROM application_qualification WHERE user_hash = ?'],
+  ['cluster_top_qualifications', 'DELETE FROM cluster_top_qualifications WHERE user_hash = ?'],
+  ['application', 'DELETE FROM application WHERE user_hash = ?'],
+  ['active_application', 'DELETE FROM active_application WHERE user_hash = ?'],
+  ['active_application_device', 'DELETE FROM active_application_device WHERE user_hash = ?'], // PARALLEL-GEN-POINTER-002
+  ['kernel_language_view', 'DELETE FROM kernel_language_view WHERE user_hash = ?'],
+  ['kernel_showcase', 'DELETE FROM kernel_showcase WHERE user_hash = ?'],
+  ['kernel_showcase_styled', 'DELETE FROM kernel_showcase_styled WHERE user_hash = ?'],
+  ['job_tracker', 'DELETE FROM job_tracker WHERE user_hash = ?'],
+  ['user_kernel', 'DELETE FROM user_kernel WHERE user_hash = ?'],
+];
+
+// Runs USER_ERASE_STATEMENTS as ONE atomic batch and returns per-table
+// changes. Several tables are created lazily by their own route, so a DB may
+// lack some, and one "no such table" would roll back the whole batch. A
+// sqlite_master probe drops the statements whose table is absent and
+// reports those tables as null. If the probe fails or lists nothing, every
+// statement runs, so a missing table fails the erase loudly instead of
+// being skipped in silence. Throws on batch failure (nothing is deleted).
+async function eraseUserD1(env, userHash) {
+  let present = null;
+  try {
+    const probe = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all();
+    const names = ((probe && probe.results) || []).map((r) => r && r.name);
+    if (names.length) present = new Set(names);
+  } catch (_) { /* run every statement */ }
+  const runs = USER_ERASE_STATEMENTS.filter(([table, , needs]) =>
+    !present || (needs || [table]).every((t) => present.has(t)));
+  const batch = await env.DB.batch(runs.map(([, sql]) => env.DB.prepare(sql).bind(userHash)));
+  const out = {};
+  for (const [table] of USER_ERASE_STATEMENTS) {
+    const i = runs.findIndex(([t]) => t === table);
+    out[table] = i < 0 ? null : ((batch[i] && batch[i].meta && batch[i].meta.changes) || 0);
+  }
+  return out;
 }
 
 // SHA-256(jd_text) → 32-char base64url. Used as application.jd_hash
@@ -3193,33 +3239,18 @@ async function handleApiProfileKernel(request, env) {
     // survived, and on a subsequent sign-in the user looked half-
     // deleted (kernel gone but applications visible in the picker).
     //
-    // Same leaf-first ordering and batched semantics as the
-    // /api/prefs DELETE handler. KV is intentionally NOT touched
-    // here — /api/profile/kernel is the kernel-scoped wipe;
+    // Same leaf-first table list (USER_ERASE_STATEMENTS) and atomic
+    // batch as the /api/prefs DELETE handler. KV is intentionally NOT
+    // touched here — /api/profile/kernel is the kernel-scoped wipe;
     // /api/prefs is the full-account wipe.
     try {
-      const batchResult = await env.DB.batch([
-        env.DB.prepare(
-          'DELETE FROM language_view WHERE application_id IN (SELECT id FROM application WHERE user_hash = ?)'
-        ).bind(userHash),
-        env.DB.prepare('DELETE FROM application WHERE user_hash = ?').bind(userHash),
-        env.DB.prepare('DELETE FROM active_application WHERE user_hash = ?').bind(userHash),
-        env.DB.prepare('DELETE FROM active_application_device WHERE user_hash = ?').bind(userHash), // PARALLEL-GEN-POINTER-002
-        env.DB.prepare('DELETE FROM user_kernel WHERE user_hash = ?').bind(userHash),
-      ]);
-      const ch = (i) => (batchResult[i] && batchResult[i].meta && batchResult[i].meta.changes) || 0;
+      const details = await eraseUserD1(env, userHash);
       return jsonResponse(
         {
           ok: true,
           deleted: true,
           user_hash: userHash,
-          details: {
-            language_view:             ch(0),
-            application:               ch(1),
-            active_application:        ch(2),
-            active_application_device: ch(3),
-            user_kernel:               ch(4),
-          },
+          details,
         },
         200, request, env, refresh
       );

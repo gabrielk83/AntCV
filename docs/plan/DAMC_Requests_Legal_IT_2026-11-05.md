@@ -5,9 +5,9 @@
 | Field | Value |
 |---|---|
 | Document ID | DAMC-REQ-001 |
-| Version | 0.2 (draft). 0.2: entailment (NLI) models in IT-05 scope, evaluation sandbox and monthly tool watch (IT-05 items 10–11). |
+| Version | 0.3 (draft). 0.3: attachments point to guidelines v0.5; requests follow DAMC-STY-001 Section 9; scope expansion repeats L-01 (step 8). 0.2: entailment (NLI) models in IT-05 scope, evaluation sandbox and monthly tool watch (IT-05 items 10–11). |
 | Date | 2026-11-05 |
-| Belongs to | DAMC-IG-001 v0.4 (`docs/plan/DAMC_Implementation_Guidelines_2026-11-05.md`) |
+| Belongs to | DAMC-IG-001 v0.5 (`docs/plan/DAMC_Implementation_Guidelines_2026-11-05.md`) |
 | Sender (role) | PMO lead, DAMC system owner |
 | Phase | Phase 0, Governance |
 
@@ -17,10 +17,12 @@
 
 1. Replace every `<placeholder>`. Remove requests that do not fit the company's team structure; merge where one team covers two areas.
 2. Send through the channel each team uses (ticket system, shared mailbox). One request per team keeps ownership clear.
-3. Attach DAMC-IG-001 v0.4 as PDF. Point to section and requirement IDs; do not paste the guidelines into the request.
+3. Attach DAMC-IG-001 v0.5 as PDF. Point to section and requirement IDs; do not paste the guidelines into the request.
 4. No personal data, no customer names, no project content in any request.
 5. Log every request in the request log (last section) on the day it is sent. Phase 0 cannot close until each row is closed or carried with a date.
 6. Every IT request says "implement only if not already in place". Ask for what exists before asking for anything new.
+7. Format each request per DAMC-STY-001 Section 9: one to two pages, numbered asks, each with a "done when".
+8. When DAMC's scope expands to a new country, region, site, language or legislation, repeat L-01 sections A–G and the affected IT requests for that scope (scope expansion step, Guidelines 11.4).
 
 ---
 
@@ -34,7 +36,7 @@
 > - It does not score, rank or monitor people. It does not infer emotions.
 > - It is not built yet. We are in the governance phase (Phase 0) and want your input before any build starts.
 >
-> The implementation guidelines (DAMC-IG-001 v0.4) are attached. References in this request (e.g. GDPR-05, SEC-21) point to requirement IDs in that document.
+> The implementation guidelines (DAMC-IG-001 v0.5) are attached. References in this request (e.g. GDPR-05, SEC-21) point to requirement IDs in that document.
 
 ---
 
@@ -89,7 +91,7 @@ We ask Legal to answer the questions below. For each one, a short written answer
 
 **What we need back:** written answers per question; one named legal contact; sign-off of Appendix B.
 **Proposed timing:** 45-minute kick-off within `<2>` weeks; written answers within `<4>` weeks.
-**Attachments:** DAMC-IG-001 v0.4 (PDF).
+**Attachments:** DAMC-IG-001 v0.5 (PDF).
 
 Kind regards,
 `<name>`, `<role>`
@@ -348,6 +350,7 @@ Linked IDs: CHG-01 to CHG-11, Section 16.3. Phase 0.
 
 - [ ] System owner approved sending
 - [ ] Placeholders filled; teams merged or removed to fit the company structure
-- [ ] Guidelines v0.4 exported to PDF and attached
+- [ ] Guidelines v0.5 exported to PDF and attached
 - [ ] No personal data, customer names or project content in any request
+- [ ] Each request checked against DAMC-STY-001 (Section 9 structure, Section 10 checklist)
 - [ ] Request log updated with send date and due date

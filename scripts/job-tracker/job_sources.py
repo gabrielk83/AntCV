@@ -61,6 +61,9 @@ import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from posting_guard import strip_invisible  # noqa: E402  POSTING-GUARD-001: zero-width/bidi/tag characters
+
 _UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
        "(KHTML, like Gecko) Chrome/124 Safari/537.36")
 
@@ -215,9 +218,14 @@ def fetch(url: str, timeout: int = 20, data=None, headers=None, robots=True) -> 
 
 
 def _text(s: str) -> str:
-    """Strip tags, unescape entities, collapse whitespace."""
+    """Strip tags, unescape entities, drop invisible characters, collapse whitespace.
+
+    POSTING-GUARD-001: discovery rows are third-party text that later sits next
+    to the candidate's data in a prompt; a zero-width split or a tag-character
+    sentence in a title never reaches the tracker. After unescape, so &shy; and
+    &#8203; go too."""
     s = re.sub(r"<[^>]+>", " ", s or "")
-    return re.sub(r"\s+", " ", html.unescape(s)).strip()
+    return re.sub(r"\s+", " ", strip_invisible(html.unescape(s))[0]).strip()
 
 
 def _dk_date(s: str):

@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.5505-no-orphan-cells';
+  const TARGET_VERSION = '1.51.5525-th-override-stale';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.5505-no-orphan-cells',
     '1.51.5485-cc-header-lang-pin',
     '1.51.5465-comms-line-002',
     '1.51.5445-sections-storm',

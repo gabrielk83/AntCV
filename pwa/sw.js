@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.5505-no-orphan-cells';
+const CACHE = 'antcv-1.51.5525-th-override-stale';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

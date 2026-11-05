@@ -36,7 +36,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.40.341-tb004-fix2';
+  var SCRIPT_VERSION = '1.51.5525-th-override-stale';
   if (window.__antcvTableHeadersEditable341 === SCRIPT_VERSION) return;
   window.__antcvTableHeadersEditable341 = SCRIPT_VERSION;
 
@@ -159,6 +159,42 @@
   function slugify(s) {
     return String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   }
+  // TH-OVERRIDE-STALE-001 (owner 2026-11-05, live DA check: the second header cell
+  // flickered between "Det bringer jeg, med belæg" and "What I bring, with proof"
+  // every 1-2 s). sectionKey comes from the table's data-sid, the RAW section id
+  // ("core_comp"); the match below slugified the candidates ("core-comp") and never
+  // the key, so every header blur failed to commit, parked a fallback override in
+  // antcv.tableHeaders.v1, and restoreText() then forced that stale text over the
+  // canonical header on every sweep - beating a later translation pass. Match the
+  // id directly and the slug both ways; treat the canonical store as the authority.
+  function sectionMatches(sec, sectionKey) {
+    if (!sec || typeof sec !== 'object') return false;
+    if (sec.id === sectionKey) return true;
+    var want = slugify(sectionKey);
+    var candidates = [sec.title, sec.name, sec.id, sec.type];
+    for (var c = 0; c < candidates.length; c++) {
+      var sl = slugify(candidates[c]);
+      if (sl && (sl === sectionKey || sl === want)) return true;
+    }
+    return false;
+  }
+  function canonicalHeaderCell(doc, sectionKey, colIndex) {
+    try {
+      var raw = localStorage.getItem(SECTIONS_KEY);
+      if (!raw) return null;
+      var bundle = JSON.parse(raw);
+      var list = bundle && bundle[doc];
+      if (!Array.isArray(list)) return null;
+      for (var i = 0; i < list.length; i++) {
+        var sec = list[i];
+        if (!sectionMatches(sec, sectionKey)) continue;
+        if (!Array.isArray(sec.rows) || !Array.isArray(sec.rows[0])) continue;
+        var v = sec.rows[0][colIndex];
+        return (typeof v === 'string' && v.trim()) ? v : null;
+      }
+    } catch (_) {}
+    return null;
+  }
   function commitToSections(doc, sectionKey, colIndex, text) {
     try {
       var raw = localStorage.getItem(SECTIONS_KEY);
@@ -169,13 +205,7 @@
       if (!Array.isArray(list)) return false;
       for (var i = 0; i < list.length; i++) {
         var sec = list[i];
-        if (!sec || typeof sec !== 'object') continue;
-        var candidates = [sec.title, sec.name, sec.id, sec.type];
-        var matches = false;
-        for (var c = 0; c < candidates.length; c++) {
-          if (slugify(candidates[c]) === sectionKey) { matches = true; break; }
-        }
-        if (!matches) continue;
+        if (!sectionMatches(sec, sectionKey)) continue;
         if (!Array.isArray(sec.rows) || sec.rows.length === 0) continue;
         var header = sec.rows[0];
         if (!Array.isArray(header)) continue;
@@ -241,6 +271,16 @@
   function restoreText(th, doc, sectionKey, colIndex) {
     var override = getOverride(doc, sectionKey, colIndex);
     if (override == null) return;
+    // TH-OVERRIDE-STALE-001: an override is a fallback for a FAILED commit. When the
+    // canonical store carries this header cell, it is the authority (React renders
+    // it; export reads it): drop the override instead of forcing it over the cell.
+    // An in-flight edit (the cell has focus) is left alone.
+    try { if (document.activeElement === th) return; } catch (_) {}
+    var canonical = canonicalHeaderCell(doc, sectionKey, colIndex);
+    if (canonical != null) {
+      if (canonical !== override) setOverrideSilent(doc, sectionKey, colIndex, '');
+      return;
+    }
     // Only overwrite if the current text differs, to avoid clobbering
     // an in-flight edit and to avoid pointless DOM writes.
     if (clean(th.textContent || '') !== override) {

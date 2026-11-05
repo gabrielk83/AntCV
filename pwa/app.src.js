@@ -1,3 +1,19 @@
+// TRANSLATE-CACHE-MIXED-001 (owner 2026-11-05, live antcv.pages.dev): prose-only signature of a sections
+// list — drops belt stamps (_cutStamp …), jdGate, ids, types and titles (titles are mapped
+// at render time) so two renderings compare on their TEXT. Used to refuse caching /
+// restoring a "translation" whose section text is a copy of the source language.
+// In app.js the same helper sits INSIDE the opening IIFE head (head invariant).
+window.__antcvTxtSig =
+  window.__antcvTxtSig ||
+  function (s) {
+    try {
+      return JSON.stringify(s, function (k, v) {
+        return "string" == typeof k && ("_" === k[0] || "jdGate" === k || "id" === k || "type" === k || "title" === k) ? void 0 : v;
+      });
+    } catch (_) {
+      return "";
+    }
+  };
 // ============================================================================
 // AntCV PWA app — SOURCE OF TRUTH (de-minified).
 // ----------------------------------------------------------------------------
@@ -19801,8 +19817,12 @@
                               n(["items", i, "deg"], it.deg);
                               n(["items", i, "sch"], it.sch);
                             });
+                          // TRANSLATE-CACHE-MIXED-001: the CORE COMPETENCIES / WHAT I BRING header row stays the
+                          // canonical EN pair — the render maps it per language (DA "Rollen kræver" |
+                          // "Det bringer jeg, med belæg"); an LLM pass drifted it to another wording.
                           if ("table" === e.type && Array.isArray(e.rows))
                             e.rows.forEach((row, ri) =>
+                              (0 === ri && ("core_comp" === e.id || "bring" === e.id)) ||
                               row.forEach((cell, ci) =>
                                 n(["rows", ri, ci], cell),
                               ),
@@ -20112,6 +20132,8 @@
                             }
                             r[a] = u(r[a], __p, _final);
                           }),
+                          // TRANSLATE-CACHE-MIXED-001: persist inside the updater, same reason as the cache path.
+                          u.set("sections", t),
                           t
                         );
                       }),
@@ -20156,6 +20178,15 @@
                   .then(() => {
                     setTimeout(() => {
                       _r((t) => {
+                        // TRANSLATE-CACHE-MIXED-001: a rendering whose section TEXT equals the source rendering is
+                        // not a translation (the apply was reverted / the pass returned nothing) —
+                        // drop any entry for this language instead of caching the mixed state.
+                        if (r[je] && r[je].sections && __antcvTxtSig((Br.current || ro).cv) === __antcvTxtSig(r[je].sections.cv)) {
+                          console.warn("[TRANSLATE-CACHE-MIXED-001] " + e + " section text unchanged after translate — not caching it");
+                          const n = { ...t };
+                          delete n[e];
+                          return (u.set("languageCache", n), n);
+                        }
                         const n = {
                           ...t,
                           [e]: {
@@ -20179,7 +20210,11 @@
           // never show the confirmation modal (the sidecar / batch re-render cannot
           // click it). Same as choosing "Translate now".
           if (__nc) { try { i(); } catch (_) {} return; }
-          if (a && a.sections && a.meta) {
+          // TRANSLATE-CACHE-MIXED-001: a cached entry whose section text equals the current source is a copy,
+          // not a translation — ignore it and offer the translate dialog instead.
+          const __stale = !!(a && a.sections && r[je] && r[je].sections && __antcvTxtSig(a.sections.cv) === __antcvTxtSig(r[je].sections.cv));
+          __stale && console.warn("[TRANSLATE-CACHE-MIXED-001] cached " + e + " has the same section text as " + je + " — ignoring it");
+          if (a && a.sections && a.meta && !__stale) {
             const o = (null == (t = a.sections.cv) ? void 0 : t.length) || 0,
               l = (null == (n = a.sections.cl) ? void 0 : n.length) || 0;
             $r(
@@ -20230,6 +20265,10 @@
                     ),
                     Nr(r),
                     ao(a.sections),
+                    // TRANSLATE-CACHE-MIXED-001: persist the restored rendering NOW — the 500 ms sections
+                    // autosave lost to the normaliser's 120 ms pass, which re-wrote the stale
+                    // source-language store and the app re-ingested it (DA headers, EN body).
+                    u.set("sections", a.sections),
                     lo(a.meta),
                     __antcvRestoreStandalone(a.standalone),
                     It(e))

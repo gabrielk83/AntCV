@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.5725-proof-points-house';
+  const TARGET_VERSION = '1.51.5745-translate-persist';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.5725-proof-points-house',
     '1.51.5705-exp-role-key',
     '1.51.5645-fit-source-key',
     '1.51.5625-spec-owner-ceiling',

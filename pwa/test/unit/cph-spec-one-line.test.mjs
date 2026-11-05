@@ -20,7 +20,8 @@ test('the shrink measures the one-line ink width with a nowrap probe', () => {
 });
 
 test('the allowance is the smaller of the name allowance and the photo-cleared width', () => {
-  assert.ok(block.includes('__allow = Math.min(__allow, __fit.specMaxW - 4)'), 'photo-clear width bounds the allowance');
+  assert.ok(block.includes("var __capW = (__fit.specMaxW != null && __fit.specMaxW > 140) ? (__fit.specMaxW - 4) : null;"), 'photo-clear width is the cap');
+  assert.ok(block.includes('if (__capW != null) __allow = Math.min(__allow, __capW);'), 'photo-clear width bounds the allowance');
   assert.ok(block.includes('__fit.specFs = Math.max(11, Math.min(18, Math.floor((__sfs * __allow / __Ws1) * 2) / 2))'), 'floor 11 px, fitted on the one-line width');
 });
 

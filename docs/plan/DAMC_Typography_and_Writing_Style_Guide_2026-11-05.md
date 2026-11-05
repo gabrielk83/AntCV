@@ -219,6 +219,7 @@ Starting values for A4, single column, 10.5 pt, 2 cm margins: about 95 character
 - **Header block on page 1:** title, then the document line (ID, version, status, classification).
 - **Footer on every page:** ID · version · status · classification · "Prepared with AI assistance" · page x / y (Guidelines DOC-01).
 - **People:** no photos of people and no person names; roles only (NG-1).
+- **Nothing is clipped.** Tables, code blocks and diagrams fit the text width. A line cut off at the margin is a blocking defect.
 - **Monthly summary order:**
   1. sentence-case headline stating the main change
   2. key figures: open S1/S2, open conflicts, unverified count, mirror freshness
@@ -273,6 +274,7 @@ Starting values for A4, single column, 10.5 pt, 2 cm margins: about 95 character
 - [ ] Every class: zero single-word last lines and zero heading orphans
 - [ ] Class 1: zero orphans (last line ≥ 60 % and at least two words), tables included. Class 2: count of other short last lines recorded.
 - [ ] Single-line rows sit on one line
+- [ ] Nothing clipped: no table, code block or diagram wider than the text width
 - [ ] Headings kept with the next paragraph; no split rows, cards or diagrams
 - [ ] Page count correct (Class 1)
 - [ ] Point sizes and condensing within the Section 3 limits
@@ -295,7 +297,10 @@ classes:
 orphan:
   applies_to:
     short_output: blocking
-    long_reference: {single_word_last_line: blocking, heading_orphan: blocking, short_last_line: advisory}
+    long_reference:
+      single_word_last_line: blocking
+      heading_orphan: blocking
+      short_last_line: advisory
   last_line_min_fill: 0.60        # below this = orphan
   min_words_last_line: 2          # one word = orphan
   target_fill_after_fix: 0.65     # headroom
@@ -327,14 +332,30 @@ line_fill:
   distributed_alignment: never
 
 font_pt:
-  short_output: {title: 16, document_line: 10, section_heading: 12, body: 10.5, table: 9.5, key_figure: 15, key_figure_caption: 8.5, footer: [7.5, 8]}
-  long_reference: {title: 18, h2: 13, h3: 11, body: [9.5, 10.5], table_min: 8.5, code_min: 8, footer: 7.5}
-  slides: {title: [28, 36], body_min: 18, table_min: 14, footer: [9, 10]}   # calibrate on the company template
+  short_output:
+    title: 16
+    document_line: 10
+    section_heading: 12
+    body: 10.5
+    table: 9.5
+    key_figure: 15
+    key_figure_caption: 8.5
+    footer: [7.5, 8]
+  long_reference:
+    title: 18
+    h2: 13
+    h3: 11
+    body: [9.5, 10.5]
+    table_min: 8.5
+    code_min: 8
+    footer: 7.5
+  slides: {title: [28, 36], body_min: 18, table_min: 14, footer: [9, 10]}   # calibrate on template
   body_floor: 9.5
   shrink_point_size_to_fit: false
 
 platforms:                         # rules are global; Appendix D maps them to settings
-  covered: [word, powerpoint, canva, google_docs, google_slides, spreadsheet_print, html_css_pdf, other_pdf]
+  covered: [word, powerpoint, canva, google_docs, google_slides,
+            spreadsheet_print, html_css_pdf, other_pdf]
   measure_on: exported_pdf
   unreachable_by_settings: reword  # never relax the rule
   letter_spacing_em: "pt / font_size_pt"
@@ -350,7 +371,8 @@ justification:
   left_align: [labels, ids_codes, long_reference_prose, paragraphs_with_natural_midline_below_0.85]
   right_align: [numeric_columns]
 
-budgets_chars:                     # short output, A4 single column, 10.5 pt, 2 cm margins; measure and recalibrate
+# short output, A4 single column, 10.5 pt, 2 cm margins; measure and recalibrate
+budgets_chars:
   chars_per_line: 95
   bullet_one_line_max: 88
   bullet_two_lines: [159, 183]

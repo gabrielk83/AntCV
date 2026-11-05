@@ -1619,7 +1619,9 @@ _verified: 2026-10-27_ — CI nightly E1 re-verify against HEAD 65ce36e0: leg (f
 
 ## Row 89 — MODEL-TABLE-FRESHNESS-001
 
-_verified: 2026-10-23_
+_verified: 2026-11-05_
+
+_2026-11-05 weekly tune (desktop, Opus 5.5, worktree-isolated): pins verify against all four vendor pages; Anthropic lists nothing unpriced. Mechanical diff of 87 page ids found five errors, fixed in all three mirrors with dated comments: MISTRAL-LARGE4-RATE-2026-11-001 (`mistral-large-4` / `-4-0` [1.36,4.18] → [0.70,2.10], was ~2x OVER; third price in four weeks), OPENAI-GPT6-TERRA-ROSALIND-RATES-2026-11-001 (`gpt-6.1-terra` [1,5] was FALLBACK 3x OVER; `gpt-6-rosalind` [15,75] was FALLBACK 5x UNDER), DEEPSEEK-V41-FLASH-RATES-2026-11-001 (Mistral-hosted `deepseek-v4-1-flash-1017` + page slug `deepseek-v4-flash-1017` [0.30,1.20], was FALLBACK 10x OVER), GEMINI-NATIVE-AUDIO-RATES-2026-11-001 (`gemini-2.5-flash-native-audio-preview-12-2025` text [0.50,2.00], was on the 2.5-flash key). Tests 46/46 ×2 + mirror 14/14; suite ALL PASS. `mistral-large-latest` still = Large 3 (/v1/models). Noted, not a table error today: from 2026-12-01 Google routes `gemini-2.5-flash` → `gemini-3.5-flash-lite` (same rate) and `gemini-2.5-pro` → `gemini-3.8-flash` ([0.75,3.75]); `gpt-5.6-sol` promo ends 2026-11-30. Report `docs/qa/COST_QUALITY_WEEKLY_2026-11-05.md`._
 
 _2026-10-23 weekly tune (desktop, Opus 5.5, worktree-isolated): pins verify against all four vendor pages; Anthropic lists nothing unpriced. Mechanical page diff found three errors, fixed in all three mirrors with dated comments: MISTRAL-LARGE4-SALE-END-2026-10-001 (the Large 4 sale ended; `mistral-large-4` / `-4-0` [0.68,2.09] → list [1.36,4.18], was 2x UNDER), ZAI-GLM53-FLASH-RATES-2026-10-001 (new `zai-glm-5-3-flash` [0.15,0.50] matched `zai-glm` [1.4,4.4], 9x OVER), GPT-ROSALIND-RATES-2026-10-001 (new `gpt-rosalind-research` / `-discovery` [5,25] fell to FALLBACK [3,15], strict null). 10-15 catalogue rows for Large 4 corrected to the vendor rate (not trimmed); `VENDOR_CATALOGUE_2026_10_23` added. Freshness 44/44 ×2, mirror 13/13, suite ALL PASS. OpenAI realtime/audio and per-minute ids left unkeyed by rule (owner call: Gemini live precedent). `mistral-large-latest` still aliases Large 3. Report `docs/qa/COST_QUALITY_WEEKLY_2026-10-23.md`._
 
@@ -2607,7 +2609,9 @@ unattended fix. Kept ACTIVE.
 
 ## Row 115 — PWA-COST-METER-OPUS55-001
 
-_verified: 2026-10-23_
+_verified: 2026-11-05_
+
+_2026-11-05 weekly tune: re-verified, not fixed. `C.claude` / `C.anthropic` still [2,10], `q()` still pins `claude-opus-5-5` [4,20]. The 11-03 session (6 calls) made no claude call; no claude row in 30 d. Owner call unchanged._
 
 _2026-10-23 weekly tune: re-verified, not fixed. `C.claude` / `C.anthropic` still [2,10] (`app.src.js` ~1220), `q()` still pins `claude-opus-5-5` [4,20]. The 2026-10-20 session (7 calls) made no claude call, so there is still no opus-5-5 row in `llm_calls`. Owner call unchanged._
 
@@ -2722,7 +2726,9 @@ _verified: 2026-11-02_
 
 ## Row 124 — CASCADE-RETIRED-IDS-2026-10-001
 
-_verified: 2026-10-23_
+_verified: 2026-11-05_
+
+_2026-11-05 weekly tune: re-verified, tails unchanged. Related vendor change: from 2026-12-01 Google routes every `gemini-2.5-pro` request to `gemini-3.8-flash` and every `gemini-2.5-flash` request to `gemini-3.5-flash-lite`, so `gemini-2.5-pro` in a tail stops being the model it names. Owner call unchanged._
 
 _2026-10-23 weekly tune: re-verified, unchanged. Mistral `GET /v1/models` (63 ids) still lists none of `mistral-large-2411` / `-2407` / `mistral-medium-2312`; the cascade tails still carry them. Owner call._
 
@@ -2807,17 +2813,17 @@ _verified: 2026-11-02_
 
 **Re-verified 2026-11-02 (job-tracker nightly, Gabo-PC).** The sweep PUT wrote rev 356 → 357 on the first try, and gen-runner's persist + writeback PUTs returned 200 (rev 361). Uplink not measured. Row stays open on the PATCH decision.
 
-## Row 139 — JT-EARLIER-CAREER-RESULTS-DUP-001
+## Row 140 — JT-EC-RESULTS-DERIVE-001
 
-_verified: 2026-11-02_
+_verified: 2026-11-05_
 
-**Found by the job-tracker nightly 2026-11-02 (Gabo-PC, Opus 5.5).** PEAK Wind app 3527 (`export_pdfs.py`) renders the Earlier career block as three one-line roles (Meprolight 2010 - 2014, Security Guard 2010, Research & Teaching Assistant 2006 - 2010) and then "Results: Electro-Optics Team Leader & R&D Electro-Optics Engineer, Meprolight, IWI Group (2010 - 2014) - Supervised characterisation and qualification." The Meprolight line is printed twice.
+**Found by the job-tracker nightly 2026-11-05 (Gabo-PC, Opus 5.5)** while closing row 139. With the duplicate summary line gone, the headless payload build for app 3527's context still gives the Earlier career role a "Results:" line: "Students Council Representative, Tel Aviv University (2005 - 2007) - Modernised 15 outdated EE exam-preparation booklets." The line is moved out of the bullets, not duplicated.
 
-**What is known.** In `gen-runner.py`, `_earlier_career` returns `results: None` and `compact_jd_aware` skips `_fit_role` for the `earlier-career` id, so the compaction step does not write it. The Results line uses the merged-title wording of kernel role `mepro-tl-2` (in `~/.antcv/cv_skeleton.json`), while the bullet uses the `_ROLE_MERGE` title "R&D Electro-Optics Engineer / Team Leader". Candidates: the skeleton overlay ("overlaid: cv=16 sections"), the density loop, or the renderer filling an empty result from a covered role.
+**Cause.** `pwa/antcv-docx-client.js` `applyOutcomesMode`: Earlier career has no `results`, no outcomes, no proof points and no kernel role with its id, so it falls to the tier-5 `deriveResultFromRole`. `hasNum = /\d|%|\bx\b|×/` matches the years in every summary line, so each line scores as a metric and the longest wins.
 
-**Next step.** Diagnostic first: dump app 3527's stored `experience.roles[earlier-career]` from the cloud and compare it with the gen-runner output before and after the skeleton overlay. Fix where the line is added; the test drives that function.
+**Fix (owed).** In the tier-5 branch, return `{ ...r, bullets: _txBl(r.bullets) }` for `r.id === 'earlier-career'` (a summary has no single outcome), or strip "(YYYY - YYYY)" before `hasNum`. Touches a `pwa/` asset: shift claim, full cache-bust, and a live export check (preview parity: `AntcvApplyOutcomesMode` drives the preview too). Not shipped by an unattended routine.
 
-**Severity.** LOW-MEDIUM: one duplicated line on every CV with an Earlier career block, visible to a recruiter.
+**Severity.** LOW: one summary line is labelled "Results:" on every CV with an Earlier career block.
 
 ## Row 136 — CI-NIGHTLY-CREDIT-EXHAUSTED-001
 

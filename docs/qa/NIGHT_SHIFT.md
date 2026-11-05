@@ -39,6 +39,7 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 <!-- SHIFT:BEGIN — one JSON object per line; managed by scripts/shift.mjs, safe to hand-edit a line if a session died without releasing -->
 {"id":"sh_mupev15f_bqmz","started":"2026-10-01T10:48:17.049Z","host":"vm","worktree":null,"branch":"claude/project-thread-cub2nb","range":"1.51.4786-1.51.4790","task":"impact types in result bullets (thread cub2nb)","beat":"2026-10-01T10:48:17.054Z"}
 {"id":"sh_mw3f4dtm_gpd","started":"2026-11-05T10:44:02.215Z","host":"Gabo-PC","worktree":"gracious-goldwasser-ac89f6","branch":"claude/musing-euler-71ad39","range":"1.51.5405-1.51.5424","task":"NO-ORPHAN-001 table cells in export preflight","beat":"2026-11-05T10:44:02.272Z"}
+{"id":"sh_mw3frlwh_dvvm","started":"2026-11-05T11:02:05.774Z","host":"Gabo-PC","worktree":"peaceful-dhawan-8d11bb","branch":"claude/adoring-mestorf-567591","range":"1.51.5465-1.51.5484","task":"COMMS-LINE-002 new Communication wording","beat":"2026-11-05T11:02:05.822Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

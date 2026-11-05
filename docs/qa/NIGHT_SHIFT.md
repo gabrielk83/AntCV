@@ -41,7 +41,6 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mw3gm2iw_3b14","started":"2026-11-05T11:25:47.004Z","host":"Gabo-PC","worktree":"gracious-goldwasser-ac89f6","branch":"claude/musing-euler-71ad39","range":"1.51.5565-1.51.5584","task":"NO-ORPHAN-002 CL + marker rows + bullets, label reword, body width, LO audit","beat":"2026-11-05T11:25:47.060Z"}
 {"id":"sh_mw3hijam_7jnk","started":"2026-11-05T11:51:01.722Z","host":"Gabo-PC","worktree":"ecstatic-heisenberg-9cfa6d","branch":"claude/ecstatic-heisenberg-9cfa6d","range":"1.51.5665-1.51.5684","task":"MARGIN-LAYOUT-001: header card inside the sidebar (house margin format), no band","beat":"2026-11-05T11:51:01.779Z"}
 {"id":"sh_mw3hqgt5_6mch","started":"2026-11-05T11:57:11.747Z","host":"Gabo-PC","worktree":"recursing-meninsky-073b65","branch":"claude/relaxed-joliot-5b27fd","range":"1.51.5685-1.51.5704","task":"PROOF-POINTS-HOUSE-001: sidebar proof points in the house shape (figure + caption) from the pinned kernel lines","beat":"2026-11-05T11:57:11.801Z"}
-{"id":"sh_mw3htcxe_50rf","started":"2026-11-05T11:59:26.678Z","host":"Gabo-PC","worktree":"quirky-hopper-4727c2","branch":"claude/dazzling-haibt-b87ec5","range":"1.51.5705-1.51.5724","task":"EXP-ROLE-KEY-001: experience role units keyed by role index (re-claim, 5605 lane overtaken)","beat":"2026-11-05T11:59:26.726Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

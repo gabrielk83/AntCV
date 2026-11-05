@@ -25,7 +25,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.5200-comms-line';
+  var VERSION = '1.51.5445-sections-storm';
   if (window.__antcvProfileAccessScrub === VERSION) return;
   window.__antcvProfileAccessScrub = VERSION;
 
@@ -147,13 +147,25 @@
           var cv3 = (secs.cv || []).map(function (s3) {
             if (!s3 || typeof s3 !== 'object') return s3;
             if (s3.id === 'accessibility') {
+              // SECTIONS-STORM-OWNED-KEYS-001 (owner 2026-11-05, "jumpy" + settings menu
+              // re-rendering): this belt compared the WHOLE section by JSON, so a key
+              // another writer adds to the item (the shape belts' bullets: []) read as
+              // a change and it rewrote the row every cycle; references-mode did the
+              // same on its rows -> a sections-updated storm (13 events / 6 s, the app
+              // reloading + re-rendering, the open Settings panel included). Compare and
+              // write ONLY the fields this belt owns (title, type, content / l, v,
+              // labelHidden); keep every foreign key on the item.
               var want = Object.assign({}, s3, { title: TITLE });
+              var same;
               if (Array.isArray(s3.items) && s3.type !== 'text') {
-                want.items = [{ l: '', v: LINE, labelHidden: true }];
+                var cur0 = (s3.items[0] && typeof s3.items[0] === 'object') ? s3.items[0] : {};
+                want.items = [Object.assign({}, cur0, { l: '', v: LINE, labelHidden: true })];
+                same = s3.title === TITLE && s3.items.length === 1 && cur0.l === '' && cur0.v === LINE && cur0.labelHidden === true;
               } else {
                 want.type = 'text'; want.content = LINE; delete want.items;
+                same = s3.title === TITLE && s3.type === 'text' && s3.content === LINE && !Array.isArray(s3.items);
               }
-              if (JSON.stringify(want) !== JSON.stringify(s3)) { changed = true; return want; }
+              if (!same) { changed = true; return want; }
               return s3;
             }
             if (Array.isArray(s3.items) && (s3.id === 'additional' || s3.id === 'languages' || s3.id === 'interests')) {

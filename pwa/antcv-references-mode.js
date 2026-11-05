@@ -25,7 +25,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.4786-impact-types';
+  var VERSION = '1.51.5445-sections-storm';
   if (window.__antcvReferencesMode === VERSION) return;
   window.__antcvReferencesMode = VERSION;
 
@@ -106,6 +106,19 @@
     return (items || []).some(function (it) { var k = String((it && (it.deg || it.l || it.b)) || '').trim().toLowerCase(); return names.indexOf(k) >= 0; });
   }
 
+  function sameRows(have, want) {
+    if (!Array.isArray(have) || have.length !== want.length) return false;
+    return want.every(function (w, i) {
+      var it = have[i];
+      return it && typeof it === 'object' && Object.keys(w).every(function (k) { return it[k] === w[k]; });
+    });
+  }
+  function mergeRows(have, want) {
+    return want.map(function (w, i) {
+      var it = Array.isArray(have) && have[i] && typeof have[i] === 'object' ? have[i] : {};
+      return Object.assign({}, it, w);
+    });
+  }
   var busy = false;
   function apply() {
     if (busy || disabled()) return;
@@ -122,7 +135,10 @@
         if (mode() === 'exposed' && list.length) {
           var generic = s._refsGeneric || (looksNamed(s, items) ? null : items);
           var want = shape(s, pickTwo(list, localStorage.getItem('antcv:lastJdText')).map(rowFor));
-          if (JSON.stringify(items) !== JSON.stringify(want)) { c = Object.assign({}, s, { items: want }); if (generic) c._refsGeneric = generic; }
+          // SECTIONS-STORM-OWNED-KEYS-001 (owner 2026-11-05): compare only the fields this
+          // belt owns and keep foreign keys (the shape belts' bullets: []) on each row;
+          // a whole-row JSON compare rewrote the rows every cycle (see profile-access-scrub).
+          if (!sameRows(items, want)) { c = Object.assign({}, s, { items: mergeRows(items, want) }); if (generic) c._refsGeneric = generic; }
         } else if (mode() === 'request') {
           var back = (Array.isArray(s._refsGeneric) && s._refsGeneric.length) ? s._refsGeneric : shape(s, [txt().generic]);
           if (looksNamed(s, items) || (!items.length)) { c = Object.assign({}, s, { items: back }); delete c._refsGeneric; }

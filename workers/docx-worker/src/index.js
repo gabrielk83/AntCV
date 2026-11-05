@@ -24448,13 +24448,28 @@ __name(paraAlignPath, "paraAlignPath");
 // EXPORT-CONDENSE-001 (owner 2026-10-01): per-paragraph character-spacing condense decided by the PWA export
 // preflight (the owner's house rule - pull a short last line back, never global). Value in 1/20 pt (w:spacing),
 // clamped to [-8, 0] = the owner's -0.4 pt body floor. 0/absent = untouched.
-function paraCondensePath(s, path) {
+// NO-ORPHAN-001 (owner 2026-11-05): table cells pass floor -10 (-0.5 pt, the house generator's cell floor).
+function paraCondensePath(s, path, floor = -8) {
   const m = s && s.item_condense;
   if (!m || typeof m !== "object" || !path) return 0;
   const v = Number(m[path]);
-  return Number.isFinite(v) && v < 0 ? Math.max(-8, Math.round(v)) : 0;
+  return Number.isFinite(v) && v < 0 ? Math.max(floor, Math.round(v)) : 0;
 }
 __name(paraCondensePath, "paraCondensePath");
+// NO-ORPHAN-001: per-cell character width (w:w, percent) decided by the PWA export preflight for table cells
+// only, clamped to [94, 100] (house generator: 94% in cells). 0 = untouched.
+function paraScalePath(s, path) {
+  const m = s && s.item_scale;
+  if (!m || typeof m !== "object" || !path) return 0;
+  const v = Number(m[path]);
+  return Number.isFinite(v) && v < 100 ? Math.max(94, Math.round(v)) : 0;
+}
+__name(paraScalePath, "paraScalePath");
+// Run options for a condensed paragraph: {} when untouched, so an export without the maps stays byte-identical.
+function condenseRunOpts(cs, scale) {
+  return { ...(cs ? { characterSpacing: cs } : {}), ...(scale ? { scale } : {}) };
+}
+__name(condenseRunOpts, "condenseRunOpts");
 function rowAlignAt(s, idx) {
   // CJLR-EXPORT-PARITY-001 (owner 2026-06-19): the native table CJLR writes the
   // section's own rowAlign[] (preview reads it since 1.50.692). Honour it on export
@@ -27370,14 +27385,17 @@ function renderSection(s, ctx, isSidebar) {
     if (cur.length) rowChunks.push(cur);
     if (rowChunks.length > 1) {
       const out2 = [];
+      let __rowBase = 0;   // NO-ORPHAN-001: data rows before this segment (keeps "rows.R.C" condense keys stable)
       rowChunks.forEach((rowsChunk, ci) => {
         const seg = Object.assign({}, s, {
           rows: [hdr, ...rowsChunk],
           row_pages: {},
           _antcvSegment: true,
+          _rowBase: __rowBase,
           title: ci > 0 ? (ctx.style && ctx.style.contHeadlines === false ? "" : String(s.title || "") + " " + (ctx.contSuffix || "(CONT.)")) : s.title,
           pageBreakBefore: ci > 0 ? true : s.pageBreakBefore
         });
+        __rowBase += rowsChunk.length;
         out2.push(...renderSection(seg, ctx, isSidebar));
       });
       return out2;
@@ -27890,22 +27908,24 @@ function renderTextBullets(s, ctx, isSidebar) {
       if (ctx && ctx.doc === "cl" && s.title && !(ctx.style && ctx.style.contHeadlines === false)) out.push(headingParagraph(contTitle, ctx, false));
     }
   };
+  // NO-ORPHAN-001: preflight condense per part (paths intro / items.N / closing, same keys as the align paths).
+  const bodyOpts = (a, path) => ({ ...(a ? { align: a } : {}), ...(paraCondensePath(s, path) ? { charSpacing: paraCondensePath(s, path) } : {}) });
   if (s.intro) {
     brk("intro");
     const a = paraAlignPath(s, "intro") ?? groupCjlr;
-    out.push(bodyParagraphRich(s.intro, ctx, isSidebar, a ? { align: a } : {}));
+    out.push(bodyParagraphRich(s.intro, ctx, isSidebar, bodyOpts(a, "intro")));
   }
   if (Array.isArray(s.items)) {
     s.items.filter(Boolean).forEach((it, i) => {
       brk("bullet_" + i);
       const a = paraAlignPath(s, "items." + i) ?? groupCjlr;
-      out.push(bulletParagraphRich("", String(it), ctx, isSidebar, a));
+      out.push(bulletParagraphRich("", String(it), ctx, isSidebar, a, void 0, void 0, void 0, void 0, paraCondensePath(s, "items." + i)));
     });
   }
   if (s.closing) {
     brk("closing");
     const a = paraAlignPath(s, "closing") ?? groupCjlr;
-    out.push(bodyParagraphRich(s.closing, ctx, isSidebar, a ? { align: a } : {}));
+    out.push(bodyParagraphRich(s.closing, ctx, isSidebar, bodyOpts(a, "closing")));
   }
   return out;
 }
@@ -28159,9 +28179,10 @@ function renderBullets(s, ctx, isSidebar) {
   if (!Array.isArray(s.items)) return [];
   return s.items.filter((it) => it && (it.t || typeof it === "string")).map((it, i) => {
     const itemAlign = paraAlignPath(s, "items." + i + ".t") ?? paraAlignPath(s, "items." + i) ?? paraAlign(s, null, void 0);
-    if (typeof it === "string") return bulletParagraphRich("", it, ctx, isSidebar, itemAlign);
+    const cs = paraCondensePath(s, "items." + i);   // NO-ORPHAN-001 (same index as the align path)
+    if (typeof it === "string") return bulletParagraphRich("", it, ctx, isSidebar, itemAlign, void 0, void 0, void 0, void 0, cs);
     const lead = it.b ? `${it.b}: ` : "";
-    return bulletParagraphRich(lead, it.t, ctx, isSidebar, itemAlign);
+    return bulletParagraphRich(lead, it.t, ctx, isSidebar, itemAlign, void 0, void 0, void 0, void 0, cs);
   });
 }
 __name(renderBullets, "renderBullets");
@@ -28316,13 +28337,22 @@ function renderCompetencyTable(s, ctx) {
             bold: true,
             color: tableHeaderInk,
             size: pt2hp(fs.mainTblH),
-            font: style.mainHeadFont
+            font: style.mainHeadFont,
+            ...cellCondense(0, i)
           })
         })]
       }))
     });
   }
   __name(makeHeaderRow, "makeHeaderRow");
+  // NO-ORPHAN-001: item_condense / item_scale keyed "rows.R.C", R = the FULL-array row index of the original
+  // section (header = 0). A page segment (renderSection split) carries _rowBase = data rows before it.
+  const rowBase = Number.isFinite(Number(s._rowBase)) ? Number(s._rowBase) : 0;
+  function cellCondense(R, C) {
+    const path = "rows." + R + "." + C;
+    return condenseRunOpts(paraCondensePath(s, path, -10), paraScalePath(s, path));
+  }
+  __name(cellCondense, "cellCondense");
   function makeDataRow(r, idx, isLastInChunk) {
     return new TableRow({
       children: (r || []).slice(0, 2).map((cell, i) => new TableCell({
@@ -28357,7 +28387,8 @@ function renderCompetencyTable(s, ctx) {
             bold: i === 0,
             color: style.mainTextColor,
             size: pt2hp(fs.mainTblCell),
-            font: style.mainBodyFont
+            font: style.mainBodyFont,
+            ...cellCondense(rowBase + idx + 1, i)
           })
         })]
       }))
@@ -28746,7 +28777,8 @@ function renderSimpleList(s, ctx, isSidebar, italic) {
     const baseRun = {
       color: isSidebar ? style.sidebarTextColor : style.mainTextColor,
       size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
-      font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont
+      font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont,
+      ...condenseRunOpts(paraCondensePath(s, "items." + idx), 0)   // NO-ORPHAN-001 (original index)
     };
     let children;
     if (isPubs) {
@@ -28966,6 +28998,8 @@ function renderLabeledList(s, ctx, isSidebar) {
     const label = stripInlineHtmlTags(it.l || it.label || "").toString();
     const value = (it.v || it.value || "").toString();
     const labelColor = isSidebar ? style.sidebarLabelColor || style.sidebarTextColor : style.mainHeadColor;
+    // EXPORT-CONDENSE-001 / NO-ORPHAN-001: the preflight keys labeled rows by the ORIGINAL s.items index.
+    const __lcs = condenseRunOpts(paraCondensePath(s, "items." + s.items.indexOf(it)), 0);
     out.push(new Paragraph({
       spacing: { before: 40, after: 40, line: 252, lineRule: "auto" },
       // CJLR group default wins when set. NO-JUSTIFY-GAPS-001 (owner
@@ -28982,12 +29016,14 @@ function renderLabeledList(s, ctx, isSidebar) {
           bold: true,
           color: labelColor,
           size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
-          font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont
+          font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont,
+          ...__lcs
         })] : [],
         ...inlineRuns(value, {
           color: isSidebar ? style.sidebarTextColor : style.mainTextColor,
           size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
-          font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont
+          font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont,
+          ...__lcs
         })
       ]
     }));
@@ -29073,13 +29109,16 @@ function renderEducation(s, ctx, isSidebar) {
     sch = sch.replace(/\s*\n\s*/g, " ").replace(/\*\*/g, "").trim();
     if (!deg && !sch) return;
     const runs = [];
+    // NO-ORPHAN-001: preflight condense for this row (path items.N, N = original s.items index).
+    const __ecs = condenseRunOpts(paraCondensePath(s, "items." + s.items.indexOf(it)), 0);
     if (deg) {
       runs.push(new TextRun({
         text: deg,
         bold: true,
         color: isSidebar ? style.sidebarTextColor : style.mainHeadColor,
         size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
-        font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont
+        font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont,
+        ...__ecs
       }));
     }
     if (deg && sch) {
@@ -29088,7 +29127,8 @@ function renderEducation(s, ctx, isSidebar) {
         bold: true,
         color: isSidebar ? style.sidebarTextColor : style.mainHeadColor,
         size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
-        font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont
+        font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont,
+        ...__ecs
       }));
     }
     if (sch) {
@@ -29097,7 +29137,8 @@ function renderEducation(s, ctx, isSidebar) {
         italics: !isSidebar,
         color: isSidebar ? style.sidebarTextColor : "595959",
         size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
-        font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont
+        font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont,
+        ...__ecs
       }));
     }
     // EDU-ROW-CJLR-EXPORT-001 (owner 2026-07-15): per-row EDUCATION / RECOMMENDATIONS

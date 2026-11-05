@@ -242,7 +242,7 @@ test('bracketed placeholders, sidebar subheads/hidden rows and non-labeled sideb
   const { api } = load();
   const payload = cvPayload([
     { ...expSection(['[Bullet 1 - describe scope]']), id: 'experience' },
-    { id: 'certs', type: 'list', loc: 'sidebar', items: ['BABOK v3 - IIBA (2022)'] },     // simple list: not targeted
+    { id: 'certs', type: 'list', loc: 'sidebar', items: ['BABOK v3 - IIBA (2022)'] },     // NO-ORPHAN-001: lists ARE targets now (asserted below)
     { id: 'tools', type: 'labeled_list', loc: 'sidebar', items: [
       { group: 'Methods' },                                                               // subhead: never
       { l: 'Hidden', v: 'some hidden value text', hidden: true },                         // hidden: never
@@ -251,7 +251,8 @@ test('bracketed placeholders, sidebar subheads/hidden rows and non-labeled sideb
     { id: 'profile', type: 'text', loc: 'main', content: '[PROFILE - template placeholder]' },
   ]);
   const targets = api._collectTargets(payload, api._metricsFromPayload(payload));
-  assert.equal(targets.length, 0);
+  assert.deepEqual(JSON.parse(JSON.stringify(targets.map((t) => t.kind + ':' + t.sid + ':' + t.condensePath))), ['list:certs:items.0']);
+  assert.equal(targets[0].noRewrite, true, 'list items are condense + bind only');
 });
 
 // ── SIDEBAR-ORPHANS-001 (owner PDF review 2026-07-03): all 7 runts in the

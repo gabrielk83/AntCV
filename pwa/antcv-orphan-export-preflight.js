@@ -61,13 +61,27 @@
  * (window.AntcvOrphanBind), which text-verifies every target and aborts on
  * ambiguity — never index-trusted.
  *
+ * NO-ORPHAN-001 (owner 2026-11-05, "make sure not to have orphans - especially in
+ * tables. always, in all antCV applications"): an orphan is a paragraph of 2+
+ * typeset lines whose LAST line fills < RUNT_FRAC of the column OR holds a single
+ * word. Condense now uses the same floor as detection (CONDENSE_FRAC = RUNT_FRAC),
+ * and the collector also covers every non-empty table cell (CV core competencies
+ * and the CL What-I-bring table, measured at the worker's renderCompetencyTable
+ * cell width), education rows, list / list_italic items, bullets sections,
+ * text_bullets intro/items/closing and main-column labeled_list rows. These new
+ * kinds are condense + NBSP-bind only (no LLM rewrite, no stored mirror). Table
+ * cells get a deeper ladder, like the house generator: down to -0.5 pt spacing
+ * plus character width (w:w) down to 94%, written to sec.item_scale[path].
+ * The CL runs in tables-only mode; a linear CV is still skipped.
+ *
  * Kill: localStorage['antcv:disable-orphan-preflight']='1'.
  * Test hooks: run(payload, { measureLines, fetchImpl, storage }) — the unit tests
  * inject a deterministic measurer + fetch; the DOM measurer is only built lazily.
+ * A measurer may tag its result array with .lastWords (words on the last line).
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.4767-export-condense';
+  var VERSION = '1.51.5505-no-orphan-cells';
   if (window.__antcvOrphanExportPreflight === VERSION) return;
   window.__antcvOrphanExportPreflight = VERSION;
 
@@ -80,8 +94,12 @@
   // gets the smallest character-spacing condense (-0.1 pt steps, floor -0.4 pt - the owner's body floor) that
   // removes that line. Written per paragraph into sec.item_condense[path] (1/20 pt, the DOCX w:spacing unit);
   // the docx-worker applies it to every run of that paragraph (Word and LibreOffice both honour it).
-  var CONDENSE_FRAC = 0.55;
+  // NO-ORPHAN-001: condense uses the detector floor (was 0.55, so 55-60% last lines were found but never condensed).
+  var CONDENSE_FRAC = RUNT_FRAC;
   var CONDENSE_FLOOR_PT = 0.4;
+  // NO-ORPHAN-001: table cells may go deeper (house generator: -0.5 pt plus character width down to 94%).
+  var CELL_CONDENSE_FLOOR_PT = 0.5;
+  var CELL_SCALE_MIN = 94;
   function condenseDisabled(storage) { try { var v = (storage || localStorage).getItem('antcv:disable-export-condense'); return v === '1' || v === 'true'; } catch (_) { return false; } }
   var PAGE_W = 11906;        // A4 twips — worker src/generate.js
   var TWIPS_PER_PX = 15;     // 96dpi
@@ -113,6 +131,10 @@
   // ── export metrics from the payload (the SAME fields the worker reads) ──────
   // Package bodyFont map mirrors workers/docx-worker src/palette.js PACKAGES.
   var PKG_BODY_FONT = { 'warm-terracotta': 'Georgia' };
+  var PKG_HEAD_FONT = {
+    'copenhagen-modern': 'Segoe UI', 'navy-executive': 'Cambria', 'warm-terracotta': 'Georgia', 'nordic-frost': 'Trebuchet MS',
+    'pampas-contemporary': 'Palatino Linotype', 'tokyo-precision': 'Tahoma', 'delhi-technical': 'Segoe UI',
+  };
   function pxTok(v) { var n = Number(v); return (isFinite(n) && n >= 0 && n <= 60) ? n : undefined; }
   function metricsFromPayload(payload) {
     var style = (payload && payload.style) || {};
@@ -152,16 +174,39 @@
     var sideFamily = (typeof style.sidebarBodyFont === 'string' && /^[a-z ]{3,}$/i.test(style.sidebarBodyFont))
       ? style.sidebarBodyFont
       : family;
+    // NO-ORPHAN-001: table cell + header fonts (worker FONT_DEFAULTS mainTblCell 10 / mainTblH 10.5; the
+    // header run uses style.mainHeadFont, from the package heading font or the worker DEFAULTS).
+    var tblCellPt = Number(fs.mainTblCell); if (!isFinite(tblCellPt) || tblCellPt <= 0) tblCellPt = 10;
+    var tblHeadPt = Number(fs.mainTblH); if (!isFinite(tblHeadPt) || tblHeadPt <= 0) tblHeadPt = 10.5;
+    var pkg = String(payload && payload.package || '').trim().toLowerCase();
+    var headFamily = (typeof style.mainHeadFont === 'string' && /^[a-z ]{3,}$/i.test(style.mainHeadFont))
+      ? style.mainHeadFont
+      : !pkg ? 'Trebuchet MS' : (PKG_HEAD_FONT[pkg] || PKG_HEAD_FONT['copenhagen-modern']);
     return {
       family: family,
+      headFamily: headFamily,
+      mainWtw: mainW,
       cellWpx: cellW / TWIPS_PER_PX,
       bulletWpx: (cellW - bIndent) / TWIPS_PER_PX,   // numbering indent: text column for bullet body
       bulletPx: bulletPt * 96 / 72,
       bodyPx: bodyPt * 96 / 72,
       sideCellWpx: (sidebarW - 2 * sbLR) / TWIPS_PER_PX,
+      sideBulletWpx: (sidebarW - 2 * sbLR - 210) / TWIPS_PER_PX, // worker antcv-sb-bullet indent left 210
       sbBodyPx: sbPt * 96 / 72,
       sideFamily: sideFamily,
+      tblCellPx: tblCellPt * 96 / 72,
+      tblHeadPx: tblHeadPt * 96 / 72,
     };
+  }
+  // NO-ORPHAN-001: text widths of the two table columns, mirroring worker renderCompetencyTable: CV table =
+  // main column - 288 DXA, CL table = 0.9 of the body (PAGE_W - 400); a forwarded s.tableWidth (clamped
+  // 2880..PAGE_W-720) and s.tableRatio (0.05..0.95, default 0.25) win; each cell has 150 + 300 DXA margins.
+  function tableColWidthsPx(s, met, isCl) {
+    var baseW = isCl ? Math.round((PAGE_W - 400) * 0.9) : met.mainWtw - 288;
+    var tw = (typeof s.tableWidth === 'number' && s.tableWidth > 0) ? Math.max(2880, Math.min(PAGE_W - 720, Math.round(s.tableWidth))) : baseW;
+    var r = (typeof s.tableRatio === 'number' && s.tableRatio > 0.05 && s.tableRatio < 0.95) ? s.tableRatio : 0.25;
+    var c1 = Math.round(tw * r), c2 = tw - c1;
+    return [(c1 - 450) / TWIPS_PER_PX, (c2 - 450) / TWIPS_PER_PX];
   }
 
   // ── raw payload string → display HTML (mirrors worker inlineRuns/styledRuns) ─
@@ -218,7 +263,10 @@
         document.body.appendChild(__domBox);
       }
       var el = document.createElement('div');
-      el.style.cssText = 'display:block;white-space:normal;letter-spacing:normal;word-spacing:normal;hyphens:none;text-wrap:initial;line-height:1.3;';
+      // NO-ORPHAN-001: kerning + ligatures OFF. The DOCX carries no w:kern, so Word sets text unkerned;
+      // measured on the Anita export, unkerned Calibri matched Word to 0.3% (kerned ran 0.7-1.1% narrow,
+      // enough to fit a label in the browser that Word still wrapped).
+      el.style.cssText = 'display:block;white-space:normal;letter-spacing:normal;word-spacing:normal;hyphens:none;text-wrap:initial;line-height:1.3;font-kerning:none;font-variant-ligatures:none;';
       if (spec.letterSpacingPx) el.style.letterSpacing = spec.letterSpacingPx + 'px';
       el.style.width = spec.widthPx + 'px';
       el.style.fontFamily = spec.family + ', Carlito, sans-serif';
@@ -229,22 +277,59 @@
       var r = document.createRange();
       r.selectNodeContents(el);
       var rects = r.getClientRects();
-      var lines = [], cur = null;
+      // NO-ORPHAN-001: group by line top across ALL lines. An inline <b>/<i> that spans several lines
+      // returns its element boxes for every line BEFORE its text boxes, so merging only with the previous
+      // rect counted each line twice (a 3-line bold cell read as 6 lines).
+      var lines = [];
       for (var i = 0; i < rects.length; i++) {
         var rc = rects[i];
         if (!rc || (rc.width < MIN_LINE_PX && rc.height < 1)) continue;
-        if (cur && Math.abs(rc.top - cur.top) < 3) { cur.left = Math.min(cur.left, rc.left); cur.right = Math.max(cur.right, rc.right); }
-        else { cur = { top: rc.top, left: rc.left, right: rc.right }; lines.push(cur); }
+        var cur = null;
+        for (var j = 0; j < lines.length; j++) { if (Math.abs(rc.top - lines[j].top) < 3) { cur = lines[j]; break; } }
+        if (cur) { cur.left = Math.min(cur.left, rc.left); cur.right = Math.max(cur.right, rc.right); }
+        else lines.push({ top: rc.top, left: rc.left, right: rc.right });
       }
+      lines.sort(function (a, b) { return a.top - b.top; });
+      var res = lines.map(function (l) { return l.right - l.left; });
+      if (lines.length >= 2) res.lastWords = lastLineWords(el, lines[lines.length - 1].top);
       __domBox.removeChild(el);
-      return lines.map(function (l) { return l.right - l.left; });
+      return res;
     } catch (_) { return []; }
+  }
+  // NO-ORPHAN-001: how many words (whitespace- or NBSP-separated tokens) sit on the last rendered line.
+  // Walks tokens from the end and stops at the first one on an earlier line, so it costs 2-3 rects.
+  function lastLineWords(el, lastTop) {
+    try {
+      var walker = document.createTreeWalker(el, 4 /* NodeFilter.SHOW_TEXT */, null);
+      var nodes = [], n;
+      while ((n = walker.nextNode())) nodes.push(n);
+      var r = document.createRange(), count = 0;
+      for (var ni = nodes.length - 1; ni >= 0; ni--) {
+        var txt = nodes[ni].nodeValue || '', toks = [], m, re = /\S+/g;   // \s includes NBSP
+        while ((m = re.exec(txt)) !== null) toks.push([m.index, m.index + m[0].length]);
+        for (var ti = toks.length - 1; ti >= 0; ti--) {
+          r.setStart(nodes[ni], toks[ti][0]); r.setEnd(nodes[ni], toks[ti][1]);
+          var rr = r.getClientRects();
+          if (!rr.length) continue;
+          if (Math.abs(rr[rr.length - 1].top - lastTop) >= 3) return count;
+          if (++count >= 2) return count;
+        }
+      }
+      return count;
+    } catch (_) { return 0; }
   }
 
   function isRuntLines(widths, colWpx) {
     if (!widths || widths.length < 2) return false;
+    if (widths.lastWords === 1) return true;   // NO-ORPHAN-001: one word alone on the last line is an orphan at any fill
     var last = widths[widths.length - 1];
     return last > 0 && colWpx > 0 && (last / colWpx) < RUNT_FRAC;
+  }
+  // A bind that makes a token wider than the column renders as an overflow (Word then breaks it mid-word).
+  function overflowsCol(widths, colWpx) {
+    if (!widths || !(colWpx > 0)) return false;
+    for (var i = 0; i < widths.length; i++) { if (widths[i] > colWpx + 1) return true; }
+    return false;
   }
   // rule 30: any NON-last line naturally under JUSTIFY_MIN of the column will
   // render with stretched word gaps once the renderer justifies it.
@@ -343,13 +428,177 @@
   // ── target collection from the BUILT payload ────────────────────────────────
   // Each target reads/writes payload.sections in place. Profile is processed per
   // paragraph (the worker splits content on blank lines — renderText).
-  function collectTargets(payload, met) {
+  // ── NO-ORPHAN-001: extra condense + NBSP-bind targets (never L3, never mirrored) ──
+  // Geometry per kind mirrors the worker renderer named in each collector; condensePath is the worker's
+  // paraCondensePath key for that paragraph.
+  var LEGACY_CC_HEADER_RE = /^(focus area|strategic expertise|fokusområde|strategisk ekspertise)$/i; // worker legacyCcHeader swaps these
+  var ACADEMIC_IDS_RE = /^(publications|publications_main|selected_research_outcomes|grants_fellowships|conferences_talks|research_experience)$/;
+  function geo(side, met, bullet, bulletFont) {
+    return {
+      widthPx: side ? (bullet ? met.sideBulletWpx : met.sideCellWpx) : (bullet ? met.bulletWpx : met.cellWpx),
+      fontPx: side ? met.sbBodyPx : (bulletFont ? met.bulletPx : met.bodyPx),
+      family: side ? met.sideFamily : met.family,
+    };
+  }
+  function pushExtra(out, s, kind, path, g, get, set, extra) {
+    var tg = {
+      kind: kind, noRewrite: true, sid: s.id || '', sec: s, condensePath: path,
+      widthPx: g.widthPx, fontPx: g.fontPx, family: g.family, align: 'left', prefixHtml: '',
+      get: get, set: set,
+    };
+    if (extra) for (var k in extra) tg[k] = extra[k];
+    out.push(tg);
+  }
+  function alignAt(s, path) {
+    var m = s && s.item_alignment;
+    var v = (m && typeof m === 'object') ? m[path] : null;
+    return (v === 'left' || v === 'center' || v === 'right' || v === 'justify') ? v : null;
+  }
+  function isPlaceholder(t) { return /^\s*\[/.test(String(t)); }
+  // labeled_list rows (worker renderLabeledList): sidebar rows keep kind side_label (SIDEBAR-ORPHANS-001);
+  // main-column rows are condense + bind only.
+  function collectLabeled(s, side, met, out) {
+    for (var li = 0; li < s.items.length; li++) {
+      (function (it, li2) {
+        if (!it || typeof it !== 'object') return;
+        if (it.hidden === true || it.on === false) return;
+        if (s.hidden && s.hidden[li2]) return;
+        if (it.group !== undefined || it.subhead !== undefined || it.header !== undefined || it.category !== undefined) return;
+        var vk = (typeof it.v === 'string' && it.v.trim()) ? 'v' : (typeof it.value === 'string' && it.value.trim()) ? 'value' : null;
+        if (!vk || isPlaceholder(it[vk])) return;
+        var label = String(it.l || it.label || '');
+        out.push({
+          kind: side ? 'side_label' : 'label', noRewrite: !side, sid: s.id || '', itemIdx: li2, sec: s, condensePath: 'items.' + li2,
+          widthPx: side ? met.sideCellWpx : met.cellWpx, fontPx: side ? met.sbBodyPx : met.bodyPx, align: 'left',
+          family: side ? met.sideFamily : met.family,
+          prefixHtml: (label && it.labelHidden !== true) ? '<b>' + esc(label) + ': </b>' : '',
+          get: function () { return it[vk]; },
+          set: function (v) { it[vk] = v; },
+        });
+      })(s.items[li], li);
+    }
+  }
+  // Every non-empty cell of a table section (worker renderCompetencyTable). Path rows.R.C, R = full-array row
+  // index (header = 0, the CJLR "rows.R" convention), C = column. Header and first-column cells are bold;
+  // data cells in column 1 render justified unless rowAlign[R] / item_alignment["rows.R"] says otherwise.
+  function collectTable(s, met, isCl, out) {
+    if (!Array.isArray(s.rows) || !s.rows.length) return;
+    var colW = tableColWidthsPx(s, met, isCl);
+    for (var r = 0; r < s.rows.length; r++) {
+      (function (row, r2) {
+        if (!Array.isArray(row)) return;
+        var ra = Array.isArray(s.rowAlign) ? s.rowAlign[r2] : null;
+        var a1 = (ra === 'left' || ra === 'center' || ra === 'right' || ra === 'justify') ? ra : alignAt(s, 'rows.' + r2);
+        for (var c = 0; c < 2; c++) {
+          (function (c2) {
+            var v = row[c2];
+            if (typeof v !== 'string' || !v.trim() || isPlaceholder(v)) return;
+            if (r2 === 0 && LEGACY_CC_HEADER_RE.test(v.trim())) return;
+            pushExtra(out, s, 'cell', 'rows.' + r2 + '.' + c2,
+              { widthPx: colW[c2], fontPx: r2 === 0 ? met.tblHeadPx : met.tblCellPx, family: r2 === 0 ? met.headFamily : met.family },
+              function () { return row[c2]; }, function (t) { row[c2] = t; },
+              { cell: true, rowIdx: r2, colIdx: c2, wrap: (r2 === 0 || c2 === 0) ? 'b' : null,
+                justified: r2 > 0 && c2 === 1 && (!a1 || a1 === 'justify') });
+          })(c);
+        }
+      })(s.rows[r], r);
+    }
+  }
+  // Education rows (worker renderEducation): bold degree + ": " + school (italic in the main column). The bind
+  // target is the run that holds the last line (school, else degree). Path items.N, N = original index.
+  function collectEducation(s, side, met, out) {
+    if (!Array.isArray(s.items)) return;
+    var g = geo(side, met, false, false);
+    var clean = function (t) { return String(t == null ? '' : t).replace(/\s*\n\s*/g, ' ').replace(/\*\*/g, '').trim(); };
+    s.items.forEach(function (it, i) {
+      if (!it || typeof it !== 'object' || it.hidden === true || it.on === false || (s.hidden && s.hidden[i])) return;
+      var deg = typeof it.deg === 'string' ? it.deg : '', sch = typeof it.sch === 'string' ? it.sch : '';
+      if (!clean(sch) && /\n/.test(deg)) return;       // the worker splits this shape itself
+      var tail = clean(sch) ? 'sch' : clean(deg) ? 'deg' : null;
+      if (!tail || isPlaceholder(it[tail])) return;
+      pushExtra(out, s, 'edu', 'items.' + i, g,
+        function () { return it[tail]; }, function (v) { it[tail] = v; },
+        { prefixHtml: tail === 'sch' && clean(deg) ? '<b>' + esc(clean(deg) + ': ') + '</b>' : '',
+          wrap: tail === 'deg' ? 'b' : (side ? null : 'i'), clean: clean });
+    });
+  }
+  // list / list_italic items (worker renderSimpleList). Publications / patents and research-formal academic
+  // sections render citations with their own runs and indents - not measured. Path items.N (original index).
+  function collectList(s, side, met, payload, out) {
+    if (!Array.isArray(s.items)) return;
+    var t = String(s.title || s.id || '').toLowerCase();
+    if (/publications?/.test(t) || /\bpatent\b/.test(t)) return;
+    var ws = String(payload && payload.writing_style || '').trim().toLowerCase();
+    if (ws === 'research-formal' && ACADEMIC_IDS_RE.test(String(s.id || '').toLowerCase().replace(/[\s-]+/g, '_').trim())) return;
+    var noBullet = /certifications?/.test(t);       // worker isNoBulletCenteredSection
+    var useBullets = noBullet ? false : side ? s.bullet_style === 'bullet' : (s.bullet_style || 'bullet') !== 'none';
+    var g = geo(side, met, useBullets, false);
+    s.items.forEach(function (it, i) {
+      if (s.hidden && s.hidden[i]) return;
+      var obj = !!it && typeof it === 'object';
+      if (obj && (it.hidden || it.on === false || typeof it.text !== 'string' || typeof it.citation === 'string' || typeof it.value === 'string')) return;
+      var raw = obj ? it.text : it;
+      if (typeof raw !== 'string' || !raw.trim() || isPlaceholder(raw)) return;
+      pushExtra(out, s, 'list', 'items.' + i, g,
+        function () { return obj ? it.text : s.items[i]; }, function (v) { if (obj) it.text = v; else s.items[i] = v; },
+        { wrap: s.type === 'list_italic' ? 'i' : null });
+    });
+  }
+  // bullets sections (worker renderBullets): path items.N, N = index among the rendered items.
+  function collectBulletList(s, side, met, out) {
+    if (!Array.isArray(s.items)) return;
+    var g = geo(side, met, true, !side);
+    var grp = alignAt(s, '__group__');
+    var vi = 0;
+    s.items.forEach(function (it, i) {
+      if (!(it && (it.t || typeof it === 'string'))) return;
+      var path = 'items.' + (vi++);
+      var str = typeof it === 'string';
+      var raw = str ? it : it.t;
+      if (typeof raw !== 'string' || !raw.trim() || isPlaceholder(raw)) return;
+      var a = alignAt(s, path + '.t') || alignAt(s, path) || grp;
+      pushExtra(out, s, 'bullets', path, g,
+        function () { return str ? s.items[i] : it.t; }, function (v) { if (str) s.items[i] = v; else it.t = v; },
+        { prefixHtml: !str && it.b ? '<b>' + esc(it.b + ': ') + '</b>' : '', justified: !a || a === 'justify' });
+    });
+  }
+  // text_bullets (worker renderTextBullets): intro / closing body paragraphs + items.N bullets.
+  function collectTextBullets(s, side, met, out) {
+    var grp = alignAt(s, '__group__');
+    var just = function (path) { var a = alignAt(s, path) || grp; return !a || a === 'justify'; };
+    var gBody = geo(side, met, false, false), gBul = geo(side, met, true, !side);
+    ['intro', 'closing'].forEach(function (k) {
+      if (typeof s[k] !== 'string' || !s[k].trim() || isPlaceholder(s[k])) return;
+      pushExtra(out, s, 'tb_body', k, gBody, function () { return s[k]; }, function (v) { s[k] = v; }, { justified: just(k) });
+    });
+    if (!Array.isArray(s.items)) return;
+    var vi = 0;
+    s.items.forEach(function (it, i) {
+      if (!it) return;
+      var path = 'items.' + (vi++);
+      if (typeof it !== 'string' || !it.trim() || isPlaceholder(it)) return;
+      pushExtra(out, s, 'tb_item', path, gBul, function () { return s.items[i]; }, function (v) { s.items[i] = v; }, { justified: just(path) });
+    });
+  }
+
+  function collectTargets(payload, met, opts) {
     var out = [];
     var secs = (payload && payload.sections) || [];
+    var tablesOnly = !!(opts && opts.tablesOnly);
+    var isCl = !!(payload && payload.doc === 'cl');
     for (var si = 0; si < secs.length; si++) {
       (function (s) {
         if (!s) return;
-        if (s.loc === 'sidebar') {
+        var side = s.loc === 'sidebar';
+        // NO-ORPHAN-001: sections every column shares.
+        if (s.type === 'table') { collectTable(s, met, isCl, out); return; }
+        if (tablesOnly) return;
+        if (s.type === 'education') { collectEducation(s, side, met, out); return; }
+        if (s.type === 'list' || s.type === 'list_italic') { collectList(s, side, met, payload, out); return; }
+        if (s.type === 'bullets') { collectBulletList(s, side, met, out); return; }
+        if (s.type === 'text_bullets') { collectTextBullets(s, side, met, out); return; }
+        if (s.type === 'labeled_list' && !side) { if (Array.isArray(s.items)) collectLabeled(s, false, met, out); return; }
+        if (side) {
           // SIDEBAR-ORPHANS-001: labeled_list VALUES wrap in the narrow column
           // and orphan exactly like main bullets. L2 NBSP binds ONLY —
           // payload-scoped, content-preserving; sidebar lines never go to L3 and
@@ -358,25 +607,7 @@
           // labeled_list, so every tools runt went undetected.
           if (!Array.isArray(s.items)) return;
           if (s.type === 'labeled_list') {
-            for (var li = 0; li < s.items.length; li++) {
-              (function (it, li2) {
-                if (!it || typeof it !== 'object') return;
-                if (it.hidden === true || it.on === false) return;
-                if (s.hidden && s.hidden[li2]) return;
-                if (it.group !== undefined || it.subhead !== undefined || it.header !== undefined || it.category !== undefined) return;
-                var vk = (typeof it.v === 'string' && it.v.trim()) ? 'v' : (typeof it.value === 'string' && it.value.trim()) ? 'value' : null;
-                if (!vk || /^\s*\[/.test(it[vk])) return;
-                var label = String(it.l || it.label || '');
-                out.push({
-                  kind: 'side_label', sid: s.id || '', itemIdx: li2, sec: s, condensePath: 'items.' + li2,
-                  widthPx: met.sideCellWpx, fontPx: met.sbBodyPx, align: 'left',
-                  family: met.sideFamily,
-                  prefixHtml: (label && it.labelHidden !== true) ? '<b>' + esc(label) + ': </b>' : '',
-                  get: function () { return it[vk]; },
-                  set: function (v) { it[vk] = v; },
-                });
-              })(s.items[li], li);
-            }
+            collectLabeled(s, true, met, out);
           } else if (s.type === 'rich_block') {
             for (var ri0 = 0; ri0 < s.items.length; ri0++) {
               (function (it, i2) {
@@ -569,11 +800,37 @@
   }
 
   // ── per-target measure + L2 ─────────────────────────────────────────────────
-  function measureTarget(measure, tg, raw, letterSpacingPx) {
+  // scalePct < 100 emulates the DOCX character width (w:w): glyphs at k = scale/100 with spacing s on a column W
+  // wrap exactly like natural glyphs with spacing s/k on a column W/k; widths come back in the real frame.
+  function measureTarget(measure, tg, raw, letterSpacingPx, scalePct) {
+    var k = (scalePct && scalePct < 100) ? scalePct / 100 : 1;
+    var body = toDisplayHtml(tg.clean ? tg.clean(raw) : raw);
+    if (tg.wrap) body = '<' + tg.wrap + '>' + body + '</' + tg.wrap + '>';
     // Always measure NATURAL (left) widths — see domMeasureLines note.
-    return measure({ html: tg.prefixHtml + toDisplayHtml(raw), widthPx: tg.widthPx, fontPx: tg.fontPx, family: tg.family, align: 'left', letterSpacingPx: letterSpacingPx || 0 });
+    var l = measure({ html: tg.prefixHtml + body, widthPx: tg.widthPx / k, fontPx: tg.fontPx, family: tg.family, align: 'left', letterSpacingPx: (letterSpacingPx || 0) / k });
+    if (k === 1 || !l) return l;
+    var out = l.map(function (w) { return w * k; });
+    if (l.lastWords != null) out.lastWords = l.lastWords;
+    return out;
   }
-  // EXPORT-CONDENSE-001: returns {condensed:true, tw} when a condense removed the short last line.
+  // EXPORT-CONDENSE-001 ladder, smallest first. Body: -0.1 pt steps to the -0.4 pt floor. Table cells
+  // (NO-ORPHAN-001): spacing to -0.5 pt crossed with character width 100..94%, ordered by an estimate of the
+  // width each step takes back (half an em per glyph); ties keep the wider character.
+  function condenseLadder(tg) {
+    var floorSteps = Math.round((tg.cell ? CELL_CONDENSE_FLOOR_PT : CONDENSE_FLOOR_PT) * 10);
+    var minScale = tg.cell ? CELL_SCALE_MIN : 100;
+    var glyphPt = Math.max(1, tg.fontPx * 0.75 * 0.5);
+    var steps = [];
+    for (var sc = 100; sc >= minScale; sc--) {
+      for (var st = 0; st <= floorSteps; st++) {
+        if (sc === 100 && st === 0) continue;
+        steps.push({ pt: -st / 10, scale: sc, cost: Math.round(((100 - sc) / 100 + (st / 10) / glyphPt) * 1000) / 1000 });
+      }
+    }
+    steps.sort(function (a, b) { return (a.cost - b.cost) || (b.scale - a.scale); });
+    return steps;
+  }
+  // EXPORT-CONDENSE-001: returns {condensed:true, tw, scale} when a condense removed the orphaned last line.
   function tryCondense(measure, tg, baseOpt) {
     if (!tg.condensePath || !tg.sec) return {};
     var raw = tg.get();
@@ -581,17 +838,33 @@
     var base = baseOpt || measureTarget(measure, tg, raw);
     if (!base || base.length < 2) return {};
     var last = base[base.length - 1];
-    if (!(last > 0) || (last / tg.widthPx) > CONDENSE_FRAC) return {};
-    var m = tg.sec.item_condense;
+    if (!(last > 0)) return {};
+    if (!(base.lastWords === 1 || (last / tg.widthPx) < CONDENSE_FRAC)) return {};
+    var m = tg.sec.item_condense, sm = tg.sec.item_scale;
     if (m && typeof m === 'object' && typeof m[tg.condensePath] === 'number') return {};   // already decided upstream
+    if (sm && typeof sm === 'object' && typeof sm[tg.condensePath] === 'number') return {};
+    var steps = condenseLadder(tg);
+    // Feasibility: the deepest step takes back about its cost of the text; 1.5x slack covers the estimate.
+    var total = 0;
+    for (var i = 0; i < base.length; i++) total += base[i];
+    var maxCost = steps.length ? steps[steps.length - 1].cost : 0;
+    if (total * (1 - maxCost * 1.5) > (base.length - 1) * tg.widthPx) return {};
     var pxPerPt = 4 / 3;
-    for (var step = 1; step <= Math.round(CONDENSE_FLOOR_PT * 10); step++) {
-      var pt = -step / 10;
-      var l = measureTarget(measure, tg, raw, pt * pxPerPt);
-      if (l.length && l.length < base.length) {
-        if (!m || typeof m !== 'object') m = tg.sec.item_condense = {};
-        m[tg.condensePath] = Math.round(pt * 20);
-        return { condensed: true, tw: m[tg.condensePath], lines: base.length };
+    for (var k = 0; k < steps.length; k++) {
+      var stp = steps[k];
+      var l = measureTarget(measure, tg, raw, stp.pt * pxPerPt, stp.scale);
+      // NO-ORPHAN-001: one line fewer that still ends on an orphan is not a fix (3-line "Winter /
+      // preparedness / planning" -> 2 lines with "planning" alone); keep looking, else leave it to the bind.
+      if (l.length && l.length < base.length && !isRuntLines(l, tg.widthPx)) {
+        if (stp.pt < 0) {
+          if (!m || typeof m !== 'object') m = tg.sec.item_condense = {};
+          m[tg.condensePath] = Math.round(stp.pt * 20);
+        }
+        if (stp.scale < 100) {
+          if (!sm || typeof sm !== 'object') sm = tg.sec.item_scale = {};
+          sm[tg.condensePath] = stp.scale;
+        }
+        return { condensed: true, tw: Math.round(stp.pt * 20), scale: stp.scale, lines: base.length };
       }
     }
     return {};
@@ -604,15 +877,24 @@
     // Sidebar values wrap in a ~2.5x narrower column — a 25-char value can already
     // span two lines there, so the main-column 40-char floor skipped real sidebar
     // runts (e.g. "Weapon-mounted sight interface context", 38 chars).
-    var minLen = tg.kind === 'side_label' ? 24 : 40;
-    if (typeof raw !== 'string' || bindableSpaces(raw).length < 2 || raw.length < minLen) return {};
+    // NO-ORPHAN-001: table label columns are ~100 px wide, so the floor follows the column width.
+    var minLen = tg.widthPx < 160 ? 8 : (tg.kind === 'side_label' || tg.widthPx < 300) ? 24 : 40;
+    if (typeof raw !== 'string') return {};
+    var bindable = bindableSpaces(raw).length >= 2 && raw.length >= minLen;
+    if (!bindable && !tg.noRewrite) return {};
     var base = baseOpt || measureTarget(measure, tg, raw);
     if (!isRuntLines(base, tg.widthPx)) return {};
+    if (!bindable) return { runt: true, baseLines: base.length };   // counted, nothing to bind
+    var baseOver = overflowsCol(base, tg.widthPx);
     var maxN = Math.min(MAX_BIND, bindableSpaces(raw).length - 1);
     for (var n = 1; n <= maxN; n++) {
       var cand = bindLastN(raw, n);
       var l = measureTarget(measure, tg, cand);
       if (l.length > base.length) break;                 // binding overflowed a new line — stop
+      if (!baseOver && overflowsCol(l, tg.widthPx)) break; // bound token wider than the column — stop
+      // A justified paragraph (table column 2, text_bullets): the line the bind shortened must stay full
+      // enough not to stretch into rivers (rule 30's JUSTIFY_MIN).
+      if (tg.justified && l.length >= 2 && l[l.length - 2] < base[base.length - 2] - 0.5 && (l[l.length - 2] / tg.widthPx) < JUSTIFY_MIN) break;
       if (!isRuntLines(l, tg.widthPx)) { tg.set(cand); return { fixed: true, n: n, baseLines: base.length }; }
     }
     return { runt: true, baseLines: base.length };
@@ -676,15 +958,19 @@
     var summary = { version: VERSION, scanned: 0, runts: 0, bound: 0, rewritten: 0, residue: 0, leftAligned: 0, ms: 0 };
     try {
       if (disabled(storage)) { summary.disabled = true; return Promise.resolve(summary); }
-      if (!payload || payload.doc !== 'cv' || payload.layout === 'linear') { summary.skipped = 'doc'; return Promise.resolve(summary); }
+      // NO-ORPHAN-001: the cover letter runs tables-only (its What-I-bring table shares renderCompetencyTable);
+      // a linear CV keeps its own geometry and is still skipped.
+      var tablesOnly = !!payload && payload.doc === 'cl';
+      if (!payload || (payload.doc !== 'cv' && !tablesOnly) || (!tablesOnly && payload.layout === 'linear')) { summary.skipped = 'doc'; return Promise.resolve(summary); }
+      if (tablesOnly && !(payload.sections || []).some(function (s) { return s && s.type === 'table' && Array.isArray(s.rows) && s.rows.length; })) { summary.skipped = 'doc'; return Promise.resolve(summary); }
       var t0 = Date.now();
       var met = metricsFromPayload(payload);
       var measure = opts.measureLines || domMeasureLines;
 
       // rule 40 first: bind/measure below must see the PACKED values.
-      try { packSidebar(payload, met, measure, storage, summary); } catch (_) {}
+      if (!tablesOnly) { try { packSidebar(payload, met, measure, storage, summary); } catch (_) {} }
 
-      var targets = collectTargets(payload, met);
+      var targets = collectTargets(payload, met, { tablesOnly: tablesOnly });
       targets.forEach(function (tg) { if (!tg.family) tg.family = met.family; });
       summary.scanned = targets.length;
 
@@ -721,14 +1007,21 @@
         if (r.fixed) { summary.runts++; summary.bound++; }
         // SIDEBAR-ORPHANS-001: sidebar values stop at L2 — no LLM rewrite, no
         // stored-section mirror (the narrow column is not worth a reword risk).
-        else if (r.runt) { summary.runts++; if (tg.kind !== 'side_label') residue.push({ tg: tg, text: tg.get(), baseLines: r.baseLines, maxLines: overLines ? MAX_BULLET_LINES : undefined }); return; }
+        // NO-ORPHAN-001: the condense + bind-only kinds (tables, education, lists, ...) stop here too; what is
+        // left is listed in summary.unfixed (sid:path) so the export log names every orphan that ships.
+        else if (r.runt) {
+          summary.runts++;
+          if (tg.kind !== 'side_label' && !tg.noRewrite) residue.push({ tg: tg, text: tg.get(), baseLines: r.baseLines, maxLines: overLines ? MAX_BULLET_LINES : undefined });
+          else (summary.unfixed = summary.unfixed || []).push((tg.sid || '?') + ':' + tg.condensePath);
+          return;
+        }
         if (overLines) {
           summary.longBullets = (summary.longBullets || 0) + 1;
           residue.push({ tg: tg, text: tg.get(), baseLines: overLines, maxLines: MAX_BULLET_LINES });
         }
       });
       summary.residue = residue.length;
-      try { console.log('[orphan-preflight] scanned ' + summary.scanned + ', condensed ' + summary.condensed + ', runts ' + summary.runts + ', L2-bound ' + summary.bound + ', left-aligned ' + summary.leftAligned + ', packed ' + (summary.packed || 0) + ', residue ' + residue.length); } catch (_) {}
+      try { console.log('[orphan-preflight] scanned ' + summary.scanned + ', condensed ' + summary.condensed + ', runts ' + summary.runts + ', L2-bound ' + summary.bound + ', left-aligned ' + summary.leftAligned + ', packed ' + (summary.packed || 0) + ', residue ' + residue.length + (summary.unfixed ? ', unfixed ' + summary.unfixed.join(' ') : '')); } catch (_) {}
       if (!residue.length) { summary.ms = Date.now() - t0; return Promise.resolve(summary); }
 
       // budget: never start the LLM leg if measurement already ate the envelope
@@ -841,6 +1134,11 @@
     _bindLastN: bindLastN,
     _bindableSpaces: bindableSpaces,
     _isRuntLines: isRuntLines,
+    _tableColWidthsPx: tableColWidthsPx,
+    _condenseLadder: condenseLadder,
+    _tryCondense: tryCondense,
+    _measureTarget: measureTarget,
+    CONDENSE_FRAC: CONDENSE_FRAC,
     _hasUnderfilledMidline: hasUnderfilledMidline,
     _safeShorten: safeShorten,
     _safeRewrite: safeRewrite,

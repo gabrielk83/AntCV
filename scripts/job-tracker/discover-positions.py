@@ -205,6 +205,11 @@ is proposed with a ⚠ quoting it, for the owner to judge. A language merely nam
 advantage passes. The language the ad is written in is not a requirement.
 Pass "posted" (the ad's own date) when the source gives one: older than 30 days gets a ⚠.
 The same role from one company in several locations is proposed ONCE, with the places listed.
+ELIGIBILITY GATE (ELIGIBILITY-GATE-001, 2026-11-05). On record: EU citizen, eligible for Danish
+DDIS clearance review, NO clearance held. Not proposed: a posting requiring Danish / Swedish /
+US / UK citizenship, a clearance the hire must already HOLD, or ITAR "US persons". Proposed with a
+⚠: a clearance the hire must be able to OBTAIN. A defence employer that states nothing is
+UNVERIFIED - read its own careers page before proposing. Put the eligibility text in "jd".
 add() enforces the obvious cases deterministically (see _evidence_gate)."""
 
 # Title families that are a no-fit UNLESS the posting shows a qualifier (below).
@@ -339,6 +344,70 @@ def _language_gate(text):
     return verdict, quote
 
 
+# ELIGIBILITY-GATE-001 (owner 2026-11-05, from ai-job-search's Eligibility Gate). The owner's
+# record (docs/personas/gabriel/kernel_snapshot_2026-06-16.md): EU citizen based in Copenhagen;
+# eligible for Danish DDIS security-clearance review (resident in MISWG / NATO / EU countries);
+# NO clearance held. Silence is not permission: a defence employer that states nothing is
+# UNVERIFIED (check its careers page), never a pass.
+ELIGIBILITY = {"citizenship": "EU", "clearance_held": False,
+               "clearance_note": "eligible for Danish DDIS clearance review; none held"}
+_REQ = r"(?:required|requirement|must|mandatory|essential|krav\w*|skal|forudsætning|krävs|kräver|only)"
+_CITIZEN_NEED = re.compile(
+    r"(?P<who>danish|dansk|swedish|svensk|norwegian|norsk|u\.?s\.?|american|british|uk|german|eu|eea|nato)\s*"
+    r"(?:citizen\w*|statsborger\w*|medborgar\w*|national\w*|person)|"
+    r"(?:citizen\w*|statsborgerskab|medborgarskap)\s+(?:of|i|in)\s+(?P<where>denmark|danmark|sweden|sverige|"
+    r"the united states|the us|norway|norge|the uk|germany|the eu|an eu|a nato)", re.I)
+_EU_OK = re.compile(r"^(eu|eea|the eu|an eu)$", re.I)
+_CLEARANCE = re.compile(r"security clearance|clearance|sikkerhedsgodkend\w*|sikkerhedsgodkendt|"
+                        r"nato (?:secret|confidential|restricted)|säkerhetsprövning|säkerhetsklass\w*|"
+                        r"\bitar\b|export[- ]control\w*", re.I)
+_OBTAIN = re.compile(r"obtain|be able to|eligible|willing|undergo|subject to|kunne\s+\w*\s*sikkerhedsgodkend|"
+                     r"kan\s+\w*\s*sikkerhedsgodkend|skal kunne|lade dig|gennemgå|vil blive|will be|"
+                     r"kunna|genomgå", re.I)
+_HOLD = re.compile(r"\b(hold|holds|holding|active|current|existing|valid|already)\b|"
+                   r"er sikkerhedsgodkendt|har en sikkerhedsgodkendelse|innehar", re.I)
+# Defence employer: by NAME (a customer named in the body is not the employer), or by two or
+# more body sentences about defence work that are not a candidate-background list ("experience
+# from medtech, aerospace or defence" - Coloplast, live sweep 2026-11-05).
+_DEFENCE_CO = re.compile(r"\bterma\b|\bmbda\b|\bweibel\b|\bsystematic\b|\bsaab\b|kongsberg|\bfmi\b|\bdalo\b|"
+                         r"forsvar|defen[cs]e|military|thales|rheinmetall|\bbae\b|lockheed|raytheon|"
+                         r"hensoldt|leonardo", re.I)
+_DEFENCE = re.compile(r"defen[cs]e|forsvar\w*|military|militær|\bnato\b|classified|electronic warfare", re.I)
+_BACKGROUND = re.compile(r"experience|background|erfaring|baggrund|industr(?:y|ies)|such as|e\.g\.|like", re.I)
+
+
+def _defence_employer(text, company):
+    if _DEFENCE_CO.search(company or ""):
+        return True
+    hits = [s for s in re.split(r"[.;\n•]+", text or "") if _DEFENCE.search(s) and not _BACKGROUND.search(s)]
+    return len(hits) >= 2
+
+
+def _eligibility_gate(text, company=""):
+    """('FAIL'|'FLAG'|'UNVERIFIED'|'PASS', quote, kind) against ELIGIBILITY."""
+    sents = [s.strip() for s in re.split(r"[.;\n•]+", text or "") if s.strip()]
+    flag = None
+    for s in sents:
+        for m in _CITIZEN_NEED.finditer(s):
+            who = (m.group("who") or m.group("where") or "").strip()
+            if not re.search(_REQ, s, re.I) and not re.search(r"\bonly\b|\bmust be\b", s, re.I):
+                continue
+            if _EU_OK.match(who) or (re.match(r"nato|a nato", who, re.I)):
+                continue                                   # EU citizen: an EU / NATO-country bar is met
+            return "FAIL", s[:140], "citizenship"
+        if _CLEARANCE.search(s) and (re.search(_REQ, s, re.I) or _OBTAIN.search(s) or _HOLD.search(s)):
+            if re.search(r"\bitar\b|u\.?s\.? person", s, re.I):
+                return "FAIL", s[:140], "export control (US persons only)"
+            if _HOLD.search(s) and not _OBTAIN.search(s) and not ELIGIBILITY["clearance_held"]:
+                return "FAIL", s[:140], "clearance held"
+            flag = flag or ("FLAG", s[:140], "clearance to obtain")
+    if flag:
+        return flag
+    if _defence_employer(text, company):
+        return "UNVERIFIED", "", "defence employer, eligibility not stated"
+    return "PASS", "", ""
+
+
 def _posted_day(s):
     """An ad date as a date: ISO, dd.mm.yyyy / dd-mm-yyyy, or RFC 822 (RSS pubDate)."""
     s = str(s or "").strip()
@@ -436,6 +505,9 @@ def _evidence_gate(c):
     verdict, quote = _language_gate(str(c.get("jd") or ""))
     if verdict == "FAIL":
         return "language gate: the posting requires a language not on the owner's record (%r)" % quote
+    ev, eq, ek = _eligibility_gate(str(c.get("jd") or ""), str(c.get("company") or ""))
+    if ev == "FAIL":
+        return "eligibility gate (%s): %r - owner: EU citizen, no clearance held" % (ek, eq)
     return None
 
 
@@ -533,6 +605,10 @@ def cmd_add(args):
             stale = _stale_note(c)
             if stale:
                 flag += "\n" + stale
+            ev, eq, ek = _eligibility_gate(jd, company)
+            if ev in ("FLAG", "UNVERIFIED"):
+                flag += "\n⚠ eligibility %s (%s)%s" % (ev.lower(), ek, (": %r" % eq) if eq else "")
+                doc.setdefault("eligibility", {})[uk] = {"verdict": ev, "quote": eq, "kind": ek}
             if i in spread:
                 flag += "\n⚠ posted identically in %d locations: %s" % (len(spread[i]), ", ".join(spread[i])[:160])
             doc["rows"].append([
@@ -597,8 +673,51 @@ def main():
     a = sub.add_parser("add")
     a.add_argument("--candidates", required=True)
     a.set_defaults(fn=cmd_add)
+    e = sub.add_parser("eligibility", help="ELIGIBILITY-GATE-001 over tracked rows that hold a JD")
+    e.add_argument("--write", action="store_true", help="store verdicts in doc.eligibility (rev-safe)")
+    e.set_defaults(fn=cmd_eligibility)
     args = ap.parse_args()
     args.fn(args)
+
+
+def eligibility_sweep(doc):
+    """{uk: {verdict, quote, kind, company, role}} for live rows whose stored JD says anything."""
+    jd = doc.get("jd") or {}
+    out = {}
+    for row in doc.get("rows") or []:
+        if not isinstance(row, list) or len(row) < 12 or str(row[8]).startswith(("Archive", "Rejected")):
+            continue
+        uk = row[11]
+        if not str(jd.get(uk) or "").strip():
+            continue
+        v, q, k = _eligibility_gate(str(jd[uk]), str(row[1]))
+        if v != "PASS":
+            out[uk] = {"verdict": v, "quote": q, "kind": k, "company": row[1], "role": row[2]}
+    return out
+
+
+def cmd_eligibility(args):
+    def apply(doc):
+        found = eligibility_sweep(doc)
+        if args.write and found:
+            elig = doc.setdefault("eligibility", {})
+            for uk, rec in found.items():
+                elig[uk] = {k: rec[k] for k in ("verdict", "quote", "kind")}
+        return found
+    for attempt in range(4):
+        rev, doc = get_doc()
+        found = apply(doc)
+        if not (args.write and found):
+            break
+        code, body = put_doc(doc, rev)
+        if code == 200:
+            break
+        if code != 409:
+            sys.exit("PUT failed: %s %s" % (code, str(body)[:200]))
+    for uk, r in sorted(found.items(), key=lambda kv: kv[1]["verdict"]):
+        print("%-10s %s | %s  (%s)%s" % (r["verdict"], r["company"], r["role"], r["kind"],
+                                         ("\n           %r" % r["quote"]) if r["quote"] else ""))
+    print("%d row(s) need an eligibility look%s" % (len(found), "; stored" if args.write and found else ""))
 
 
 if __name__ == "__main__":

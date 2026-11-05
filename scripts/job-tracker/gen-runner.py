@@ -277,9 +277,10 @@ def employer_financials(doc, r):
         rec = (doc.get("financials") or {}).get(r["uk"]) or {}
         if not rec.get("summary"):
             print("   [financials] none: %s" % str(rec.get("error") or "no record")[:110])
-        return rec.get("summary") or ""
+            return {}
+        return {"summary": rec["summary"], "angles": rec.get("angles") or {}}
     except Exception as e:
-        print(f"   [financials] skipped ({str(e)[:80]})"); return ""
+        print(f"   [financials] skipped ({str(e)[:80]})"); return {}
 
 # ── brand capture (BRAND-DECIDES-RESEARCH-001) ─────────────────────
 # The brand is colours AND company SPIRIT + VALUES, collected as RESEARCH in the
@@ -800,6 +801,18 @@ def _user_turn(profile_json, meta, section_ask):
     if meta.get("research"):
         lines.append("=== RECENT WEB RESEARCH on the employer (Brave web search; SUBORDINATE — may be dated, verify; NEVER a source of the candidate's identity/history) ===")
         lines.append(str(meta["research"])[:2500]); lines.append("")
+    _fin = meta.get("financials") or {}
+    if _fin.get("summary"):
+        # FIN-ANGLES-001: which of the candidate's proof to LEAD with, given the employer's figures.
+        lines.append("=== EMPLOYER FINANCIALS (latest Danish annual report, Erhvervsstyrelsen via Virk; SUBORDINATE framing, never a source of the candidate's facts) ===")
+        lines.append(str(_fin["summary"])[:700])
+        _ang = (_fin.get("angles") or {}).get("cl_angles") or []
+        if _ang:
+            lines.append("Letter angle from these figures: " + " ".join(_ang)[:700]
+                         + " Prove it ONLY with the candidate's own facts. Never quote or allude to a loss, a decline"
+                           " or any weak figure; frame it as the employer's priority (profitable growth, efficiency,"
+                           " scaling) and show how the candidate helps from the angles their record supports.")
+        lines.append("")
     if meta.get("brand_brief"):
         # BRAND-DECIDES-RESEARCH-001: the employer's own brand voice (spirit/
         # values/tone) sampled from its site. Subordinate framing for the VOICE
@@ -1070,12 +1083,12 @@ def cmd_run(args):
         r["language"] = language   # BRAND-CANONICAL-SITE-CCTLD-001: seeds the ccTLD hints
         rsch = research(r["company"], r["role"]) if getattr(args, "research", True) else ""
         if rsch: print("   research: %d findings" % len(rsch.splitlines()))
-        # COMPANY-FINANCIALS-001: the employer's last annual report (Virk open data,
-        # the figures Proff shows) joins the employer research the prompt sees.
-        fin = employer_financials(doc, r) if getattr(args, "research", True) else ""
-        if fin:
-            rsch = (rsch + "\n" if rsch else "") + "- Company financials: " + fin
-            print("   financials: " + fin[:110])
+        # COMPANY-FINANCIALS-001 + FIN-ANGLES-001: the employer's last annual report (Virk
+        # open data, the figures Proff shows) and the letter angle it implies get their own
+        # prompt block (the research block is cut at 2500 chars, this must not be).
+        fin = employer_financials(doc, r) if getattr(args, "research", True) else {}
+        if fin.get("summary"):
+            print("   financials: " + fin["summary"][:110])
         # CATEGORY-RECALL-001: category is decided BEFORE the plan is built so
         # the newest same-category saved application can ride along as a
         # subordinate tone/altitude reference (never a source of facts).
@@ -1094,7 +1107,8 @@ def cmd_run(args):
                 "signals": _signals_for(uk), "support": support.get(uk),
                 "research": rsch, "language": language, "prior_app": prior,
                 "baseline": baseline, "notes": notes.get(uk),
-                "brand_brief": (brand or {}).get("slogan_brief") or None}
+                "brand_brief": (brand or {}).get("slogan_brief") or None,
+                "financials": fin}
         sections, model = build_plan(profile, meta, r["tier"])
         print(f"\n== {uk} [{r['tier']}] {r['company']} / {r['role']} — {len(sections)} sections, model={model}")
         if args.dry:
@@ -1183,7 +1197,7 @@ def cmd_run(args):
         # TEXT-GUARDS-001: fact guard + echo check over every generated section,
         # unless --no-guards. Advisory: the report lists what to confirm; nothing blocks.
         if getattr(args, "guards", True) and not args.dry:
-            gd = run_text_guards(args.out, r, res, kernel)
+            gd = run_text_guards(args.out, r, res, kernel, nli=getattr(args, "nli", False))
             if gd:
                 entry["guards"] = gd
     if not args.row:
@@ -2758,7 +2772,26 @@ def run_course_checklist(out_dir, r, cv_sections, kernel=None, pages=None, scope
         print(f"   [checklist] {rep['summary']} -> {rep['md']}")
     return rep
 
-def run_text_guards(out_dir, r, res, kernel=None):
+def run_nli_guard(out_dir, uk, sections, ktext, timeout=1800):
+    """FACT-GUARD-NLI-001: tier-1 NLI check through the nli venv (~/.antcv/nli-venv; heavy deps
+    stay out of this interpreter). {section_id: [finding]} or {} when the venv is missing."""
+    import subprocess
+    import fact_guard_nli as NLI
+    if not os.path.exists(NLI.VENV_PY):
+        print("   [nli] skipped (no venv at %s; see scripts/job-tracker/README.md)" % NLI.VENV_PY)
+        return {}
+    src = os.path.join(out_dir, f"nli_in_{uk}.json")
+    dst = os.path.join(out_dir, f"nli_out_{uk}.json")
+    json.dump({"kernel_text": ktext, "sections": sections, "lang": None}, open(src, "w", encoding="utf-8"),
+              ensure_ascii=False)
+    p = subprocess.run([NLI.VENV_PY, os.path.join(os.path.dirname(os.path.abspath(__file__)), "fact_guard_nli.py"),
+                        "--batch", src, "--out", dst], capture_output=True, text=True, timeout=timeout)
+    if p.returncode != 0 or not os.path.exists(dst):
+        print("   [nli] failed (%s)" % (p.stderr or p.stdout)[-160:].strip().replace("\n", " "))
+        return {}
+    return json.load(open(dst, encoding="utf-8"))
+
+def run_text_guards(out_dir, r, res, kernel=None, nli=False):
     """TEXT-GUARDS-001 (from ai-job-search PRs #783 / #807, 2026-11-05). Tier-0 fact guard
     (figures, credentials, names vs the kernel; the JD never grounds a figure) and echo
     check (lifts from the JD) over the generated cv_* and cl_* sections. Writes
@@ -2769,15 +2802,20 @@ def run_text_guards(out_dir, r, res, kernel=None):
         import guard_common as GC
         ktext = "\n".join(GC.flatten(kernel or {}))
         jd = r.get("jd") or ""
-        found = []
+        found, texts = [], {}
         for sid, s in (res.get("sections") or {}).items():
             text = sanitize_text(s.get("result") or "")
             if not text.strip() or not (sid.startswith("cv_") or sid.startswith("cl_")):
                 continue
+            texts[sid] = text
             for f in FG.check(text, ktext, jd):
                 found.append(dict(f, section=sid, check="fact"))
             for f in EC.check(text, jd, keywords=[str(r.get("company") or ""), str(r.get("role") or "")]):
                 found.append(dict(f, section=sid, check="echo"))
+        if nli and texts:
+            for sid, items in run_nli_guard(out_dir, r["uk"], texts, ktext).items():
+                for f in items:
+                    found.append(dict(f, section=sid, check="nli", kind="claim", token=f["sentence"][:60]))
         path = os.path.join(out_dir, f"guards_{r['uk']}.json")
         json.dump(found, open(path, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
         nf = sum(1 for f in found if f["severity"] == "FAIL")
@@ -2816,6 +2854,7 @@ def main():
         p.add_argument("--no-brand", dest="brand", action="store_false", help="skip the brand-decides site-crawl (colours + spirit/values/tone)")
         p.add_argument("--no-checklist", dest="checklist", action="store_false", help="skip The Checklist (course CV checklist, compendium p 22); it runs by default")
         p.add_argument("--no-guards", dest="guards", action="store_false", help="skip the fact guard + echo check (TEXT-GUARDS-001); they run by default")
+        p.add_argument("--nli", action="store_true", help="also run the local NLI claim check (FACT-GUARD-NLI-001; needs ~/.antcv/nli-venv, slower)")
     sub.add_parser("health", help="check every artifacts[uk].application_id resolves to a live cloud app")
     args = ap.parse_args()
     if args.cmd == "list": cmd_list(args)

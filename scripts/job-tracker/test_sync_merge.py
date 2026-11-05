@@ -103,7 +103,10 @@ def test_outcome_maps_survive_a_merge():
     assert merged["followups"] == cloud["followups"], merged.get("followups")
     assert merged["financials"] == cloud["financials"], merged.get("financials")
     assert not conflicts, conflicts
-    print("PASS: status_history / followups / financials survive a merge.")
+    # SUBMITTED-VERSION-001 / INTERVIEW-PREP-001 / the clearance gate: same rule.
+    for f in ("submitted", "interview", "interview_next", "eligibility"):
+        assert f in S.UK_DICT_FIELDS, f
+    print("PASS: status_history / followups / financials (+ submitted, interview, eligibility) survive a merge.")
 
 
 def test_legacy_history_list_does_not_crash_the_merge():

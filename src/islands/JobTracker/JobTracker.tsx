@@ -7,6 +7,7 @@ import { mergeDocs } from './mergeDocs';
 import {
   getDoc, putDoc, fetchJdUrl, createApplication, setActive, classifyReason,
   fetchClusterTop20, askAI, fitPercent, fetchBrandColors, research, claimTabAppId, TRACKED_STATUSES, asText, type TrackerDoc, type Row,
+  saveSnapshot, getSnapshot, type SnapshotData,
 } from './api';
 import { computeTier, orderTop5 } from './rank';
 import { isClosedRow, passesTierFilter } from './rowVisibility';
@@ -16,6 +17,8 @@ import { CLUSTER_REFRESH_MS, reconcileSnapshot, shouldRefetchOnFocus } from './c
 import {
   SUBMITTED, INTERVIEW, INTERVIEW_STAGES, MAX_FOLLOWUPS, localDay, interviewStage, statusSince,
   followUpState, stampSubmitted, setSubmitted, logSent, financialsView, recordStatusIn, statusHistoryOf,
+  PREP_SCRIPT, submittedList, addSubmitted, interviewPack, nextStageOf, setNextStage, eligibilityView, mdBlocks, mdInline, daysBetween,
+  type SubmittedRec, type PrepPack,
 } from './outcomes';
 
 const NAVY = '#1F3864';
@@ -315,6 +318,42 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
   function markFollowupSent(uk: string): void {
     if (!doc) return;
     setDocState({ ...doc, followups: logSent(doc.followups, uk, localDay()) }); setDirty(true);
+  }
+  // INTERVIEW-PREP-001: the owner's next-stage date, kept apart from the script's pack.
+  function setNextStageDate(uk: string, day: string): void {
+    if (!doc) return;
+    setDocState({ ...doc, interview_next: setNextStage(doc.interview_next, uk, day, interviewStage(statusHistoryOf(doc, uk))) }); setDirty(true);
+  }
+  // SUBMITTED-VERSION-001: freeze what the employer read. The relay copies the
+  // application's CV/CL/meta into an insert-only row; the tracker adds the posting
+  // text, URL and export links, then submitted[uk] records the version (saved at once,
+  // rev-safe, like Reject).
+  const [snapView, setSnapView] = useState<{ uk: string; label: string; list: SubmittedRec[]; idx: number; data?: SnapshotData | null; err?: string } | null>(null);
+  const [prepView, setPrepView] = useState<{ uk: string; label: string } | null>(null);
+  async function saveSubmittedVersion(row: Row): Promise<void> {
+    if (!doc) return;
+    const uk = row[11]; const art = (doc.artifacts || {})[uk] || {};
+    setBusyKey(uk); setErr(null); setNote('Saving the submitted version of ' + row[1] + '…');
+    try {
+      const res = await saveSnapshot({
+        uk, application_id: art.application_id ?? null,
+        posting: { url: (doc.urls || {})[uk] || '', jd_text: (doc.jd || {})[uk] || '', company: row[1], role: row[2] },
+        exports: { cv_export_url: art.cv_export_url || '', cl_export_url: art.cl_export_url || '', analysis_url: art.analysis_url || '' },
+      });
+      if (!res.ok || !res.snapshot) { setNote(null); setErr('Submitted version not saved: ' + (res.error || 'unknown error')); return; }
+      const next = { ...doc, submitted: addSubmitted(doc.submitted, uk, { snapshot_id: res.snapshot.id, date: localDay(), application_id: res.snapshot.application_id }) };
+      if (await persist(next, true)) {
+        setNote('Submitted version saved for ' + row[1] + ' — ' + (res.snapshot.application_id ? 'CV, cover letter and posting frozen.' : 'posting frozen (no AntCV application on this row).'));
+      }
+    } finally { setBusyKey(null); }
+  }
+  async function openSubmitted(uk: string, label: string, idx?: number): Promise<void> {
+    const list = submittedList((doc?.submitted || {})[uk]);
+    if (!list.length) return;
+    const i = idx === undefined ? list.length - 1 : idx;
+    setSnapView({ uk, label, list, idx: i });
+    const res = await getSnapshot(list[i].snapshot_id);
+    setSnapView((v) => (v && v.uk === uk && v.idx === i ? { ...v, data: res.ok ? res.snapshot?.data ?? null : undefined, err: res.ok ? undefined : res.error } : v));
   }
   // Generation tier: explicit choice wins; otherwise Top-5 default to High
   // quality (they're the priority applications), the rest to Quick.
@@ -972,7 +1011,8 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
                       <td className="jt-ranktoggle" onClick={() => toggleTop5Membership(uk)}
                         title={star ? 'In Top-5 — click to park out (stays in the list). Right-click / long-press to reject.' : 'Click to pin into Top-5. Right-click / long-press to reject.'}
                         style={{ ...cell, textAlign: 'center', fontWeight: 700, borderLeft: '4px solid ' + t.accent, cursor: 'pointer', userSelect: 'none' }}>{star ? '★' : ''}{r[0]}</td>
-                      <td style={{ ...cell }}><span style={{ background: t.accent, color: '#fff', borderRadius: 4, padding: '1px 6px', fontSize: 11, fontWeight: 700 }}>{t.label}</span></td>
+                      <td style={{ ...cell }}><span style={{ background: t.accent, color: '#fff', borderRadius: 4, padding: '1px 6px', fontSize: 11, fontWeight: 700 }}>{t.label}</span>
+                        <EligibilityChip v={(doc?.eligibility || {})[uk]} /></td>
                       {/* JT-IDENTITY-EDIT-001 (owner 2026-07-29 "on mobile, the role content is
                           still not editable … the editing is supposed to be in the JD list"):
                           Company (r[1]) and Role (r[2]) are editable in place like the other
@@ -989,7 +1029,11 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
                       </td>
                       <td style={cell}><select value={r[8]} onChange={(e) => setStatus(uk, e.target.value)} style={{ fontSize: 12, width: '100%' }}>{TRACKED_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}{!TRACKED_STATUSES.includes(r[8]) && r[8] ? <option value={r[8]}>{r[8]}</option> : null}</select>
                         <OutcomeCell status={r[8]} hist={statusHistoryOf(doc, uk)} fu={(doc?.followups || {})[uk]}
-                          onStage={(s) => setStage(uk, s)} onSubmitted={(d) => setSubmittedOn(uk, d)} onSent={() => markFollowupSent(uk)} /></td>
+                          onStage={(s) => setStage(uk, s)} onSubmitted={(d) => setSubmittedOn(uk, d)} onSent={() => markFollowupSent(uk)}
+                          subs={submittedList((doc?.submitted || {})[uk])} busy={busyKey === uk} onSaveVersion={() => void saveSubmittedVersion(r)}
+                          onViewVersion={() => void openSubmitted(uk, r[1] + ' — ' + r[2])}
+                          next={nextStageOf((doc?.interview_next || {})[uk])} onNext={(d) => setNextStageDate(uk, d)}
+                          hasPack={!!interviewPack((doc?.interview || {})[uk])} onPrep={() => setPrepView({ uk, label: r[1] + ' — ' + r[2] })} /></td>
                       <td style={cell}><textarea value={r[9]} onChange={(e) => editRow(uk, 9, e.target.value)} onFocus={() => setExpandRow(uk)} rows={expandRow === uk ? 5 : 2} style={ta} /></td>
                       <td style={cell}><textarea value={r[10]} onChange={(e) => editRow(uk, 10, e.target.value)} onFocus={() => setExpandRow(uk)} rows={expandRow === uk ? 5 : 2} style={ta} /></td>
                       <td style={cell}>
@@ -1036,6 +1080,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
                 onPrepare={() => void prepareAndOpen(r)} onOpen={() => void openSaved(r)}
                 pinned={pinnedOf(r[11])} onTogglePin={() => togglePin(r[11])} onPark={() => togglePark(r[11])} onReject={() => void rejectRow(r)}
                 onSaveSupport={saveSupport} onSaveWeb={saveWeb} onResearch={researchRow} onSaveNotes={saveNotes}
+                onViewSubmitted={() => void openSubmitted(r[11], r[1] + ' — ' + r[2])} onSetNext={(d) => setNextStageDate(r[11], d)}
                 onEditCell={editRow} onCommitIdentity={() => { if (dirty && !saving) void save(); }} />)}
               {top5.length === 0 && <div>No Top-5 roles yet.</div>}
             </div>
@@ -1073,6 +1118,30 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
           </div>
         )}
 
+        {/* SUBMITTED-VERSION-001: read-only view of a saved submitted version */}
+        {snapView && (
+          <Sheet title={'📌 Submitted version — ' + snapView.label} onClose={() => setSnapView(null)}>
+            {snapView.list.length > 1 && (
+              <div style={{ marginBottom: 8, fontSize: 12 }}>
+                Version: <select value={snapView.idx} onChange={(e) => void openSubmitted(snapView.uk, snapView.label, Number(e.target.value))} style={{ fontSize: 12 }}>
+                  {snapView.list.map((s, i) => <option key={s.snapshot_id} value={i}>{s.date} (#{i + 1})</option>)}
+                </select>
+              </div>
+            )}
+            <div style={{ fontSize: 11.5, color: '#667', marginBottom: 8 }}>Saved {snapView.list[snapView.idx].date}. Read-only: this is what was sent, kept apart from the editable application.</div>
+            {snapView.err ? <div style={{ color: '#b3261e', fontSize: 13 }}>Could not load it: {snapView.err}</div>
+              : snapView.data === undefined ? <div style={{ fontSize: 13 }}>Loading…</div>
+                : <SnapshotBody data={snapView.data} />}
+          </Sheet>
+        )}
+
+        {/* INTERVIEW-PREP-001: the prep pack for an Interview row (list view) */}
+        {prepView && (
+          <Sheet title={'🎤 Interview prep — ' + prepView.label} onClose={() => setPrepView(null)}>
+            <PrepPanel pack={interviewPack((doc?.interview || {})[prepView.uk])} size={13} />
+          </Sheet>
+        )}
+
         {/* JOBTRACKER-TOP5-CONTROLS-001: row context menu (right-click / long-press) */}
         {ctxMenu && (() => {
           const left = Math.max(6, Math.min(ctxMenu.x, (window.innerWidth || 1200) - 210));
@@ -1108,17 +1177,35 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
   );
 }
 
+// Rows that have been sent off: the ones a submitted version can be saved for.
+const SENT_STATUSES = [SUBMITTED, INTERVIEW, 'Offer'];
+
 // OUTCOME-RECORD-001: under the status select — the date the status was set, the
 // Interview stage (each pick dated in history), and for a Submitted row the
 // submitted-on date (editable → submitted_source 'owner') and the follow-up clock.
-function OutcomeCell({ status, hist, fu, onStage, onSubmitted, onSent }: {
+// SUBMITTED-VERSION-001: save / view the frozen submitted version. INTERVIEW-PREP-001:
+// the next-stage date and the prep pack for an Interview row.
+function OutcomeCell({ status, hist, fu, onStage, onSubmitted, onSent, subs, busy, onSaveVersion, onViewVersion, next, onNext, hasPack, onPrep }: {
   status: string; hist: unknown; fu: unknown;
   onStage: (stage: string) => void; onSubmitted: (day: string) => void; onSent: () => void;
+  subs: SubmittedRec[]; busy: boolean; onSaveVersion: () => void; onViewVersion: () => void;
+  next: { date: string; stage: string }; onNext: (day: string) => void; hasPack: boolean; onPrep: () => void;
 }): JSX.Element | null {
   const isInterview = String(status || '').trim() === INTERVIEW;
+  const sent = SENT_STATUSES.includes(String(status || '').trim());
   const f = followUpState(fu, status, localDay());
   const since = statusSince(hist, status);
-  if (!isInterview && !f && !since) return null;
+  const today = localDay();
+  const chip: React.CSSProperties = { background: '#fff', border: '1px solid #b7c2d4', borderRadius: 3, cursor: 'pointer', fontSize: 10, padding: '0 4px', color: '#334', textAlign: 'left' };
+  const versions = subs.length ? (
+    <button onClick={onViewVersion} title={'Submitted version saved ' + subs[subs.length - 1].date + (subs.length > 1 ? ' (' + subs.length + ' versions)' : '') + ' — open it read-only'}
+      style={{ ...chip, background: '#eef6ee', borderColor: '#9cc79c', color: '#245a24', fontWeight: 700 }}>📌 sent version · {subs[subs.length - 1].date}{subs.length > 1 ? ' (' + subs.length + ')' : ''}</button>
+  ) : null;
+  const save = sent ? (
+    <button onClick={onSaveVersion} disabled={busy} title="Freeze what the employer read: the posting, the CV and the cover letter as they stand now. Never overwritten; saving again adds a version."
+      style={{ ...chip, ...(subs.length ? {} : { background: '#fff8e0', borderColor: '#e0b84a', color: '#6b4d00', fontWeight: 700 }) }}>{busy ? '…' : subs.length ? '＋ save new version' : '📌 save as submitted version'}</button>
+  ) : null;
+  if (!isInterview && !f && !since && !versions && !save) return null;
   const dateTitle = f && f.source === 'owner' ? 'Submitted on (set by you)'
     : f && f.submitted ? 'First seen as Submitted — the real date may be earlier; set it here'
       : 'No submitted date yet — set the day you applied';
@@ -1146,6 +1233,112 @@ function OutcomeCell({ status, hist, fu, onStage, onSubmitted, onSent }: {
         </span>
       )}
       {f && f.sent > 0 && <span>{f.sent}/{MAX_FOLLOWUPS} follow-ups sent</span>}
+      {isInterview && (
+        <label title="Date of the next interview stage (shown on the Top-5 card)" style={{ display: 'grid', gap: 1 }}>
+          <span>next stage{next.date && next.date >= today ? ' · in ' + daysBetween(today, next.date) + 'd' : ''}</span>
+          <input type="date" value={next.date} onChange={(e) => onNext(e.target.value)}
+            style={{ fontSize: 10.5, width: '100%', boxSizing: 'border-box', padding: '1px 2px' }} />
+        </label>
+      )}
+      {isInterview && <button onClick={onPrep} title={hasPack ? 'Open the interview prep pack' : 'No prep pack yet — see how to generate one'} style={{ ...chip, ...(hasPack ? { fontWeight: 700 } : { opacity: 0.75 }) }}>🎤 prep {hasPack ? 'pack' : '(none yet)'}</button>}
+      {versions}
+      {save}
+    </div>
+  );
+}
+
+// The clearance / citizenship gate verdict (doc.eligibility[uk], written by a script).
+function EligibilityChip({ v }: { v: unknown }): JSX.Element | null {
+  const e = eligibilityView(v);
+  if (!e) return null;
+  const look = e.verdict === 'PASS' ? { bg: '#e6f4e6', fg: '#245a24', t: '✓ eligible' }
+    : e.verdict === 'FAIL' ? { bg: '#fbe3e1', fg: '#8a1f15', t: '✗ not eligible' } : { bg: '#fff3d6', fg: '#6b4d00', t: '? eligibility' };
+  return (
+    <span title={(e.kind ? e.kind + ': ' : '') + (e.quote ? '“' + e.quote + '”' : e.verdict)}
+      style={{ display: 'inline-block', marginTop: 4, background: look.bg, color: look.fg, borderRadius: 4, padding: '0 4px', fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap' }}>{look.t}</span>
+  );
+}
+
+// A modal over the tracker (Escape closes the sheet, not the tracker).
+function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }): JSX.Element {
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,22,40,0.6)', zIndex: 100001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); onClose(); } }}>
+      <div style={{ background: '#fff', borderRadius: 10, width: 'min(820px, 100%)', maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 18px 50px rgba(0,0,0,0.4)' }}>
+        <div style={{ background: NAVY, color: '#fff', padding: '9px 14px', fontWeight: 700, fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</span>
+          <button onClick={onClose} aria-label="Close" autoFocus style={{ background: 'none', border: 0, color: '#fff', cursor: 'pointer', fontSize: 16, fontWeight: 800 }}>✕</button>
+        </div>
+        <div style={{ padding: 14, overflow: 'auto' }}>{children}</div>
+      </div>
+    </div>
+  );
+}
+
+// SUBMITTED-VERSION-001: the frozen posting, CV and cover letter, as plain text.
+function SnapshotBody({ data }: { data: SnapshotData | null }): JSX.Element {
+  if (!data) return <div style={{ fontSize: 13 }}>This version holds no readable content.</div>;
+  const app = data.application || null;
+  const post = data.posting || {};
+  const ex = data.exports || {};
+  const h: React.CSSProperties = { fontSize: 12, fontWeight: 800, color: NAVY, textTransform: 'uppercase', letterSpacing: 0.3, margin: '12px 0 5px' };
+  const box: React.CSSProperties = { whiteSpace: 'pre-wrap', fontSize: 12.5, lineHeight: 1.45, background: '#f6f8fc', border: '1px solid #dbe2ee', borderRadius: 6, padding: '8px 10px', maxHeight: 320, overflow: 'auto', color: '#1d2433' };
+  const sections = (v: unknown, label: string) => {
+    const list = Array.isArray(v) ? v : [];
+    if (!list.length) return <div style={{ fontSize: 12.5, color: '#889' }}>No {label} stored on the application when this was saved.</div>;
+    return list.map((s, i) => {
+      const o = (s && typeof s === 'object' ? s : { content: s }) as Record<string, unknown>;
+      const title = asText(o.title || o.heading || o.label || o.id);
+      const { title: _t, heading: _h, label: _l, id: _i, ...rest } = o;
+      const keys = Object.keys(rest);   // a lone text field reads plain, without its label
+      const text = keys.length === 1 && typeof rest[keys[0]] === 'string' ? rest[keys[0]] as string : asText(rest);
+      return <div key={i} style={{ marginBottom: 8 }}>{title && <div style={{ fontWeight: 700, fontSize: 12.5, marginBottom: 2 }}>{title}</div>}<div style={box}>{text || '(empty)'}</div></div>;
+    });
+  };
+  const links = [['CV PDF', ex.cv_export_url], ['Cover letter PDF', ex.cl_export_url], ['Analysis', ex.analysis_url]].filter((l) => /^https?:\/\//.test(String(l[1] || '')));
+  return (
+    <div>
+      <div style={h}>Posting</div>
+      {post.url && /^https?:\/\//.test(post.url) ? <a href={post.url} target="_blank" rel="noreferrer" style={{ fontSize: 12.5 }}>{post.url}</a> : null}
+      <div style={{ ...box, marginTop: 4 }}>{post.jd_text || (app && app.jd_text) || '(no posting text was stored)'}</div>
+      {links.length > 0 && <><div style={h}>Exported files</div>{links.map(([n, u]) => <div key={n as string}><a href={u as string} target="_blank" rel="noreferrer" style={{ fontSize: 12.5 }}>{n}</a></div>)}</>}
+      {app ? (<>
+        <div style={h}>CV</div>{sections(app.cv_sections, 'CV')}
+        <div style={h}>Cover letter</div>{sections(app.cl_sections, 'cover letter')}
+      </>) : <div style={{ ...h, textTransform: 'none', fontWeight: 400, color: '#667' }}>No AntCV application was linked to this row, so only the posting was frozen.</div>}
+    </div>
+  );
+}
+
+// INTERVIEW-PREP-001: the pack the prep script wrote to doc.interview[uk], or how to get one.
+function PrepPanel({ pack, size }: { pack: PrepPack | null; size: number }): JSX.Element {
+  if (!pack) {
+    return (
+      <div style={{ fontSize: size, color: '#445' }}>
+        <button disabled title={'Run ' + PREP_SCRIPT + ' to write the pack'} style={{ ...btn('#c9d2e0', '#556', size), cursor: 'not-allowed' }}>Generate pack</button>
+        <div style={{ marginTop: 6 }}>No prep pack for this role yet. It is generated outside the app: run <code>{PREP_SCRIPT}</code>; the pack appears here on the next reload.</div>
+      </div>
+    );
+  }
+  return (
+    <div style={{ fontSize: size }}>
+      {(pack.stage || pack.generated_at) && <div style={{ fontSize: size - 1.5, color: '#667', marginBottom: 6 }}>{pack.stage ? 'Stage: ' + pack.stage : ''}{pack.stage && pack.generated_at ? ' · ' : ''}{pack.generated_at ? 'generated ' + String(pack.generated_at).slice(0, 16) : ''}</div>}
+      {pack.md ? <MdView md={pack.md} size={size} /> : <div style={{ color: '#667' }}>The pack has structured data only (no text to show).</div>}
+    </div>
+  );
+}
+
+function MdView({ md, size }: { md: string; size: number }): JSX.Element {
+  const inline = (text: string) => mdInline(text).map((s, i) => s.t === 'b' ? <b key={i}>{s.s}</b>
+    : s.t === 'code' ? <code key={i} style={{ background: '#eef1f6', borderRadius: 3, padding: '0 3px' }}>{s.s}</code>
+      : s.t === 'a' ? <a key={i} href={s.href} target="_blank" rel="noreferrer">{s.s}</a> : <span key={i}>{s.s}</span>);
+  return (
+    <div style={{ lineHeight: 1.45, color: '#1d2433' }}>
+      {mdBlocks(md).map((b, i) => b.t === 'h' ? <div key={i} style={{ fontWeight: 800, fontSize: size + Math.max(0, 4 - b.level), color: NAVY, margin: '10px 0 4px' }}>{inline(b.text)}</div>
+        : b.t === 'li' ? <div key={i} style={{ display: 'flex', gap: 6, marginLeft: 4 + b.depth * 14 }}><span>•</span><span>{inline(b.text)}</span></div>
+          : b.t === 'hr' ? <hr key={i} style={{ border: 0, borderTop: '1px solid #dbe2ee', margin: '8px 0' }} />
+            : <p key={i} style={{ margin: '5px 0' }}>{inline(b.text)}</p>)}
     </div>
   );
 }
@@ -1235,7 +1428,7 @@ function buildSupport(p: ReturnType<typeof parseSupport>): string {
   return out.join('\n');
 }
 
-function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, pinned, onTogglePin, onPark, onReject, onSaveSupport, onSaveWeb, onResearch, onSaveNotes, onEditCell, onCommitIdentity }: {
+function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, pinned, onTogglePin, onPark, onReject, onSaveSupport, onSaveWeb, onResearch, onSaveNotes, onEditCell, onCommitIdentity, onViewSubmitted, onSetNext }: {
   row: Row; doc: TrackerDoc | null; cluster: { qual: string }[]; mobile: boolean; busy: boolean;
   onPrepare: () => void; onOpen: () => void; pinned: boolean; onTogglePin: () => void; onPark: () => void; onReject: () => void;
   onSaveSupport: (uk: string, text: string) => Promise<boolean>;
@@ -1243,6 +1436,8 @@ function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, pinned,
   onSaveNotes: (uk: string, n: { hm?: string; deadline?: string; why?: string }) => Promise<boolean>;
   // JT-IDENTITY-EDIT-001: edit company/role from the card header (mobile-first view)
   onEditCell: (uk: string, idx: number, value: string) => void; onCommitIdentity: () => void;
+  // SUBMITTED-VERSION-001 / INTERVIEW-PREP-001
+  onViewSubmitted: () => void; onSetNext: (day: string) => void;
 }): JSX.Element {
   const uk = row[11]; const t = tierOf(row[12]);
   const rawSupport = (doc?.support || {})[uk] || '';
@@ -1281,6 +1476,12 @@ function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, pinned,
   const fu = followUpState((doc?.followups || {})[uk], row[8], localDay());
   const fin = financialsView((doc?.financials || {})[uk]);
   const [finOpen, setFinOpen] = useState(false);
+  const elig = eligibilityView((doc?.eligibility || {})[uk]);
+  const subs = submittedList((doc?.submitted || {})[uk]);
+  const isInterview = String(row[8] || '').trim() === INTERVIEW;
+  const nextStage = nextStageOf((doc?.interview_next || {})[uk]);
+  const pack = interviewPack((doc?.interview || {})[uk]);
+  const [prepOpen, setPrepOpen] = useState(false);
 
   function editItem(si: number, ii: number, field: 'need' | 'bring' | 'insight', v: string): void {
     setP((prev) => { const c = { ...prev, sections: prev.sections.map((s) => ({ ...s, items: s.items.slice() })) }; c.sections[si].items[ii] = { ...c.sections[si].items[ii], [field]: v }; return c; });
@@ -1354,6 +1555,24 @@ function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, pinned,
         {p.flag && <Line icon="⚠️" label="Flag" text={p.flag} color="#8a4b12" size={fs(12.5, 14.5)} />}
         {sigBlock && <Line icon="📌" label="Signals" text={sigBlock.replace(/\n+/g, ' · ').slice(0, 240)} color="#3a4d6b" size={fs(12, 13.5)} />}
         {fu && fu.due && <Line icon="⏰" label="Follow-up due" text={'no reply for ' + fu.quiet + ' days since ' + fu.since + ' · ' + fu.sent + '/' + MAX_FOLLOWUPS + ' sent — log it from the List view'} color="#7a4b00" size={fs(12, 13.5)} />}
+        {elig && elig.verdict !== 'PASS' && <Line icon={elig.verdict === 'FAIL' ? '⛔' : '❔'} label={elig.verdict === 'FAIL' ? 'Not eligible' : 'Eligibility unverified'} text={(elig.kind ? elig.kind + ': ' : '') + (elig.quote ? '“' + elig.quote + '”' : 'no quote recorded')} color={elig.verdict === 'FAIL' ? '#8a1f15' : '#6b4d00'} size={fs(12, 13.5)} />}
+        {subs.length > 0 && (
+          <div style={{ fontSize: fs(12, 13.5), color: '#245a24', margin: '3px 0' }}>📌 <b>Submitted version</b> saved {subs[subs.length - 1].date}{subs.length > 1 ? ' (' + subs.length + ' versions)' : ''}{' '}
+            <button onClick={onViewSubmitted} style={{ ...btn('#eef6ee', '#245a24', fs(11, 13)), padding: '1px 8px', border: '1px solid #9cc79c' }}>view</button>
+          </div>
+        )}
+        {isInterview && (
+          <div style={{ marginTop: 10, border: '1px solid #d5deec', borderRadius: 8, padding: '8px 10px', background: '#fbfcff' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: fs(11, 13), fontWeight: 800, color: t.accent, letterSpacing: 0.3, textTransform: 'uppercase' }}>🎤 Interview prep{interviewStage(statusHistoryOf(doc, uk)) ? ' · ' + interviewStage(statusHistoryOf(doc, uk)) : ''}</span>
+              <label style={{ fontSize: fs(11, 13), color: '#556', display: 'inline-flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>next stage
+                <input type="date" value={nextStage.date} onChange={(e) => onSetNext(e.target.value)} style={{ fontSize: fs(11, 14) }} /></label>
+              {pack && <button onClick={() => setPrepOpen((o) => !o)} style={{ ...btn('#eef3fb', '#1d3a6e', fs(11, 13)), padding: '2px 8px' }}>{prepOpen ? 'Hide pack' : 'Show pack'}</button>}
+            </div>
+            {nextStage.date && <div style={{ fontSize: fs(11.5, 13), color: '#334', marginTop: 4 }}>Next stage on <b>{nextStage.date}</b>{nextStage.date >= localDay() ? ' — in ' + daysBetween(localDay(), nextStage.date) + ' days' : ' (past)'}</div>}
+            {(!pack || prepOpen) && <div style={{ marginTop: 6, maxHeight: mobile ? 420 : 360, overflow: 'auto' }}><PrepPanel pack={pack} size={fs(12, 14)} /></div>}
+          </div>
+        )}
         {p.sections.map((s, si) => (
           <div key={si} style={{ marginTop: 11 }}>
             <div style={{ fontSize: fs(11, 13), fontWeight: 800, color: t.accent, letterSpacing: 0.3, textTransform: 'uppercase', marginBottom: 5 }}>{s.title}</div>

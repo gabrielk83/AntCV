@@ -20687,7 +20687,17 @@
           // to "custom"). navyColor (Ke) owns the backgrounds. Deps are [Ke, ya]
           // only — Sa is declared later in the component, so it must NOT be in the
           // dependency array (TDZ); it is read inside the callback, which is safe.
-          if (ps && ya.mainHeadColor !== ps.mainHeadColor)
+          // PACKAGE-PALETTE-HEAL-REGIONS-001 (owner 2026-11-05, live: white sidebar
+          // text on Copenhagen's pale #DCE5EA sidebar): the heal compared ONLY
+          // mainHeadColor, so a styleConfig left behind by an earlier brand record
+          // (headerBg/sidebarBg #1a1a1a, white sidebar inks) survived under a NAMED
+          // package whose mainHeadColor happened to match - the CSS registry painted
+          // the pale sidebar while k.sidebarTextColor/HeadColor stayed white, in the
+          // preview AND the export (docx-client builds from styleConfig). Compare the
+          // region tokens too. Skipped while a brand is active (brand fit owns them).
+          const __brandActive = (() => { try { return window.__antcvBrandFit === true || !!localStorage.getItem("antcv:brandV2"); } catch (_) { return false; } })();
+          const __drift = ps && !__brandActive && ["mainHeadColor","headerBg","sidebarBg","sidebarHeadColor","sidebarTextColor","tableHeaderBg"].some((k) => ps[k] && ya[k] !== ps[k]);
+          if (ps && (ya.mainHeadColor !== ps.mainHeadColor || __drift))
             // STYLE-BG-FOLLOW-PKG-001: the named package owns ALL its colours,
             // including the band / sidebar / table BACKGROUNDS (no longer clobbered
             // by navyColor). This is what makes switching the Visual style update

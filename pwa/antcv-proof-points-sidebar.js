@@ -41,7 +41,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.5885-proof-points-lang';
+  var VERSION = '1.51.5905-proof-points-lang-b';
   if (window.__antcvProofPoints === VERSION) return;
   window.__antcvProofPoints = VERSION;
 
@@ -64,7 +64,16 @@
   function bare(v) { return String(v == null ? '' : v).replace(/^"|"$/g, '').trim(); }
   function disabled() { var v = get('antcv:disable-proof-points'); return v === '1' || v === 'true'; }
   function lang() { var v = bare(get('language')).replace(/[^a-z]/gi, '').slice(0, 2).toLowerCase(); return v || 'en'; }
-  function translating() { try { return !!window.__antcvTranslateBusy; } catch (_) { return false; } }
+  // 1.51.5905: the window flag covers this tab; the localStorage marker (lang:epoch ms, written by
+  // app.js with the pass, removed in its finally) covers a pass running in another tab of the same
+  // profile. A marker older than 5 min is a crashed pass and is ignored.
+  function translating() {
+    try { if (window.__antcvTranslateBusy) return true; } catch (_) {}
+    try {
+      var m = String(get('antcv:translateBusy') || ''), at = parseInt(m.split(':')[1], 10);
+      return !!m && (!isFinite(at) || Date.now() - at < 300000);
+    } catch (_) { return false; }
+  }
   function stamp() { var s = readJson(STAMP, null); return s && typeof s === 'object' ? s : null; }
   function writeStamp(l, h) {
     var s = stamp();

@@ -199,4 +199,14 @@ test('PROOF-POINTS-LANG-001: while a translate pass is in flight the belt does n
   sb.window.__antcvTranslateBusy = '';
   sb.window.AntcvProofPoints.run();
   assert.notEqual(mm.get('sections'), base.sections, 'writes once the pass is over');
+  // the shared marker: a pass in another tab of the same profile
+  const m3 = new Map(Object.entries(base)); m3.set('antcv:translateBusy', 'da:' + Date.now());
+  const ls3 = { getItem: (k) => (m3.has(k) ? m3.get(k) : null), setItem: (k, v) => m3.set(k, String(v)), removeItem: (k) => m3.delete(k) };
+  const sb3 = Object.assign({}, sb, { window: { addEventListener() {}, dispatchEvent() {} }, localStorage: ls3, Date });
+  vm.createContext(sb3); vm.runInContext(src, sb3);
+  sb3.window.AntcvProofPoints.run();
+  assert.equal(m3.get('sections'), base.sections, 'no write while antcv:translateBusy is fresh in the store');
+  m3.set('antcv:translateBusy', 'da:' + (Date.now() - 400000));
+  sb3.window.AntcvProofPoints.run();
+  assert.notEqual(m3.get('sections'), base.sections, 'a stale marker (crashed pass) is ignored');
 });

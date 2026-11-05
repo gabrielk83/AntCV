@@ -91,6 +91,11 @@
 
   function getCurrentLanguage() {
     try {
+      // PROOF-POINTS-LANG-001b (1.51.5905): a translate pass in flight names its TARGET in
+      // window.__antcvTranslateBusy (set by app.js); the ribbon flips only after the pass, so
+      // reading localStorage.language here rewrote the bundle's correct 'Danish' back to 'English'.
+      var busy = window.__antcvTranslateBusy;
+      if (typeof busy === 'string' && LANG_NAMES[busy]) return busy;
       var raw = localStorage.getItem('language');
       if (!raw) return 'en';
       var v = JSON.parse(raw);

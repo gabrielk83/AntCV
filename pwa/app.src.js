@@ -19681,6 +19681,9 @@ window.__antcvTxtSame =
                     // it to clear, so the index-addressed apply below lands on the lines that were
                     // collected; the progress banner reads it instead of the ribbon.
                     window.__antcvTranslateBusy = e;
+                    // 1.51.5905: the same marker in localStorage, so a belt in ANOTHER tab of the same
+                    // profile waits too (the window flag is per document; two tabs share the store).
+                    try { localStorage.setItem("antcv:translateBusy", e + ":" + Date.now()); } catch (_) {}
                     try {
                       const t =
                           {
@@ -20200,6 +20203,7 @@ window.__antcvTxtSame =
                         }));
                     } finally {
                       (Sr(!1), Ir({ done: 0, total: 0 }), Cr({}), (window.__antcvTranslateBusy = ""));
+                      try { localStorage.removeItem("antcv:translateBusy"); } catch (_) {}
                     }
                   }
                 })(e)

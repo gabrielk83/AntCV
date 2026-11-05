@@ -38,7 +38,6 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 
 <!-- SHIFT:BEGIN — one JSON object per line; managed by scripts/shift.mjs, safe to hand-edit a line if a session died without releasing -->
 {"id":"sh_mupev15f_bqmz","started":"2026-10-01T10:48:17.049Z","host":"vm","worktree":null,"branch":"claude/project-thread-cub2nb","range":"1.51.4786-1.51.4790","task":"impact types in result bullets (thread cub2nb)","beat":"2026-10-01T10:48:17.054Z"}
-{"id":"sh_mw3ge9na_gtmv","started":"2026-11-05T11:19:42.993Z","host":"Gabo-PC","worktree":"peaceful-dhawan-8d11bb","branch":"claude/adoring-mestorf-567591","range":"1.51.5545-1.51.5564","task":"COMMS-LANG-001 Communication line names the job's language (es/he instead of Danish)","beat":"2026-11-05T11:19:43.050Z"}
 {"id":"sh_mw3gm2iw_3b14","started":"2026-11-05T11:25:47.004Z","host":"Gabo-PC","worktree":"gracious-goldwasser-ac89f6","branch":"claude/musing-euler-71ad39","range":"1.51.5565-1.51.5584","task":"NO-ORPHAN-002 CL + marker rows + bullets, label reword, body width, LO audit","beat":"2026-11-05T11:25:47.060Z"}
 <!-- SHIFT:END -->
 

@@ -32,7 +32,7 @@ const telemetrySql = await readFile(new URL('../schema-telemetry.sql', import.me
 // Tables the relay creates outside schema.sql. kernel_showcase_styled is the
 // relay's own lazy DDL. The three cluster tables use the live shape: no FK.
 // application_snapshot is the lazy DDL of OUTCOME-RECORD-002 (submitted
-// CV/CL/JD, insert-only).
+// CV/CL/JD, insert-only); schema.sql carries it too since SUBMITTED-VERSION-001.
 const EXTRA_DDL = [
   'CREATE TABLE IF NOT EXISTS kernel_showcase_styled (' +
     'user_hash TEXT NOT NULL, style_key TEXT NOT NULL DEFAULT \'\', ' +
@@ -262,7 +262,8 @@ test('a table not created yet does not roll back the erase; it reports null', as
   const ALWAYS = ['user_kernel', 'application', 'language_view', 'active_application', 'active_application_device'];
   const sqlite = new DatabaseSync(':memory:', { enableForeignKeyConstraints: false });
   sqlite.exec(schemaSql);
-  for (const t of ['kernel_language_view', 'kernel_showcase', 'job_tracker']) sqlite.exec('DROP TABLE ' + t);
+  // application_snapshot is in schema.sql since SUBMITTED-VERSION-001 but live DBs create it lazily.
+  for (const t of ['kernel_language_view', 'kernel_showcase', 'job_tracker', 'application_snapshot']) sqlite.exec('DROP TABLE ' + t);
   const h = await hashOf(VICTIM);
   sqlite.prepare('INSERT INTO user_kernel (user_hash, identity, history, preferences, created_at, updated_at) VALUES (?, ?, ?, ?, 1, 1)').run(h, '{}', '{}', '{}');
   sqlite.prepare("INSERT INTO application (id, user_hash, jd_hash, jd_text, jd_language, category, created_at, updated_at) VALUES (7, ?, 'j', 'JD', 'en', 'executive', 1, 1)").run(h);

@@ -4067,6 +4067,128 @@ async function handleApiJobTracker(request, env) {
   return jsonResponse({ error: 'method_not_allowed' }, 405, request, env, refresh);
 }
 
+// ---- /api/application-snapshots  (SUBMITTED-VERSION-001) -------------
+// Owner 2026-11-05: "allow to save and mark the submitted version". Freezes
+// what the employer read: the posting text + URL the tracker held, the
+// application's CV/CL sections, meta and JD as they stood, the export URLs.
+// `application` rows stay editable (cv_sections_bak is one level deep) and
+// nightly regeneration can drift from what was sent, so each save is its
+// own INSERT-ONLY row: no handler updates or deletes one, and a
+// re-submission adds a new row. Erased with the account
+// (USER_ERASE_STATEMENTS, ACCOUNT-ERASE-COMPLETE-001).
+//   POST /api/application-snapshots      {uk, application_id?, kind?, posting?, exports?}
+//   GET  /api/application-snapshots?uk=  list (no payload)
+//   GET  /api/application-snapshots/:id  one, with its payload
+// created_at is epoch ms (as job_tracker.updated_at).
+const SNAPSHOT_MAX_BYTES = 1500000;   // D1 caps a row at 2 MB
+const SNAPSHOT_KINDS = ['submitted'];
+
+async function ensureSnapshotTable(env) {
+  await env.DB.prepare(
+    'CREATE TABLE IF NOT EXISTS application_snapshot (' +
+    'id INTEGER PRIMARY KEY AUTOINCREMENT, user_hash TEXT NOT NULL, application_id INTEGER, ' +
+    'uk TEXT NOT NULL, kind TEXT NOT NULL, json TEXT NOT NULL, created_at INTEGER NOT NULL)'
+  ).run();
+  await env.DB.prepare(
+    'CREATE INDEX IF NOT EXISTS idx_application_snapshot_user_uk ON application_snapshot (user_hash, uk, created_at)'
+  ).run();
+}
+
+function buildApplicationSnapshot(app, body) {
+  const str = (v, max) => (typeof v === 'string' ? v.slice(0, max) : '');
+  const obj = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
+  const posting = obj(body && body.posting);
+  const ex = obj(body && body.exports);
+  return {
+    posting: {
+      url: str(posting.url, 2000), jd_text: str(posting.jd_text, 200000),
+      company: str(posting.company, 300), role: str(posting.role, 300),
+    },
+    exports: {
+      cv_export_url: str(ex.cv_export_url, 2000), cl_export_url: str(ex.cl_export_url, 2000),
+      analysis_url: str(ex.analysis_url, 2000),
+    },
+    application: app ? {
+      id: app.id, jd_company: app.jd_company || '', jd_role: app.jd_role || '',
+      jd_language: app.jd_language || '', jd_text: app.jd_text || '',
+      meta: parseJsonField(app.meta, null),
+      cv_sections: parseJsonField(app.cv_sections, null),
+      cl_sections: parseJsonField(app.cl_sections, null),
+      style_config: parseJsonField(app.style_config, null),
+      updated_at: app.updated_at,
+    } : null,
+  };
+}
+
+async function handleApiApplicationSnapshots(request, env, idStr) {
+  const id = await identityFromRequest(request, env);
+  if (!id) return jsonResponse({ error: 'unauthenticated' }, 401, request, env);
+  if (!hasD1(env)) return jsonResponse({ error: 'd1_not_bound' }, 503, request, env);
+  const refresh = await maybeRefreshHeader(env, id);
+  const userHash = await userHashFromEmail(id.email);
+  const m = request.method;
+  try { await ensureSnapshotTable(env); }
+  catch (e) { return jsonResponse({ error: 'd1_schema_failed', message: String(e && e.message || e) }, 500, request, env, refresh); }
+
+  if (idStr) {
+    if (m !== 'GET') return jsonResponse({ error: 'method_not_allowed' }, 405, request, env, refresh);
+    const row = await env.DB.prepare(
+      'SELECT id, uk, kind, application_id, json, created_at FROM application_snapshot WHERE id = ? AND user_hash = ?'
+    ).bind(parseInt(idStr, 10), userHash).first();
+    if (!row) return jsonResponse({ error: 'not_found' }, 404, request, env, refresh);
+    return jsonResponse({ ok: true, snapshot: {
+      id: row.id, uk: row.uk, kind: row.kind, application_id: row.application_id,
+      created_at: row.created_at, data: parseJsonField(row.json, null),
+    } }, 200, request, env, refresh);
+  }
+
+  if (m === 'GET') {
+    const uk = new URL(request.url).searchParams.get('uk');
+    const sql = 'SELECT id, uk, kind, application_id, created_at, length(json) AS bytes FROM application_snapshot ' +
+      'WHERE user_hash = ?' + (uk ? ' AND uk = ?' : '') + ' ORDER BY created_at DESC, id DESC LIMIT 200';
+    const st = env.DB.prepare(sql);
+    const res = await (uk ? st.bind(userHash, uk) : st.bind(userHash)).all();
+    return jsonResponse({ ok: true, snapshots: (res && res.results) || [] }, 200, request, env, refresh);
+  }
+
+  if (m === 'POST') {
+    let body;
+    try { body = await request.json(); }
+    catch (_) { return jsonResponse({ error: 'invalid_json' }, 400, request, env, refresh); }
+    const uk = body && typeof body.uk === 'string' ? body.uk.trim() : '';
+    if (!uk || uk.length > 200) return jsonResponse({ error: 'invalid_uk' }, 400, request, env, refresh);
+    const kind = body.kind === undefined ? 'submitted' : body.kind;
+    if (!SNAPSHOT_KINDS.includes(kind)) return jsonResponse({ error: 'invalid_kind' }, 400, request, env, refresh);
+    let app = null;
+    if (body.application_id !== undefined && body.application_id !== null) {
+      const appId = Number(body.application_id);
+      if (!Number.isInteger(appId) || appId <= 0) return jsonResponse({ error: 'invalid_application_id' }, 400, request, env, refresh);
+      app = await env.DB.prepare('SELECT * FROM application WHERE id = ? AND user_hash = ?').bind(appId, userHash).first();
+      // 404, not 403: never confirm another user's row exists.
+      if (!app) return jsonResponse({ error: 'application_not_found' }, 404, request, env, refresh);
+    }
+    const snap = buildApplicationSnapshot(app, body);
+    if (!app && !snap.posting.jd_text && !snap.posting.url) {
+      return jsonResponse({ error: 'empty_snapshot', message: 'need an application_id or the posting text / URL' }, 400, request, env, refresh);
+    }
+    const json = JSON.stringify(snap);
+    if (json.length > SNAPSHOT_MAX_BYTES) return jsonResponse({ error: 'snapshot_too_large', bytes: json.length }, 413, request, env, refresh);
+    const now = Date.now();
+    try {
+      const ins = await env.DB.prepare(
+        'INSERT INTO application_snapshot (user_hash, application_id, uk, kind, json, created_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING id'
+      ).bind(userHash, app ? app.id : null, uk, kind, json, now).first();
+      return jsonResponse({ ok: true, snapshot: {
+        id: ins && ins.id, uk, kind, application_id: app ? app.id : null, created_at: now, bytes: json.length,
+      } }, 201, request, env, refresh);
+    } catch (e) {
+      return jsonResponse({ error: 'd1_write_failed', message: String(e && e.message || e) }, 500, request, env, refresh);
+    }
+  }
+
+  return jsonResponse({ error: 'method_not_allowed' }, 405, request, env, refresh);
+}
+
 async function handleApiKernelShowcase(request, env) {
   const id = await identityFromRequest(request, env);
   if (!id) return jsonResponse({ error: 'unauthenticated' }, 401, request, env);
@@ -5509,6 +5631,14 @@ const method = request.method;
   }
   if (path === '/api/job-tracker') {
     return handleApiJobTracker(request, env);
+  }
+  // SUBMITTED-VERSION-001: insert-only submitted-version snapshots.
+  if (path === '/api/application-snapshots') {
+    return handleApiApplicationSnapshots(request, env, null);
+  }
+  {
+    const snapIdMatch = path.match(/^\/api\/application-snapshots\/(\d+)$/);
+    if (snapIdMatch) return handleApiApplicationSnapshots(request, env, snapIdMatch[1]);
   }
 
   // --- /analytics : public, fire-and-forget, never blocking ---

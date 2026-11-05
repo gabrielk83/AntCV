@@ -180,3 +180,102 @@ export function financialsView(v: unknown): { text: string; check: string; error
   const e = typeof v.error === 'string' ? v.error.trim() : '';
   return e ? { text: '', check: '', error: e } : null;
 }
+
+// ---- SUBMITTED-VERSION-001 / INTERVIEW-PREP-001 (2026-11-05) -------------------------
+// Owner: "allow to save and mark the submitted version" and "support for positions that
+// are advancing towards an interview". More doc maps:
+//   submitted[uk]      = [{snapshot_id, date, application_id}]  newest last; the island
+//                        appends after the relay stores an insert-only snapshot
+//                        (/api/application-snapshots)
+//   interview[uk]      = {stage, generated_at, md, json}       the prep-pack script
+//   interview_next[uk] = {date, stage}                         the owner's next-stage date;
+//                        its own key so a pack rewrite never clobbers it
+//   eligibility[uk]    = {verdict: PASS|FAIL|UNVERIFIED, quote, kind}   the clearance gate
+
+export const PREP_SCRIPT = 'scripts/job-tracker/interview_prep.py';
+
+export interface SubmittedRec { snapshot_id: number; date: string; application_id: number | null; }
+
+export function submittedList(v: unknown): SubmittedRec[] {
+  if (!Array.isArray(v)) return [];
+  const out: SubmittedRec[] = [];
+  for (const e of v) {
+    if (!isRec(e)) continue;
+    const id = Number(e.snapshot_id);
+    const date = dayOf(e.date);
+    if (!Number.isInteger(id) || id <= 0 || !date) continue;
+    const app = Number(e.application_id);
+    out.push({ snapshot_id: id, date, application_id: Number.isInteger(app) && app > 0 ? app : null });
+  }
+  return out;
+}
+
+/** Append a saved snapshot; earlier ones stay (a re-submission adds a version). */
+export function addSubmitted(submitted: unknown, uk: string, rec: SubmittedRec): Record<string, SubmittedRec[]> {
+  const map = { ...(isRec(submitted) ? submitted : {}) } as Record<string, SubmittedRec[]>;
+  map[uk] = [...submittedList(map[uk]), rec];
+  return map;
+}
+
+export interface PrepPack { md: string; stage: string; generated_at: string; hasJson: boolean; }
+export function interviewPack(v: unknown): PrepPack | null {
+  if (!isRec(v)) return null;
+  const md = typeof v.md === 'string' ? v.md.trim() : '';
+  const hasJson = v.json !== undefined && v.json !== null;
+  if (!md && !hasJson) return null;
+  return { md, stage: typeof v.stage === 'string' ? v.stage : '', generated_at: v.generated_at == null ? '' : String(v.generated_at), hasJson };
+}
+
+export function nextStageOf(v: unknown): { date: string; stage: string } {
+  const r = isRec(v) ? v : {};
+  return { date: dayOf(r.date) || '', stage: typeof r.stage === 'string' ? r.stage : '' };
+}
+/** An empty date clears it ({date: ''}), since a deleted key cannot survive the 3-way merge. */
+export function setNextStage(map: unknown, uk: string, date: string, stage: string): Record<string, { date: string; stage: string }> {
+  return { ...(isRec(map) ? map : {}) as Record<string, { date: string; stage: string }>, [uk]: { date: dayOf(date) || '', stage } };
+}
+
+export type Verdict = 'PASS' | 'FAIL' | 'UNVERIFIED';
+export function eligibilityView(v: unknown): { verdict: Verdict; quote: string; kind: string } | null {
+  if (!isRec(v)) return null;
+  const verdict = String(v.verdict || '').trim().toUpperCase();
+  if (verdict !== 'PASS' && verdict !== 'FAIL' && verdict !== 'UNVERIFIED') return null;
+  return { verdict, quote: typeof v.quote === 'string' ? v.quote.trim() : '', kind: typeof v.kind === 'string' ? v.kind.trim() : '' };
+}
+
+// Minimal markdown for the prep pack: headings, bullets, rules, paragraphs; **bold**,
+// `code` and http(s) links inline. Rendered as React elements, never as HTML, so a pack
+// cannot inject markup.
+export type MdBlock = { t: 'h'; level: number; text: string } | { t: 'li'; depth: number; text: string } | { t: 'p'; text: string } | { t: 'hr' };
+export function mdBlocks(md: string): MdBlock[] {
+  const out: MdBlock[] = [];
+  let para: string[] = [];
+  const flush = () => { if (para.length) { out.push({ t: 'p', text: para.join(' ') }); para = []; } };
+  for (const raw of String(md || '').replace(/\r\n?/g, '\n').split('\n')) {
+    const line = raw.replace(/\s+$/, '');
+    let m: RegExpExecArray | null;
+    if (!line.trim()) flush();
+    else if ((m = /^(#{1,6})\s+(.*)$/.exec(line))) { flush(); out.push({ t: 'h', level: m[1].length, text: m[2] }); }
+    else if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) { flush(); out.push({ t: 'hr' }); }
+    else if ((m = /^(\s*)(?:[-*+]|\d+[.)])\s+(.*)$/.exec(line))) { flush(); out.push({ t: 'li', depth: Math.min(3, Math.floor(m[1].length / 2)), text: m[2] }); }
+    else para.push(line.trim());
+  }
+  flush();
+  return out;
+}
+export type MdSpan = { t: 'text' | 'b' | 'code'; s: string } | { t: 'a'; s: string; href: string };
+export function mdInline(text: string): MdSpan[] {
+  const out: MdSpan[] = [];
+  const re = /\*\*([^*]+)\*\*|`([^`]+)`|\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text))) {
+    if (m.index > last) out.push({ t: 'text', s: text.slice(last, m.index) });
+    if (m[1]) out.push({ t: 'b', s: m[1] });
+    else if (m[2]) out.push({ t: 'code', s: m[2] });
+    else out.push({ t: 'a', s: m[3], href: m[4] });
+    last = re.lastIndex;
+  }
+  if (last < text.length) out.push({ t: 'text', s: text.slice(last) });
+  return out;
+}

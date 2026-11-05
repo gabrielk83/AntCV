@@ -5,7 +5,7 @@
 // 'include'); no token fishing. Base URL mirrors app.js: localStorage
 // 'proxyUrl' (JSON) with the relay as fallback.
 
-import type { HistoryEntry, FollowupRec, FinancialsRec } from './outcomes';
+import type { HistoryEntry, FollowupRec, FinancialsRec, SubmittedRec } from './outcomes';
 
 const RELAY_FALLBACK = 'https://antcv-access-relay.karp-gabriel-a.workers.dev';
 
@@ -93,6 +93,11 @@ export interface TrackerDoc {
   history?: unknown;                            // OUTCOME-RECORD-002: legacy workbook key (an array in JOB-TRACKER-001); never written here
   followups?: Record<string, FollowupRec>;      // submitted date + follow-up log (followups.py and the island)
   financials?: Record<string, FinancialsRec>;   // annual-report summary (company_financials.py; read-only here)
+  // SUBMITTED-VERSION-001 / INTERVIEW-PREP-001 (outcomes.ts)
+  submitted?: Record<string, SubmittedRec[]>;   // saved submitted versions, newest last
+  interview?: Record<string, { stage?: string; generated_at?: string | number; md?: string; json?: unknown }>; // prep pack (script; read-only here)
+  interview_next?: Record<string, { date: string; stage: string }>; // owner's next-stage date
+  eligibility?: Record<string, { verdict?: string; quote?: string; kind?: string }>; // clearance gate (script; read-only here)
   [k: string]: unknown;
 }
 
@@ -184,6 +189,35 @@ export async function putDoc(doc: TrackerDoc, baseRev: number | null): Promise<P
   if (res.status === 409) return { ok: false, conflict: true, serverDoc: normalizeDoc(j.doc ?? null), serverRev: j.rev };
   if (!res.ok) return { ok: false, error: (j && j.error) || ('HTTP ' + res.status) };
   return { ok: true, rev: j.rev };
+}
+
+// SUBMITTED-VERSION-001: insert-only snapshots of what the employer read (relay
+// /api/application-snapshots). The server copies the application's CV/CL/meta itself;
+// the client adds the posting text, URL and export links the tracker holds. Until the
+// relay ships the route, the path falls through to the cv-proxy passthrough and 404s
+// with no relay error code: reported as `missing`.
+export interface SnapshotMeta { id: number; uk: string; kind: string; application_id: number | null; created_at: number; bytes?: number; }
+export interface SnapshotData {
+  posting?: { url?: string; jd_text?: string; company?: string; role?: string };
+  exports?: { cv_export_url?: string; cl_export_url?: string; analysis_url?: string };
+  application?: { id?: number; jd_company?: string; jd_role?: string; jd_text?: string; meta?: unknown; cv_sections?: unknown; cl_sections?: unknown; updated_at?: number } | null;
+}
+export interface SnapshotResult { ok: boolean; snapshot?: SnapshotMeta & { data?: SnapshotData | null }; error?: string; missing?: boolean; }
+const RELAY_ERRORS = ['unauthenticated', 'not_found', 'application_not_found', 'invalid_uk', 'invalid_kind', 'invalid_application_id', 'empty_snapshot', 'snapshot_too_large', 'd1_write_failed', 'd1_schema_failed', 'd1_not_bound'];
+async function snapshotCall(path: string, opts: RequestInit): Promise<SnapshotResult> {
+  try {
+    const res = await call(path, opts);
+    const j = await res.json().catch(() => ({}));
+    if (res.ok && j && j.ok && j.snapshot) return { ok: true, snapshot: j.snapshot };
+    if (res.status === 404 && !RELAY_ERRORS.includes(j && j.error)) return { ok: false, missing: true, error: 'the snapshot store is not live yet (relay deploy pending)' };
+    return { ok: false, error: (j && (j.message || j.error)) || ('HTTP ' + res.status) };
+  } catch (e) { return { ok: false, error: String((e as Error).message || e) }; }
+}
+export function saveSnapshot(p: { uk: string; application_id?: number | null; posting: SnapshotData['posting']; exports: SnapshotData['exports'] }): Promise<SnapshotResult> {
+  return snapshotCall('/api/application-snapshots', { method: 'POST', body: JSON.stringify({ kind: 'submitted', ...p }) });
+}
+export function getSnapshot(id: number): Promise<SnapshotResult> {
+  return snapshotCall('/api/application-snapshots/' + encodeURIComponent(String(id)), { method: 'GET' });
 }
 
 // Proxy JD fetch (same pipeline that unlocked the LinkedIn set).

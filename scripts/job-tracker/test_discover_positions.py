@@ -278,6 +278,47 @@ check("mass posting: the kept row lists both places", "posted identically in 2 l
 check("language FLAG lands on the row flag with the declared level", "on record: Danish B1" in flag0, True)
 check("stale posting lands on the row flag", "⚠ posted 2026-01-02" in flag0, True)
 
+# ---- ELIGIBILITY-GATE-001 (owner on record: EU citizen, eligible for DDIS review, no clearance) ----
+EG = dp._eligibility_gate
+check("eligibility: Danish citizenship required -> FAIL",
+      EG("Du skal have dansk statsborgerskab for at kunne ansættes.")[0], "FAIL")
+check("eligibility: 'must be a US citizen' -> FAIL", EG("Applicants must be a US citizen.")[0], "FAIL")
+check("eligibility: EU citizenship required -> PASS for an EU citizen",
+      EG("EU citizenship is required for this position in Lyngby.")[0], "PASS")
+check("eligibility: an active clearance the hire must already hold -> FAIL",
+      EG("You must hold an active NATO SECRET security clearance.")[:3:2], ("FAIL", "clearance held"))
+check("eligibility: a clearance to obtain -> FLAG, quoted",
+      EG("Du skal kunne sikkerhedsgodkendes efter gældende regler.")[0], "FLAG")
+check("eligibility: ITAR US persons -> FAIL", EG("Due to ITAR, applicants must be U.S. persons with clearance.")[0], "FAIL")
+check("eligibility: a defence employer saying nothing -> UNVERIFIED",
+      EG("We build radar systems for naval platforms.", "Nordic Defence Systems A/S")[0], "UNVERIFIED")
+check("eligibility: a civil employer saying nothing -> PASS", EG("We build spectrometers.", "Ibsen Photonics")[0], "PASS")
+check("eligibility: defence named as acceptable background is not a defence employer",
+      EG("Experience from medtech, aerospace or defence is an advantage. We make ostomy products.", "Medico Devices A/S")[0],
+      "PASS")
+check("eligibility: a customer named in the body is not the employer",
+      EG("Our customers include Saab and Volvo. You design locks.", "Nordic Locks A/S")[0], "PASS")
+check("eligibility: two sentences about defence work in the body -> UNVERIFIED",
+      EG("You will build radar for military platforms. Our defence programmes run for decades.", "RF Industries ApS")[0],
+      "UNVERIFIED")
+check("eligibility: 'Danish customers' is not a citizenship rule",
+      EG("You will support Danish customers; experience is required.")[0], "PASS")
+check("eligibility: the gate rejects a FAIL candidate with the reason",
+      "eligibility gate" in (G(dict(PM, company="Some Co", jd="Dansk statsborgerskab er et krav.")) or ""), True)
+res, out, state = run_add({"rows": [], "urls": {}, "discovered": {}}, [
+    dict(OPT, role="Systems Engineer", company="Nordic Defence Systems A/S", url="https://defence.example/j/9",
+         jd="Systems engineer for radar. " * 40 + "You must be able to obtain a security clearance.")])
+flag9 = state["doc"]["rows"][0][10]
+sw = dp.eligibility_sweep({"rows": [[1, "Nordic Defence Systems A/S", "SE", "", "", "", "", "", "Identified (posting saved)", "", "", "t1", ""],
+                                    [2, "Old Co", "PM", "", "", "", "", "", "Archive / closed", "", "", "o1", ""],
+                                    [3, "Ibsen", "LE", "", "", "", "", "", "Submitted", "", "", "i1", ""]],
+                           "jd": {"t1": "Radar work. You must hold an active security clearance.",
+                                  "o1": "Dansk statsborgerskab er et krav.", "i1": "Spectrometers."}})
+check("eligibility sweep: live rows only, PASS rows left out", {k: v["verdict"] for k, v in sw.items()}, {"t1": "FAIL"})
+check("eligibility: a FLAG lands on the row and in doc.eligibility",
+      ("⚠ eligibility flag (clearance to obtain)" in flag9,
+       list(state["doc"]["eligibility"].values())[0]["verdict"]), (True, "FLAG"))
+
 if fails:
     print("FAIL (%d):" % len(fails))
     for f in fails:

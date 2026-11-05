@@ -52,20 +52,20 @@ class Fake:
         return sup, con
 
 
-N.MODELS["factcg"]["enabled"] = True        # exercise the English path with the stub
 res = N.check("At Lumen Optics I led the NPI of twelve laser modules. "
               "At Lumen Optics I managed a team of forty software developers.", KT, "en", Fake())
-N.MODELS["factcg"]["enabled"] = False
 check("check: only unsupported claims are returned, as WARN",
       [(r["verdict"], r["severity"]) for r in res], [("UNSUPPORTED", "WARN")])
 res = N.check("Hos Lumen Optics har jeg aldrig arbejdet med lasermoduler, never.", KT, "da", Fake())
 check("check: a contradicted Danish claim FAILs with evidence", (res[0]["verdict"], bool(res[0]["evidence"])),
       ("CONTRADICTED", True))
-check("English is off until a model passes the self-test (FactCG failed it 2026-11-05)",
-      (N.enabled("en"), N.enabled("da"), N.check("At Lumen Optics I led the NPI of twelve laser modules.", KT, "en", Fake())),
-      (False, True, []))
-check("model choice: da/sv -> scandi, en -> factcg", [N.model_for(x) for x in ("da", "sv", "en")],
-      ["scandi", "scandi", "factcg"])
+check("English is on by default (the mnli model passed --self-test 2026-11-05)", N.enabled("en"), True)
+N.MODELS["en"]["enabled"] = False                  # ANTCV_NLI_EN=0
+check("English off -> no English findings, Danish unaffected",
+      (N.check("At Lumen Optics I led the NPI of twelve laser modules.", KT, "en", Fake()), N.enabled("da")), ([], True))
+N.MODELS["en"]["enabled"] = True
+check("model choice: da/sv -> scandi, en -> the English 3-label model", [N.model_for(x) for x in ("da", "sv", "en")],
+      ["scandi", "scandi", "en"])
 check("models load from safetensors only, pinned revision configurable",
       all("rev" in m for m in N.MODELS.values()), True)
 

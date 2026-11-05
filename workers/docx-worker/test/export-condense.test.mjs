@@ -89,6 +89,30 @@ test('education, list, bullets, text_bullets and labeled_list rows carry their c
   assert.ok(!/<w:w w:val=/.test(xml), 'no item_scale, no character width');
 });
 
+// NO-ORPHAN-003 (audit of a real CV, 2026-11-05): roles split across pages (role.page) and sidebar lists split by
+// _page / row_pages render as page segments; the payload-indexed keys must still find their own paragraph.
+test('page segments keep payload indexes: roles.N, items.N land on the right paragraph', async () => {
+  const xml = await gen([
+    { id: 'experience', title: 'EXPERIENCE', type: 'experience', loc: 'main',
+      item_condense: { 'roles.1.bullets.1': -6, 'roles.2.results': -4 }, item_scale: { 'roles.2.bullets.0': 97 },
+      item_alignment: { 'roles.2.bullets.0': 'center' },
+      roles: [
+        { id: 'a', title: 'First role', company: 'A', years: '2024', bullets: ['Page one bullet zero', 'Page one bullet one'] },
+        { id: 'b', title: 'Second role', company: 'B', years: '2022', page: 2, bullets: ['Page two bullet zero', 'Page two bullet one'] },
+        { id: 'c', title: 'Third role', company: 'C', years: '2020', page: 2, bullets: ['Third role bullet zero'], results: 'Third role results' },
+      ] },
+    { id: 'certs', title: 'CERTS', type: 'list', loc: 'sidebar', bullet_style: 'bullet', item_condense: { 'items.2': -6 },
+      items: ['Cert zero', { text: 'Cert one', _page: 2 }, { text: 'Cert two', _page: 2 }] },
+  ]);
+  assert.match(para(xml, 'Page two bullet one'), /<w:spacing w:val="-6"\/>/, 'roles.1 = the second role, in the page-2 segment');
+  assert.ok(!/<w:spacing w:val="-6"\/>/.test(para(xml, 'Page one bullet one')), 'not the first role of the segment');
+  assert.match(para(xml, 'Third role bullet zero'), /<w:w w:val="97"\/>/);
+  assert.match(para(xml, 'Third role bullet zero'), /<w:jc w:val="center"\/>/, 'alignment keys follow the same index');
+  assert.match(para(xml, 'Third role results'), /<w:spacing w:val="-4"\/>/);
+  assert.match(para(xml, 'Cert two'), /<w:spacing w:val="-6"\/>/, 'items.2 in the page-2 list segment');
+  assert.ok(!/<w:spacing w:val="-6"\/>/.test(para(xml, 'Cert zero')));
+});
+
 // NO-ORPHAN-002 (owner fix order): character width for body paragraphs too - compress to 96%, widen to 104% -
 // clamped [96, 104] for body and [94, 104] for table cells; marker / emoji rich_block rows take both controls.
 test('body width 96..104%, cells 94..104%, marker and emoji rows, Results line', async () => {

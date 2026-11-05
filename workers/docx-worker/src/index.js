@@ -27433,8 +27433,10 @@ function renderSection(s, ctx, isSidebar) {
     }
     if (chunks.length > 1) {
       const out2 = [];
+      let __itemBase = 0;   // NO-ORPHAN-003: items before this segment (keeps "items.N" keys on the payload index)
       chunks.forEach((ch, ci) => {
         const seg = Object.assign({}, s, {
+          _itemBase: __itemBase,
           // 1.14.40 PB-WORKER-CONT-DOUBLE-002: CLEAR _page on the chunk items.
           // The segment's "(Cont.)" heading comes from the wrapper title below.
           // renderSimpleList / renderLabeledList ALSO emit their own makeContHeader
@@ -27452,6 +27454,7 @@ function renderSection(s, ctx, isSidebar) {
           // the section footer line (PUBLICATIONS "All publications: ...") closes the LAST part only
           ...(s.masterSite && ci < chunks.length - 1 ? { masterSite: void 0 } : {}),
         });
+        __itemBase += ch.items.length;
         out2.push(...renderSection(seg, ctx, isSidebar));
       });
       return out2;
@@ -27523,6 +27526,14 @@ function renderSection(s, ctx, isSidebar) {
   // here — the worker deliberately does NOT guess a split index (it has no height
   // model; a guessed break risks a stranded head-overflow or an extra/blank page in
   // this PDF-BLANK-PAGE-history area).
+  // NO-ORPHAN-003 (owner 2026-11-05 audit of a real CV): "roles.N.bullets.M" / "roles.N.results" keys
+  // (item_condense, item_scale, item_alignment) name the role's index in the PAYLOAD. The page splitters below
+  // re-slice s.roles, so each segment counted its roles from 0 again and a page-2 role took page 1's controls.
+  // Stamp every role with its payload index (_ri) once; renderExperience reads it.
+  if (!s._antcvSegment && s.type === "experience" && Array.isArray(s.roles) &&
+      s.roles.some((r) => r && typeof r === "object" && r._ri == null)) {
+    s = Object.assign({}, s, { roles: s.roles.map((r, i) => (r && typeof r === "object" && r._ri == null) ? Object.assign({}, r, { _ri: i }) : r) });
+  }
   if (!s._antcvSegment && s.type === "experience" && Array.isArray(s.roles) &&
       s.roles.some((r) => r && r.bullet_pages && typeof r.bullet_pages === "object")) {
     const expanded = [];
@@ -27545,8 +27556,10 @@ function renderSection(s, ctx, isSidebar) {
       }
       if (cur.length) groups.push(cur);
       if (groups.length < 2) { expanded.push(role); continue; }   // no real break -> untouched
+      let __biBase = 0;   // NO-ORPHAN-003: bullets before this group (keeps "roles.N.bullets.M" keys)
       groups.forEach((g, gi) => {
-        const nr = Object.assign({}, role, { bullets: g.map((x) => x.b) });
+        const nr = Object.assign({}, role, { bullets: g.map((x) => x.b), _biBase: __biBase });
+        __biBase += g.length;
         delete nr.bullet_pages;
         if (gi === 0) {
           // head keeps the role identity (+ any client whole-role break)
@@ -27624,9 +27637,11 @@ function renderSection(s, ctx, isSidebar) {
     }
     if (chunks.length > 1) {
       const out2 = [];
+      let __itemBase = 0;   // NO-ORPHAN-003: rows before this segment
       chunks.forEach((ch, ci) => {
         const seg = Object.assign({}, s, {
           items: ch.items,
+          _itemBase: __itemBase,
           // breaks are now top-level segment boundaries — clear row_pages so
           // renderRichBlock doesn't ALSO emit an in-cell pbBreakPara/(CONT.).
           row_pages: {},
@@ -27634,6 +27649,7 @@ function renderSection(s, ctx, isSidebar) {
           title: ci > 0 ? (ctx.style && ctx.style.contHeadlines === false ? "" : (s.title || "") + " " + (ctx.contSuffix || "(CONT.)")) : s.title,
           pageBreakBefore: ci > 0 ? true : s.pageBreakBefore,
         });
+        __itemBase += ch.items.length;
         out2.push(...renderSection(seg, ctx, isSidebar));
       });
       return out2;
@@ -28167,7 +28183,8 @@ function renderRichBlock(s, ctx, isSidebar) {
   };
   items.forEach((it, i) => {
     const row = it && typeof it === "object" ? it : { t: String(it || "") };
-    const align = paraAlignPath(s, "items." + i + ".t") ?? paraAlignPath(s, "items." + i) ?? (__hasGrp ? AlignmentType.LEFT : AlignmentType.JUSTIFIED);
+    const I = (Number(s._itemBase) || 0) + i;   // NO-ORPHAN-003: payload index (sidebar page segments re-slice the rows)
+    const align = paraAlignPath(s, "items." + I + ".t") ?? paraAlignPath(s, "items." + I) ?? (__hasGrp ? AlignmentType.LEFT : AlignmentType.JUSTIFIED);
     // RICH-BLOCK-GROUP-001: a grp row is a bold sub-heading (like labeled_list).
     if (row.grp) {
       // ROLES-AS-RICHBLOCK-001 general model (Increment A): a group heading may
@@ -28181,7 +28198,7 @@ function renderRichBlock(s, ctx, isSidebar) {
       const txt = String(row.t || "").trim();
       if ((!__segs || !__segs.length) && !txt) return;
       if (!row.grpKeep && !__grpHasChild(i)) return;   // GROUP-EMPTY-HIDE-001: no rendered child → hide heading (grpKeep = user-made group stays)
-      const galign = paraAlignPath(s, "items." + i + ".t") ?? paraAlignPath(s, "items." + i) ?? groupCjlr ?? AlignmentType.CENTER;
+      const galign = paraAlignPath(s, "items." + I + ".t") ?? paraAlignPath(s, "items." + I) ?? groupCjlr ?? AlignmentType.CENTER;
       if (rowPage(i) >= 2) { if (__wholeMoveSkip) { __wholeMoveSkip = false; } else out.push(pbBreakPara()); }
       const __gHeadColor = isSidebar ? style.sidebarHeadColor : style.mainHeadColor;
       const __gHeadFont = isSidebar ? style.sidebarFont : style.mainHeadFont;
@@ -28270,7 +28287,7 @@ function renderRichBlock(s, ctx, isSidebar) {
         if (!s.headlineOff && s.title && !(ctx.style && ctx.style.contHeadlines === false)) out.push(headingParagraph(String(s.title || "").toUpperCase() + " " + (ctx.contSuffix || "(CONT.)"), ctx, isSidebar, s.ruleOff));
       }
     }
-    const __cs = paraCondenseOpts(s, "items." + i);   // EXPORT-CONDENSE-001 / NO-ORPHAN-002 (spacing + width)
+    const __cs = paraCondenseOpts(s, "items." + I);   // EXPORT-CONDENSE-001 / NO-ORPHAN-002/003 (spacing + width)
     if (row.mk === true) out.push(bulletParagraphRich(lead, body, ctx, isSidebar, align, void 0, void 0, leadUnderline, leadUlHex, __cs));
     else if (typeof row.mk === "string" && row.mk) out.push(make(lead, body, align, row.mk, __cs));
     else out.push(make(lead, body, align, void 0, __cs));
@@ -28569,6 +28586,9 @@ function renderExperience(s, ctx) {
   // the role above it. Mirrors renderCompetencyTable / renderTextBullets.
   let __runMaxRolePage = 1;
   roles.forEach((role, ri) => {
+    // NO-ORPHAN-003: the payload index of this role (page segments re-slice the roles) and of its first bullet
+    const RI = Number.isInteger(role && role._ri) ? role._ri : ri;
+    const BI0 = Number.isInteger(role && role._biBase) ? role._biBase : 0;
     const __rp = Number(role && role.page);
     const __pg = (Number.isFinite(__rp) && __rp >= 2 && __rp <= 4) ? Math.round(__rp) : 1;
     if (__pg > __runMaxRolePage) {
@@ -28645,7 +28665,7 @@ function renderExperience(s, ctx) {
     // Absent align → roleAlign undefined → __roleLCR false → leading TAB + no paragraph
     // alignment, i.e. byte-identical to the pre-CJLR export. RTL segment reversal is
     // deferred in BOTH preview and worker (kept at parity).
-    const roleAlign = paraAlignPath(s, "roles." + ri + ".title") ?? paraAlignPath(s, "roles." + ri) ?? paraAlign(s, null, void 0);
+    const roleAlign = paraAlignPath(s, "roles." + RI + ".title") ?? paraAlignPath(s, "roles." + RI) ?? paraAlign(s, null, void 0);
     const __roleLCR = roleAlign === AlignmentType.LEFT || roleAlign === AlignmentType.CENTER || roleAlign === AlignmentType.RIGHT;
     const yearsRun = __yrs ? new TextRun({
       // justify/default → leading TAB drives years to the right tab-stop (space-between);
@@ -28703,7 +28723,7 @@ function renderExperience(s, ctx) {
         // experience is a grouped rich_block so content rows resolve __rowAlign(isGrp=false,
         // __hasGrp=true) -> "left" (was JUSTIFIED in the export). __group__ never touches bullets
         // (it aligns the role LINE/head only).
-        const bAlign = paraAlignPath(s, "roles." + ri + ".bullets." + bi) ?? AlignmentType.LEFT;
+        const bAlign = paraAlignPath(s, "roles." + RI + ".bullets." + (BI0 + bi)) ?? AlignmentType.LEFT;
         // keep every bullet chained to what follows; the LAST bullet glues to
         // the Results paragraph when one follows (was: dropped the chain here).
         const _keepWithNext = bi < _bl.length - 1 || _hasResults;
@@ -28719,7 +28739,7 @@ function renderExperience(s, ctx) {
           252,
           void 0,
           void 0,
-          paraCondenseOpts(s, "roles." + ri + ".bullets." + bi)   // NO-ORPHAN-002: spacing + width
+          paraCondenseOpts(s, "roles." + RI + ".bullets." + (BI0 + bi))   // NO-ORPHAN-002/003: spacing + width
         ));
       });
     }
@@ -28740,7 +28760,7 @@ function renderExperience(s, ctx) {
             // CPH-RENDER-FLAGS-001 flag 5: upright with a grey underline on
             // copenhagen (the mockup reserves italics for the company line).
             text: style._resultsLabel || "Results: ",
-            ...paraCondenseOpts(s, "roles." + ri + ".results"),   // NO-ORPHAN-002: spacing + width
+            ...paraCondenseOpts(s, "roles." + RI + ".results"),   // NO-ORPHAN-002/003: spacing + width
             bold: true,
             italics: !style._cph,
             ...(style._cph ? { underline: { type: "single", color: "777777" } } : {}),
@@ -28750,7 +28770,7 @@ function renderExperience(s, ctx) {
           }),
           new TextRun({
             text: role.results.trim(),
-            ...paraCondenseOpts(s, "roles." + ri + ".results"),   // NO-ORPHAN-002: spacing + width
+            ...paraCondenseOpts(s, "roles." + RI + ".results"),   // NO-ORPHAN-002/003: spacing + width
             color: style.mainTextColor,
             size: pt2hp(fs.mainBody),
             font: style.mainBodyFont
@@ -28881,7 +28901,7 @@ function renderSimpleList(s, ctx, isSidebar, italic) {
       color: isSidebar ? style.sidebarTextColor : style.mainTextColor,
       size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
       font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont,
-      ...paraCondenseOpts(s, "items." + idx)   // NO-ORPHAN-001/002 (original index)
+      ...paraCondenseOpts(s, "items." + ((Number(s._itemBase) || 0) + idx))   // NO-ORPHAN-001/002/003 (payload index)
     };
     let children;
     if (isPubs) {
@@ -28907,7 +28927,7 @@ function renderSimpleList(s, ctx, isSidebar, italic) {
     } else {
       children = inlineRuns(item, { ...baseRun, italics: italic });
     }
-    const itemAlign = paraAlignPath(s, "items." + idx) ?? a;
+    const itemAlign = paraAlignPath(s, "items." + ((Number(s._itemBase) || 0) + idx)) ?? a;
     const para = {
       spacing: isAcademic ? { before: 80, after: 80, line: 264, lineRule: "auto" } : { before: 30, after: 30, line: 252, lineRule: "auto" },
       alignment: itemAlign,
@@ -29102,7 +29122,7 @@ function renderLabeledList(s, ctx, isSidebar) {
     const value = (it.v || it.value || "").toString();
     const labelColor = isSidebar ? style.sidebarLabelColor || style.sidebarTextColor : style.mainHeadColor;
     // EXPORT-CONDENSE-001 / NO-ORPHAN-001: the preflight keys labeled rows by the ORIGINAL s.items index.
-    const __lcs = paraCondenseOpts(s, "items." + s.items.indexOf(it));
+    const __lcs = paraCondenseOpts(s, "items." + ((Number(s._itemBase) || 0) + s.items.indexOf(it)));   // NO-ORPHAN-003: payload index
     out.push(new Paragraph({
       spacing: { before: 40, after: 40, line: 252, lineRule: "auto" },
       // CJLR group default wins when set. NO-JUSTIFY-GAPS-001 (owner
@@ -29213,7 +29233,7 @@ function renderEducation(s, ctx, isSidebar) {
     if (!deg && !sch) return;
     const runs = [];
     // NO-ORPHAN-001: preflight condense for this row (path items.N, N = original s.items index).
-    const __ecs = paraCondenseOpts(s, "items." + s.items.indexOf(it));
+    const __ecs = paraCondenseOpts(s, "items." + ((Number(s._itemBase) || 0) + s.items.indexOf(it)));   // NO-ORPHAN-003: payload index
     if (deg) {
       runs.push(new TextRun({
         text: deg,
@@ -29252,7 +29272,7 @@ function renderEducation(s, ctx, isSidebar) {
     // __group__ must not move education rows on export either (GROUP-CJLR-SCOPE-001,
     // 1.14.158). Default void 0 = docx LEFT = the preview default. Byte-identical when no
     // per-row override AND no __group__ are set (both resolve to void 0 / left).
-    const __eduIdx = s.items.indexOf(it);
+    const __eduIdx = (Number(s._itemBase) || 0) + s.items.indexOf(it);   // NO-ORPHAN-003: payload index across page segments
     out.push(new Paragraph({
       spacing: { before: 40, after: 40 },
       // NO-JUSTIFY-GAPS-001 (owner 2026-06-12): sidebar default LEFT.

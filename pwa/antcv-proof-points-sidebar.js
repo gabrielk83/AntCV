@@ -25,15 +25,27 @@
  * gets no block. A hand-edited block (items differ from the last auto write) is left alone.
  * Store: localStorage 'sections' (secs.cv), event antcv:sections-updated (own reason ignored).
  * Rules: pwa/gold-rules.json PROOF-POINTS-FIRST-001 / PROOF-POINTS-ORDER-001 / EXPERIENCE-SPACING-001.
- * No app.js edit. Kill: localStorage['antcv:disable-proof-points']='1'.
+ * PROOF-POINTS-LANG-001 (owner 2026-11-05 "some proof-point lines stay English after the DA
+ * switch"): the translate pass collects the block's lines by index and applies the LLM's
+ * output minutes later by the same index. The belt used to rebuild the block in between
+ * (the ribbon flips first, a non-EN ribbon reads the role fragments instead of the kernel
+ * lines), so the Danish lines landed on a different block - some lines Danish, some English.
+ * Now: while window.__antcvTranslateBusy is set the belt waits; under a non-EN ribbon an
+ * existing block keeps its lines (the translation owns them) and only the house title is
+ * pinned; the language the block was last written in is stamped in
+ * localStorage 'antcv:proofPointsAuto' {lang, hash} (the 763 re-typer drops _proofAuto from
+ * the section), and an EN ribbon over a block stamped in another language rebuilds it from
+ * the kernel lines - a translation is not the owner's edit.
+ * No app.js edit for the block itself; app.js sets window.__antcvTranslateBusy around the pass.
+ * Kill: localStorage['antcv:disable-proof-points']='1'.
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.5805-proof-points-bt';
+  var VERSION = '1.51.5885-proof-points-lang';
   if (window.__antcvProofPoints === VERSION) return;
   window.__antcvProofPoints = VERSION;
 
-  var ID = 'proof_points', REASON = 'proof-points-sidebar', AUTO = '_proofAuto';
+  var ID = 'proof_points', REASON = 'proof-points-sidebar', AUTO = '_proofAuto', STAMP = 'antcv:proofPointsAuto';
   var MIN = 3, MAX = 5, MAX_CHARS = 64, CAP_CHARS = 48;
   // PROOF-POINTS-HOUSE-001 (owner 2026-11-05 "proof points do not match academy format and
   // content"): the house margin CV (gen_margin.py) renders five proof points as a BIG figure
@@ -52,6 +64,13 @@
   function bare(v) { return String(v == null ? '' : v).replace(/^"|"$/g, '').trim(); }
   function disabled() { var v = get('antcv:disable-proof-points'); return v === '1' || v === 'true'; }
   function lang() { var v = bare(get('language')).replace(/[^a-z]/gi, '').slice(0, 2).toLowerCase(); return v || 'en'; }
+  function translating() { try { return !!window.__antcvTranslateBusy; } catch (_) { return false; } }
+  function stamp() { var s = readJson(STAMP, null); return s && typeof s === 'object' ? s : null; }
+  function writeStamp(l, h) {
+    var s = stamp();
+    if (s && s.lang === l && s.hash === h) return;
+    try { localStorage.setItem(STAMP, JSON.stringify({ lang: l, hash: h })); } catch (_) {}
+  }
   function pkg() {
     var p = bare(get('stylePackage'));
     if (!p && typeof document !== 'undefined' && document.body && document.body.dataset) p = document.body.dataset.package || '';
@@ -276,8 +295,13 @@
   }
   function hash(items) { return JSON.stringify(texts(items)); }
   function isEdited(existing) {
-    if (!existing || !existing[AUTO]) return false;
-    var auto = String(existing[AUTO]);
+    if (!existing) return false;
+    var st = stamp();
+    // PROOF-POINTS-LANG-001: the stamp outlives the section key; a block last written under
+    // another ribbon carries the translation's lines, not the owner's edit
+    if (lang() === 'en' && st && st.lang && st.lang !== 'en') return false;
+    var auto = existing[AUTO] != null ? String(existing[AUTO]) : (st && st.hash != null ? String(st.hash) : null);
+    if (auto == null) return false;
     var now = hash(existing.items || []);
     if (auto === now) return false;
     try { var legacy = JSON.parse(auto); if (Array.isArray(legacy) && hash(legacy) === now) return false; } catch (_) {}
@@ -302,10 +326,12 @@
     } catch (_) {}
   }
 
-  var busy = false;
+  var busy = false, retry = 0;
   function run(ev) {
     if (busy || disabled()) return;
     if (ev && ev.detail && ev.detail.reason === REASON) return;
+    // PROOF-POINTS-LANG-001: a translate pass is applying by index - wait for it
+    if (translating()) { if (!retry) retry = setTimeout(function () { retry = 0; run(); }, 1500); return; }
     busy = true;
     try {
       var secs = readJson('sections', null);
@@ -318,6 +344,18 @@
 
       if (!eligible()) {
         if (existing && existing[AUTO] && !edited) { cv.splice(at, 1); changed = true; }
+      } else if (existing && lang() !== 'en' && existing.type !== 'bullets') {
+        // PROOF-POINTS-LANG-001: under a non-EN ribbon the translation owns the lines; pin the
+        // house title, keep the block first in the sidebar, record the language
+        roleGapDefault();
+        injectCss();
+        var nt = TITLE[lang()], nx = existing;
+        if (nt && existing.title !== nt) { nx = Object.assign({}, existing, { title: nt }); changed = true; }
+        cv.splice(at, 1);
+        var w2 = firstSidebarIndex(cv);
+        cv.splice(w2, 0, nx);
+        if (w2 !== at) changed = true;
+        writeStamp(lang(), hash(nx.items || []));
       } else {
         roleGapDefault();
         injectCss();
@@ -339,7 +377,9 @@
           var want = firstSidebarIndex(cv);
           cv.splice(want, 0, next);
           if (want !== at) changed = true;
+          writeStamp(lang(), hash(next.items || []));
         }
+        if (changed) { var w3 = cv.filter(function (s) { return s && s.id === ID; })[0]; if (w3) writeStamp(lang(), hash(w3.items || [])); }
       }
       if (!changed) return;
       secs.cv = cv;
@@ -350,5 +390,5 @@
 
   window.addEventListener('antcv:sections-updated', run);
   [0, 400, 1200, 2500, 5000].forEach(function (ms) { setTimeout(run, ms); });
-  window.AntcvProofPoints = { version: VERSION, run: run, fragments: fragments, rank: rank, demand: demand, eligible: eligible, figure: figure, pairs: pairs, pinned: pinned, isEdited: isEdited };
+  window.AntcvProofPoints = { version: VERSION, run: run, fragments: fragments, rank: rank, demand: demand, eligible: eligible, figure: figure, pairs: pairs, pinned: pinned, isEdited: isEdited, stamp: stamp };
 })();

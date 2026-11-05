@@ -142,3 +142,61 @@ test('PROOF-POINTS-HOUSE-001c: the rich_block {b, t} re-typing by the 763 belt i
   const changed = { id: 'proof_points', type: 'rich_block', items: [{ b: '250 \u2192 10 days', t: 'my own words' }, { b: '10x', t: 'reduced product cost' }], _proofAuto: auto };
   assert.equal(api.isEdited(changed), true);
 });
+
+// PROOF-POINTS-LANG-001 (owner 2026-11-05): the block follows the output language. The translate
+// pass collects the lines by index and applies by index minutes later; the belt must not rebuild
+// the block in between, and under a non-EN ribbon the translation owns the lines.
+const DA_BLOCK = { id: 'proof_points', type: 'rich_block', loc: 'sidebar', on: true, title: 'Beviser', items: [
+  { b: '3,400 of 3,600', t: 'håndterede systemkrav i ALM-værktøjet', bullets: [] },
+  { b: '150 brugere', t: 'forenkling af rapportering', bullets: [] },
+  { b: '250 → 10 dage', t: 'skar ændringsanmodningscyklussen hos Innoviz', bullets: [] } ] };
+const DA_SECS = { cv: [
+  { id: 'profile', type: 'text', loc: 'main', on: true, content: 'Profil på dansk' },
+  { id: 'tools', type: 'labeled_list', loc: 'sidebar', on: true, items: [{ l: 'Software', v: 'Jira' }] },
+  DA_BLOCK,
+  { id: 'experience', type: 'experience', loc: 'main', on: true, roles: [
+    { title: 'A', results: 'Results: simplifying reporting for 150 users' }, { title: 'B', results: 'Results: wrote pricing and decision material for 4 offers' }, { title: 'C', results: 'Resultat: 10x hurtigere gating' } ] } ], cl: [] };
+
+test('PROOF-POINTS-LANG-001: under a non-EN ribbon the translated lines are kept, the house title is pinned, the block stays first', () => {
+  const { api, m } = load(Object.assign({}, base, { language: JSON.stringify('da'), sections: JSON.stringify(DA_SECS) }));
+  api.run();
+  const cv = JSON.parse(m.get('sections')).cv;
+  const pp = cv.find((s) => s.id === 'proof_points');
+  assert.equal(pp.title, 'Resultater i tal', 'house title pinned over the LLM title');
+  assert.deepEqual(pp.items.map((i) => [i.b, i.t]), DA_BLOCK.items.map((i) => [i.b, i.t]), 'the translation owns the lines - no rebuild from the English role fragments');
+  assert.equal(cv.findIndex((s) => s.id === 'proof_points'), cv.findIndex((s) => s.loc === 'sidebar'), 'first sidebar section');
+  const st = JSON.parse(m.get('antcv:proofPointsAuto'));
+  assert.equal(st.lang, 'da', 'the language the block was last written under is stamped');
+});
+
+test('PROOF-POINTS-LANG-001: an EN ribbon over a block stamped in another language rebuilds it from the kernel lines (a translation is not an edit)', () => {
+  const seed = Object.assign({}, base, { sections: JSON.stringify(DA_SECS), 'antcv:proofPointsAuto': JSON.stringify({ lang: 'da', hash: 'x' }) });
+  const { api, m } = load(seed);
+  assert.equal(api.isEdited(DA_BLOCK), false);
+  api.run();
+  const pp = JSON.parse(m.get('sections')).cv.find((s) => s.id === 'proof_points');
+  assert.equal(pp.title, 'Proof points');
+  assert.ok(pp.items.some((it) => it.l === '250 → 10 days'), 'kernel lines back');
+  assert.equal(JSON.parse(m.get('antcv:proofPointsAuto')).lang, 'en');
+});
+
+test('PROOF-POINTS-LANG-001: with an EN stamp a changed block is the owner\'s edit even though the 763 re-typer dropped _proofAuto', () => {
+  const stamped = Object.assign({}, base, { 'antcv:proofPointsAuto': JSON.stringify({ lang: 'en', hash: JSON.stringify([['250 → 10 days', 'auto caption']]) }) });
+  const { api } = load(stamped);
+  assert.equal(api.isEdited({ id: 'proof_points', type: 'rich_block', items: [{ b: '250 → 10 days', t: 'my own caption', bullets: [] }] }), true);
+  assert.equal(api.isEdited({ id: 'proof_points', type: 'rich_block', items: [{ b: '250 → 10 days', t: 'auto caption', bullets: [] }] }), false);
+});
+
+test('PROOF-POINTS-LANG-001: while a translate pass is in flight the belt does nothing', () => {
+  const mm = new Map(Object.entries(base));
+  const ls = { getItem: (k) => (mm.has(k) ? mm.get(k) : null), setItem: (k, v) => mm.set(k, String(v)), removeItem: (k) => mm.delete(k) };
+  // the sandbox window is the belt's window; app.js sets window.__antcvTranslateBusy to the target language around the pass
+  const sb = { window: { addEventListener() {}, dispatchEvent() {}, __antcvTranslateBusy: 'da' }, document: { body: { dataset: {} }, head: null, getElementById: () => null, createElement: () => ({ style: {} }) },
+    localStorage: ls, setTimeout: () => 0, CustomEvent: function () {}, JSON, Array, Object, String, Number, Math, RegExp, parseFloat, parseInt, Error };
+  vm.createContext(sb); vm.runInContext(src, sb);
+  sb.window.AntcvProofPoints.run();
+  assert.equal(mm.get('sections'), base.sections, 'no write while window.__antcvTranslateBusy is set');
+  sb.window.__antcvTranslateBusy = '';
+  sb.window.AntcvProofPoints.run();
+  assert.notEqual(mm.get('sections'), base.sections, 'writes once the pass is over');
+});

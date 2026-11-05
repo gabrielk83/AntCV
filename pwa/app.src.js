@@ -19676,6 +19676,11 @@ window.__antcvTxtSame =
                 (async (e) => {
                   if (!Rr) {
                     Sr(!0);
+                    // PROOF-POINTS-LANG-001 (owner 2026-11-05): the TARGET language of the pass in
+                    // flight. Belts that rebuild a section from owned text (proof points) wait for
+                    // it to clear, so the index-addressed apply below lands on the lines that were
+                    // collected; the progress banner reads it instead of the ribbon.
+                    window.__antcvTranslateBusy = e;
                     try {
                       const t =
                           {
@@ -20194,7 +20199,7 @@ window.__antcvTxtSame =
                           );
                         }));
                     } finally {
-                      (Sr(!1), Ir({ done: 0, total: 0 }), Cr({}));
+                      (Sr(!1), Ir({ done: 0, total: 0 }), Cr({}), (window.__antcvTranslateBusy = ""));
                     }
                   }
                 })(e)
@@ -48073,7 +48078,8 @@ window.__antcvTxtSame =
                 "div",
                 { style: { fontSize: 12, fontWeight: 600, marginBottom: 4 } },
                 "Translating to ",
-                "da" === je ? "Danish" : "English",
+                // PROOF-POINTS-LANG-001: the target of the pass, not the ribbon (an EN -> DA pass read "English").
+                ({ da: "Danish", es: "Spanish", zh: "中文", he: "עברית", am: "አማርኛ", ar: "العربية" }[window.__antcvTranslateBusy || je] || "English"),
                 "…",
                 Ar.total > 0 ? ` (${Ar.done}/${Ar.total})` : "",
               ),

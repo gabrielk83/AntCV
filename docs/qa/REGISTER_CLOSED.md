@@ -4,6 +4,16 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 139 — JT-EARLIER-CAREER-RESULTS-DUP-001 — CLOSED 2026-11-05 (job-tracker nightly, evidence: negative-controlled test on the real `compact_jd_aware`; 4 red on pre-fix HEAD)
+
+_verified: 2026-11-05_
+
+_Found by the job-tracker nightly 2026-11-02, fixed by the job-tracker nightly 2026-11-05 (Gabo-PC, Opus 5.5, worktree-isolated). Script-only: no `pwa/` asset, no version, no shift claim._
+
+PEAK Wind app 3527 rendered the Earlier career block with a "Results:" line repeating its own Meprolight entry. Isolated 2026-11-05: the stored role has `results: null` and four lines, Meprolight twice ("R&D Electro-Optics Engineer / Team Leader" from gen-runner's `_ROLE_MERGE` head, and "Electro-Optics Team Leader & R&D Electro-Optics Engineer" from the skeleton's `mepro-tl-2`). The captured skeleton carries the app's own stored merges (merged role `on:true`, constituents `on:false`); `compact_jd_aware` ignored `on`, merged the constituents and kept the merged copy too. The same cause stored Innoviz twice as full roles in 3527 (`innoviz-ccr` + `innoviz-ccr-2`). The export's tier-5 derive then moved the duplicate line into "Results:".
+
+Fix: `gen-runner.py` `_drop_merge_products` (an " & " / " and " title with >=2 plain same-company roles inside its year span is dropped, same rule as `pwa/antcv-role-merge-dedup.js`) before `_merge_roles`, and `_cover_dropped` declares the dropped ids in `__covers`. `test_merge_products.py`: 9 checks, pre-fix 4 red, sabotage of lines 1769 / 1776 / 1934 → 4 / 4 / 2 red, restored byte-identical. Dry run on the real skeleton with the PEAK Wind JD: Innoviz once, Meprolight once. Residual export behaviour (a summary line labelled "Results:") is row 140.
+
 ## Row 138 — EARLIER-CAREER-CHRONO-001 — CLOSED 2026-11-02 (job-tracker nightly, evidence: negative-controlled test on the real `_select_and_summarize`; 3 red on pre-fix HEAD)
 
 _verified: 2026-11-02_

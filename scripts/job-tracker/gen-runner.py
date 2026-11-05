@@ -1746,7 +1746,53 @@ def _merge_roles(roles):
             out.append(r)
     return out
 
-_VOL_RE = re.compile(r"forening|volunteer|frivillig|\bcouncil\b|representative|pan idr", re.I)
+# JT-EARLIER-CAREER-RESULTS-DUP-001 (2026-11-05): the captured skeleton carries
+# the app's OWN stored merges: a merged role ("Change Request Lead & System
+# Architect", id innoviz-ccr-2) next to its constituents (on:false). The runner
+# ignores `on` and merges the constituents itself (_ROLE_MERGE), so the app's
+# merged copy printed as well: Innoviz twice, Meprolight twice inside Earlier
+# career (the export then promoted the second line to "Results:"). Same rule as
+# antcv-role-merge-dedup.js: a role whose title joins roles (" & " / " and ") is
+# a duplicate when >=2 plain same-company roles sit inside its year span. Drop
+# it; the constituents stay and merge canonically.
+_MERGED_TITLE_RE = re.compile(r" & | and ", re.I)
+def _drop_merge_products(roles):
+    """Return (kept, dropped) where dropped = [(id, [constituent ids])]."""
+    def span(r):
+        a, b = _yr(r.get("years"), first=True), _yr(r.get("years"))
+        return (a or b, b) if b else None
+    co = lambda r: (r.get("company") or "").strip().lower()
+    kept, dropped = [], []
+    for m in roles:
+        ms = span(m)
+        subs = []
+        if ms and _MERGED_TITLE_RE.search(m.get("title") or ""):
+            for r in roles:
+                rs = span(r)
+                if r is m or not rs or co(r) != co(m) or _MERGED_TITLE_RE.search(r.get("title") or ""):
+                    continue
+                if ms[0] <= rs[0] and rs[1] <= ms[1]:
+                    subs.append(r.get("id"))
+        if len(subs) >= 2:
+            dropped.append((m.get("id"), subs))
+        else:
+            kept.append(m)
+    return kept, dropped
+
+def _cover_dropped(roles, dropped):
+    """Declare each dropped merge product in the __covers of the role that now
+    carries its constituents, so the app's role backfill does not re-add it."""
+    for pid, subs in dropped:
+        if not pid: continue
+        for r in roles:
+            cov = r.get("__covers") or ([r.get("id")] if r.get("id") else [])
+            if any(s in cov for s in subs):
+                if pid not in cov: cov = cov + [pid]
+                r["__covers"] = cov
+                break
+    return roles
+
+_VOL_RE =re.compile(r"forening|volunteer|frivillig|\bcouncil\b|representative|pan idr", re.I)
 def _score_roles(roles, jdkw):
     scored = []
     for r in roles:
@@ -1883,7 +1929,9 @@ def compact_jd_aware(cv, cl, jd, language="en"):
         sid, typ = s.get("id"), s.get("type")
         if typ == "experience" and isinstance(s.get("roles"), list):
             n0 = len(s["roles"])
-            roles = _select_and_summarize(_merge_roles(s["roles"]), jdkw, keep=6, language=language)
+            kept, dropped = _drop_merge_products(s["roles"])
+            roles = _select_and_summarize(_merge_roles(kept), jdkw, keep=6, language=language)
+            _cover_dropped(roles, dropped)
             for r in roles:
                 if r.get("id") != "earlier-career":            # keep the summary compact, verbatim
                     _fit_role(r, jdkw, max_bullets=3, cap=148, demand=demand)

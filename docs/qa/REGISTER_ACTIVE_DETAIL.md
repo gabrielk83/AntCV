@@ -2813,17 +2813,17 @@ _verified: 2026-11-02_
 
 **Re-verified 2026-11-02 (job-tracker nightly, Gabo-PC).** The sweep PUT wrote rev 356 → 357 on the first try, and gen-runner's persist + writeback PUTs returned 200 (rev 361). Uplink not measured. Row stays open on the PATCH decision.
 
-## Row 139 — JT-EARLIER-CAREER-RESULTS-DUP-001
+## Row 140 — JT-EC-RESULTS-DERIVE-001
 
-_verified: 2026-11-02_
+_verified: 2026-11-05_
 
-**Found by the job-tracker nightly 2026-11-02 (Gabo-PC, Opus 5.5).** PEAK Wind app 3527 (`export_pdfs.py`) renders the Earlier career block as three one-line roles (Meprolight 2010 - 2014, Security Guard 2010, Research & Teaching Assistant 2006 - 2010) and then "Results: Electro-Optics Team Leader & R&D Electro-Optics Engineer, Meprolight, IWI Group (2010 - 2014) - Supervised characterisation and qualification." The Meprolight line is printed twice.
+**Found by the job-tracker nightly 2026-11-05 (Gabo-PC, Opus 5.5)** while closing row 139. With the duplicate summary line gone, the headless payload build for app 3527's context still gives the Earlier career role a "Results:" line: "Students Council Representative, Tel Aviv University (2005 - 2007) - Modernised 15 outdated EE exam-preparation booklets." The line is moved out of the bullets, not duplicated.
 
-**What is known.** In `gen-runner.py`, `_earlier_career` returns `results: None` and `compact_jd_aware` skips `_fit_role` for the `earlier-career` id, so the compaction step does not write it. The Results line uses the merged-title wording of kernel role `mepro-tl-2` (in `~/.antcv/cv_skeleton.json`), while the bullet uses the `_ROLE_MERGE` title "R&D Electro-Optics Engineer / Team Leader". Candidates: the skeleton overlay ("overlaid: cv=16 sections"), the density loop, or the renderer filling an empty result from a covered role.
+**Cause.** `pwa/antcv-docx-client.js` `applyOutcomesMode`: Earlier career has no `results`, no outcomes, no proof points and no kernel role with its id, so it falls to the tier-5 `deriveResultFromRole`. `hasNum = /\d|%|\bx\b|×/` matches the years in every summary line, so each line scores as a metric and the longest wins.
 
-**Next step.** Diagnostic first: dump app 3527's stored `experience.roles[earlier-career]` from the cloud and compare it with the gen-runner output before and after the skeleton overlay. Fix where the line is added; the test drives that function.
+**Fix (owed).** In the tier-5 branch, return `{ ...r, bullets: _txBl(r.bullets) }` for `r.id === 'earlier-career'` (a summary has no single outcome), or strip "(YYYY - YYYY)" before `hasNum`. Touches a `pwa/` asset: shift claim, full cache-bust, and a live export check (preview parity: `AntcvApplyOutcomesMode` drives the preview too). Not shipped by an unattended routine.
 
-**Severity.** LOW-MEDIUM: one duplicated line on every CV with an Earlier career block, visible to a recruiter.
+**Severity.** LOW: one summary line is labelled "Results:" on every CV with an Earlier career block.
 
 ## Row 136 — CI-NIGHTLY-CREDIT-EXHAUSTED-001
 

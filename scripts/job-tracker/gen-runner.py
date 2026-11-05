@@ -277,9 +277,10 @@ def employer_financials(doc, r):
         rec = (doc.get("financials") or {}).get(r["uk"]) or {}
         if not rec.get("summary"):
             print("   [financials] none: %s" % str(rec.get("error") or "no record")[:110])
-        return rec.get("summary") or ""
+            return {}
+        return {"summary": rec["summary"], "angles": rec.get("angles") or {}}
     except Exception as e:
-        print(f"   [financials] skipped ({str(e)[:80]})"); return ""
+        print(f"   [financials] skipped ({str(e)[:80]})"); return {}
 
 # ── brand capture (BRAND-DECIDES-RESEARCH-001) ─────────────────────
 # The brand is colours AND company SPIRIT + VALUES, collected as RESEARCH in the
@@ -799,6 +800,18 @@ def _user_turn(profile_json, meta, section_ask):
     if meta.get("research"):
         lines.append("=== RECENT WEB RESEARCH on the employer (Brave web search; SUBORDINATE — may be dated, verify; NEVER a source of the candidate's identity/history) ===")
         lines.append(str(meta["research"])[:2500]); lines.append("")
+    _fin = meta.get("financials") or {}
+    if _fin.get("summary"):
+        # FIN-ANGLES-001: which of the candidate's proof to LEAD with, given the employer's figures.
+        lines.append("=== EMPLOYER FINANCIALS (latest Danish annual report, Erhvervsstyrelsen via Virk; SUBORDINATE framing, never a source of the candidate's facts) ===")
+        lines.append(str(_fin["summary"])[:700])
+        _ang = (_fin.get("angles") or {}).get("cl_angles") or []
+        if _ang:
+            lines.append("Letter angle from these figures: " + " ".join(_ang)[:700]
+                         + " Prove it ONLY with the candidate's own facts. Never quote or allude to a loss, a decline"
+                           " or any weak figure; frame it as the employer's priority (profitable growth, efficiency,"
+                           " scaling) and show how the candidate helps from the angles their record supports.")
+        lines.append("")
     if meta.get("brand_brief"):
         # BRAND-DECIDES-RESEARCH-001: the employer's own brand voice (spirit/
         # values/tone) sampled from its site. Subordinate framing for the VOICE
@@ -1069,12 +1082,12 @@ def cmd_run(args):
         r["language"] = language   # BRAND-CANONICAL-SITE-CCTLD-001: seeds the ccTLD hints
         rsch = research(r["company"], r["role"]) if getattr(args, "research", True) else ""
         if rsch: print("   research: %d findings" % len(rsch.splitlines()))
-        # COMPANY-FINANCIALS-001: the employer's last annual report (Virk open data,
-        # the figures Proff shows) joins the employer research the prompt sees.
-        fin = employer_financials(doc, r) if getattr(args, "research", True) else ""
-        if fin:
-            rsch = (rsch + "\n" if rsch else "") + "- Company financials: " + fin
-            print("   financials: " + fin[:110])
+        # COMPANY-FINANCIALS-001 + FIN-ANGLES-001: the employer's last annual report (Virk
+        # open data, the figures Proff shows) and the letter angle it implies get their own
+        # prompt block (the research block is cut at 2500 chars, this must not be).
+        fin = employer_financials(doc, r) if getattr(args, "research", True) else {}
+        if fin.get("summary"):
+            print("   financials: " + fin["summary"][:110])
         # CATEGORY-RECALL-001: category is decided BEFORE the plan is built so
         # the newest same-category saved application can ride along as a
         # subordinate tone/altitude reference (never a source of facts).
@@ -1093,7 +1106,8 @@ def cmd_run(args):
                 "signals": _signals_for(uk), "support": support.get(uk),
                 "research": rsch, "language": language, "prior_app": prior,
                 "baseline": baseline, "notes": notes.get(uk),
-                "brand_brief": (brand or {}).get("slogan_brief") or None}
+                "brand_brief": (brand or {}).get("slogan_brief") or None,
+                "financials": fin}
         sections, model = build_plan(profile, meta, r["tier"])
         print(f"\n== {uk} [{r['tier']}] {r['company']} / {r['role']} — {len(sections)} sections, model={model}")
         if args.dry:

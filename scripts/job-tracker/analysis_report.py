@@ -85,6 +85,24 @@ def question_bank_block():
             "'challenges' question.\n" + "\n".join(lines))
 
 
+def financials_block(gr, app_id):
+    """FIN-ANGLES-001: the employer's annual-report summary and the questions it suggests, from
+    the tracker row whose artifacts point at this application. '' when none is stored."""
+    try:
+        _, doc = gr.get_doc()
+        uk = next((u for u, art in (doc.get("artifacts") or {}).items()
+                   if str((art or {}).get("application_id")) == str(app_id)), None)
+        rec = (doc.get("financials") or {}).get(uk) or {} if uk else {}
+    except Exception:
+        return ""
+    if not rec.get("summary"):
+        return ""
+    qs = (rec.get("angles") or {}).get("questions") or []
+    return ("EMPLOYER FINANCIALS (latest Danish annual report): " + rec["summary"]
+            + ("\nQuestions these figures suggest (put 1-2 of them in questions_to_employer, worded for THIS "
+               "role; respectful, never accusing): " + " | ".join(qs) if qs else ""))
+
+
 def analyze(app_id, model, provider="anthropic"):
     cv, cl, pi, sc, meta, language, a = MD.job_context_for_app(app_id)
     jd = str(a.get("jd_text") or "")[:9000]
@@ -99,6 +117,7 @@ def analyze(app_id, model, provider="anthropic"):
             f"JOB DESCRIPTION:\n{jd}\n\n"
             f"CANDIDATE TAILORED CV (sections JSON):\n{cvtxt}\n\n"
             f"CANDIDATE FULL BACKGROUND (kernel digest):\n{kdigest}\n\n"
+            f"{financials_block(gr, app_id)}\n\n"
             f"{question_bank_block()}\n\n"
             "Analyze the fit and return the JSON.")
     text = _post(provider, model, SYS, user)

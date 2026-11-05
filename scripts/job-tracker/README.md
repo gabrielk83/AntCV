@@ -170,3 +170,24 @@ python test_company_financials.py
 ```
 
 Swedish employers (Bolagsverket) are not covered yet.
+
+**FIN-ANGLES-001: what the figures change.** `company_financials.angles()` reads signals from the
+figures:
+- loss (and a second loss year), back to profit;
+- growth of 15% or more, decline of 5% or more;
+- operating margin under 3%;
+- negative equity, or an equity ratio under 20%;
+- headcount up or down 10% or more.
+
+Each signal turns into four things, stored in `financials[uk].angles`:
+- a question for the recruiter or hiring manager (`questions`);
+- a cover-letter angle (`cl_angles`): which of the candidate's proof to lead with. A loss means
+  cost / yield / time proof, growth means scaling proof. Negative equity gives no angle, because it is
+  a risk for the candidate to weigh;
+- a question the interviewer may ask, and what to rehearse (`interview`).
+
+Where the angles are used:
+- `gen-runner.py` puts the figures and the angle in an EMPLOYER FINANCIALS prompt block. The letter
+  proves the angle with kernel facts only and never quotes or alludes to a loss or a weak figure.
+- `analysis_report.py` puts 1-2 of the questions into `questions_to_employer`.
+- The interview-prep pack and the mock interview read `angles.interview`.

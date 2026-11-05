@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.5805-proof-points-bt';
+const CACHE = 'antcv-1.51.5825-translate-persist-b';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

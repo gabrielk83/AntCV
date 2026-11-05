@@ -14,6 +14,29 @@ window.__antcvTxtSig =
       return "";
     }
   };
+// TRANSLATE-CACHE-MIXED-001b: fuzzy twin of __antcvTxtSig — true when >= 80 % of a's long string leaves
+// (>= 24 chars, titles excluded) also occur in b. A mixed snapshot (DA years / role
+// titles, EN prose) differs from the source in a few leaves, so exact equality missed it.
+window.__antcvTxtSame =
+  window.__antcvTxtSame ||
+  function (a, b) {
+    try {
+      var S = function (x) {
+        var o = [];
+        JSON.stringify(x, function (k, v) {
+          return "string" == typeof v && v.length >= 24 && "title" !== k && o.push(v), v;
+        });
+        return o;
+      };
+      var A = S(a), B = new Set(S(b));
+      if (!A.length) return !1;
+      var n = 0;
+      A.forEach(function (s) { B.has(s) && n++; });
+      return n / A.length >= 0.8;
+    } catch (_) {
+      return !1;
+    }
+  };
 // ============================================================================
 // AntCV PWA app — SOURCE OF TRUTH (de-minified).
 // ----------------------------------------------------------------------------
@@ -20181,7 +20204,7 @@ window.__antcvTxtSig =
                         // TRANSLATE-CACHE-MIXED-001: a rendering whose section TEXT equals the source rendering is
                         // not a translation (the apply was reverted / the pass returned nothing) —
                         // drop any entry for this language instead of caching the mixed state.
-                        if (r[je] && r[je].sections && __antcvTxtSig((Br.current || ro).cv) === __antcvTxtSig(r[je].sections.cv)) {
+                        if (r[je] && r[je].sections && __antcvTxtSame((Br.current || ro).cv, r[je].sections.cv)) {
                           console.warn("[TRANSLATE-CACHE-MIXED-001] " + e + " section text unchanged after translate — not caching it");
                           const n = { ...t };
                           delete n[e];
@@ -20212,7 +20235,7 @@ window.__antcvTxtSig =
           if (__nc) { try { i(); } catch (_) {} return; }
           // TRANSLATE-CACHE-MIXED-001: a cached entry whose section text equals the current source is a copy,
           // not a translation — ignore it and offer the translate dialog instead.
-          const __stale = !!(a && a.sections && r[je] && r[je].sections && __antcvTxtSig(a.sections.cv) === __antcvTxtSig(r[je].sections.cv));
+          const __stale = !!(a && a.sections && r[je] && r[je].sections && __antcvTxtSame(a.sections.cv, r[je].sections.cv));
           __stale && console.warn("[TRANSLATE-CACHE-MIXED-001] cached " + e + " has the same section text as " + je + " — ignoring it");
           if (a && a.sections && a.meta && !__stale) {
             const o = (null == (t = a.sections.cv) ? void 0 : t.length) || 0,

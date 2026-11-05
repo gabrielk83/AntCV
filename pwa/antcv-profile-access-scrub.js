@@ -21,11 +21,12 @@
  *    is retitled COMMUNICATION and carries the canonical "what works" line; an
  *    Accessibility row in ADDITIONAL is relabelled the same way. No disability
  *    label ("hearing impaired", "cochlear implant") reaches the CV.
+ *    COMMS-LINE-002 (owner 2026-11-05): new, shorter wording of that line.
  * Kill: localStorage['antcv:disable-profile-access-scrub']='1'.
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.5445-sections-storm';
+  var VERSION = '1.51.5465-comms-line-002';
   if (window.__antcvProfileAccessScrub === VERSION) return;
   window.__antcvProfileAccessScrub = VERSION;
 
@@ -33,13 +34,17 @@
   var DISABILITY = /hearing[- ]impair|cochlear|disabilit|accessibilit|hearing aid/i;
   var FILLER = /people\s+from\s+many\s+backgrounds/i;
   // COMMS-LINE-001 (owner 2026-11-01): canonical Communication row, per output language.
+  // COMMS-LINE-002 (owner 2026-11-05): shorter wording; the 2026-11-01 sentence only fit
+  // on one line with the font squeezed to 86-90 %, this one fits at 100 %.
   var COMMS_LINE = {
-    en: 'I work in English and Danish and follow meetings best with live captions and written follow-ups.',
-    da: 'Jeg arbejder på engelsk og dansk og følger møder bedst med liveundertekster og skriftlig opfølgning.',
-    es: 'Trabajo en inglés y danés y sigo mejor las reuniones con subtítulos en directo y seguimiento por escrito.'
+    en: 'English and Danish at work; live captions and written follow-ups in meetings.',
+    da: 'Engelsk og dansk i arbejdet; liveundertekster og skriftlig opfølgning i møder.',
+    es: 'Inglés y danés en el trabajo; subtítulos en directo y seguimiento por escrito en las reuniones.'
   };
   var COMMS_TITLE = { en: 'COMMUNICATION', da: 'KOMMUNIKATION', es: 'COMUNICACIÓN' };
   var COMMS_LABEL = { en: 'Communication', da: 'Kommunikation', es: 'Comunicación' };
+  // the COMMS-LINE-001 wording, so a row that already carries it is rewritten to the new line
+  var LEGACY_COMMS = /follow meetings best|følger møder bedst|sigo mejor las reuniones/i;
   var ACCESS_LABEL = /^\s*(accessib\w*|tilg[æa]ngelighed|accesibilidad|无障碍\S*)\s*:?\s*$/i;
   function commsLang() {
     try { var l = String(localStorage.getItem('language') || '').replace(/[^a-z]/gi, '').slice(0, 2).toLowerCase(); return COMMS_LINE[l] ? l : 'en'; } catch (_) { return 'en'; }
@@ -174,7 +179,7 @@
                 if (!it3 || typeof it3 !== 'object') return it3;
                 if (typeof it3.group === 'string' && ACCESS_LABEL.test(it3.group)) { hit3 = true; return Object.assign({}, it3, { group: LABEL }); }
                 var lab = String(it3.l || ''), val = String(it3.v || '');
-                if (ACCESS_LABEL.test(lab) || DISABILITY.test(val)) {
+                if (ACCESS_LABEL.test(lab) || DISABILITY.test(val) || LEGACY_COMMS.test(val)) {
                   if (lab === LABEL && val === LINE) return it3;
                   hit3 = true; return Object.assign({}, it3, { l: LABEL, v: LINE });
                 }

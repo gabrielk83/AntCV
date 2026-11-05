@@ -126,7 +126,7 @@ test('rich_block profile (items[].t — the live NIL row shape) is scrubbed too'
 
 // COMMS-LINE-001 (owner 2026-11-01, supersedes ACCESS-MIDDLE-001): no disability
 // label on Gabriel's CV; the row is COMMUNICATION and says what works.
-const LINE_EN = 'I work in English and Danish and follow meetings best with live captions and written follow-ups.';
+const LINE_EN = 'English and Danish at work; live captions and written follow-ups in meetings.';
 const GAB = 'Gabriel Alexander Karp-Gershon';
 function runWith(cv, name, lang) {
   const backing = new Map();
@@ -161,7 +161,7 @@ test('COMMS-LINE-001: Danish output gets the Danish line and title; ADDITIONAL r
     { id: 'additional', type: 'labeled_list', items: [{ group: 'Accessibility' }, { l: 'Accessibility', v: 'Hearing impaired; captions help.' }, { l: 'Rugby', v: 'Copenhagen Wolves RFC' }] },
   ], GAB, 'da');
   assert.equal(out[0].title, 'KOMMUNIKATION');
-  assert.match(out[0].content, /^Jeg arbejder på engelsk og dansk/);
+  assert.equal(out[0].content, 'Engelsk og dansk i arbejdet; liveundertekster og skriftlig opfølgning i møder.');
   assert.equal(out[1].items[0].group, 'Kommunikation');
   assert.equal(out[1].items[1].l, 'Kommunikation');
   assert.equal(out[1].items[2].v, 'Copenhagen Wolves RFC', 'other rows untouched');
@@ -174,4 +174,20 @@ test('COMMS-LINE-001: idempotent and name-guarded', () => {
   assert.equal(backing.get('sections'), after, 'second run writes nothing');
   const { out } = runWith([{ id: 'accessibility', type: 'text', content: 'Hearing impaired.' }], 'Anita Ant');
   assert.equal(out[0].content, 'Hearing impaired.', 'other personas untouched');
+});
+
+// COMMS-LINE-002 (owner 2026-11-05): rows that carry the COMMS-LINE-001 sentence move to the
+// shorter line, in the accessibility section and in an ADDITIONAL row already labelled Communication.
+test('COMMS-LINE-002: the COMMS-LINE-001 sentence is rewritten to the new line', () => {
+  const OLD = 'I work in English and Danish and follow meetings best with live captions and written follow-ups.';
+  const { out } = runWith([
+    { id: 'accessibility', title: 'COMMUNICATION', type: 'labeled_list', items: [{ l: '', v: OLD, labelHidden: true }] },
+    { id: 'additional', type: 'labeled_list', items: [{ l: 'Communication', v: OLD }] },
+  ], GAB);
+  assert.equal(out[0].items[0].v, 'English and Danish at work; live captions and written follow-ups in meetings.');
+  assert.equal(out[1].items[0].v, out[0].items[0].v);
+  const { out: da } = runWith([
+    { id: 'additional', type: 'labeled_list', items: [{ l: 'Kommunikation', v: 'Jeg arbejder på engelsk og dansk og følger møder bedst med liveundertekster og skriftlig opfølgning.' }] },
+  ], GAB, 'da');
+  assert.equal(da[0].items[0].v, 'Engelsk og dansk i arbejdet; liveundertekster og skriftlig opfølgning i møder.');
 });

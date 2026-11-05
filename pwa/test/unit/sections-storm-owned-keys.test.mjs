@@ -41,7 +41,7 @@ function loadRefs(seed) {
 }
 const secs = (m) => JSON.parse(m.get('sections'));
 
-const LINE = 'I work in English and Danish and follow meetings best with live captions and written follow-ups.';
+const LINE = 'English and Danish at work; live captions and written follow-ups in meetings.';
 const GABRIEL = JSON.stringify({ name: 'Gabriel Alexander Karp-Gershon' });
 
 test('scrub: a canonical COMMUNICATION row carrying a foreign bullets key is left alone (no write, no event)', () => {

@@ -143,10 +143,22 @@ def linkedin_job_id(url):
     return m.group(1) if m else None
 
 
+# POSTING-JOBNET-001 (JOBSRC-UPSTREAM-001, 2026-11-05): jobnet.dk/find-job/<id> answers
+# HTTP 404 to a non-JS client even while the ad is live (the page renders client-side),
+# which would read GONE and archive a live row after two sweeps. The BFF detail endpoint
+# answers 200 for a live internal ad and 404 for a gone one; it needs `x-csrf: 1`.
+_JOBNET_FIND = re.compile(r"^https?://(?:www\.)?jobnet\.dk/find-job/([0-9a-f-]{36})/?$", re.I)
+JOBNET_DETAILS = "https://jobnet.dk/bff/FindJob/JobAdDetails/%s"
+
+
 def probe_target(url):
-    """The URL to actually fetch for a tracker URL (guest API for LinkedIn views)."""
+    """The URL to actually fetch for a tracker URL (guest API for LinkedIn views,
+    the BFF detail endpoint for jobnet find-job pages)."""
     jid = linkedin_job_id(url)
-    return LI_GUEST % jid if jid else url
+    if jid:
+        return LI_GUEST % jid
+    m = _JOBNET_FIND.match(url or "")
+    return JOBNET_DETAILS % m.group(1) if m else url
 
 
 # ------------------------------------------------------------------ relay glue
@@ -274,10 +286,12 @@ def classify(status, final_url, requested_url, text, today=None):
 
 
 def probe(url, timeout=25):
-    req = urllib.request.Request(url, headers={
-        "User-Agent": _UA,
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en,da;q=0.8"})
+    headers = {"User-Agent": _UA,
+               "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+               "Accept-Language": "en,da;q=0.8"}
+    if url.startswith(JOBNET_DETAILS.split("%s")[0]):
+        headers["x-csrf"] = "1"                              # POSTING-JOBNET-001
+    req = urllib.request.Request(url, headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             raw = resp.read(400_000)

@@ -52,3 +52,41 @@ test('LANG-CACHE-APP-SCOPE-001b: the switch twins load the record\'s JD into the
   assert.ok(min.includes('localStorage.setItem("antcv:lastJdText",real?jd:"")'), 'mirror: scoped lastJdText follows the record');
   assert.ok(/GENERAL CV \[—–-\] UNSOLICITED APPLICATION CONTEXT/.test(min.slice(min.indexOf('window.__antcvLoadJd='), min.indexOf('window.__antcvLoadJd=') + 700)), 'mirror: unsolicited stub is not a real JD');
 });
+
+test('LANG-CACHE-APP-SCOPE-001c: every cache write keeps only this application\'s tagged entries', () => {
+  assert.equal(count(src, 'function __antcvCacheOwn(c) {'), 1);
+  assert.equal(count(min, 'function __antcvCacheOwn(c){'), 1);
+  // untagged (pre-001) entries fail the === test exactly like a foreign application's
+  assert.ok(min.includes('c[k]&&String(c[k].app||"")===me?o[k]=c[k]:d.push(k)'), 'mirror: foreign + untagged entries dropped');
+  assert.ok(min.includes('r={...__antcvCacheOwn(Gr),[Be]:{'), 'mirror: switch snapshot');
+  assert.ok(min.includes('const n=__antcvCacheOwn(t);delete n[e];return L.set("languageCache",n),n}const n={...__antcvCacheOwn(t),[e]:{sections:'), 'mirror: mixed-drop + post-translate snapshot');
+  assert.equal(count(src, '__antcvCacheOwn(Or), // LANG-CACHE-APP-SCOPE-001c'), 1);
+  assert.equal(count(src, '__antcvCacheOwn(t); // LANG-CACHE-APP-SCOPE-001c'), 1);
+  assert.equal(count(src, '...__antcvCacheOwn(t), // LANG-CACHE-APP-SCOPE-001c'), 1);
+  // TRANSLATE-CACHE-MIXED-001 guard stays in front of the write
+  assert.ok(min.includes('if(r[Be]&&r[Be].sections&&__antcvTxtSame((Zr.current||xo).cv,r[Be].sections.cv))'), 'mixed guard intact');
+});
+
+test('LANG-CACHE-APP-SCOPE-001c: a switch to a DIFFERENT application clears the cache through the editor bridge', () => {
+  assert.equal(count(min, 'window.__antcvLangCacheReset=(f,t)=>{'), 1, 'mirror: bridge defined once');
+  assert.ok(min.includes(': languageCache cleared")}catch(_){}Jr({})})'), 'mirror: bridge clears state + storage via the setter');
+  assert.equal(count(src, 'window.__antcvLangCacheReset = (f, t) => {'), 1);
+  const twinMin = '__lcp&&__lcp!==String(e.id)&&(window.__antcvLangCacheReset?window.__antcvLangCacheReset(__lcp,String(e.id)):localStorage.removeItem("languageCache"))}catch(_){}try{window.AntcvJdScope&&window.AntcvJdScope.setCurrentAppId(String(e.id))}catch(_){}';
+  assert.equal(count(min, twinMin), 2, 'mirror: both twins, previous id read BEFORE the scope moves');
+  assert.equal(count(src, '__lcp && __lcp !== String(e.id) && (window.__antcvLangCacheReset'), 2, 'source: both twins');
+});
+
+test('LANG-CACHE-APP-SCOPE-001c: __antcvCacheOwn behaviour', () => {
+  const body = min.slice(min.indexOf('function __antcvCacheOwn(c){'), min.indexOf('function __antcvSnapStandalone()'));
+  const run = (cur, cache) => {
+    const warn = [];
+    const f = new Function('__antcvCacheApp', 'console', body + ';return __antcvCacheOwn;')(() => cur, { warn: (m) => warn.push(m) });
+    return { out: f(cache), warn };
+  };
+  const cache = { en: { app: '3491', meta: { company: 'Kaleido' } }, da: { app: '3525' }, es: { meta: {} } };
+  const r = run('3525', cache);
+  assert.deepEqual(Object.keys(r.out), ['da']);
+  assert.match(r.warn[0], /dropped cached en,es/);
+  assert.deepEqual(run('3525', null).out, {});
+  assert.equal(run('3525', { da: { app: '3525' } }).warn.length, 0);
+});

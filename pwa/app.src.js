@@ -2942,6 +2942,15 @@ window.__antcvTxtSame =
   function __antcvCacheApp() {
     try { return String((window.AntcvJdScope && window.AntcvJdScope.getCurrentAppId && window.AntcvJdScope.getCurrentAppId()) || "kernel"); } catch (_) { return "kernel"; }
   }
+  // LANG-CACHE-APP-SCOPE-001c (owner 2026-11-05): the cache keeps only THIS application's entries.
+  // Every write drops entries tagged with another application and untagged entries written before
+  // 001 (they can carry another application's meta), so a stale snapshot never rides along.
+  function __antcvCacheOwn(c) {
+    var me = __antcvCacheApp(), o = {}, d = [];
+    try { for (var k in c || {}) c[k] && String(c[k].app || "") === me ? (o[k] = c[k]) : d.push(k); } catch (_) {}
+    if (d.length) try { console.warn("[LANG-CACHE-APP-SCOPE-001c] dropped cached " + d.join(",") + " (another application or untagged), this tab is on " + me); } catch (_) {}
+    return o;
+  }
   function __antcvSnapStandalone() {
     var s = {};
     try { var sl = localStorage.getItem("antcv:clSlogan"); if (null != sl) s.clSlogan = sl; } catch (_) {}
@@ -19659,7 +19668,7 @@ window.__antcvTxtSame =
           if (!__force && e === je) return;
           const o = Lr(ro, io),
             r = {
-              ...Or,
+              ...__antcvCacheOwn(Or), // LANG-CACHE-APP-SCOPE-001c
               [je]: {
                 sections: JSON.parse(JSON.stringify(ro)),
                 meta: { ...io },
@@ -20233,12 +20242,12 @@ window.__antcvTxtSame =
                         // drop any entry for this language instead of caching the mixed state.
                         if (r[je] && r[je].sections && __antcvTxtSame((Br.current || ro).cv, r[je].sections.cv)) {
                           console.warn("[TRANSLATE-CACHE-MIXED-001] " + e + " section text unchanged after translate — not caching it");
-                          const n = { ...t };
+                          const n = __antcvCacheOwn(t); // LANG-CACHE-APP-SCOPE-001c
                           delete n[e];
                           return (u.set("languageCache", n), n);
                         }
                         const n = {
-                          ...t,
+                          ...__antcvCacheOwn(t), // LANG-CACHE-APP-SCOPE-001c
                           [e]: {
                             sections: JSON.parse(
                               JSON.stringify(Br.current || ro),
@@ -26967,6 +26976,13 @@ window.__antcvTxtSame =
         // new app's scope (live: antcv:app:3491:jdText = the ASSA ABLOY JD). Same shape as the
         // read-from-cloud restore: a real JD lands in Dt / Ft / Un and the scoped lastJdText;
         // an unsolicited / template / manual-save record clears them.
+        // LANG-CACHE-APP-SCOPE-001c: the application-switch twins (app-shell component) call this when the
+        // tab moves to a DIFFERENT application; the cache state lives here, so clear state + storage via Nr.
+        ("undefined" != typeof window &&
+          (window.__antcvLangCacheReset = (f, t) => {
+            try { console.warn("[LANG-CACHE-APP-SCOPE-001c] application " + f + " -> " + t + ": languageCache cleared"); } catch (_) {}
+            Nr({});
+          })),
         ("undefined" != typeof window &&
           (window.__antcvLoadJd = (jd, co, ro) => {
             try {
@@ -42406,6 +42422,8 @@ window.__antcvTxtSame =
                                                       // applicationQuestions / activeAppCompany) to the NEW application before anything is
                                                       // stamped - the [Fl] effect only runs after render, so the company stamp below and the
                                                       // JD mirror landed in the PREVIOUS app's namespace (antcv:app:3525:company = Kaleido).
+                                                      // LANG-CACHE-APP-SCOPE-001c: a different application clears the languageCache (bridge next to __antcvLoadJd)
+                                                      try { var __lcp = window.AntcvJdScope && window.AntcvJdScope.getCurrentAppId && window.AntcvJdScope.getCurrentAppId(); __lcp && __lcp !== String(e.id) && (window.__antcvLangCacheReset ? window.__antcvLangCacheReset(__lcp, String(e.id)) : localStorage.removeItem("languageCache")); } catch (_) {}
                                                       try { window.AntcvJdScope && window.AntcvJdScope.setCurrentAppId(String(e.id)); } catch (_) {}
                                                       // LANG-CACHE-APP-SCOPE-001b: load the record's JD into the editor's JD state (bridge defined next to __antcvRelangHeadless)
                                                       try { window.__antcvLoadJd && window.__antcvLoadJd(n.jd_text, n.jd_company, n.jd_role); } catch (_) {}
@@ -49042,6 +49060,8 @@ window.__antcvTxtSame =
                                           // applicationQuestions / activeAppCompany) to the NEW application before anything is
                                           // stamped - the [Fl] effect only runs after render, so the company stamp below and the
                                           // JD mirror landed in the PREVIOUS app's namespace (antcv:app:3525:company = Kaleido).
+                                          // LANG-CACHE-APP-SCOPE-001c: a different application clears the languageCache (bridge next to __antcvLoadJd)
+                                          try { var __lcp = window.AntcvJdScope && window.AntcvJdScope.getCurrentAppId && window.AntcvJdScope.getCurrentAppId(); __lcp && __lcp !== String(e.id) && (window.__antcvLangCacheReset ? window.__antcvLangCacheReset(__lcp, String(e.id)) : localStorage.removeItem("languageCache")); } catch (_) {}
                                           try { window.AntcvJdScope && window.AntcvJdScope.setCurrentAppId(String(e.id)); } catch (_) {}
                                           // LANG-CACHE-APP-SCOPE-001b: load the record's JD into the editor's JD state (bridge defined next to __antcvRelangHeadless)
                                           try { window.__antcvLoadJd && window.__antcvLoadJd(n.jd_text, n.jd_company, n.jd_role); } catch (_) {}

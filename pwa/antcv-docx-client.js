@@ -720,13 +720,16 @@ export function buildPayload({
   })(language);
   // Normalize sections — the PWA stores these as { cv: [...], cl: [...] }
   // depending on doc type; the worker just wants the active list.
-  const docSections = sanitizeForExport(applyOutcomesMode(
+  const __srcSections = (sections && sections[doc]) || (Array.isArray(sections) ? sections : []);
+  const __academy = _academyFormatOn(doc, layout);
+  const docSections = applyAcademyFormat(sanitizeForExport(applyOutcomesMode(
     mergeHowContributeFromLocalStorage(
-      hydrateClProse((sections && sections[doc]) || (Array.isArray(sections) ? sections : []), doc, meta),
+      hydrateClProse(__srcSections, doc, meta),
       doc
     ),
-    doc
-  ), doc);
+    doc,
+    { language, forceResults: __academy }
+  ), doc), { on: __academy, language, meta, personalInfo, source: __srcSections });
 
   // Strip the data: prefix from photo dataURL if present.
   const photo_b64 = stripDataUrlPrefix(photo);
@@ -1741,6 +1744,43 @@ function _bulletRelevantToJd(bullet, jdSet) {
 }
 function _jdIsTechOps() { return /\b(?:it support|sysadmin|system[s]? admin|infrastructure|devops|networking|on-?prem|server administration|helpdesk|service desk)\b/.test(_jdText()); }
 function _jdIsResearch() { return /\b(?:research|patent|publication|r&d|phd|ph\.d|scientist|academ|postdoc|peer[- ]review)\b/.test(_jdText()); }
+// ACADEMY-FORMAT-001 (owner 2026-11-05, "make sure the application fully match academy format - for
+// sidebars, for profile bullets number etc..."): a CV in the margin layout (the default) exports in the
+// house shape of package 1051 — at most 6 detailed roles + Earlier career, 3 bullets + Results, 5 proof
+// points, 4 tools rows, 4 certificates, Danish-first languages, interests = volunteer row + one strip.
+// The rules live in antcv-academy-format.js (pure; it never writes `sections`). Payload-only, after
+// sanitizeForExport. Kill: antcv:disable-academy-format=1.
+function _academyFormatOn(doc, layout) {
+  try {
+    if (doc !== 'cv') return false;
+    if (localStorage.getItem('antcv:disable-academy-format') === '1') return false;
+    if ((layout || readCvLayout()) !== 'margin') return false;
+    const af = (typeof window !== 'undefined') && window.AntcvAcademyFormat;
+    return !!(af && typeof af.apply === 'function');
+  } catch (_) { return false; }
+}
+function applyAcademyFormat(list, o) {
+  if (!o || !o.on || !Array.isArray(list)) return list;
+  try {
+    let jd = '';
+    try { jd = String(localStorage.getItem('antcv:lastJdText') || ''); } catch (_) {}
+    const pi = (o.personalInfo && (o.personalInfo.personalInfo || o.personalInfo)) || {};
+    let name = String(pi.name || '');
+    if (!name) { try { const p = JSON.parse(localStorage.getItem('personalInfo') || '{}') || {}; name = String((p.personalInfo ? p.personalInfo.name : p.name) || ''); } catch (_) {} }
+    const res = window.AntcvAcademyFormat.apply(list, {
+      lang: o.language, jdText: jd, company: (o.meta && o.meta.company) || '', role: (o.meta && o.meta.role) || '', name,
+      nowYear: _payloadNowYear(), source: o.source,
+    });
+    if (!res || !Array.isArray(res.sections)) return list;
+    try {
+      window.__antcvAcademyLast = { changes: res.changes, audit: window.AntcvAcademyFormat.audit(res.sections, { lang: o.language, jdText: jd, company: (o.meta && o.meta.company) || '', role: (o.meta && o.meta.role) || '', name, checkResults: true }) };
+      if (res.changes.length) console.info('[ACADEMY-FORMAT-001] ' + res.changes.length + ' change(s): ' + res.changes.join(' | '));
+      const left = window.__antcvAcademyLast.audit.issues;
+      if (left.length) console.warn('[ACADEMY-FORMAT-001] still off the house format: ' + left.map((i) => i.code + ' ' + i.where + ' (' + i.detail + ')').join(' | '));
+    } catch (_) {}
+    return res.sections;
+  } catch (_) { return list; }
+}
 function _isTargetedExport() {
   try {
     const m = JSON.parse(localStorage.getItem('meta') || '{}');
@@ -3417,10 +3457,28 @@ function _expTenseMode() {
   }
   catch (_) { return 'auto'; }
 }
-export function applyOutcomesMode(docSections, doc) {
+// ACADEMY-FORMAT-001 (owner 2026-11-05, #3491 Kaleido, da): the CV language the Results lines must
+// be in. The export passes it; the preview (results-laminate / app.js __erm) calls without opts and
+// reads the stored output language, so both surfaces gate the same way.
+function _outcomesLang(opts) {
+  let l = opts && opts.language;
+  if (!l) { try { l = String(localStorage.getItem('language') || ''); const p = JSON.parse(l); if (typeof p === 'string') l = p; } catch (_) {} }
+  l = String(l || 'en').toLowerCase();
+  return /^da/.test(l) ? 'da' : /^es/.test(l) ? 'es' : /^zh/.test(l) ? 'zh' : 'en';
+}
+export function applyOutcomesMode(docSections, doc, opts) {
   try {
     if (doc !== 'cv' || !Array.isArray(docSections)) return docSections;
     const _tmode = _expTenseMode();
+    // ACADEMY-FORMAT-001: the kernel outcomes, the proof-point texts and the Gabriel pins below are
+    // ENGLISH source text; in a da/es CV they printed English "Results:" lines (6 of 9 on #3491).
+    // A candidate detected as another language than the CV's is skipped, so the role falls through
+    // to the translated SELECTED OUTCOMES pool or to its own (translated) bullets. Detector:
+    // antcv-academy-format.js langOf (function words; short or mixed text is never judged).
+    const _olang = _outcomesLang(opts);
+    const _afmt = (typeof window !== 'undefined') && window.AntcvAcademyFormat;
+    const _foreign = (t) => _olang !== 'en' && _olang !== 'zh' && !!_afmt && typeof _afmt.wrongLang === 'function'
+      && _afmt.wrongLang(typeof t === 'string' ? t : [t && t.b, t && t.t].filter(Boolean).join(' '), _olang);
     // TENSE-FULL-CLAUSE-001 (owner 2026-06-19: "make sure role and role-result are in the
     // same tense" + fixes E1 broken mixed tense). The Result laminates two outcomes joined
     // by "; " — _tenseLead only re-tensed the FIRST clause's leading verb, leaving
@@ -3453,6 +3511,8 @@ export function applyOutcomesMode(docSections, doc) {
       if (pkg === 'scandinavian' || pkg === '') pkg = 'copenhagen-modern';
       mode = pkg === 'copenhagen-modern' ? 'results' : 'section';
     }
+    // ACADEMY-FORMAT-001: the academy (margin) CV carries a Results line per role, never the block.
+    if (opts && opts.forceResults) mode = 'results';
     if (mode !== 'results') return docSections;
     const isOutcomes = (s) => s &&
       (/^(outcomes|selected_outcomes)$/.test(String(s.id || '')) ||
@@ -3632,7 +3692,45 @@ export function applyOutcomesMode(docSections, doc) {
       }
       return t;
     };
+    // ACADEMY-FORMAT-001: a wrong-language candidate is not dropped blind. Numbers (years aside) and
+    // Latin acronyms survive translation, so the English kernel result names its own translated twin:
+    // the SELECTED OUTCOMES item or the role bullet that shares a number and scores >= 3 ("cutting the
+    // change cycle from roughly 250 days to about 10" -> "ændringscyklustid fra ca. 250 til ca. 10
+    // dage"). Matching the Danish pool on English kernel WORDS put a LiDAR result on Trackman (#3491).
+    const _sigOf = (t) => {
+      const s = String(t == null ? '' : t), out = new Set();
+      (s.match(/\d[\d.,]*/g) || []).forEach((m) => {
+        const n = m.replace(/[.,](?=\d{3}(?!\d))/g, '').replace(/[.,]+$/, '').replace(',', '.');
+        const v = parseFloat(n);
+        if (isFinite(v) && !(v >= 1900 && v <= 2100 && /^\d{4}$/.test(n))) out.add('#' + v);
+      });
+      (s.match(/\b[A-Z][A-Za-z0-9]*[A-Z][A-Za-z0-9]*\b/g) || []).forEach((m) => { if (m.length >= 3) out.add(m.toLowerCase()); });
+      return out;
+    };
+    const _twinUsed = new Set();
+    const _twinOf = (enTexts, r) => {
+      if (!enTexts.length) return null;
+      const cands = [];
+      (Array.isArray(so.items) ? so.items : []).forEach((x) => { const c = lineOf(x); if (c) cands.push(c); });
+      (Array.isArray(r.bullets) ? r.bullets : []).forEach((b) => { const c = typeof b === 'string' ? b : [b && b.b, b && b.t].filter(Boolean).join(' '); if (c) cands.push(c); });
+      for (const en of enTexts) {
+        const es = _sigOf(en);
+        let best = null, bs = 0;
+        for (const c of cands) {
+          if (_twinUsed.has(c) || _foreign(c)) continue;
+          // a number >= 10 weighs 2, a small number or an acronym 1 ("v2" / "phase 1" alone never match)
+          let sc = 0, num = 0;
+          _sigOf(c).forEach((k) => { if (es.has(k)) { if (k[0] === '#') { sc += Number(k.slice(1)) >= 10 ? 2 : 1; num++; } else sc += 1; } });
+          if (num && sc >= 3 && sc > bs) { bs = sc; best = c; }
+        }
+        if (best) { _twinUsed.add(best); return best.trim(); }
+      }
+      return null;
+    };
     visRoles.forEach((r) => {
+      // ACADEMY-FORMAT-001: wrong-language candidates seen on the way down, tried as twins at the end.
+      const _en = [];
+      const _keep = (t) => { if (t && _foreign(t)) { _en.push(t); return false; } return !!t; };
       // BABEL-PINS-LANG-GATE-001 (owner 2026-07-11 "generation in the target language"):
       // a role whose title is in a wide script (zh/he/ar/am) is a NATIVE-language
       // rendering — the ENGLISH pin/kernel-outcome tiers must never laminate onto it
@@ -3641,9 +3739,9 @@ export function applyOutcomesMode(docSections, doc) {
       // Results stays empty rather than becoming English.
       const _wideT = /[一-鿿㐀-䶿֐-׿؀-ۿሀ-፿]/.test(String(r.title || ''));
       // GABRIEL-EXACT-RESULTS-001: owner-pinned verbatim Results win above ALL tiers (no cap, no cut).
-      const _gx = _wideT ? null : _gabrielExactResult(r); if (_gx) { _lam.set(r, _gx); return; }
+      const _gx = _wideT ? null : _gabrielExactResult(r); if (_gx && _keep(_gx)) { _lam.set(r, _gx); return; }
       // 1) explicit role.results string wins verbatim.
-      if (typeof r.results === 'string' && r.results.trim()) { _lam.set(r, r.results.trim()); return; }
+      if (typeof r.results === 'string' && r.results.trim() && _keep(r.results.trim())) { _lam.set(r, r.results.trim()); return; }
       if (_wideT) return;
       // 2) self-contained role.outcomes[] (owner's 'outcome_edits' lists): use the
       //    DEFAULT-VISIBLE items only — JD-gated hidden ones (defaultVisible:false)
@@ -3655,7 +3753,7 @@ export function applyOutcomesMode(docSections, doc) {
           // {title,result,numeric} — read o.result; keep the v1 {b,t} path.
           .map((o) => (typeof o === 'string' ? o.trim()
             : (o.result ? String(o.result).trim() : [o.b, o.t].filter(Boolean).join(' ').trim())))
-          .filter(Boolean);
+          .filter(_keep);
         // RESULTS-NUMERIC-LEAD-001 + CLUSTER-QUAL-001: order by the blended numeric +
         // skill-demand score so a quantified AND demanded outcome leads (and survives
         // the cap), not stored order.
@@ -3670,6 +3768,7 @@ export function applyOutcomesMode(docSections, doc) {
       let texts = ids.map((id) => _ppText[id]).filter(Boolean);
       if (!texts.length && Array.isArray(r.proofPoints) && r.proofPoints.length)
         texts = r.proofPoints.map((p) => (typeof p === 'string' ? p.trim() : String((p && (p.text || p.result)) || '').trim())).filter(Boolean);
+      texts = texts.filter(_keep);
       texts.sort((p, q) => _rankScore(q) - _rankScore(p)); // RESULTS-NUMERIC-LEAD-001 + CLUSTER-QUAL-001
       if (texts.length) { _lam.set(r, _capJoin(texts)); return; }
       // 3b) RESULTS-KERNEL-ROLE-MATCH-001 (owner 2026-06-23): the generated doc role carries
@@ -3677,9 +3776,17 @@ export function applyOutcomesMode(docSections, doc) {
       //     and adopt ITS real (numeric) outcomes. Without this a role rich in numeric
       //     outcomes laminated from a token-matched wrong outcome or a derived bullet.
       let _kt = (r.id != null && _koTextById[String(r.id)]) || _koTextByName[_nameKey(r)] || null;
+      if (_kt) _kt = _kt.filter(_keep);
       if (_kt && _kt.length) {
         const _tx2 = _kt.slice().sort((p, q) => _rankScore(q) - _rankScore(p));
         _lam.set(r, _capJoin(_tx2));
+        return;
+      }
+      // ACADEMY-FORMAT-001: every candidate above was in the wrong language: take the translated twin
+      // of the strongest one (or leave the role to the distribution / derive below).
+      if (_en.length) {
+        const _tw = _twinOf(_en.slice().sort((p, q) => _rankScore(q) - _rankScore(p)), r);
+        if (_tw) _lam.set(r, _tw);
       }
     });
     // The heuristic SELECTED-OUTCOMES distribution runs ONLY for roles that are
@@ -3705,8 +3812,12 @@ export function applyOutcomesMode(docSections, doc) {
     let oroMapEarly = {};
     try { oroMapEarly = JSON.parse(localStorage.getItem('antcv:outcomeRoleMap') || '{}') || {}; } catch (_) {}
     const isMappedOutcome = (x) => x && x._oid != null && oroMapEarly[x._oid] != null;
-    const pool = so.items.filter(Boolean).filter((x) => !isPatent(x) && (isMappedOutcome(x) || !echoes(x)));
-    if (!pool.length) return docSections.filter((s) => !isOutcomes(s));
+    const poolAll = so.items.filter(Boolean).filter((x) => !isPatent(x) && (isMappedOutcome(x) || !echoes(x)));
+    if (!poolAll.length) return docSections.filter((s) => !isOutcomes(s));
+    // ACADEMY-FORMAT-001: wrong-language outcomes leave the pool; an emptied pool still laminates
+    // the tiers above and derives the rest (the early return above stays as it was for every
+    // pool that was empty before the gate).
+    const pool = poolAll.filter((x) => !_foreign(x) && !_twinUsed.has(lineOf(x)));
     const assign = distRoles.map(() => []);
     const left = [];
     const distIdx = new Map(); distRoles.forEach((r, i) => distIdx.set(r, i));

@@ -1,5 +1,5 @@
 {
-  "version": "1.10.3",
+  "version": "1.10.4",
   "_note": "GOLD RULES - the ONE machine-readable control site for every AntCV generation (owner 2026-07-13). Narrative + enforcement map: docs/qa/GOLD_STANDARD_LOCKER.md. Consumers: pwa/antcv-bullet-targets.js (prompt block on every generation/Fit-it/Enhance call), scripts/job-tracker/{quality_pass,density_fit,measure_density,gen-runner}.py (persist + sweep enforcement). Served at antcv.pages.dev/gold-rules.json so workers can fetch it (proxy prompt-augment wiring = open follow-up). Change values HERE; code reads them.",
   "density": {
     "runt_fraction": 0.6,
@@ -31,6 +31,19 @@
     "table_label_max_chars": 28,
     "table_label_hard_chars": 30,
     "table_value_max_chars": 112
+  },
+  "academy_format": {
+    "_doc": "ACADEMY-FORMAT-001 (owner 2026-11-05: \"make sure the application fully match academy format - for sidebars, for profile bullets number etc...\"). The house margin package (housestyle_pdf_generator/course_cvs_2026-10-01/pkgs_1051.py EN, pkgs_1050.py DA) is the shape of record for a CV in the margin layout (the app default since MARGIN-LAYOUT-001). Enforced at export by pwa/antcv-academy-format.js (pure: payload only, rows hidden, never spliced; called from antcv-docx-client buildPayload after sanitizeForExport; kill antcv:disable-academy-format). Its langOf detector also gates wrong-language Results lines out of da/es CVs (applyOutcomesMode, preview + export). languages_first is the house LANGS_ROW order for the margin CV; languages_order below (English first, 2026-10-23) still drives the stored sort and the other layouts. Mirror test: pwa/test/unit/academy-format.test.mjs.",
+    "max_roles": 6,
+    "role_bullets_max": 3,
+    "bullet_max_chars": 145,
+    "results_max_chars": 150,
+    "proof_points": 5,
+    "tools_rows": 4,
+    "tool_items_max": 6,
+    "certs_max": 4,
+    "interests_rows": 2,
+    "languages_first": ["danish", "english", "spanish", "hebrew"]
   },
   "results": {
     "require_metric": true,
@@ -113,7 +126,7 @@
     "notes": [
       {
         "company_pattern": "trackman",
-        "present_pattern": "\\bintern(?:ship)?s?\\b",
+        "present_pattern": "\\b(?:intern(?:ship)?s?|praktik\\w*|prácticas|practicas|pasant[ií]a\\w*)\\b",
         "label_suffix": " (internship)",
         "prefix": "Internship: "
       }
@@ -311,6 +324,7 @@
     " - LINEAR CV CLOSING TABLES (LINEAR-DETAILS-ENRICHED-001, owner 2026-10-05, CV_Veo_Director_enriched): in the linear layout the closing details are THREE label | content tables, each under its own heading: CREDENTIALS (Standards, Courses/Certificates, Patent), LANGUAGES & PERSONAL (Languages, Rugby, Interests, Communication), AVAILABILITY & REFERENCES (Availability, References); never one combined details table and never a courses row under Education. Keep each of those items its own SHORT section (a one-liner whose section title is the row label) so the layout can place it as a row; never merge them into one block. Page 2 of the experience opens with 'Professional experience (Cont.)' after ONE explicit page break, roles kept whole (LINEAR-CONT-001).",
     " - PROOF POINTS FIRST (PROOF-POINTS-FIRST-001, owner 2026-10-23, course reviewer feedback on the Veo CV): with the nordic-minimal writing style or the copenhagen-modern package the CV is TWO columns by default and the LEFT column (the sidebar) opens with a PROOF POINTS block: 4-5 short lines, each one number taken from the source in the source's own terms (shape only: 'Change cycle ~250 to ~10 days', '20,000 units/week test line'), so the reader meets the numbers in the first ten seconds. The block carries only numbers that already stand in a Results line or a Core Competencies row; never a new figure. The classic full-width heading stack is not the default for these two.",
     " - PROOF POINT ORDER (PROOF-POINTS-ORDER-001, owner 2026-10-23): rank proof points and Core Competencies rows by what THIS ad stresses, not by habit: an ad that stresses DFM/DFA, mass production, volume or consumer electronics gets the VOLUME numbers first (units per week, units shipped, production lines) and a verification count (requirements verified) steps back; shipped consumer hardware ranks before automotive verification; a cost ad gets cost cuts first; a delivery ad gets cycle times first.",
+    " - ACADEMY FORMAT (ACADEMY-FORMAT-001, owner 2026-11-05; the two-column margin CV is the default, shape of record = the house package): at most 6 detailed roles, newest first; university research or teaching roles and anything older go into ONE 'Earlier career' entry (one line per employer, 'Title, Company (years)'), unless the job is research. Each role: at most 3 bullets plus its Results line, and every bullet is ONE line (70 characters or fewer) or TWO full lines (125-145 characters), never three. Sidebar: exactly 5 proof points; Tools & Methods as 4 grouped rows of at most 6 items each (no group header rows); at most 4 certificates; the volunteer row plus ONE interests strip ('Tai-chi (...) · hiking (...) · ...'); no publications list or regulatory block unless the job asks for them (the patent stays as one sidebar line). Every field is written in the OUTPUT language, Results lines, proof-point captions, tools rows and fixed labels included: a Danish CV has no English Results line, no 'Work style' lead and no English table header. The profile names the target company.",
     " - BUDGET SIZE (BUDGET-SIZE-001, owner 2026-10-23): 'owned the budget' is credible only with its size: state the stored figure or range ('a budget of about X', 'a six-figure budget') when the source carries one; when the source has no size, write the responsibility without 'owned' ('ran the electro-optics budget') and never invent a figure. An ad that asks to 'build and own Capex/Opex budgets' makes a stored budget size a first-tier proof point, so a missing size is a question for the candidate, not a guess.",
     " - SHAREABLE FIGURES (SHAREABLE-FIGURES-001, owner 2026-10-23): a figure that reads as internal reporting (a customer programme value, a share of a company's revenue, a customer's name next to a sum) is printed only when the stored fact is marked shareable (public or agreed); otherwise describe the scale without the figure ('a multi-year customer programme'). Never derive a share or a sum the source does not state.",
     " - PROFILE LENGTH (PROFILE-LENGTH-001, owner 2026-10-23): the whole CV profile (heading, Who I Am, What I Bring, Work style) renders in 10-12 lines of its column, in two or three blocks. The first block is the hook and stays; no later block restates the ad or the first block (the employer's own product list is not a profile sentence); the work-style line carries one behaviour and one proof, never a third summary. When the cap bites, merge blocks; never drop the value sentence.",

@@ -12,19 +12,31 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.4786-impact-types';
+  var VERSION = '1.51.6105-academy-format';
   if (window.__antcvRoleBodyNotes === VERSION) return;
   window.__antcvRoleBodyNotes = VERSION;
 
+  // ACADEMY-FORMAT-001 (2026-11-05, #3491 Kaleido, da): the note follows the CV language, and a
+  // Danish / Spanish word for internship counts as "already says it". The English-only test put
+  // "Internship: " on bullet 0 of a Danish role whose bullet 1 already opened "Praktik:".
   var NOTES = [
-    { company: /trackman/i, present: /\bintern(?:ship)?s?\b/i, labelSuffix: ' (internship)', prefix: 'Internship: ' }
+    { company: /trackman/i, present: /\b(?:intern(?:ship)?s?|praktik\w*|prácticas|practicas|pasant[ií]a\w*)\b/i,
+      labelSuffix: { en: ' (internship)', da: ' (praktik)', es: ' (prácticas)' },
+      prefix: { en: 'Internship: ', da: 'Praktik: ', es: 'Prácticas: ' } }
   ];
+  function docLang() {
+    var raw = '';
+    try { raw = String(localStorage.getItem('language') || ''); } catch (_) {}
+    try { var p = JSON.parse(raw); if (typeof p === 'string') raw = p; } catch (_) {}
+    return /^da/i.test(raw) ? 'da' : (/^es/i.test(raw) ? 'es' : 'en');
+  }
 
   function noteBullet(text, n) {
     var t = String(text || '');
     var m = t.match(/^([^:.]{2,48}):\s+(\S[\s\S]*)$/);
-    if (m) return m[1] + n.labelSuffix + ': ' + m[2];
-    return n.prefix + t;
+    var l = docLang();
+    if (m) return m[1] + (n.labelSuffix[l] || n.labelSuffix.en) + ': ' + m[2];
+    return (n.prefix[l] || n.prefix.en) + t;
   }
   function applyRole(r) {
     if (!r || typeof r !== 'object' || !Array.isArray(r.bullets) || !r.bullets.length) return false;

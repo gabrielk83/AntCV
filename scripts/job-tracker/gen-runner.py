@@ -46,6 +46,10 @@
 #        --kernel-file PATH | --out DIR | --provider anthropic | --dry (plan only, no LLM)
 import os, sys, json, time, argparse, urllib.request, urllib.error, urllib.parse, re, copy
 
+if os.path.dirname(os.path.abspath(__file__)) not in sys.path:
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import meta_guard as MG  # noqa: E402  META-LEAK-GATE-001: one detector for every cv_*/cl_* section
+
 # GOLD-RULES-SITE-001: caps + banned words read from the single control site
 # (pwa/gold-rules.json); literals are fallbacks.
 try:
@@ -963,6 +967,48 @@ def sanitize_text(text):
     t = _swap_banned(t)
     return t
 
+# ── meta-commentary gate (META-LEAK-GATE-001) ──────────────────────
+# Found 2026-11-05: a stored CV shipped a SELECTED OUTCOMES bullet that was the
+# coherence repair talking about its instructions ("The instructions above concern
+# the Selected Outcomes CV section ... the review items list fixes for sections
+# including 'cl_what_i_bring'"). Only the WHY paragraph was ever checked. Every
+# cv_*/cl_* section now passes meta_guard before persist: a dirty section is
+# regenerated ONCE (one single-pass job for all dirty sections, no coherence
+# repair - that pass is where the leak came from); a regen that is still dirty,
+# or fails, falls back to MG.strip (commentary lines/sentences removed, '' when
+# nothing real is left). Every action lands in res["meta_gate"], the run index
+# and guards_<uk>.json - never silent.
+def meta_gate(res, plan, regen=None):
+    """Gate res["sections"] in place. regen(sub_plan) -> drive()-shaped result or
+    None. Returns [{section, action, rule, token, sentence, ...}]."""
+    secs = res.get("sections") or {}
+    dirty = {sid: MG.check(s.get("result") or "") for sid, s in secs.items()
+             if sid.startswith(("cv_", "cl_"))}
+    dirty = {sid: f for sid, f in dirty.items() if f}
+    if not dirty:
+        return []
+    fresh = {}
+    if regen:
+        try:
+            rr = regen([p for p in plan if p.get("id") in dirty]) or {}
+            fresh = {sid: s.get("result") or "" for sid, s in (rr.get("sections") or {}).items()
+                     if s.get("state") == "done"}
+        except Exception as e:
+            print(f"   [meta-gate] regen failed ({str(e)[:80]}); stripping instead")
+    log = []
+    for sid, finds in dirty.items():
+        sec = secs[sid]
+        new = fresh.get(sid, "")
+        if new.strip() and not MG.check(new):
+            sec["result"], action = new, "regenerated"
+        else:
+            sec["result"] = MG.strip(sec.get("result") or "")
+            action = "stripped" if sec["result"] else "dropped"
+        sec["meta_gate"] = action
+        log.extend(dict(f, section=sid, action=action) for f in finds)
+        print(f"   [meta-gate] {sid}: {action} ({finds[0]['rule']}: {finds[0]['sentence'][:70]!r})")
+    return log
+
 # ── commands ───────────────────────────────────────────────────────
 def dead_pointer_rows(doc, app_ids):
     """JT-HEALTH-CMD-001 (2026-10-25): artifacts[uk].application_id values that
@@ -1159,6 +1205,11 @@ def cmd_run(args):
             print(f"   [provider-fallback] generated on {prov}:{model} after {' -> '.join(_tried_here[:-1])} exhausted")
         if res.get("error"):
             print(f"   FAILED: {res['error']}"); results_index.append({"uk": uk, "error": res["error"]}); continue
+        # META-LEAK-GATE-001: no section reaches the bundle, the guards or persist
+        # with model meta-commentary in it.
+        res["meta_gate"] = meta_gate(res, sections, regen=lambda sub: drive(
+            sub, prov, model, source_cv=json.dumps(profile, ensure_ascii=False)[:38000],
+            jd_text=r["jd"], skip_coherence=True))
         # quality probe
         allbanned = {}
         for sid, s in res["sections"].items():
@@ -1180,6 +1231,11 @@ def cmd_run(args):
             persisted = persist_application(doc, r, res, cat, language,
                                             kernel=kernel, measure=getattr(args, "measure", True) and not args.dry,
                                             max_pages=getattr(args, "max_pages", 2))
+            # the persist-time belt's removals (text the quality/density/CL-fit LLM passes wrote)
+            res["meta_gate"] += [dict(f, section=f["path"]) for f in (persisted or {}).get("meta") or []]
+        if res["meta_gate"]:
+            entry["meta"] = [{k: f.get(k) for k in ("section", "action", "rule", "sentence")}
+                             for f in res["meta_gate"]]
         # COURSE-CHECKLIST-DEFAULT-001: The Checklist runs on every generated CV
         # unless --no-checklist. Persisted run -> the final structured CV (after
         # quality/nordic/fit); review-only -> the generated cv_* sections.
@@ -1212,6 +1268,9 @@ def cmd_run(args):
             print(f"   {e['uk']}: {e['checklist']['summary']}")
         if e.get("guards"):
             print(f"   {e['uk']}: {e['guards']['summary']}")
+        if e.get("meta"):
+            print(f"   {e['uk']}: META-LEAK-GATE-001 " + "; ".join(
+                f"{m['section']} {m['action']}" for m in e["meta"]))
     if args.persist:
         # re-fetch + writeback the doc rev-safe (artifacts were mutated in place)
         rev2, cur = get_doc()
@@ -1639,20 +1698,8 @@ _WHY_BRIDGE_RX = re.compile(
     r"(?:really\s+|closely\s+|directly\s+)?(?:aligns?|matches?|fits?|corresponds?|speaks?|maps?)\b"
     r"|^\s*i\s+(?:believe|feel|think)\s+i\s+(?:would|will|could)\s+be\s+a\s+(?:good|great|strong)\s+fit",
     re.I)
-_WHY_META_RX = re.compile(
-    # The letter must never TALK ABOUT its own inputs. Any mention of the job
-    # description/prompt AS A DOCUMENT, of injections, or of the drafting process
-    # is a leak - the window-limited first draft let a reworded leak slip through
-    # ("the job description excerpt is mostly corporate boilerplate ... no
-    # injection attempt visible"), so the JD-as-object mention alone is enough.
-    r"\b(?:job description|job posting|the listing|prompt|instructions?)\b[^.]{0,140}"
-    r"\b(?:injection|bracketed|fragment|flagged|boilerplate|excerpt|placeholder)\b"
-    r"|\b(?:possible|prompt|attempted) injection\b|\bi have ignored (?:it|that|this)\b"
-    r"|\bas an ai\b|\bthe (?:user|system) (?:prompt|message)\b"
-    r"|\bi (?:cannot|can't|will not|won'?t) (?:comply|fabricate|invent)\b"
-    r"|^\s*note\s*:\s*the\s+(?:job|listing|posting|jd)\b"
-    r"|\b(?:i (?:have )?)?drafted (?:only )?from the (?:legitimate|real|actual)\b",
-    re.I)
+# (3) META LEAK lives in meta_guard.py (META-LEAK-GATE-001): the same detector now
+# gates every cv_*/cl_* section before persist, not only this paragraph.
 # Kept for the joined-ness signal; multilingual so a da/es/zh letter is judged on
 # the same footing as an English one.
 _FIRST_PERSON_RX = re.compile(
@@ -1687,7 +1734,7 @@ def _why_defects(text, company):
         if _WHY_BRIDGE_RX.search(s):
             out.append("hollow bridge opener: %r" % s[:70])
         # (3) model meta-commentary leaked into the letter
-        if _WHY_META_RX.search(s):
+        if MG.hits(s):
             out.append("model meta-commentary in letter: %r" % s[:90])
     return out
 
@@ -2669,6 +2716,19 @@ def persist_application(doc, r, res, category, language, kernel=None, measure=Fa
     # t.subtitle before the global personalInfo.specialization); slogan -> meta.
     spec = _format_spec((res["sections"].get("cv_specialization") or {}).get("result"), language)
     slogan = _format_slogan((res["sections"].get("cl_slogan") or {}).get("result"))
+    # META-LEAK-GATE-001 belt: the quality, density and CL-fit passes above rewrite
+    # text with an LLM after meta_gate ran, so the FINAL structured sections are
+    # scrubbed right before the write. Removed, printed, and returned to the run
+    # report - never persisted, never silent.
+    meta_found = MG.scrub_sections(cv, "cv") + MG.scrub_sections(cl, "cl")
+    if MG.hits(spec):
+        meta_found += [dict(f, path="meta:subtitle", action="dropped") for f in MG.check(spec)]
+        spec = _STANDING_SPEC.get(language, _STANDING_SPEC["en"])
+    if MG.hits(slogan):
+        meta_found += [dict(f, path="meta:slogan", action="dropped") for f in MG.check(slogan)]
+        slogan = ""
+    for f in meta_found:
+        print(f"   [meta-belt] {f['path']}: {f['action']} ({f['rule']}: {f['sentence'][:70]!r})")
     _meta = {"source": "gen-runner", "tier": r["tier"], "urlkey": uk}
     # SUBTITLE-PI-FALLBACK-001 (owner 2026-07-29 "many times also the specialization
     # line" goes missing on an Application-History load): the runner's meta was minimal
@@ -2744,7 +2804,7 @@ def persist_application(doc, r, res, category, language, kernel=None, measure=Fa
     })
     print(f"   [lang] subtitle={spec!r} slogan={('<suppressed:unsolicited>' if (slogan and _unsol) else slogan)!r}")
     if c != 200 or not (b.get("application") or {}).get("id"):
-        print(f"   persist POST failed: {c} {str(b)[:160]}"); return {"cv": cv, "pages": pages}
+        print(f"   persist POST failed: {c} {str(b)[:160]}"); return {"cv": cv, "pages": pages, "meta": meta_found}
     app_id = b["application"]["id"]
     c2, b2 = _req(RELAY, f"/api/applications/{app_id}", "PUT",
                   {"cv_sections": cv, "cl_sections": cl, "jd_company": str(r["company"]), "jd_role": str(r["role"])})
@@ -2752,7 +2812,7 @@ def persist_application(doc, r, res, category, language, kernel=None, measure=Fa
     arts = doc.setdefault("artifacts", {})
     arts[uk] = {**(arts.get(uk) or {}), "application_id": app_id, "generated_at": int(time.time())}
     q = doc.setdefault("queue", {}); q[uk] = False
-    return {"cv": cv, "pages": pages, "application_id": app_id}
+    return {"cv": cv, "pages": pages, "application_id": app_id, "meta": meta_found}
 
 
 def run_course_checklist(out_dir, r, cv_sections, kernel=None, pages=None, scope=""):
@@ -2812,6 +2872,12 @@ def run_text_guards(out_dir, r, res, kernel=None, nli=False):
                 found.append(dict(f, section=sid, check="fact"))
             for f in EC.check(text, jd, keywords=[str(r.get("company") or ""), str(r.get("role") or "")]):
                 found.append(dict(f, section=sid, check="echo"))
+            for f in MG.check(text):   # META-LEAK-GATE-001: whatever is still there now
+                found.append(dict(f, section=sid, check="meta"))
+        # META-LEAK-GATE-001: what the gate and the persist belt already did. A clean
+        # regeneration is a glance (WARN); removed text is a confirm (FAIL).
+        for f in res.get("meta_gate") or []:
+            found.append(dict(f, check="meta", severity="WARN" if f.get("action") == "regenerated" else "FAIL"))
         if nli and texts:
             for sid, items in run_nli_guard(out_dir, r["uk"], texts, ktext).items():
                 for f in items:

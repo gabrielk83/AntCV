@@ -45966,7 +45966,12 @@ window.__antcvTxtSame =
           // is natively LARGER (slider ×1.3, capped) and the medallion keeps
           // an EQUAL gap above (to the page top) and below (to the first
           // sidebar headline) — G is that gap.
-          __bridgeOn = "band-overlap" === er && !!zn && "cv" === Lt,
+          // MARGIN-LAYOUT-001 (owner 2026-11-05, docs/design/MARGIN_LAYOUT_SPEC.md): the
+          // house margin format - the header lives in a card at the top of the page-1
+          // sidebar and NO band is drawn. CV only. antcv-cv-layout-margin.js owns the
+          // store (antcv:cvLayout absent = margin), the card CSS and the paginator budgets.
+          __antcvMarginOn = "cv" === Lt && "function" == typeof window.__antcvCvLayoutIs && window.__antcvCvLayoutIs("margin"),
+          __bridgeOn = !__antcvMarginOn && "band-overlap" === er && !!zn && "cv" === Lt,
           __zoEff = __bridgeOn ? Math.min(220, Math.round(1.3 * Zo)) : Zo,
           __bridgeGap = 14,
           // PHOTO-POSITIONS-NATIVE-001 (owner 2026-06-11: "only sidebar top
@@ -46098,7 +46103,10 @@ window.__antcvTxtSame =
                   // carries its own leading glyph (⌂ ★ @ ☎ 🔗︎ ⌘ ⌁ from pe()), so
                   // the between-item bullet is redundant — replace with an em-space
                   // gap. Dropping it frees width, so the font also grows +0.5pt.
-                  const _sep = _i ? [" "] : [];
+                  // MARGIN-LAYOUT-001: in the sidebar card every item is its own line (flex
+                  // column), so no en-space separators there - an en space is not collapsible
+                  // whitespace and rendered as an empty row of its own.
+                  const _sep = _i && !__antcvMarginOn ? [" "] : [];
                   // CONTACT-INLINE-EDIT-001 (owner 2026-07-14): each contact item is
                   // click-to-edit in place. Only the RAW fields (email/phone/linkedin/
                   // github/website — pe() emits them verbatim) are editable; location &
@@ -46143,7 +46151,9 @@ window.__antcvTxtSame =
                       ),
                     ];
                   }
-                  return [..._sep, `${e} ${t}`];
+                  // MARGIN-LAYOUT-001: plain items (location, citizenship) become spans in the card so
+                  // each is its own flex row (adjacent text nodes would merge into one anonymous row).
+                  return [..._sep, __antcvMarginOn ? React.createElement("span", { key: "cp" + _i }, `${e} ${t}`) : `${e} ${t}`];
                 })
               : "da" === je
                 ? "[Kontakt — e-mail | telefon | LinkedIn | lokation]"
@@ -46291,7 +46301,7 @@ window.__antcvTxtSame =
         return React.createElement(
           "div",
           { style: { background: "#fff", minHeight: "100%", fontFamily: t } },
-          b
+          b && !__antcvMarginOn
             ? React.createElement(
                 "div",
                 {
@@ -46352,7 +46362,9 @@ window.__antcvTxtSame =
                   }),
                 w.map(v),
               )
-            : React.createElement("div", {
+            : __antcvMarginOn
+              ? null   // MARGIN-LAYOUT-001: no band, no empty strip either
+              : React.createElement("div", {
                 // SEAM-LINE-001b / HEADER-SEAM-#0b: empty-state header strip — same
                 // gated seam as the populated band (only when headerBg === sidebarBg).
                 style: { background: `var(--header-bg, ${Ke})`, height: 8, ...__antcvSeamStyle(ya) },
@@ -46844,7 +46856,28 @@ window.__antcvTxtSame =
                                 pointerEvents: "none",
                               },
                             }),
+                          // MARGIN-LAYOUT-001: the header CARD - photo (for the four
+                          // header-adjacent positions), name, title, a CONTACT heading and
+                          // one contact item per line - first in the page-1 sidebar. The
+                          // name/spec/contact nodes are the band's own (v), restyled by
+                          // antcv-cv-layout-margin.js; main/bridge/sidebar-bottom photos
+                          // keep their placement.
                           0 === n &&
+                            __antcvMarginOn &&
+                            React.createElement(
+                              "div",
+                              { key: "antcv-sidebar-card", "data-antcv-sidebar-card": "1" },
+                              zn &&
+                                ("sidebar-top" === er || "band-overlap" === er || "header-left" === er || "header-right" === er) &&
+                                React.createElement("img", { src: zn, "data-antcv-card-photo": "1", style: { ...__photoFrame(84), display: "block" } }),
+                              w.flatMap((t) =>
+                                "contact" === t && p
+                                  ? [React.createElement("div", { key: "antcv-card-contact-head", "data-antcv-card-head": "1" }, { da: "KONTAKT", es: "CONTACTO", zh: "联系方式" }[je] || "CONTACT"), v(t)]
+                                  : [v(t)],
+                              ),
+                            ),
+                          0 === n &&
+                            !__antcvMarginOn &&
                             zn &&
                             ("sidebar-top" === er ||
                               "band-overlap" === er) &&

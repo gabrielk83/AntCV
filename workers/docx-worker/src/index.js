@@ -24737,6 +24737,8 @@ async function generateDocx(payload) {
     // and cannot carry that signal.
     fsRaw: payload.font_sizes && typeof payload.font_sizes === "object" ? payload.font_sizes : {},
     lang,
+    // MARGIN-LAYOUT-001 (docs/design/MARGIN_LAYOUT_SPEC.md): CV layout "margin" = two-column, header card inside the sidebar, no band
+    marginHeader: payload.doc === "cv" && layout === "margin",
     contSuffix,
     pi: payload.personal_info || {},
     meta: payload.meta || {},
@@ -24799,7 +24801,9 @@ async function generateDocx(payload) {
     contCounter: 0
   };
   // EXEC-LINEAR step 5a: a CV asked for as linear gets the single-column executive layout; letters unchanged.
-  const document2 = layout === "two_column" ? buildTwoColumnDocument(ctx) : (payload.doc === "cv" ? buildLinearCvDocument(ctx) : buildLinearDocument(ctx));
+  // MARGIN-LAYOUT-001: "margin" is the two-column document with the candidate header inside the sidebar cell
+  // (buildMarginSidebarCard) and no band rows / head box / top strip.
+  const document2 = (layout === "two_column" || layout === "margin") ? buildTwoColumnDocument(ctx) : (payload.doc === "cv" ? buildLinearCvDocument(ctx) : buildLinearDocument(ctx));
   const raw = await Packer.toBuffer(document2);
   let buffer2 = raw;
   let postProcessStatus = "skipped";
@@ -24807,15 +24811,15 @@ async function generateDocx(payload) {
   let postProcessError = null;
   let markersRemaining = 0;
   try {
-    const result = postProcessDocx(raw, { watermark: payload.watermark || "", photoShape: resolvePhotoShape(payload), headerBg: (payload.doc === "cv" && layout === "linear") ? "" : ((style && style.headerBg) || ""), aiNotice: style && style._aiNotice, aiFont: style && style._aiFont, cph: !!(style && style._cph), docType: payload.doc,
+    const result = postProcessDocx(raw, { watermark: payload.watermark || "", photoShape: resolvePhotoShape(payload), headerBg: (payload.doc === "cv" && (layout === "linear" || layout === "margin")) ? "" : ((style && style.headerBg) || ""), aiNotice: style && style._aiNotice, aiFont: style && style._aiFont, cph: !!(style && style._cph), docType: payload.doc,
       // COPENHAGEN-STAGE4: rounded navy header box + cyan 1.5pt border as a
       // page-anchored VML roundrect in a FIRST-PAGE header part (titlePg) —
       // the band cells above dropped their shading for it. Page 1 only; the
       // default header (spine/watermark) keeps serving pages 2+.
-      headerBox: style && style._cph && !(payload.doc === "cv" && layout === "linear") ? { fill: style.headerBg, stroke: style._cphCyan } : null,
+      headerBox: style && style._cph && !(payload.doc === "cv" && (layout === "linear" || layout === "margin")) ? { fill: style.headerBg, stroke: style._cphCyan } : null,
       // SIDEBAR-SPINE-VML-001: full-height header-hosted rect behind the
       // sidebar (two-column CVs only; kill: style_config sidebarSpine:false)
-      spineColor: (layout === "two_column" && ctx.sidebarSpine && style && style.sidebarBg) || "",
+      spineColor: ((layout === "two_column" || layout === "margin") && ctx.sidebarSpine && style && style.sidebarBg) || "",
       spineSide: (style && (style._rtl || style.sidebarPosition === "right")) ? "right" : "left",
       spineWidthPt: Math.round(PAGE_W * (Number(payload.sidebar_ratio) > 0.1 && Number(payload.sidebar_ratio) < 0.7 ? Number(payload.sidebar_ratio) : 0.36) / 20) });
     buffer2 = result.buffer;
@@ -25004,12 +25008,15 @@ function buildTwoColumnDocument(ctx) {
   const { style, sections } = ctx;
   // FIGURE-CONTACT-REF-001: only the two-column (bridge-capable) document
   // embeds the page-anchored photo in the contact paragraph.
-  const headerCell = buildHeaderCell(ctx, /*bridgePhoto*/ true);
+  // MARGIN-LAYOUT-001: no candidate band - the header is a card at the top of the page-1 sidebar cell.
+  const marginHdr = ctx.marginHeader === true;
+  const headerCell = marginHdr ? [] : buildHeaderCell(ctx, /*bridgePhoto*/ true);
   const sidebarSecs = sections.filter((s) => s.loc === "sidebar");
   const mainSecs = sections.filter((s) => s.loc !== "sidebar");
-  const photoTopOfSidebar = maybeBuildPhotoFor(ctx, "sidebar-top");
+  // MARGIN-LAYOUT-001: the four header-adjacent positions (sidebar-top, band-overlap, header-left/right) live in the card.
+  const photoTopOfSidebar = marginHdr ? null : maybeBuildPhotoFor(ctx, "sidebar-top");
   const photoBottomOfSidebar = maybeBuildPhotoFor(ctx, "sidebar-bottom");
-  const photoInHeader = maybeBuildPhotoFor(ctx, "header");
+  const photoInHeader = marginHdr ? null : maybeBuildPhotoFor(ctx, "header");
   const photoInMain = maybeBuildPhotoFor(ctx, "main");
   const photoMainBottom = maybeBuildPhotoFor(ctx, "main-bottom");
   const photoBridge = maybeBuildPhotoFor(ctx, "bridge");
@@ -25059,6 +25066,8 @@ function buildTwoColumnDocument(ctx) {
   }
   ctx._twoColPaged = true;   // MAIN-LIST-PAGE-SEGMENTS-001: main lists split into page segments here
   const sidebarChildren = [
+    // MARGIN-LAYOUT-001: photo + name + title + CONTACT heading + one contact item per line, first in the page-1 sidebar.
+    ...(marginHdr ? buildMarginSidebarCard(ctx) : []),
     // 1.14.53: the vertical-seam medallion anchors on a zero-height paragraph
     // at the TOP of the page-1 sidebar (its floating position is page-relative,
     // so the anchor only decides which page carries it).
@@ -25228,7 +25237,7 @@ function buildTwoColumnDocument(ctx) {
     const b = String((style && style.sidebarBg) || "").trim().toLowerCase().replace(/^#/, "");
     return !!a && a === b;
   })();
-  const __seamBorders = __seamSame
+  const __seamBorders = (__seamSame && !marginHdr)   // MARGIN-LAYOUT-001: no header above the columns, no seam
     ? bodyTopBorder(seamContourColor(style.photoBorderColor || "00746E", style.headerBg))
     : noBorders();
   const makeSidebarCell = (els, withHeader) => new TableCell({
@@ -25327,7 +25336,8 @@ function buildTwoColumnDocument(ctx) {
     cantSplit: false,
     // 1.14.55: a repeated slim header strip on pages 2+ costs ~900 DXA;
     // shrink those pages' body min so the total stays inside the sheet.
-    height: { value: withHeader ? PAGE1_BODY_MIN : style && style.repeatHeader === true ? CONT_BODY_MIN - 900 : CONT_BODY_MIN, rule: "atLeast" },
+    // MARGIN-LAYOUT-001: page 1 carries no band, so its body row gets the continuation budget.
+    height: { value: withHeader ? (marginHdr ? CONT_BODY_MIN : PAGE1_BODY_MIN) : style && style.repeatHeader === true ? CONT_BODY_MIN - 900 : CONT_BODY_MIN, rule: "atLeast" },
     children: sidebarOnRight ? [makeMainCell(mnEls, withHeader), makeSidebarCell(sbEls, withHeader)] : [makeSidebarCell(sbEls, withHeader), makeMainCell(mnEls, withHeader)]
   }));
   // PHOTO-SIDEBAR-BRIDGE-001 (1.14.51): in bridge mode the candidate header
@@ -25335,7 +25345,7 @@ function buildTwoColumnDocument(ctx) {
   // zone the floating medallion rises into, the right cell carries the text.
   // The text cell's small left margin (120 DXA = 8px) lets the candidate
   // block start near the seam (the preview's leftward flow).
-  const bridgeOn = normalisePhotoPosition(ctx.pi && ctx.pi.photoPosition) === "band-overlap" && !!(ctx.pi && ctx.pi.photo_b64);
+  const bridgeOn = !marginHdr && normalisePhotoPosition(ctx.pi && ctx.pi.photoPosition) === "band-overlap" && !!(ctx.pi && ctx.pi.photo_b64);
   // CONTACT-BRIDGE-WIDECELL-001 (owner 2026-06-30): size the empty photo-zone
   // cell to the FIGURE's right edge, not a fixed reserve. The medallion is
   // page-centred on the sidebar middle (buildPhotoParagraph band-overlap:
@@ -25356,7 +25366,7 @@ function buildTwoColumnDocument(ctx) {
   // (email + phone + LinkedIn) no longer wraps / splits the phone number. Non-bridge unchanged.
   const __contactParas = bridgeOn ? headerCell.filter(function (p) { return p && p.__antcvContactPara; }) : [];
   const __topParas = __contactParas.length ? headerCell.filter(function (p) { return !(p && p.__antcvContactPara); }) : headerCell;
-  const headerRows = bridgeOn ? [
+  const headerRows = marginHdr ? [] : bridgeOn ? [
     // HEADER-BANNER rule 2 (KOMBIT gold, owner 2026-07-07 "1 go"): name +
     // specialisation are a FULL-WIDTH centered row (gridSpan=2), so they centre
     // on the PAGE axis — the SAME axis as the full-width contact line below — not
@@ -26657,6 +26667,87 @@ function __cphNameFit(ctx, contactPt, bridgePhotoOn) {
   return { pt, track: Math.round(TRACK_EM * pt * 20) + __trkTw(fsRaw, "nameTrack") };
 }
 __name(__cphNameFit, "__cphNameFit");
+// MARGIN-LAYOUT-001 (owner 2026-11-05, docs/design/MARGIN_LAYOUT_SPEC.md): the house margin format's panel head -
+// photo, name, title, a CONTACT heading and one contact item per line - as the first paragraphs of the page-1
+// sidebar cell. Mirrors the preview card ([data-antcv-sidebar-card], antcv-cv-layout-margin.js). The band rows,
+// the AntCVHeadBox roundrect and the top-strip shading are all off in this layout (generateDocx / postProcessDocx).
+function buildMarginSidebarCard(ctx) {
+  const { style, fs, pi, meta } = ctx;
+  const out = [];
+  const sbShade = { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" };
+  const fsRaw = ctx.fsRaw || {};
+  const pos = normalisePhotoPosition(pi && pi.photoPosition);
+  // The four header-adjacent positions lose their native placement with the band and move into the card;
+  // main-*, bridge-* and sidebar-bottom keep theirs (buildTwoColumnDocument still places them).
+  const CARD_PHOTO_POS = new Set(["sidebar-top", "band-overlap", "header-left", "header-right"]);
+  if (pi && pi.photo_b64 && CARD_PHOTO_POS.has(pos)) {
+    const outlineColor = (style._cph && style._cphCyan) || String(style.photoBorderColor || style.sidebarHeadColor || style.accent || "01B7BB").replace(/^#/, "");
+    try {
+      out.push(new Paragraph({
+        alignment: AlignmentType.LEFT,
+        spacing: { before: 0, after: 120 },
+        shading: sbShade,
+        children: [new ImageRun({
+          data: base64ToUint8Array(pi.photo_b64),
+          type: detectImageType(pi.photo_b64),
+          transformation: { width: 84, height: 84 },   // the house 84 px ringed photo
+          outline: { width: style._cph ? 19050 : 12700, solidFillType: "rgb", value: outlineColor },
+          altText: { title: "Profile photo", description: pi.name ? "Profile photo of " + pi.name : "Profile photo", name: "profile-photo" }
+        })]
+      }));
+    } catch (_) {}
+  }
+  if (pi && pi.name) {
+    const namePt = typeof fsRaw.nameSize === "number" && fsRaw.nameSize > 0 ? fsRaw.nameSize : 16;
+    out.push(new Paragraph({
+      alignment: AlignmentType.LEFT,
+      spacing: { before: 60, after: 40, line: 252, lineRule: "auto" },
+      shading: sbShade,
+      children: [new TextRun({ text: pi.name, bold: true, color: style.sidebarTextColor, size: pt2hp(namePt), font: style.headerFont })]
+    }));
+  }
+  const subtitle = String((meta && meta.subtitle) || "").replace(/\s*[\u2014\u2013]\s*/g, " - ").replace(/\s*\|\s*/g, "  \u2022  ");
+  if (subtitle && !subtitle.startsWith("[")) {
+    const specPt = typeof fsRaw.specialisation === "number" && fsRaw.specialisation > 0 ? fsRaw.specialisation : 10;
+    out.push(new Paragraph({
+      alignment: AlignmentType.LEFT,
+      spacing: { before: 0, after: 60, line: 252, lineRule: "auto" },
+      shading: sbShade,
+      children: [new TextRun({ text: subtitle, bold: true, color: style.sidebarHeadColor, size: pt2hp(specPt), font: style.headerFont })]
+    }));
+  }
+  const LINK_GLYPH = "\u{1F517}\uFE0E";
+  const bits = [];
+  if (pi.location) bits.push({ text: `\u2302\xA0${pi.location}` });
+  if (pi.citizenship) bits.push({ text: `\u2605\xA0${pi.citizenship}` });
+  if (pi.email) bits.push({ text: `\u2709\xA0${pi.email}` });
+  if (pi.phone) bits.push({ text: `\u260E\xA0${pi.phone}` });
+  if (pi.linkedin) {
+    const v = String(pi.linkedin).trim();
+    bits.push({ text: `${LINK_GLYPH}\xA0${pi.linkedin}`, link: /^https?:/i.test(v) ? v : "https://" + v });
+  }
+  if (pi.website) bits.push({ text: `${LINK_GLYPH}\xA0${pi.website}` });
+  if (Array.isArray(pi.contact_extra)) {
+    for (const it of pi.contact_extra) if (it && it.value) bits.push({ text: `${it.icon || "\u2022"}\xA0${it.value}` });
+  }
+  if (bits.length) {
+    const label = ({ da: "KONTAKT", es: "CONTACTO", zh: "\u8054\u7CFB\u65B9\u5F0F" })[ctx.lang] || "CONTACT";
+    out.push(headingParagraph(label, ctx, /*isSidebar*/ true, false));   // the same builder the sidebar sections use
+    const base = { color: style.sidebarTextColor, size: pt2hp(fs.sbBody), font: style.sidebarBodyFont || style.sidebarFont };
+    for (const b of bits) {
+      out.push(new Paragraph({
+        alignment: AlignmentType.LEFT,
+        spacing: { before: 20, after: 20, line: 264, lineRule: "auto" },
+        shading: sbShade,
+        children: b.link
+          ? [new ExternalHyperlink({ link: b.link, children: [new TextRun({ text: b.text, ...base, underline: {} })] })]
+          : [new TextRun({ text: b.text, ...base })]
+      }));
+    }
+  }
+  return out;
+}
+__name(buildMarginSidebarCard, "buildMarginSidebarCard");
 function buildHeaderCell(ctx, bridgePhoto) {
   const { style, fs, pi, meta, headerAlign } = ctx;
   const out = [];
@@ -29272,7 +29363,7 @@ var VALID_TYPES = /* @__PURE__ */ new Set([
 var VALID_DOC = /* @__PURE__ */ new Set(["cv", "cl"]);
 var VALID_LOC = /* @__PURE__ */ new Set(["main", "sidebar"]);
 var VALID_LANG = /* @__PURE__ */ new Set(["en", "da", "es", "zh"]);
-var VALID_LAYOUT = /* @__PURE__ */ new Set(["two_column", "linear"]);
+var VALID_LAYOUT = /* @__PURE__ */ new Set(["two_column", "linear", "margin"]);   // MARGIN-LAYOUT-001: margin = two-column with the header card inside the sidebar
 function validatePayload(p) {
   const errs = [];
   if (!p || typeof p !== "object") {
@@ -29288,7 +29379,7 @@ function validatePayload(p) {
     errs.push(`language must be one of: en, da, es, zh`);
   }
   if (p.layout && !VALID_LAYOUT.has(p.layout)) {
-    errs.push(`layout must be one of: two_column, linear`);
+    errs.push(`layout must be one of: two_column, linear, margin`);
   }
   if (p.writing_style != null && typeof p.writing_style !== "string") {
     errs.push(`writing_style must be a string`);
@@ -30474,7 +30565,7 @@ function getSchemaDoc() {
     doc: { enum: ["cv", "cl"], description: "CV or cover letter" },
     language: { enum: ["en", "da", "es", "zh"], default: "en" },
     layout: {
-      enum: ["two_column", "linear"],
+      enum: ["two_column", "linear", "margin"],
       default: "two_column",
       description: "two_column = navy sidebar + main; linear = single-column (CL default)"
     },

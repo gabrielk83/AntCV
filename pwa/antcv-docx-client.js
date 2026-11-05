@@ -181,8 +181,16 @@ export function readPhotoShape() {
 // localStorage['antcv:cvLayout'] = 'linear' | absent. A CV export then asks the worker for the
 // single-column executive layout (buildLinearCvDocument); letters are always linear anyway.
 // Explicit `layout` from a caller still wins. Spec: docs/design/EXECUTIVE_LINEAR_SPEC_ADDENDUM.md.
+// MARGIN-LAYOUT-001 (owner 2026-11-05, docs/design/MARGIN_LAYOUT_SPEC.md): absent = 'margin' (header card inside
+// the sidebar panel, no band - the house academy format), 'two_column' = the explicit band opt-out. Kill switch
+// antcv:disable-cv-layout-margin=1 makes the default the band again. Same rule as antcv-cv-layout-margin.js.
 export function readCvLayout() {
-  try { return localStorage.getItem('antcv:cvLayout') === 'linear' ? 'linear' : 'two_column'; } catch (_) { return 'two_column'; }
+  try {
+    const v = localStorage.getItem('antcv:cvLayout');
+    if (v === 'linear' || v === 'two_column') return v;
+    const k = localStorage.getItem('antcv:disable-cv-layout-margin');
+    return (k === '1' || k === 'true') ? 'two_column' : 'margin';
+  } catch (_) { return 'margin'; }
 }
 
 export function readPhotoPosition() {

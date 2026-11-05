@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.5845-no-orphan-cl';
+  const TARGET_VERSION = '1.51.5865-margin-layout';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.5845-no-orphan-cl',
     '1.51.5825-translate-persist-b',
     '1.51.5805-proof-points-bt',
     '1.51.5765-proof-points-edit-rule',

@@ -19,10 +19,16 @@ globalThis.window = globalThis.window || {};
 const { buildPayload, readCvLayout } = await import('../../antcv-docx-client.js');
 const cv = () => buildPayload({ doc: 'cv', personalInfo: { name: 'X' }, meta: {}, sections: { cv: [] }, styleConfig: {} });
 
-test('default CV export stays two_column', () => {
+// MARGIN-LAYOUT-001 (1.51.5865): absent = 'margin' (the house academy format); 'two_column' is the explicit band opt-out.
+test('default CV export is margin; two_column is the explicit band opt-out', () => {
   store.delete('antcv:cvLayout');
+  store.delete('antcv:disable-cv-layout-margin');
+  assert.equal(readCvLayout(), 'margin');
+  assert.equal(cv().layout, 'margin');
+  store.set('antcv:cvLayout', 'two_column');
   assert.equal(readCvLayout(), 'two_column');
   assert.equal(cv().layout, 'two_column');
+  store.delete('antcv:cvLayout');
 });
 
 test('antcv:cvLayout=linear -> CV export asks for linear; letters unaffected; explicit layout wins', () => {
@@ -31,7 +37,7 @@ test('antcv:cvLayout=linear -> CV export asks for linear; letters unaffected; ex
   assert.equal(buildPayload({ doc: 'cl', personalInfo: { name: 'X' }, meta: {}, sections: { cl: [] } }).layout, 'linear');
   assert.equal(buildPayload({ doc: 'cv', layout: 'two_column', personalInfo: { name: 'X' }, meta: {}, sections: { cv: [] } }).layout, 'two_column');
   store.set('antcv:cvLayout', 'bogus');
-  assert.equal(cv().layout, 'two_column', 'unknown values fall back');
+  assert.equal(cv().layout, 'margin', 'unknown values fall back to the default (margin since MARGIN-LAYOUT-001)');
   store.delete('antcv:cvLayout');
 });
 

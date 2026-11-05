@@ -48,6 +48,10 @@ const ANCHORS = [
   'antcv:autoPagesPreview',
   'exportPdfViaWorker',
   'antcv:clSloganCase',
+  // MARGIN-LAYOUT-001 (1.51.5865): the sidebar header card + its CONTACT heading + the layout reader
+  'data-antcv-sidebar-card',
+  'data-antcv-card-head',
+  'data-antcv-card-photo',
   // wizard / import affordance
   'Drop a CV or LinkedIn export',
 ];

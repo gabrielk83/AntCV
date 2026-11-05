@@ -29,17 +29,31 @@
   }
 
   var LKEY = 'antcv:cvLayout';
-  function readLayout() { try { return localStorage.getItem(LKEY) === 'linear' ? 'linear' : 'two_column'; } catch (_) { return 'two_column'; } }
+  // MARGIN-LAYOUT-001 (owner 2026-11-05, docs/design/MARGIN_LAYOUT_SPEC.md): absent = 'margin' (the house
+  // academy format, header inside the sidebar panel); 'two_column' is the explicit band opt-out; 'linear' as before.
+  // Kill switch antcv:disable-cv-layout-margin=1 makes the default the band again. Same rule in
+  // antcv-cv-layout-margin.js (preview) and antcv-docx-client.js readCvLayout (export).
+  function readLayout() {
+    try {
+      var v = localStorage.getItem(LKEY);
+      if (v === 'linear' || v === 'two_column') return v;
+      var k = localStorage.getItem('antcv:disable-cv-layout-margin');
+      return (k === '1' || k === 'true') ? 'two_column' : 'margin';
+    } catch (_) { return 'margin'; }
+  }
   function writeLayout(v) {
     try {
-      if (v === 'linear') localStorage.setItem(LKEY, 'linear'); else localStorage.removeItem(LKEY);
+      if (v === 'linear' || v === 'two_column') localStorage.setItem(LKEY, v); else localStorage.removeItem(LKEY);
       // step 3: antcv-cv-layout-linear.js moves the sections + switches the columns right away
       if (typeof window.__antcvCvLayoutApply === 'function') window.__antcvCvLayoutApply();
+      // MARGIN-LAYOUT-001: the margin sidecar flips the body flag, re-renders the preview, re-budgets the paginator
+      if (typeof window.__antcvCvLayoutMarginApply === 'function') window.__antcvCvLayoutMarginApply();
       else window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { reason: 'cv-layout' } }));
     } catch (_) {}
   }
-  // EXEC-LINEAR "CV layout" - Two-column (default) | Linear. Export: worker buildLinearCvDocument (5a);
-  // preview: antcv-cv-layout-linear.js (step 3, single column, plain sections).
+  // EXEC-LINEAR "CV layout" - Two-column (header in sidebar, default) | Two-column (band) | Linear. Export: worker
+  // buildTwoColumnDocument (margin / band) or buildLinearCvDocument (5a); preview: antcv-cv-layout-margin.js /
+  // antcv-cv-layout-linear.js (step 3, single column, plain sections).
   function buildLayout() {
     var row = document.createElement('label');
     row.setAttribute(ATTR, 'layout');
@@ -49,7 +63,7 @@
     lb.style.cssText = 'font-size:9px;color:rgba(255,255,255,0.45);flex:0 0 auto;';
     var sel = document.createElement('select');
     sel.style.cssText = 'font-size:9px;padding:1px 2px;max-width:100%;';
-    [['two_column', 'Two-column'], ['linear', 'Linear']].forEach(function (o) {
+    [['margin', 'Two-column (header in sidebar)'], ['two_column', 'Two-column (band)'], ['linear', 'Linear']].forEach(function (o) {
       var op = document.createElement('option'); op.value = o[0]; op.textContent = o[1];
       if (o[0] === readLayout()) op.selected = true;
       sel.appendChild(op);

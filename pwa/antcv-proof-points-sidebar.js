@@ -29,13 +29,23 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.5114-proof-points';
+  var VERSION = '1.51.5685-proof-points-house';
   if (window.__antcvProofPoints === VERSION) return;
   window.__antcvProofPoints = VERSION;
 
   var ID = 'proof_points', REASON = 'proof-points-sidebar', AUTO = '_proofAuto';
-  var MIN = 3, MAX = 5, MAX_CHARS = 64;
-  var TITLE = { en: 'Proof points', da: 'Dokumenterede resultater', es: 'Resultados probados' };
+  var MIN = 3, MAX = 5, MAX_CHARS = 64, CAP_CHARS = 48;
+  // PROOF-POINTS-HOUSE-001 (owner 2026-11-05 "proof points do not match academy format and
+  // content"): the house margin CV (gen_margin.py) renders five proof points as a BIG figure
+  // in accent type with a small caption ("250 -> 10 days" / "change cycle as change-board
+  // chair"), titled "Proof points" / DA "Resultater i tal". This block was 64-char digit
+  // fragments cut from role bullets, newest role first - the Trackman internship led and the
+  // career figures were tails ("Through to Tier-1 customer sign-off"). Now: the figure and
+  // the caption are split deterministically, and an English document takes its lines from
+  // the kernel's pinned proof points (personalInfo.proofPoints / ByRole / ByPosition, the
+  // owner-curated record) before the role-bullet fragments. Other languages keep the
+  // translated fragments (the kernel lines are English) in the same shape.
+  var TITLE = { en: 'Proof points', da: 'Resultater i tal', es: 'Resultados probados' };
 
   function get(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
   function readJson(k, d) { try { var v = JSON.parse(get(k) || 'null'); return v == null ? d : v; } catch (_) { return d; } }
@@ -143,11 +153,114 @@
       .map(function (o) { return o.f; });
   }
 
+  // ---- PROOF-POINTS-HOUSE-001: pinned lines + figure / caption split ----------------------
+  function pinned() {
+    var out = [];
+    try {
+      var pi = readJson('personalInfo', {}) || {}; pi = pi.personalInfo || pi;
+      (Array.isArray(pi.proofPoints) ? pi.proofPoints : []).forEach(function (p) {
+        var t = typeof p === 'string' ? p : (p && typeof p === 'object' ? (p.text || p.t || '') : '');
+        if (t && String(t).trim()) out.push(String(t).trim());
+      });
+      [].concat(pi.proofPointsByRole || [], pi.proofPointsByPosition || []).forEach(function (p) {
+        if (p && typeof p.text === 'string' && p.text.trim()) out.push(p.text.trim());
+      });
+    } catch (_) {}
+    return out;
+  }
+  var UNITS = '(?:users?|units?\\/(?:week|day|year)|units?|clauses?|countries|sites?|machines?|offers?|clients?|teams?|engineers?|people|persons?|domains?|roles?|papers?|publications?|patents?|lines?|weeks?|months?|days?|years?|hours?|MP|GB|TB'
+    + '|brugere|enheder\\/(?:uge|dag|år)|enheder|klausuler|lande|maskiner|tilbud|kunder|teams?|ingeniører|personer|dage|uger|år|timer|krav|linjer)';
+  var UNIT_RE = new RegExp('(~?\\$?\\d[\\d,.]*(?:%|[kKmM]\\b)?)(?:-(?=person|unit|week|day|year|site|country|mand))?\\s*(' + UNITS + '\\b)?', 'gi');
+  var CAP_KEY = /\b(cost|cut|reduc\w*|faster|saved|shipped|verified|qualified|simplif\w*|omkostning\w*|skåret|reduceret|hurtigere|leveret|verificeret|forenklet)\b/i;
+  var TRAIL = /\s+(?:as|of|in|at|to|for|and|the|a|an|with|over|across|from|by|on|via|som|af|i|på|til|for|og|den|det|en|et|med|fra)$/i;
+  // numbers that are identifiers, not results: patent / certificate numbers, levels, fiscal years
+  function idNumber(s) { return /(?:\bno\.?\s*|\bnr\.?\s*|\bpatent\s+|\blevel\s+|\bfy)\s*[\d,.]+/i.test(s); }
+  function caption(rest) {
+    var r = String(rest || '').replace(/\s+/g, ' ').replace(/\(\s*\)/g, '').replace(/\s+([,;:.])/g, '$1').replace(/\ba\s+(?=[aeiou])/gi, 'an ').trim();
+    r = r.replace(/^[,;:\s]+|[,;:.\s]+$/g, '');
+    var cl = r.split(/,\s|;\s|\s\(|\svia\s|\sthrough\s|\sthat\s|\swhich\s|\sgennem\s|\ssom\s/).map(function (c) { return c.trim(); }).filter(Boolean);
+    var m = null;
+    for (var i = 0; i < cl.length; i++) if (CAP_KEY.test(cl[i])) { m = cl[i]; break; }
+    if (!m) m = cl[0] || r;
+    m = m.replace(/[.;:,]+$/, '').trim();
+    if (m.length > CAP_CHARS) { m = m.slice(0, CAP_CHARS + 1); m = m.replace(/\s+\S*$/, ''); }
+    m = m.replace(TRAIL, '').replace(TRAIL, '').trim();
+    m = m.replace(/^([A-Z])(?=[a-zs])/, function (c) { return c.toLowerCase(); });   // sentence-case opener; an acronym (ALM, EOL) keeps its caps
+    return m.length >= 6 ? m : '';                                                  // a short tail ("one line") is still a caption
+  }
+  // Returns { big, cap } or null. big <= 18 chars, cap 6..48 chars.
+  function figure(line) {
+    var s = String(line || '').replace(/\s+/g, ' ').trim();
+    if (!s || !hasDigit(s)) return null;
+    var m, big, rest;
+    if ((m = s.match(/\b(?:from|fra)\s+(~?\d[\d,.]*)\s*(?:%|[a-zæøå%\/-]+)?\s+(?:to|til)\s+(~?\d[\d,.]*)\s*(%|[a-zæøå][a-zæøå\/-]*)?/i))) {
+      // a) range: "from ~250 to ~10 days" -> "250 → 10 days"
+      big = m[1].replace(/^~/, '') + ' → ' + m[2].replace(/^~/, '') + (m[3] ? ' ' + m[3] : '');
+      rest = s.replace(m[0], '');
+    } else if ((m = s.match(/\(?\b(\d+(?:\.\d+)?)\s*[x×]\)?/i))) {
+      // b) multiplier: "(10×)" / "10× faster" -> "10x"
+      big = m[1] + 'x';
+      rest = s.replace(m[0], '').replace(/\b(?:by|med)\s+\d+%\s*/i, '');
+    } else if ((m = s.match(/(~?\d[\d,.]*)\s+(?:of|af)\s+(~?\d[\d,.]*)\s+(?=[a-zæøå])/i))) {
+      // c) "3,400 of 3,600 requirements" -> "3,400 of 3,600"
+      big = m[1] + ' of ' + m[2];
+      rest = s.replace(m[0], '');
+    } else {
+      // d) generic: the largest "number + unit" that is not an identifier; a bare number is not a proof point
+      var best = null, mm;
+      UNIT_RE.lastIndex = 0;
+      while ((mm = UNIT_RE.exec(s))) {
+        var tok = mm[0].trim();
+        if (!tok) continue;
+        if (idNumber(s.slice(Math.max(0, mm.index - 10), mm.index + tok.length))) continue;
+        if (!mm[2] && !/[%$]/.test(mm[1])) continue;
+        var val = parseFloat(mm[1].replace(/[^\d.]/g, '')) || 0;
+        if (!best || val > best.val) best = { tok: tok, val: val, i: mm.index };
+      }
+      if (!best) return null;
+      big = best.tok.replace(/\s+/g, ' ');
+      rest = s.slice(0, best.i) + ' ' + s.slice(best.i + best.tok.length);
+      rest = rest.replace(/\b(?:a|an|et|en)\s+(?=(?:[a-zæøå-]+\s+)?(?:team|run|line|group|hold))/i, '').replace(/\(\s*\/\s*[^)]*\)/g, '');
+    }
+    if (!big || big.length > 18) return null;
+    var cap = caption(rest);
+    if (!cap) return null;
+    return { big: big, cap: cap };
+  }
+  function keyOf(f) { return f.big.toLowerCase().replace(/[^0-9a-zæøå]/g, ''); }
+  function pairs(secs) {
+    var lines = lang() === 'en' ? pinned() : [];
+    var fromPinned = lines.length > 0;
+    if (!fromPinned) lines = fragments(secs);
+    var seen = {}, out = [];
+    var take = function (l) { var f = figure(l); if (!f) return; var k = keyOf(f); if (!k || seen[k]) return; seen[k] = 1; f.src = l; out.push(f); };
+    lines.forEach(take);
+    if (fromPinned && out.length < MIN) fragments(secs).forEach(take);          // thin kernel: top up from the sections
+    // rank by what the ad stresses, judged on the SOURCE line (its words carry the group), source order as the tie-break
+    var ranked = rank(out.map(function (f) { return f.src; }), get('antcv:lastJdText'));
+    var byLine = {}; out.forEach(function (f) { byLine[f.src] = f; });
+    return ranked.map(function (l) { return byLine[l]; }).filter(Boolean).slice(0, MAX).map(function (f) { return { big: f.big, cap: f.cap }; });
+  }
+  // Preview shape: a bold accent figure on its own line, the caption small below it. The
+  // label span carries a trailing ':' text node (labeled_list), hidden by the zero font size
+  // on the wrapper while the editable inner span keeps the figure visible.
+  function injectCss() {
+    try {
+      if (typeof document === 'undefined' || !document.head || document.getElementById('antcv-proof-points-house-css')) return;
+      var st = document.createElement('style'); st.id = 'antcv-proof-points-house-css';
+      st.textContent = '[data-sid="proof_points"] p[data-antcv-row-path] > span:first-child{display:block;font-size:0 !important;line-height:1 !important;}'
+        + '[data-sid="proof_points"] p[data-antcv-row-path] > span:first-child > span{font-size:15px !important;font-weight:700 !important;color:var(--sidebar-head-color,#00746E) !important;line-height:1.1 !important;letter-spacing:0 !important;}'
+        + '[data-sid="proof_points"] p[data-antcv-row-path]{margin:5px 0 2px !important;}'
+        + '[data-sid="proof_points"] p[data-antcv-row-path] > span:not(:first-child){font-size:9.5px !important;line-height:1.2 !important;display:block;}';
+      document.head.appendChild(st);
+    } catch (_) {}
+  }
+
   // ---- the section ---------------------------------------------------------------------------
   function hash(items) { return JSON.stringify(items); }
   function build(items) {
-    return { id: ID, type: 'bullets', title: TITLE[lang()] || TITLE.en, on: true, loc: 'sidebar',
-      items: items.map(function (t) { return { t: t }; }) };
+    return { id: ID, type: 'labeled_list', title: TITLE[lang()] || TITLE.en, on: true, loc: 'sidebar',
+      items: items.map(function (f) { return { l: f.big, v: f.cap }; }) };
   }
   function firstSidebarIndex(cv) {
     for (var i = 0; i < cv.length; i++) if (cv[i] && cv[i].loc === 'sidebar' && cv[i].id !== ID) return i;
@@ -181,7 +294,8 @@
         if (existing && existing[AUTO] && !edited) { cv.splice(at, 1); changed = true; }
       } else {
         roleGapDefault();
-        var items = rank(fragments(secs), get('antcv:lastJdText')).slice(0, MAX);
+        injectCss();
+        var items = pairs(secs);
         if (items.length < MIN) {
           if (existing && existing[AUTO] && !edited) { cv.splice(at, 1); changed = true; }
         } else if (!existing) {
@@ -210,5 +324,5 @@
 
   window.addEventListener('antcv:sections-updated', run);
   [0, 400, 1200, 2500, 5000].forEach(function (ms) { setTimeout(run, ms); });
-  window.AntcvProofPoints = { version: VERSION, run: run, fragments: fragments, rank: rank, demand: demand, eligible: eligible };
+  window.AntcvProofPoints = { version: VERSION, run: run, fragments: fragments, rank: rank, demand: demand, eligible: eligible, figure: figure, pairs: pairs, pinned: pinned };
 })();

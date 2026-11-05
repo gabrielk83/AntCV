@@ -70,10 +70,12 @@ test('the block is inserted first in the sidebar, 5 lines at most, and the role 
   const i = cv.findIndex((s) => s.id === 'proof_points');
   const firstSidebar = cv.findIndex((s) => s.loc === 'sidebar');
   assert.equal(i, firstSidebar, 'proof points is the first sidebar section');
-  assert.equal(cv[i].type, 'bullets');
+  // PROOF-POINTS-HOUSE-001: house shape - a labeled_list of figure (l) + caption (v)
+  assert.equal(cv[i].type, 'labeled_list');
   assert.equal(cv[i].title, 'Proof points');
   assert.ok(cv[i].items.length >= 3 && cv[i].items.length <= 5);
-  assert.match(cv[i].items[0].t, /20,000 units\/week/);
+  assert.match(cv[i].items[0].l, /20,000 units\/week/);
+  assert.ok(cv[i].items.every((it) => it.l && it.v), 'every item is figure + caption');
   assert.equal(JSON.parse(store.styleConfig).roleGap, 14);
   assert.equal(store['antcv:roleGapDefaulted'], '1');
   // a second run changes nothing (idempotent); an owner slider change is kept

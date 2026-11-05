@@ -198,7 +198,12 @@ function makeRequest({ method = 'DELETE', token = 'fake.jwt.token', origin = 'ht
 //     "storage_bound": true,
 //     "details": {
 //       "kv": { "prefs2:...": true, "prefs:...": true, "signals:...": true },
-//       "d1_core": { "user_kernel": 1, "application": N, "language_view": M, "active_application": 1 },
+//       "d1_core": { "language_view": M, "application_fit": F, "application_qualification": Q,
+//                    "cluster_top_qualifications": C, "application": N, "active_application": 1,
+//                    "active_application_device": D, "kernel_language_view": L, "kernel_showcase": 1,
+//                    "kernel_showcase_styled": S, "job_tracker": 1, "user_kernel": 1 },
+//         (null = table not created on that DB; ACCOUNT-ERASE-COMPLETE-001,
+//          tested in account-erase-complete.test.mjs)
 //       "d1_telemetry": { "llm_calls": K, "llm_quality_signals": L }
 //     }
 //   }

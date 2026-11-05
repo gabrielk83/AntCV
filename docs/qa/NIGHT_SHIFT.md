@@ -41,7 +41,6 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mw3hijam_7jnk","started":"2026-11-05T11:51:01.722Z","host":"Gabo-PC","worktree":"ecstatic-heisenberg-9cfa6d","branch":"claude/ecstatic-heisenberg-9cfa6d","range":"1.51.5665-1.51.5684","task":"MARGIN-LAYOUT-001: header card inside the sidebar (house margin format), no band","beat":"2026-11-05T11:51:01.779Z"}
 {"id":"sh_mw3muynw_4wyg","started":"2026-11-05T14:20:39.586Z","host":"Gabo-PC","worktree":"laughing-ritchie-794d4d","branch":"claude/laughing-ritchie-794d4d","range":"1.51.5985-1.51.6004","task":"TAB-DOC-LEASE-001: only the docWriterTab lease holder writes sections/meta; non-holders work on a per-tab shadow and ignore foreign storage events","beat":"2026-11-05T14:20:39.632Z"}
 {"id":"sh_mw4226gy_48mq","started":"2026-11-05T21:26:10.542Z","host":"Gabo-PC","worktree":"fervent-booth-7a97aa","branch":"claude/fervent-booth-7a97aa","range":"1.51.6065-1.51.6084","task":"LANG-CACHE-APP-SCOPE-001c: application switch clears languageCache; snapshots drop foreign/untagged entries","beat":"2026-11-05T21:26:10.594Z"}
-{"id":"sh_mw424c28_d3f7","started":"2026-11-05T21:27:51.094Z","host":"Gabo-PC","worktree":"vigorous-grothendieck-5da792","branch":"claude/magical-chebyshev-aed5df","range":"1.51.6085-1.51.6104","task":"LANG-CACHE-APP-SCOPE-001c: auto-sync drift branch skipped while an application switch is in flight (scope id ahead of Fl)","beat":"2026-11-05T21:27:51.144Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

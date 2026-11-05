@@ -23,7 +23,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.120-bucket-ts';
+  var VERSION = '1.51.5242-company-key';
   if (window.__antcvClProseGuard985 === VERSION) return;
   window.__antcvClProseGuard985 = VERSION;
 
@@ -83,6 +83,60 @@
   function readSections() {
     try { var v = JSON.parse(localStorage.getItem('sections') || '{}'); return (v && typeof v === 'object') ? v : null; } catch (_) { return null; }
   }
+
+  // CL-GUARD-COMPANY-001 (owner 2026-11-01, Ambu 3524): the bucket key is the CURRENT
+  // meta, but the live letter can still be the PREVIOUS application's (meta flips to the
+  // new JD before generation runs, or generation never runs). snapshot() then filed the
+  // Terma letter under "Ambu|Hardware Solution Architect…|en" (5735 bytes, identical to
+  // the Terma bucket) and reapply() kept re-injecting it, so Ambu exported Terma's
+  // letter. A letter written for X names X: never snapshot or reapply prose for a
+  // targeted company unless the letter names that company, and never move a section
+  // that names a different known company. Shared matcher: antcv-company-match.js.
+  function CM() { return (window.AntcvCompanyMatch && typeof window.AntcvCompanyMatch.names === 'function') ? window.AntcvCompanyMatch : null; }
+  function curCompany() {
+    try { var m = JSON.parse(localStorage.getItem('meta') || '{}') || {}; return String(m.company || '').trim(); } catch (_) { return ''; }
+  }
+  function textOf(v) {
+    if (v == null) return '';
+    if (typeof v === 'string') return v;
+    if (Array.isArray(v)) return v.map(textOf).join(' ');
+    if (typeof v === 'object') {
+      var out = [];
+      ['content', 't', 'b', 'v', 'l', 'items', 'rows', 'bullets', 'hands_on', 'professionally'].forEach(function (k) { if (v[k] != null) out.push(textOf(v[k])); });
+      return out.join(' ');
+    }
+    return '';
+  }
+  function bucketText(bucket) {
+    return Object.keys(bucket || {}).filter(function (id) { return id.charAt(0) !== '_'; })
+      .map(function (id) { return textOf(bucket[id]); }).join(' ');
+  }
+  function letterText(cl) {
+    return (cl || []).filter(function (s) { return s && GUARDED.indexOf(s.id) >= 0 && isReal(s); })
+      .map(textOf).join(' ');
+  }
+  function knownCompanies(store) {
+    var out = [];
+    Object.keys(store || {}).forEach(function (k) {
+      var c = String(k.split('|')[0] || '').trim();
+      if (c && out.indexOf(c) < 0) out.push(c);
+      var b = store[k];
+      if (b && typeof b === 'object' && b._co && out.indexOf(b._co) < 0) out.push(String(b._co));
+    });
+    return out;
+  }
+  // Does this text belong to `co`? false when the text names another known company and not co.
+  function foreignTo(text, co, known) {
+    var cm = CM(); if (!cm || !text) return false;
+    if (co && cm.isTargeted(co) && cm.names(text, co)) return false;
+    return cm.otherCompaniesNamed(text, known, co).length > 0;
+  }
+  var lastCompanySkipLog = '';
+  function logSkip(msg) {
+    if (msg === lastCompanySkipLog) return;
+    lastCompanySkipLog = msg;
+    try { console.log('[CL-PROSE-LOSS-GUARD] CL-GUARD-COMPANY-001: ' + msg); } catch (_) {}
+  }
   function readStore() {
     try { var v = JSON.parse(localStorage.getItem(STORE) || '{}'); return (v && typeof v === 'object') ? v : {}; } catch (_) { return {}; }
   }
@@ -139,6 +193,14 @@
   function snapshot() {
     if (isUnsolicited()) return;   // never capture prose under an unsolicited key
     var secs = readSections(); if (!secs || !Array.isArray(secs.cl)) return;
+    // CL-GUARD-COMPANY-001: the live letter must name the bucket's company. Checked BEFORE
+    // the opening fallback below, which itself names the current company and would make a
+    // stale letter look like this application's.
+    var __co = curCompany(), __cm = CM();
+    if (__cm && __cm.isTargeted(__co)) {
+      var __letter = letterText(secs.cl);
+      if (__letter && !__cm.names(__letter, __co)) { logSkip('live letter does not name "' + __co + '" - not snapshotted (belongs to another application)'); return; }
+    }
     // CL-OPENING-EMPTY-GEN-001 (owner 2026-07-29): the OPENING can be persisted EMPTY at
     // GENERATION (LLM omits/rejects the slot) with no snapshot to restore. When the CL is
     // otherwise generated (why is real) but the opening is empty/placeholder and not
@@ -167,9 +229,11 @@
     var store = readStore();
     var bucket = (store[key] && typeof store[key] === 'object') ? store[key] : {};
     var changed = false;
+    var __known = knownCompanies(store);
     secs.cl.forEach(function (sec) {
       if (!sec || GUARDED.indexOf(sec.id) < 0) return;
       if (isReal(sec)) {
+        if (foreignTo(textOf(sec), __co, __known)) { logSkip('section "' + sec.id + '" names another company - not snapshotted'); return; }
         // store a deep copy of the real section
         try { bucket[sec.id] = JSON.parse(JSON.stringify(sec)); changed = true; } catch (_) {}
       }
@@ -182,6 +246,7 @@
     // the scrub skip it (the Trackman CL lost "Trackman" -> "your organisation"
     // through exactly this window). Underscore-keys are metadata, never sections.
     bucket._ts = Date.now();
+    if (__co) bucket._co = __co;
     store[key] = bucket;
     // keep the store small: cap at the 6 most-recent application buckets
     try {
@@ -200,11 +265,20 @@
     var store = readStore();
     var bucket = store[appKey()];
     if (!bucket || typeof bucket !== 'object') return;
+    // CL-GUARD-COMPANY-001: a bucket whose prose never names the current company was
+    // captured from another application's letter — never re-inject it.
+    var __co = curCompany(), __cm = CM(), __known = knownCompanies(store);
+    if (__cm && __cm.isTargeted(__co) && !__cm.names(bucketText(bucket), __co)) {
+      logSkip('bucket for "' + __co + '" does not name it - not re-applied');
+      return;
+    }
+    var __ok = function (snap) { return !foreignTo(textOf(snap), __co, __known); };
     var changed = false;
     var cl = secs.cl.map(function (sec) {
       if (!sec || GUARDED.indexOf(sec.id) < 0) return sec;
       var snap = bucket[sec.id];
       if (!snap || isReal(sec) || !isReal(snap)) return sec; // only placeholder<-real
+      if (!__ok(snap)) return sec;                            // CL-GUARD-COMPANY-001
       changed = true;
       return JSON.parse(JSON.stringify(snap));
     });
@@ -222,7 +296,7 @@
     GUARDED.forEach(function (id) {
       if (liveIds[id]) return;
       var snap = bucket[id];
-      if (!snap || !isReal(snap)) return;
+      if (!snap || !isReal(snap) || !__ok(snap)) return;
       var oi = ORDER.indexOf(id);
       var at = cl.length;
       for (var j = 0; j < cl.length; j++) {
@@ -291,6 +365,39 @@
     } catch (_) {}
   }
 
+  // CL-GUARD-COMPANY-001 boot purge: drop buckets captured from ANOTHER application's
+  // letter. (1) A targeted key whose prose never names its own company is foreign
+  // (the owner's "Ambu|…" bucket held the Terma letter). (2) The same prose filed under
+  // several keys keeps only the key whose company the prose names (empty / unsolicited
+  // keys lose to a named one). Runs once per load, after the skeleton purge.
+  function purgeCrossKeyBuckets() {
+    try {
+      var cm = CM(); if (!cm) return;
+      var store = readStore();
+      var dropped = [];
+      Object.keys(store).forEach(function (k) {
+        var b = store[k]; if (!b || typeof b !== 'object') return;
+        var co = String(k.split('|')[0] || '').trim();
+        if (cm.isTargeted(co) && !cm.names(bucketText(b), co)) { delete store[k]; dropped.push(k); }
+      });
+      var bySig = {};
+      Object.keys(store).forEach(function (k) {
+        var b = store[k]; if (!b || typeof b !== 'object') return;
+        var sig = JSON.stringify(Object.keys(b).filter(function (id) { return id.charAt(0) !== '_'; }).sort().map(function (id) { return [id, b[id]]; }));
+        (bySig[sig] = bySig[sig] || []).push(k);
+      });
+      Object.keys(bySig).forEach(function (sig) {
+        var ks = bySig[sig]; if (ks.length < 2) return;
+        var named = ks.filter(function (k) { var co = String(k.split('|')[0] || '').trim(); return cm.isTargeted(co) && cm.names(bucketText(store[k]), co); });
+        ks.forEach(function (k) { if (named.indexOf(k) < 0) { delete store[k]; dropped.push(k); } });
+      });
+      if (dropped.length) {
+        localStorage.setItem(STORE, JSON.stringify(store));
+        try { console.log('[CL-PROSE-LOSS-GUARD] CL-GUARD-COMPANY-001: purged ' + dropped.length + ' cross-application bucket(s): ' + dropped.join(' ; ')); } catch (_) {}
+      }
+    } catch (_) {}
+  }
+
   var t = null;
   function run() {
     if (disabled() || erasing()) return;
@@ -316,7 +423,7 @@
   window.addEventListener('antcv:sections-updated', debounced);
   // Boot sweep + later windows to catch a cloud-restore / me()-enforce that
   // out-races the first pass (restore + the converter sidecars settle by ~5s).
-  setTimeout(purgeSkeletonSnapshots, 300);
+  setTimeout(function () { purgeSkeletonSnapshots(); purgeCrossKeyBuckets(); }, 300);
   [600, 1500, 3500, 7000, 12000].forEach(function (ms) { setTimeout(run, ms); });
   // PROSE-GUARD-POLL-001 (owner 2026-07): on a HEAVY load the cloud / me()-enforce restore
   // can placeholder opening/why/who LONG after the boot sweeps (the renderer freezes 45-60s),
@@ -324,5 +431,5 @@
   // keeps restoring — safe because reapply ONLY ever replaces a PLACEHOLDER with a real
   // snapshot, never a real value, so it cannot fight a genuine user edit.
   setInterval(run, 2500);
-  window.AntcvClProseGuard = { version: VERSION, run: run, snapshot: snapshot, reapply: reapply, purgeSkeletonSnapshots: purgeSkeletonSnapshots, _isPlaceholder: isPlaceholder };
+  window.AntcvClProseGuard = { version: VERSION, run: run, snapshot: snapshot, reapply: reapply, purgeSkeletonSnapshots: purgeSkeletonSnapshots, purgeCrossKeyBuckets: purgeCrossKeyBuckets, _isPlaceholder: isPlaceholder };
 })();

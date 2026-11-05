@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.51.5159-gdpr-rights';
+  var VERSION = '1.51.5385-gdpr-rights';
   if (window.__antcvDataExport360 === VERSION) return;
   window.__antcvDataExport360 = VERSION;
 

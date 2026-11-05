@@ -270,6 +270,40 @@ function rowsFromHealth(health) {
   }
   return [];
 }
+// RELAY-TUNE-BLIND-001 (2026-11-03): llm_calls went silent after 2026-10-20 and this tune kept
+// answering "keep (under-sampled)" — indistinguishable from a quiet healthy week. Telemetry is
+// only what the PWA's in-app cascade (and, since LLM-LOG-SERVER-001, the proxy's server-side
+// calls) report, and /api/llm-health serves the LATEST snapshot per window, so after the data
+// leaves a window the old snapshot lingers. State:
+//   blind — no rows / zero calls: nothing to judge, say so (exit 4 in main)
+//   stale — the newest snapshot is older than staleMin: the rows are history, not this week
+//   thin  — fewer than minCalls calls overall: the per-provider floors will skip everything
+//   ok
+// A row's snapshot time is window_start + window_minutes*60 (the relay stamps window_start as
+// now - window). Rows without those fields (offline --data files) skip the stale test.
+export function assessCoverage(rows, { minCalls = 20, nowSec = Math.floor(Date.now() / 1000), staleMin = 60 } = {}) {
+  const list = Array.isArray(rows) ? rows : [];
+  const calls = list.reduce((n, r) => n + (Number(r && r.call_count) || 0), 0);
+  if (!list.length || calls <= 0) {
+    return { state: 'blind', calls: 0, snapshotAgeMin: null, why: 'no telemetry rows in any window — the tune has nothing to judge.' };
+  }
+  let newest = 0;
+  for (const r of list) {
+    const ws = Number(r && r.window_start), wm = Number(r && r.window_minutes);
+    if (ws > 0 && wm > 0) newest = Math.max(newest, ws + wm * 60);
+  }
+  const snapshotAgeMin = newest ? Math.max(0, Math.round((nowSec - newest) / 60)) : null;
+  if (snapshotAgeMin != null && snapshotAgeMin > staleMin) {
+    const days = snapshotAgeMin >= 2880 ? ` (${Math.round(snapshotAgeMin / 1440)} days)` : '';
+    return { state: 'stale', calls, snapshotAgeMin,
+      why: `newest health snapshot is ${snapshotAgeMin} min old${days}: no new calls reached telemetry since — these ${calls} calls are history, not this week.` };
+  }
+  if (calls < minCalls) {
+    return { state: 'thin', calls, snapshotAgeMin, why: `only ${calls} calls in the window (< ${minCalls}): per-provider sample floors will skip most roles.` };
+  }
+  return { state: 'ok', calls, snapshotAgeMin, why: '' };
+}
+
 async function fetchHealth() {
   const base = String(process.env.ANTCV_RELAY_URL || '').replace(/\/+$/, '');
   if (!base) return null;
@@ -303,11 +337,26 @@ async function main() {
     if (!health) { console.error('No telemetry: set ANTCV_RELAY_URL (+ ANTCV_ADMIN_TOKEN) or pass --data <file>.'); process.exit(2); }
   }
   const rows = rowsFromHealth(health);
+  // Offline --data files carry no snapshot times worth judging as stale unless they have them.
+  const coverage = assessCoverage(rows, { minCalls: opts.minCalls });
+  if (coverage.state === 'blind' || coverage.state === 'stale') {
+    // A proposal built on no / history-only data is noise; refuse it and fail loudly so the
+    // scheduled routine reports BLIND instead of a quiet "keep".
+    if (arg('json', false)) console.log(JSON.stringify({ current, coverage, changed: false }, null, 2));
+    else {
+      console.log(`\nRELAY-COST-QUALITY-TUNE — BLIND (${coverage.state})\n  ${coverage.why}`);
+      console.log('  No MODEL_ROLES change is proposed. Check: (1) the in-app cascade was actually used this week');
+      console.log('  (gen-runner / gen-job / manual packages log only via the proxy server-side logger), (2) the');
+      console.log('  relay cron is running (llm_provider_health snapshots), (3) llm_calls max(ts) in D1.');
+    }
+    process.exit(4);
+  }
   const { proposed, rationale, changed } = proposeRoles(current, rows, opts);
   const clientLevers = summarizeClientDispatch(rows, opts);
 
-  if (arg('json', false)) { console.log(JSON.stringify({ current, proposed, changed, rationale, clientLevers }, null, 2)); }
+  if (arg('json', false)) { console.log(JSON.stringify({ current, proposed, changed, rationale, clientLevers, coverage }, null, 2)); }
   else {
+    if (coverage.state === 'thin') console.log(`\nNOTE: thin telemetry — ${coverage.why}`);
     console.log(`\nRELAY-COST-QUALITY-TUNE — ${rows.length} health rows · floor=${opts.floor} margin=${opts.margin} min-calls=${opts.minCalls}\n`);
     for (const r of rationale) {
       const mark = r.decision === 'flip' ? 'FLIP' : 'keep';

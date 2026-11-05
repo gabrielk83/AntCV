@@ -24230,6 +24230,25 @@ function sloganColorOnWhite(hex, fallback) {
   }
 }
 __name(sloganColorOnWhite, "sloganColorOnWhite");
+function sloganCased(text, mode) {
+  // SLOGAN-CASE-001 (owner 2026-11-03, CL-ACADEMY-001): the CL headline prints in SENTENCE
+  // CASE when the client forwards meta.slogan_case = "sentence" (the academy letter default).
+  // Same steps as the PWA __antcvSloganCased (preview == export): keep the author's casing
+  // (acronyms, company names), lower a legacy ALL-CAPS slogan, capitalise the first letter of
+  // each " • " segment. Any other value, or an older client that sends no field, keeps the
+  // legacy capitals.
+  let t = String(text == null ? "" : text);
+  if (String(mode || "").toLowerCase() !== "sentence") return t.toUpperCase();
+  if (t === t.toUpperCase()) t = t.toLowerCase();
+  return t.split(" • ").map((p) => {
+    for (let i = 0; i < p.length; i++) {
+      const c = p.charAt(i);
+      if (c.toUpperCase() !== c.toLowerCase()) return p.slice(0, i) + c.toUpperCase() + p.slice(i + 1);
+    }
+    return p;
+  }).join(" • ");
+}
+__name(sloganCased, "sloganCased");
 function normalisePackageId(raw) {
   if (typeof raw !== "string") return DEFAULT_PACKAGE;
   const lower = raw.trim().toLowerCase();
@@ -25628,7 +25647,8 @@ function buildLinearDocument(ctx) {
   const otherSecs = sections.filter((s) => !s || s.id !== "closure" && s.id !== "jd_questions" && s.id !== "application_qa");
   const bodyChildren = [];
   // SLOGAN-CL-001 (owner 2026-06-29): a tagline heading at the TOP of the cover-letter body
-  // (before the opening) — uppercased teal. SLOGAN-CL-EDIT-001 (owner 2026-06-29): now editable
+  // (before the opening) — teal, uppercased until SLOGAN-CASE-001 (2026-11-03: sentence case
+  // when meta.slogan_case = "sentence", see sloganCased). SLOGAN-CL-EDIT-001 (owner 2026-06-29): now editable
   // via the client's standalone slogan keys, forwarded as meta.slogan / slogan_hidden /
   // slogan_align. An empty override falls back to meta.subtitle (the old default; Gabriel
   // unsolicited = "PROCESSES • PRODUCTS • PEOPLE"). Skipped when hidden or empty/placeholder.
@@ -25692,7 +25712,7 @@ function buildLinearDocument(ctx) {
         keepNext: true,
         ...__srB,
         children: [new TextRun({
-          text: __slogan.toUpperCase(),
+          text: sloganCased(__slogan, __m.slogan_case),
           bold: true,
           // SLOGAN-BRAND-COLOR-001 (owner 2026-07-14): follow the brand slogan colour
           // (meta.slogan_color, forwarded from antcv:brandV2 slots.sloganColor — the SAME
@@ -29759,7 +29779,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.175-ai-mark-props";
+var VERSION = "1.14.176-slogan-case";
 // AI-ACT-MARK-001 (EU AI Act Art. 50(2), Art. 111 transition to 2 Dec 2026):
 // machine-readable marking of AI-generated text in every DOCX, as custom
 // document properties. Interim layer under the visible AI notice footer

@@ -3,6 +3,7 @@
 // a traceable saved application · V4 drop → why → classify → Dream Envelope.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { mergeDocs } from './mergeDocs';
 import {
   getDoc, putDoc, fetchJdUrl, createApplication, setActive, classifyReason,
   fetchClusterTop20, askAI, fitPercent, fetchBrandColors, research, claimTabAppId, TRACKED_STATUSES, asText, type TrackerDoc, type Row,
@@ -10,7 +11,12 @@ import {
 import { computeTier, orderTop5 } from './rank';
 import { isClosedRow, passesTierFilter } from './rowVisibility';
 import { top5ClickAction } from './top5controls';
+import { ENVELOPE_HEADING, positioningLine } from './openRouting';
 import { CLUSTER_REFRESH_MS, reconcileSnapshot, shouldRefetchOnFocus } from './clusterRefresh';
+import {
+  SUBMITTED, INTERVIEW, INTERVIEW_STAGES, MAX_FOLLOWUPS, localDay, interviewStage, statusSince,
+  followUpState, stampSubmitted, setSubmitted, logSent, financialsView, recordStatusIn, statusHistoryOf,
+} from './outcomes';
 
 const NAVY = '#1F3864';
 const today = () => new Date().toISOString().slice(0, 10);
@@ -120,27 +126,7 @@ function signalsBlockOf(d: TrackerDoc | null, uk: string): string {
   return parts.join('\n');
 }
 
-// SAVE-409-MERGE-001: rebase this session's edits onto a newer server doc after
-// a rev conflict. Server doc is the base (rows/keys added elsewhere survive —
-// e.g. discovery rows, app-written rationale/scores); local wins per row-key
-// where this session has data. Deliberate last-writer-wins on shared keys: the
-// pre-existing behaviour on conflict was to DROP every local edit, so any
-// overlap here is strictly less lossy.
-function mergeDocs(server: TrackerDoc, local: TrackerDoc): TrackerDoc {
-  const out: TrackerDoc = { ...server };
-  const MAPS = ['urls', 'jd', 'gen', 'queue', 'brandfit', 'brand', 'signals', 'sigfiles', 'support', 'webintel', 'scores', 'artifacts', 'discovered', 'pin', 'park'];
-  for (const k of MAPS) {
-    const sv = (server as Record<string, unknown>)[k] as Record<string, unknown> | undefined;
-    const lv = (local as Record<string, unknown>)[k] as Record<string, unknown> | undefined;
-    if (lv && typeof lv === 'object') (out as Record<string, unknown>)[k] = { ...(sv || {}), ...lv };
-  }
-  const lmap = new Map((local.rows || []).map((r) => [r[11], r]));
-  const skeys = new Set((server.rows || []).map((r) => r[11]));
-  out.rows = (server.rows || []).map((r) => lmap.get(r[11]) || r);
-  for (const r of local.rows || []) if (!skeys.has(r[11])) out.rows.push(r);
-  if (local.envelope) out.envelope = local.envelope;
-  return out;
-}
+// SAVE-409-MERGE-002: three-way conflict rebase lives in mergeDocs.ts (unit-tested).
 
 // RESEARCH-MERGE-001: JD-sourced ROLE INTEL + web-sourced COMPANY RESEARCH go
 // to generation as ONE coherent research block. The JD intel leads (it is the
@@ -178,6 +164,8 @@ function mergeResearchBlock(roleIntel: string, webBrief: string): string {
 
 export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
   const [doc, setDocState] = useState<TrackerDoc | null>(null);
+  // SAVE-409-MERGE-002: the doc as last loaded / saved, the base of a conflict rebase.
+  const baseRef = useRef<TrackerDoc | null>(null);
   const [rev, setRev] = useState(0);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -222,7 +210,8 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     setLoading(true); setErr(null);
     try {
       const s = await getDoc();
-      setDocState(s.doc || { version: 2, rows: [], urls: {}, jd: {}, support: {}, artifacts: {} });
+      const loaded = s.doc || { version: 2, rows: [], urls: {}, jd: {}, support: {}, artifacts: {} };
+      baseRef.current = loaded; setDocState(loaded);
       setRev(s.rev); setDirty(false);
     } catch (e) { setErr(String((e as Error).message || e)); }
     finally { setLoading(false); }
@@ -300,6 +289,32 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
     if (!doc) return;
     setDocState({ ...doc, rows: (doc.rows || []).map((r) => { if (r[11] !== uk) return r; const c = r.slice() as Row; c[idx] = value; return c; }) });
     setDirty(true);
+  }
+  // OUTCOME-RECORD-001: a status change is dated into status_history[uk]; a row turning
+  // Submitted gets a submitted date in followups[uk] (same 'first-seen' stamp as
+  // followups.py) unless it has one. Like every cell edit, Save persists it.
+  function setStatus(uk: string, status: string): void {
+    if (!doc) return;
+    const day = localDay();
+    setDocState({
+      ...doc,
+      rows: (doc.rows || []).map((r) => { if (r[11] !== uk) return r; const c = r.slice() as Row; c[8] = status; return c; }),
+      status_history: recordStatusIn(doc, uk, status, day),
+      ...(status === SUBMITTED ? { followups: stampSubmitted(doc.followups, uk, day) } : {}),
+    });
+    setDirty(true);
+  }
+  function setStage(uk: string, stage: string): void {
+    if (!doc || !stage) return;
+    setDocState({ ...doc, status_history: recordStatusIn(doc, uk, INTERVIEW, localDay(), stage) }); setDirty(true);
+  }
+  function setSubmittedOn(uk: string, day: string): void {
+    if (!doc) return;
+    setDocState({ ...doc, followups: setSubmitted(doc.followups, uk, day) }); setDirty(true);
+  }
+  function markFollowupSent(uk: string): void {
+    if (!doc) return;
+    setDocState({ ...doc, followups: logSent(doc.followups, uk, localDay()) }); setDirty(true);
   }
   // Generation tier: explicit choice wins; otherwise Top-5 default to High
   // quality (they're the priority applications), the rest to Quick.
@@ -502,7 +517,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
 
   const persist = useCallback(async (next: TrackerDoc, quiet = false): Promise<boolean> => {
     const res = await putDoc(next, rev);
-    if (res.ok) { setRev(res.rev || rev + 1); setDocState(next); setDirty(false); if (!quiet) setNote('Saved ✓'); return true; }
+    if (res.ok) { baseRef.current = next; setRev(res.rev || rev + 1); setDocState(next); setDirty(false); if (!quiet) setNote('Saved ✓'); return true; }
     if (res.conflict) {
       // SAVE-409-MERGE-001 (register row 79): the app bumps the doc rev behind
       // the island (auto JD-analysis persists rationale onto the row after
@@ -511,14 +526,15 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
       // before pressing Open). Rebase ONCE onto the server doc (server-added
       // rows/keys survive, this session's edits win) and re-PUT.
       if (res.serverDoc) {
-        const rebased = mergeDocs(res.serverDoc, next);
+        const rebased = mergeDocs(res.serverDoc, next, baseRef.current);
         const res2 = await putDoc(rebased, res.serverRev ?? null);
         if (res2.ok) {
-          setRev(res2.rev || (res.serverRev || rev) + 1); setDocState(rebased); setDirty(false);
+          baseRef.current = rebased; setRev(res2.rev || (res.serverRev || rev) + 1); setDocState(rebased); setDirty(false);
           if (!quiet) setNote('Saved ✓ (merged a concurrent update)');
           return true;
         }
       }
+      if (res.serverDoc) baseRef.current = res.serverDoc;
       setErr('Changed elsewhere — reloaded latest, re-apply your edit.'); setDocState(res.serverDoc || next); setRev(res.serverRev || rev); setDirty(false); return false;
     }
     setErr(res.error || 'save failed'); return false;
@@ -793,7 +809,8 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
       if (String(nt.why || '').trim()) tf.push('Why this role for the candidate (their OWN words — weave the genuine motivation into WHY-THIS-POSITION; do not quote verbatim): ' + String(nt.why).trim());
       const targetFacts = tf.length ? '\n\nTARGET FACTS (calibration only — use to set altitude, emphasis and tone; NEVER copy verbatim into the CV or cover letter, and never state the salary figure or the tier):\n• ' + tf.join('\n• ') : '';
       const hmDirective = hmName ? '\n\nHIRING MANAGER: ' + hmName + ' — address the cover-letter greeting to this person by name (e.g. "Dear ' + hmName + ',"), not the generic hiring team.' : '';
-      const supporting = 'TARGET-ROLE GUIDELINES (Dream Envelope):\n' + envText + hmDirective
+      // ENVELOPE-PRECEDENCE-001: the posting's role family positions the CV/CL; the envelope only calibrates (openRouting.ts).
+      const supporting = positioningLine(String(row[2] || '')) + ENVELOPE_HEADING + '\n' + envText + hmDirective
         + targetFacts
         // RESEARCH-MERGE-001: one merged, deduped research block (JD role intel
         // + web company research) instead of two blocks restating each other.
@@ -890,7 +907,8 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
         ? url.toLowerCase().replace(/^https?:\/\/(www\.)?/, '').split(/[?#]/)[0].replace(/\/+$/, '')
         : (String(row[1]) + '|' + String(row[2])).toLowerCase().replace(/[^a-z0-9|]+/g, '');
       const discovered = { ...(doc.discovered || {}), [key]: { ...((doc.discovered || {})[key] || {}), status: 'rejected', reason: reason.trim(), uk, company: row[1], role: row[2], url } };
-      const next = { ...doc, envelope: env, rows: rowsNext, discovered, pin: { ...(doc.pin || {}), [uk]: false }, park: { ...(doc.park || {}), [uk]: false } };
+      const next = { ...doc, envelope: env, rows: rowsNext, discovered, pin: { ...(doc.pin || {}), [uk]: false }, park: { ...(doc.park || {}), [uk]: false },
+        status_history: recordStatusIn(doc, uk, 'Archive / closed', localDay()) };
       if (await persist(next, true)) setNote('Rejected ' + row[1] + ' → envelope learning (' + dim + '); discovery won\'t re-propose it.');
     } catch (e) { setErr(String((e as Error).message || e)); }
     finally { setBusyKey(null); }
@@ -969,7 +987,9 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
                         <button onClick={() => void captureJd(r)} title={hasJd ? 'JD stored — click to view or replace it' : 'No JD — click to paste or attach it (the posting URL is walled or is a listing page)'}
                           style={{ background: 'transparent', border: hasJd ? 'none' : '1px dashed #b7c2d4', borderRadius: 4, cursor: 'pointer', fontSize: hasJd ? 14 : 10.5, color: '#556', padding: hasJd ? 0 : '1px 3px', lineHeight: 1.4 }}>{hasJd ? '✅' : '＋ JD'}</button>
                       </td>
-                      <td style={cell}><select value={r[8]} onChange={(e) => editRow(uk, 8, e.target.value)} style={{ fontSize: 12, width: '100%' }}>{TRACKED_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}{!TRACKED_STATUSES.includes(r[8]) && r[8] ? <option value={r[8]}>{r[8]}</option> : null}</select></td>
+                      <td style={cell}><select value={r[8]} onChange={(e) => setStatus(uk, e.target.value)} style={{ fontSize: 12, width: '100%' }}>{TRACKED_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}{!TRACKED_STATUSES.includes(r[8]) && r[8] ? <option value={r[8]}>{r[8]}</option> : null}</select>
+                        <OutcomeCell status={r[8]} hist={statusHistoryOf(doc, uk)} fu={(doc?.followups || {})[uk]}
+                          onStage={(s) => setStage(uk, s)} onSubmitted={(d) => setSubmittedOn(uk, d)} onSent={() => markFollowupSent(uk)} /></td>
                       <td style={cell}><textarea value={r[9]} onChange={(e) => editRow(uk, 9, e.target.value)} onFocus={() => setExpandRow(uk)} rows={expandRow === uk ? 5 : 2} style={ta} /></td>
                       <td style={cell}><textarea value={r[10]} onChange={(e) => editRow(uk, 10, e.target.value)} onFocus={() => setExpandRow(uk)} rows={expandRow === uk ? 5 : 2} style={ta} /></td>
                       <td style={cell}>
@@ -1084,6 +1104,48 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
         <button onClick={() => setChatOpen((o) => !o)} title="Ask AI about your job list"
           style={{ position: 'absolute', right: 16, bottom: 14, zIndex: 7, background: '#01b7bb', color: '#06243a', fontWeight: 800, fontSize: 13, border: 0, borderRadius: 24, padding: '10px 15px', cursor: 'pointer', boxShadow: '0 6px 20px rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', gap: 6 }}>🤖 Ask AI</button>
       </div>
+    </div>
+  );
+}
+
+// OUTCOME-RECORD-001: under the status select — the date the status was set, the
+// Interview stage (each pick dated in history), and for a Submitted row the
+// submitted-on date (editable → submitted_source 'owner') and the follow-up clock.
+function OutcomeCell({ status, hist, fu, onStage, onSubmitted, onSent }: {
+  status: string; hist: unknown; fu: unknown;
+  onStage: (stage: string) => void; onSubmitted: (day: string) => void; onSent: () => void;
+}): JSX.Element | null {
+  const isInterview = String(status || '').trim() === INTERVIEW;
+  const f = followUpState(fu, status, localDay());
+  const since = statusSince(hist, status);
+  if (!isInterview && !f && !since) return null;
+  const dateTitle = f && f.source === 'owner' ? 'Submitted on (set by you)'
+    : f && f.submitted ? 'First seen as Submitted — the real date may be earlier; set it here'
+      : 'No submitted date yet — set the day you applied';
+  return (
+    <div style={{ marginTop: 3, display: 'grid', gap: 2, fontSize: 10.5, color: '#556' }}>
+      {isInterview && (
+        <select value={interviewStage(hist)} onChange={(e) => onStage(e.target.value)} title="Interview stage — each change is dated" style={{ fontSize: 11, width: '100%' }}>
+          <option value="" disabled>stage…</option>
+          {INTERVIEW_STAGES.map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+      )}
+      {since && !f && <span title="Date this status was set">since {since}</span>}
+      {f && (
+        <label title={dateTitle} style={{ display: 'grid', gap: 1 }}>
+          <span>submitted on{f.source === 'first-seen' ? ' (first seen)' : ''}</span>
+          <input type="date" value={f.submitted || ''} onChange={(e) => { if (e.target.value) onSubmitted(e.target.value); }}
+            style={{ fontSize: 10.5, width: '100%', boxSizing: 'border-box', padding: '1px 2px' }} />
+        </label>
+      )}
+      {f && f.due && (
+        <span title={'No reply for ' + f.quiet + ' days since ' + (f.sent ? 'your last follow-up' : 'you applied') + ' (' + f.since + '). Send a short follow-up, then tick ✓ sent.' + (f.last ? ' This is the last one.' : '')}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#fff1d6', border: '1px solid #e8b04a', color: '#7a4b00', borderRadius: 4, padding: '1px 4px', fontWeight: 700 }}>
+          ⏰ follow-up due · {f.quiet}d
+          <button onClick={onSent} title="I sent the follow-up today" style={{ marginLeft: 'auto', background: '#fff', border: '1px solid #e8b04a', borderRadius: 3, cursor: 'pointer', fontSize: 10, padding: '0 4px', color: '#7a4b00' }}>✓ sent</button>
+        </span>
+      )}
+      {f && f.sent > 0 && <span>{f.sent}/{MAX_FOLLOWUPS} follow-ups sent</span>}
     </div>
   );
 }
@@ -1215,6 +1277,10 @@ function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, pinned,
   const sigBlock = signalsBlockOf(doc, uk);
   const pct = fitPercent(row[12], rawSupport + ' ' + ((doc?.jd || {})[uk] || '') + ' ' + sigBlock, cluster);
   const fs = (d: number, m: number) => (mobile ? m : d); // font-size: bigger on mobile
+  // OUTCOME-RECORD-001: follow-up clock + the employer's annual-report line.
+  const fu = followUpState((doc?.followups || {})[uk], row[8], localDay());
+  const fin = financialsView((doc?.financials || {})[uk]);
+  const [finOpen, setFinOpen] = useState(false);
 
   function editItem(si: number, ii: number, field: 'need' | 'bring' | 'insight', v: string): void {
     setP((prev) => { const c = { ...prev, sections: prev.sections.map((s) => ({ ...s, items: s.items.slice() })) }; c.sections[si].items[ii] = { ...c.sections[si].items[ii], [field]: v }; return c; });
@@ -1287,6 +1353,7 @@ function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, pinned,
         {p.fit && <Line icon="🎯" label="Fit" text={p.fit} color="#2a3244" size={fs(12.5, 14.5)} />}
         {p.flag && <Line icon="⚠️" label="Flag" text={p.flag} color="#8a4b12" size={fs(12.5, 14.5)} />}
         {sigBlock && <Line icon="📌" label="Signals" text={sigBlock.replace(/\n+/g, ' · ').slice(0, 240)} color="#3a4d6b" size={fs(12, 13.5)} />}
+        {fu && fu.due && <Line icon="⏰" label="Follow-up due" text={'no reply for ' + fu.quiet + ' days since ' + fu.since + ' · ' + fu.sent + '/' + MAX_FOLLOWUPS + ' sent — log it from the List view'} color="#7a4b00" size={fs(12, 13.5)} />}
         {p.sections.map((s, si) => (
           <div key={si} style={{ marginTop: 11 }}>
             <div style={{ fontSize: fs(11, 13), fontWeight: 800, color: t.accent, letterSpacing: 0.3, textTransform: 'uppercase', marginBottom: 5 }}>{s.title}</div>
@@ -1311,6 +1378,17 @@ function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, pinned,
             <button onClick={() => void doResearch()} disabled={researching} title="Fetch or refresh employer research from the web (holistic + specific — fed into generation)"
               style={{ ...btn('#eef3fb', '#1d3a6e', fs(11, 13)), padding: '2px 8px', marginLeft: 'auto' }}>{researching ? 'Researching…' : (web ? '↻ Refresh' : '🔎 Research')}</button>
           </div>
+          {/* OUTCOME-RECORD-001: financials[uk].summary (company_financials.py) on one line, tap
+              to expand. The CHECK note sits outside the truncated text so it is always seen. */}
+          {fin && (
+            <div onClick={() => setFinOpen((o) => !o)} title={fin.text || fin.error}
+              style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 6px', alignItems: 'baseline', fontSize: fs(11.5, 13), color: fin.error ? '#889' : '#2a3a55', marginBottom: 6, cursor: 'pointer' }}>
+              <span>📊</span>
+              {fin.text && <span style={finOpen ? { flex: '1 1 160px' } : { flex: '1 1 160px', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fin.text}</span>}
+              {fin.check && <b style={{ color: '#a14a00' }}>⚠ {fin.check}</b>}
+              {fin.error && <span style={{ flex: '1 1 160px' }}>Financials: {fin.error}</span>}
+            </div>
+          )}
           <textarea value={web} onChange={(e) => { setWeb(e.target.value); setWebDirty(true); }} rows={web ? (mobile ? 6 : 5) : 2}
             placeholder="Holistic + specific employer context from the web — feeds the WHY-this-company, cover letter and employer Q&As. Tap Research to fetch."
             style={{ ...ta, fontSize: fs(12, 14), lineHeight: 1.4, background: '#f6f9fe', border: '1px solid #cfddf0', color: '#1d2a44' }} />

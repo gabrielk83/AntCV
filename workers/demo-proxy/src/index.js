@@ -1020,11 +1020,23 @@ async function handleRequest(request, env = {}) {
     }
   } catch (_) { userHashForLlm = null; }
 
-  let injectionStats = { redacted: 0, suspicious: [] };
+  let injectionStats = { redacted: 0, suspicious: [], stripped: 0 };
   try {
     const parsed = JSON.parse(bodyText);
     if (parsed && typeof parsed === 'object') {
       let modified = false;
+      // Sanitize one user text; returns the text to forward, or null when unchanged.
+      const sanitized = (text, fieldName) => {
+        const r = sanitizeUserContent(text, { fieldName });
+        injectionStats.stripped += r.stripped;
+        if (r.redacted > 0 || r.suspicious.length > 0) {
+          injectionStats.redacted += r.redacted;
+          injectionStats.suspicious.push(...r.suspicious);
+          return r.clean;
+        }
+        // POSTING-GUARD-001: only invisible characters were found - drop them, no length cap.
+        return r.stripped > 0 ? r.visible : null;
+      };
 
       // OpenAI / Mistral / Anthropic shape: messages: [{role, content}]
       if (Array.isArray(parsed.messages)) {
@@ -1040,12 +1052,15 @@ async function handleRequest(request, env = {}) {
               modified = true;
             }
           } else if (m.role === 'user' && typeof m.content === 'string') {
-            const r = sanitizeUserContent(m.content, { fieldName: 'message[' + i + ']' });
-            if (r.redacted > 0 || r.suspicious.length > 0) {
-              m.content = r.clean;
-              injectionStats.redacted += r.redacted;
-              injectionStats.suspicious.push(...r.suspicious);
-              modified = true;
+            const next = sanitized(m.content, 'message[' + i + ']');
+            if (next !== null) { m.content = next; modified = true; }
+          } else if (m.role === 'user' && Array.isArray(m.content)) {
+            // Multi-part message (document/image + text): sanitize the text blocks.
+            for (let j = 0; j < m.content.length; j++) {
+              const b = m.content[j];
+              if (!b || b.type !== 'text' || typeof b.text !== 'string') continue;
+              const next = sanitized(b.text, 'message[' + i + '].content[' + j + ']');
+              if (next !== null) { b.text = next; modified = true; }
             }
           }
         }
@@ -1076,13 +1091,8 @@ async function handleRequest(request, env = {}) {
           if (!c || c.role !== 'user' || !Array.isArray(c.parts)) continue;
           for (let j = 0; j < c.parts.length; j++) {
             if (c.parts[j] && typeof c.parts[j].text === 'string') {
-              const r = sanitizeUserContent(c.parts[j].text, { fieldName: 'contents[' + i + '].parts[' + j + ']' });
-              if (r.redacted > 0 || r.suspicious.length > 0) {
-                c.parts[j].text = r.clean;
-                injectionStats.redacted += r.redacted;
-                injectionStats.suspicious.push(...r.suspicious);
-                modified = true;
-              }
+              const next = sanitized(c.parts[j].text, 'contents[' + i + '].parts[' + j + ']');
+              if (next !== null) { c.parts[j].text = next; modified = true; }
             }
           }
         }
@@ -1145,6 +1155,9 @@ async function handleRequest(request, env = {}) {
     if (demo && demo.headers) Object.assign(out, demo.headers);
     if (injectionStats.redacted > 0) {
       out['X-AntCV-Sanitized-Patterns'] = String(injectionStats.redacted);
+    }
+    if (injectionStats.stripped > 0) {
+      out['X-AntCV-Invisible-Stripped'] = String(injectionStats.stripped);
     }
     if (writingStyleRequest) {
       out['X-AntCV-Writing-Style'] = writingStyleRequest.writingStyle;

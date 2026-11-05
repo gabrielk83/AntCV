@@ -9,6 +9,7 @@ verifies each file:
     split bugfix" — notice anchoring differs on 1-slot vs 2-slot docs)
   - SIDEBAR-SPINE-VML-001: the sidebar color reaches the true page bottom
     (pixel-sampled at the sidebar's x-center a few points above the edge)
+  - ATS-TEXT-LAYER-001 (CV): the text layer an ATS parses (ats_text.py)
 
 Usage:
   python export_pdfs.py --apps 807,806,805 --out "C:/Users/x/Downloads/dir"
@@ -83,6 +84,16 @@ def verify_pdf(pdf_bytes, payload, doc):
             out["spine_bottom"] = all(abs(avg[c] - rgb[c]) <= 18 for c in range(3))
             out["_spine_avg"] = avg
             out["_spine_want"] = rgb
+        # ATS-TEXT-LAYER-001: what a parser reads from this PDF (glyphs, contact as
+        # literal text, the two columns not interleaving in stream order).
+        try:
+            import ats_text
+            pi = payload.get("personalInfo") or payload.get("personal_info") or {}
+            out["ats"] = ats_text.check_doc(d, email=str(pi.get("email") or "") or None,
+                                            phone=str(pi.get("phone") or "") or None,
+                                            sidebar_ratio=float(payload.get("sidebar_ratio") or 0) or None)
+        except Exception as e:                                 # noqa: BLE001
+            out["ats"] = [{"item": "ats check", "status": "WARN", "detail": "skipped: %s" % str(e)[:80]}]
     return out
 
 
@@ -131,6 +142,9 @@ def main():
                     flags.append(f"SPINE-GAP avg={v.get('_spine_avg')} want={v.get('_spine_want')}")
                 if v["banned_dashes"]:
                     flags.append("BANNED-DASH " + ",".join(f"{k}x{n}" for k, n in v["banned_dashes"].items()))
+                bad_ats = [r for r in v.get("ats") or [] if r["status"] == "FAIL"]
+                if bad_ats:
+                    flags.append("ATS " + "; ".join(f"{r['item']}: {r['detail']}" for r in bad_ats)[:160])
                 rows.append((app_id, doc, name, v["pages"], "OK" if not flags else "; ".join(flags),
                              chk["summary"] if chk else None))
                 print(f"{app_id} {doc}: {name}  pages={v['pages']}  {'OK' if not flags else '; '.join(flags)}"

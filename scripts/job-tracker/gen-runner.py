@@ -264,6 +264,23 @@ def research(company, role, num=6):
     except Exception:
         return ""
 
+def employer_financials(doc, r):
+    """COMPANY-FINANCIALS-001: one summary line of the employer's newest Danish annual
+    report, cached in doc['financials'][uk] for 90 days (company_financials.py). The CVR
+    comes from the cache / discovery seed, the CVR register or cvrapi.dk. '' when none
+    is found. A name mismatch stays in the line as a CHECK note. Never raises."""
+    try:
+        import datetime
+        import company_financials as CF
+        today = datetime.date.today()
+        CF.enrich(doc, [r["uk"]], today, research=lambda name: research(name, "CVR"))
+        rec = (doc.get("financials") or {}).get(r["uk"]) or {}
+        if not rec.get("summary"):
+            print("   [financials] none: %s" % str(rec.get("error") or "no record")[:110])
+        return rec.get("summary") or ""
+    except Exception as e:
+        print(f"   [financials] skipped ({str(e)[:80]})"); return ""
+
 # ── brand capture (BRAND-DECIDES-RESEARCH-001) ─────────────────────
 # The brand is colours AND company SPIRIT + VALUES, collected as RESEARCH in the
 # SAME site-crawl as the colour exploration. brand_fit.capture_brand drives the
@@ -346,10 +363,11 @@ def is_closed_row(row):
     Closed = the D9D9D9 Archive band, an archived/rejected/withdrawn tracked
     status, or a "Dropped (...)" flag. Keep the three clauses in step with the
     island's - the JD list hides exactly these rows, and the nightly must not
-    generate for anything the owner can no longer see."""
+    generate for anything the owner can no longer see. OUTCOME-RECORD-001: the
+    terminal outcomes Offer declined / No response / Hired are closed too."""
     import re as _re
     return (str(row[12] if len(row) > 12 else "").upper() == "D9D9D9"
-            or bool(_re.search(r"rejected|archive|closed|withdrawn",
+            or bool(_re.search(r"rejected|archive|closed|withdrawn|declined|no response|hired",
                                str(row[8] if len(row) > 8 else ""), _re.I))
             or bool(_re.match(r"^\s*dropped\b",
                               str(row[10] if len(row) > 10 else ""), _re.I)))
@@ -1052,6 +1070,12 @@ def cmd_run(args):
         r["language"] = language   # BRAND-CANONICAL-SITE-CCTLD-001: seeds the ccTLD hints
         rsch = research(r["company"], r["role"]) if getattr(args, "research", True) else ""
         if rsch: print("   research: %d findings" % len(rsch.splitlines()))
+        # COMPANY-FINANCIALS-001: the employer's last annual report (Virk open data,
+        # the figures Proff shows) joins the employer research the prompt sees.
+        fin = employer_financials(doc, r) if getattr(args, "research", True) else ""
+        if fin:
+            rsch = (rsch + "\n" if rsch else "") + "- Company financials: " + fin
+            print("   financials: " + fin[:110])
         # CATEGORY-RECALL-001: category is decided BEFORE the plan is built so
         # the newest same-category saved application can ride along as a
         # subordinate tone/altitude reference (never a source of facts).
@@ -1156,6 +1180,12 @@ def cmd_run(args):
             chk = run_course_checklist(args.out, r, cvs, kernel, pages, scope)
             if chk:
                 entry["checklist"] = {"summary": chk["summary"], "md": chk["md"], "json": chk["json"]}
+        # TEXT-GUARDS-001: fact guard + echo check over every generated section,
+        # unless --no-guards. Advisory: the report lists what to confirm; nothing blocks.
+        if getattr(args, "guards", True) and not args.dry:
+            gd = run_text_guards(args.out, r, res, kernel)
+            if gd:
+                entry["guards"] = gd
     if not args.row:
         print_unqueued_summary(doc)
         print_armed_summary(doc)  # JT-ARMED-ARTIFACT-NO-DRAIN-001
@@ -1166,6 +1196,8 @@ def cmd_run(args):
     for e in results_index:
         if e.get("checklist"):
             print(f"   {e['uk']}: {e['checklist']['summary']}")
+        if e.get("guards"):
+            print(f"   {e['uk']}: {e['guards']['summary']}")
     if args.persist:
         # re-fetch + writeback the doc rev-safe (artifacts were mutated in place)
         rev2, cur = get_doc()
@@ -1174,6 +1206,8 @@ def cmd_run(args):
         # BRAND-DECIDES-RESEARCH-001: persist per-position brand records too.
         if doc.get("brand"):
             cur["brand"] = {**(cur.get("brand") or {}), **(doc.get("brand") or {})}
+        if doc.get("financials"):                      # COMPANY-FINANCIALS-001
+            cur["financials"] = {**(cur.get("financials") or {}), **(doc.get("financials") or {})}
         c, b = put_doc(cur, rev2)
         print(f"doc writeback: {c} rev={b.get('rev')}")
         # restore the user's active-application pointer (see ACTIVE-POINTER-GUARD-001)
@@ -1688,6 +1722,7 @@ def _why_repair(text, company, role, jd, log=None):
         req = urllib.request.Request(
             _DF.PROXY + "/v1/messages", data=json.dumps(body).encode(),
             headers={"Content-Type": "application/json", "x-provider": "anthropic",
+                     "x-antcv-source": "gen-runner",
                      "User-Agent": UA, "Origin": ORIGIN, "Authorization": "Bearer " + _token()})
         with urllib.request.urlopen(req, timeout=180) as r:
             new = _DF._sse_text(r.read().decode("utf-8", "replace")).strip().strip('"')
@@ -1746,7 +1781,53 @@ def _merge_roles(roles):
             out.append(r)
     return out
 
-_VOL_RE = re.compile(r"forening|volunteer|frivillig|\bcouncil\b|representative|pan idr", re.I)
+# JT-EARLIER-CAREER-RESULTS-DUP-001 (2026-11-05): the captured skeleton carries
+# the app's OWN stored merges: a merged role ("Change Request Lead & System
+# Architect", id innoviz-ccr-2) next to its constituents (on:false). The runner
+# ignores `on` and merges the constituents itself (_ROLE_MERGE), so the app's
+# merged copy printed as well: Innoviz twice, Meprolight twice inside Earlier
+# career (the export then promoted the second line to "Results:"). Same rule as
+# antcv-role-merge-dedup.js: a role whose title joins roles (" & " / " and ") is
+# a duplicate when >=2 plain same-company roles sit inside its year span. Drop
+# it; the constituents stay and merge canonically.
+_MERGED_TITLE_RE = re.compile(r" & | and ", re.I)
+def _drop_merge_products(roles):
+    """Return (kept, dropped) where dropped = [(id, [constituent ids])]."""
+    def span(r):
+        a, b = _yr(r.get("years"), first=True), _yr(r.get("years"))
+        return (a or b, b) if b else None
+    co = lambda r: (r.get("company") or "").strip().lower()
+    kept, dropped = [], []
+    for m in roles:
+        ms = span(m)
+        subs = []
+        if ms and _MERGED_TITLE_RE.search(m.get("title") or ""):
+            for r in roles:
+                rs = span(r)
+                if r is m or not rs or co(r) != co(m) or _MERGED_TITLE_RE.search(r.get("title") or ""):
+                    continue
+                if ms[0] <= rs[0] and rs[1] <= ms[1]:
+                    subs.append(r.get("id"))
+        if len(subs) >= 2:
+            dropped.append((m.get("id"), subs))
+        else:
+            kept.append(m)
+    return kept, dropped
+
+def _cover_dropped(roles, dropped):
+    """Declare each dropped merge product in the __covers of the role that now
+    carries its constituents, so the app's role backfill does not re-add it."""
+    for pid, subs in dropped:
+        if not pid: continue
+        for r in roles:
+            cov = r.get("__covers") or ([r.get("id")] if r.get("id") else [])
+            if any(s in cov for s in subs):
+                if pid not in cov: cov = cov + [pid]
+                r["__covers"] = cov
+                break
+    return roles
+
+_VOL_RE =re.compile(r"forening|volunteer|frivillig|\bcouncil\b|representative|pan idr", re.I)
 def _score_roles(roles, jdkw):
     scored = []
     for r in roles:
@@ -1802,7 +1883,8 @@ def _is_early(r):
 def _select_and_summarize(roles, jdkw, keep=6, language="en"):
     """Keep the top JD-ranked roles in full; collapse the dropped EARLY roles into
     one 'Earlier career' entry so breadth is preserved, not lost. Recent roles that
-    lose on relevance just drop. Earlier career always sorts last. <=keep total."""
+    lose on relevance just drop. Earlier career sorts by its end year (last on a
+    tie). <=keep total."""
     if len(roles) <= keep:
         return roles
     scored = _score_roles(roles, jdkw)
@@ -1818,8 +1900,14 @@ def _select_and_summarize(roles, jdkw, keep=6, language="en"):
         result = [t[0] for t in detailed] + [ec]
     else:
         result = [t[0] for t in (forced + rest[:max(0, keep - len(forced))])]  # no early tail -> keep `keep` detailed
-    # reverse-chronological, Earlier career pinned last
-    return sorted(result[:keep], key=lambda r: (1 if r.get("id") == "earlier-career" else 0, -_yr(r.get("years"))))
+    return sorted(result[:keep], key=_role_order_key)
+
+def _role_order_key(r):
+    """EARLIER-CAREER-CHRONO-001: newest end year first. The Earlier career summary
+    sorts by its own end year like any role and goes last only on a tie, so a
+    full role older than the summary (IDF 2001-2003 under "2005 - 2014") stays
+    below it and the CV reads reverse-chronologically."""
+    return (-_yr(r.get("years")), 1 if r.get("id") == "earlier-career" else 0)
 
 def _fit_role(role, jdkw, max_bullets=3, cap=148, demand=None):
     bl = role.get("bullets") or []
@@ -1876,7 +1964,9 @@ def compact_jd_aware(cv, cl, jd, language="en"):
         sid, typ = s.get("id"), s.get("type")
         if typ == "experience" and isinstance(s.get("roles"), list):
             n0 = len(s["roles"])
-            roles = _select_and_summarize(_merge_roles(s["roles"]), jdkw, keep=6, language=language)
+            kept, dropped = _drop_merge_products(s["roles"])
+            roles = _select_and_summarize(_merge_roles(kept), jdkw, keep=6, language=language)
+            _cover_dropped(roles, dropped)
             for r in roles:
                 if r.get("id") != "earlier-career":            # keep the summary compact, verbatim
                     _fit_role(r, jdkw, max_bullets=3, cap=148, demand=demand)
@@ -2668,6 +2758,36 @@ def run_course_checklist(out_dir, r, cv_sections, kernel=None, pages=None, scope
         print(f"   [checklist] {rep['summary']} -> {rep['md']}")
     return rep
 
+def run_text_guards(out_dir, r, res, kernel=None):
+    """TEXT-GUARDS-001 (from ai-job-search PRs #783 / #807, 2026-11-05). Tier-0 fact guard
+    (figures, credentials, names vs the kernel; the JD never grounds a figure) and echo
+    check (lifts from the JD) over the generated cv_* and cl_* sections. Writes
+    guards_<uk>.json beside the review bundle. Never raises."""
+    try:
+        import echo_check as EC
+        import fact_guard as FG
+        import guard_common as GC
+        ktext = "\n".join(GC.flatten(kernel or {}))
+        jd = r.get("jd") or ""
+        found = []
+        for sid, s in (res.get("sections") or {}).items():
+            text = sanitize_text(s.get("result") or "")
+            if not text.strip() or not (sid.startswith("cv_") or sid.startswith("cl_")):
+                continue
+            for f in FG.check(text, ktext, jd):
+                found.append(dict(f, section=sid, check="fact"))
+            for f in EC.check(text, jd, keywords=[str(r.get("company") or ""), str(r.get("role") or "")]):
+                found.append(dict(f, section=sid, check="echo"))
+        path = os.path.join(out_dir, f"guards_{r['uk']}.json")
+        json.dump(found, open(path, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        nf = sum(1 for f in found if f["severity"] == "FAIL")
+        nw = len(found) - nf
+        summary = f"guards: {nf} to confirm, {nw} to glance at" if found else "guards: clean"
+        print(f"   [guards] {summary} -> {path}")
+        return {"summary": summary, "json": path, "fail": nf, "warn": nw}
+    except Exception as e:
+        print(f"   [guards] skipped ({str(e)[:80]})"); return None
+
 def main():
     # JT-STDOUT-ENCODING-001: the nightly reads this through a pipe, which on
     # Windows defaults to cp1252; a Danish company then arrives mangled and a
@@ -2695,6 +2815,7 @@ def main():
         p.add_argument("--no-research", dest="research", action="store_false", help="skip Google-CSE employer research")
         p.add_argument("--no-brand", dest="brand", action="store_false", help="skip the brand-decides site-crawl (colours + spirit/values/tone)")
         p.add_argument("--no-checklist", dest="checklist", action="store_false", help="skip The Checklist (course CV checklist, compendium p 22); it runs by default")
+        p.add_argument("--no-guards", dest="guards", action="store_false", help="skip the fact guard + echo check (TEXT-GUARDS-001); they run by default")
     sub.add_parser("health", help="check every artifacts[uk].application_id resolves to a live cloud app")
     args = ap.parse_args()
     if args.cmd == "list": cmd_list(args)

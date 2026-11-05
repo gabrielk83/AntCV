@@ -331,3 +331,18 @@ DROP TABLE IF EXISTS llm_provider_health;
 DROP TABLE IF EXISTS llm_provider_costs;
 DROP TABLE IF EXISTS llm_calls;
 ```
+
+## Server-side rows (LLM-LOG-SERVER-001, 2026-11-03)
+
+`llm_calls` was fed only by the PWA's in-app cascade (`POST /analytics` with an `llm_call` event).
+Calls made on the Worker itself left no row. cv-proxy now writes them directly:
+
+- Needs a `[[d1_databases]]` binding named `DB` (the same `ant_memory`) in `workers/proxy/wrangler.toml`.
+  Without it the logger is a no-op. demo-proxy has no binding, so its identical `multi-llm.js` stays inert.
+- Rows: every `callAnyLLMForJSON` attempt (task = role: analysis / supervisor / writer / coherence / kernel),
+  every gen-job section (task `generation`), and `/v1/messages` calls with an `x-antcv-source` header
+  (the job-tracker scripts set `gen-runner`). Tagged `client_version` = `srv:<source>`; `user_hash` is NULL.
+- The PWA's own calls carry no such header and are logged client-side only: nothing is counted twice.
+- Check after a proxy deploy: `SELECT task, client_version, count(*) FROM llm_calls WHERE client_version LIKE 'srv:%' GROUP BY 1, 2`
+  after one JD analysis. The relay also accepts `custom:<id>` providers now (stored as `custom`).
+- Rollback: remove the binding block (the logger goes inert) or redeploy the previous proxy.

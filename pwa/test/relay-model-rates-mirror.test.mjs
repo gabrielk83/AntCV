@@ -133,8 +133,8 @@ test('the ids shipped since the 09-29 pass are priced ahead of adoption (2026-10
 test('the ids shipped since the 10-01 pass are priced ahead of adoption (2026-10-08 tune)', async () => {
   const { rateForStrict } = await import(pathToFileURL(MIRROR).href);
   assert.deepEqual(rateForStrict('claude-haiku-5-5'), [0.1, 0.5]);    // ANTHROPIC-HAIKU55-RATES-2026-10-001 (was null / fallback [3,15])
-  assert.deepEqual(rateForStrict('mistral-large-4'), [1.36, 4.18]);   // MISTRAL-LARGE4-RATES-2026-10-001; sale ended 2026-10-23 (was [0.68,2.09])
-  assert.deepEqual(rateForStrict('mistral-large-4-0'), [1.36, 4.18]);
+  assert.deepEqual(rateForStrict('mistral-large-4'), [0.7, 2.1]);     // MISTRAL-LARGE4-RATE-2026-11-001 (10-23 [1.36,4.18], 10-08 sale [0.68,2.09])
+  assert.deepEqual(rateForStrict('mistral-large-4-0'), [0.7, 2.1]);
   assert.deepEqual(rateForStrict('mistral-large-latest'), [0.5, 1.5]); // the live pin still aliases Large 3 (mistral-large-2512)
   assert.deepEqual(rateForStrict('gpt-5.5-cyber'), [12.5, 75]);     // GPT-CYBER-RATES-2026-10-001 (was gpt-5.5 [5,30])
   assert.deepEqual(rateForStrict('gpt-5.6-cyber'), [12.5, 75]);     // (was gpt-5 [1.25,10])
@@ -199,7 +199,7 @@ const VENDOR_CATALOGUE_2026_10_15 = [
   ['chat-latest', [5, 30]], ['gpt-5.3-codex', [1.75, 14]], ['gpt-5-search-api', [1.25, 10]],
   ['gpt-5.6-cyber', [12.50, 75]], ['gpt-5.5-cyber', [12.50, 75]],
   // Mistral — docs.mistral.ai/inference/pricing, ids from GET /v1/models 2026-10-15
-  ['mistral-large-4', [1.36, 4.18]], ['mistral-large-4-0', [1.36, 4.18]], ['mistral-large-latest', [0.50, 1.50]], ['mistral-large-2512', [0.50, 1.50]],
+  ['mistral-large-4', [0.70, 2.10]], ['mistral-large-4-0', [0.70, 2.10]], ['mistral-large-latest', [0.50, 1.50]], ['mistral-large-2512', [0.50, 1.50]],
   ['mistral-medium-latest', [1.50, 7.50]], ['mistral-medium-2604', [1.50, 7.50]], ['magistral-medium-latest', [1.50, 7.50]],
   ['mistral-vibe-cli-latest', [1.50, 7.50]], ['mistral-vibe-cli-with-tools', [1.50, 7.50]], ['mistral-vibe-cli-fast', [0.15, 0.60]],
   ['mistral-small-latest', [0.15, 0.60]], ['mistral-small-2603', [0.15, 0.60]], ['magistral-small-latest', [0.15, 0.60]],
@@ -232,4 +232,14 @@ test('the 2026-10-23 vendor additions have a strict rate (ZAI-GLM53-FLASH / GPT-
   assert.deepEqual(rateForStrict('zai-glm-5-3-flash'), [0.15, 0.5]);     // was zai-glm [1.4,4.4]
   assert.deepEqual(rateForStrict('gpt-rosalind-research'), [5, 25]);    // was null / fallback [3,15]
   assert.deepEqual(rateForStrict('gpt-rosalind-discovery'), [5, 25]);
+});
+
+test('the 2026-11-05 vendor additions have a strict rate (2026-11-001 tickets)', async () => {
+  const { rateForStrict } = await import(pathToFileURL(MIRROR).href);
+  assert.deepEqual(rateForStrict('gpt-6.1-terra'), [1, 5]);                 // was null / fallback [3,15]
+  assert.deepEqual(rateForStrict('gpt-6-rosalind'), [15, 75]);              // was null / fallback [3,15]
+  assert.deepEqual(rateForStrict('deepseek-v4-1-flash-1017'), [0.3, 1.2]);  // was null / fallback [3,15]
+  assert.deepEqual(rateForStrict('deepseek-v4-flash-1017'), [0.3, 1.2]);
+  assert.deepEqual(rateForStrict('gemini-2.5-flash-native-audio-preview-12-2025'), [0.5, 2]); // was gemini-2.5-flash [0.3,2.5]
+  assert.deepEqual(rateForStrict('gemini-2.5-flash'), [0.3, 2.5]);          // pin undisturbed
 });

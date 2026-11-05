@@ -122,8 +122,8 @@ machine is off" path for those is a **claude.ai cloud routine**, created from th
 
 | Routine | Cadence | Pushes to main / deploys? | Claim required | Notes |
 |---|---|---|---|---|
-| `antcv-position-discovery` | 3x weekly (Sun + Tue + Thu 22:00; Thu added 2026-09-30, max gap 3 days) | data only (Excel/D1 PROPOSED rows) | no (data-only) — SYNC FIRST | Finds NEW openings vs the Dream Envelope, propose-only. `scripts/job-tracker/discover-positions.py`; memory position-discovery-task. ⚠ **Two of its five mandatory sources need `scripts/job-tracker/job_sources.py` — a hand-fetch of their search pages returns nothing. It should also run the obsolescence sweep. See "Position-discovery sources + the obsolescence sweep" below.** |
-| antcv-job-tracker-nightly | nightly | yes (gen-runner may commit; may bump islands/app) | **yes** | Generates/persists tracked applications. `scripts/job-tracker/gen-runner.py`. |
+| `antcv-position-discovery` | 3x weekly (Sun + Tue + Thu 22:00; Thu added 2026-09-30, max gap 3 days) | data only (Excel/D1 PROPOSED rows) | no (data-only) — SYNC FIRST | Finds NEW openings vs the Dream Envelope, propose-only. `scripts/job-tracker/discover-positions.py`; memory position-discovery-task. ⚠ **Two of its five mandatory sources need `scripts/job-tracker/job_sources.py` — a hand-fetch of their search pages returns nothing. It should also run the obsolescence sweep. Since 2026-11-05 `job_sources.py --source all` also covers Jobnet, freehire and Jobdanmark, and `job_sources.py health` runs at the end of each run. See "Position-discovery sources + the obsolescence sweep" below.** |
+| antcv-job-tracker-nightly | nightly | yes (gen-runner may commit; may bump islands/app) | **yes** | Generates/persists tracked applications. `scripts/job-tracker/gen-runner.py` (since 2026-11-05 it also adds the employer's annual-report figures to the research and writes `guards_<uk>.json`, the fact guard + echo check). Since 2026-11-05 also: `followups.py stamp`, then `followups.py due`; for each due row, DRAFT a follow-up per scripts/job-tracker/README.md "Follow-ups" into the run report (never send; the owner sends and logs). `company_financials.py enrich` fills `financials[uk]` for live rows. |
 | antcv-nightly | nightly | yes (PWA/worker fixes) | **yes** | Verify-first backlog work; ships cache-busted PWA changes → always claim. |
 | weekly demand-seed (CLUSTER-QUAL) | weekly | yes (worker + D1 top-20 refresh) | **yes** (if it ships code) | Cluster demand model refresh. Partly unbuilt. LIVE TRIGGER since 2026-07-13: scheduled task `antcv-demand-seed-weekly` (Fri 22:00) — before that the routine existed only on paper (one manual run 2026-07-10). ⚠ **Its stored prompt's step 4 is WRONG — see "Demand-seed step 4" below before running it.** **10 clusters since 2026-10-15 (MEDSEC-CLUSTER-001): `medical_secretary` joined the 9; every run researches it too, with the East-Denmark + Skåne search leg (Jobindex `region-hovedstaden.rss` / `region-sjaelland.rss?q=lægesekretær`, JobTech `jobsearch.api.jobtechdev.se/search?q=medicinsk sekreterare` filtered to Skåne län) and expects 10×20 = 200 quals in the artefact, the seed and the D1 verify. The CLOUD twin of this task (claude.ai routine trig_01C2FGAuWTQLEfFMk5gsKDwW "AntCV weekly demand-seed tuning", Monday 08:00 Copenhagen, branch claude/weekly-demand-tuning-<date>) was rewritten 2026-10-15 to the same 10-cluster job plus a duplicate-run check against this desktop task; its prompt is versioned verbatim in docs/qa/CLOUD_DEMAND_SEED_ROUTINE_PROMPT.md. Update both the routine and that file together.** |
 | **relay cost-quality tune** (RELAY-COST-QUALITY-TUNE-001) | **weekly** | **yes (proxy `MODEL_ROLES` + deploy)** | **yes** | See the procedure below. Reviews the week's router telemetry AND modifies the routing function so it improves over time. LIVE TRIGGER since 2026-07-13: scheduled task `antcv-relay-cost-quality-tune` (Wed 22:00); 'gen'-role flips stay owner-gated. **Second trigger since 2026-09-06: the same task on the owner's desktop (Gabo-PC), Wed 22:00 local; its prompt runs a same-week-report check and degrades to a 1a+1b cross-check if the other trigger already wrote the report.** |
@@ -166,6 +166,104 @@ stated `Frist:` has already passed. Tests: `scripts/job-tracker/test_job_sources
 search (`/jobs/search?keywords=&location=&f_TPR=`) is the strongest of the five and returned
 54/60/20/12 rows across four queries; TheHub returned 15. Google Jobs was not separately
 exercised that run.
+
+**DISCOVERY-EVIDENCE-GATE-001 (2026-11-01) — the envelope's work-task count no longer qualifies a
+role on its own.** The envelope scores AI-workflow / training / governance tasks ("≥7 = strong fit"),
+so discovery proposed ~50 AI-adoption, AI-trainer, AI-governance, newsroom, web and banking roles
+the owner then closed by hand (Tryg AI Trainer, DSB AI Governance, JP/Politikens Hus newsroom PM,
+EET webshop). Owner rule: an AI-workflow / digital role fits when the posting needs, or lists as
+nice-to-have, **serious product management, business analysis, supplier / vendor control, or
+hardware**. `discover-positions.py context` now prints the gate text and every row the owner closed
+as "Archive / not a fit"; `add` rejects the obvious cases deterministically (`_evidence_gate`: an
+AI-adoption / trainer / governance / web title with none of the four qualifiers in title, why, fit
+or JD, and "digital" web / MarTech platform roles). Override per candidate with
+`{"override_gate": true, "override_reason": "..."}`, which is written onto the row. Tests in
+`test_discover_positions.py`.
+
+**DISCOVERY-EVIDENCE-GATE-002 (2026-11-01) — employer families, construction, medical-must, jobindex
+teasers.** Owner round 2: banking, insurance, pension, payments and consumer-telecom employers are not
+relevant whatever the role says (Nykredit, Danske Bank, Nordea, Ikano Bank, Mastercard, YouSee closed by
+hand); investment / infrastructure funds such as CIP stay allowed. VELUX-type construction-product roles
+that want a building-industry background are out. In medtech, a role is proposed only when medical-device
+experience is not a must ("or another regulated industry", nice-to-have, an advantage, or absent).
+`_evidence_gate` now rejects: a `_FINANCE_TELCO` company name; VELUX or a background / experience phrase
+naming construction or building (company boilerplate such as "kunder i byggeriet" does not count); a jd
+sentence with a medical-device term, an experience word and a must marker but no soft marker; and a
+jobindex.dk url whose jd is shorter than `JOBINDEX_MIN_JD` (600 chars). A jobindex ad is a teaser: the
+routine must follow it to the employer's or recruiter's posting and pass that text as `jd`, which the
+medical-must check then reads. Same override as GATE-001.
+
+**GATE-003 + DEADLINE-RELEVANCE-001 (2026-11-01) — building automation, public-sector IT analysts, pay floor,
+deadlines.** Owner: Lemvigh-Mueller (building-automation PM wanting a CTS/BMS/KNX installer background) and STIL
+(public-sector exam-systems business analyst) are not fits; Skatteforvaltningen's deadline ("senest den 1. november
+2026") had passed on the day it was still open; "pay attention to due date relevance in the future". `_evidence_gate`
+now also rejects a background phrase naming building automation / installation, a public-sector business-analyst
+title with no hardware core, a why/fit note that pay sits below the envelope floor, and a jd whose stated deadline is
+today or earlier. `deadlines.py` (shared) reads Danish and English deadline wording only right after a deadline cue
+(frist, senest, deadline, apply by, no later than ...), so a start date is never taken for one; a same-day deadline
+counts as passed. `check-postings.py` archives a live row whose STORED posting text states a passed deadline without
+probing it, on any host (page HTML stays host-gated), but never a row the owner is working on (`is_engaged`: drafted,
+packaged, outreach, submitted, interview, or a package / outreach mark on the flag). Tests: `test_deadlines.py`,
+`test_check_postings.py`, `test_discover_positions.py`.
+
+**JOBSRC-CAREERHOUND-001 (2026-11-03) — Career Hound, with Career Hound's written permission.** Career
+Hound's terms (s.7) forbid automated access without their written permission; Roman
+(roman@careerhound.io) gave it on 2 Nov 2026 for the owner's personal tracking. `job_sources.py`
+now has a `careerhound` source that reads the owner's OWN feed (`/api/view-jobs`) with the owner's
+NextAuth session cookie. **Owner setup, once (and again when it expires, about monthly):** sign in at
+careerhound.io with the e-mailed login link, pick a job category, open DevTools > Application >
+Cookies > www.careerhound.io, copy the value of `__Secure-next-auth.session-token` and save it as
+the only content of `~/.antcv/careerhound_session`. Nobody else handles the value; the fetcher reads
+it and sends it only to careerhound.io. `--source all` includes Career Hound only when that file
+exists; a redirect to /login or /select-category is reported as an expired session. First run:
+`python scripts/job-tracker/job_sources.py careerhound-probe` prints only the response shape (no job
+text, no cookie) so the parser can be confirmed; the parser already reads JSON feeds, `__NEXT_DATA__`
+pages and app-router flight chunks. Scope: one request per run, personal tracking only.
+
+**JOBSRC-THEHUB-001 (2026-11-01) — TheHub now has a deterministic fetcher.** `/jobs?search=` is a
+Nuxt page: the jobs exist only inside the `window.__NUXT__` IIFE (a link scrape finds one), and
+Nuxt hoists repeated strings into the IIFE parameters (`title:c`), which the fetcher resolves.
+`--source thehub` (or `all`) reads `https://thehub.io/jobs?search=<q>&countryCode=DK`; robots.txt
+allows `/jobs` and the terms carry no automated-access clause.
+
+**JOBSRC-UPSTREAM-001 + JOBSRC-HEALTH-001 (2026-11-05) — Jobnet back, freehire and Jobdanmark added,
+fetch hygiene, source health.** From the ai-job-search review (github.com/ai-job-search-dev/ai-job-search).
+- **Jobnet is NOT behind a login.** Its search API `https://jobnet.dk/bff/FindJob/Search` answers 200
+  when the request carries `x-csrf: 1` (the Duende BFF anti-forgery header); without it, 401, and every
+  page path 307s to `/auth/duendebff/login`, which is what the 2026-10-15 note saw. Regions, hospitals
+  and municipalities post here. Internal ads store `https://jobnet.dk/find-job/<id>`; that page answers
+  HTTP 404 to a non-JS client even while live, so `check-postings.py` probes
+  `/bff/FindJob/JobAdDetails/<id>` (200 live, 404 gone) instead (POSTING-JOBNET-001).
+- **freehire.me** pools ~50 ATS platforms (Workday, Greenhouse, Emply, hr-manager, SmartRecruiters)
+  plus jobnet/jobindex/thehub, filtered to Denmark and the last 14 days. It is the only source that
+  reads employer career sites (Ibsen Photonics, the Birkerød photonics Workday roles). Rows carry `via`
+  (the board it came from). One-person service with no SLA: an extra source, never the only one.
+- **Jobdanmark** (`POST /api/jobsearch/search/1`): a further general board, strongest on healthcare and
+  municipal roles.
+- **Jobbank** now reads its RSS feed `https://jobbank.dk/job/rss/?key=<q>` (100 items, deadline in the
+  teaser); the onclick page scrape is the fallback.
+- **Fetch hygiene:** 20 s timeout, two retries on 429 / 5xx / transport errors (2 s, 6 s, or the server's
+  `Retry-After` when longer; past 30 s the source fails fast), and a wildcard-aware robots.txt gate on
+  every public source. Career Hound is exempt (written permission, account feed).
+- **Health:** every CLI search appends one line per source to `~/.antcv/job_sources_yield.jsonl`. Run
+  this once at the END of each discovery run and copy its lines into the run's REGISTER_RUNLOG entry:
+
+```
+python scripts/job-tracker/job_sources.py health
+```
+
+It runs one sentinel search per source (one broader retry if empty) and scans the rows for junk: no
+company on any row, empty titles, undecoded entities, URLs off the board's host. Verdicts: healthy,
+degraded, broken (exit 1), inconclusive (401/403/429 or robots refusal; never counted as broken). A
+"YIELD DROP" note means the source returned nothing for 3+ searches in a row after earlier yields. A
+broken or degraded source goes in the run log as an owed fix; do not drop it silently.
+
+**Account-backed sources the owner asked for (2026-11-01), and why they are not automated:**
+LinkedIn stays on the public guest search above; driving the owner's own session is against the
+LinkedIn User Agreement and puts the account at risk. Career Hound (careerhound.io) terms s.7
+forbid automated access "without our written permission" — permission from Career Hound, not
+from the account holder. Until Career Hound grants it in writing, Career Hound results reach the
+tracker only as postings the owner saves by hand.
 
 **POSTING-OBSOLETE-001 — obsolete postings were never detected, so dead roles never left the list.**
 

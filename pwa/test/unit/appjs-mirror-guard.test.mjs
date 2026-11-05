@@ -47,6 +47,7 @@ const ANCHORS = [
   'antcv:lastJdText',
   'antcv:autoPagesPreview',
   'exportPdfViaWorker',
+  'antcv:clSloganCase',
   // wizard / import affordance
   'Drop a CV or LinkedIn export',
 ];

@@ -33,6 +33,12 @@
 // that bucket answers ONLY to the In-progress swatch (not to its tier band).
 // Pre-submission statuses (CV/CL drafting, drafted) stay tier-governed: nothing
 // has left the building yet.
+//
+// OUTCOME-RECORD-001 (2026-11-05): the outcome statuses are terminal, so they are
+// closed. "Offer declined" goes to the ⛔ box with Rejected (isRejectedRow already
+// read "declined"; isClosedRow did not, so Top-5 still offered the row). "No
+// response" and "Hired" go to the Archive box, "Withdrawn" already did.
+// gen-runner.py is_closed_row() is the server twin: keep the regexes in step.
 
 export type VisRow = readonly (string | number | null | undefined)[];
 
@@ -53,11 +59,12 @@ export function isRejectedRow(r: VisRow): boolean {
 /**
  * TOP5-REFILL-001 predicate, moved here so the list filter and the Top-5 panel
  * cannot drift apart. Closed = the archive band, an archived/rejected/withdrawn
- * tracked status, or a "Dropped (…)" flag written by dropFromTop5.
+ * or other terminal-outcome tracked status, or a "Dropped (…)" flag written by
+ * dropFromTop5.
  */
 export function isClosedRow(r: VisRow): boolean {
   return cell(r, BAND).toUpperCase() === ARCHIVE_BAND
-    || /rejected|archive|closed|withdrawn/i.test(cell(r, TRACKED))
+    || /rejected|archive|closed|withdrawn|declined|no response|hired/i.test(cell(r, TRACKED))
     || /^\s*dropped\b/i.test(cell(r, FLAG));
 }
 

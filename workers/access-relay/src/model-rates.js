@@ -90,7 +90,7 @@ const RATES = {
   'gpt-5.5-cyber':       [12.50, 75.00], // 2026-10-08 MUST stay longer than 'gpt-5.5'
   'gpt-5.4-pro':         [30.00, 180.00], // 2026-09-29 MUST stay longer than 'gpt-5.4'
   'gpt-6-astra':         [10.00, 50.00],  // 2026-09-10 OpenAI flagship; not an AntCV pin
-  'gpt-5.6-sol':         [4.00, 20.00],  // 2026-09-10; page note read 2026-10-08: this is a PROMOTIONAL price "available at least through November 21, 2026" (no post-promo number given) — re-verify at the first tune after that date
+  'gpt-5.6-sol':         [4.00, 20.00],  // 2026-09-10; PROMOTIONAL price — page note 2026-11-05 reads "available until November 30, 2026" (10-08 read "at least through November 21"); no post-promo number given — re-verify at the first tune after 2026-11-30
   'gpt-5.6-terra':       [2.00, 12.00],  // 2026-09-10
   'gpt-5.6-luna':        [0.20, 1.20],  // 2026-09-10 cheapest of the 5.6 line; the 'gpt-5' fallback OVER-priced it 6.25x
   // GPT55-RATE-2026-09-001 (2026-09-10): gpt-5.5 is [5,30], NOT [30,60]. The [30,60] entry has been in the
@@ -142,6 +142,11 @@ const RATES = {
   // rateForStrict() answered null. The realtime / audio family (gpt-realtime-*, gpt-audio-*) and per-minute gpt-live-1
   // stay unkeyed by rule: audio-first models, AntCV sends them no text traffic. Owner call if that should change.
   'gpt-rosalind':        [5.00, 25.00],  // 2026-10-23 covers -research and -discovery
+  // OPENAI-GPT6-TERRA-ROSALIND-RATES-2026-11-001 (2026-11-05): two ids new on developers.openai.com/api/docs/pricing.
+  // 'gpt-6.1-terra' contains no key ('gpt-6.1-sol' / 'gpt-6-sol' are siblings, not substrings) and 'gpt-6-rosalind' does
+  // not contain 'gpt-rosalind', so both fell to FALLBACK [3,15] (3x OVER / 5x UNDER) and rateForStrict() answered null.
+  'gpt-6.1-terra':       [1.00,  5.00],  // 2026-11-05
+  'gpt-6-rosalind':      [15.00, 75.00], // 2026-11-05 restricted (trusted-access); prompts >272k bill [30,112.50]
   // Mistral
   'mistral-small':       [0.15,  0.60],   // Mistral Small 4, verified 2026-08-20 mistral.ai/pricing/api
   'mistral-medium':      [1.50,  7.50],   // Mistral Medium 3.5, verified 2026-08-20 mistral.ai/pricing/api
@@ -155,7 +160,10 @@ const RATES = {
   // MISTRAL-LARGE4-SALE-END-2026-10-001 (2026-10-23): the sale is over. docs.mistral.ai/inference/pricing now shows Large 4 at
   // list [1.36,4.18]; the [0.68,2.09] sale key was 2x UNDER in and out. /v1/models 2026-10-23: 'mistral-large-latest' still
   // aliases 'mistral-large-2512' (Large 3), so the live AntCV pin is unaffected.
-  'mistral-large-4':     [1.36,  4.18],   // 2026-10-23 list price (sale [0.68,2.09] ended). MUST stay longer than 'mistral-large'. Not an AntCV pin.
+  // MISTRAL-LARGE4-RATE-2026-11-001 (2026-11-05): docs.mistral.ai/inference/pricing now lists Large 4 at [0.70,2.10] with no
+  // sale or promo note; the 10-23 list key [1.36,4.18] was 1.94x / 1.99x OVER. Third price in four weeks — re-verify every tune.
+  // /v1/models 2026-11-05: 'mistral-large-latest' still aliases 'mistral-large-2512' (Large 3); the live pin is unaffected.
+  'mistral-large-4':     [0.70,  2.10],   // 2026-11-05 vendor page (10-23 [1.36,4.18], 10-08 sale [0.68,2.09]). MUST stay longer than 'mistral-large'. Not an AntCV pin.
   'mistral-large':       [0.50,  1.50],   // Mistral Large 3, verified 2026-08-20 mistral.ai/pricing/api. Was [2,6] (Large 2 era) - 4x over. Substring-matches the live `mistral-large-latest`. LLM-COST-MISTRAL-RATE-001.
   // MODEL-TABLE-SWEEP-2026-10-001 (2026-10-15): the rest of docs.mistral.ai/inference/pricing, with the id forms taken from
   // a read-only GET /v1/models on 2026-10-15 (54 ids). Findings: 'ministral-*' contains no 'mistral' key (FALLBACK, 20-30x OVER);
@@ -176,6 +184,11 @@ const RATES = {
   'zai-glm-5-3-flash':   [0.15,  0.50],  // 2026-10-23 Z.ai GLM 5.3 Flash (ZAI-GLM53-FLASH-RATES-2026-10-001); matched 'zai-glm' [1.4,4.4] = 9x OVER. MUST stay longer than 'zai-glm'.
   'zai-glm':             [1.40,  4.40],  // 2026-10-15 Z.ai GLM 5.3 hosted by Mistral (zai-glm-5-3 / zai-glm-5 / zai-glm-latest; 5-2 at the same rate, see above)
   'glm-5-2':             [1.40,  4.40],  // 2026-10-15 the bare 'glm-5-2' id /v1/models also lists
+  // DEEPSEEK-V41-FLASH-RATES-2026-11-001 (2026-11-05): DeepSeek V4.1 Flash hosted by Mistral. Pricing-page slug
+  // 'deepseek-v4-flash-1017'; /v1/models id 'deepseek-v4-1-flash-1017'. Neither form matched a key -> FALLBACK [3,15]
+  // (10x OVER in, 12.5x OVER out) and strict null. Both forms keyed.
+  'deepseek-v4-1-flash': [0.30,  1.20],  // 2026-11-05 live id form
+  'deepseek-v4-flash':   [0.30,  1.20],  // 2026-11-05 pricing-page slug form
   // Gemini
   'gemini-1.5-flash':    [0.075, 0.30],
   'gemini-1.5-pro':      [1.25,  5.00],
@@ -203,6 +216,9 @@ const RATES = {
   'gemini-3.6-flash':    [0.75, 3.75],  // 2026-10-01 promotional through 2026-12-31; RISES with 3.8-flash on 2027-01-01
   'gemini-3.8-flash':    [0.75, 3.75],  // 2026-09-10 promotional through 2026-12-31; RISES to [1.50, 7.50] on 2027-01-01 — re-verify at the first tune of 2027
   'gemini-3.5-flash':    [1.50, 9.00],  // 2026-09-10
+  // GEMINI-25-ROUTING-2026-12-001 (read 2026-11-05): from 2026-12-01 Google routes gemini-2.5-flash -> gemini-3.5-flash-lite
+  // (same [0.30,2.50], no rate change) and gemini-2.5-pro -> gemini-3.8-flash (billed [0.75,3.75]). Re-key 2.5-pro at the
+  // first tune after 2026-12-01. The AntCV gemini pin changes MODEL, not price, on that date — owner call on quality.
   'gemini-2.5-flash-lite': [0.10, 0.40], // verified 2026-08-20 ai.google.dev/gemini-api/docs/pricing. MUST stay longer than the 2.5-flash key below - longest-key-wins is what keeps Flash-Lite off the Flash rate.
   'gemini-2.5-flash':    [0.30,  2.50],   // verified 2026-08-20 ai.google.dev/gemini-api/docs/pricing. Was [0.10,0.40], which is Flash-LITE's rate - 3x under in, 6.25x under out. LLM-COST-GEMINI-RECONCILE-001.
   'gemini-2.5-pro':      [1.25, 10.00],
@@ -213,6 +229,10 @@ const RATES = {
   'gemini-omni':         [1.50,  9.00],  // 2026-10-15 gemini-omni-1.1-flash + gemini-omni-flash-preview (video output [—,17.50] not modelled)
   'gemini-3.8-live':     [0.75,  4.50],  // 2026-10-15 text rate of the live models (+ -extended-thinking); audio is [3,12]
   'gemini-3.1-flash-live': [0.75, 4.50], // 2026-10-15 gemini-3.1-flash-live-preview; NOT a substring match of 'gemini-3.1-flash-lite'
+  // GEMINI-NATIVE-AUDIO-RATES-2026-11-001 (2026-11-05): 'gemini-2.5-flash-native-audio-preview-12-2025' contains
+  // 'gemini-2.5-flash', so it metered at Flash [0.30,2.50] (1.67x UNDER in, 1.25x OVER out on text). Keyed at its text
+  // rate, same precedent as the live models above; audio [3,12] is not modelled.
+  'gemini-2.5-flash-native-audio': [0.50, 2.00], // 2026-11-05 text rate. MUST stay longer than 'gemini-2.5-flash'.
   // xAI Grok — added 2026-07-05 (BYOK-COST-AUDIT-001, owner: the byok-qualify
   // audit never priced a BYOK provider whose model id fell through to
   // FALLBACK_RATE, e.g. any grok-* model — cost silently went untracked).

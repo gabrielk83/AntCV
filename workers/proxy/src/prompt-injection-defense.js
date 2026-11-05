@@ -22,7 +22,15 @@
 //
 //  This module is called from prompt-augment.js for every user-
 //  facing field in the request body BEFORE the call is forwarded.
+//
+//  POSTING-GUARD-001 (2026-11-05): layer 0 strips invisible characters
+//  (zero-width, bidi controls, soft hyphen, BOM, Unicode tag characters,
+//  variation-selector runs) before the patterns run, so "ig<ZWSP>nore"
+//  meets layer 1 and a sentence spelled in tag characters never reaches
+//  the model. Shared with fetch-jd-url via ./posting-guard.js.
 // =================================================================
+
+import { stripInvisible, verdict as guardVerdict, NO_TEXT_VERDICT } from './posting-guard.js';
 
 
 // Patterns commonly used in jailbreak / injection attempts. Match
@@ -81,20 +89,33 @@ const SUSPICIOUS_PATTERNS = [
  * @param {object} opts
  *   @param {number} opts.maxLength  truncate to N chars (default 50000)
  *   @param {string} opts.fieldName  for logging only, e.g. "jdText"
- * @returns {{ clean: string, redacted: number, suspicious: string[] }}
+ * @returns {{ clean: string, redacted: number, suspicious: string[],
+ *             stripped: number, visible: string, invisible_flagged: number,
+ *             invisible_text: number, verdict: string }}
  *   clean       - text safe to interpolate into a prompt
  *   redacted    - count of injection patterns stripped
  *   suspicious  - list of suspicious-but-allowed patterns observed
+ *   stripped    - invisible characters removed (layer 0)
+ *   visible     - the input minus invisible characters, nothing else changed
+ *                 (no caps, no redaction): what to forward when only layer 0 fired
+ *   invisible_flagged - zero-width inside a word, bidi overrides/isolates
+ *   invisible_text    - strings spelled in tag characters / variation selectors
+ *   verdict     - posting_guard verdict line; empty input is "no text", never "clean"
  */
 export function sanitizeUserContent(text, opts = {}) {
   const maxLength = Number(opts.maxLength) || 50000;
   const fieldName = String(opts.fieldName || 'user_content');
 
-  if (typeof text !== 'string') {
-    return { clean: '', redacted: 0, suspicious: [] };
+  // Issue #798 upstream: an empty field was gated on nothing, so say so.
+  if (typeof text !== 'string' || !text.trim()) {
+    const s = typeof text === 'string' ? text : '';
+    return { clean: s, redacted: 0, suspicious: [], stripped: 0, visible: s, invisible_flagged: 0, invisible_text: 0, verdict: NO_TEXT_VERDICT };
   }
 
-  let clean = text;
+  // Layer 0: drop invisible characters first, so a pattern split by them
+  // still matches below and text spelled in them never reaches the LLM.
+  const inv = stripInvisible(text);
+  let clean = inv.text;
 
   // Layer 1: strip injection patterns. Replace with a marker so the
   // LLM can SEE that content was stripped (helps it ignore the rest
@@ -133,13 +154,26 @@ export function sanitizeUserContent(text, opts = {}) {
     .replace(/<\s*\/\s*profile\s*>/gi, '[PROFILE_CLOSE]')
     .replace(/<\s*\/\s*signals\s*>/gi, '[SIGNALS_CLOSE]');
 
-  if (redacted > 0 || suspicious.length > 0) {
+  if (redacted > 0 || suspicious.length > 0 || inv.invisible_flagged > 0 || inv.invisible_text.length > 0 || inv.invisible_chars.tag) {
     try {
-      console.warn(`[prompt-injection-defense] field=${fieldName} redacted=${redacted} suspicious=${suspicious.join(',') || 'none'}`);
+      console.warn(`[prompt-injection-defense] field=${fieldName} redacted=${redacted} suspicious=${suspicious.join(',') || 'none'} stripped=${inv.removed} tag=${inv.invisible_chars.tag || 0} flagged=${inv.invisible_flagged}`);
     } catch (_) {}
   }
 
-  return { clean, redacted, suspicious };
+  const verdict = guardVerdict({
+    redacted,
+    invisible_chars: inv.invisible_chars,
+    invisible_flagged: inv.invisible_flagged,
+    invisible_text: inv.invisible_text,
+  });
+  return {
+    clean, redacted, suspicious,
+    stripped: inv.removed,
+    visible: inv.text,
+    invisible_flagged: inv.invisible_flagged,
+    invisible_text: inv.invisible_text.length,
+    verdict,
+  };
 }
 
 

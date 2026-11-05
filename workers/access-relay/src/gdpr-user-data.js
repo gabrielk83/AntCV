@@ -7,15 +7,17 @@
 // kernel_language_view, application_fit, application_qualification, the legacy
 // per-user rows of cluster_top_qualifications) were left to ON DELETE CASCADE,
 // and four of them were created without a foreign key, so their rows survived an
-// account delete. A new user-keyed table goes into USER_TABLES, and both the
-// delete and the copy pick it up.
+// account delete. Since ACCOUNT-ERASE-COMPLETE-001 the delete is ONE atomic batch
+// in src/index.js (USER_ERASE_STATEMENTS); this list drives the data copy. A new
+// user-keyed table goes into BOTH lists; tests/gdpr-user-data.test.mjs fails when
+// they differ.
 //
 // The GLOBAL_USER_HASH sentinel ('__global_market__') in cluster_top_qualifications
 // is a SHA-256 hash of no e-mail, so `user_hash = ?` with a real hash never touches it.
 
-// Every table keyed directly by user_hash, leaf first. `extra` = not in the
-// v2.5.3 core/telemetry batches, so the delete removes it here.
+// Every table keyed directly by user_hash, leaf first.
 export const USER_TABLES = [
+  { table: 'application_snapshot',       extra: true }, // OUTCOME-RECORD-002: submitted CV/CL/JD
   { table: 'application_fit',            extra: true },
   { table: 'application_qualification',  extra: true },
   { table: 'cluster_top_qualifications', extra: true },
@@ -38,26 +40,6 @@ export const CHILD_TABLES = [
 
 function isNoTable(e) {
   return /no such table/i.test(String((e && e.message) || e));
-}
-
-// Delete the user's rows from the tables the core and telemetry batches do not
-// name. One statement per table, each best-effort: a table that does not exist on
-// this deployment is reported as `missing`, never fails the erase.
-export async function eraseExtraUserTables(db, userHash) {
-  const out = {};
-  let hadErrors = false;
-  for (const t of USER_TABLES) {
-    if (!t.extra) continue;
-    try {
-      const r = await db.prepare(`DELETE FROM ${t.table} WHERE user_hash = ?`).bind(userHash).run();
-      out[t.table] = (r && r.meta && r.meta.changes) || 0;
-    } catch (e) {
-      if (isNoTable(e)) { out[t.table] = 'missing'; continue; }
-      out[t.table] = { error: String((e && e.message) || e) };
-      hadErrors = true;
-    }
-  }
-  return { details: out, hadErrors };
 }
 
 // API keys are the user's own credentials. The copy says they are stored and

@@ -1,0 +1,36 @@
+{
+  "_doc": "TEXT-GUARDS-001 (2026-11-05). Shared word lists and thresholds for fact_guard.py and echo_check.py. One versioned file so a later JS port reads the same values. Bump version when a threshold or list changes.",
+  "version": 1,
+  "stopwords": {
+    "en": ["a", "about", "above", "after", "all", "also", "an", "and", "any", "are", "as", "at", "be", "been", "being", "both", "but", "by", "can", "could", "do", "does", "for", "from", "had", "has", "have", "he", "her", "his", "how", "i", "if", "in", "into", "is", "it", "its", "me", "more", "my", "no", "not", "of", "on", "or", "our", "out", "over", "own", "same", "she", "so", "such", "than", "that", "the", "their", "them", "then", "there", "these", "they", "this", "those", "through", "to", "up", "us", "very", "was", "we", "were", "what", "when", "where", "which", "while", "who", "will", "with", "within", "would", "you", "your"],
+    "da": ["af", "alle", "andre", "at", "blev", "bliver", "da", "de", "dem", "den", "denne", "der", "deres", "det", "dette", "dig", "din", "dine", "dit", "du", "efter", "eller", "en", "end", "er", "et", "for", "fra", "har", "hos", "hun", "hvad", "hvis", "hvor", "i", "ikke", "ind", "jeg", "kan", "man", "med", "meget", "men", "mig", "min", "mine", "mit", "mod", "na", "når", "nu", "og", "også", "om", "op", "os", "over", "på", "sig", "sin", "sine", "sit", "skal", "som", "til", "ud", "under", "var", "ved", "vi", "vil", "være", "været"],
+    "sv": ["alla", "att", "av", "de", "dem", "den", "denna", "det", "detta", "din", "du", "efter", "eller", "en", "ett", "för", "från", "har", "hon", "hos", "här", "i", "inte", "jag", "kan", "man", "med", "men", "mig", "min", "mitt", "mot", "nu", "när", "och", "också", "om", "på", "sig", "sin", "ska", "som", "till", "under", "upp", "ut", "var", "vi", "vid", "vill", "är"]
+  },
+  "credential_words": {
+    "en": ["certified", "certification", "licensed", "licence", "license", "chartered", "accredited", "registered", "qualified", "diploma", "phd", "doctorate", "msc", "bsc", "mba", "pmp", "prince2", "csm", "six sigma", "lean six sigma", "black belt", "green belt", "clearance"],
+    "da": ["certificeret", "certificering", "autoriseret", "akkrediteret", "uddannet", "eksamineret", "kandidat", "cand.", "ph.d.", "diplom", "sikkerhedsgodkendelse"],
+    "sv": ["certifierad", "certifiering", "auktoriserad", "legitimerad", "legitimation", "examinerad", "utbildad", "säkerhetsprövning"]
+  },
+  "hedge_words": ["over", "more than", "nearly", "almost", "about", "around", "approximately", "roughly", "up to", "~", "ca.", "ca", "cirka", "omkring", "næsten", "mere end", "over", "op til", "drygt", "nästan", "mer än", "upp till", "runt"],
+  "intent_markers": ["i will", "i would", "i want", "my goal", "i aim", "i plan", "jeg vil", "mit mål", "jeg ønsker", "jeg kan", "jag vill", "mitt mål", "jag kan"],
+  "_number_words_doc": "Per language, read only in that language. One is left out everywhere: en/et/ett are also the articles.",
+  "number_words": {
+    "en": {"two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12, "fifteen": 15, "twenty": 20},
+    "da": {"to": 2, "tre": 3, "fire": 4, "fem": 5, "seks": 6, "syv": 7, "otte": 8, "ni": 9, "ti": 10, "elleve": 11, "tolv": 12, "femten": 15, "tyve": 20},
+    "sv": {"två": 2, "tre": 3, "fyra": 4, "fem": 5, "sex": 6, "sju": 7, "åtta": 8, "nio": 9, "tio": 10, "elva": 11, "tolv": 12, "femton": 15, "tjugo": 20}
+  },
+  "name_allowlist": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday", "Kind", "Dear", "Regards", "Best", "Hello", "Present", "CV", "PDF", "AI", "I", "Med", "Venlig", "Hilsen", "Kære", "Vänliga", "Hälsningar", "Hej", "Mvh", "Mfh"],
+  "template_allowlist": ["kind regards", "best regards", "yours sincerely", "dear hiring manager", "dear hiring team", "med venlig hilsen", "venlig hilsen", "kære rekrutteringsteam", "med vänliga hälsningar", "vänliga hälsningar", "my goal", "mit mål", "mitt mål", "i look forward to", "jeg ser frem til", "jag ser fram emot"],
+  "thresholds": {
+    "lift_min_tokens": 5,
+    "lift_min_content": 2,
+    "keyword_ok_max_tokens": 3,
+    "near_lift_min_tokens": 8,
+    "near_lift_char5_containment": 0.7,
+    "near_lift_lcs_ratio": 0.6,
+    "reuse_min_tokens": 8,
+    "reuse_jaccard_word3": 0.6,
+    "hedge_round_down_floor": 0.5,
+    "small_number_skip": 2
+  }
+}

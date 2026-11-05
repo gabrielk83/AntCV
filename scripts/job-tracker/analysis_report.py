@@ -25,6 +25,7 @@ def _post(provider, model, sys_p, user, timeout=180):
             "messages": [{"role": "user", "content": user}], "stream": True}
     req = urllib.request.Request(PROXY + "/v1/messages", data=json.dumps(body).encode(),
                                  headers={"Content-Type": "application/json", "x-provider": provider,
+                                          "x-antcv-source": "gen-runner",
                                           "User-Agent": gr.UA, "Origin": gr.ORIGIN,
                                           "Authorization": "Bearer " + gr._token()})
     out = []

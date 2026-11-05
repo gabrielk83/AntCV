@@ -349,7 +349,9 @@ _reconcile 2026-09-07 (CI nightly, E1): `pwa/test/unit/kernel-v2-reader.test.mjs
 
 ## Row 21 — SETTINGS-ROLLER-RESET-001
 
-_verified: 2026-10-19_
+_verified: 2026-11-02_
+
+_reconcile 2026-11-02 (desktop nightly, E1, HEAD `19584eb9`): `diag-settings-history-guard.mjs` RE-RUN GREEN (real headless Chromium): guarded openBefore {open:true,sentinel:true} → after {marker:"alive", open:false, sentinel:true}; kill-switch control marker GONE. Guard + kill-switch `antcv:no-settings-history-guard` present, loaded once in index.html. Blocked: owner live verify on a real device._
 
 _desktop nightly 2026-10-19 (Gabo-PC): `diag-settings-history-guard.mjs` FAILED 2 of 3 runs at baseline — not the guard: the open call before Back was a silent no-op (no panel, no sentinel). Root cause filed and fixed as row 129 SETTINGS-ROUTE-NOOP-001 (`1.51.5074-settings-route-fallback`); after the fix the diag is 4/4 OK on this host. Guard itself unchanged and intact. Unchanged: OWNER live-verify on real roller-side hardware Back button still owed._
 
@@ -373,7 +375,9 @@ _reconcile 2026-09-07 (CI nightly, E1): `diag-settings-history-guard.mjs` GREEN 
 
 ## Row 22 — CL-SLOGAN-RICHCONTENT-001
 
-_verified: 2026-10-19_
+_verified: 2026-11-02_
+
+_reconcile 2026-11-02 (desktop nightly, E1, HEAD `19584eb9`): phase-1 sidecar `antcv-cl-slogan-element.js` loaded in index.html (1 ref), kill-switch `antcv:disable-cl-slogan-element` 2 hits; suite 1860/1860. Phase 2 (real sections.cl rich_block) still GENUINE OPEN WORK, spec-before-splice, owner-gated._
 
 _E1 re-verify 2026-10-19 (CI nightly, HEAD d23170cf): phase-1 sidecar `antcv-cl-slogan-element.js` loaded in index.html (1 ref) + kill-switch `antcv:disable-cl-slogan-element` present in the sidecar (2 hits); suite 1834/1834. Phase 2 (real sections.cl rich_block) remains GENUINE OPEN WORK — spec-before-splice, owner-gated._
 
@@ -401,7 +405,9 @@ _E1 sweep 2026-09-08 (CI nightly): phase 1 (`antcv-cl-slogan-element.js`) confir
 
 ## Row 33 — WHY-RULE-EXPORT-PARITY-001
 
-_verified: 2026-10-20_
+_verified: 2026-11-05_
+
+_reconcile 2026-11-05 (desktop nightly, E1, HEAD `9c8f1980`): `antcv:nameLineAlign` ×2 + `headline_align` in docx-client, `headlineAlign` ×3 in docx-worker (live `1.14.176-slogan-case`); `export-align-parity` green in the 1915 suite. Blocked: owner signed-in export eyeball._
 
 _E1 re-verify 2026-10-20 (CI nightly, HEAD 69824677): `antcv:nameLineAlign` + `headline_align`/`headlineAlign` markers still intact in `antcv-docx-client.js` and `docx-worker/src/index.js`; `export-align-parity.test.mjs` GREEN (full suite 1837/1837). CODE-COMPLETE — only remaining step is a signed-in export eyeball; **recommended to owner for CLOSED**._
 
@@ -429,7 +435,9 @@ _E1 sweep 2026-09-08 (CI nightly): all three legs confirmed in CURRENT code — 
 
 ## Row 24 — ANALYTICS-BUTTONS-SESSION-TIMEOUT-001
 
-_verified: 2026-10-20_
+_verified: 2026-11-05_
+
+_reconcile 2026-11-05 (desktop nightly, E1, HEAD `9c8f1980`): `auth-401-wipe-scope.test.mjs` green; relay `/health` 200 `auth-38-subtitle-guard-qual-put`. Blocked: owner click-through of the three Analytics buttons (slow export tracked in row 130)._
 
 _Desktop live click-through 2026-10-20 (Gabo-PC, saved owner token, new `pwa/test/diag-analytics-buttons-live.mjs`, GETs only): the session-wipe bug is GONE — token survives every click, no "session expired" alert, no reboot into the sign-in gate, "View summary" 200 in 0.8 s with the summary alert. The two EXPORT buttons do not complete: Export JSON hung, then `net::ERR_CONNECTION_RESET`; the buttons stay busy meanwhile, so CSV/summary clicks queue behind it. curl with the same token: export JSON 200 in 36 s at 07:24Z, 200 in 383 s at ~07:40Z. That is a separate defect, filed as row 130 (ANALYTICS-EXPORT-SLOW-001). This row stays ACTIVE until row 130 lands and the owner presses the three buttons once._
 
@@ -459,7 +467,9 @@ _E1 sweep 2026-09-08 (CI nightly): client 401-wipe scope guard (`auth-401-wipe-s
 
 ## Row 26 — TOOLS-SIDEBAR-COMPRESS-001
 
-_verified: 2026-10-20_
+_verified: 2026-11-05_
+
+_reconcile 2026-11-05 (desktop nightly, E1, HEAD `9c8f1980`): `antcv-sidebar-compact-001.js` loaded once in index.html, `sidebar-compact.test.mjs` green. Blocked: owner visual on an unsolicited export sidebar._
 
 _Desktop live leg 2026-10-20 (Gabo-PC): `antcv-sidebar-compact-001.js` served byte-identical to the repo (CR-stripped md5) at sw `1.51.5074-settings-route-fallback`. Residual gate unchanged._
 
@@ -489,7 +499,9 @@ _E1 sweep 2026-09-08 (CI nightly): belt present in CURRENT code — `antcv-sideb
 
 ## Row 30 — LLM-IMAGE-ROUTING-001
 
-_verified: 2026-10-20_
+_verified: 2026-11-05_
+
+_reconcile 2026-11-05 (desktop nightly, E1, HEAD `9c8f1980`): `VISION_BLIND` ×3 in both `workers/proxy` and `workers/demo-proxy` `multi-llm.js`, `image-routing-ee.test.mjs` green. Code-complete; owner close call._
 
 _E1 re-verify 2026-10-20 (CI nightly, HEAD 69824677): `VISION_BLIND`/`messagesHaveImages`/`filterVisionBlind` still intact in BOTH `workers/proxy/src/multi-llm.js` and `workers/demo-proxy/src/multi-llm.js`; `image-routing-ee.test.mjs` GREEN (full suite 1837/1837). Both proxies carry the filter; the only remainder is the explicitly-optional adequacy-gate extension to vision calls → CODE-COMPLETE, **recommended to owner for CLOSED**._
 
@@ -517,7 +529,9 @@ _E1 sweep 2026-09-08 (CI nightly): all legs confirmed in CURRENT code — `filte
 
 ## Row 32 — CL-PLATFORM-SIGNALS-001
 
-_verified: 2026-10-20_
+_verified: 2026-11-05_
+
+_reconcile 2026-11-05 (desktop nightly, E1, HEAD `9c8f1980`): `__platformRule` ×2 in app.src.js, `__pr` in app.js, `cl-platform-signals.test.mjs` green. Owner close call (no real gen this run)._
 
 _E1 re-verify 2026-10-20 (CI nightly, HEAD 69824677): `__platformRule` detector + injection still intact in `app.src.js` / minified `__pr` in `app.js` (both-bundle mirror); `cl-platform-signals.test.mjs` GREEN (full suite 1837/1837). Rule wired in both bundles; regen-gated — needs a signed-in platform-class JD gen to eyeball the CL tone (owner, non-code)._
 
@@ -1615,7 +1629,9 @@ _verified: 2026-10-27_ — CI nightly E1 re-verify against HEAD 65ce36e0: leg (f
 
 ## Row 89 — MODEL-TABLE-FRESHNESS-001
 
-_verified: 2026-10-23_
+_verified: 2026-11-05_
+
+_2026-11-05 weekly tune (desktop, Opus 5.5, worktree-isolated): pins verify against all four vendor pages; Anthropic lists nothing unpriced. Mechanical diff of 87 page ids found five errors, fixed in all three mirrors with dated comments: MISTRAL-LARGE4-RATE-2026-11-001 (`mistral-large-4` / `-4-0` [1.36,4.18] → [0.70,2.10], was ~2x OVER; third price in four weeks), OPENAI-GPT6-TERRA-ROSALIND-RATES-2026-11-001 (`gpt-6.1-terra` [1,5] was FALLBACK 3x OVER; `gpt-6-rosalind` [15,75] was FALLBACK 5x UNDER), DEEPSEEK-V41-FLASH-RATES-2026-11-001 (Mistral-hosted `deepseek-v4-1-flash-1017` + page slug `deepseek-v4-flash-1017` [0.30,1.20], was FALLBACK 10x OVER), GEMINI-NATIVE-AUDIO-RATES-2026-11-001 (`gemini-2.5-flash-native-audio-preview-12-2025` text [0.50,2.00], was on the 2.5-flash key). Tests 46/46 ×2 + mirror 14/14; suite ALL PASS. `mistral-large-latest` still = Large 3 (/v1/models). Noted, not a table error today: from 2026-12-01 Google routes `gemini-2.5-flash` → `gemini-3.5-flash-lite` (same rate) and `gemini-2.5-pro` → `gemini-3.8-flash` ([0.75,3.75]); `gpt-5.6-sol` promo ends 2026-11-30. Report `docs/qa/COST_QUALITY_WEEKLY_2026-11-05.md`._
 
 _2026-10-23 weekly tune (desktop, Opus 5.5, worktree-isolated): pins verify against all four vendor pages; Anthropic lists nothing unpriced. Mechanical page diff found three errors, fixed in all three mirrors with dated comments: MISTRAL-LARGE4-SALE-END-2026-10-001 (the Large 4 sale ended; `mistral-large-4` / `-4-0` [0.68,2.09] → list [1.36,4.18], was 2x UNDER), ZAI-GLM53-FLASH-RATES-2026-10-001 (new `zai-glm-5-3-flash` [0.15,0.50] matched `zai-glm` [1.4,4.4], 9x OVER), GPT-ROSALIND-RATES-2026-10-001 (new `gpt-rosalind-research` / `-discovery` [5,25] fell to FALLBACK [3,15], strict null). 10-15 catalogue rows for Large 4 corrected to the vendor rate (not trimmed); `VENDOR_CATALOGUE_2026_10_23` added. Freshness 44/44 ×2, mirror 13/13, suite ALL PASS. OpenAI realtime/audio and per-minute ids left unkeyed by rule (owner call: Gemini live precedent). `mistral-large-latest` still aliases Large 3. Report `docs/qa/COST_QUALITY_WEEKLY_2026-10-23.md`._
 
@@ -2157,7 +2173,9 @@ _verified: 2026-10-28_
 
 ## Row 3 — FLOAT-SPINE-001
 
-_verified: 2026-10-19_
+_verified: 2026-11-02_
+
+_reconcile 2026-11-02 (desktop nightly, E1, HEAD `19584eb9`): `floatSpine`/`float_spine` on 6 lines of `workers/docx-worker/src/index.js` (default-OFF line 24685 unchanged) + `antcv-docx-client.js` opt-in `antcv:float-spine` (line 1261); live docx-worker `1.14.175-ai-mark-props` /health 200. Blocked: owner visual re-export (no reference docx)._
 
 **Re-verify 2026-10-19 (CI nightly — E1 stalest slot, code-presence on HEAD `d23170cf`):** `floatSpine`/`float_spine` gate present `workers/docx-worker/src/index.js` ×6 + `pwa/antcv-docx-client.js` ×2, default-OFF unchanged; owner-visual re-export gate (no reference docx in CI) still owed. Full PWA suite 1834/1834 green.
 
@@ -2183,7 +2201,9 @@ _verified: 2026-10-19_
 
 ## Row 20 — CONTACT-TRACK-TIGHT-001
 
-_verified: 2026-10-19_
+_verified: 2026-11-02_
+
+_reconcile 2026-11-02 (desktop nightly, E1, HEAD `19584eb9`): docx-worker anchors present (`headlineAlign` ×3 + `CONTACT-TRACK-TIGHT-001` ×1 = the same 4 refs); live docx-worker `1.14.175-ai-mark-props`, no docx-worker commit since 10-29. Blocked: owner Hard Refresh + CL regen + real CloudConvert PDF eyeball._
 
 **Re-verify 2026-10-19 (CI nightly — E1 stalest slot, code-presence on HEAD `d23170cf`):** docx-worker anchors present (`headlineAlign` / `fix_orphans` / `SIRIN-SEMANTICS-001` / `CONTACT-TRACK-TIGHT-001`, 4 refs in `workers/docx-worker/src/index.js`). Stays OWNER-GATED: acceptance needs one Hard Refresh + CL regen + CV re-export eyeballed in a real CloudConvert PDF CI cannot do. Full PWA suite 1834/1834 green.
 
@@ -2599,7 +2619,9 @@ unattended fix. Kept ACTIVE.
 
 ## Row 115 — PWA-COST-METER-OPUS55-001
 
-_verified: 2026-10-23_
+_verified: 2026-11-05_
+
+_2026-11-05 weekly tune: re-verified, not fixed. `C.claude` / `C.anthropic` still [2,10], `q()` still pins `claude-opus-5-5` [4,20]. The 11-03 session (6 calls) made no claude call; no claude row in 30 d. Owner call unchanged._
 
 _2026-10-23 weekly tune: re-verified, not fixed. `C.claude` / `C.anthropic` still [2,10] (`app.src.js` ~1220), `q()` still pins `claude-opus-5-5` [4,20]. The 2026-10-20 session (7 calls) made no claude call, so there is still no opus-5-5 row in `llm_calls`. Owner call unchanged._
 
@@ -2615,7 +2637,9 @@ _2026-10-08 weekly tune: re-verified, not fixed. `C.claude` / `C.anthropic` stil
 
 ## Row 117 — CLUSTER-GLOBAL-SINGLE-JD-DOMINANCE-001
 
-_verified: 2026-10-25_
+_verified: 2026-11-02_
+
+**2026-11-02 (weekly demand-seed, cloud routine):** NOT re-measured. The Cloudflare-Developer-Platform connector is not authorized in the cloud session, so the read-only split query did not run. The 11-02 D1 push re-wrote identical research ranks (10 clusters, 247 rows), so the 10-25 split stands. Owner decision still owed.
 
 **2026-10-25 (weekly demand-seed, desktop Gabo-PC, read-only D1 verify after the 10-25 push):** split re-measured as rows with weight_sum ≥ 1 — `executive` 15/20 (max jd_count 1), `pm_process` 20/20 (max 2), `photonics_eng` 20/20 (max 8), `research_phd` 14/20 (max 2); the other six clusters 100% research. This run's only change (`pm_process` project planning 10→6) therefore reaches the client SEED only. Owner design decision still owed.
 
@@ -2658,7 +2682,9 @@ _verified: 2026-10-27_
 
 ## Row 123 — PKG-ID-PERSIST-MIGRATE-001
 
-_verified: 2026-10-19_
+_verified: 2026-11-02_
+
+_reconcile 2026-11-02 (desktop nightly, E1, HEAD `19584eb9`): state UNCHANGED live: `browser-qa --only palette-mix` FAIL on prod `1.51.5202` with the known shape {stylePackage:"scandinavian", dataPackage:"copenhagen-modern", lsResolved:false, toneResolved:true}. `__pkgNorm` 6 refs, 2 restore-path write-backs, still no boot-time write-back. Render correct. Not patched: the row marks the app.js init edit owner-gated._
 
 **Re-verify 2026-10-19 (CI nightly — E1 stalest slot, code-presence on HEAD `d23170cf`):** state UNCHANGED — `set("stylePackage", __pkgNorm(...))` write-backs exist only on the cloud-restore path (app.src.js 17624) and a restore-like path (23466); line 40294 is the raw user-select write (`set("stylePackage", e)`), 20857 is the `__pkgMap[v]` settings path — there is still NO boot/init-time normalising write-back, so a locally-persisted orphan `"scandinavian"` stays orphan. Render stays FIXED via `__pkgNorm` (6 refs). Severity LOW, owner-gated (touches app.js init → surgical mirror, not done unattended). Full PWA suite 1834/1834 green.
 
@@ -2694,7 +2720,9 @@ storage-layer cleanup, no user impact while the render mitigation holds.
 
 ## Row 125 — MEDSEC-CLUSTER-001
 
-_verified: 2026-10-25_
+_verified: 2026-11-02_
+
+**2026-11-02 (weekly demand-seed, cloud routine): cluster re-confirmed on a DK-only sample; new OPEN leg (4) cloud egress allowlist.** Jobindex RSS `q=lægesekretær` + `q=sundhedsadministrativ`: 33 items, 22 secretary/SAK titles, 4 full jobannonce bodies (DK n=4, 2 in Region Hovedstaden). The cloud environment's egress proxy refuses `jobsearch.api.jobtechdev.se` (SE Skåne leg did not run) and `sundhedsjobs.dk` (where Region H / Sjælland hospital ads keep their bodies), so the cloud leg cannot reach requirement-level hospital or Skåne data. 13 of 16 hospital titles name the lægesekretær / SAK education (r4 pin holds). Owner: add `jobsearch.api.jobtechdev.se`, `sundhedsjobs.dk` and `antcv.pages.dev` to the routine environment's network allowlist. Regional `.rss` paths still 404 (leg from 10-25 carried).
 
 **2026-10-25 (first scheduled weekly run on 10 clusters, desktop Gabo-PC): leg (2) CLOSED.** The medical_secretary leg ran unattended end to end: DK Jobindex RSS + hosted bodies (7 secretary ads, 4 in Region Hovedstaden / Sjælland, plus 10 hospital SAK teasers), SE JobTech (22 Skåne län ads), pooled n=29, tallied by a UTF-8 script; cluster re-confirmed, D1 push carried it (10 clusters, 247 inserted). NEW finding: `https://www.jobindex.dk/jobsoegning/region-hovedstaden.rss` and `.../region-sjaelland.rss` return 404 (also `storkoebenhavn` / `sjaelland` slugs); the national `jobsoegning.rss?q=lægesekretær` works, so the run used it plus `q=sundhedsadministrativ` and read region from the ad. Owner: update the stored routine prompt (desktop SKILL.md + cloud) to name the national feeds. Region H / Sjælland hospital ads are teaser-only on Jobindex (body on hr-manager), so the East-DK hospital requirement sample stays thin. Legs (1) cloud prompt and (3) Region Østdanmark 2027 still open.
 
@@ -2708,7 +2736,9 @@ _verified: 2026-10-25_
 
 ## Row 124 — CASCADE-RETIRED-IDS-2026-10-001
 
-_verified: 2026-10-23_
+_verified: 2026-11-05_
+
+_2026-11-05 weekly tune: re-verified, tails unchanged. Related vendor change: from 2026-12-01 Google routes every `gemini-2.5-pro` request to `gemini-3.8-flash` and every `gemini-2.5-flash` request to `gemini-3.5-flash-lite`, so `gemini-2.5-pro` in a tail stops being the model it names. Owner call unchanged._
 
 _2026-10-23 weekly tune: re-verified, unchanged. Mistral `GET /v1/models` (63 ids) still lists none of `mistral-large-2411` / `-2407` / `mistral-medium-2312`; the cascade tails still carry them. Owner call._
 
@@ -2777,7 +2807,7 @@ _verified: 2026-10-20_
 
 ## Row 135 — JT-PUT-SLOW-UPLINK-001
 
-_verified: 2026-10-30_
+_verified: 2026-11-02_
 
 **Found by the position-discovery run 2026-10-30 (Gabo-PC, Opus 5.5).** Two `check-postings.py check --apply` sweeps finished probing and then lost every verdict: the doc PUT failed with `599 {'error': 'transport_failed: URLError: <urlopen error The write operation timed out>'}`. The no-retry PUT path (row 134) worked as designed and printed the 4 verdicts as "would archive", so nothing was corrupted, but ~10 minutes of probing per sweep were thrown away.
 
@@ -2790,3 +2820,74 @@ _verified: 2026-10-30_
 **Progress 2026-10-30 (job-tracker nightly, Gabo-PC, Opus 5.5).** Reproduced: sweep 1 on pre-fix code probed 136 rows and lost the PUT to `The write operation timed out`. Shipped option (b) client-side: `_body_timeout(data, timeout)` in `check-postings.py`, `discover-positions.py`, `job-tracker-sync.py`, `gen-runner.py`; a body gets max(floor, len / 10 KB/s) seconds, GETs and small bodies unchanged. `test_put_timeout.py` (16 checks) drives the four real `_req`; pre-fix 4 red; negative-controlled by line index (cp 187/176, dp 73, sync 82, gr 173), each red, restored byte-identical. Not live-proven: sweep 2 on patched code lost its PUT to `getaddrinfo failed` (DNS drop), and a 1 MB curl POST to the relay then died at 77 s, 6.2 KB/s, exit 55. At that rate the 1.37 MB PUT needs ~220 s and can fail regardless of the client timeout. **Remaining:** a smaller write (per-row PATCH endpoint on the relay so a sweep sends only changed rows; needs a worker deploy, owner's call). Row stays OPEN.
 
 **Owner decision.** ~~Approve (a) or (b) for the next job-tracker nightly.~~ (b) shipped 2026-10-30. Now: approve a per-row PATCH on the relay, or accept that the sweep writes only on a fast uplink. Severity MEDIUM for routines on a slow uplink: a lost sweep costs a day of strikes, a lost `add` costs the run.
+
+**Re-verified 2026-11-02 (job-tracker nightly, Gabo-PC).** The sweep PUT wrote rev 356 → 357 on the first try, and gen-runner's persist + writeback PUTs returned 200 (rev 361). Uplink not measured. Row stays open on the PATCH decision.
+
+## Row 140 — JT-EC-RESULTS-DERIVE-001
+
+_verified: 2026-11-05_
+
+_SHIPPED 2026-11-05 (desktop nightly, `1.51.5322-ec-no-derive`, commit `9c8f1980`): one guard in `applyOutcomesMode` before `deriveResultFromRole`: id `earlier-career` keeps every line as a bullet, no Results line; tiers 1-4 unchanged. New `unit/earlier-career-no-derive.test.mjs` (5 checks, red pre-fix on the earlier-career check; an ordinary role still derives). Suite 1915/1915, results parity diag OK; live sw.js CACHE + docx-client ?v = repo, served docx-client sha256 = repo. REMAINING: owner eyeball on a real export with an Earlier career block (app 3527 after regen), then CLOSE._
+
+**Found by the job-tracker nightly 2026-11-05 (Gabo-PC, Opus 5.5)** while closing row 139. With the duplicate summary line gone, the headless payload build for app 3527's context still gives the Earlier career role a "Results:" line: "Students Council Representative, Tel Aviv University (2005 - 2007) - Modernised 15 outdated EE exam-preparation booklets." The line is moved out of the bullets, not duplicated.
+
+**Cause.** `pwa/antcv-docx-client.js` `applyOutcomesMode`: Earlier career has no `results`, no outcomes, no proof points and no kernel role with its id, so it falls to the tier-5 `deriveResultFromRole`. `hasNum = /\d|%|\bx\b|×/` matches the years in every summary line, so each line scores as a metric and the longest wins.
+
+**Fix (owed).** In the tier-5 branch, return `{ ...r, bullets: _txBl(r.bullets) }` for `r.id === 'earlier-career'` (a summary has no single outcome), or strip "(YYYY - YYYY)" before `hasNum`. Touches a `pwa/` asset: shift claim, full cache-bust, and a live export check (preview parity: `AntcvApplyOutcomesMode` drives the preview too). Not shipped by an unattended routine.
+
+**Severity.** LOW: one summary line is labelled "Results:" on every CV with an Earlier career block.
+
+## Row 136 — CI-NIGHTLY-CREDIT-EXHAUSTED-001
+
+_verified: 2026-11-05_
+
+_re-verified 2026-11-05 (desktop nightly): still failing 11-03 (`41611776624`) and 11-04 (`41805475423`); the 11-04 artifact ends `Credit balance is too low`, `terminal_reason: api_error`. 7 days down. Owner: top up or rotate the key._
+
+**Found by the desktop nightly 2026-11-02 (Gabo-PC, Opus 5.5).** The GitHub Actions nightly (`.github/workflows/nightly.yml`, `anthropics/claude-code-action`, `--model claude-opus-4-8`) has failed every day since 2026-10-29. Last green run: 2026-10-28 (`40657423612`).
+
+**Evidence.** The `claude-execution-output` artifact of each failed run ends with an assistant message `Credit balance is too low` and `terminal_reason: api_error`:
+
+| run | date | turns | cost |
+|---|---|---|---|
+| `40842376276` | 10-29 | 15 | $0.88 (ran out mid-run) |
+| `41027848381` | 10-30 | 1 | $0 |
+| `41184555558` | 10-31 | 1 | $0 |
+| `41292364347` | 11-01 | 1 | $0 |
+| `41421138029` | 11-02 | 1 | $0 |
+
+The 10-30 desktop report saw the 10-29 failure as "cause not visible in the log": the action hides full output; the cause is only in the artifact.
+
+**Impact.** No CI nightly report, E1 staleness sweep or CI-side band work since 10-28. The desktop nightly is the only band coverage. `nightly.yml` is the only workflow that reads `ANTHROPIC_API_KEY`. Not checked: whether the same Anthropic account funds a production Claude key in cv-proxy (secrets not readable here); if it does, Claude-routed generations would fail the same way.
+
+**Owner action.** Top up the Anthropic Console account behind the `ANTHROPIC_API_KEY` repo secret, or rotate the secret to a funded key. Then `gh workflow run nightly.yml` once and confirm green. Close this row on the first green scheduled run.
+
+**Optional hardening (not done).** A post-step in `nightly.yml` that greps the execution artifact for `Credit balance` and prints it as `::error::` so the cause shows in the run summary.
+
+**Progress 2026-11-02 (position-discovery, Gabo-PC, Opus 5.5).** All three relay PUTs of this run landed first time on the body-scaled timeout (sweep rev 355 → 356, two `add` passes → rev 360); no transport error. Still open for the slow-uplink case; owner call unchanged.
+
+## Row 137 — DISCOVERY-MED-MUST-EXAMPLE-001
+
+_verified: 2026-11-02_
+
+**Found by the position-discovery run 2026-11-01 (Sunday 22:00 fire, ran past midnight; Gabo-PC, Opus 5.5).** `discover-positions.py add` skipped two leads on evidence-gate false positives.
+
+1. **Subra / Technical Project Manager, New Factory** — skipped as `medical-device experience is a must`. The sentence: "5–10 years of experience with managing complex technical projects in a manufacturing setting, such as pharma, medtech, or electronics." `_medical_must` needs `_MED_TERM` (medtech) + `_EXP_WORD` (experience) + `_MUST` (the `\d+\+?\s*years` branch) and no `_SOFT` match. `_SOFT` has no example-list case ("such as", "e.g.", "for example", "or electronics"). The owner rule (GATE-002) is: skip only when medical-device experience is a must. Here medtech is one of three examples. Re-added with `override_gate` + `override_reason`, recorded on the row.
+2. **Hamamatsu Photonics / NPI Engineer** — skipped as `pay noted below the envelope floor`. `_BELOW_FLOOR` matched "below the envelope's specialist/manager framing" in the routine's own `why` text (a title remark, not pay). Re-added with the `why` reworded. Lower risk: the regex is wider than its name.
+
+**Owed:** (a) an example-list clause in `_SOFT`, or require the must-word to govern the medical term rather than a sibling "years", with a test on the Subra sentence and a negative control on a real must sentence; (b) narrow `_BELOW_FLOOR` to pay context (pay / salary / løn / DKK near the match). Script-only, no `pwa/` asset.
+
+## Row 141 — ACCOUNT-ERASE-COMPLETE-001
+
+_verified: 2026-11-05_
+
+_FIXED IN PR 2026-11-05 (side session, Gabo-PC, Opus 5.5, worktree-isolated; `workers/access-relay/src/index.js`, new `workers/access-relay/tests/account-erase-complete.test.mjs`; relay `auth-39-erase-complete`; no `pwa/` asset, no cache-bust, no version consumed). Not deployed: the relay deploy is owed (owner-gated, deploy.yml workflow_dispatch), then live-verify that `/health` reports `auth-39-erase-complete`._
+
+**Found 2026-11-05** by a gap review of the open-source ai-job-search project against AntCV (its scoped `/reset` against AntCV's erase), then confirmed by grepping every `DELETE FROM` in the relay. AntCV serves at least two real users, so this is a data-protection correctness bug, not a feature request.
+
+**Gap.** Both full wipes deleted five tables: `language_view`, `application`, `active_application`, `active_application_device`, `user_kernel` (plus telemetry in /api/prefs only). These survived an account delete: `job_tracker` (hiring-manager names, salaries, notes, JD text; only `DELETE /api/job-tracker` removed it, and no PWA code calls that), `kernel_showcase`, `kernel_showcase_styled`, `kernel_language_view`, `application_fit`, the user's `application_qualification` rows, and legacy per-user `cluster_top_qualifications` rows. FK cascade does not cover them: the live cluster tables have no FK (schema introspection, CLUSTER-DEMAND-GLOBAL-001), the lazy `kernel_showcase_styled` / `kernel_language_view` DDL declares none, and v2.5.3 saw application rows survive a `user_kernel` delete. The PWA's final confirm promises it "permanently deletes everything ... AND your cloud-synced data".
+
+**Fix.** `USER_ERASE_STATEMENTS` (13 tables, leaf-first, incl. `application_snapshot`, the submitted CV/CL/JD table OUTCOME-RECORD-002 adds lazily; listed ahead of its PR so no deploy order can leave it behind), run by `eraseUserD1` as one atomic batch from both paths; `details` gives one count per table. A `sqlite_master` probe skips tables not created on that DB (reported as null), so a lazily created table cannot roll back the erase. If the probe fails or lists nothing, every statement runs and a missing table fails loudly. Rows under `__global_market__` stay: the research rows have no application link, and the global top-20 has no user_hash or application_id. That rollup is recomputed on the next JD extract in the cluster and on every weekly research refresh.
+
+**Tests.** 6 tests drive the real worker (minted JWT) against an in-memory node:sqlite DB behind a D1 adapter, FK off and FK on: 0/6 pre-fix, 6/6 fixed. Four one-line sabotages (drop the job_tracker statement, drop the cluster_top statement, ignore the probe, user_kernel first) each go red; the source was restored byte-identical. Relay suite 138/138, 12 relay diags OK.
+
+**Not changed (owner calls).** KV: `prefs2:` / `prefs:` / `signals:` were already wiped; `otp:`, the OTP cooldown and IP rate keys expire within an hour; `access_req:<email>` exists only for a denied sign-in (14-day TTL); `relay:allowlist` keeps the email (admin access control); `demo_usage:<hash>:<month>` in the shared KV namespace (60-day TTL) is kept because deleting it would reset a demo user's monthly cap. No R2 binding. `schema.sql` still lacks the DDL for `application_qualification`, `cluster_top_qualifications`, `application_fit` and `kernel_showcase_styled`. DELETE /api/profile/kernel still leaves `llm_calls`; the PWA's delete uses /api/prefs, which wipes it.

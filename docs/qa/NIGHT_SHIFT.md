@@ -39,6 +39,7 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 <!-- SHIFT:BEGIN — one JSON object per line; managed by scripts/shift.mjs, safe to hand-edit a line if a session died without releasing -->
 {"id":"sh_mupev15f_bqmz","started":"2026-10-01T10:48:17.049Z","host":"vm","worktree":null,"branch":"claude/project-thread-cub2nb","range":"1.51.4786-1.51.4790","task":"impact types in result bullets (thread cub2nb)","beat":"2026-10-01T10:48:17.054Z"}
 {"id":"sh_mw3hijam_7jnk","started":"2026-11-05T11:51:01.722Z","host":"Gabo-PC","worktree":"ecstatic-heisenberg-9cfa6d","branch":"claude/ecstatic-heisenberg-9cfa6d","range":"1.51.5665-1.51.5684","task":"MARGIN-LAYOUT-001: header card inside the sidebar (house margin format), no band","beat":"2026-11-05T11:51:01.779Z"}
+{"id":"sh_mw47j4nx_ie2u","started":"2026-11-05T23:59:19.434Z","host":"Gabo-PC","worktree":"nervous-napier-68c925","branch":"ship-academy","range":"1.51.6145-1.51.6164","task":"ACADEMY-EMPTY-001: no heading without real content, no template rows, no other person's rows (margin preview + export)","beat":"2026-11-05T23:59:19.492Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

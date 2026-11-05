@@ -84,6 +84,10 @@ check("...but no longer blocks a different ad on the same host", dp._norm_url(FM
 
 
 # ---- cmd_add end to end on the real function --------------------------------
+def _lang(jd):
+    return dp._language_gate(jd)[0]
+
+
 def run_add(doc0, cands):
     state = {"doc": json.loads(json.dumps(doc0)), "puts": []}
 
@@ -229,6 +233,50 @@ check("deadline: a deadline TODAY is rejected (owner: same day counts as passed)
       bool(G(dict(PM, company="Some Co", jd="Ansøgningsfrist: " + _today))), True)
 check("deadline: a deadline in three weeks passes",
       G(dict(PM, company="Some Co", jd="Ansøgningsfrist: " + _future)), None)
+
+# ---- LANGUAGE-GATE-001 (2026-11-05): on record EN/HE native, ES full professional, DA B1 ----
+check("language: fluent German required -> FAIL", _lang("Fluent German is required for customer calls."), "FAIL")
+check("language: Swedish requirement in Swedish -> FAIL", _lang("Flytande svenska i tal och skrift krävs."), "FAIL")
+check("language: the gate rejects a FAIL candidate, quoting the line",
+      "language gate" in (G(dict(PM, company="Some Co", jd="Du taler og skriver flydende tysk.")) or ""), True)
+check("language: a German COMPANY or OEM is not a language requirement",
+      (_lang("Experience with German automotive OEMs is required."), _lang("Tysk virksomhed søger PM. Krav: 5 år.")),
+      ("PASS", "PASS"))
+check("language: an undeclared language as an advantage passes", _lang("German language skills are an advantage."),
+      "PASS")
+check("language: any Danish requirement at B1 -> FLAG", _lang("Du taler og skriver flydende dansk."), "FLAG")
+check("language: Danish in the alternatives -> FLAG, not FAIL",
+      _lang("You speak Danish, Swedish or Norwegian fluently."), "FLAG")
+check("language: Danish as a plus -> PASS", _lang("Danish language skills are a plus."), "PASS")
+check("language: fluent English -> PASS (native)", _lang("Fluent English, written and spoken, is required."), "PASS")
+check("language: Spanish required -> PASS, native Spanish -> FLAG (full professional on record)",
+      (_lang("Spanish language skills are required."), _lang("Native Spanish speaker required.")), ("PASS", "FLAG"))
+check("language: the ad being written in Danish is not a requirement",
+      _lang("Vi søger en projektleder til vores optikafdeling i Farum. Du har erfaring med NPI."), "PASS")
+
+# ---- STALE-POSTING-001 + MASS-POSTING-001 --------------------------------------
+check("posted: ISO, dd.mm.yyyy and RSS pubDate all parse",
+      [dp._posted_day(s) for s in ("2026-09-01", "01.09.2026", "Tue, 01 Sep 2026 00:00:00 +0200", "snart")],
+      [_dt.date(2026, 9, 1)] * 3 + [None])
+check("stale: 40 days old -> warning; 10 days -> none; no date -> none",
+      [bool(dp._stale_note({"posted": str(_dt.date(2026, 9, 1) + _dt.timedelta(days=d))}, _dt.date(2026, 10, 11)))
+       for d in (0, 30)] + [dp._stale_note({}, _dt.date(2026, 10, 11))],
+      [True, False, None])
+OPT = {"company": "Lumen Optics A/S", "why": "optics NPI", "fit": "T2",
+       "jd": "Optical engineer for NPI. " * 40 + "Du taler og skriver flydende dansk."}
+res, out, state = run_add({"rows": [], "urls": {}, "discovered": {}}, [
+    dict(OPT, role="Optical Engineer - Aarhus", location="Aarhus", url="https://lumen.example/j/1",
+         posted="2026-01-02"),
+    dict(OPT, role="Optical Engineer - Kolding", location="Kolding", url="https://lumen.example/j/2"),
+    dict(OPT, role="Test Engineer", location="Aarhus", url="https://lumen.example/j/3", cvr="12345678")])
+check("cvr seeds financials[uk] for the annual-report lookup",
+      list(state["doc"].get("financials", {}).values()), [{"cvr": "12345678", "cvr_source": "posting"}])
+check("mass posting: one row per role; the repeat in another city is skipped",
+      (res.get("added"), "mass posting" in out), (2, True))
+flag0 = state["doc"]["rows"][0][10]
+check("mass posting: the kept row lists both places", "posted identically in 2 locations: Aarhus, Kolding" in flag0, True)
+check("language FLAG lands on the row flag with the declared level", "on record: Danish B1" in flag0, True)
+check("stale posting lands on the row flag", "⚠ posted 2026-01-02" in flag0, True)
 
 if fails:
     print("FAIL (%d):" % len(fails))

@@ -20,7 +20,10 @@ Commands:
                                    keys (feed the agent so it does not re-search
                                    what is already tracked or already proposed)
   add --candidates <file.json>  -> file is a JSON list of objects:
-      {company, role, location, url, why, fit?, jd?, tier?}
+      {company, role, location, url, why, fit?, jd?, tier?, posted?, cvr?}
+      posted = the ad's own publication date (job_sources.py rows carry it);
+      it drives the staleness warning, never a veto. cvr = the employer's CVR
+      number when the source gives it (Jobnet does); seeds financials[uk].
     Appends the non-duplicate ones as Proposed rows, updates the ledger, PUTs
     the doc rev-safe (re-fetch+merge+retry on 409). Prints what was added/skipped.
 
@@ -195,6 +198,13 @@ Also do NOT propose (owner 2026-11-01, round 2; GATE-002):
     owner reads a same-day deadline as passed). Put the deadline in "jd" so add() can see it.
 A jobindex.dk ad is a teaser: open it, follow the link to the employer's or recruiter's own
 posting, and pass THAT full text as "jd". A jobindex url with a teaser-length jd is skipped.
+LANGUAGE GATE (LANGUAGE-GATE-001, 2026-11-05). On record: English native, Hebrew native,
+Spanish full professional, Danish B1 (Prøve i dansk 2). A posting that REQUIRES a language
+not on that list (fluent German, flytande svenska ...) is not proposed. A Danish requirement
+is proposed with a ⚠ quoting it, for the owner to judge. A language merely named as an
+advantage passes. The language the ad is written in is not a requirement.
+Pass "posted" (the ad's own date) when the source gives one: older than 30 days gets a ⚠.
+The same role from one company in several locations is proposed ONCE, with the places listed.
 add() enforces the obvious cases deterministically (see _evidence_gate)."""
 
 # Title families that are a no-fit UNLESS the posting shows a qualifier (below).
@@ -264,6 +274,130 @@ def _medical_must(text):
     return None
 
 
+# LANGUAGE-GATE-001 (2026-11-05, from ai-job-search's Language Gate). The owner's record,
+# as the PWA's lang-fabrication guard holds it (kernel personalInfo.languages, GEN-LANGFAB-001):
+DECLARED_LANGUAGES = {"english": "native", "hebrew": "native",
+                      "spanish": "full professional", "danish": "B1"}
+_LANGS = {
+    "danish": r"danish|dansk\w*|scandinavian|skandinavisk\w*|nordisk\w* sprog|nordiska språk",
+    "english": r"english|engelsk\w*",
+    "hebrew": r"hebrew|hebraisk\w*",
+    "spanish": r"spanish|spansk\w*|español",
+    "swedish": r"swedish|svensk\w*",
+    "norwegian": r"norwegian|norsk\w*",
+    "german": r"german|tysk\w*",
+    "french": r"french|fransk\w*",
+    "finnish": r"finnish|finsk\w*",
+    "dutch": r"dutch|hollandsk\w*|nederlandsk\w*",
+    "polish": r"polish|polsk\w*",
+    "italian": r"italian|italiensk\w*",
+    "portuguese": r"portuguese|portugisisk\w*",
+    "chinese": r"chinese|mandarin|kinesisk\w*",
+    "japanese": r"japanese|japansk\w*",
+    "korean": r"korean|koreansk\w*",
+    "russian": r"russian|russisk\w*",
+    "arabic": r"arabic|arabisk\w*",
+}
+# A language NAME only counts next to a language word: "tysk virksomhed" (a German company)
+# and "German OEMs" are not language requirements.
+_LANG_CTX = (r"speak\w*|spoken|written|writing|fluen\w*|native|mother[- ]tongue|language|"
+             r"proficien\w*|business[- ]level|\b[BC][12]\b|sprog\w*|tale\b|taler\b|talt\b|skrift\w*|"
+             r"mundtlig\w*|flydende|modersmål\w*|behersk\w*|mestr\w*|flytande|språk\w*|tala\b|"
+             r"skriva\b|kundskaber|færdigheder")
+_LANG_NEAR = {k: re.compile(r"(?:%s)[^.;\n•]{0,40}?\b(?:%s)\b|\b(?:%s)\b[^.;\n•]{0,40}?(?:%s)"
+                            % (_LANG_CTX, rx, rx, _LANG_CTX), re.I) for k, rx in _LANGS.items()}
+_LANG_MUST = re.compile(r"required|requirement|\bmust\b|mandatory|essential|fluen\w*|native|"
+                        r"mother[- ]tongue|proficien\w*|business[- ]level|\b[BC][12]\b|\bkrav\w*|"
+                        r"\bskal\b|flydende|modersmål\w*|behersk\w*|mestr\w*|i skrift og tale|"
+                        r"på højt niveau|forudsætning|obligatorisk|flytande|\bkrävs\b|you speak|"
+                        r"du taler|you are fluent", re.I)
+_LANG_SOFT = re.compile(r"advantage|\ba plus\b|is a plus|nice[- ]to[- ]have|preferred|preferabl\w*|"
+                        r"desirable|ideally|\bbonus\b|\bfordel\b|gerne|meriterande|merit", re.I)
+_NATIVE_BAR = re.compile(r"native|mother[- ]tongue|modersmål\w*|first language", re.I)
+
+
+def _language_gate(text):
+    """('FAIL'|'FLAG'|'PASS', quote). FAIL: a requirement naming only languages off the
+    owner's record. FLAG: a requirement on a declared language whose bar may exceed the
+    declared level (any Danish requirement at B1; a native bar on a non-native language)."""
+    verdict, quote = "PASS", ""
+    for sent in re.split(r"[.;\n•]+", text or ""):
+        named = [k for k, rx in _LANG_NEAR.items() if rx.search(sent)]
+        if not named or not _LANG_MUST.search(sent) or _LANG_SOFT.search(sent):
+            continue
+        declared = [k for k in named if k in DECLARED_LANGUAGES]
+        if not declared:
+            return "FAIL", sent.strip()[:120]
+        for k in declared:
+            level = DECLARED_LANGUAGES[k]
+            if level == "native":
+                continue
+            if level == "full professional" and not _NATIVE_BAR.search(sent):
+                continue
+            if verdict == "PASS":
+                verdict, quote = "FLAG", sent.strip()[:120]
+    return verdict, quote
+
+
+def _posted_day(s):
+    """An ad date as a date: ISO, dd.mm.yyyy / dd-mm-yyyy, or RFC 822 (RSS pubDate)."""
+    s = str(s or "").strip()
+    m = re.search(r"\b(\d{4})-(\d{2})-(\d{2})\b", s) or None
+    try:
+        if m:
+            return datetime.date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+        m = re.search(r"\b(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{4})\b", s)
+        if m:
+            return datetime.date(int(m.group(3)), int(m.group(2)), int(m.group(1)))
+        if s:
+            import email.utils
+            return email.utils.parsedate_to_datetime(s).date()
+    except (TypeError, ValueError, IndexError):
+        return None
+    return None
+
+
+STALE_DAYS = 30
+
+
+def _stale_note(c, today=None):
+    """STALE-POSTING-001: a signal for the owner, never a veto (a 27-month-old ad was still live
+    in the upstream case)."""
+    d = _posted_day(c.get("posted"))
+    if not d:
+        return None
+    age = ((today or datetime.date.today()) - d).days
+    return "⚠ posted %s, %d days ago" % (d.isoformat(), age) if age > STALE_DAYS else None
+
+
+def _mass_key(c):
+    """Company + role with the candidate's own place names stripped, so 'PM - Aarhus' and
+    'PM - Kolding' from one employer read as one ad posted twice (MASS-POSTING-001)."""
+    role = str(c.get("role") or "")
+    for place in re.split(r"[,/]| og | and ", str(c.get("location") or "")):
+        place = place.strip()
+        if len(place) > 2:
+            role = re.sub(re.escape(place), " ", role, flags=re.I)
+    role = re.sub(r"[\s\-–—|(),]+$", "", re.sub(r"\s*[\-–—|]\s*$", "", role.strip()))
+    return _norm_cr(c.get("company") or "", role)
+
+
+def _mass_groups(cands):
+    """{index of the first ad: [places]} and {index of a repeat: first index}."""
+    first, places = {}, {}
+    repeat = {}
+    for i, c in enumerate(cands):
+        if not c.get("company") or not c.get("role"):
+            continue
+        k = _mass_key(c)
+        if k in first:
+            repeat[i] = first[k]
+        else:
+            first[k] = i
+        places.setdefault(first[k], []).append(str(c.get("location") or "?").strip() or "?")
+    return {i: p for i, p in places.items() if len(p) > 1}, repeat
+
+
 def _evidence_gate(c):
     """Reason string when a candidate is an obvious no-fit, else None.
     A role fails when its TITLE is in a no-core family AND nothing in title/why/fit/jd
@@ -299,6 +433,9 @@ def _evidence_gate(c):
     if _JOBINDEX.search(str(c.get("url") or "")) and len(str(c.get("jd") or "").strip()) < JOBINDEX_MIN_JD:
         return ("evidence gate: jobindex teaser only - follow the ad to the employer's or recruiter's "
                 "posting and pass its full text as jd")
+    verdict, quote = _language_gate(str(c.get("jd") or ""))
+    if verdict == "FAIL":
+        return "language gate: the posting requires a language not on the owner's record (%r)" % quote
     return None
 
 
@@ -333,6 +470,7 @@ def cmd_add(args):
         sys.exit("--candidates must be a JSON list")
     today = datetime.date.today().isoformat()
     added, skipped = [], []
+    spread, repeat = _mass_groups(cands)
 
     for attempt in range(4):
         rev, doc = get_doc()
@@ -347,12 +485,17 @@ def cmd_add(args):
         ranks = [row[0] for row in doc["rows"] if isinstance(row[0], (int, float))]
         next_rank = (max(ranks) + 1) if ranks else 1
 
-        for c in cands:
+        for i, c in enumerate(cands):
             company = str(c.get("company") or "").strip()
             role = str(c.get("role") or "").strip()
             url = str(c.get("url") or "").strip()
             if not company or not role:
                 skipped.append((company or url or "?", "missing company/role"))
+                continue
+            if i in repeat:
+                first = cands[repeat[i]]
+                skipped.append((f"{company} / {role}", "mass posting: same ad as %r in another location"
+                                % str(first.get("role") or "")[:60]))
                 continue
             gate = _evidence_gate(c)
             if gate:
@@ -383,6 +526,15 @@ def cmd_add(args):
             flag = ("🔎 " + why) if why else "🔎 proposed (auto-discovered)"
             if c.get("override_gate"):
                 flag += "\n⚠ evidence gate overridden: " + str(c.get("override_reason") or "")[:200]
+            lv, lq = _language_gate(jd)
+            if lv == "FLAG":
+                flag += "\n⚠ language: %r (on record: Danish %s)" % (lq, DECLARED_LANGUAGES["danish"]) \
+                    if re.search(_LANGS["danish"], lq, re.I) else "\n⚠ language: %r" % lq
+            stale = _stale_note(c)
+            if stale:
+                flag += "\n" + stale
+            if i in spread:
+                flag += "\n⚠ posted identically in %d locations: %s" % (len(spread[i]), ", ".join(spread[i])[:160])
             doc["rows"].append([
                 next_rank, company, role, loc, "", "Proposed", fit, "OPEN",
                 "Identified (posting saved)", "Review", flag, uk, band])
@@ -394,6 +546,9 @@ def cmd_add(args):
             doc["queue"][uk] = False          # <-- the hard safety gate
             if c.get("tier"):
                 doc["gen"][uk] = str(c["tier"])
+            cvr = str(c.get("cvr") or "").strip()
+            if re.fullmatch(r"\d{8}", cvr):              # COMPANY-FINANCIALS-001 seed
+                doc.setdefault("financials", {})[uk] = {"cvr": cvr, "cvr_source": "posting"}
             ledkey = ck_url or ck_cr
             doc["discovered"][ledkey] = {"first_seen": today, "uk": uk,
                                          "company": company, "role": role, "url": url,

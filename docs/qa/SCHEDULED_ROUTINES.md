@@ -122,8 +122,8 @@ machine is off" path for those is a **claude.ai cloud routine**, created from th
 
 | Routine | Cadence | Pushes to main / deploys? | Claim required | Notes |
 |---|---|---|---|---|
-| `antcv-position-discovery` | 3x weekly (Sun + Tue + Thu 22:00; Thu added 2026-09-30, max gap 3 days) | data only (Excel/D1 PROPOSED rows) | no (data-only) — SYNC FIRST | Finds NEW openings vs the Dream Envelope, propose-only. `scripts/job-tracker/discover-positions.py`; memory position-discovery-task. ⚠ **Two of its five mandatory sources need `scripts/job-tracker/job_sources.py` — a hand-fetch of their search pages returns nothing. It should also run the obsolescence sweep. See "Position-discovery sources + the obsolescence sweep" below.** |
-| antcv-job-tracker-nightly | nightly | yes (gen-runner may commit; may bump islands/app) | **yes** | Generates/persists tracked applications. `scripts/job-tracker/gen-runner.py`. |
+| `antcv-position-discovery` | 3x weekly (Sun + Tue + Thu 22:00; Thu added 2026-09-30, max gap 3 days) | data only (Excel/D1 PROPOSED rows) | no (data-only) — SYNC FIRST | Finds NEW openings vs the Dream Envelope, propose-only. `scripts/job-tracker/discover-positions.py`; memory position-discovery-task. ⚠ **Two of its five mandatory sources need `scripts/job-tracker/job_sources.py` — a hand-fetch of their search pages returns nothing. It should also run the obsolescence sweep. Since 2026-11-05 `job_sources.py --source all` also covers Jobnet, freehire and Jobdanmark, and `job_sources.py health` runs at the end of each run. See "Position-discovery sources + the obsolescence sweep" below.** |
+| antcv-job-tracker-nightly | nightly | yes (gen-runner may commit; may bump islands/app) | **yes** | Generates/persists tracked applications. `scripts/job-tracker/gen-runner.py` (since 2026-11-05 it also adds the employer's annual-report figures to the research and writes `guards_<uk>.json`, the fact guard + echo check). Since 2026-11-05 also: `followups.py stamp`, then `followups.py due`; for each due row, DRAFT a follow-up per scripts/job-tracker/README.md "Follow-ups" into the run report (never send; the owner sends and logs). `company_financials.py enrich` fills `financials[uk]` for live rows. |
 | antcv-nightly | nightly | yes (PWA/worker fixes) | **yes** | Verify-first backlog work; ships cache-busted PWA changes → always claim. |
 | weekly demand-seed (CLUSTER-QUAL) | weekly | yes (worker + D1 top-20 refresh) | **yes** (if it ships code) | Cluster demand model refresh. Partly unbuilt. LIVE TRIGGER since 2026-07-13: scheduled task `antcv-demand-seed-weekly` (Fri 22:00) — before that the routine existed only on paper (one manual run 2026-07-10). ⚠ **Its stored prompt's step 4 is WRONG — see "Demand-seed step 4" below before running it.** **10 clusters since 2026-10-15 (MEDSEC-CLUSTER-001): `medical_secretary` joined the 9; every run researches it too, with the East-Denmark + Skåne search leg (Jobindex `region-hovedstaden.rss` / `region-sjaelland.rss?q=lægesekretær`, JobTech `jobsearch.api.jobtechdev.se/search?q=medicinsk sekreterare` filtered to Skåne län) and expects 10×20 = 200 quals in the artefact, the seed and the D1 verify. The CLOUD twin of this task (claude.ai routine trig_01C2FGAuWTQLEfFMk5gsKDwW "AntCV weekly demand-seed tuning", Monday 08:00 Copenhagen, branch claude/weekly-demand-tuning-<date>) was rewritten 2026-10-15 to the same 10-cluster job plus a duplicate-run check against this desktop task; its prompt is versioned verbatim in docs/qa/CLOUD_DEMAND_SEED_ROUTINE_PROMPT.md. Update both the routine and that file together.** |
 | **relay cost-quality tune** (RELAY-COST-QUALITY-TUNE-001) | **weekly** | **yes (proxy `MODEL_ROLES` + deploy)** | **yes** | See the procedure below. Reviews the week's router telemetry AND modifies the routing function so it improves over time. LIVE TRIGGER since 2026-07-13: scheduled task `antcv-relay-cost-quality-tune` (Wed 22:00); 'gen'-role flips stay owner-gated. **Second trigger since 2026-09-06: the same task on the owner's desktop (Gabo-PC), Wed 22:00 local; its prompt runs a same-week-report check and degrades to a 1a+1b cross-check if the other trigger already wrote the report.** |
@@ -225,6 +225,38 @@ Nuxt page: the jobs exist only inside the `window.__NUXT__` IIFE (a link scrape 
 Nuxt hoists repeated strings into the IIFE parameters (`title:c`), which the fetcher resolves.
 `--source thehub` (or `all`) reads `https://thehub.io/jobs?search=<q>&countryCode=DK`; robots.txt
 allows `/jobs` and the terms carry no automated-access clause.
+
+**JOBSRC-UPSTREAM-001 + JOBSRC-HEALTH-001 (2026-11-05) — Jobnet back, freehire and Jobdanmark added,
+fetch hygiene, source health.** From the ai-job-search review (github.com/ai-job-search-dev/ai-job-search).
+- **Jobnet is NOT behind a login.** Its search API `https://jobnet.dk/bff/FindJob/Search` answers 200
+  when the request carries `x-csrf: 1` (the Duende BFF anti-forgery header); without it, 401, and every
+  page path 307s to `/auth/duendebff/login`, which is what the 2026-10-15 note saw. Regions, hospitals
+  and municipalities post here. Internal ads store `https://jobnet.dk/find-job/<id>`; that page answers
+  HTTP 404 to a non-JS client even while live, so `check-postings.py` probes
+  `/bff/FindJob/JobAdDetails/<id>` (200 live, 404 gone) instead (POSTING-JOBNET-001).
+- **freehire.me** pools ~50 ATS platforms (Workday, Greenhouse, Emply, hr-manager, SmartRecruiters)
+  plus jobnet/jobindex/thehub, filtered to Denmark and the last 14 days. It is the only source that
+  reads employer career sites (Ibsen Photonics, the Birkerød photonics Workday roles). Rows carry `via`
+  (the board it came from). One-person service with no SLA: an extra source, never the only one.
+- **Jobdanmark** (`POST /api/jobsearch/search/1`): a further general board, strongest on healthcare and
+  municipal roles.
+- **Jobbank** now reads its RSS feed `https://jobbank.dk/job/rss/?key=<q>` (100 items, deadline in the
+  teaser); the onclick page scrape is the fallback.
+- **Fetch hygiene:** 20 s timeout, two retries on 429 / 5xx / transport errors (2 s, 6 s, or the server's
+  `Retry-After` when longer; past 30 s the source fails fast), and a wildcard-aware robots.txt gate on
+  every public source. Career Hound is exempt (written permission, account feed).
+- **Health:** every CLI search appends one line per source to `~/.antcv/job_sources_yield.jsonl`. Run
+  this once at the END of each discovery run and copy its lines into the run's REGISTER_RUNLOG entry:
+
+```
+python scripts/job-tracker/job_sources.py health
+```
+
+It runs one sentinel search per source (one broader retry if empty) and scans the rows for junk: no
+company on any row, empty titles, undecoded entities, URLs off the board's host. Verdicts: healthy,
+degraded, broken (exit 1), inconclusive (401/403/429 or robots refusal; never counted as broken). A
+"YIELD DROP" note means the source returned nothing for 3+ searches in a row after earlier yields. A
+broken or degraded source goes in the run log as an owed fix; do not drop it silently.
 
 **Account-backed sources the owner asked for (2026-11-01), and why they are not automated:**
 LinkedIn stays on the public guest search above; driving the owner's own session is against the

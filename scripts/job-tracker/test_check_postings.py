@@ -196,6 +196,21 @@ check("a LinkedIn company page is not a job view", cp.probe_target(
     "https://www.linkedin.com/company/novo-nordisk/"), "https://www.linkedin.com/company/novo-nordisk/")
 check("a lookalike host is not LinkedIn",
       cp.linkedin_job_id("https://evil-linkedin.com/jobs/view/4445506698"), None)
+# POSTING-JOBNET-001: the find-job page 404s while live; the BFF detail endpoint does not.
+JN = "https://jobnet.dk/find-job/c6100943-1bbf-41d6-a1a8-51329184e0e6"
+check("jobnet find-job page routes to the BFF detail endpoint", cp.probe_target(JN),
+      "https://jobnet.dk/bff/FindJob/JobAdDetails/c6100943-1bbf-41d6-a1a8-51329184e0e6")
+check("a jobnet search page is fetched as-is", cp.probe_target("https://jobnet.dk/find-job?q=x"),
+      "https://jobnet.dk/find-job?q=x")
+_sent = []
+_real = cp.urllib.request.urlopen
+cp.urllib.request.urlopen = lambda req, timeout=None: (_ for _ in ()).throw(
+    _sent.append(dict(req.header_items())) or OSError("stub"))
+cp.probe(cp.probe_target(JN))
+cp.probe(U)
+cp.urllib.request.urlopen = _real
+check("the jobnet detail probe sends x-csrf: 1; other probes do not (urllib title-cases it)",
+      [h.get("X-csrf") for h in _sent], ["1", None])
 check("a short number in the slug is not a job id",
       cp.linkedin_job_id("https://www.linkedin.com/jobs/view/pm-at-acme-2026"), None)
 

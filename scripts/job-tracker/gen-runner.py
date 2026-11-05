@@ -264,6 +264,23 @@ def research(company, role, num=6):
     except Exception:
         return ""
 
+def employer_financials(doc, r):
+    """COMPANY-FINANCIALS-001: one summary line of the employer's newest Danish annual
+    report, cached in doc['financials'][uk] for 90 days (company_financials.py). The CVR
+    comes from the cache / discovery seed, the CVR register or cvrapi.dk. '' when none
+    is found. A name mismatch stays in the line as a CHECK note. Never raises."""
+    try:
+        import datetime
+        import company_financials as CF
+        today = datetime.date.today()
+        CF.enrich(doc, [r["uk"]], today, research=lambda name: research(name, "CVR"))
+        rec = (doc.get("financials") or {}).get(r["uk"]) or {}
+        if not rec.get("summary"):
+            print("   [financials] none: %s" % str(rec.get("error") or "no record")[:110])
+        return rec.get("summary") or ""
+    except Exception as e:
+        print(f"   [financials] skipped ({str(e)[:80]})"); return ""
+
 # ── brand capture (BRAND-DECIDES-RESEARCH-001) ─────────────────────
 # The brand is colours AND company SPIRIT + VALUES, collected as RESEARCH in the
 # SAME site-crawl as the colour exploration. brand_fit.capture_brand drives the
@@ -1053,6 +1070,12 @@ def cmd_run(args):
         r["language"] = language   # BRAND-CANONICAL-SITE-CCTLD-001: seeds the ccTLD hints
         rsch = research(r["company"], r["role"]) if getattr(args, "research", True) else ""
         if rsch: print("   research: %d findings" % len(rsch.splitlines()))
+        # COMPANY-FINANCIALS-001: the employer's last annual report (Virk open data,
+        # the figures Proff shows) joins the employer research the prompt sees.
+        fin = employer_financials(doc, r) if getattr(args, "research", True) else ""
+        if fin:
+            rsch = (rsch + "\n" if rsch else "") + "- Company financials: " + fin
+            print("   financials: " + fin[:110])
         # CATEGORY-RECALL-001: category is decided BEFORE the plan is built so
         # the newest same-category saved application can ride along as a
         # subordinate tone/altitude reference (never a source of facts).
@@ -1157,6 +1180,12 @@ def cmd_run(args):
             chk = run_course_checklist(args.out, r, cvs, kernel, pages, scope)
             if chk:
                 entry["checklist"] = {"summary": chk["summary"], "md": chk["md"], "json": chk["json"]}
+        # TEXT-GUARDS-001: fact guard + echo check over every generated section,
+        # unless --no-guards. Advisory: the report lists what to confirm; nothing blocks.
+        if getattr(args, "guards", True) and not args.dry:
+            gd = run_text_guards(args.out, r, res, kernel)
+            if gd:
+                entry["guards"] = gd
     if not args.row:
         print_unqueued_summary(doc)
         print_armed_summary(doc)  # JT-ARMED-ARTIFACT-NO-DRAIN-001
@@ -1167,6 +1196,8 @@ def cmd_run(args):
     for e in results_index:
         if e.get("checklist"):
             print(f"   {e['uk']}: {e['checklist']['summary']}")
+        if e.get("guards"):
+            print(f"   {e['uk']}: {e['guards']['summary']}")
     if args.persist:
         # re-fetch + writeback the doc rev-safe (artifacts were mutated in place)
         rev2, cur = get_doc()
@@ -1175,6 +1206,8 @@ def cmd_run(args):
         # BRAND-DECIDES-RESEARCH-001: persist per-position brand records too.
         if doc.get("brand"):
             cur["brand"] = {**(cur.get("brand") or {}), **(doc.get("brand") or {})}
+        if doc.get("financials"):                      # COMPANY-FINANCIALS-001
+            cur["financials"] = {**(cur.get("financials") or {}), **(doc.get("financials") or {})}
         c, b = put_doc(cur, rev2)
         print(f"doc writeback: {c} rev={b.get('rev')}")
         # restore the user's active-application pointer (see ACTIVE-POINTER-GUARD-001)
@@ -2725,6 +2758,36 @@ def run_course_checklist(out_dir, r, cv_sections, kernel=None, pages=None, scope
         print(f"   [checklist] {rep['summary']} -> {rep['md']}")
     return rep
 
+def run_text_guards(out_dir, r, res, kernel=None):
+    """TEXT-GUARDS-001 (from ai-job-search PRs #783 / #807, 2026-11-05). Tier-0 fact guard
+    (figures, credentials, names vs the kernel; the JD never grounds a figure) and echo
+    check (lifts from the JD) over the generated cv_* and cl_* sections. Writes
+    guards_<uk>.json beside the review bundle. Never raises."""
+    try:
+        import echo_check as EC
+        import fact_guard as FG
+        import guard_common as GC
+        ktext = "\n".join(GC.flatten(kernel or {}))
+        jd = r.get("jd") or ""
+        found = []
+        for sid, s in (res.get("sections") or {}).items():
+            text = sanitize_text(s.get("result") or "")
+            if not text.strip() or not (sid.startswith("cv_") or sid.startswith("cl_")):
+                continue
+            for f in FG.check(text, ktext, jd):
+                found.append(dict(f, section=sid, check="fact"))
+            for f in EC.check(text, jd, keywords=[str(r.get("company") or ""), str(r.get("role") or "")]):
+                found.append(dict(f, section=sid, check="echo"))
+        path = os.path.join(out_dir, f"guards_{r['uk']}.json")
+        json.dump(found, open(path, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        nf = sum(1 for f in found if f["severity"] == "FAIL")
+        nw = len(found) - nf
+        summary = f"guards: {nf} to confirm, {nw} to glance at" if found else "guards: clean"
+        print(f"   [guards] {summary} -> {path}")
+        return {"summary": summary, "json": path, "fail": nf, "warn": nw}
+    except Exception as e:
+        print(f"   [guards] skipped ({str(e)[:80]})"); return None
+
 def main():
     # JT-STDOUT-ENCODING-001: the nightly reads this through a pipe, which on
     # Windows defaults to cp1252; a Danish company then arrives mangled and a
@@ -2752,6 +2815,7 @@ def main():
         p.add_argument("--no-research", dest="research", action="store_false", help="skip Google-CSE employer research")
         p.add_argument("--no-brand", dest="brand", action="store_false", help="skip the brand-decides site-crawl (colours + spirit/values/tone)")
         p.add_argument("--no-checklist", dest="checklist", action="store_false", help="skip The Checklist (course CV checklist, compendium p 22); it runs by default")
+        p.add_argument("--no-guards", dest="guards", action="store_false", help="skip the fact guard + echo check (TEXT-GUARDS-001); they run by default")
     sub.add_parser("health", help="check every artifacts[uk].application_id resolves to a live cloud app")
     args = ap.parse_args()
     if args.cmd == "list": cmd_list(args)

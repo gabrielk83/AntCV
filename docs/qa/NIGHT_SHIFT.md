@@ -40,7 +40,6 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mupev15f_bqmz","started":"2026-10-01T10:48:17.049Z","host":"vm","worktree":null,"branch":"claude/project-thread-cub2nb","range":"1.51.4786-1.51.4790","task":"impact types in result bullets (thread cub2nb)","beat":"2026-10-01T10:48:17.054Z"}
 {"id":"sh_mw3gm2iw_3b14","started":"2026-11-05T11:25:47.004Z","host":"Gabo-PC","worktree":"gracious-goldwasser-ac89f6","branch":"claude/musing-euler-71ad39","range":"1.51.5565-1.51.5584","task":"NO-ORPHAN-002 CL + marker rows + bullets, label reword, body width, LO audit","beat":"2026-11-05T11:25:47.060Z"}
 {"id":"sh_mw3hc4ea_ack7","started":"2026-11-05T11:46:02.470Z","host":"Gabo-PC","worktree":"quirky-hopper-4727c2","branch":"claude/dazzling-haibt-b87ec5","range":"1.51.5605-1.51.5624","task":"EXP-ROLE-KEY-001: experience role 0 whole-moved to page 2 (coordinator part keys)","beat":"2026-11-05T11:46:02.526Z"}
-{"id":"sh_mw3hhbph_gra6","started":"2026-11-05T11:50:05.235Z","host":"Gabo-PC","worktree":"recursing-meninsky-073b65","branch":"claude/relaxed-joliot-5b27fd","range":"1.51.5645-1.51.5664","task":"CPH-FIT-SOURCE-KEY-001: the band fit pass reads the canonical fontSizes key like the emission","beat":"2026-11-05T11:50:05.292Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

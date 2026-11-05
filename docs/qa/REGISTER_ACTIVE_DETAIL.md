@@ -405,7 +405,9 @@ _E1 sweep 2026-09-08 (CI nightly): phase 1 (`antcv-cl-slogan-element.js`) confir
 
 ## Row 33 — WHY-RULE-EXPORT-PARITY-001
 
-_verified: 2026-10-20_
+_verified: 2026-11-05_
+
+_reconcile 2026-11-05 (desktop nightly, E1, HEAD `9c8f1980`): `antcv:nameLineAlign` ×2 + `headline_align` in docx-client, `headlineAlign` ×3 in docx-worker (live `1.14.176-slogan-case`); `export-align-parity` green in the 1915 suite. Blocked: owner signed-in export eyeball._
 
 _E1 re-verify 2026-10-20 (CI nightly, HEAD 69824677): `antcv:nameLineAlign` + `headline_align`/`headlineAlign` markers still intact in `antcv-docx-client.js` and `docx-worker/src/index.js`; `export-align-parity.test.mjs` GREEN (full suite 1837/1837). CODE-COMPLETE — only remaining step is a signed-in export eyeball; **recommended to owner for CLOSED**._
 
@@ -433,7 +435,9 @@ _E1 sweep 2026-09-08 (CI nightly): all three legs confirmed in CURRENT code — 
 
 ## Row 24 — ANALYTICS-BUTTONS-SESSION-TIMEOUT-001
 
-_verified: 2026-10-20_
+_verified: 2026-11-05_
+
+_reconcile 2026-11-05 (desktop nightly, E1, HEAD `9c8f1980`): `auth-401-wipe-scope.test.mjs` green; relay `/health` 200 `auth-38-subtitle-guard-qual-put`. Blocked: owner click-through of the three Analytics buttons (slow export tracked in row 130)._
 
 _Desktop live click-through 2026-10-20 (Gabo-PC, saved owner token, new `pwa/test/diag-analytics-buttons-live.mjs`, GETs only): the session-wipe bug is GONE — token survives every click, no "session expired" alert, no reboot into the sign-in gate, "View summary" 200 in 0.8 s with the summary alert. The two EXPORT buttons do not complete: Export JSON hung, then `net::ERR_CONNECTION_RESET`; the buttons stay busy meanwhile, so CSV/summary clicks queue behind it. curl with the same token: export JSON 200 in 36 s at 07:24Z, 200 in 383 s at ~07:40Z. That is a separate defect, filed as row 130 (ANALYTICS-EXPORT-SLOW-001). This row stays ACTIVE until row 130 lands and the owner presses the three buttons once._
 
@@ -463,7 +467,9 @@ _E1 sweep 2026-09-08 (CI nightly): client 401-wipe scope guard (`auth-401-wipe-s
 
 ## Row 26 — TOOLS-SIDEBAR-COMPRESS-001
 
-_verified: 2026-10-20_
+_verified: 2026-11-05_
+
+_reconcile 2026-11-05 (desktop nightly, E1, HEAD `9c8f1980`): `antcv-sidebar-compact-001.js` loaded once in index.html, `sidebar-compact.test.mjs` green. Blocked: owner visual on an unsolicited export sidebar._
 
 _Desktop live leg 2026-10-20 (Gabo-PC): `antcv-sidebar-compact-001.js` served byte-identical to the repo (CR-stripped md5) at sw `1.51.5074-settings-route-fallback`. Residual gate unchanged._
 
@@ -493,7 +499,9 @@ _E1 sweep 2026-09-08 (CI nightly): belt present in CURRENT code — `antcv-sideb
 
 ## Row 30 — LLM-IMAGE-ROUTING-001
 
-_verified: 2026-10-20_
+_verified: 2026-11-05_
+
+_reconcile 2026-11-05 (desktop nightly, E1, HEAD `9c8f1980`): `VISION_BLIND` ×3 in both `workers/proxy` and `workers/demo-proxy` `multi-llm.js`, `image-routing-ee.test.mjs` green. Code-complete; owner close call._
 
 _E1 re-verify 2026-10-20 (CI nightly, HEAD 69824677): `VISION_BLIND`/`messagesHaveImages`/`filterVisionBlind` still intact in BOTH `workers/proxy/src/multi-llm.js` and `workers/demo-proxy/src/multi-llm.js`; `image-routing-ee.test.mjs` GREEN (full suite 1837/1837). Both proxies carry the filter; the only remainder is the explicitly-optional adequacy-gate extension to vision calls → CODE-COMPLETE, **recommended to owner for CLOSED**._
 
@@ -521,7 +529,9 @@ _E1 sweep 2026-09-08 (CI nightly): all legs confirmed in CURRENT code — `filte
 
 ## Row 32 — CL-PLATFORM-SIGNALS-001
 
-_verified: 2026-10-20_
+_verified: 2026-11-05_
+
+_reconcile 2026-11-05 (desktop nightly, E1, HEAD `9c8f1980`): `__platformRule` ×2 in app.src.js, `__pr` in app.js, `cl-platform-signals.test.mjs` green. Owner close call (no real gen this run)._
 
 _E1 re-verify 2026-10-20 (CI nightly, HEAD 69824677): `__platformRule` detector + injection still intact in `app.src.js` / minified `__pr` in `app.js` (both-bundle mirror); `cl-platform-signals.test.mjs` GREEN (full suite 1837/1837). Rule wired in both bundles; regen-gated — needs a signed-in platform-class JD gen to eyeball the CL tone (owner, non-code)._
 
@@ -2817,6 +2827,8 @@ _verified: 2026-11-02_
 
 _verified: 2026-11-05_
 
+_SHIPPED 2026-11-05 (desktop nightly, `1.51.5322-ec-no-derive`, commit `9c8f1980`): one guard in `applyOutcomesMode` before `deriveResultFromRole`: id `earlier-career` keeps every line as a bullet, no Results line; tiers 1-4 unchanged. New `unit/earlier-career-no-derive.test.mjs` (5 checks, red pre-fix on the earlier-career check; an ordinary role still derives). Suite 1915/1915, results parity diag OK; live sw.js CACHE + docx-client ?v = repo, served docx-client sha256 = repo. REMAINING: owner eyeball on a real export with an Earlier career block (app 3527 after regen), then CLOSE._
+
 **Found by the job-tracker nightly 2026-11-05 (Gabo-PC, Opus 5.5)** while closing row 139. With the duplicate summary line gone, the headless payload build for app 3527's context still gives the Earlier career role a "Results:" line: "Students Council Representative, Tel Aviv University (2005 - 2007) - Modernised 15 outdated EE exam-preparation booklets." The line is moved out of the bullets, not duplicated.
 
 **Cause.** `pwa/antcv-docx-client.js` `applyOutcomesMode`: Earlier career has no `results`, no outcomes, no proof points and no kernel role with its id, so it falls to the tier-5 `deriveResultFromRole`. `hasNum = /\d|%|\bx\b|×/` matches the years in every summary line, so each line scores as a metric and the longest wins.
@@ -2827,7 +2839,9 @@ _verified: 2026-11-05_
 
 ## Row 136 — CI-NIGHTLY-CREDIT-EXHAUSTED-001
 
-_verified: 2026-11-02_
+_verified: 2026-11-05_
+
+_re-verified 2026-11-05 (desktop nightly): still failing 11-03 (`41611776624`) and 11-04 (`41805475423`); the 11-04 artifact ends `Credit balance is too low`, `terminal_reason: api_error`. 7 days down. Owner: top up or rotate the key._
 
 **Found by the desktop nightly 2026-11-02 (Gabo-PC, Opus 5.5).** The GitHub Actions nightly (`.github/workflows/nightly.yml`, `anthropics/claude-code-action`, `--model claude-opus-4-8`) has failed every day since 2026-10-29. Last green run: 2026-10-28 (`40657423612`).
 

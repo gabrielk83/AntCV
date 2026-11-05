@@ -39,6 +39,7 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 <!-- SHIFT:BEGIN — one JSON object per line; managed by scripts/shift.mjs, safe to hand-edit a line if a session died without releasing -->
 {"id":"sh_mupev15f_bqmz","started":"2026-10-01T10:48:17.049Z","host":"vm","worktree":null,"branch":"claude/project-thread-cub2nb","range":"1.51.4786-1.51.4790","task":"impact types in result bullets (thread cub2nb)","beat":"2026-10-01T10:48:17.054Z"}
 {"id":"sh_mw3g7nvq_ka18","started":"2026-11-05T11:14:34.837Z","host":"Gabo-PC","worktree":"gracious-goldwasser-ac89f6","branch":"claude/musing-euler-71ad39","range":"1.51.5505-1.51.5524","task":"NO-ORPHAN-001 table cells in export preflight (re-claim above 1.51.5485)","beat":"2026-11-05T11:14:34.893Z"}
+{"id":"sh_mw3g9785_if6o","started":"2026-11-05T11:15:46.573Z","host":"Gabo-PC","worktree":"recursing-meninsky-073b65","branch":"claude/relaxed-joliot-5b27fd","range":"1.51.5525-1.51.5544","task":"TH-OVERRIDE-STALE-001: table-headers-editable-341 stale override beats the canonical header (DA header flicker)","beat":"2026-11-05T11:15:46.639Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

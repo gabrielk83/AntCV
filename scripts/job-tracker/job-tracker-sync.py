@@ -246,9 +246,11 @@ def cmd_pull(render=False, force=False):
 # role intel, the owner's typed signals and the generation state - i.e. most of
 # the doc's value - and until 2026-08-20 the sync merged NONE of them
 # (JOBTRACKER-PULL-CLOBBERS-LOCAL-SUPPORT-001).
+# OUTCOME-RECORD-001: history / followups / financials are uk-keyed too. Outside this
+# list a top-level key is taken from LOCAL only, so a pull-then-push would drop them.
 UK_DICT_FIELDS = ("urls", "jd", "support", "signals", "notes", "webintel", "gen",
                   "queue", "brandfit", "brand", "artifacts", "sigfiles", "pin",
-                  "park", "discovered")
+                  "park", "discovered", "history", "followups", "financials")
 
 def _merge_uk_dict(base, local, remote, field):
     """Per-KEY 3-way for one uk-keyed dict. Union of both sides - a key present

@@ -88,10 +88,29 @@ def test_push_409_merge_keeps_cloud_only_entries():
     print("PASS: a 409 push merge no longer drops cloud-only entries either.")
 
 
+def test_outcome_maps_survive_a_merge():
+    # OUTCOME-RECORD-001: history / followups / financials are written to the cloud
+    # by the PWA and the scripts. Outside UK_DICT_FIELDS a top-level key came from
+    # LOCAL only, so a pull-then-push would have dropped all three.
+    base = {"rows": [_row("a")]}
+    local = {"rows": [_row("a")], "history": {"b": [{"status": "Submitted", "date": "2026-11-01"}]}}
+    cloud = {"rows": [_row("a")],
+             "history": {"a": [{"status": "Interview", "date": "2026-11-04", "stage": "1st"}]},
+             "followups": {"a": {"submitted": "2026-10-20", "submitted_source": "owner", "sent": []}},
+             "financials": {"a": {"summary": "Acme annual report: revenue DKK 1.0m."}}}
+    merged, conflicts = S._merge(base, local, cloud)
+    assert set(merged["history"]) == {"a", "b"}, merged["history"]
+    assert merged["followups"] == cloud["followups"], merged.get("followups")
+    assert merged["financials"] == cloud["financials"], merged.get("financials")
+    assert not conflicts, conflicts
+    print("PASS: history / followups / financials survive a merge.")
+
+
 if __name__ == "__main__":
     test_pull_keeps_local_only_entries()
     test_pull_conflict_prefers_local_and_reports()
     test_pull_force_overwrites()
     test_push_409_merge_keeps_cloud_only_entries()
-    print("\nOK - 4/4")
+    test_outcome_maps_survive_a_merge()
+    print("\nOK - 5/5")
     sys.exit(0)

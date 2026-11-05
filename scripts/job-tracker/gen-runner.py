@@ -346,10 +346,11 @@ def is_closed_row(row):
     Closed = the D9D9D9 Archive band, an archived/rejected/withdrawn tracked
     status, or a "Dropped (...)" flag. Keep the three clauses in step with the
     island's - the JD list hides exactly these rows, and the nightly must not
-    generate for anything the owner can no longer see."""
+    generate for anything the owner can no longer see. OUTCOME-RECORD-001: the
+    terminal outcomes Offer declined / No response / Hired are closed too."""
     import re as _re
     return (str(row[12] if len(row) > 12 else "").upper() == "D9D9D9"
-            or bool(_re.search(r"rejected|archive|closed|withdrawn",
+            or bool(_re.search(r"rejected|archive|closed|withdrawn|declined|no response|hired",
                                str(row[8] if len(row) > 8 else ""), _re.I))
             or bool(_re.match(r"^\s*dropped\b",
                               str(row[10] if len(row) > 10 else ""), _re.I)))

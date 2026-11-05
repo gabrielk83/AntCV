@@ -39,7 +39,6 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 <!-- SHIFT:BEGIN — one JSON object per line; managed by scripts/shift.mjs, safe to hand-edit a line if a session died without releasing -->
 {"id":"sh_mupev15f_bqmz","started":"2026-10-01T10:48:17.049Z","host":"vm","worktree":null,"branch":"claude/project-thread-cub2nb","range":"1.51.4786-1.51.4790","task":"impact types in result bullets (thread cub2nb)","beat":"2026-10-01T10:48:17.054Z"}
 {"id":"sh_mw3hijam_7jnk","started":"2026-11-05T11:51:01.722Z","host":"Gabo-PC","worktree":"ecstatic-heisenberg-9cfa6d","branch":"claude/ecstatic-heisenberg-9cfa6d","range":"1.51.5665-1.51.5684","task":"MARGIN-LAYOUT-001: header card inside the sidebar (house margin format), no band","beat":"2026-11-05T11:51:01.779Z"}
-{"id":"sh_mw3jg2bf_3jzt","started":"2026-11-05T12:45:05.642Z","host":"Gabo-PC","worktree":"vigorous-grothendieck-5da792","branch":"claude/magical-chebyshev-aed5df","range":"1.51.5905-1.51.5924","task":"PROOF-POINTS-LANG-001b: progress banner names the target under antcv-language-ui-fixes-292 too","beat":"2026-11-05T12:45:05.690Z"}
 {"id":"sh_mw3jvic6_gxki","started":"2026-11-05T12:57:06.233Z","host":"Gabo-PC","worktree":"goofy-bhabha-200d8c","branch":"claude/goofy-bhabha-200d8c","range":"1.51.5945-1.51.5964","task":"QA-EMDASH-LOOP-001: application-qa vs emdash-hyphen sections-updated storm (settings blips)","beat":"2026-11-05T12:57:06.273Z"}
 <!-- SHIFT:END -->
 

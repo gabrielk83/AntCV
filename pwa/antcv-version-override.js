@@ -58,11 +58,14 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.5364-outcome-shape';
+  const TARGET_VERSION = '1.51.5425-gdpr-rights';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.5385-gdpr-rights',
+    '1.51.5364-outcome-shape',
+    '1.51.5382-gdpr-rights',
     '1.51.5363-submitted-version',
     '1.51.5362-status-history',
     '1.51.5342-outcome-record',
@@ -182,7 +185,6 @@
     '1.51.3141-band-gap',
     '1.51.3121-header-defects',
     '1.51.3101-copenhagen-mockup-parity',
-    '1.51.3081-queued-filter',
     '1.51.3061-copenhagen-stage3',
     '1.51.3041-copenhagen-table',
     '1.51.3040-app-rev-guard',
@@ -283,7 +285,6 @@
     '1.51.1224-headline-cjlr2',
     '1.51.1204-cjlr-rerender',
     '1.51.1185-headline-cjlr2',
-    '1.51.1184-headline-cjlr',
     '1.51.1184-headline-cjlr',
     '1.51.1164-slogan-ctl',
     '1.51.1144-slogan-enhance',
@@ -426,7 +427,6 @@
     '1.51.329-f5-fresh',
     '1.51.326-babel-view-gate',
     '1.51.327-hardreset-local',
-    '1.51.326-babel-view-gate',
     '1.51.325-babel-headless',
     '1.51.324-babel-invariant',
     '1.51.323-babel-cloud-cache',

@@ -1,4 +1,5 @@
 import { insertLlmCall, aggregateHealth, getLatestHealth, pruneOld, insertQualitySignal } from './telemetry.js';
+import { collectUserRows, buildExport } from './gdpr-user-data.js';
 import { rowWriteMismatch } from './row-write-guard.js';
 
 const VERSION='1.3.14';
@@ -1931,6 +1932,34 @@ async function handleApiPrefsRenew(request, env) {
   } catch (e) {
     return jsonResponse({ error: 'renew_failed', message: String(e && e.message || e) }, 500, request, env, refresh);
   }
+}
+
+// GDPR-RIGHTS-001 (owner 2026-10-23): GET /api/prefs/export.
+// The PWA's "Download my data" covers the browser's localStorage only. This is
+// the server half: the KV prefs record (API key values masked) plus every D1 row
+// keyed by the user's hash (src/gdpr-user-data.js USER_TABLES), the retention
+// status and the recipients list, as one JSON attachment. Read-only.
+async function handleApiPrefsExport(request, env) {
+  const id = await identityFromRequest(request, env);
+  if (!id) return jsonResponse({ error: 'unauthenticated', hint: 'Sign in first.' }, 401, request, env);
+  if (request.method !== 'GET') return jsonResponse({ error: 'method_not_allowed' }, 405, request, env);
+  const kv = env.KV_BINDING || env.ANALYTICS || null;
+  const refresh = await maybeRefreshHeader(env, id);
+  const userHash = await userHashFromEmail(id.email);
+  let kvPrefs = {};
+  if (kv) {
+    try {
+      const raw = await kv.get(await userScopedKeyHashed('prefs2', id.email));
+      kvPrefs = raw ? (JSON.parse(raw) || {}) : {};
+    } catch (_) { kvPrefs = {}; }
+  }
+  const rows = hasD1(env) ? await collectUserRows(env.DB, userHash) : {};
+  const body = buildExport({ email: id.email, kvPrefs, rows, retention: computeRetentionStatus(kvPrefs, env) });
+  return jsonResponse(body, 200, request, env, {
+    ...(refresh || {}),
+    'Content-Disposition': 'attachment; filename="antcv-my-data-' + body.exported_at.slice(0, 10) + '.json"',
+    'Cache-Control': 'no-store',
+  });
 }
 
 // GEN-CONTAMINATION-001 (owner 2026-06-23): POST /api/prefs/wipe-generated.
@@ -5543,6 +5572,11 @@ const method = request.method;
   // Keeps the kernel + the saved-application rows. Quick gen does NOT call this.
   if (path === '/api/prefs/wipe-generated') {
     return handleApiPrefsWipeGenerated(request, env);
+  }
+  // GDPR-RIGHTS-001 (owner 2026-10-23): GET /api/prefs/export — a copy of
+  // every row the relay holds for the signed-in user (GDPR Art. 15 and 20).
+  if (path === '/api/prefs/export') {
+    return handleApiPrefsExport(request, env);
   }
   if (path === '/api/prefs')          return handleApiPrefs(request, env);
   if (path === '/api/export-key')     return handleApiExportKey(request, env);

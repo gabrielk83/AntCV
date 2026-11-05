@@ -2914,7 +2914,12 @@ function normalizeSections(raw) {
         // item→role via the adapter's item._key ('roles.R') mapping, else no role.page is
         // set and the export loses every role split + "(Cont.)" heading and collapses the
         // two columns into a sequential multi-page PDF. No-op (returns autoR) when off.
-        if (autoR && window.AntcvRolesRichBlock && typeof window.AntcvRolesRichBlock.isOn === 'function'
+        // EXP-ROLE-KEY-001 (2026-11-05): the measurer keys experience by ROLE index again and stamps
+        // antcv:autoPagesExpKeys = 'role' with the maps; translating such a map would read role 1 as
+        // item 1 (role 0's first bullet). Translate only maps written without the stamp (legacy).
+        let __expKeysRole = false;
+        try { __expKeysRole = localStorage.getItem('antcv:autoPagesExpKeys') === 'role'; } catch (_) {}
+        if (autoR && !__expKeysRole && window.AntcvRolesRichBlock && typeof window.AntcvRolesRichBlock.isOn === 'function'
             && window.AntcvRolesRichBlock.isOn()
             && typeof window.AntcvRolesRichBlock.itemAutoPagesToRoleAutoPages === 'function') {
           autoR = window.AntcvRolesRichBlock.itemAutoPagesToRoleAutoPages(s, autoR);

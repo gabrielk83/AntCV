@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.5645-fit-source-key';
+const CACHE = 'antcv-1.51.5705-exp-role-key';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

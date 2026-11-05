@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.51.4726-linear-keys';
+  var VERSION = '1.51.5705-exp-role-key';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -861,6 +861,34 @@
     // maps every recheck. In Linear, a part's DOM key is shifted by its first ORIGINAL item index,
     // rebuilt with the render's own grouping (itemPages + the auto map, runs never go back a page).
     var __linearKeys = __isLinearLayout();
+    // EXP-ROLE-KEY-001 (owner 2026-11-05 "experience whole-moved to page 2, 520 px free on page 1"):
+    // since the roles cutover (ROLES-AS-RICHBLOCK-001) every experience ROW carries
+    // data-antcv-row-path "items.N", and a role on page 2+ renders as its OWN part whose rows restart
+    // at items.0. Read as plain item keys, the per-role parts collided (one "0" per role), the
+    // coordinator sorted them first and emitted {"0":2} - which the preview reads as ROLE 0 - so the
+    // whole section left page 1 and the map re-derived the same way on every pass. Collect experience
+    // as ROLE units instead (head row to its last row, atomic: a role never splits, ROLE-ORPHAN-PAGE1-001
+    // holds), keyed by the role's ORIGINAL index in sec.roles via the adapter's own flattening (same
+    // drop rules as the render), in DOM order across the page boxes. The preview's role.page floor and
+    // the export both read role keys; the export's item->role translation is switched off by the stamp
+    // written with the maps (antcv:autoPagesExpKeys = 'role').
+    var __expRoleRi = null, __expSid = null, __expHeadOrd = 0;
+    try {
+      var __expS = null;
+      for (var __ei = 0; __ei < list.length; __ei++) { if (list[__ei] && list[__ei].type === 'experience') { __expS = list[__ei]; break; } }
+      if (__expS && __expS.id && Array.isArray(__expS.roles) && window.AntcvRolesRichBlock
+          && typeof window.AntcvRolesRichBlock.isOn === 'function' && window.AntcvRolesRichBlock.isOn()
+          && typeof window.AntcvRolesRichBlock.adapt === 'function') {
+        var __ad = window.AntcvRolesRichBlock.adapt(__expS);
+        var __adItems = __ad && Array.isArray(__ad.items) ? __ad.items : [];
+        var __ris = [];
+        for (var __ai = 0; __ai < __adItems.length; __ai++) {
+          if (__adItems[__ai] && __adItems[__ai].roleHead && typeof __adItems[__ai]._ri === 'number') __ris.push(__adItems[__ai]._ri);
+        }
+        if (__ris.length) { __expRoleRi = __ris; __expSid = __expS.id; }
+      }
+    } catch (_) { __expRoleRi = null; __expSid = null; }
+    __expKeysRole = !!__expSid;
     var __partOrd = typeof Map === 'function' ? new Map() : null, __partCnt = {}, __partStartsCache = {};
     function __partStarts(sid) {
       if (__partStartsCache[sid]) return __partStartsCache[sid];
@@ -1016,6 +1044,7 @@
             var __rSidEl = __rEl.closest ? __rEl.closest('[data-sid]') : null;
             var __rc = __rEl.getBoundingClientRect();
             var __rSid = __rSidEl ? __rSidEl.getAttribute('data-sid') : null;
+            if (__expSid && __rSid === __expSid) continue;   // EXP-ROLE-KEY-001: collected as role units below
             __uniBucket.push({
               sid: __rSid,
               kind: 'item', key: isMainCol ? __origKey(__rSidEl, __rSid, __rm[1]) : __rm[1],
@@ -1029,7 +1058,7 @@
             });
           }
           var __roleEls2 = col.querySelectorAll('[data-antcv-role-index]');
-          for (var __qi = 0; __qi < __roleEls2.length; __qi++) {
+          for (var __qi = 0; !__expSid && __qi < __roleEls2.length; __qi++) {   // EXP-ROLE-KEY-001: role units below instead
             var __qEl = __roleEls2[__qi];
             if (!visible(__qEl)) continue;
             var __qSidEl = __qEl.closest ? __qEl.closest('[data-sid]') : null;
@@ -1041,6 +1070,31 @@
               top: (__qc.top - colTop) / scale,
               bottom: (__qc.bottom - colTop) / scale,
             });
+          }
+          // EXP-ROLE-KEY-001: experience ROLE units - a head row (data-antcv-role-head) plus every
+          // row under it until the next head, in one part. Key = the ORIGINAL role index.
+          if (__expSid && isMainCol) {
+            var __expParts = col.querySelectorAll('[data-sid]');
+            for (var __pi = 0; __pi < __expParts.length; __pi++) {
+              if (__expParts[__pi].getAttribute('data-sid') !== __expSid) continue;
+              var __pRows = __expParts[__pi].querySelectorAll('[' + ITEM_PATH_ATTR + '^="items."]');
+              var __unit = null;
+              for (var __xi = 0; __xi < __pRows.length; __xi++) {
+                var __xEl = __pRows[__xi];
+                if (!visible(__xEl)) continue;
+                var __xc = __xEl.getBoundingClientRect();
+                if (__xEl.hasAttribute('data-antcv-role-head')) {
+                  var __ri2 = __expRoleRi[__expHeadOrd++];
+                  __unit = (typeof __ri2 === 'number')
+                    ? { sid: __expSid, kind: 'item', key: String(__ri2), grpHead: false, col: c,
+                        top: (__xc.top - colTop) / scale, bottom: (__xc.bottom - colTop) / scale }
+                    : null;
+                  if (__unit) __uniBucket.push(__unit);
+                  continue;
+                }
+                if (__unit) __unit.bottom = Math.max(__unit.bottom, (__xc.bottom - colTop) / scale);
+              }
+            }
           }
           // DET-COORD-003 (owner 2026-06-25): TABLE sections (CORE COMPETENCIES) carry real
           // height but had NO row-path / role blocks, so the coordinator under-counted the main
@@ -1325,6 +1379,29 @@
           __sPaged = __uniPaginate(__uniBlocks.sidebar, __sbBand1, SIDEBAR_PREVIEW_INFLATE, KEEP_WHOLE_FRAC);
         }
         var __mPaged = __uniPaginate(__uniBlocks.main, PAGE1_BAND, 1, 1, __uniLimit + MAIN_PDF_LINE_BONUS, Math.max(400, __uniLimit - MAIN_PAGE_N_BAND));
+        // EXP-ROLE-KEY-001 debug (localStorage antcv:flg-debug=1): the main column's page-1 budget, the fill
+        // before the first role, and every role unit's span, the fill when it was placed, and its page.
+        try {
+          if (__expSid && localStorage.getItem('antcv:flg-debug') === '1') {
+            var __dCap = Math.max(300, __uniLimit + MAIN_PDF_LINE_BONUS - PAGE1_BAND), __dNCap = Math.max(400, __uniLimit - MAIN_PAGE_N_BAND);
+            var __dUsed = 0, __dRoles = [], __dBefore = null, __dPage = 1, __dPageUsed = 0;
+            var __dH = {}; __uniBlocks.main.forEach(function (b) { __dH[b.sid + '|' + b.kind + '|' + b.key] = b.__h; });
+            for (var __di = 0; __di < __mPaged.length; __di++) {
+              var __db = __mPaged[__di], __dh = __dH[__db.sid + '|' + __db.kind + '|' + __db.key] || 0;
+              var __dPrevCap = (__dPage === 1) ? __dCap : __dNCap;
+              if (__db.sid === __expSid) {
+                if (__dBefore == null) __dBefore = __dUsed;
+                __dRoles.push({ role: __db.key, h: Math.round(__dh), usedAt: Math.round(__dPageUsed), page: __db.page,
+                  rule: __db.page === __dPage ? 'fits' : ((__dPageUsed + __dh) > __dPrevCap ? 'overflow' : 'keep-whole/orphan-guard') });
+              }
+              if (__db.page !== __dPage) { __dPage = __db.page; __dPageUsed = 0; }
+              __dPageUsed += __dh;
+              if (__db.page === 1) __dUsed += __dh;
+            }
+            console.log('[EXP]', { keys: 'role', p1Cap: Math.round(__dCap), p1UsedBeforeRoles: Math.round(__dBefore || 0),
+              p1FreeBeforeRoles: Math.round(__dCap - (__dBefore || 0)), p1Used: Math.round(__dUsed), roles: __dRoles });
+          }
+        } catch (_) {}
         // FORCE-LAST-GRP post-process (deterministic). For a BIG multi-group SIDEBAR section the
         // coordinator's internal break can land on the wrong group (it broke regulatory at the
         // Imaging group, but the owner has room for Imaging/Electrical on page 2 and wants ONLY
@@ -1536,7 +1613,9 @@
           if (!__uniSids[__ms]) continue;
           if (__reItem[__ms]) continue;
           var __mSec = sectionById(list, __ms);
-          if (__mSec && (__mSec.type === 'table' || __mSec.type === 'experience')) continue;
+          // EXP-ROLE-KEY-001: experience is coordinator-measured (role units) too, so a stale experience
+          // break the coordinator did not re-affirm clears like any other main section's.
+          if (__mSec && (__mSec.type === 'table' || (__mSec.type === 'experience' && __ms !== __expSid))) continue;
           delete map[__ms];
           delete __breakBornAt[bornKey(__ms)];
         }
@@ -1657,7 +1736,11 @@
   // EXPORT-PAGE-BUDGET-001: breaks are sticky, so the application already open on a device kept the plan made
   // with the old row-only budget. Drop both maps ONCE per budget revision; the next pass re-plans them
   // (opening another application already clears them - app.js __pgk).
-  var BUDGET_REV = '2026-10-01-span';
+  // EXP-ROLE-KEY-001: experience maps are keyed by ROLE index again; the stamp tells the export client
+  // not to translate them from item indices. Bumping the revision re-plans the open application's maps.
+  var EXP_KEYS_KEY = 'antcv:autoPagesExpKeys';
+  var __expKeysRole = false;
+  var BUDGET_REV = '2026-11-05-role-keys';
   try {
     if (localStorage.getItem('antcv:autoPagesRev') !== BUDGET_REV) {
       localStorage.removeItem(AUTO_KEY);
@@ -1842,6 +1925,7 @@
 
       if (exportChanged) { localStorage.setItem(AUTO_KEY, nextExport); lastWritten = nextExport; }
       if (previewChanged) { localStorage.setItem(PREVIEW_KEY, nextPreview); lastWrittenPreview = nextPreview; }
+      try { localStorage.setItem(EXP_KEYS_KEY, __expKeysRole ? 'role' : 'item'); } catch (_) {}   // EXP-ROLE-KEY-001
       cooldownUntil = now + 1500;   // 1.50.287: don't re-measure our own pagination for 1.5s
       __writtenPairs.push(__pair); if (__writtenPairs.length > 3) __writtenPairs.shift();
       try {

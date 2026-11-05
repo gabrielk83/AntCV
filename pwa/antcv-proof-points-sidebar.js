@@ -29,7 +29,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.5765-proof-points-edit-rule';
+  var VERSION = '1.51.5805-proof-points-bt';
   if (window.__antcvProofPoints === VERSION) return;
   window.__antcvProofPoints = VERSION;
 
@@ -268,7 +268,10 @@
   function texts(items) {
     return (Array.isArray(items) ? items : []).map(function (i) {
       if (!i || typeof i !== 'object') return String(i == null ? '' : i);
-      return (i.l != null || i.v != null) ? [String(i.l || ''), String(i.v || '')] : String(i.t || '');
+      // PROOF-POINTS-HOUSE-001c: antcv-labeled-list-to-rich-block-763 re-types the block to {b, t}; same owned text
+      if (i.l != null || i.v != null) return [String(i.l || ''), String(i.v || '')];
+      if (i.b != null) return [String(i.b || ''), String(i.t || '')];
+      return String(i.t || '');
     });
   }
   function hash(items) { return JSON.stringify(texts(items)); }

@@ -133,3 +133,12 @@ test('a hand-edited block is left alone', () => {
   const pp = JSON.parse(m.get('sections')).cv.find((s) => s.id === 'proof_points');
   assert.deepEqual(pp.items, [{ l: 'my own', v: 'hand-written caption' }]);
 });
+
+test('PROOF-POINTS-HOUSE-001c: the rich_block {b, t} re-typing by the 763 belt is not an edit', () => {
+  const { api } = load(base);
+  const auto = JSON.stringify([['250 \u2192 10 days', 'cut change-request cycle time at Innoviz'], ['10x', 'reduced product cost']]);
+  const retyped = { id: 'proof_points', type: 'rich_block', items: [{ b: '250 \u2192 10 days', t: 'cut change-request cycle time at Innoviz', bullets: [] }, { b: '10x', t: 'reduced product cost' }], _proofAuto: auto };
+  assert.equal(api.isEdited(retyped), false);
+  const changed = { id: 'proof_points', type: 'rich_block', items: [{ b: '250 \u2192 10 days', t: 'my own words' }, { b: '10x', t: 'reduced product cost' }], _proofAuto: auto };
+  assert.equal(api.isEdited(changed), true);
+});

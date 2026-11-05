@@ -5,7 +5,7 @@
 // Run: node --test scripts/tests/relay-cost-quality-tune.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { scoreRows, proposeRoles, summarizeClientDispatch, normProvider } from '../relay-cost-quality-tune.mjs';
+import { scoreRows, proposeRoles, summarizeClientDispatch, normProvider, assessCoverage } from '../relay-cost-quality-tune.mjs';
 
 // Health rows for the `writer` role (task 'gen'). health_score is the 0..1 quality composite.
 const R = (provider, o) => ({ provider, task: 'gen', call_count: 100, success_rate: 0.98, success_count: 98,
@@ -186,4 +186,30 @@ test('no-flip rationale still names the ADEQUACY floor when quality genuinely fa
   const w = rationale.find((r) => r.role === 'writer');
   assert.equal(w.decision, 'keep');
   assert.match(w.why, /adequacy floor/);
+});
+// RELAY-TUNE-BLIND-001: the tune must not turn "no telemetry reached the relay" into a quiet "keep".
+const NOW = 1793700000;                                   // 2026-11-03
+const SNAP = (ageMin, o) => ({ provider: 'mistral', task: 'gen', call_count: 40, window_minutes: 10080,
+  window_start: NOW - ageMin * 60 - 10080 * 60, ...o });   // snapshot time = window_start + window_minutes*60
+
+test('assessCoverage: no rows, or rows with zero calls, is blind', () => {
+  assert.equal(assessCoverage([], { nowSec: NOW }).state, 'blind');
+  assert.equal(assessCoverage(null, { nowSec: NOW }).state, 'blind');
+  assert.equal(assessCoverage([SNAP(5, { call_count: 0 })], { nowSec: NOW }).state, 'blind');
+});
+
+test('assessCoverage: the 2026-10-27 snapshot read on 2026-11-03 is stale, not "ok"', () => {
+  // the real shape: a 7-day snapshot stamped 2026-10-27 10:20Z, lingering after the data left the window
+  const tick = Date.UTC(2026, 9, 27, 10, 20, 2) / 1000;
+  const rows = [{ provider: 'openai', task: 'analyze_fit', call_count: 3, window_minutes: 10080, window_start: tick - 10080 * 60 }];
+  const c = assessCoverage(rows, { nowSec: Date.UTC(2026, 10, 3, 1, 40, 0) / 1000 });
+  assert.equal(c.state, 'stale');
+  assert.ok(c.snapshotAgeMin > 9000 && /days/.test(c.why));
+});
+
+test('assessCoverage: a fresh snapshot is ok, a fresh but tiny one is thin, and missing times skip the stale test', () => {
+  assert.equal(assessCoverage([SNAP(5)], { nowSec: NOW, minCalls: 20 }).state, 'ok');
+  assert.equal(assessCoverage([SNAP(5, { call_count: 6 })], { nowSec: NOW, minCalls: 20 }).state, 'thin');
+  assert.equal(assessCoverage([{ provider: 'mistral', task: 'gen', call_count: 40 }], { nowSec: NOW }).state, 'ok');
+  assert.equal(assessCoverage([SNAP(61)], { nowSec: NOW, staleMin: 60 }).state, 'stale');
 });

@@ -323,7 +323,10 @@ def row_uk(row):
 # DEADLINE-RELEVANCE-001: a row the owner is working on (drafted, packaged, outreach, submitted, interview)
 # is never archived by the stored-text deadline sweep; on 2026-11-01 Deloitte's deadline was the same day the
 # owner was finishing that application, and Hempel's had passed while the owner wrote to the hiring manager.
-_ENGAGED = re.compile(r"submitted|interview|drafted|applied|offer|rejected|outreach|package|\bcv\b|\bcl\b", re.I)
+# OUTCOME-RECORD-001: the outcome statuses (No response, Withdrawn, Offer declined, Hired) count too, like
+# rejected, so the sweep never overwrites a recorded outcome with "Archive / closed".
+_ENGAGED = re.compile(r"submitted|interview|drafted|applied|offer|rejected|declined|no response|withdrawn|hired"
+                      r"|outreach|package|\bcv\b|\bcl\b", re.I)
 
 
 def is_engaged(row):

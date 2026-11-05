@@ -14,11 +14,37 @@ type Row = unknown[];
 type Doc = { rows?: Row[]; envelope?: unknown; [k: string]: unknown };
 
 export const MERGE_MAPS = ['urls', 'jd', 'gen', 'queue', 'brandfit', 'brand', 'signals', 'sigfiles', 'support',
-  'webintel', 'scores', 'artifacts', 'discovered', 'pin', 'park'];
+  'webintel', 'scores', 'artifacts', 'discovered', 'pin', 'park', 'history', 'followups'];
 
 function same(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
+
+// OUTCOME-RECORD-001: history[uk] is a dated list and followups[uk] a record that
+// followups.py writes too, so where this session changed the key, merge INSIDE it:
+// a follow-up the script logged, or a status another tab dated, must survive.
+const list = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
+function mergeHistory(sv: unknown, lv: unknown, bv: unknown): unknown {
+  const l = list(lv);
+  const has = (xs: unknown[], e: unknown) => xs.some((x) => same(x, e));
+  const added = list(sv).filter((e) => !has(list(bv), e) && !has(l, e));
+  const date = (e: unknown) => String((e as { date?: unknown } | null)?.date ?? '');
+  return [...l, ...added].map((e, i) => ({ e, i }))
+    .sort((a, b) => (date(a.e) < date(b.e) ? -1 : date(a.e) > date(b.e) ? 1 : a.i - b.i)).map((x) => x.e);
+}
+function mergeFollowup(sv: unknown, lv: unknown, bv: unknown): unknown {
+  const rec = (v: unknown) => (v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {});
+  const s = rec(sv), l = rec(lv), b = rec(bv);
+  const out: Record<string, unknown> = { ...s };
+  for (const f of Object.keys(l)) {
+    if (same(l[f], b[f])) continue;
+    out[f] = Array.isArray(l[f]) && Array.isArray(s[f])
+      ? Array.from(new Set([...(s[f] as unknown[]), ...(l[f] as unknown[])].map(String))).sort()
+      : l[f];
+  }
+  return out;
+}
+const INNER: Record<string, (sv: unknown, lv: unknown, bv: unknown) => unknown> = { history: mergeHistory, followups: mergeFollowup };
 
 export function mergeDocs<T extends Doc>(server: T, local: T, base?: T | null): T {
   const out = { ...server } as T;
@@ -31,7 +57,8 @@ export function mergeDocs<T extends Doc>(server: T, local: T, base?: T | null): 
     const bv = rec(base, k) || {};
     const m: Record<string, unknown> = { ...(sv || {}) };
     for (const key of Object.keys(lv)) {
-      if (!base || !same(lv[key], bv[key])) m[key] = lv[key];
+      if (base && same(lv[key], bv[key])) continue;
+      m[key] = INNER[k] && sv && key in sv ? INNER[k](sv[key], lv[key], bv[key]) : lv[key];
     }
     (out as Doc)[k] = m;
   }

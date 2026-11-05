@@ -35,7 +35,7 @@ This classification rests on AntCV staying candidate-side. **Employer-facing sco
 |---|---|
 | Transparency (Art. 13, 52) | Every modification — LLM-source or user-source — is recorded in the `change_log` table with `source`, `actor_id`, `reason`, `confidence` (high/medium/low), and `risk` (invented/overstated/too-generic/none). User can view this per generation. |
 | Human oversight (Art. 14 principle) | All output is reviewed by the user in the AntCV editor before submission. No auto-send. JD Gap Closure flow puts the user in the loop explicitly when the system detects a gap. |
-| Data governance (Art. 10 principle) | Per-user data isolation via Cloudflare Access JWT. EU jurisdiction on D1. Retention controls (30/90/180/off). Wipe-my-analytics endpoint. |
+| Data governance (Art. 10 principle) | Per-user data isolation via Cloudflare Access JWT. EU jurisdiction on D1. Account-data retention 365 days with yearly renewal (owner 2026-11-05). Wipe-my-analytics endpoint. |
 | Documentation | The locked-source plan, this doc, the skill folder. Versioned in Git. |
 | Accuracy and robustness | Semantic Constraint Engine post-filter catches banned words, metric integrity violations, role-boundary violations. Two retry attempts before a `flagged: true` returns to the user. |
 
@@ -105,7 +105,7 @@ AntCV processes personal data (CVs are personal data per Art. 4(1)). User is dat
 | Art. 5(1)(a) Lawfulness, fairness, transparency | Privacy notice in onboarding wizard (planned — see Gaps); change log shows the user what AI did to their content. |
 | Art. 5(1)(b) Purpose limitation | Data collected for CV generation only. No secondary use. |
 | Art. 5(1)(c) Data minimisation | Section-level prompt assembly only sends the fields needed for that section. Profile-only regeneration does not transmit phone/address. |
-| Art. 5(1)(e) Storage limitation | Retention controls 30/90/180/off, default 90. Daily cron trims `change_log.before_text` and `after_text` past the threshold to first 40 chars plus length suffix. Aggregates retained. |
+| Art. 5(1)(e) Storage limitation | Account data: 365 days (owner 2026-11-05). `RETENTION_DAYS` default 365, reminder e-mail, `/api/prefs/renew` (`workers/access-relay`). Usage records: 90 days raw, 30 days health (`telemetry.js` `pruneOld`). The earlier "30/90/180/off, default 90" control was never in the code. Source of truth: `docs/compliance/EU_AI_ACT_GDPR.md`. |
 | Art. 6(1)(a) Consent | "Off" retention selection requires explicit modal confirmation with explanation of the privacy implications. |
 | Art. 13/14 Information to data subject | Privacy notice integrated into the onboarding wizard alongside the existing AI notice — single combined disclosure covering AI use, data storage, retention, and user rights. Settings → Privacy page documents what is stored, where, for how long. |
 | Art. 17 Right to erasure | "Wipe my analytics" button deletes all `events`, `change_log`, `outcomes`, `applications` rows and all `user:{uid}:*` KV keys for the requesting user. Global aggregates remain anonymised. |

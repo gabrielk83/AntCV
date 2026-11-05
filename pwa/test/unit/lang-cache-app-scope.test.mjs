@@ -37,8 +37,18 @@ test('the "Use cached" offer refuses an entry from another application', () => {
 });
 
 test('both application-switch twins scope the JD keys to the new app before the company stamp', () => {
-  const needleMin = 'try{window.AntcvJdScope&&window.AntcvJdScope.setCurrentAppId(String(e.id))}catch(_){}localStorage.setItem("antcv:activeAppCompany",String(n.jd_company||""))}catch(e){}})(),await vo.setActive(e.id),ts(e.id)';
+  const needleMin = 'try{window.AntcvJdScope&&window.AntcvJdScope.setCurrentAppId(String(e.id))}catch(_){}try{window.__antcvLoadJd&&window.__antcvLoadJd(n.jd_text,n.jd_company,n.jd_role)}catch(_){}localStorage.setItem("antcv:activeAppCompany",String(n.jd_company||""))}catch(e){}})(),await vo.setActive(e.id),ts(e.id)';
   assert.equal(count(min, needleMin), 2, 'mirror: settings history twin + topbar twin');
-  const re = /try \{ window\.AntcvJdScope && window\.AntcvJdScope\.setCurrentAppId\(String\(e\.id\)\); \} catch \(_\) \{\}\n\s*localStorage\.setItem\(\n\s*"antcv:activeAppCompany",\n\s*String\(n\.jd_company \|\| ""\),/g;
+  const re = /try \{ window\.AntcvJdScope && window\.AntcvJdScope\.setCurrentAppId\(String\(e\.id\)\); \} catch \(_\) \{\}\n\s*\/\/ LANG-CACHE-APP-SCOPE-001b[^\n]*\n\s*try \{ window\.__antcvLoadJd && window\.__antcvLoadJd\(n\.jd_text, n\.jd_company, n\.jd_role\); \} catch \(_\) \{\}\n\s*localStorage\.setItem\(\n\s*"antcv:activeAppCompany",\n\s*String\(n\.jd_company \|\| ""\),/g;
   assert.equal((src.match(re) || []).length, 2, 'source: the scope call sits right before the stamp at both twins');
+});
+
+test('LANG-CACHE-APP-SCOPE-001b: the switch twins load the record\'s JD into the editor state through the bridge', () => {
+  assert.equal(count(src, 'window.__antcvLoadJd = (jd, co, ro) => {'), 1, 'source: bridge defined once (editor component)');
+  assert.equal(count(min, 'window.__antcvLoadJd=(jd,co,ro)=>{'), 1, 'mirror: bridge defined once');
+  assert.equal(count(min, 'try{window.__antcvLoadJd&&window.__antcvLoadJd(n.jd_text,n.jd_company,n.jd_role)}catch(_){}'), 2, 'mirror: both twins call it');
+  assert.equal(count(src, 'try { window.__antcvLoadJd && window.__antcvLoadJd(n.jd_text, n.jd_company, n.jd_role); } catch (_) {}'), 2, 'source: both twins call it');
+  // a real JD lands in the JD state + the scoped lastJdText; an unsolicited / manual-save record clears it
+  assert.ok(min.includes('localStorage.setItem("antcv:lastJdText",real?jd:"")'), 'mirror: scoped lastJdText follows the record');
+  assert.ok(/GENERAL CV \[—–-\] UNSOLICITED APPLICATION CONTEXT/.test(min.slice(min.indexOf('window.__antcvLoadJd='), min.indexOf('window.__antcvLoadJd=') + 700)), 'mirror: unsolicited stub is not a real JD');
 });

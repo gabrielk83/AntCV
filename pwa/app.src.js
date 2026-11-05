@@ -26960,7 +26960,29 @@ window.__antcvTxtSame =
         }),
         (_wlhook = "undefined" != typeof window && (window.AntcvFusion = wl)),
         ("undefined" != typeof window && (window.__antcvRelang = (e, f) => Pr(e, f))),  /* BABEL-FISH-RELANG-001: expose the translate pass so the relang sidecar can re-render content into the ribbon language */
-        ("undefined" != typeof window && (window.__antcvRelangHeadless = (e) => Pr(e, true, true))),  /* BABEL-FISH-HEADLESS-001: modal-free full translate into e — the sidecar/batch use this so a zh (or any) ribbon never stays mixed waiting on a confirm click */
+        ("undefined" != typeof window && (window.__antcvRelangHeadless = (e) => Pr(e, true, true))),
+        // LANG-CACHE-APP-SCOPE-001b (owner 2026-11-05): the application-switch twins live in the
+        // app-shell component and never loaded the record's JD into THIS component's JD state,
+        // so the JD mirror / auto-sync (Un.current || Ut) wrote the PREVIOUS app's JD under the
+        // new app's scope (live: antcv:app:3491:jdText = the ASSA ABLOY JD). Same shape as the
+        // read-from-cloud restore: a real JD lands in Dt / Ft / Un and the scoped lastJdText;
+        // an unsolicited / template / manual-save record clears them.
+        ("undefined" != typeof window &&
+          (window.__antcvLoadJd = (jd, co, ro) => {
+            try {
+              var s = String(jd || "").trim(),
+                real = s.length >= 30 && !/^GENERAL CV [—–-] UNSOLICITED APPLICATION CONTEXT/i.test(s) && !/^Manual save/i.test(s);
+              if (real) {
+                var l = String((((co || "") + (co && ro ? " — " : "") + (ro || "")).trim()) || "Job description").slice(0, 120);
+                (Dt({ name: l, kind: "restore", size: s.length, source: "app-switch" }),
+                  Ft({ text: jd, method: "restored", pages: 1, fileName: l }),
+                  (Un.current = jd));
+              } else Un.current = null;
+              Vt("");
+              try { localStorage.setItem("antcv:lastJdText", real ? jd : ""); } catch (_) {}
+              return real;
+            } catch (_) { return !1; }
+          })),  /* BABEL-FISH-HEADLESS-001: modal-free full translate into e — the sidecar/batch use this so a zh (or any) ribbon never stays mixed waiting on a confirm click */
         (window.__antcvGenTrigger = vl = async () => {  /* GEN-BACKGROUND-001 row 38a: expose the generate fn so antcv-gen-memo auto-resumes an interrupted run on foreground */
           var e, t, n, o;
           if (!Bt && !Ut && !Un.current && 0 === Yt.length)
@@ -42385,6 +42407,8 @@ window.__antcvTxtSame =
                                                       // stamped - the [Fl] effect only runs after render, so the company stamp below and the
                                                       // JD mirror landed in the PREVIOUS app's namespace (antcv:app:3525:company = Kaleido).
                                                       try { window.AntcvJdScope && window.AntcvJdScope.setCurrentAppId(String(e.id)); } catch (_) {}
+                                                      // LANG-CACHE-APP-SCOPE-001b: load the record's JD into the editor's JD state (bridge defined next to __antcvRelangHeadless)
+                                                      try { window.__antcvLoadJd && window.__antcvLoadJd(n.jd_text, n.jd_company, n.jd_role); } catch (_) {}
                                                       localStorage.setItem(
                                                         "antcv:activeAppCompany",
                                                         String(n.jd_company || ""),
@@ -49019,6 +49043,8 @@ window.__antcvTxtSame =
                                           // stamped - the [Fl] effect only runs after render, so the company stamp below and the
                                           // JD mirror landed in the PREVIOUS app's namespace (antcv:app:3525:company = Kaleido).
                                           try { window.AntcvJdScope && window.AntcvJdScope.setCurrentAppId(String(e.id)); } catch (_) {}
+                                          // LANG-CACHE-APP-SCOPE-001b: load the record's JD into the editor's JD state (bridge defined next to __antcvRelangHeadless)
+                                          try { window.__antcvLoadJd && window.__antcvLoadJd(n.jd_text, n.jd_company, n.jd_role); } catch (_) {}
                                           localStorage.setItem(
                                             "antcv:activeAppCompany",
                                             String(n.jd_company || ""),

@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.6025-no-orphan-roles';
+const CACHE = 'antcv-1.51.6045-lang-cache-app-scope-b';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

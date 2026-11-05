@@ -1,30 +1,23 @@
-// GDPR-RIGHTS-001 (owner 2026-10-23): one list of every D1 table that holds one
-// user's rows, used by the full-account delete (GDPR Art. 17) and the data copy
-// (GDPR Art. 15 access, Art. 20 portability). Narrative: docs/compliance/AI_ACT_AND_GDPR.md.
+// GDPR-RIGHTS-001 (owner 2026-10-23): every D1 table that holds one user's rows,
+// read by the data copy GET /api/prefs/export (GDPR Art. 15 access, Art. 20
+// portability). Narrative: docs/compliance/EU_AI_ACT_GDPR.md.
 //
-// Why a list: the v2.5.3 delete named five core tables and two telemetry tables.
-// Tables added later (job_tracker, kernel_showcase, kernel_showcase_styled,
-// kernel_language_view, application_fit, application_qualification, the legacy
-// per-user rows of cluster_top_qualifications) were left to ON DELETE CASCADE,
-// and four of them were created without a foreign key, so their rows survived an
-// account delete. Since ACCOUNT-ERASE-COMPLETE-001 the delete is ONE atomic batch
-// in src/index.js (USER_ERASE_STATEMENTS); this list drives the data copy. A new
-// user-keyed table goes into BOTH lists; tests/gdpr-user-data.test.mjs fails when
-// they differ.
+// The account delete uses USER_ERASE_STATEMENTS in src/index.js
+// (ACCOUNT-ERASE-COMPLETE-001). tests/gdpr-user-data.test.mjs fails when a table
+// is in one list and not the other, or when a table created with a user_hash
+// column is in neither, so the copy and the delete cover the same rows.
 //
-// The GLOBAL_USER_HASH sentinel ('__global_market__') in cluster_top_qualifications
-// is a SHA-256 hash of no e-mail, so `user_hash = ?` with a real hash never touches it.
-
-// Every table keyed directly by user_hash, leaf first.
+// Rows under the GLOBAL_USER_HASH sentinel ('__global_market__') in
+// cluster_top_qualifications are never selected: a real user's hash never equals it.
 export const USER_TABLES = [
-  { table: 'application_snapshot',       extra: true }, // OUTCOME-RECORD-002: submitted CV/CL/JD
-  { table: 'application_fit',            extra: true },
-  { table: 'application_qualification',  extra: true },
-  { table: 'cluster_top_qualifications', extra: true },
-  { table: 'kernel_showcase_styled',     extra: true },
-  { table: 'kernel_showcase',            extra: true },
-  { table: 'kernel_language_view',       extra: true },
-  { table: 'job_tracker',                extra: true },
+  { table: 'application_fit' },
+  { table: 'application_snapshot' },
+  { table: 'application_qualification' },
+  { table: 'cluster_top_qualifications' },
+  { table: 'kernel_showcase_styled' },
+  { table: 'kernel_showcase' },
+  { table: 'kernel_language_view' },
+  { table: 'job_tracker' },
   { table: 'active_application_device' },
   { table: 'active_application' },
   { table: 'application' },

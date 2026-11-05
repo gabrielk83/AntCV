@@ -1782,10 +1782,6 @@ async function handleApiPrefs(request, env) {
     //    ACCOUNT-ERASE-COMPLETE-001). Atomic batch; either all succeed or
     //    none do. Per-table counts; null = table not created on this DB.
     if (d1Available) {
-      // GDPR-RIGHTS-001 + ACCOUNT-ERASE-COMPLETE-001: one atomic batch covers every
-      // per-user table (the tables GDPR-RIGHTS-001 found left behind included).
-      // gdpr-user-data.js USER_TABLES lists the same tables for the data copy;
-      // a drift test keeps the two lists equal.
       try {
         result.details.d1_core = await eraseUserD1(env, userHash);
       } catch (e) {

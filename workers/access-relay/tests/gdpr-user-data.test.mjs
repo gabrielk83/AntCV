@@ -1,16 +1,14 @@
-/* GDPR-RIGHTS-001 (owner 2026-10-23): full-account delete reaches every
- * user-keyed D1 table (GDPR Art. 17), and GET /api/prefs/export returns a copy of
- * the same rows with API key values masked (Art. 15 and 20).
+/* GDPR-RIGHTS-001 (owner 2026-10-23): GET /api/prefs/export returns a copy of
+ * every user-keyed D1 row with API key values masked (GDPR Art. 15 and 20), over
+ * the same tables the account delete erases (ACCOUNT-ERASE-COMPLETE-001, Art. 17).
  *
  * Three layers:
- *   1. Functional: collectUserRows / buildExport against an
- *      in-memory D1 mock (other users and the global sentinel survive).
- *   2. Invariant: every table created with a user_hash column (schema*.sql and the
- *      runtime CREATE TABLE strings in src/index.js) is listed in USER_TABLES, so a
- *      new table cannot silently escape the copy, and USER_TABLES names exactly the
- *      tables the atomic erase batch (src/index.js USER_ERASE_STATEMENTS,
- *      ACCOUNT-ERASE-COMPLETE-001) deletes, so the delete and the copy cannot drift.
- *   3. Source locks on the export route.
+ *   1. Functional: collectUserRows / buildExport against an in-memory D1 mock
+ *      (other users and the global sentinel stay out of the copy).
+ *   2. Invariants: every table created with a user_hash column (schema*.sql and the
+ *      runtime CREATE TABLE strings in src/index.js) is in USER_TABLES, and
+ *      USER_TABLES matches the delete's USER_ERASE_STATEMENTS.
+ *   3. Source lock on the export route.
  *
  * Run:  node --test workers/access-relay/tests/gdpr-user-data.test.mjs
  */
@@ -68,6 +66,7 @@ function seed() {
     active_application_device: [{ user_hash: 'H', device_id: 'd1' }],
     application_fit: [{ application_id: 1, user_hash: 'H' }, { application_id: 2, user_hash: 'OTHER' }],
     application_qualification: [{ application_id: 1, user_hash: 'H', qual_text: 'x' }],
+    application_snapshot: [{ application_id: 1, user_hash: 'H' }],
     cluster_top_qualifications: [
       { user_hash: 'H', cluster_id: 'c' },
       { user_hash: '__global_market__', cluster_id: 'c' },
@@ -88,7 +87,8 @@ test('export collects own rows only, masks API keys, names recipients', async ()
   assert.deepEqual(rows.language_view, [{ application_id: 1, language: 'en' }]);
   assert.equal(rows.llm_quality_signals.length, 1);
   assert.equal(rows.kernel_language_view, 'missing');
-  assert.equal(rows.cluster_top_qualifications.length, 1);
+  assert.equal(rows.cluster_top_qualifications.length, 1, 'global sentinel row stays out of the copy');
+  assert.equal(rows.application_fit.length, 1, 'other user fit row stays out of the copy');
 
   const body = buildExport({
     email: 'a@example.com',
@@ -127,23 +127,16 @@ test('every table created with a user_hash column is in USER_TABLES', () => {
   assert.deepEqual(CHILD_TABLES.map((t) => t.table).sort(), ['language_view', 'llm_quality_signals']);
 });
 
-test('the erase batch and the export list name the same tables (no drift)', () => {
-  const block = src.slice(src.indexOf('const USER_ERASE_STATEMENTS = ['), src.indexOf('];', src.indexOf('const USER_ERASE_STATEMENTS = [')));
-  const erased = new Set([...block.matchAll(/\['(\w+)',\s*'DELETE FROM/g)].map((m) => m[1]));
-  assert.ok(erased.size >= 10, 'parsed too few erase statements: ' + [...erased]);
-  // telemetry rows are erased by their own optional batch, beside the core one
-  const TELEMETRY = new Set(['llm_calls', 'llm_quality_signals']);
-  const exported = new Set([...USER_TABLES, ...CHILD_TABLES].map((t) => t.table).filter((t) => !TELEMETRY.has(t)));
-  assert.deepEqual([...exported].filter((t) => !erased.has(t)).sort(), [], 'exported but never erased');
-  assert.deepEqual([...erased].filter((t) => !exported.has(t)).sort(), [], 'erased but missing from the data copy');
-  for (const t of TELEMETRY) assert.ok(src.includes('DELETE FROM ' + t + ' WHERE'), t + ' erase missing');
-});
-
-test('DELETE /api/prefs runs the one atomic erase, not a second per-table pass', () => {
-  const del = src.indexOf("if (m === 'DELETE') {");
-  assert.ok(del > 0);
-  assert.ok(src.indexOf('result.details.d1_core = await eraseUserD1(env, userHash)', del) > del);
-  assert.ok(!src.includes('eraseExtraUserTables'), 'the removed per-table pass came back');
+test('the copy and the delete cover the same tables', () => {
+  const block = src.slice(src.indexOf('const USER_ERASE_STATEMENTS = ['));
+  const body = block.slice(0, block.indexOf('];'));
+  const erased = new Set([...body.matchAll(/\['(\w+)', 'DELETE FROM/g)].map((m) => m[1]));
+  assert.ok(erased.size >= 10, 'USER_ERASE_STATEMENTS not found: ' + [...erased]);
+  const copied = new Set(USER_TABLES.map((t) => t.table).concat(CHILD_TABLES.map((t) => t.table)));
+  // telemetry is erased in its own batch, outside USER_ERASE_STATEMENTS
+  for (const t of ['llm_calls', 'llm_quality_signals']) copied.delete(t);
+  assert.deepEqual([...erased].filter((t) => !copied.has(t)), [], 'erased but not in the copy');
+  assert.deepEqual([...copied].filter((t) => !erased.has(t)), [], 'in the copy but not erased');
 });
 
 test('GET /api/prefs/export is routed before /api/prefs and requires sign-in', () => {

@@ -63,6 +63,7 @@
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.5382-gdpr-rights',
     '1.51.5363-submitted-version',
     '1.51.5362-status-history',
     '1.51.5342-outcome-record',

@@ -31,6 +31,8 @@ const telemetrySql = await readFile(new URL('../schema-telemetry.sql', import.me
 
 // Tables the relay creates outside schema.sql. kernel_showcase_styled is the
 // relay's own lazy DDL. The three cluster tables use the live shape: no FK.
+// application_snapshot is the lazy DDL of OUTCOME-RECORD-002 (submitted
+// CV/CL/JD, insert-only).
 const EXTRA_DDL = [
   'CREATE TABLE IF NOT EXISTS kernel_showcase_styled (' +
     'user_hash TEXT NOT NULL, style_key TEXT NOT NULL DEFAULT \'\', ' +
@@ -49,6 +51,9 @@ const EXTRA_DDL = [
     'application_id INTEGER PRIMARY KEY, user_hash TEXT NOT NULL, cluster_id TEXT NOT NULL, ' +
     'fit_score REAL NOT NULL, matched TEXT NOT NULL, gaps TEXT NOT NULL, tier TEXT, ' +
     'computed_at INTEGER NOT NULL)',
+  'CREATE TABLE IF NOT EXISTS application_snapshot (' +
+    'id INTEGER PRIMARY KEY AUTOINCREMENT, user_hash TEXT NOT NULL, application_id INTEGER, ' +
+    'uk TEXT NOT NULL, kind TEXT NOT NULL, json TEXT NOT NULL, created_at INTEGER NOT NULL)',
 ];
 
 // Every table that holds rows keyed to one user, and how to count that
@@ -65,6 +70,7 @@ const USER_TABLES = {
   kernel_showcase_styled:     'SELECT COUNT(*) AS n FROM kernel_showcase_styled WHERE user_hash = ?',
   job_tracker:                'SELECT COUNT(*) AS n FROM job_tracker WHERE user_hash = ?',
   application_fit:            'SELECT COUNT(*) AS n FROM application_fit WHERE user_hash = ?',
+  application_snapshot:       'SELECT COUNT(*) AS n FROM application_snapshot WHERE user_hash = ?',
   application_qualification:  'SELECT COUNT(*) AS n FROM application_qualification WHERE user_hash = ?',
   cluster_top_qualifications: 'SELECT COUNT(*) AS n FROM cluster_top_qualifications WHERE user_hash = ?',
 };
@@ -150,6 +156,9 @@ function seed(db, h, o) {
   }
   ins("INSERT INTO application_fit (application_id, user_hash, cluster_id, fit_score, matched, gaps, computed_at) VALUES (101, ?, 'exec', 80, '[]', '[]', ?)", h, t);
   ins("INSERT INTO application_fit (application_id, user_hash, cluster_id, fit_score, matched, gaps, computed_at) VALUES (201, ?, 'exec', 70, '[]', '[]', ?)", o, t);
+  for (const [u, app] of [[h, 101], [h, 102], [o, 201]]) {
+    ins("INSERT INTO application_snapshot (user_hash, application_id, uk, kind, json, created_at) VALUES (?, ?, 'row-uk', 'cv', '{\"sections\":[]}', ?)", u, app, t);
+  }
   // Real-JD extractions carry the owner's user_hash; research rows sit under the sentinel.
   ins("INSERT INTO application_qualification (application_id, user_hash, cluster_id, qual_text, qual_canonical, source, created_at) VALUES (101, ?, 'exec', 'P&L ownership', 'p l ownership', 'jd', ?)", h, t);
   ins("INSERT INTO application_qualification (application_id, user_hash, cluster_id, qual_text, qual_canonical, source, created_at) VALUES (102, ?, 'exec', 'Board reporting', 'board reporting', 'jd', ?)", h, t);
@@ -219,7 +228,7 @@ for (const fk of [false, true]) {
     assert.deepEqual(
       { ...core },
       {
-        language_view: 2, application_fit: 1, application_qualification: 2,
+        language_view: 2, application_fit: 1, application_snapshot: 2, application_qualification: 2,
         cluster_top_qualifications: 2, application: 2, active_application: 1,
         active_application_device: 1, kernel_language_view: 1, kernel_showcase: 1,
         kernel_showcase_styled: 1, job_tracker: 1, user_kernel: 1,
@@ -243,6 +252,7 @@ for (const fk of [false, true]) {
     assertOtherAndGlobalSurvive(sqlite, o);
     assert.equal(res.body.details.job_tracker, 1);
     assert.equal(res.body.details.kernel_showcase_styled, 1);
+    assert.equal(res.body.details.application_snapshot, 2);
     assert.equal(res.body.details.user_kernel, 1);
   });
 }
@@ -263,7 +273,7 @@ test('a table not created yet does not roll back the erase; it reports null', as
   const core = res.body.details.d1_core;
   assert.equal(core.user_kernel, 1);
   assert.equal(core.application, 1);
-  for (const t of ['job_tracker', 'kernel_showcase', 'kernel_showcase_styled', 'kernel_language_view', 'application_fit', 'application_qualification', 'cluster_top_qualifications']) {
+  for (const t of ['job_tracker', 'kernel_showcase', 'kernel_showcase_styled', 'kernel_language_view', 'application_fit', 'application_snapshot', 'application_qualification', 'cluster_top_qualifications']) {
     assert.equal(core[t], null, `${t} is absent, reported as null`);
   }
   for (const t of ALWAYS) {

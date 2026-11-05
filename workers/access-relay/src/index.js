@@ -2271,6 +2271,7 @@ async function userHashFromEmail(email) {
 const USER_ERASE_STATEMENTS = [
   ['language_view', 'DELETE FROM language_view WHERE application_id IN (SELECT id FROM application WHERE user_hash = ?)', ['language_view', 'application']],
   ['application_fit', 'DELETE FROM application_fit WHERE user_hash = ?'],
+  ['application_snapshot', 'DELETE FROM application_snapshot WHERE user_hash = ?'], // OUTCOME-RECORD-002: submitted CV/CL/JD, lazily created
   ['application_qualification', 'DELETE FROM application_qualification WHERE user_hash = ?'],
   ['cluster_top_qualifications', 'DELETE FROM cluster_top_qualifications WHERE user_hash = ?'],
   ['application', 'DELETE FROM application WHERE user_hash = ?'],

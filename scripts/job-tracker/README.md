@@ -117,6 +117,30 @@ tiers (a local NLI model, Workers AI) is in `docs/analysis/TEXT_GUARDS_RESEARCH_
 python test_text_guards.py   # synthetic kernel, PDFs built with PyMuPDF
 ```
 
+**Model meta-commentary (META-LEAK-GATE-001, 2026-11-05).** `meta_guard.py` flags the model talking about
+its task instead of writing the section: "the instructions above", "the review items", a `cv_*` / `cl_*` id
+in prose, "the format I produced", "Here is the revised ...", a "Note:" preamble, "as requested", and the
+Danish and Swedish forms. Unlike the checks above, this one blocks. Commentary never reaches a stored application:
+- `gen-runner.py run` checks every generated `cv_*` / `cl_*` section before the bundle, the guards and persist.
+  The dirty sections are regenerated once in one job without the coherence repair, which is where the leaks
+  came from. If the regenerated text is still dirty, or the call fails, the commentary lines or sentences
+  are removed. A section with nothing real left is dropped.
+- `persist_application` scrubs the final structured CV and letter again right before the write, because
+  the quality, density and CL-fit passes rewrite text with an LLM after the gate. The subtitle and slogan
+  are checked too.
+- Every action is printed, listed under `meta` in `index.json`, and added to `guards_<uk>.json` with
+  `check: "meta"`: a clean regeneration is a WARN, removed text is a FAIL.
+
+`meta_sweep.py` checks the stored applications. It only reads, through the relay, and writes its report
+to `~/.antcv/meta_sweep_<date>.json` and `.md`, outside the repo, because the report quotes application
+text. It never edits or regenerates an application.
+
+```
+python meta_guard.py --draft CV.pdf        # exit 1 on any hit
+python meta_sweep.py [--ids 101,102]       # read-only; exit 1 when any stored application has a hit
+python test_meta_guard.py                  # synthetic fixtures, incl. one shaped like the 2026-11-05 leak
+```
+
 **Tier 1, the local NLI claim check (FACT-GUARD-NLI-001, owner-approved 2026-11-05).**
 `fact_guard_nli.py` checks each claim sentence against the kernel facts that share the most words with it.
 

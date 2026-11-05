@@ -41,7 +41,6 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mw3gm2iw_3b14","started":"2026-11-05T11:25:47.004Z","host":"Gabo-PC","worktree":"gracious-goldwasser-ac89f6","branch":"claude/musing-euler-71ad39","range":"1.51.5565-1.51.5584","task":"NO-ORPHAN-002 CL + marker rows + bullets, label reword, body width, LO audit","beat":"2026-11-05T11:25:47.060Z"}
 {"id":"sh_mw3hijam_7jnk","started":"2026-11-05T11:51:01.722Z","host":"Gabo-PC","worktree":"ecstatic-heisenberg-9cfa6d","branch":"claude/ecstatic-heisenberg-9cfa6d","range":"1.51.5665-1.51.5684","task":"MARGIN-LAYOUT-001: header card inside the sidebar (house margin format), no band","beat":"2026-11-05T11:51:01.779Z"}
 {"id":"sh_mw3i2cb0_d1un","started":"2026-11-05T12:06:25.774Z","host":"Gabo-PC","worktree":"strange-euler-50581f","branch":"claude/strange-euler-50581f","range":"1.51.5745-1.51.5764","task":"TRANSLATE-CACHE-MIXED-001: persist translated sections synchronously + stale cache guard","beat":"2026-11-05T12:06:25.817Z"}
-{"id":"sh_mw3i4afd_53l2","started":"2026-11-05T12:07:56.650Z","host":"Gabo-PC","worktree":"recursing-meninsky-073b65","branch":"claude/relaxed-joliot-5b27fd","range":"1.51.5765-1.51.5784","task":"PROOF-POINTS-HOUSE-001b: owned-text edit detection + legacy-shape upgrade for the proof-points block","beat":"2026-11-05T12:07:56.691Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

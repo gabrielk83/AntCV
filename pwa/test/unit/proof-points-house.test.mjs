@@ -90,6 +90,40 @@ test('run(): a Danish document keeps the translated section fragments and the ho
   assert.ok(pp.items.every((it) => it.l && it.v));
 });
 
+test('PROOF-POINTS-HOUSE-001b: a legacy auto block with foreign item keys is NOT an edit and is rebuilt (EN)', () => {
+  const legacyItems = [{ t: 'Simplifying reporting for 150 users' }, { t: 'Through to Tier-1 customer sign-off' }, { t: 'Wrote pricing and decision material for 4 offers' }];
+  const stored = legacyItems.map((i) => Object.assign({}, i, { bullets: [] }));          // shape belts added keys
+  const seed = Object.assign({}, base, { sections: JSON.stringify({ cv: [
+    { id: 'proof_points', type: 'bullets', loc: 'sidebar', on: true, title: 'Proof points', items: stored, _proofAuto: JSON.stringify(legacyItems), bullets: [] },
+    { id: 'tools', type: 'labeled_list', loc: 'sidebar', on: true, items: [] } ], cl: [] }) });
+  const { api, m } = load(seed);
+  assert.equal(api.isEdited(JSON.parse(seed.sections).cv[0]), false);
+  api.run();
+  const pp = JSON.parse(m.get('sections')).cv.find((s) => s.id === 'proof_points');
+  assert.equal(pp.type, 'labeled_list');
+  assert.ok(pp.items.some((it) => it.l === '250 → 10 days'), 'rebuilt from the pinned lines');
+});
+
+test('PROOF-POINTS-HOUSE-001b: a pre-house bullets block in a Danish document is upgraded, a Danish labeled_list edit is kept', () => {
+  const daSecs = { cv: [
+    { id: 'proof_points', type: 'bullets', loc: 'sidebar', on: true, title: 'Beviser', items: [{ t: 'Forenkling af rapportering for 150 brugere' }], _proofAuto: JSON.stringify([{ t: 'Simplifying reporting for 150 users' }]) },
+    { id: 'experience', type: 'experience', loc: 'main', on: true, roles: [
+      { title: 'A', results: 'Resultat: ændringscyklus fra ~250 til ~10 dage' }, { title: 'B', results: 'Resultat: 20.000 enheder/uge på én linje' }, { title: 'C', results: 'Resultat: rapportering forenklet for 150 brugere' } ] } ], cl: [] };
+  const { api, m } = load(Object.assign({}, base, { language: JSON.stringify('da'), sections: JSON.stringify(daSecs) }));
+  assert.equal(api.isEdited(daSecs.cv[0]), false, 'translated pre-house block is an upgrade');
+  api.run();
+  const pp = JSON.parse(m.get('sections')).cv.find((s) => s.id === 'proof_points');
+  assert.equal(pp.type, 'labeled_list'); assert.equal(pp.title, 'Resultater i tal');
+  const edited = { id: 'proof_points', type: 'labeled_list', items: [{ l: '250 → 10 dage', v: 'min egen tekst' }], _proofAuto: JSON.stringify([['250 → 10 dage', 'auto tekst']]) };
+  assert.equal(api.isEdited(edited), true, 'a changed caption in the house shape is the owner’s edit');
+});
+
+test('figure(): a range with qualifiers and the unit on the first number', () => {
+  const { api } = load(base);
+  const f = api.figure('Results: cutting the change cycle from roughly 250 days to about 10 as change-board chair');
+  assert.equal(f.big, '250 → 10 days');
+});
+
 test('a hand-edited block is left alone', () => {
   const edited = Object.assign({}, base, { sections: JSON.stringify({ cv: [
     { id: 'proof_points', type: 'labeled_list', loc: 'sidebar', on: true, title: 'Proof points', items: [{ l: 'my own', v: 'hand-written caption' }], _proofAuto: '[]' },

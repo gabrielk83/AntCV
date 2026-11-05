@@ -29,7 +29,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.5685-proof-points-house';
+  var VERSION = '1.51.5765-proof-points-edit-rule';
   if (window.__antcvProofPoints === VERSION) return;
   window.__antcvProofPoints = VERSION;
 
@@ -193,9 +193,11 @@
     var s = String(line || '').replace(/\s+/g, ' ').trim();
     if (!s || !hasDigit(s)) return null;
     var m, big, rest;
-    if ((m = s.match(/\b(?:from|fra)\s+(~?\d[\d,.]*)\s*(?:%|[a-zæøå%\/-]+)?\s+(?:to|til)\s+(~?\d[\d,.]*)\s*(%|[a-zæøå][a-zæøå\/-]*)?/i))) {
-      // a) range: "from ~250 to ~10 days" -> "250 → 10 days"
-      big = m[1].replace(/^~/, '') + ' → ' + m[2].replace(/^~/, '') + (m[3] ? ' ' + m[3] : '');
+    if ((m = s.match(/\b(?:from|fra)\s+(?:roughly|about|approximately|around|some|circa|ca\.?|cirka|omkring|godt)?\s*(~?\d[\d,.]*)\s*(%|[a-zæøå][a-zæøå\/-]*)?\s+(?:to|til)\s+(?:roughly|about|approximately|around|some|circa|ca\.?|cirka|omkring|godt)?\s*(~?\d[\d,.]*)\s*(%|[a-zæøå][a-zæøå\/-]*)?/i))) {
+      // a) range: "from ~250 to ~10 days" / "from roughly 250 days to about 10" -> "250 → 10 days"
+      var __stop = /^(?:as|to|til|at|i|på|and|og|of|af|in|for|with|med|via|through|gennem|a|an|en|et|the|den|det|by|per)$/i;
+      var __u = (m[2] && !__stop.test(m[2])) ? m[2] : ((m[4] && !__stop.test(m[4])) ? m[4] : '');
+      big = m[1].replace(/^~/, '') + ' → ' + m[3].replace(/^~/, '') + (__u ? ' ' + __u : '');
       rest = s.replace(m[0], '');
     } else if ((m = s.match(/\(?\b(\d+(?:\.\d+)?)\s*[x×]\)?/i))) {
       // b) multiplier: "(10×)" / "10× faster" -> "10x"
@@ -257,7 +259,28 @@
   }
 
   // ---- the section ---------------------------------------------------------------------------
-  function hash(items) { return JSON.stringify(items); }
+  // PROOF-POINTS-HOUSE-001b (owner's live document 2026-11-05): the shape belts add keys to
+  // every item (bullets: []), so a whole-item JSON hash never matched the auto hash again and
+  // the block read as hand-edited in EN and DA alike - the house shape never applied. Hash
+  // the OWNED text only (t, or l + v); accept the legacy whole-item hash by re-deriving the
+  // same texts from it; a pre-house bullets block in a translated document is an upgrade,
+  // not an edit (the translation pass rewrote its lines, the owner did not).
+  function texts(items) {
+    return (Array.isArray(items) ? items : []).map(function (i) {
+      if (!i || typeof i !== 'object') return String(i == null ? '' : i);
+      return (i.l != null || i.v != null) ? [String(i.l || ''), String(i.v || '')] : String(i.t || '');
+    });
+  }
+  function hash(items) { return JSON.stringify(texts(items)); }
+  function isEdited(existing) {
+    if (!existing || !existing[AUTO]) return false;
+    var auto = String(existing[AUTO]);
+    var now = hash(existing.items || []);
+    if (auto === now) return false;
+    try { var legacy = JSON.parse(auto); if (Array.isArray(legacy) && hash(legacy) === now) return false; } catch (_) {}
+    if (existing.type === 'bullets' && lang() !== 'en') return false;      // pre-house block, translated: upgrade
+    return true;
+  }
   function build(items) {
     return { id: ID, type: 'labeled_list', title: TITLE[lang()] || TITLE.en, on: true, loc: 'sidebar',
       items: items.map(function (f) { return { l: f.big, v: f.cap }; }) };
@@ -287,7 +310,7 @@
       var cv = secs.cv.slice();
       var at = -1; for (var i = 0; i < cv.length; i++) if (cv[i] && cv[i].id === ID) { at = i; break; }
       var existing = at >= 0 ? cv[at] : null;
-      var edited = !!(existing && existing[AUTO] && hash(existing.items || []) !== existing[AUTO]);
+      var edited = isEdited(existing);
       var changed = false;
 
       if (!eligible()) {
@@ -324,5 +347,5 @@
 
   window.addEventListener('antcv:sections-updated', run);
   [0, 400, 1200, 2500, 5000].forEach(function (ms) { setTimeout(run, ms); });
-  window.AntcvProofPoints = { version: VERSION, run: run, fragments: fragments, rank: rank, demand: demand, eligible: eligible, figure: figure, pairs: pairs, pinned: pinned };
+  window.AntcvProofPoints = { version: VERSION, run: run, fragments: fragments, rank: rank, demand: demand, eligible: eligible, figure: figure, pairs: pairs, pinned: pinned, isEdited: isEdited };
 })();

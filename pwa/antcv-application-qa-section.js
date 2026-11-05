@@ -22,7 +22,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.4506-qa-empty-page';
+  var VERSION = '1.51.5945-qa-emdash-loop';
   if (window.__antcvApplicationQa === VERSION) return;
   window.__antcvApplicationQa = VERSION;
 
@@ -73,9 +73,18 @@
   // HEADLINE is the section title itself ("Responses to application
   // questions:"), so the items are just the Q&A rows + the closing line.
   var QA_TITLE = 'Responses to application questions:';
+  // QA-EMDASH-LOOP-001 (owner 2026-11-05, "settings still blips"): a question
+  // with an en dash ("requirements – What ...") was written into sections,
+  // antcv-emdash-to-hyphen.js turned it into "-", and the sync below saw its row
+  // differ from the source and wrote the dash back: ~30 write/scrub cycles a
+  // second, each re-rendering the app and the open Settings panel. Rows are built
+  // with the same rule as the scrub (EMDASH-HYPHEN-001), so they compare equal
+  // after it.
+  var DASH = /[—–]/g;
+  function hyphen(s) { return String(s).replace(DASH, '-'); }
   function buildItems(qs) {
     var items = [];
-    qs.forEach(function (qa) { items.push({ b: qa.question, t: qa.answer }); });
+    qs.forEach(function (qa) { items.push({ b: hyphen(qa.question), t: hyphen(qa.answer) }); });
     return items.concat(closingItems());
   }
   function isHeaderRow(it) { return it && it.grp && /responses to your application questions/i.test(String(it.t || '')); }

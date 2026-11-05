@@ -36,12 +36,15 @@ const words = (n) => Array.from({ length: n }, () => 'abc').join(' ');
 const cv = (bullets, extra = {}) => ({ doc: 'cv', layout: 'two_column', style: {}, font_sizes: {}, ...extra,
   sections: [{ id: 'experience', type: 'experience', loc: 'main', title: 'EXPERIENCE', roles: [{ id: 'r1', title: 'PdM', company: 'Acme', bullets }] }] });
 
-test('a short last line is pulled back by the smallest condense (here -0.3 pt = -6 twentieths)', async () => {
+test('a short last line is pulled back by the smallest condense that holds at 98% of the column (-0.3 pt)', async () => {
   const { api } = load();
   const p = cv([words(22)]);            // 87 chars; ~82 fit per line at 497.8px -> 2 lines, last line ~5 chars
   const sum = await api.run(p, { measureLines: measure, fetchImpl: () => Promise.reject(new Error('no')) });
   assert.equal(sum.condensed, 1);
+  // 87 chars must fit 98% of 497.8 px (SAFE_FIT): -0.3 pt alone (cost .057) is the cheapest step that does;
+  // 99% + -0.2 pt (.048) would fit the full column only
   assert.equal(JSON.stringify(p.sections[0].item_condense), JSON.stringify({ 'roles.0.bullets.0': -6 }));
+  assert.ok(!p.sections[0].item_scale, 'no width step needed');
   assert.equal(p.sections[0].roles[0].bullets[0], words(22), 'text untouched - no bind, no rewrite');
 });
 
@@ -150,7 +153,12 @@ test('every non-empty table cell is a target: rows.R.C paths, cell fonts, bold l
   assert.equal(by['rows.1.1'].wrap, null);
   assert.equal(by['rows.1.1'].justified, true);
   assert.equal(by['rows.3.1'].justified, false, 'rowAlign left wins');
-  assert.ok(cells.every((t) => t.noRewrite && t.cell));
+  assert.ok(cells.every((t) => t.cell));
+  // NO-ORPHAN-002: data cells may be reworded; the label column gets a one-line brief
+  assert.deepEqual(plain(cells.filter((t) => !t.noRewrite).map((t) => t.condensePath)), ['rows.1.0', 'rows.1.1', 'rows.3.0', 'rows.3.1']);
+  assert.equal(by['rows.1.0'].label, true);
+  assert.equal(by['rows.1.1'].label, false);
+  assert.equal(by['rows.1.0'].fitChars, Math.floor(by['rows.1.0'].widthPx / (by['rows.1.0'].fontPx * 0.55)));
 });
 
 test('table cell: a condense the body floor cannot reach uses the cell ladder (-0.5 pt + character width)', async () => {
@@ -160,8 +168,9 @@ test('table cell: a condense the body floor cannot reach uses the cell ladder (-
   p.sections.push(tbl([HDR, ['Lead', text]]));
   const sum = await api.run(p, { measureLines: measureW, fetchImpl: noFetch });
   const t = p.sections[1];
+  // 67 chars in 98% of 354.5 px: 97% + -0.5 pt ties 95% + -0.4 pt on cost; the wider character wins
   assert.equal(t.item_condense['rows.1.1'], -10);
-  assert.equal(t.item_scale['rows.1.1'], 99);
+  assert.equal(t.item_scale['rows.1.1'], 97);
   assert.equal(t.rows[1][1], text, 'text untouched');
   assert.ok(!p.sections[0].item_condense, 'the same text as a body bullet stays above the -0.4 pt floor');
   assert.ok(sum.condensed >= 1);
@@ -194,7 +203,7 @@ test('justified cell: a bind that would stretch the line above under 85% is refu
   pj.sections.push(tbl([HDR, ['Lead', text]]));
   const sj = await api.run(pj, { measureLines: stub, fetchImpl: noFetch });
   assert.equal(pj.sections[1].rows[1][1], text);
-  assert.deepEqual(plain(sj.unfixed), ['core_competencies:rows.1.1']);
+  assert.equal(sj.residue, 1, 'NO-ORPHAN-002: an unbindable data cell goes to the L3 reword');
   const pl = cv([]);
   pl.sections.push(tbl([HDR, ['Lead', text]], { rowAlign: [null, 'left'] }));
   const sl = await api.run(pl, { measureLines: stub, fetchImpl: noFetch });
@@ -240,7 +249,7 @@ test('education rows, list items, bullets and text_bullets are condense + bind t
   ]);
 });
 
-test('cover letter: tables-only mode measures the What-I-bring cells; a CL without a table is skipped', async () => {
+test('cover letter: measured in full at the body width (NO-ORPHAN-002); an empty CL is skipped', async () => {
   const { api } = load();
   const text = words(17);
   const p = { doc: 'cl', layout: 'two_column', style: {}, font_sizes: {}, sections: [
@@ -249,7 +258,101 @@ test('cover letter: tables-only mode measures the What-I-bring cells; a CL witho
   ] };
   const sum = await api.run(p, { measureLines: measureW, fetchImpl: noFetch });
   assert.equal(sum.skipped, undefined);
-  assert.equal(sum.scanned, 4, 'two header cells + two data cells, no prose');
-  const s2 = await api.run({ doc: 'cl', sections: [{ id: 'opening', type: 'text', content: 'x' }] }, { measureLines: measureW });
+  assert.equal(sum.scanned, 5, 'the opening paragraph + two header cells + two data cells');
+  const met = api._metricsFromPayload(p);
+  assert.ok(Math.abs(met.cellWpx - (11906 - 400) / 15) < 1e-9, 'CL body = PAGE_W - 400');
+  const s2 = await api.run({ doc: 'cl', sections: [] }, { measureLines: measureW });
   assert.equal(s2.skipped, 'doc');
+});
+
+// ── NO-ORPHAN-002 (owner 2026-11-05: reword labels; check marked rows / bullets, especially the cover letter and
+// the CV bullet lists; fix experience bullets). Owner fix order: compress (body 96%), widen (to 104%), bind, reword.
+const NBHY = String.fromCharCode(0x2011), NBS = String.fromCharCode(160);
+
+test('bind: hyphens inside the bound tail become U+2011 (a renderer breaks after "-"); others and tags untouched', () => {
+  const { api } = load();
+  const s = 'Kept late-winter stock through early-spring <b>cross-team</b> peaks';
+  // n = 1: the group is "<b>cross-team</b> peaks"; early-spring keeps its break
+  assert.equal(api._bindLastN(s, 1), 'Kept late-winter stock through early-spring <b>cross' + NBHY + 'team</b>' + NBS + 'peaks');
+  // n = 2: the group starts at "early-spring"; late-winter (before the group) is untouched
+  assert.equal(api._bindLastN(s, 2), 'Kept late-winter stock through early' + NBHY + 'spring' + NBS + '<b>cross' + NBHY + 'team</b>' + NBS + 'peaks');
+  assert.ok(api._bindLastN('a b <b class="x-y">c</b> d', 2).includes('class="x-y"'), 'never inside a tag');
+});
+
+test('widen (owner step 2): 101..104% when it fills the last line without adding one; refused without headroom', () => {
+  const { api } = load();
+  // natural line widths at 100%; measureTarget scales them by the width step and divides the column by it.
+  // A line wider than the column the stub is given reflows into three lines.
+  const stub = (n1, n2) => (spec) => { const a = spec.widthPx >= n1 ? [n1, n2] : [n1 - 100, 200, n2]; a.lastWords = 3; return a; };
+  const tg = { condensePath: 'items.0', get: () => 'x y z', widthPx: 497.8, fontPx: 14, prefixHtml: '' };
+  // 292 px = 58.7% of 497.8: 102% gives 297.8 (still under 298.7), 103% gives 300.8 -> filled
+  const sec = {};
+  assert.deepEqual(plain(api._tryWiden(stub(470, 292), { ...tg, sec })), { widened: true, scale: 103 });
+  assert.equal(sec.item_scale['items.0'], 103);
+  // a 476 px first line: at 103% only 473.6 px remain under the 98% margin -> it would reflow -> refused
+  const sec2 = {};
+  assert.deepEqual(plain(api._tryWiden(stub(476, 292), { ...tg, sec: sec2 })), {});
+  assert.ok(!sec2.item_scale);
+});
+
+test('marker rows are targets in both columns: bullet geometry, no auto-colon, L3 only for markers and the cover letter', () => {
+  const { api } = load();
+  const p = cv([]);
+  p.sections.push(
+    { id: 'outcomes', type: 'rich_block', loc: 'main', items: [
+      { b: 'Lead', t: 'A prose row body long enough' },
+      { b: 'Cut', t: 'losses by 30% through tracking', mk: true },
+      { b: '', t: 'An emoji led marker row', mk: '★' },
+      { grp: true, t: 'Group' },
+    ] },
+    { id: 'skills', type: 'rich_block', loc: 'sidebar', items: [{ b: 'Lab', t: 'PCR and assays', mk: true }] },
+  );
+  const met = api._metricsFromPayload(p);
+  const ts = api._collectTargets(p, met);
+  const by = Object.fromEntries(ts.map((t) => [t.sid + ':' + t.condensePath, t]));
+  assert.equal(by['outcomes:items.0'].kind, 'main_rich');
+  assert.equal(by['outcomes:items.0'].noRewrite, true, 'CV prose rows: bind only (owner prose)');
+  assert.equal(by['outcomes:items.0'].prefixHtml, '<b>Lead: </b>');
+  assert.equal(by['outcomes:items.1'].kind, 'rich_mk');
+  assert.equal(by['outcomes:items.1'].noRewrite, false);
+  assert.equal(by['outcomes:items.1'].prefixHtml, '<b>Cut </b>', 'a marker lead gets no colon');
+  assert.equal(by['outcomes:items.1'].widthPx, met.bulletWpx);
+  assert.equal(by['outcomes:items.1'].fontPx, met.bulletPx);
+  assert.equal(by['outcomes:items.2'].prefixHtml, '★ ');
+  assert.equal(by['outcomes:items.2'].widthPx, met.cellWpx);
+  assert.equal(by['outcomes:items.1'].justified, false, 'a grouped section renders LEFT');
+  assert.equal(by['skills:items.0'].kind, 'side_label');
+  assert.equal(by['skills:items.0'].widthPx, met.sideBulletWpx);
+  // the same rows in a cover letter all go to L3 when nothing else fixes them
+  const cl = { doc: 'cl', layout: 'linear', style: {}, font_sizes: {}, sections: [p.sections[1], { id: 'closure', type: 'text', loc: 'main', content: 'I would welcome the chance to talk.' }] };
+  const cts = api._collectTargets(cl, api._metricsFromPayload(cl));
+  assert.ok(cts.every((t) => t.noRewrite === false), 'cover-letter rows and text are rewordable');
+});
+
+test('a two-word label that wraps one word per line goes to the L3 reword with a one-line brief', async () => {
+  const { api } = load({ proxyUrl: 'https://relay.example' });
+  const p = cv([]);
+  p.sections.push(tbl([HDR, ['Stakeholdering reportings', 'ok']]));   // 25 chars: two lines in the 98 px column
+  let sent = null;
+  const fetchImpl = (u, o) => { sent = JSON.parse(JSON.parse(o.body).messages[0].content); return Promise.resolve({ json: () => Promise.resolve({ content: [{ text: JSON.stringify(['Stakeholders']) }] }) }); };
+  const sum = await api.run(p, { measureLines: measureW, fetchImpl });
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].kind, 'label');
+  assert.equal(sent[0].fitChars, Math.floor(((1922 - 450) / 15) / ((40 / 3) * 0.55)));
+  assert.equal(sum.rewritten, 1);
+  assert.equal(p.sections[1].rows[1][0], 'Stakeholders');
+});
+
+test('mirror: a cell / marker-row rewrite lands in the stored section only on a unique text match', () => {
+  const { api } = load();
+  const mk = (rows) => new Map([['sections', JSON.stringify({ cv: [{ id: 'core', type: 'table', rows }], cl: [{ id: 'bring', type: 'rich_block', items: [{ b: 'X', t: 'Shared text', mk: true }] }] })]]);
+  const st = (m) => ({ getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)) });
+  const m1 = mk([HDR, ['Cross-team handover', 'proof']]);
+  assert.equal(api._mirrorGeneric({ sid: 'core', doc: 'cv' }, 'Team handover', 'Cross-team handover', st(m1)), true);
+  assert.equal(JSON.parse(m1.get('sections')).cv[0].rows[1][0], 'Team handover');
+  const m2 = mk([HDR, ['Same', 'x'], ['Same', 'y']]);
+  assert.equal(api._mirrorGeneric({ sid: 'core', doc: 'cv' }, 'New', 'Same', st(m2)), false, 'two hits: abort');
+  const m3 = mk([HDR]);
+  assert.equal(api._mirrorGeneric({ sid: 'bring', doc: 'cl' }, 'Short', 'Shared text', st(m3)), true, 'cover letter list');
+  assert.equal(JSON.parse(m3.get('sections')).cl[0].items[0].t, 'Short');
 });

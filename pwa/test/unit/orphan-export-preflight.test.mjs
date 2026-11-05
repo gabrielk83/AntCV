@@ -139,7 +139,7 @@ test('L2 bind clears a runt without an LLM call', async () => {
   const secs = [expSection([text])];
   const payload = cvPayload(secs);
   let fetchCalls = 0;
-  const { api } = load();
+  const { api } = load({ 'antcv:disable-export-condense': '1' });   // the bind alone (condense/widen would act first)
   const sum = await api.run(payload, { measureLines: fakeMeasure, fetchImpl: () => { fetchCalls++; return Promise.reject(new Error('no')); } });
   const out = payload.sections[0].roles[0].bullets[0];
   const m = fakeMeasure({ html: out, widthPx: 497.8 });
@@ -434,7 +434,7 @@ test('L3 lengthen: fact-backed longer rewrite fills the runt line without adding
   const payload = cvPayload([expSection([orig])]);
   let body = null;
   const fetchImpl = (url, opts) => { body = JSON.parse(opts.body); return Promise.resolve({ json: () => Promise.resolve({ content: [{ text: JSON.stringify([longer]) }] }) }); };
-  const { api } = load({ proxyUrl: 'https://relay.example', personalInfo: JSON.stringify(pi) });
+  const { api } = load({ proxyUrl: 'https://relay.example', personalInfo: JSON.stringify(pi), 'antcv:disable-export-condense': '1' });
   const sum = await api.run(payload, { measureLines: fakeMeasure, fetchImpl });
   assert.equal(sum.residue, 1);
   assert.equal(sum.rewritten, 1, 'lengthened rewrite accepted');
@@ -541,7 +541,7 @@ test('rule 40: prose sidebar values are never reordered', async () => {
 });
 
 // ── rich_block sidebar rows are L2 bind targets (v2 only saw labeled_list) ───
-test('rich_block sidebar rows collect as side targets; grp/residue/mk rows never do', () => {
+test('rich_block sidebar rows collect as side targets; grp/residue rows never do; marker rows do (NO-ORPHAN-002)', () => {
   const { api } = load();
   const payload = cvPayload([
     { id: 'tools', type: 'rich_block', loc: 'sidebar', items: [
@@ -553,9 +553,12 @@ test('rich_block sidebar rows collect as side targets; grp/residue/mk rows never
       { b: 'Ph', t: '[placeholder value]' },
     ] },
   ]);
-  const targets = api._collectTargets(payload, api._metricsFromPayload(payload));
-  assert.equal(targets.length, 1);
-  assert.equal(targets[0].kind, 'side_label');
+  const met = api._metricsFromPayload(payload);
+  const targets = api._collectTargets(payload, met);
+  assert.equal(targets.length, 2);
+  assert.ok(targets.every((t) => t.kind === 'side_label' && t.noRewrite));
+  assert.equal(targets[1].prefixHtml, '<b>Marker </b>', 'a marker row lead gets no auto-colon');
+  assert.equal(targets[1].widthPx, met.sideBulletWpx, 'marker row measured at the sidebar bullet indent');
   assert.match(targets[0].prefixHtml, /<b>Software: <\/b>/, 'lead + worker auto-colon in the measured prefix');
   targets[0].set('replaced');
   assert.equal(payload.sections[0].items[1].t, 'replaced');

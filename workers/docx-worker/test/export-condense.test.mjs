@@ -86,5 +86,31 @@ test('education, list, bullets, text_bullets and labeled_list rows carry their c
   assert.ok(!/<w:spacing w:val=/.test(para(xml, 'Text bullet plain')));
   assert.match(para(xml, 'Closing paragraph condensed'), /<w:spacing w:val="-1"\/>/);
   assert.match(para(xml, 'labeled value condensed'), /<w:spacing w:val="-2"\/>/);
-  assert.ok(!/<w:w w:val=/.test(xml), 'character width is a table-cell-only control');
+  assert.ok(!/<w:w w:val=/.test(xml), 'no item_scale, no character width');
+});
+
+// NO-ORPHAN-002 (owner fix order): character width for body paragraphs too - compress to 96%, widen to 104% -
+// clamped [96, 104] for body and [94, 104] for table cells; marker / emoji rich_block rows take both controls.
+test('body width 96..104%, cells 94..104%, marker and emoji rows, Results line', async () => {
+  const xml = await gen([
+    { id: 'experience', title: 'EXPERIENCE', type: 'experience', loc: 'main',
+      item_condense: { 'roles.0.bullets.0': -4 }, item_scale: { 'roles.0.bullets.0': 90, 'roles.0.bullets.1': 110, 'roles.0.results': 103 },
+      roles: [{ id: 'r1', title: 'PM', company: 'Co', years: '2020 - 2025', bullets: ['Bullet compressed to the floor', 'Bullet widened past the cap'], results: 'Results line widened' }] },
+    { id: 'core', title: 'CORE COMPETENCIES', type: 'table', loc: 'main', item_scale: { 'rows.1.0': 90, 'rows.1.1': 110 },
+      rows: [HDR, ['Label cell compressed', 'Proof cell widened past the cap']] },
+    { id: 'bring', title: 'WHAT I BRING', type: 'rich_block', loc: 'main', item_condense: { 'items.0': -6 }, item_scale: { 'items.0': 97, 'items.1': 102 },
+      items: [{ b: 'Tracking', t: 'Marker row body', mk: true }, { b: '', t: 'Emoji row body', mk: '*' }, { b: 'Plain', t: 'Plain row untouched' }] },
+  ]);
+  const b0 = para(xml, 'Bullet compressed to the floor');
+  assert.match(b0, /<w:spacing w:val="-4"\/>/);
+  assert.match(b0, /<w:w w:val="96"\/>/, 'body clamps at 96%');
+  assert.match(para(xml, 'Bullet widened past the cap'), /<w:w w:val="104"\/>/, 'widening clamps at 104%');
+  assert.match(para(xml, 'Results line widened'), /<w:w w:val="103"\/>/);
+  assert.match(para(xml, 'Label cell compressed'), /<w:w w:val="94"\/>/, 'cells clamp at 94%');
+  assert.match(para(xml, 'Proof cell widened past the cap'), /<w:w w:val="104"\/>/);
+  const mk = para(xml, 'Marker row body');
+  assert.match(mk, /<w:spacing w:val="-6"\/>/);
+  assert.match(mk, /<w:w w:val="97"\/>/);
+  assert.match(para(xml, 'Emoji row body'), /<w:w w:val="102"\/>/);
+  assert.ok(!/<w:w w:val=/.test(para(xml, 'Plain row untouched')));
 });

@@ -24456,13 +24456,14 @@ function paraCondensePath(s, path, floor = -8) {
   return Number.isFinite(v) && v < 0 ? Math.max(floor, Math.round(v)) : 0;
 }
 __name(paraCondensePath, "paraCondensePath");
-// NO-ORPHAN-001: per-cell character width (w:w, percent) decided by the PWA export preflight for table cells
-// only, clamped to [94, 100] (house generator: 94% in cells). 0 = untouched.
-function paraScalePath(s, path) {
+// NO-ORPHAN-001/002: per-paragraph character width (w:w, percent) decided by the PWA export preflight. Owner fix
+// order (CONTENT_RULES 2026-11-05): compress to 96% (body) / 94% (table cells), or widen to 104% when that fills
+// the last line without adding one. Clamped to [min, 104]; 0 = untouched (100).
+function paraScalePath(s, path, min = 96) {
   const m = s && s.item_scale;
   if (!m || typeof m !== "object" || !path) return 0;
-  const v = Number(m[path]);
-  return Number.isFinite(v) && v < 100 ? Math.max(94, Math.round(v)) : 0;
+  const v = Math.round(Number(m[path]));
+  return Number.isFinite(v) && v !== 100 ? Math.max(min, Math.min(104, v)) : 0;
 }
 __name(paraScalePath, "paraScalePath");
 // Run options for a condensed paragraph: {} when untouched, so an export without the maps stays byte-identical.
@@ -24470,6 +24471,16 @@ function condenseRunOpts(cs, scale) {
   return { ...(cs ? { characterSpacing: cs } : {}), ...(scale ? { scale } : {}) };
 }
 __name(condenseRunOpts, "condenseRunOpts");
+// The run options for one preflight path: spacing (floor -0.4 pt body, -0.5 pt cells) + width.
+function paraCondenseOpts(s, path, cell = false) {
+  return condenseRunOpts(paraCondensePath(s, path, cell ? -10 : -8), paraScalePath(s, path, cell ? 94 : 96));
+}
+__name(paraCondenseOpts, "paraCondenseOpts");
+// bulletParagraphRich / rich-block make() take either legacy spacing (number) or paraCondenseOpts (object).
+function asCondenseOpts(v) {
+  return v && typeof v === "object" ? v : (v ? { characterSpacing: v } : {});
+}
+__name(asCondenseOpts, "asCondenseOpts");
 function rowAlignAt(s, idx) {
   // CJLR-EXPORT-PARITY-001 (owner 2026-06-19): the native table CJLR writes the
   // section's own rowAlign[] (preview reads it since 1.50.692). Honour it on export
@@ -27823,8 +27834,8 @@ function renderText(s, ctx, isSidebar) {
   const align = paraAlignPath(s, "content") ?? paraAlign(s, null, void 0) ?? AlignmentType.JUSTIFIED;
   // CL-CLOSE-SPACE-001 (owner 2026-09-30): the letter's closing line ("I welcome ...") gets 5 pt above and below
   const spacing = s.id === "closure" ? { before: 100, after: 100, line: 276, lineRule: "auto" } : void 0;
-  const charSpacing = paras.length === 1 ? paraCondensePath(s, "content") : 0;   // EXPORT-CONDENSE-001 (one paragraph = one path)
-  return paras.map((p) => bodyParagraphRich(p, ctx, isSidebar, { align, spacing, charSpacing }));
+  const runOpts = paras.length === 1 ? paraCondenseOpts(s, "content") : {};   // EXPORT-CONDENSE-001 (one paragraph = one path)
+  return paras.map((p) => bodyParagraphRich(p, ctx, isSidebar, { align, spacing, runOpts }));
 }
 __name(renderText, "renderText");
 function renderTextInline(s, ctx, isSidebar) {
@@ -27873,7 +27884,8 @@ function bodyParagraphRich(text, ctx, isSidebar, opts = {}) {
       font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont,
       italics: opts.italic || false,
       bold: opts.bold || false,
-      ...(opts.charSpacing ? { characterSpacing: opts.charSpacing } : {})
+      ...(opts.charSpacing ? { characterSpacing: opts.charSpacing } : {}),
+      ...(opts.runOpts || {})   // NO-ORPHAN-002: paraCondenseOpts (spacing + width)
     })
   });
 }
@@ -27909,7 +27921,7 @@ function renderTextBullets(s, ctx, isSidebar) {
     }
   };
   // NO-ORPHAN-001: preflight condense per part (paths intro / items.N / closing, same keys as the align paths).
-  const bodyOpts = (a, path) => ({ ...(a ? { align: a } : {}), ...(paraCondensePath(s, path) ? { charSpacing: paraCondensePath(s, path) } : {}) });
+  const bodyOpts = (a, path) => ({ ...(a ? { align: a } : {}), runOpts: paraCondenseOpts(s, path) });
   if (s.intro) {
     brk("intro");
     const a = paraAlignPath(s, "intro") ?? groupCjlr;
@@ -27919,7 +27931,7 @@ function renderTextBullets(s, ctx, isSidebar) {
     s.items.filter(Boolean).forEach((it, i) => {
       brk("bullet_" + i);
       const a = paraAlignPath(s, "items." + i) ?? groupCjlr;
-      out.push(bulletParagraphRich("", String(it), ctx, isSidebar, a, void 0, void 0, void 0, void 0, paraCondensePath(s, "items." + i)));
+      out.push(bulletParagraphRich("", String(it), ctx, isSidebar, a, void 0, void 0, void 0, void 0, paraCondenseOpts(s, "items." + i)));
     });
   }
   if (s.closing) {
@@ -27999,14 +28011,14 @@ function renderRichBlock(s, ctx, isSidebar) {
     const n = Number(rp[String(i)] != null ? rp[String(i)] : rp["items." + i]);
     return Number.isFinite(n) && n >= 2 ? Math.round(n) : 1;
   }, "rowPage");
-  const make = /* @__PURE__ */ __name((lead, body, align, emoji, cs) => new Paragraph({
+  const make = /* @__PURE__ */ __name((lead, body, align, emoji, cs0) => { const cs = asCondenseOpts(cs0); return new Paragraph({
     spacing: { before: 60, after: 60, line: 276, lineRule: "auto" },
     alignment: align,
     shading: isSidebar ? { type: ShadingType.CLEAR, fill: style.sidebarBg, color: "auto" } : void 0,
     children: [
       ...emoji ? [new TextRun({
         text: emoji + " ",
-        ...(cs ? { characterSpacing: cs } : {}),
+        ...cs,
         color: isSidebar ? style.sidebarTextColor : style.mainTextColor,
         size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
         font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont
@@ -28019,16 +28031,16 @@ function renderRichBlock(s, ctx, isSidebar) {
         underline: leadUnderline ? { type: UnderlineType.SINGLE, color: leadUlHex } : undefined,
         size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
         font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont,
-        ...(cs ? { characterSpacing: cs } : {})
+        ...cs
       })] : [],
       ...inlineRuns(body || "", {
         color: isSidebar ? style.sidebarTextColor : style.mainTextColor,
         size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
         font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont,
-        ...(cs ? { characterSpacing: cs } : {})
+        ...cs
       })
     ]
-  }), "make");
+  }); }, "make");
   const sep = s.leadColon ? ": " : " ";
   // RICH-BLOCK-WHOLE-MOVE-001: when the whole section already broke to its page via the
   // section-level pageBreakPara (_antcvFirstItemPageMoved), swallow the FIRST per-item break so
@@ -28167,7 +28179,7 @@ function renderRichBlock(s, ctx, isSidebar) {
         if (!s.headlineOff && s.title && !(ctx.style && ctx.style.contHeadlines === false)) out.push(headingParagraph(String(s.title || "").toUpperCase() + " " + (ctx.contSuffix || "(CONT.)"), ctx, isSidebar, s.ruleOff));
       }
     }
-    const __cs = paraCondensePath(s, "items." + i);   // EXPORT-CONDENSE-001
+    const __cs = paraCondenseOpts(s, "items." + i);   // EXPORT-CONDENSE-001 / NO-ORPHAN-002 (spacing + width)
     if (row.mk === true) out.push(bulletParagraphRich(lead, body, ctx, isSidebar, align, void 0, void 0, leadUnderline, leadUlHex, __cs));
     else if (typeof row.mk === "string" && row.mk) out.push(make(lead, body, align, row.mk, __cs));
     else out.push(make(lead, body, align, void 0, __cs));
@@ -28179,7 +28191,7 @@ function renderBullets(s, ctx, isSidebar) {
   if (!Array.isArray(s.items)) return [];
   return s.items.filter((it) => it && (it.t || typeof it === "string")).map((it, i) => {
     const itemAlign = paraAlignPath(s, "items." + i + ".t") ?? paraAlignPath(s, "items." + i) ?? paraAlign(s, null, void 0);
-    const cs = paraCondensePath(s, "items." + i);   // NO-ORPHAN-001 (same index as the align path)
+    const cs = paraCondenseOpts(s, "items." + i);   // NO-ORPHAN-001/002 (same index as the align path)
     if (typeof it === "string") return bulletParagraphRich("", it, ctx, isSidebar, itemAlign, void 0, void 0, void 0, void 0, cs);
     const lead = it.b ? `${it.b}: ` : "";
     return bulletParagraphRich(lead, it.t, ctx, isSidebar, itemAlign, void 0, void 0, void 0, void 0, cs);
@@ -28188,11 +28200,12 @@ function renderBullets(s, ctx, isSidebar) {
 __name(renderBullets, "renderBullets");
 function bulletParagraphRich(lead, body, ctx, isSidebar, align, keepWithNext, lineTwips, leadUnderline, leadUlHex, charSpacing) {
   const { style, fs } = ctx;
+  const __co = asCondenseOpts(charSpacing);   // NO-ORPHAN-002: spacing number or {characterSpacing, scale}
   const baseRun = {
     color: isSidebar ? style.sidebarTextColor : style.mainTextColor,
     size: pt2hp(isSidebar ? fs.sbBody : fs.bulletContent),
     font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont,
-    ...(charSpacing ? { characterSpacing: charSpacing } : {})
+    ...__co
   };
   return new Paragraph({
     numbering: { reference: isSidebar ? "antcv-sb-bullet" : "antcv-bullet", level: 0 },
@@ -28220,7 +28233,7 @@ function bulletParagraphRich(lead, body, ctx, isSidebar, align, keepWithNext, li
         underline: leadUnderline ? { type: UnderlineType.SINGLE, color: leadUlHex || (isSidebar ? style.sidebarHeadColor : style.mainTextColor) } : undefined,
         size: baseRun.size,
         font: baseRun.font,
-        ...(charSpacing ? { characterSpacing: charSpacing } : {})
+        ...__co
       })] : [],
       ...inlineRuns(body || "", baseRun)
     ]
@@ -28349,8 +28362,7 @@ function renderCompetencyTable(s, ctx) {
   // section (header = 0). A page segment (renderSection split) carries _rowBase = data rows before it.
   const rowBase = Number.isFinite(Number(s._rowBase)) ? Number(s._rowBase) : 0;
   function cellCondense(R, C) {
-    const path = "rows." + R + "." + C;
-    return condenseRunOpts(paraCondensePath(s, path, -10), paraScalePath(s, path));
+    return paraCondenseOpts(s, "rows." + R + "." + C, true);
   }
   __name(cellCondense, "cellCondense");
   function makeDataRow(r, idx, isLastInChunk) {
@@ -28616,7 +28628,7 @@ function renderExperience(s, ctx) {
           252,
           void 0,
           void 0,
-          paraCondensePath(s, "roles." + ri + ".bullets." + bi)
+          paraCondenseOpts(s, "roles." + ri + ".bullets." + bi)   // NO-ORPHAN-002: spacing + width
         ));
       });
     }
@@ -28637,7 +28649,7 @@ function renderExperience(s, ctx) {
             // CPH-RENDER-FLAGS-001 flag 5: upright with a grey underline on
             // copenhagen (the mockup reserves italics for the company line).
             text: style._resultsLabel || "Results: ",
-            ...(paraCondensePath(s, "roles." + ri + ".results") ? { characterSpacing: paraCondensePath(s, "roles." + ri + ".results") } : {}),
+            ...paraCondenseOpts(s, "roles." + ri + ".results"),   // NO-ORPHAN-002: spacing + width
             bold: true,
             italics: !style._cph,
             ...(style._cph ? { underline: { type: "single", color: "777777" } } : {}),
@@ -28647,7 +28659,7 @@ function renderExperience(s, ctx) {
           }),
           new TextRun({
             text: role.results.trim(),
-            ...(paraCondensePath(s, "roles." + ri + ".results") ? { characterSpacing: paraCondensePath(s, "roles." + ri + ".results") } : {}),
+            ...paraCondenseOpts(s, "roles." + ri + ".results"),   // NO-ORPHAN-002: spacing + width
             color: style.mainTextColor,
             size: pt2hp(fs.mainBody),
             font: style.mainBodyFont
@@ -28778,7 +28790,7 @@ function renderSimpleList(s, ctx, isSidebar, italic) {
       color: isSidebar ? style.sidebarTextColor : style.mainTextColor,
       size: pt2hp(isSidebar ? fs.sbBody : fs.mainBody),
       font: isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont,
-      ...condenseRunOpts(paraCondensePath(s, "items." + idx), 0)   // NO-ORPHAN-001 (original index)
+      ...paraCondenseOpts(s, "items." + idx)   // NO-ORPHAN-001/002 (original index)
     };
     let children;
     if (isPubs) {
@@ -28999,7 +29011,7 @@ function renderLabeledList(s, ctx, isSidebar) {
     const value = (it.v || it.value || "").toString();
     const labelColor = isSidebar ? style.sidebarLabelColor || style.sidebarTextColor : style.mainHeadColor;
     // EXPORT-CONDENSE-001 / NO-ORPHAN-001: the preflight keys labeled rows by the ORIGINAL s.items index.
-    const __lcs = condenseRunOpts(paraCondensePath(s, "items." + s.items.indexOf(it)), 0);
+    const __lcs = paraCondenseOpts(s, "items." + s.items.indexOf(it));
     out.push(new Paragraph({
       spacing: { before: 40, after: 40, line: 252, lineRule: "auto" },
       // CJLR group default wins when set. NO-JUSTIFY-GAPS-001 (owner
@@ -29110,7 +29122,7 @@ function renderEducation(s, ctx, isSidebar) {
     if (!deg && !sch) return;
     const runs = [];
     // NO-ORPHAN-001: preflight condense for this row (path items.N, N = original s.items index).
-    const __ecs = condenseRunOpts(paraCondensePath(s, "items." + s.items.indexOf(it)), 0);
+    const __ecs = paraCondenseOpts(s, "items." + s.items.indexOf(it));
     if (deg) {
       runs.push(new TextRun({
         text: deg,

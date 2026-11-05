@@ -72,7 +72,20 @@
  * kinds are condense + NBSP-bind only (no LLM rewrite, no stored mirror). Table
  * cells get a deeper ladder, like the house generator: down to -0.5 pt spacing
  * plus character width (w:w) down to 94%, written to sec.item_scale[path].
- * The CL runs in tables-only mode; a linear CV is still skipped.
+ *
+ * NO-ORPHAN-002 (owner 2026-11-05: reword labels; check marked rows / bullets,
+ * especially the cover letter and the CV bullet lists; fix experience bullets).
+ * Owner fix order (CONTENT_RULES_2026-09-27.md, NO-ORPHAN-001): 1 compress
+ * (body width to 96% + spacing to -0.4 pt; cells 94% + -0.5 pt), 2 widen (101-
+ * 104%) when that fills the last line without adding one, then the NBSP bind,
+ * 3 reword (L3). The cover letter is measured in full at its body width (PAGE_W
+ * - 400). rich_block marker rows (mk: bullet / emoji) are targets in every column
+ * (they were skipped). L3 now also takes table cells (labels get a one-line
+ * "fitChars" brief), marker rows, bullet lists and cover-letter prose; their
+ * rewrites mirror into the stored section through a text-verified unique-match
+ * writer. CV main-column prose rows stay bind-only (owner prose). A bind turns
+ * hyphens in the bound tail into U+2011 non-breaking hyphens: a renderer breaks
+ * after "-", so binding spaces alone never moved "early-spring" down.
  *
  * Kill: localStorage['antcv:disable-orphan-preflight']='1'.
  * Test hooks: run(payload, { measureLines, fetchImpl, storage }) — the unit tests
@@ -81,7 +94,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.5505-no-orphan-cells';
+  var VERSION = '1.51.5845-no-orphan-cl';
   if (window.__antcvOrphanExportPreflight === VERSION) return;
   window.__antcvOrphanExportPreflight = VERSION;
 
@@ -100,6 +113,14 @@
   // NO-ORPHAN-001: table cells may go deeper (house generator: -0.5 pt plus character width down to 94%).
   var CELL_CONDENSE_FLOOR_PT = 0.5;
   var CELL_SCALE_MIN = 94;
+  // NO-ORPHAN-002: body character width down to 96%; widening up to 104% (owner fix order steps 1 + 2).
+  var BODY_SCALE_MIN = 96;
+  var WIDEN_MAX = 104;
+  var NBHY = String.fromCharCode(0x2011);   // non-breaking hyphen
+  // NO-ORPHAN-002: a condense or widen step must still hold at 98% of the column. Glyph widths match Word and
+  // LibreOffice to 0.3%, but on the Anita export a cell condensed to a 99%-full line wrapped again in
+  // LibreOffice and a 98%-full sidebar row wrapped in Word (their column edges and break rules differ a little).
+  var SAFE_FIT = 0.98;
   function condenseDisabled(storage) { try { var v = (storage || localStorage).getItem('antcv:disable-export-condense'); return v === '1' || v === 'true'; } catch (_) { return false; } }
   var PAGE_W = 11906;        // A4 twips — worker src/generate.js
   var TWIPS_PER_PX = 15;     // 96dpi
@@ -150,7 +171,9 @@
     var seam = seamPx !== undefined ? Math.round(seamPx * 15) : 0;
     var biPx = pxTok(style.bulletIndent);
     var bIndent = biPx !== undefined ? Math.round(biPx * 15) : 210;  // worker default
-    var cellW = mainW - 2 * mainEdge - seam;                         // makeMainCell margins
+    // NO-ORPHAN-002: the cover letter is one full-width body (worker CL_SIDE_MARGIN 200 each side).
+    var isClDoc = !!(payload && payload.doc === 'cl');
+    var cellW = isClDoc ? PAGE_W - 400 : mainW - 2 * mainEdge - seam; // makeMainCell margins
     var family = (typeof style.mainBodyFont === 'string' && /^[a-z ]{3,}$/i.test(style.mainBodyFont))
       ? style.mainBodyFont
       : (payload && payload.legacy_ats_tier === true) ? 'Calibri'
@@ -184,6 +207,7 @@
       : !pkg ? 'Trebuchet MS' : (PKG_HEAD_FONT[pkg] || PKG_HEAD_FONT['copenhagen-modern']);
     return {
       family: family,
+      isCl: isClDoc,
       headFamily: headFamily,
       mainWtw: mainW,
       cellWpx: cellW / TWIPS_PER_PX,
@@ -240,8 +264,20 @@
   function bindLastN(s, n) {
     var right = String(s).replace(/\s+$/, ''); var trail = String(s).slice(right.length);
     var arr = right.split('');
-    var idx = bindableSpaces(right).slice(-n);
+    var all = bindableSpaces(right);
+    var idx = all.slice(-n);
     for (var i = 0; i < idx.length; i++) arr[idx[i]] = NBSP;
+    // NO-ORPHAN-002: a renderer breaks after "-", so "late-winter and early-spring" bound by spaces still
+    // splits at "early-". Inside the bound group (from the word before the first bound space) a hyphen
+    // between two letters/digits becomes U+2011 (non-breaking hyphen); tags are never touched.
+    if (idx.length) {
+      var from = all.length > idx.length ? all[all.length - idx.length - 1] + 1 : 0, inTag = false;
+      for (var p = from; p < arr.length; p++) {
+        if (arr[p] === '<') inTag = true;
+        else if (arr[p] === '>') inTag = false;
+        else if (!inTag && arr[p] === '-' && /[0-9A-Za-z\u00c0-\u024f]/.test(arr[p - 1] || '') && /[0-9A-Za-z\u00c0-\u024f]/.test(arr[p + 1] || '')) arr[p] = NBHY;
+      }
+    }
     return arr.join('') + trail;
   }
 
@@ -386,7 +422,7 @@
     if (!b && typeof window.ANTCV_RELAY_URL === 'string') b = String(window.ANTCV_RELAY_URL).replace(/\/+$/, '');
     return b;
   }
-  var L3_SYSTEM = 'You are a precise CV line editor. Each input item is {"line","facts"}: "line" is one CV line (an experience bullet, a Results line, or a profile sentence group) whose LAST typeset line in the EXPORTED PDF fills under 60% of the column (a dangling runt); "facts" is stored source material about the SAME role from the candidate\'s own data (may be empty). Rewrite EACH line so it fills complete typeset lines with NO short dangling last line. You may SHORTEN (shorter synonyms, drop filler like "the", "a", "that", "in order to", "various", redundant qualifiers) OR LENGTHEN by folding in ONE concrete detail taken ONLY from "facts" — never invent a fact, number, tool, or claim that is not in "line" or "facts". An item may carry "maxLines": that line is TOO LONG for the layout — shorten it decisively so it fits within that many typeset lines (keep only the strongest content; a two-line bullet beats a three-line one). Keep the SAME meaning and the SAME leading verb form. PRESERVE VERBATIM every number, %, year, patent/standard code, tool name, proper noun, acronym, and any <b>/<i> tags from the original. NEVER use an em dash or en dash. Do NOT merge lines. Return ONLY a JSON array of strings, the SAME length and order as the input.';
+  var L3_SYSTEM = 'You are a precise CV line editor. Each input item is {"line","facts"}: "line" is one CV line (an experience bullet, a Results line, or a profile sentence group) whose LAST typeset line in the EXPORTED PDF fills under 60% of the column (a dangling runt); "facts" is stored source material about the SAME role from the candidate\'s own data (may be empty). Rewrite EACH line so it fills complete typeset lines with NO short dangling last line. You may SHORTEN (shorter synonyms, drop filler like "the", "a", "that", "in order to", "various", redundant qualifiers) OR LENGTHEN by folding in ONE concrete detail taken ONLY from "facts" — never invent a fact, number, tool, or claim that is not in "line" or "facts". An item may carry "kind": "label" is a short table label naming one job need - keep its key noun phrase and return at most "fitChars" characters so it sits on ONE line; "letter" is a cover-letter sentence or bullet - keep its voice and its first person. An item may carry "maxLines": that line is TOO LONG for the layout — shorten it decisively so it fits within that many typeset lines (keep only the strongest content; a two-line bullet beats a three-line one). Keep the SAME meaning and the SAME leading verb form. PRESERVE VERBATIM every number, %, year, patent/standard code, tool name, proper noun, acronym, and any <b>/<i> tags from the original. NEVER use an em dash or en dash. Do NOT merge lines. Return ONLY a JSON array of strings, the SAME length and order as the input.';
 
   // ── kernel FACTS for the LENGTHEN leg ────────────────────────────────────────
   function normKey(s) { return String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); }
@@ -498,7 +534,10 @@
               { widthPx: colW[c2], fontPx: r2 === 0 ? met.tblHeadPx : met.tblCellPx, family: r2 === 0 ? met.headFamily : met.family },
               function () { return row[c2]; }, function (t) { row[c2] = t; },
               { cell: true, rowIdx: r2, colIdx: c2, wrap: (r2 === 0 || c2 === 0) ? 'b' : null,
-                justified: r2 > 0 && c2 === 1 && (!a1 || a1 === 'justify') });
+                justified: r2 > 0 && c2 === 1 && (!a1 || a1 === 'justify'),
+                // NO-ORPHAN-002: data cells may be reworded (L3); a label gets a one-line brief (bold ~0.55 em/char)
+                noRewrite: r2 === 0, label: r2 > 0 && c2 === 0,
+                fitChars: Math.max(6, Math.floor(colW[c2] / ((r2 === 0 ? met.tblHeadPx : met.tblCellPx) * 0.55))) });
           })(c);
         }
       })(s.rows[r], r);
@@ -559,7 +598,7 @@
       var a = alignAt(s, path + '.t') || alignAt(s, path) || grp;
       pushExtra(out, s, 'bullets', path, g,
         function () { return str ? s.items[i] : it.t; }, function (v) { if (str) s.items[i] = v; else it.t = v; },
-        { prefixHtml: !str && it.b ? '<b>' + esc(it.b + ': ') + '</b>' : '', justified: !a || a === 'justify' });
+        { prefixHtml: !str && it.b ? '<b>' + esc(it.b + ': ') + '</b>' : '', justified: !a || a === 'justify', noRewrite: false });
     });
   }
   // text_bullets (worker renderTextBullets): intro / closing body paragraphs + items.N bullets.
@@ -569,7 +608,7 @@
     var gBody = geo(side, met, false, false), gBul = geo(side, met, true, !side);
     ['intro', 'closing'].forEach(function (k) {
       if (typeof s[k] !== 'string' || !s[k].trim() || isPlaceholder(s[k])) return;
-      pushExtra(out, s, 'tb_body', k, gBody, function () { return s[k]; }, function (v) { s[k] = v; }, { justified: just(k) });
+      pushExtra(out, s, 'tb_body', k, gBody, function () { return s[k]; }, function (v) { s[k] = v; }, { justified: just(k), noRewrite: !met.isCl });
     });
     if (!Array.isArray(s.items)) return;
     var vi = 0;
@@ -577,14 +616,73 @@
       if (!it) return;
       var path = 'items.' + (vi++);
       if (typeof it !== 'string' || !it.trim() || isPlaceholder(it)) return;
-      pushExtra(out, s, 'tb_item', path, gBul, function () { return s.items[i]; }, function (v) { s.items[i] = v; }, { justified: just(path) });
+      pushExtra(out, s, 'tb_item', path, gBul, function () { return s.items[i]; }, function (v) { s.items[i] = v; }, { justified: just(path), noRewrite: false });
     });
+  }
+
+  // rich_block rows (worker renderRichBlock) in either column. mk === true renders as a numbered bullet
+  // (bullet indent, bulletContent size, bold lead with no auto-colon); a string mk is an emoji-led paragraph.
+  // Rows default to JUSTIFIED unless the section has group rows (LEFT) or the row carries its own align.
+  // NO-ORPHAN-002: marker rows were skipped; CV main prose rows were condense-only (now bind too). L3 takes
+  // marker rows and every cover-letter row; CV prose rows stay out of it (owner prose).
+  function collectRichBlock(s, side, met, isCl, out) {
+    if (!Array.isArray(s.items)) return;
+    var hasGrp = s.items.some(function (it) { return it && typeof it === 'object' && it.grp; });
+    for (var i = 0; i < s.items.length; i++) {
+      (function (it, i2) {
+        if (!it || typeof it !== 'object') return;
+        if (it.grp || it.group !== undefined) return;                    // group sub-heading
+        if (typeof it.t !== 'string' || !it.t.trim() || isPlaceholder(it.t)) return;
+        var lead = String(it.b || '');
+        if (/^\s*hidden\s*[-–—:]\s*/i.test(lead)) return;            // residue rows never ship (belt) — never measure
+        // Worker LEAD-COLON-PERROW-001: a non-marker lead gets ': ' unless it already ends in punctuation,
+        // row.colon says otherwise or the section disables it; a marker row gets none unless row.colon.
+        var colon = (it.colon != null) ? !!it.colon : (!it.mk && s.leadColon !== false && !/[:.;,!?…–—-]$/.test(lead.trim()));
+        var leadText = lead ? lead + (colon ? ': ' : ' ') : '';
+        var bullet = it.mk === true, emoji = typeof it.mk === 'string' && it.mk ? it.mk : '';
+        var leadBold = bullet || s.leadBold !== false;
+        var leadHtml = leadText ? (leadBold ? '<b>' : '') + (s.leadItalic && !bullet ? '<i>' : '') + esc(leadText) + (s.leadItalic && !bullet ? '</i>' : '') + (leadBold ? '</b>' : '') : '';
+        var a = alignAt(s, 'items.' + i2 + '.t') || alignAt(s, 'items.' + i2);
+        var g = geo(side, met, bullet, bullet && !side);
+        out.push({
+          kind: side ? 'side_label' : (it.mk ? 'rich_mk' : 'main_rich'),
+          noRewrite: side || (!it.mk && !isCl),
+          sid: s.id || '', itemIdx: i2, sec: s, condensePath: 'items.' + i2,
+          widthPx: g.widthPx, fontPx: g.fontPx, family: g.family, align: 'left',
+          prefixHtml: (emoji ? esc(emoji + ' ') : '') + leadHtml,
+          justified: a ? a === 'justify' : !hasGrp,
+          get: function () { return it.t; },
+          set: function (v) { it.t = v; },
+        });
+      })(s.items[i], i);
+    }
+  }
+  // text sections (worker renderText: content split on blank lines, justified by default). The profile keeps
+  // its rule-30 align path and L3; other CV text is condense + bind; cover-letter text may go to L3.
+  function collectText(s, met, kind, out, isCl) {
+    if (typeof s.content !== 'string' || /^\s*\[[\s\S]*\]\s*$/.test(s.content)) return; // worker drops placeholders
+    var parts = s.content.split(/(\n{2,})/);
+    var a = alignAt(s, 'content') || alignAt(s, '__group__');
+    for (var pi = 0; pi < parts.length; pi++) {
+      (function (pi2) {
+        if (/^\n{2,}$/.test(parts[pi2]) || !parts[pi2].trim()) return;
+        var tg = {
+          kind: kind, sid: s.id, parIdx: pi2, section: s, sec: s,
+          condensePath: parts.length === 1 ? 'content' : null,    // one paragraph = one path (multi-paragraph content: no condense)
+          widthPx: met.cellWpx, fontPx: met.bodyPx, align: 'left', prefixHtml: '',
+          get: function () { return parts[pi2]; },
+          set: function (v) { parts[pi2] = v; s.content = parts.join(''); },
+        };
+        if (kind === 'profile') tg.alignPath = 'content';         // worker renderText paraAlignPath key
+        else { tg.noRewrite = !isCl; tg.justified = !a || a === 'justify'; }
+        out.push(tg);
+      })(pi);
+    }
   }
 
   function collectTargets(payload, met, opts) {
     var out = [];
     var secs = (payload && payload.sections) || [];
-    var tablesOnly = !!(opts && opts.tablesOnly);
     var isCl = !!(payload && payload.doc === 'cl');
     for (var si = 0; si < secs.length; si++) {
       (function (s) {
@@ -592,7 +690,6 @@
         var side = s.loc === 'sidebar';
         // NO-ORPHAN-001: sections every column shares.
         if (s.type === 'table') { collectTable(s, met, isCl, out); return; }
-        if (tablesOnly) return;
         if (s.type === 'education') { collectEducation(s, side, met, out); return; }
         if (s.type === 'list' || s.type === 'list_italic') { collectList(s, side, met, payload, out); return; }
         if (s.type === 'bullets') { collectBulletList(s, side, met, out); return; }
@@ -609,27 +706,7 @@
           if (s.type === 'labeled_list') {
             collectLabeled(s, true, met, out);
           } else if (s.type === 'rich_block') {
-            for (var ri0 = 0; ri0 < s.items.length; ri0++) {
-              (function (it, i2) {
-                if (!it || typeof it !== 'object') return;
-                if (it.grp || it.group !== undefined) return;            // group sub-heading
-                if (it.mk) return;                                       // marker/bullet rows keep their own geometry
-                if (typeof it.t !== 'string' || !it.t.trim() || /^\s*\[/.test(it.t)) return;
-                var lead = String(it.b || '');
-                if (/^\s*hidden\s*[-–—:]\s*/i.test(lead)) return;        // residue rows never ship (belt) — never measure
-                // Worker LEAD-COLON-PERROW-001: non-marker lead gets ': ' unless
-                // it already ends in punctuation or row.colon === false.
-                var colon = (it.colon != null) ? !!it.colon : (s.leadColon !== false && !/[:.;,!?…–—-]$/.test(lead.trim()));
-                out.push({
-                  kind: 'side_label', sid: s.id || '', itemIdx: i2, sec: s, condensePath: 'items.' + i2,
-                  widthPx: met.sideCellWpx, fontPx: met.sbBodyPx, align: 'left',
-                  family: met.sideFamily,
-                  prefixHtml: lead ? '<b>' + esc(lead + (colon ? ': ' : ' ')) + '</b>' : '',
-                  get: function () { return it.t; },
-                  set: function (v) { it.t = v; },
-                });
-              })(s.items[ri0], ri0);
-            }
+            collectRichBlock(s, true, met, isCl, out);
           }
           return;
         }
@@ -664,40 +741,12 @@
               }
             })(s.roles[ri], ri);
           }
-        } else if (s.type === 'rich_block' && Array.isArray(s.items) && s.loc !== 'sidebar') {
-          // EXPORT-CONDENSE-001: main-column rich_block prose rows (profile, work style, ...) - CONDENSE ONLY
-          // (no NBSP bind, no LLM rewrite: these rows are owner prose).
-          for (var mi = 0; mi < s.items.length; mi++) {
-            (function (it, i2) {
-              if (!it || typeof it !== 'object' || it.grp || it.mk) return;
-              if (typeof it.t !== 'string' || !it.t.trim() || /^\s*\[/.test(it.t)) return;
-              var lead = String(it.b || '');
-              var colon = (it.colon != null) ? !!it.colon : (s.leadColon !== false && !/[:.;,!?…–—-]$/.test(lead.trim()));
-              out.push({
-                kind: 'main_rich', condenseOnly: true, sid: s.id || '', itemIdx: i2, sec: s, condensePath: 'items.' + i2,
-                widthPx: met.cellWpx, fontPx: met.bodyPx, align: 'left',
-                prefixHtml: lead ? '<b>' + esc(lead + (colon ? ': ' : ' ')) + '</b>' : '',
-                get: function () { return it.t; },
-                set: function (v) { it.t = v; },
-              });
-            })(s.items[mi], mi);
-          }
+        } else if (s.type === 'rich_block' && Array.isArray(s.items)) {
+          collectRichBlock(s, false, met, isCl, out);
         } else if ((s.type === 'text' || s.type === 'text_inline') && String(s.id || '') === 'profile') {
-          if (typeof s.content !== 'string' || /^\s*\[[\s\S]*\]\s*$/.test(s.content)) return; // worker drops placeholders
-          var parts = s.content.split(/(\n{2,})/);
-          for (var pi = 0; pi < parts.length; pi++) {
-            (function (pi2) {
-              if (/^\n{2,}$/.test(parts[pi2]) || !parts[pi2].trim()) return;
-              out.push({
-                kind: 'profile', sid: s.id, parIdx: pi2, section: s, sec: s,
-                alignPath: 'content',                                   // worker renderText paraAlignPath key
-                condensePath: parts.length === 1 ? 'content' : null,    // one paragraph = one path (multi-paragraph content: no condense)
-                widthPx: met.cellWpx, fontPx: met.bodyPx, align: 'left', prefixHtml: '',
-                get: function () { return parts[pi2]; },
-                set: function (v) { parts[pi2] = v; s.content = parts.join(''); },
-              });
-            })(pi);
-          }
+          collectText(s, met, 'profile', out);
+        } else if (s.type === 'text') {
+          collectText(s, met, 'text', out, isCl);
         }
       })(secs[si]);
     }
@@ -800,25 +849,27 @@
   }
 
   // ── per-target measure + L2 ─────────────────────────────────────────────────
-  // scalePct < 100 emulates the DOCX character width (w:w): glyphs at k = scale/100 with spacing s on a column W
+  // scalePct != 100 emulates the DOCX character width (w:w): glyphs at k = scale/100 with spacing s on a column W
   // wrap exactly like natural glyphs with spacing s/k on a column W/k; widths come back in the real frame.
-  function measureTarget(measure, tg, raw, letterSpacingPx, scalePct) {
-    var k = (scalePct && scalePct < 100) ? scalePct / 100 : 1;
+  // fit (0..1) measures against that fraction of the column (the SAFE_FIT margin checks).
+  function measureTarget(measure, tg, raw, letterSpacingPx, scalePct, fit) {
+    var k = (scalePct && scalePct !== 100) ? scalePct / 100 : 1;
+    var colW = tg.widthPx * (fit || 1);
     var body = toDisplayHtml(tg.clean ? tg.clean(raw) : raw);
     if (tg.wrap) body = '<' + tg.wrap + '>' + body + '</' + tg.wrap + '>';
     // Always measure NATURAL (left) widths — see domMeasureLines note.
-    var l = measure({ html: tg.prefixHtml + body, widthPx: tg.widthPx / k, fontPx: tg.fontPx, family: tg.family, align: 'left', letterSpacingPx: (letterSpacingPx || 0) / k });
+    var l = measure({ html: tg.prefixHtml + body, widthPx: colW / k, fontPx: tg.fontPx, family: tg.family, align: 'left', letterSpacingPx: (letterSpacingPx || 0) / k });
     if (k === 1 || !l) return l;
     var out = l.map(function (w) { return w * k; });
     if (l.lastWords != null) out.lastWords = l.lastWords;
     return out;
   }
-  // EXPORT-CONDENSE-001 ladder, smallest first. Body: -0.1 pt steps to the -0.4 pt floor. Table cells
-  // (NO-ORPHAN-001): spacing to -0.5 pt crossed with character width 100..94%, ordered by an estimate of the
+  // EXPORT-CONDENSE-001 ladder, smallest first. Body (NO-ORPHAN-002): spacing to the -0.4 pt floor crossed with
+  // character width 100..96%. Table cells (NO-ORPHAN-001): spacing to -0.5 pt crossed with width 100..94%, ordered by an estimate of the
   // width each step takes back (half an em per glyph); ties keep the wider character.
   function condenseLadder(tg) {
     var floorSteps = Math.round((tg.cell ? CELL_CONDENSE_FLOOR_PT : CONDENSE_FLOOR_PT) * 10);
-    var minScale = tg.cell ? CELL_SCALE_MIN : 100;
+    var minScale = tg.cell ? CELL_SCALE_MIN : BODY_SCALE_MIN;   // NO-ORPHAN-002: body width to 96%
     var glyphPt = Math.max(1, tg.fontPx * 0.75 * 0.5);
     var steps = [];
     for (var sc = 100; sc >= minScale; sc--) {
@@ -848,14 +899,14 @@
     var total = 0;
     for (var i = 0; i < base.length; i++) total += base[i];
     var maxCost = steps.length ? steps[steps.length - 1].cost : 0;
-    if (total * (1 - maxCost * 1.5) > (base.length - 1) * tg.widthPx) return {};
+    if (total * (1 - maxCost * 1.5) > (base.length - 1) * tg.widthPx * SAFE_FIT) return {};
     var pxPerPt = 4 / 3;
     for (var k = 0; k < steps.length; k++) {
       var stp = steps[k];
-      var l = measureTarget(measure, tg, raw, stp.pt * pxPerPt, stp.scale);
+      var l = measureTarget(measure, tg, raw, stp.pt * pxPerPt, stp.scale, SAFE_FIT);
       // NO-ORPHAN-001: one line fewer that still ends on an orphan is not a fix (3-line "Winter /
       // preparedness / planning" -> 2 lines with "planning" alone); keep looking, else leave it to the bind.
-      if (l.length && l.length < base.length && !isRuntLines(l, tg.widthPx)) {
+      if (l.length && l.length < base.length && !isRuntLines(l, tg.widthPx * SAFE_FIT)) {
         if (stp.pt < 0) {
           if (!m || typeof m !== 'object') m = tg.sec.item_condense = {};
           m[tg.condensePath] = Math.round(stp.pt * 20);
@@ -865,6 +916,28 @@
           sm[tg.condensePath] = stp.scale;
         }
         return { condensed: true, tw: Math.round(stp.pt * 20), scale: stp.scale, lines: base.length };
+      }
+    }
+    return {};
+  }
+  // NO-ORPHAN-002 (owner fix order step 2): widen the characters 101..104% when that fills the last line to the
+  // floor without adding a line or pushing a line past the column edge. Written to sec.item_scale[path].
+  function tryWiden(measure, tg, baseOpt) {
+    if (!tg.condensePath || !tg.sec) return {};
+    var raw = tg.get();
+    if (typeof raw !== 'string' || !raw.trim()) return {};
+    var base = baseOpt || measureTarget(measure, tg, raw);
+    if (!isRuntLines(base, tg.widthPx)) return {};
+    var m = tg.sec.item_condense, sm = tg.sec.item_scale;
+    if ((m && typeof m === 'object' && typeof m[tg.condensePath] === 'number') || (sm && typeof sm === 'object' && typeof sm[tg.condensePath] === 'number')) return {};
+    for (var sc = 101; sc <= WIDEN_MAX; sc++) {
+      var l = measureTarget(measure, tg, raw, 0, sc);
+      if (l.length !== base.length || overflowsCol(l, tg.widthPx)) break;   // wider pushed a word down or past the edge
+      if (measureTarget(measure, tg, raw, 0, sc, SAFE_FIT).length !== base.length) break;   // no headroom left
+      if (!isRuntLines(l, tg.widthPx)) {
+        if (!sm || typeof sm !== 'object') sm = tg.sec.item_scale = {};
+        sm[tg.condensePath] = sc;
+        return { widened: true, scale: sc };
       }
     }
     return {};
@@ -881,7 +954,7 @@
     var minLen = tg.widthPx < 160 ? 8 : (tg.kind === 'side_label' || tg.widthPx < 300) ? 24 : 40;
     if (typeof raw !== 'string') return {};
     var bindable = bindableSpaces(raw).length >= 2 && raw.length >= minLen;
-    if (!bindable && !tg.noRewrite) return {};
+    // NO-ORPHAN-002: an unbindable orphan is still reported (a two-word table label goes to the L3 reword).
     var base = baseOpt || measureTarget(measure, tg, raw);
     if (!isRuntLines(base, tg.widthPx)) return {};
     if (!bindable) return { runt: true, baseLines: base.length };   // counted, nothing to bind
@@ -946,8 +1019,42 @@
         }
         return false;
       }
+      return mirrorGeneric(tg, shortText, origText, st);
     } catch (_) {}
     return false;
+  }
+  // NO-ORPHAN-002: cells, marker rows, bullet lists and cover-letter lines. The stored section with the same id
+  // in sections[cv|cl] must hold the original text in EXACTLY ONE string field (whitespace-normalised, then the
+  // verifier's normText); anything else aborts - text-verified, never index-trusted (ORPHAN-WRITE-VERIFY-001).
+  function mirrorGeneric(tg, shortText, origText, st) {
+    var raw = st.getItem('sections'); if (!raw) return false;
+    var secs = JSON.parse(raw);
+    var list = secs && secs[tg.doc === 'cl' ? 'cl' : 'cv'];
+    if (!Array.isArray(list)) return false;
+    var OB = window.AntcvOrphanBind;
+    var ws = function (t) { return String(t == null ? '' : t).replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim(); };
+    var loose = OB && typeof OB._normText === 'function' ? OB._normText : null;
+    var find = function (eq) {
+      var hits = [];
+      list.forEach(function (s) {
+        if (!s || String(s.id || '') !== String(tg.sid || '')) return;
+        (function walk(o) {
+          for (var k in o) {
+            if (!Object.prototype.hasOwnProperty.call(o, k)) continue;
+            var v = o[k];
+            if (typeof v === 'string') { if (eq(v)) hits.push([o, k]); }
+            else if (v && typeof v === 'object') walk(v);
+          }
+        })(s);
+      });
+      return hits;
+    };
+    var hits = find(function (v) { return ws(v) === ws(origText); });
+    if (!hits.length && loose) hits = find(function (v) { return loose(v) === loose(origText); });
+    if (hits.length !== 1) return false;
+    hits[0][0][hits[0][1]] = shortText;
+    st.setItem('sections', JSON.stringify(secs));
+    return true;
   }
 
   // ── the preflight ───────────────────────────────────────────────────────────
@@ -958,20 +1065,20 @@
     var summary = { version: VERSION, scanned: 0, runts: 0, bound: 0, rewritten: 0, residue: 0, leftAligned: 0, ms: 0 };
     try {
       if (disabled(storage)) { summary.disabled = true; return Promise.resolve(summary); }
-      // NO-ORPHAN-001: the cover letter runs tables-only (its What-I-bring table shares renderCompetencyTable);
-      // a linear CV keeps its own geometry and is still skipped.
-      var tablesOnly = !!payload && payload.doc === 'cl';
-      if (!payload || (payload.doc !== 'cv' && !tablesOnly) || (!tablesOnly && payload.layout === 'linear')) { summary.skipped = 'doc'; return Promise.resolve(summary); }
-      if (tablesOnly && !(payload.sections || []).some(function (s) { return s && s.type === 'table' && Array.isArray(s.rows) && s.rows.length; })) { summary.skipped = 'doc'; return Promise.resolve(summary); }
+      // NO-ORPHAN-002: the cover letter is measured in full at its body width (it ran tables-only in
+      // NO-ORPHAN-001); a linear CV keeps its own geometry and is still skipped.
+      var isCl = !!payload && payload.doc === 'cl';
+      if (!payload || (payload.doc !== 'cv' && !isCl) || (!isCl && payload.layout === 'linear')) { summary.skipped = 'doc'; return Promise.resolve(summary); }
+      if (isCl && !(payload.sections || []).length) { summary.skipped = 'doc'; return Promise.resolve(summary); }
       var t0 = Date.now();
       var met = metricsFromPayload(payload);
       var measure = opts.measureLines || domMeasureLines;
 
       // rule 40 first: bind/measure below must see the PACKED values.
-      if (!tablesOnly) { try { packSidebar(payload, met, measure, storage, summary); } catch (_) {} }
+      if (!isCl) { try { packSidebar(payload, met, measure, storage, summary); } catch (_) {} }
 
-      var targets = collectTargets(payload, met, { tablesOnly: tablesOnly });
-      targets.forEach(function (tg) { if (!tg.family) tg.family = met.family; });
+      var targets = collectTargets(payload, met);
+      targets.forEach(function (tg) { if (!tg.family) tg.family = met.family; tg.doc = payload.doc; });
       summary.scanned = targets.length;
 
       var targeted = isTargetedMeta(storage);
@@ -986,6 +1093,9 @@
           var c = {};
           try { c = tryCondense(measure, tg); } catch (_) { c = {}; }
           if (c.condensed) { summary.condensed++; return; }
+          var w = {};
+          try { w = tryWiden(measure, tg); } catch (_) { w = {}; }
+          if (w.widened) { summary.widened = (summary.widened || 0) + 1; return; }
         }
         if (tg.condenseOnly) return;
         // rule 30 (NO-FORCE-JUSTIFY): bullets + profile render justified by
@@ -1021,7 +1131,7 @@
         }
       });
       summary.residue = residue.length;
-      try { console.log('[orphan-preflight] scanned ' + summary.scanned + ', condensed ' + summary.condensed + ', runts ' + summary.runts + ', L2-bound ' + summary.bound + ', left-aligned ' + summary.leftAligned + ', packed ' + (summary.packed || 0) + ', residue ' + residue.length + (summary.unfixed ? ', unfixed ' + summary.unfixed.join(' ') : '')); } catch (_) {}
+      try { console.log('[orphan-preflight] scanned ' + summary.scanned + ', condensed ' + summary.condensed + ', widened ' + (summary.widened || 0) + ', runts ' + summary.runts + ', L2-bound ' + summary.bound + ', left-aligned ' + summary.leftAligned + ', packed ' + (summary.packed || 0) + ', residue ' + residue.length + (summary.unfixed ? ', unfixed ' + summary.unfixed.join(' ') : '')); } catch (_) {}
       if (!residue.length) { summary.ms = Date.now() - t0; return Promise.resolve(summary); }
 
       // budget: never start the LLM leg if measurement already ate the envelope
@@ -1050,6 +1160,9 @@
       var inputs = fresh.map(function (r) {
         var it = { line: r.text, facts: r.facts || '' };
         if (r.maxLines) it.maxLines = r.maxLines;   // rule 46: hard line cap for over-long targeted bullets
+        // NO-ORPHAN-002: a table label gets a one-line brief; cover-letter lines keep the letter voice
+        if (r.tg.label) { it.kind = 'label'; it.fitChars = r.tg.fitChars; }
+        else if (r.tg.doc === 'cl') it.kind = 'letter';
         return it;
       });
       return fetchImpl(base + '/', {
@@ -1148,6 +1261,8 @@
     _applyLeftOverride: applyLeftOverride,
     _tryL2: tryL2,
     _mirrorRewrite: mirrorRewrite,
+    _mirrorGeneric: mirrorGeneric,
+    _tryWiden: tryWiden,
     _domMeasureLines: domMeasureLines,
     _hash: hash,
   };

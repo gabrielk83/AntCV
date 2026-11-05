@@ -103,9 +103,14 @@ test('CONDENSE_FRAC is the 0.60 detector floor: a 57% last line now condenses (i
   assert.equal(api._tryCondense(stub, tg).condensed, true);
   assert.equal(sec.item_condense['items.0'], -2);
   const sec2 = {};
+  // NO-ORPHAN-004: 61% is no orphan by the owner floor, but the fix aims at FILL_AIM 0.64 for engine headroom
+  assert.equal(api.FILL_AIM, 0.64);
   const stub61 = (spec) => (spec.letterSpacingPx ? Array(7).fill(100) : [...Array(7).fill(100), 61]);
-  assert.equal(api._tryCondense(stub61, { ...tg, sec: sec2 }).condensed, undefined, 'a 61% last line is not an orphan');
-  assert.ok(!sec2.item_condense);
+  assert.equal(api._tryCondense(stub61, { ...tg, sec: sec2 }).condensed, true, 'a 61% last line is at risk: condensed');
+  const sec3 = {};
+  const stub66 = (spec) => (spec.letterSpacingPx ? Array(7).fill(100) : [...Array(7).fill(100), 66]);
+  assert.equal(api._tryCondense(stub66, { ...tg, sec: sec3 }).condensed, undefined, 'a 66% last line is left alone');
+  assert.ok(!sec3.item_condense);
 });
 
 test('a condense that drops a line but still ends on an orphan is not a fix', () => {
@@ -208,7 +213,8 @@ test('justified cell: a bind that would stretch the line above under 85% is refu
   pl.sections.push(tbl([HDR, ['Lead', text]], { rowAlign: [null, 'left'] }));
   const sl = await api.run(pl, { measureLines: stub, fetchImpl: noFetch });
   assert.equal(sl.bound, 1);
-  assert.equal(pl.sections[1].rows[1][1].split(NB).length - 1, 4);
+  // 4 binds reach 62% (the floor); NO-ORPHAN-004 binds to the 64% aim: 5 binds, 70%
+  assert.equal(pl.sections[1].rows[1][1].split(NB).length - 1, 5);
 });
 
 test('table cell: a bind never pushes a token past the column edge (narrow label column)', async () => {
@@ -233,7 +239,7 @@ test('education rows, list items, bullets and text_bullets are condense + bind t
   );
   const met = api._metricsFromPayload(p);
   const r1 = (x) => Math.round(x * 10) / 10;
-  const ts = api._collectTargets(p, met).map((t) => [t.kind, t.sid, t.condensePath, r1(t.widthPx), t.prefixHtml, t.wrap || '']);
+  const ts = api._collectTargets(p, met).filter((t) => t.kind !== 'role_line').map((t) => [t.kind, t.sid, t.condensePath, r1(t.widthPx), t.prefixHtml, t.wrap || '']);
   assert.deepEqual(plain(ts), [
     ['edu', 'education', 'items.0', r1(met.sideCellWpx), '<b>MSc Agricultural Sciences: </b>', ''],
     ['list', 'certs', 'items.0', r1(met.cellWpx), '', ''],          // certifications: no bullet
@@ -285,13 +291,14 @@ test('widen (owner step 2): 101..104% when it fills the last line without adding
   // A line wider than the column the stub is given reflows into three lines.
   const stub = (n1, n2) => (spec) => { const a = spec.widthPx >= n1 ? [n1, n2] : [n1 - 100, 200, n2]; a.lastWords = 3; return a; };
   const tg = { condensePath: 'items.0', get: () => 'x y z', widthPx: 497.8, fontPx: 14, prefixHtml: '' };
-  // 292 px = 58.7% of 497.8: 102% gives 297.8 (still under 298.7), 103% gives 300.8 -> filled
+  // 312 px = 62.7% of 497.8 (under the 64% aim): 103% gives 321.4 (64.6%) -> the smallest fix; NO-ORPHAN-004
+  // takes one step more for headroom -> 104%
   const sec = {};
-  assert.deepEqual(plain(api._tryWiden(stub(470, 292), { ...tg, sec })), { widened: true, scale: 103 });
-  assert.equal(sec.item_scale['items.0'], 103);
-  // a 476 px first line: at 103% only 473.6 px remain under the 98% margin -> it would reflow -> refused
+  assert.deepEqual(plain(api._tryWiden(stub(460, 312), { ...tg, sec })), { widened: true, scale: 104 });
+  assert.equal(sec.item_scale['items.0'], 104);
+  // a 470 px first line: at 104% only 469.1 px remain under the 98% margin -> it would reflow -> no headroom, refused
   const sec2 = {};
-  assert.deepEqual(plain(api._tryWiden(stub(476, 292), { ...tg, sec: sec2 })), {});
+  assert.deepEqual(plain(api._tryWiden(stub(470, 312), { ...tg, sec: sec2 })), {});
   assert.ok(!sec2.item_scale);
 });
 
@@ -355,4 +362,60 @@ test('mirror: a cell / marker-row rewrite lands in the stored section only on a 
   const m3 = mk([HDR]);
   assert.equal(api._mirrorGeneric({ sid: 'bring', doc: 'cl' }, 'Short', 'Shared text', st(m3)), true, 'cover letter list');
   assert.equal(JSON.parse(m3.get('sections')).cl[0].items[0].t, 'Short');
+});
+
+// ── NO-ORPHAN-004 (live audit of a real CV, 2026-11-05): role lines, justified rows, the Results lead ──────────
+const roleCv = (roles, store) => ({ doc: 'cv', layout: 'two_column', style: {}, font_sizes: {},
+  sections: [{ id: 'experience', type: 'experience', loc: 'main', title: 'EXPERIENCE', roles }] });
+
+test('role line: one line as is -> untouched; slightly long -> condensed (roles.N.title)', async () => {
+  const { api } = load();
+  const p = roleCv([{ title: 'L'.repeat(20), company: 'Co', years: '2026 - nu', location: 'Hørsholm, Denmark', bullets: [] },
+    { title: 'L'.repeat(56), company: 'Co', years: '2026 - nu', location: 'Hørsholm', bullets: [] }]);
+  const sum = await api.run(p, { measureLines: measureW, fetchImpl: noFetch });
+  const s = p.sections[0];
+  assert.ok(!(s.item_condense && 'roles.0.title' in s.item_condense) && !(s.item_scale && 'roles.0.title' in s.item_scale), 'a fitting line is untouched');
+  assert.ok((s.item_condense && s.item_condense['roles.1.title'] < 0) || (s.item_scale && s.item_scale['roles.1.title'] < 100), 'the long line is condensed');
+  assert.equal(s.roles[1].location, 'Hørsholm');
+  assert.equal(sum.roleLines, 1);
+});
+
+test('role line: too long to condense -> the place drops its country (academy place style), stored role mirrored', async () => {
+  const stored = { cv: [{ id: 'experience', type: 'experience', roles: [{ title: 'L'.repeat(56), company: 'Co', years: '2026 - nu', location: 'Hørsholm, Denmark' }] }], cl: [] };
+  const { api, store } = load({ sections: JSON.stringify(stored) });
+  const p = roleCv([{ title: 'L'.repeat(56), company: 'Co', years: '2026 - nu', location: 'Hørsholm, Denmark', bullets: [] }]);
+  const sum = await api.run(p, { measureLines: measureW, fetchImpl: noFetch });
+  assert.equal(p.sections[0].roles[0].location, 'Hørsholm');
+  assert.equal(sum.shortenedPlaces, 1);
+  assert.equal(JSON.parse(store.get('sections')).cv[0].roles[0].location, 'Hørsholm', 'preview stays in step');
+  assert.equal(api._shortPlace('Copenhagen, Denmark (alongside Innoviz until 2025)'), 'Copenhagen (alongside Innoviz until 2025)');
+  assert.equal(api._shortPlace('Israel / Copenhagen'), null, 'no trailing country: nothing to drop');
+  const far = roleCv([{ title: 'L'.repeat(90), company: 'Co', years: '2026', location: 'Or Akiva, Israel', bullets: [] }]);
+  const s2 = await load().api.run(far, { measureLines: measureW, fetchImpl: noFetch });
+  assert.equal(far.sections[0].roles[0].location, 'Or Akiva, Israel', 'no fix found: the place stays');
+  assert.deepEqual(plain(s2.unfixed), ['experience:roles.0.title']);
+});
+
+test('a justified sidebar row whose bind would stretch the line above is bound and set LEFT; a table cell is not', async () => {
+  const { api } = load({ 'antcv:disable-export-condense': '1' });   // isolate the bind
+  const p = cv([]);
+  p.sections.push({ id: 'certs', type: 'rich_block', loc: 'sidebar', items: [{ b: '', t: words(11) }] });
+  const sum = await api.run(p, { measureLines: measureW, fetchImpl: noFetch });
+  const s = p.sections[1];
+  assert.ok(s.items[0].t.includes(NBS), 'bound');
+  assert.equal(s.item_alignment['items.0'], 'left');
+  assert.ok(sum.leftAligned >= 1);
+  const q = cv([]);
+  q.sections.push({ id: 'certs', type: 'rich_block', loc: 'sidebar', item_alignment: { 'items.0': 'justify' }, items: [{ b: '', t: words(11) }] });
+  await api.run(q, { measureLines: measureW, fetchImpl: noFetch });
+  assert.equal(q.sections[1].items[0].t, words(11), 'an explicit justify is the user’s choice: no bind');
+});
+
+test('the Results lead is measured in the export language, upright on Copenhagen', () => {
+  const { api } = load();
+  const mk = (extra) => ({ doc: 'cv', layout: 'two_column', style: {}, font_sizes: {}, ...extra,
+    sections: [{ id: 'experience', type: 'experience', loc: 'main', roles: [{ title: 'T', company: 'C', bullets: [], results: 'Cut the cycle from 250 to 10 days' }] }] });
+  const lead = (p) => api._collectTargets(p, api._metricsFromPayload(p)).find((t) => t.kind === 'results').prefixHtml;
+  assert.equal(lead(mk({ language: 'da', package: 'copenhagen-modern' })), '<b>Resultater: </b>');
+  assert.equal(lead(mk({ language: 'en' })), '<b><i>Results: </i></b>');
 });

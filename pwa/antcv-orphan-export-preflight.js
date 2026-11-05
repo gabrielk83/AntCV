@@ -87,6 +87,16 @@
  * hyphens in the bound tail into U+2011 non-breaking hyphens: a renderer breaks
  * after "-", so binding spaces alone never moved "early-spring" down.
  *
+ * NO-ORPHAN-004 (live audit of a real CV, 2026-11-05: 40 orphans in the LibreOffice PDF, 15 left after
+ * NO-ORPHAN-003): decisions aim at FILL_AIM 0.64 so a line the browser sets at 60-63% does not land under 60%
+ * in LibreOffice / Word; widening takes one step past the smallest fixing width (its fix is a reflow at the
+ * column edge, which an engine measuring 0.6% narrower did not repeat); a bind must still hold at 98% of the
+ * column; a justified row (not a table cell) whose bind would stretch the line above is bound and set LEFT
+ * (item_alignment), as rule 30 does for bullets; the role line (title | company, right tab, years | place) is a
+ * one-line element: condensed (key roles.N.title), else its place shortened to the city ("Hørsholm, Denmark" ->
+ * "Hørsholm", the academy template's place style); the Results lead is measured in the export language
+ * ("Resultater: "), upright on Copenhagen.
+ *
  * Kill: localStorage['antcv:disable-orphan-preflight']='1'.
  * Test hooks: run(payload, { measureLines, fetchImpl, storage }) — the unit tests
  * inject a deterministic measurer + fetch; the DOM measurer is only built lazily.
@@ -94,7 +104,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.5845-no-orphan-cl';
+  var VERSION = '1.51.6025-no-orphan-roles';
   if (window.__antcvOrphanExportPreflight === VERSION) return;
   window.__antcvOrphanExportPreflight = VERSION;
 
@@ -121,6 +131,13 @@
   // LibreOffice to 0.3%, but on the Anita export a cell condensed to a 99%-full line wrapped again in
   // LibreOffice and a 98%-full sidebar row wrapped in Word (their column edges and break rules differ a little).
   var SAFE_FIT = 0.98;
+  // NO-ORPHAN-004: what a fix aims for (the owner floor stays RUNT_FRAC 0.60). Measured gap on a real CV: the
+  // browser set last lines at 60-62% that LibreOffice / Word set at 57-59%.
+  var FILL_AIM = 0.64;
+  // worker style._resultsLabel (generateDocx __RESULTS)
+  var RESULTS_LABEL = { da: 'Resultater: ', es: 'Resultados: ' };
+  // NO-ORPHAN-004: country names a role-line place may end with ("Hørsholm, Denmark")
+  var PLACE_COUNTRY_RE = /,\s*(Denmark|Danmark|Israel|Sweden|Sverige|Norway|Norge|Germany|Deutschland|Tyskland|Finland|Spain|Spanien|España|Netherlands|Holland|Nederland|UK|United Kingdom|USA|United States|France|Frankrig|Switzerland|Schweiz|Poland|Polen|Austria|Østrig|Belgium|Belgien|Italy|Italien|Ireland|Irland|Portugal|China|Kina|Japan|Taiwan)(?=\s*(\(|$))/;
   function condenseDisabled(storage) { try { var v = (storage || localStorage).getItem('antcv:disable-export-condense'); return v === '1' || v === 'true'; } catch (_) { return false; } }
   var PAGE_W = 11906;        // A4 twips — worker src/generate.js
   var TWIPS_PER_PX = 15;     // 96dpi
@@ -208,6 +225,11 @@
     return {
       family: family,
       isCl: isClDoc,
+      // NO-ORPHAN-004: role line (fs.expSubHead, right tab at mainW - 680 DXA), Results lead, Copenhagen flags
+      expSubPx: (function () { var v = Number(fs.expSubHead); return (isFinite(v) && v > 0 ? v : 10.5) * 96 / 72; })(),
+      roleTabWpx: (mainW - 680) / TWIPS_PER_PX,
+      resultsLabel: RESULTS_LABEL[String(payload && payload.language || '').slice(0, 2).toLowerCase()] || 'Results: ',
+      cph: (function () { var p = String(payload && payload.package || '').trim().toLowerCase(); return !!p && (p === 'copenhagen-modern' || !PKG_HEAD_FONT[p]); })(),
       headFamily: headFamily,
       mainWtw: mainW,
       cellWpx: cellW / TWIPS_PER_PX,
@@ -355,11 +377,11 @@
     } catch (_) { return 0; }
   }
 
-  function isRuntLines(widths, colWpx) {
+  function isRuntLines(widths, colWpx, frac) {
     if (!widths || widths.length < 2) return false;
     if (widths.lastWords === 1) return true;   // NO-ORPHAN-001: one word alone on the last line is an orphan at any fill
     var last = widths[widths.length - 1];
-    return last > 0 && colWpx > 0 && (last / colWpx) < RUNT_FRAC;
+    return last > 0 && colWpx > 0 && (last / colWpx) < (frac || RUNT_FRAC);
   }
   // A bind that makes a token wider than the column renders as an overflow (Word then breaks it mid-word).
   function overflowsCol(widths, colWpx) {
@@ -598,7 +620,7 @@
       var a = alignAt(s, path + '.t') || alignAt(s, path) || grp;
       pushExtra(out, s, 'bullets', path, g,
         function () { return str ? s.items[i] : it.t; }, function (v) { if (str) s.items[i] = v; else it.t = v; },
-        { prefixHtml: !str && it.b ? '<b>' + esc(it.b + ': ') + '</b>' : '', justified: !a || a === 'justify', noRewrite: false });
+        { prefixHtml: !str && it.b ? '<b>' + esc(it.b + ': ') + '</b>' : '', justified: !a || a === 'justify', noRewrite: false, alignKey: path, groupAligns: true });
     });
   }
   // text_bullets (worker renderTextBullets): intro / closing body paragraphs + items.N bullets.
@@ -608,7 +630,7 @@
     var gBody = geo(side, met, false, false), gBul = geo(side, met, true, !side);
     ['intro', 'closing'].forEach(function (k) {
       if (typeof s[k] !== 'string' || !s[k].trim() || isPlaceholder(s[k])) return;
-      pushExtra(out, s, 'tb_body', k, gBody, function () { return s[k]; }, function (v) { s[k] = v; }, { justified: just(k), noRewrite: !met.isCl });
+      pushExtra(out, s, 'tb_body', k, gBody, function () { return s[k]; }, function (v) { s[k] = v; }, { justified: just(k), noRewrite: !met.isCl, alignKey: k, groupAligns: true });
     });
     if (!Array.isArray(s.items)) return;
     var vi = 0;
@@ -616,7 +638,7 @@
       if (!it) return;
       var path = 'items.' + (vi++);
       if (typeof it !== 'string' || !it.trim() || isPlaceholder(it)) return;
-      pushExtra(out, s, 'tb_item', path, gBul, function () { return s.items[i]; }, function (v) { s.items[i] = v; }, { justified: just(path), noRewrite: false });
+      pushExtra(out, s, 'tb_item', path, gBul, function () { return s.items[i]; }, function (v) { s.items[i] = v; }, { justified: just(path), noRewrite: false, alignKey: path, groupAligns: true });
     });
   }
 
@@ -651,6 +673,7 @@
           widthPx: g.widthPx, fontPx: g.fontPx, family: g.family, align: 'left',
           prefixHtml: (emoji ? esc(emoji + ' ') : '') + leadHtml,
           justified: a ? a === 'justify' : !hasGrp,
+          alignKey: 'items.' + i2,
           get: function () { return it.t; },
           set: function (v) { it.t = v; },
         });
@@ -674,10 +697,35 @@
           set: function (v) { parts[pi2] = v; s.content = parts.join(''); },
         };
         if (kind === 'profile') tg.alignPath = 'content';         // worker renderText paraAlignPath key
-        else { tg.noRewrite = !isCl; tg.justified = !a || a === 'justify'; }
+        else { tg.noRewrite = !isCl; tg.justified = !a || a === 'justify'; tg.alignKey = tg.condensePath; tg.groupAligns = true; }
         out.push(tg);
       })(pi);
     }
+  }
+
+  // NO-ORPHAN-004: one role line (worker renderExperience) as a fit target; years text as the worker scrubs it.
+  function roleLineTarget(s, role, ri, met, payload) {
+    var style = (payload && payload.style) || {};
+    var meta = style.roleLineFormat === 'meta';
+    var years = String(role.years || '').replace(/\s*\(\s*(?:present|nuv[æa]rende|nutid|ongoing|current(?:ly)?|now|p[åa]g[åa]ende|actual)\s*\)/gi, '')
+      .replace(/\b(?:present|nuv[æa]rende|nutid|ongoing|currently|current|now|p[åa]g[åa]ende)\b/gi, String(new Date().getFullYear())).replace(/\s{2,}/g, ' ').trim();
+    var a = alignAt(s, 'roles.' + ri + '.title') || alignAt(s, 'roles.' + ri) || alignAt(s, '__group__');
+    var inline = a === 'left' || a === 'center' || a === 'right';
+    var title = String(role.title || ''), company = String(role.company || '');
+    var left = (title ? '<b>' + esc(title) + '</b>' : '') +
+      (company ? (meta ? esc((title ? ' - ' : '') + company) : '<i>' + esc((title ? ' | ' : '') + company) + '</i>') : '');
+    return {
+      kind: 'role_line', noRewrite: true, sid: s.id || 'experience', sec: s, role: role, roleIdx: ri, doc: payload && payload.doc,
+      condensePath: 'roles.' + ri + '.title', fontPx: met.expSubPx, family: met.family, widthPx: met.cellWpx,
+      fitWpx: inline ? met.cellWpx : met.roleTabWpx, gapPx: inline ? met.expSubPx * 0.5 : met.expSubPx * 0.6,
+      leftHtml: left,
+      rightHtml: function (loc) {
+        var parts = [years, String(loc || '').trim()].filter(Boolean);
+        if (!parts.length) return '';
+        return meta ? '<b>(' + esc(parts.join(' | ')) + ')</b>' : esc(parts.join(' | '));
+      },
+      get: function () { return role.location || ''; }, set: function (v) { role.location = v; },
+    };
   }
 
   function collectTargets(payload, met, opts) {
@@ -714,6 +762,7 @@
           for (var ri = 0; ri < s.roles.length; ri++) {
             (function (role, ri2) {
               if (!role) return;
+              if (role.title || role.company) out.push(roleLineTarget(s, role, ri2, met, payload));
               if (Array.isArray(role.bullets)) {
                 for (var bi = 0; bi < role.bullets.length; bi++) {
                   (function (bi2) {
@@ -734,7 +783,8 @@
                 out.push({
                   kind: 'results', sid: s.id || 'experience', roleIdx: ri2, role: role, sec: s, condensePath: 'roles.' + ri2 + '.results',
                   widthPx: met.cellWpx, fontPx: met.bodyPx, align: 'left',
-                  prefixHtml: '<b><i>Results: </i></b>',   // same paragraph as the lead run (worker renderExperience)
+                  // NO-ORPHAN-004: the worker prints the lead in the export language, upright on Copenhagen
+                  prefixHtml: met.cph ? '<b>' + esc(met.resultsLabel) + '</b>' : '<b><i>' + esc(met.resultsLabel) + '</i></b>',
                   get: function () { return role.results; },
                   set: function (v) { role.results = v; },
                 });
@@ -890,7 +940,7 @@
     if (!base || base.length < 2) return {};
     var last = base[base.length - 1];
     if (!(last > 0)) return {};
-    if (!(base.lastWords === 1 || (last / tg.widthPx) < CONDENSE_FRAC)) return {};
+    if (!(base.lastWords === 1 || (last / tg.widthPx) < FILL_AIM)) return {};   // NO-ORPHAN-004: aim, not the floor
     var m = tg.sec.item_condense, sm = tg.sec.item_scale;
     if (m && typeof m === 'object' && typeof m[tg.condensePath] === 'number') return {};   // already decided upstream
     if (sm && typeof sm === 'object' && typeof sm[tg.condensePath] === 'number') return {};
@@ -906,7 +956,7 @@
       var l = measureTarget(measure, tg, raw, stp.pt * pxPerPt, stp.scale, SAFE_FIT);
       // NO-ORPHAN-001: one line fewer that still ends on an orphan is not a fix (3-line "Winter /
       // preparedness / planning" -> 2 lines with "planning" alone); keep looking, else leave it to the bind.
-      if (l.length && l.length < base.length && !isRuntLines(l, tg.widthPx * SAFE_FIT)) {
+      if (l.length && l.length < base.length && !isRuntLines(l, tg.widthPx * SAFE_FIT, FILL_AIM)) {
         if (stp.pt < 0) {
           if (!m || typeof m !== 'object') m = tg.sec.item_condense = {};
           m[tg.condensePath] = Math.round(stp.pt * 20);
@@ -927,17 +977,25 @@
     var raw = tg.get();
     if (typeof raw !== 'string' || !raw.trim()) return {};
     var base = baseOpt || measureTarget(measure, tg, raw);
-    if (!isRuntLines(base, tg.widthPx)) return {};
+    if (!isRuntLines(base, tg.widthPx, FILL_AIM)) return {};
     var m = tg.sec.item_condense, sm = tg.sec.item_scale;
     if ((m && typeof m === 'object' && typeof m[tg.condensePath] === 'number') || (sm && typeof sm === 'object' && typeof sm[tg.condensePath] === 'number')) return {};
-    for (var sc = 101; sc <= WIDEN_MAX; sc++) {
+    var ok = function (sc) {
       var l = measureTarget(measure, tg, raw, 0, sc);
-      if (l.length !== base.length || overflowsCol(l, tg.widthPx)) break;   // wider pushed a word down or past the edge
-      if (measureTarget(measure, tg, raw, 0, sc, SAFE_FIT).length !== base.length) break;   // no headroom left
-      if (!isRuntLines(l, tg.widthPx)) {
+      if (l.length !== base.length || overflowsCol(l, tg.widthPx)) return null;   // wider pushed a word down or past the edge
+      if (measureTarget(measure, tg, raw, 0, sc, SAFE_FIT).length !== base.length) return null;   // no headroom left
+      return isRuntLines(l, tg.widthPx, FILL_AIM) ? false : true;
+    };
+    for (var sc = 101; sc <= WIDEN_MAX; sc++) {
+      var r = ok(sc);
+      if (r === null) break;
+      if (r) {
+        // NO-ORPHAN-004: the fix is a reflow at the column edge; take one step more so an engine that sets the
+        // line ~1% narrower reflows too. No step left (or it fails) -> no widening.
+        if (sc + 1 > WIDEN_MAX || ok(sc + 1) !== true) return {};
         if (!sm || typeof sm !== 'object') sm = tg.sec.item_scale = {};
-        sm[tg.condensePath] = sc;
-        return { widened: true, scale: sc };
+        sm[tg.condensePath] = sc + 1;
+        return { widened: true, scale: sc + 1 };
       }
     }
     return {};
@@ -956,8 +1014,8 @@
     var bindable = bindableSpaces(raw).length >= 2 && raw.length >= minLen;
     // NO-ORPHAN-002: an unbindable orphan is still reported (a two-word table label goes to the L3 reword).
     var base = baseOpt || measureTarget(measure, tg, raw);
-    if (!isRuntLines(base, tg.widthPx)) return {};
-    if (!bindable) return { runt: true, baseLines: base.length };   // counted, nothing to bind
+    if (!isRuntLines(base, tg.widthPx, FILL_AIM)) return {};
+    if (!bindable) return isRuntLines(base, tg.widthPx) ? { runt: true, baseLines: base.length } : {};   // counted, nothing to bind
     var baseOver = overflowsCol(base, tg.widthPx);
     var maxN = Math.min(MAX_BIND, bindableSpaces(raw).length - 1);
     for (var n = 1; n <= maxN; n++) {
@@ -967,10 +1025,84 @@
       if (!baseOver && overflowsCol(l, tg.widthPx)) break; // bound token wider than the column — stop
       // A justified paragraph (table column 2, text_bullets): the line the bind shortened must stay full
       // enough not to stretch into rivers (rule 30's JUSTIFY_MIN).
-      if (tg.justified && l.length >= 2 && l[l.length - 2] < base[base.length - 2] - 0.5 && (l[l.length - 2] / tg.widthPx) < JUSTIFY_MIN) break;
-      if (!isRuntLines(l, tg.widthPx)) { tg.set(cand); return { fixed: true, n: n, baseLines: base.length }; }
+      // NO-ORPHAN-004: a justified row that is not a table cell is bound and set LEFT instead (rule 30's remedy);
+      // table cells keep justified rows (Copenhagen mockup lock) and go to the reword.
+      var needLeft = false;
+      if (tg.justified && l.length >= 2 && l[l.length - 2] < base[base.length - 2] - 0.5 && (l[l.length - 2] / tg.widthPx) < JUSTIFY_MIN) {
+        if (tg.cell || !canSetLeft(tg)) break;
+        needLeft = true;
+      }
+      if (isRuntLines(l, tg.widthPx, FILL_AIM)) continue;
+      // NO-ORPHAN-004: the bound layout must still hold at 98% of the column (an engine that sets text wider)
+      var l98 = measureTarget(measure, tg, cand, 0, 100, SAFE_FIT);
+      if (l98.length !== l.length || isRuntLines(l98, tg.widthPx * SAFE_FIT)) continue;
+      tg.set(cand);
+      if (needLeft) setLeft(tg);
+      return { fixed: true, n: n, baseLines: base.length, left: needLeft };
     }
-    return { runt: true, baseLines: base.length };
+    return isRuntLines(base, tg.widthPx) ? { runt: true, baseLines: base.length } : {};
+  }
+
+  // NO-ORPHAN-004: LEFT override at the target's own align key, never over an explicit choice.
+  function canSetLeft(tg) {
+    if (!tg.alignKey || !tg.sec) return false;
+    var m = tg.sec.item_alignment;
+    if (!m || typeof m !== 'object') return true;
+    var own = function (k) { var v = m[k]; return v === 'left' || v === 'center' || v === 'right' || v === 'justify'; };
+    if (own(tg.alignKey) || own(tg.alignKey + '.t')) return false;
+    return !(tg.groupAligns && own('__group__'));
+  }
+  function setLeft(tg) {
+    var m = tg.sec.item_alignment;
+    if (!m || typeof m !== 'object') m = tg.sec.item_alignment = {};
+    m[tg.alignKey] = 'left';
+  }
+  function shortPlace(loc) {
+    var t = String(loc || '');
+    var u = t.replace(PLACE_COUNTRY_RE, '').replace(/\s{2,}/g, ' ').trim();
+    return u && u !== t ? u : null;
+  }
+  // NO-ORPHAN-004: the role line is ONE line (owner rule "one-line elements"; academy experience line). Worker
+  // renderExperience: classic "title | company" then a right tab (mainW - 680 DXA) to "years | place"; meta
+  // "title - company" then "(years | place)"; an L/C/R align puts the right part inline. Fits when
+  // left + gap + right <= the tab (or the cell). Ladder: body condense at 98%, then the place shortened to the
+  // city (payload + text-verified mirror), then the condense ladder again on the short place.
+  function roleLineFits(measure, tg, loc, lsPx, scale, fit) {
+    var natural = function (html) {
+      var k = (scale && scale !== 100) ? scale / 100 : 1;
+      var l = measure({ html: html, widthPx: 100000, fontPx: tg.fontPx, family: tg.family, align: 'left', letterSpacingPx: (lsPx || 0) / k });
+      return (l && l.length ? l[0] : 0) * k;
+    };
+    var right = tg.rightHtml(loc);
+    var need = natural(tg.leftHtml) + (right ? tg.gapPx + natural(right) : 0);
+    return need <= tg.fitWpx * (fit || 1);
+  }
+  function fixRoleLine(measure, tg, storage, summary) {
+    var loc = tg.role.location || '';
+    if (roleLineFits(measure, tg, loc)) return {};
+    var m = tg.sec.item_condense, sm = tg.sec.item_scale;
+    if ((m && typeof m[tg.condensePath] === 'number') || (sm && typeof sm[tg.condensePath] === 'number')) return {};
+    var steps = condenseLadder(tg), pxPerPt = 4 / 3;
+    var tryLadder = function (l2) {
+      for (var k = 0; k < steps.length; k++) {
+        if (roleLineFits(measure, tg, l2, steps[k].pt * pxPerPt, steps[k].scale, SAFE_FIT)) return steps[k];
+      }
+      return null;
+    };
+    var write = function (stp) {
+      if (stp.pt < 0) { if (!m || typeof m !== 'object') m = tg.sec.item_condense = {}; m[tg.condensePath] = Math.round(stp.pt * 20); }
+      if (stp.scale < 100) { if (!sm || typeof sm !== 'object') sm = tg.sec.item_scale = {}; sm[tg.condensePath] = stp.scale; }
+    };
+    var stp = tryLadder(loc);
+    if (stp) { write(stp); return { fixed: 'condense' }; }
+    var short = shortPlace(loc);
+    if (!short) return { runt: true };
+    var shortStep = roleLineFits(measure, tg, short, 0, 100, SAFE_FIT) ? { pt: 0, scale: 100 } : tryLadder(short);
+    if (!shortStep) return { runt: true };
+    tg.role.location = short;
+    write(shortStep);
+    if (mirrorGeneric(tg, short, loc, storage || localStorage)) summary.mirrored = (summary.mirrored || 0) + 1;
+    return { fixed: 'place', place: short };
   }
 
   // ── stored-section mirror (rewrites only) via the SHIPPED verifier ──────────
@@ -1087,6 +1219,13 @@
       summary.condensed = 0;
       targets.forEach(function (tg) {
         var base = null;
+        if (tg.kind === 'role_line') {
+          var rl = {};
+          try { rl = noCondense ? {} : fixRoleLine(measure, tg, storage, summary); } catch (_) { rl = {}; }
+          if (rl.fixed) { summary.runts++; summary.roleLines = (summary.roleLines || 0) + 1; if (rl.place) summary.shortenedPlaces = (summary.shortenedPlaces || 0) + 1; }
+          else if (rl.runt) { summary.runts++; (summary.unfixed = summary.unfixed || []).push((tg.sid || '?') + ':' + tg.condensePath); }
+          return;
+        }
         // EXPORT-CONDENSE-001 first: a short last line pulled back by a small per-paragraph condense needs no
         // bind and no rewrite. Condense-only targets stop here either way.
         if (!noCondense) {
@@ -1114,7 +1253,7 @@
         if (targeted && tg.kind === 'bullet') {
           try { var lw = measureTarget(measure, tg, tg.get()); if (lw.length > MAX_BULLET_LINES) overLines = lw.length; } catch (_) {}
         }
-        if (r.fixed) { summary.runts++; summary.bound++; }
+        if (r.fixed) { summary.runts++; summary.bound++; if (r.left) summary.leftAligned++; }
         // SIDEBAR-ORPHANS-001: sidebar values stop at L2 — no LLM rewrite, no
         // stored-section mirror (the narrow column is not worth a reword risk).
         // NO-ORPHAN-001: the condense + bind-only kinds (tables, education, lists, ...) stop here too; what is
@@ -1263,6 +1402,10 @@
     _mirrorRewrite: mirrorRewrite,
     _mirrorGeneric: mirrorGeneric,
     _tryWiden: tryWiden,
+    _fixRoleLine: fixRoleLine,
+    _roleLineFits: roleLineFits,
+    _shortPlace: shortPlace,
+    FILL_AIM: FILL_AIM,
     _domMeasureLines: domMeasureLines,
     _hash: hash,
   };

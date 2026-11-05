@@ -28612,6 +28612,8 @@ function renderExperience(s, ctx) {
     //   meta               title - company ........ (years | location)   company upright, years bold (owner 2026-09-29: hyphen, not em dash)
     // location absent + classic => byte-identical to the pre-change export.
     const __meta = style && style.roleLineFormat === "meta";
+    // NO-ORPHAN-004: the export preflight keeps the role line on ONE line with a condense keyed "roles.N.title"
+    const __rlc = paraCondenseOpts(s, "roles." + RI + ".title");
     const __loc = typeof role.location === "string" ? role.location.trim() : "";
     if (role.title) {
       left.push(new TextRun({
@@ -28621,7 +28623,8 @@ function renderExperience(s, ctx) {
         italics: __tSeg && __tSeg.italic != null ? !!__tSeg.italic : false,
         color: (__tSeg && __hex(__tSeg.color)) || style.mainHeadColor,
         size: pt2hp(fs.expSubHead),
-        font: style.mainBodyFont
+        font: style.mainBodyFont,
+        ...__rlc
       }));
     }
     if (role.company) {
@@ -28632,7 +28635,8 @@ function renderExperience(s, ctx) {
         // Spec: role title in main head colour, COMPANY in BLACK, year in gray.
         color: (__cSeg && __hex(__cSeg.color)) || style.mainTextColor,
         size: pt2hp(fs.expSubHead),
-        font: style.mainBodyFont
+        font: style.mainBodyFont,
+        ...__rlc
       }));
     }
     // DATE-NO-PRESENT-001 (owner 2026-07-09, "not present instead of 2+26"):
@@ -28675,7 +28679,8 @@ function renderExperience(s, ctx) {
       bold: __ySeg && __ySeg.bold != null ? !!__ySeg.bold : __meta,
       color: (__ySeg && __hex(__ySeg.color)) || "595959",
       size: pt2hp(fs.expSubHead),
-      font: style.mainBodyFont
+      font: style.mainBodyFont,
+      ...__rlc
     }) : null;
     if (left.length || yearsRun) {
       out.push(new Paragraph({

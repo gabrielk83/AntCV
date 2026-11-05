@@ -251,8 +251,9 @@ test('bracketed placeholders, sidebar subheads/hidden rows and non-labeled sideb
     { id: 'profile', type: 'text', loc: 'main', content: '[PROFILE - template placeholder]' },
   ]);
   const targets = api._collectTargets(payload, api._metricsFromPayload(payload));
-  assert.deepEqual(JSON.parse(JSON.stringify(targets.map((t) => t.kind + ':' + t.sid + ':' + t.condensePath))), ['list:certs:items.0']);
-  assert.equal(targets[0].noRewrite, true, 'list items are condense + bind only');
+  const nonRole = Array.from(targets).filter((t) => t.kind !== 'role_line');   // NO-ORPHAN-004: role lines are targets too
+  assert.deepEqual(JSON.parse(JSON.stringify(nonRole.map((t) => t.kind + ':' + t.sid + ':' + t.condensePath))), ['list:certs:items.0']);
+  assert.equal(nonRole[0].noRewrite, true, 'list items are condense + bind only');
 });
 
 // ── SIDEBAR-ORPHANS-001 (owner PDF review 2026-07-03): all 7 runts in the
@@ -316,7 +317,7 @@ test('profile paragraphs and per-role Results are measured; Results carries the 
   const targets = api._collectTargets(payload, api._metricsFromPayload(payload));
   // join for comparison — the vm-realm array has a foreign Array.prototype
   const kinds = Array.from(targets, (t) => t.kind).sort().join(',');
-  assert.equal(kinds, 'bullet,profile,profile,results');
+  assert.equal(kinds, 'bullet,profile,profile,results,role_line');
   const res = targets.find((t) => t.kind === 'results');
   assert.match(res.prefixHtml, /Results: /);
   const prof = targets.find((t) => t.kind === 'profile');

@@ -113,6 +113,22 @@ test('page segments keep payload indexes: roles.N, items.N land on the right par
   assert.ok(!/<w:spacing w:val="-6"\/>/.test(para(xml, 'Cert zero')));
 });
 
+// NO-ORPHAN-004: the role line (title | company, tab, years) takes the "roles.N.title" condense on every run.
+test('role line runs carry the roles.N.title condense; other roles do not', async () => {
+  const xml = await gen([
+    { id: 'experience', title: 'EXPERIENCE', type: 'experience', loc: 'main',
+      item_condense: { 'roles.1.title': -4 }, item_scale: { 'roles.1.title': 97 },
+      roles: [
+        { id: 'a', title: 'Plain role title', company: 'Alpha', years: '2024', bullets: ['x bullet'] },
+        { id: 'b', title: 'Condensed role title', company: 'Beta Company', years: '2020 - 2023', location: 'Hørsholm', bullets: ['y bullet'] },
+      ] },
+  ]);
+  const line = para(xml, 'Condensed role title');
+  assert.equal((line.match(/<w:spacing w:val="-4"\/>/g) || []).length, 3, 'title, company and years runs');
+  assert.equal((line.match(/<w:w w:val="97"\/>/g) || []).length, 3);
+  assert.ok(!/<w:spacing w:val="-4"\/>/.test(para(xml, 'Plain role title')));
+});
+
 // NO-ORPHAN-002 (owner fix order): character width for body paragraphs too - compress to 96%, widen to 104% -
 // clamped [96, 104] for body and [94, 104] for table cells; marker / emoji rich_block rows take both controls.
 test('body width 96..104%, cells 94..104%, marker and emoji rows, Results line', async () => {

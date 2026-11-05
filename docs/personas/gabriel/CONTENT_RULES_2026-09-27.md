@@ -153,3 +153,14 @@ Source: written advice from Anne (Improve Academy), 2026-11-01. "Hearing impaire
 | Work support (for later) | The Danish scheme for compensation to disabled persons in employment can fund up to 20 h/week of interpreting (e.g. a writing interpreter) or personal assistance in full-time work; applied for with the employer through the municipality's jobcenter, usually paid to the employer. Interpreter funding for interviews: ask the municipality or Den Nationale Tolkemyndighed. |
 
 Enforcement: `pwa/antcv-profile-access-scrub.js` (COMMS-LINE-001, Gabriel name-guarded, preview + export read the stored sections), `pwa/gold-rules.json` 1.9.7 (`communication`, prompt_block), `workers/proxy` + `workers/demo-proxy` `writing-style-engine.js` (communication-what-works; **both need a workflow_dispatch deploy**). Kernel: the stored `personalInfo.accessibility` text (v13k) still holds the old wording; the scrub overrides it at render, and the D1/kernel line should be updated to the EN line above at the next kernel import.
+
+## 2026-11-05 - No orphans, in every application (NO-ORPHAN-001)
+
+Owner, 2026-11-05: "make sure not to have orphans - especially in tables. always, in all antCV applications."
+
+| Rule | Detail |
+|---|---|
+| Definition | A paragraph of two or more typeset lines is an orphan when its last line fills less than 60 % of the line (the same floor as the app's RUNT_FRAC 0.60) or holds a single word. Applies to CVs and cover letters: requirement tables, bullets, Results lines, sidebar rows, references, interests, letter paragraphs. |
+| Fix order | 1. Character-width compression (body down to 96 %, table cells down to 94 %, spacing to -0.5 pt) when it pulls the line back. 2. Slight widening (102-104 %) when it fills the last line without adding one. 3. Otherwise reword: shorten to fewer lines or lengthen with true facts only (no new claims). |
+| Gate | No file is delivered while the orphan check reports a hit. House generator: `orphan_audit.py` (matches each Word paragraph to its PDF lines) after every CV and letter build; rewordings are measured before they go into the source. AntCV app: the export preflight (`pwa/antcv-orphan-export-preflight.js`) must also cover table cells (lane claimed 2026-11-05). |
+| Length guide (two-column CV, main column) | About 75 characters per line: a bullet is either one line (70 or fewer) or two full lines (125-145). |

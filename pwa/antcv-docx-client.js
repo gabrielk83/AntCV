@@ -3965,6 +3965,11 @@ export function applyOutcomesMode(docSections, doc) {
         // torn off, only the result stayed"): NEVER consume a role's only content into a
         // Result — if deriving would leave ZERO bullets, skip the derive and keep the
         // bullet as content (no Results line) instead.
+        // JT-EC-RESULTS-DERIVE-001 (row 140, 2026-11-05): the Earlier career role is a
+        // summary of short roles, each line dated "(YYYY - YYYY)". The years read as a metric,
+        // so the derive moved the longest line into "Results:". A summary has no single
+        // outcome: skip the derive, keep every line as a bullet.
+        if (String(r && r.id || '') === 'earlier-career') return { ...r, bullets: _txBl(r.bullets) };
         const d = deriveResultFromRole(r, __unsolicited);
         if (!d) return { ...r, bullets: _txBl(r.bullets) };
         const keptBullets = (Array.isArray(r.bullets) ? r.bullets : []).filter((_, i) => i !== d.index);

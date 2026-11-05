@@ -122,7 +122,9 @@ python test_text_guards.py   # synthetic kernel, PDFs built with PyMuPDF
 
 Models, pinned to a commit, safetensors only, CPU:
 - `alexandrainst/scandi-nli-large-v2` for Danish / Swedish;
-- English: OFF (FACT-GUARD-NLI-EN-OFF-001). `yaxili96/FactCG-DeBERTa-v3-Large` failed `--self-test` on 2026-11-05: as published it does not separate a supported claim from an invented one. English claims are skipped until a model passes; `ANTCV_NLI_EN=1` turns it back on to try one.
+- `MoritzLaurer/DeBERTa-v3-large-mnli-fever-anli-ling-wanli` for English (FACT-GUARD-NLI-EN-001). It replaced `yaxili96/FactCG-DeBERTa-v3-Large`, which failed `--self-test` on 2026-11-05. `ANTCV_NLI_EN=0` turns English off.
+
+Calibration is still owed. A first run on a real generated package (2026-11-05) flagged 12 of 17 letter sentences and 33 of 67 CV lines. Most flags were frame lines, sentences about the employer, and kernel facts that retrieval missed in a 775k-character kernel. Treat `--nli` findings as hints until the evaluation in `docs/analysis/TEXT_GUARDS_RESEARCH_2026-11-05.md` is done.
 
 Verdicts:
 - CONTRADICTED is a FAIL (Danish / Swedish model only);

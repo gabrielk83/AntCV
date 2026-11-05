@@ -48,7 +48,7 @@ SOFTWARE.
 | Model | Licence | Used by |
 |---|---|---|
 | alexandrainst/scandi-nli-large-v2 | Apache-2.0 | `scripts/job-tracker/fact_guard_nli.py` (Danish / Swedish) |
-| yaxili96/FactCG-DeBERTa-v3-Large | MIT | `scripts/job-tracker/fact_guard_nli.py` (English) |
+| MoritzLaurer/DeBERTa-v3-large-mnli-fever-anli-ling-wanli | MIT | `scripts/job-tracker/fact_guard_nli.py` (English) |
 
 ## Data sources
 

@@ -8,14 +8,15 @@ a fact moved to another role).
 
   Danish / Swedish  alexandrainst/scandi-nli-large-v2 (Apache-2.0; entailment / neutral /
                     contradiction)
-  English           yaxili96/FactCG-DeBERTa-v3-Large (MIT; supported / unsupported;
-                    LLM-AggreFact 75.6, the best under 1B parameters)
+  English           MoritzLaurer/DeBERTa-v3-large-mnli-fever-anli-ling-wanli (MIT;
+                    entailment / neutral / contradiction). It replaced FactCG-DeBERTa-v3-Large,
+                    which failed --self-test on 2026-11-05 (FACT-GUARD-NLI-EN-001).
 
 For each claim sentence of the draft: retrieve the k kernel facts that share the most stemmed
 content words, score the claim against them joined AND one by one (max, the AlignScore
 pattern, so one CV line merging several facts is not punished), then:
   SUPPORTED     support >= 0.5
-  CONTRADICTED  contradiction >= 0.6 (Danish / Swedish model only)          FAIL
+  CONTRADICTED  contradiction >= 0.6                                       FAIL
   UNSUPPORTED   otherwise ("neutral": inferred wording, or a real gap)    WARN
 Intent sentences ("I will", "Jeg vil") and headings are skipped.
 
@@ -24,7 +25,7 @@ the other job-tracker scripts keep running on plain Python. gen-runner calls thi
 that venv with `run --nli`. Models are pinned to a commit and loaded from safetensors only.
 
 Usage (with the venv's python):
-  python fact_guard_nli.py --download                 # one-time, about 3.2 GB
+  python fact_guard_nli.py --download                 # one-time, about 2.3 GB
   python fact_guard_nli.py --draft CL.txt --kernel kernel.json [--lang da] [--json]
   python fact_guard_nli.py --batch in.json --out out.json    # gen-runner's interface
   python fact_guard_nli.py --self-test                # label orientation on two known pairs
@@ -46,14 +47,12 @@ MODELS = {
     "scandi": {"id": "alexandrainst/scandi-nli-large-v2",
                "rev": os.environ.get("ANTCV_NLI_SCANDI_REV", "6172daba8d0b47341488abdad4e8e375b1d18956"),
                "langs": ("da", "sv"), "kind": "nli3"},
-    # OFF by default (FACT-GUARD-NLI-EN-OFF-001): the self-test on 2026-11-05 found FactCG as
-    # published does not separate a supported claim from an invented one in either input order
-    # (support 0.71 vs 0.83; all weights load, no warnings). English claims are skipped until a
-    # model passes --self-test; ANTCV_NLI_EN=1 turns it on to try one.
-    "factcg": {"id": "yaxili96/FactCG-DeBERTa-v3-Large",
-               "rev": os.environ.get("ANTCV_NLI_FACTCG_REV", "0430e3509dbd28d2dff7a117c0eae25359ff3e80"),
-               "langs": ("en",), "kind": "binary", "support_index": 1,
-               "enabled": os.environ.get("ANTCV_NLI_EN") == "1"},
+    # FACT-GUARD-NLI-EN-001 (owner 2026-11-05): FactCG-DeBERTa-v3-Large failed --self-test (an invented
+    # claim scored 0.83 support, a true one 0.71) and was replaced by this 3-label NLI model, so English
+    # flags contradictions too. ANTCV_NLI_EN=0 turns English off.
+    "en": {"id": "MoritzLaurer/DeBERTa-v3-large-mnli-fever-anli-ling-wanli",
+           "rev": os.environ.get("ANTCV_NLI_EN_REV", "b3546ea6b0346eb6f8d5d68b13c7dc6d0376b3d7"),
+           "langs": ("en",), "kind": "nli3", "enabled": os.environ.get("ANTCV_NLI_EN", "1") != "0"},
 }
 
 
@@ -63,7 +62,7 @@ SUPPORT_MIN, CONTRADICT_MIN, TOP_K, MIN_WORDS = 0.5, 0.6, 4, 6
 
 
 def model_for(lang):
-    return "scandi" if lang in ("da", "sv") else "factcg"
+    return "scandi" if lang in ("da", "sv") else "en"
 
 
 # ------------------------------------------------------------------ retrieval (no model)
@@ -188,7 +187,10 @@ SELF_TEST = [
     ("en", "Led NPI of 12 laser modules at Lumen Optics from 2017 to 2020.",
      "At Lumen Optics I led the NPI of twelve laser modules.", "SUPPORTED"),
     ("en", "Led NPI of 12 laser modules at Lumen Optics from 2017 to 2020.",
-     "At Lumen Optics I managed a team of 40 software developers building a banking app.", "UNSUPPORTED"),
+     "At Lumen Optics I managed a team of 40 software developers building a banking app.",
+     ("UNSUPPORTED", "CONTRADICTED")),        # an invented claim: any flag, never SUPPORTED
+    ("en", "Led NPI of 12 laser modules at Lumen Optics from 2017 to 2020.",
+     "At Lumen Optics I never worked with laser modules.", "CONTRADICTED"),
     ("da", "Ledede NPI af 12 lasermoduler hos Lumen Optics fra 2017 til 2020.",
      "Hos Lumen Optics ledede jeg NPI af tolv lasermoduler.", "SUPPORTED"),
     ("da", "Ledede NPI af 12 lasermoduler hos Lumen Optics fra 2017 til 2020.",
@@ -201,12 +203,13 @@ def self_test():
     ok = True
     for lang, prem, hyp, want in SELF_TEST:
         if not enabled(lang):
-            print("%s skipped (model off; ANTCV_NLI_EN=1 to test it)" % lang)
+            print("%s skipped (model off: ANTCV_NLI_EN=0)" % lang)
             continue
         s, c = sc.score(prem, hyp, lang)
         got = verdict(s, c)[0]
-        ok &= got == want
-        print("%s %-12s want %-12s support %.3f contra %s | %s" % (lang, got, want, s, "-" if c is None else "%.3f" % c,
+        ok &= got in (want if isinstance(want, tuple) else (want,))
+        print("%s %-12s want %-12s support %.3f contra %s | %s" % (lang, got, "/".join(want) if isinstance(want, tuple) else want,
+                                                                    s, "-" if c is None else "%.3f" % c,
                                                                     hyp[:60]))
     print("SELF-TEST", "PASS" if ok else "FAIL")
     return ok

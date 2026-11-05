@@ -127,7 +127,16 @@ consensus_reinforce openai $0.0093/call.
 
 ## 4. Deploy
 
-See §6 (filled after the code commit reaches `main`).
+**DEPLOYED ×3, one at a time via `deploy.yml` (`mode=deploy`, `confirm=<target>`), after the code commit
+`81cab631` reached `main` and the full suite passed:**
+
+| worker | run | from | result | `/health` after |
+|---|---|---|---|---|
+| proxy (`cv-proxy`) | 41995902712 | `81cab631` | success (lint, unit-tests, deploy-worker) | 200, `3.8.4-brand-ink-match` |
+| demo-proxy (`antcv-demo-proxy`) | 41995992221 | `81cab631` | success | 200, `3.8.4-brand-ink-match` |
+| access-relay (`antcv-access-relay`) | 41996075141 | `81cab631` | success | 200, `auth-38-subtitle-guard-qual-put` |
+
+Not verified live beyond `/health`: no endpoint exposes the rate table and none of the five ids has traffic.
 
 ## 5. Owed / owner calls
 

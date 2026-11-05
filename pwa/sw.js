@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.5342-outcome-record';
+const CACHE = 'antcv-1.51.5362-status-history';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

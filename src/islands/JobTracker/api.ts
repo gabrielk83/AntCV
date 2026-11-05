@@ -89,7 +89,8 @@ export interface TrackerDoc {
     cv_export_url?: string; cl_export_url?: string; analysis_url?: string;
   }>;
   // OUTCOME-RECORD-001 (shapes and writers in outcomes.ts)
-  history?: Record<string, HistoryEntry[]>;     // dated status changes, Interview entries carry a stage
+  status_history?: Record<string, HistoryEntry[]>; // dated status changes, Interview entries carry a stage
+  history?: unknown;                            // OUTCOME-RECORD-002: legacy workbook key (an array in JOB-TRACKER-001); never written here
   followups?: Record<string, FollowupRec>;      // submitted date + follow-up log (followups.py and the island)
   financials?: Record<string, FinancialsRec>;   // annual-report summary (company_financials.py; read-only here)
   [k: string]: unknown;

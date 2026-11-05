@@ -14,13 +14,13 @@ type Row = unknown[];
 type Doc = { rows?: Row[]; envelope?: unknown; [k: string]: unknown };
 
 export const MERGE_MAPS = ['urls', 'jd', 'gen', 'queue', 'brandfit', 'brand', 'signals', 'sigfiles', 'support',
-  'webintel', 'scores', 'artifacts', 'discovered', 'pin', 'park', 'history', 'followups'];
+  'webintel', 'scores', 'artifacts', 'discovered', 'pin', 'park', 'status_history', 'followups'];
 
 function same(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
-// OUTCOME-RECORD-001: history[uk] is a dated list and followups[uk] a record that
+// OUTCOME-RECORD-001: status_history[uk] is a dated list and followups[uk] a record that
 // followups.py writes too, so where this session changed the key, merge INSIDE it:
 // a follow-up the script logged, or a status another tab dated, must survive.
 const list = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
@@ -44,7 +44,7 @@ function mergeFollowup(sv: unknown, lv: unknown, bv: unknown): unknown {
   }
   return out;
 }
-const INNER: Record<string, (sv: unknown, lv: unknown, bv: unknown) => unknown> = { history: mergeHistory, followups: mergeFollowup };
+const INNER: Record<string, (sv: unknown, lv: unknown, bv: unknown) => unknown> = { status_history: mergeHistory, followups: mergeFollowup };
 
 export function mergeDocs<T extends Doc>(server: T, local: T, base?: T | null): T {
   const out = { ...server } as T;
@@ -53,7 +53,9 @@ export function mergeDocs<T extends Doc>(server: T, local: T, base?: T | null): 
   for (const k of MERGE_MAPS) {
     const sv = rec(server, k);
     const lv = rec(local, k);
-    if (!lv || typeof lv !== 'object') continue;
+    // OUTCOME-RECORD-002: only uk-keyed maps merge here. Spreading an array into `{...}`
+    // turned it into an object keyed "0", "1", ...; an array on either side keeps the server's.
+    if (!lv || typeof lv !== 'object' || Array.isArray(lv) || Array.isArray(sv)) continue;
     const bv = rec(base, k) || {};
     const m: Record<string, unknown> = { ...(sv || {}) };
     for (const key of Object.keys(lv)) {

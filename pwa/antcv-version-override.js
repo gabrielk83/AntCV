@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.5585-palette-heal-regions';
+  const TARGET_VERSION = '1.51.5605-spec-one-line';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.5585-palette-heal-regions',
     '1.51.5545-comms-lang',
     '1.51.5525-th-override-stale',
     '1.51.5505-no-orphan-cells',

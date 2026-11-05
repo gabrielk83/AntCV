@@ -33,7 +33,7 @@
 (function () {
   'use strict';
   if (window.__antcvCopenhagenV2) return;
-  window.__antcvCopenhagenV2 = '1.51.4626-spec-photo-clear';
+  window.__antcvCopenhagenV2 = '1.51.5605-spec-one-line';
 
   var FLAG = 'antcv:copenhagen-v2';
   var STYLE_ID = 'antcv-copenhagen-v2-style';
@@ -346,11 +346,32 @@
               if (__ds.length >= 3 && !(typeof __fsOv.specialisation === 'number' && __fsOv.specialisation > 0)) {
                 var __specEl = __ds[1];
                 var __Ws = __rngW(__specEl) / __sc;
+                // CPH-SPEC-ONE-LINE-001 (owner 2026-11-05 "header line feels very empty -
+                // text is pushed to second line"): the photo-clear cap (CPH-SPEC-PHOTO-
+                // CLEAR-001) WRAPS the row, and the Range width then reads the wrapped
+                // box (364 px), not the line's natural width (489 px) - so this shrink
+                // never fired and the band grew a second spec line. Measure the ONE-LINE
+                // ink width with a nowrap probe and shrink to fit the SMALLER of the name
+                // allowance and the photo-cleared width (floor 11 px, as before). Only
+                // when even the floor cannot fit does the cap's wrap remain. An explicit
+                // Font sizes value still switches the shrink off (owner's size wins).
+                var __Ws1 = __Ws;
+                try {
+                  var __pcs = getComputedStyle(__specEl);
+                  var __pr = document.createElement('span');
+                  __pr.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden;white-space:nowrap;font:' + __pcs.font + ';letter-spacing:' + __pcs.letterSpacing;
+                  __pr.textContent = String(__specEl.textContent || '');
+                  document.body.appendChild(__pr);
+                  var __w1 = __pr.getBoundingClientRect().width;
+                  __pr.parentNode.removeChild(__pr);
+                  if (__w1 > 40) __Ws1 = __w1;
+                } catch (_) {}
                 var __sfs = parseFloat(getComputedStyle(__specEl).fontSize) || 18;
                 var __allow = 0.92 * __target;
-                if (__Ws > 40 && __allow > 60 && __Ws > __allow) {
-                  __fit.specFs = Math.max(11, Math.min(18, Math.floor((__sfs * __allow / __Ws) * 2) / 2));
-                } else if (__Ws > 40 && __allow > 60 && __Ws <= __allow * 0.9) {
+                if (__fit.specMaxW != null && __fit.specMaxW > 140) __allow = Math.min(__allow, __fit.specMaxW - 4);
+                if (__Ws1 > 40 && __allow > 60 && __Ws1 > __allow) {
+                  __fit.specFs = Math.max(11, Math.min(18, Math.floor((__sfs * __allow / __Ws1) * 2) / 2));
+                } else if (__Ws1 > 40 && __allow > 60 && __Ws1 <= __allow * 0.9) {
                   __fit.specFs = null;
                 }
               }

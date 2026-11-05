@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.5585-palette-heal-regions';
+const CACHE = 'antcv-1.51.5605-spec-one-line';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

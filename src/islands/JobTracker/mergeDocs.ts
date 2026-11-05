@@ -45,9 +45,25 @@ function mergeFollowup(sv: unknown, lv: unknown, bv: unknown): unknown {
   }
   return out;
 }
-// SUBMITTED-VERSION-001: submitted[uk] is a dated list too; a version saved in another
-// tab must survive a rebase, so it merges like status_history.
-const INNER: Record<string, (sv: unknown, lv: unknown, bv: unknown) => unknown> = { status_history: mergeHistory, followups: mergeFollowup, submitted: mergeHistory };
+// SUBMITTED-VERSION-001: submitted[uk] = {newest version's fields, versions: [...]}. A
+// version saved in another tab must survive a rebase: versions merge like
+// status_history, and the top level is re-derived from the newest merged version.
+function mergeSubmitted(sv: unknown, lv: unknown, bv: unknown): unknown {
+  const rec = (v: unknown) => (v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {});
+  const vers = (v: unknown): unknown[] => {
+    const r = rec(v);
+    if (Array.isArray(v)) return v;
+    if (Array.isArray(r.versions)) return r.versions;
+    return r.snapshot_id ? [{ snapshot_id: r.snapshot_id, date: r.date, application_id: r.application_id }] : [];
+  };
+  // same-day versions: snapshot ids are AUTOINCREMENT, so the higher id is the newer save
+  const merged = (mergeHistory(vers(sv), vers(lv), vers(bv)) as Record<string, unknown>[])
+    .sort((a, b) => (String(a.date) < String(b.date) ? -1 : String(a.date) > String(b.date) ? 1 : Number(a.snapshot_id) - Number(b.snapshot_id)));
+  const last = merged[merged.length - 1];
+  if (!last) return lv;
+  return { ...rec(sv), ...rec(lv), snapshot_id: last.snapshot_id, date: last.date, application_id: last.application_id, versions: merged };
+}
+const INNER: Record<string, (sv: unknown, lv: unknown, bv: unknown) => unknown> = { status_history: mergeHistory, followups: mergeFollowup, submitted: mergeSubmitted };
 
 export function mergeDocs<T extends Doc>(server: T, local: T, base?: T | null): T {
   const out = { ...server } as T;

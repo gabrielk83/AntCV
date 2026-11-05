@@ -42,7 +42,8 @@ test('EXPORT-PALETTE-PARITY: the package-palette self-heal PERSISTS styleConfig 
   // The heal used to fix React state only; docx-client buildStyle exports from
   // localStorage styleConfig, so exports kept a stale palette (the owner's dark
   // theme under the copenhagen preset). The heal must write styleConfig.
-  assert.match(app, /mainHeadColor!==\w+\.mainHeadColor&&\w+\(\w+=>\{const \w+=\{\.\.\.\w+,\.\.\.\w+\};try\{\w+\.set\("styleConfig",\w+\)\}/,
+  // PACKAGE-PALETTE-HEAL-REGIONS-001: the condition may carry a region-drift clause ("||...") before the heal.
+  assert.match(app, /mainHeadColor!==\w+\.mainHeadColor(?:\|\|.*?\))?&&\w+\(\w+=>\{const \w+=\{\.\.\.\w+,\.\.\.\w+\};try\{\w+\.set\("styleConfig",\w+\)\}/,
     'app.js: the mainHeadColor-mismatch heal must persist styleConfig');
   assert.ok(src.includes('EXPORT-PALETTE-PARITY'),
     'app.src.js: the heal-persist block (EXPORT-PALETTE-PARITY comment) is missing');

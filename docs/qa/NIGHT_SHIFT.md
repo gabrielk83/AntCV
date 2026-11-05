@@ -41,6 +41,7 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mw3hijam_7jnk","started":"2026-11-05T11:51:01.722Z","host":"Gabo-PC","worktree":"ecstatic-heisenberg-9cfa6d","branch":"claude/ecstatic-heisenberg-9cfa6d","range":"1.51.5665-1.51.5684","task":"MARGIN-LAYOUT-001: header card inside the sidebar (house margin format), no band","beat":"2026-11-05T11:51:01.779Z"}
 {"id":"sh_mw3i2cb0_d1un","started":"2026-11-05T12:06:25.774Z","host":"Gabo-PC","worktree":"strange-euler-50581f","branch":"claude/strange-euler-50581f","range":"1.51.5745-1.51.5764","task":"TRANSLATE-CACHE-MIXED-001: persist translated sections synchronously + stale cache guard","beat":"2026-11-05T12:06:25.817Z"}
 {"id":"sh_mw3i982d_l1gv","started":"2026-11-05T12:11:46.902Z","host":"Gabo-PC","worktree":"gracious-goldwasser-ac89f6","branch":"claude/musing-euler-71ad39","range":"1.51.5785-1.51.5804","task":"NO-ORPHAN-002 CL + marker rows + bullets, label reword, body width, LO audit (re-claim)","beat":"2026-11-05T12:11:46.954Z"}
+{"id":"sh_mw3i9zpw_jl1p","started":"2026-11-05T12:12:22.715Z","host":"Gabo-PC","worktree":"recursing-meninsky-073b65","branch":"claude/relaxed-joliot-5b27fd","range":"1.51.5805-1.51.5824","task":"PROOF-POINTS-HOUSE-001c: edit detection reads the rich_block b/t shape the 763 belt produces","beat":"2026-11-05T12:12:22.762Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

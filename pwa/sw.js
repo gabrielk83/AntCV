@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.5525-th-override-stale';
+const CACHE = 'antcv-1.51.5545-comms-lang';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

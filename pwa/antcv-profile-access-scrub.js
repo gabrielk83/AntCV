@@ -22,11 +22,13 @@
  *    Accessibility row in ADDITIONAL is relabelled the same way. No disability
  *    label ("hearing impaired", "cochlear implant") reaches the CV.
  *    COMMS-LINE-002 (owner 2026-11-05): new, shorter wording of that line.
+ *    COMMS-LANG-001 (owner 2026-11-05): the second language in that line follows
+ *    the job (Danish, Spanish / castellano, Hebrew), read from the stored job ad.
  * Kill: localStorage['antcv:disable-profile-access-scrub']='1'.
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.5465-comms-line-002';
+  var VERSION = '1.51.5545-comms-lang';
   if (window.__antcvProfileAccessScrub === VERSION) return;
   window.__antcvProfileAccessScrub = VERSION;
 
@@ -36,18 +38,64 @@
   // COMMS-LINE-001 (owner 2026-11-01): canonical Communication row, per output language.
   // COMMS-LINE-002 (owner 2026-11-05): shorter wording; the 2026-11-01 sentence only fit
   // on one line with the font squeezed to 86-90 %, this one fits at 100 %.
-  var COMMS_LINE = {
-    en: 'English and Danish at work; live captions and written follow-ups in meetings.',
-    da: 'Engelsk og dansk i arbejdet; liveundertekster og skriftlig opfølgning i møder.',
-    es: 'Inglés y danés en el trabajo; subtítulos en directo y seguimiento por escrito en las reuniones.'
+  // COMMS-LANG-001 (owner 2026-11-05): the second work language follows the job. Danish
+  // when the job needs it (Danish output, or the ad names the Danish language); otherwise
+  // the job's own language: Spanish (Spanish output, the ad names Spanish, or a Spanish-
+  // speaking location), Hebrew (Hebrew output, the ad names Hebrew, or Israel). Both when
+  // the ad needs Danish and one of them. No signal: Danish. Spanish text says
+  // 'castellano' when the ad does, 'español' when the ad does, else by location
+  // (castellano in Spain's co-official-language regions and Argentina, Uruguay, Paraguay).
+  var COMMS_FIRST = { en: 'English', da: 'Engelsk', es: 'Inglés' };
+  var COMMS_AND = { en: ' and ', da: ' og ', es: ' y ' };
+  var COMMS_TAIL = {
+    en: ' at work; live captions and written follow-ups in meetings.',
+    da: ' i arbejdet; liveundertekster og skriftlig opfølgning i møder.',
+    es: ' en el trabajo; subtítulos en directo y seguimiento por escrito en las reuniones.'
+  };
+  var COMMS_NAME = {
+    en: { da: 'Danish', es: 'Spanish', he: 'Hebrew' },
+    da: { da: 'dansk', es: 'spansk', he: 'hebraisk' },
+    es: { da: 'danés', es: 'español', he: 'hebreo' }
   };
   var COMMS_TITLE = { en: 'COMMUNICATION', da: 'KOMMUNIKATION', es: 'COMUNICACIÓN' };
   var COMMS_LABEL = { en: 'Communication', da: 'Kommunikation', es: 'Comunicación' };
-  // the COMMS-LINE-001 wording, so a row that already carries it is rewritten to the new line
-  var LEGACY_COMMS = /follow meetings best|følger møder bedst|sigo mejor las reuniones/i;
+  function wordRe(list) { return new RegExp('(?:^|[^a-z\\u00c0-\\u024f])(?:' + list.join('|') + ')(?![a-z\\u00c0-\\u024f])', 'i'); }
+  var JD_DA = wordRe(['danish', 'dansk\\w*', 'danés', 'danesa', 'dänisch\\w*']);
+  var JD_ES = wordRe(['spanish', 'spansk\\w*', 'spanisch\\w*', 'español', 'espanol', 'castellano', 'hispanohablante',
+    'spain', 'españa', 'espana', 'spanien', 'madrid', 'barcelona', 'valencia', 'sevilla', 'seville', 'málaga', 'malaga', 'bilbao', 'zaragoza',
+    'méxico', 'mexico', 'argentina', 'buenos aires', 'uruguay', 'montevideo', 'chile', 'colombia', 'bogotá', 'bogota', 'perú', 'peru',
+    'ecuador', 'bolivia', 'paraguay', 'venezuela', 'costa rica', 'panamá', 'panama', 'guatemala', 'latin america', 'latinoamérica', 'latam']);
+  var JD_HE = wordRe(['hebrew', 'hebraisk', 'hebreo', 'hebräisch', 'israel', 'israël', 'tel[ -]aviv', 'jerusalem', 'haifa', 'herzliya',
+    'petah[ -]tikva', "ra'?anana", 'rehovot', 'netanya', 'yokneam', "be'?er[ -]sheva", 'עברית', 'ישראל', 'תל אביב']);
+  var CASTELLANO_PLACE = wordRe(['catalu(?:ñ|n)ya', 'cataluña', 'catalonia', 'barcelona', 'girona', 'lleida', 'tarragona', 'val(?:è|e)ncia',
+    'alicante', 'castell(?:ó|o)n', 'baleares', 'balears', 'mallorca', 'menorca', 'ibiza', 'eivissa', 'pa(?:í|i)s vasco', 'euskadi',
+    'basque country', 'bilbao', 'donostia', 'san sebasti(?:á|a)n', 'vitoria', 'navarra', 'pamplona', 'galicia', 'a coru(?:ñ|n)a', 'vigo',
+    'santiago de compostela', 'argentina', 'buenos aires', 'uruguay', 'montevideo', 'paraguay']);
+  // any Communication line (the COMMS-LINE-001 wording or another language variant), so a
+  // row that carries one is rewritten to the line this job needs
+  var COMMS_ANY = /follow meetings best|følger møder bedst|sigo mejor las reuniones|live captions|liveundertekster|subtítulos en directo/i;
   var ACCESS_LABEL = /^\s*(accessib\w*|tilg[æa]ngelighed|accesibilidad|无障碍\S*)\s*:?\s*$/i;
-  function commsLang() {
-    try { var l = String(localStorage.getItem('language') || '').replace(/[^a-z]/gi, '').slice(0, 2).toLowerCase(); return COMMS_LINE[l] ? l : 'en'; } catch (_) { return 'en'; }
+  function rawLang() {
+    try { return String(localStorage.getItem('language') || '').replace(/[^a-z]/gi, '').slice(0, 2).toLowerCase(); } catch (_) { return ''; }
+  }
+  function commsLang() { var l = rawLang(); return COMMS_TAIL[l] ? l : 'en'; }
+  function jdText() {
+    try { return String(localStorage.getItem('antcv:app:kernel:jdText') || '') + ' ' + String(localStorage.getItem('antcv:lastJdText') || ''); } catch (_) { return ''; }
+  }
+  function commsLangs(raw, jd) {
+    var out = [];
+    if (raw === 'da' || JD_DA.test(jd)) out.push('da');
+    if (raw === 'es' || JD_ES.test(jd)) out.push('es');
+    if ((raw === 'he' || JD_HE.test(jd)) && out.length < 2) out.push('he');
+    return out.length ? out : ['da'];
+  }
+  function commsLine(L, raw, jd) {
+    var castellano = /castellano/i.test(jd) ? true : /espa(?:ñ|n)ol/i.test(jd) ? false : CASTELLANO_PLACE.test(jd);
+    var names = [COMMS_FIRST[L]].concat(commsLangs(raw, jd).map(function (k) {
+      return (L === 'es' && k === 'es' && castellano) ? 'castellano' : COMMS_NAME[L][k];
+    }));
+    var last = names.pop();
+    return names.join(', ') + COMMS_AND[L] + last + COMMS_TAIL[L];
   }
 
   function disabled() { try { var v = localStorage.getItem('antcv:disable-profile-access-scrub'); return v === '1' || v === 'true'; } catch (_) { return false; } }
@@ -148,7 +196,7 @@
         var __pi = readJson('personalInfo', {}) || {}; __pi = __pi.personalInfo || __pi;
         if (/\bgabriel\b/i.test(String(__pi.name || ''))) {
           var L = commsLang();
-          var LINE = COMMS_LINE[L], TITLE = COMMS_TITLE[L], LABEL = COMMS_LABEL[L];
+          var LINE = commsLine(L, rawLang(), jdText()), TITLE = COMMS_TITLE[L], LABEL = COMMS_LABEL[L];
           var cv3 = (secs.cv || []).map(function (s3) {
             if (!s3 || typeof s3 !== 'object') return s3;
             if (s3.id === 'accessibility') {
@@ -179,7 +227,7 @@
                 if (!it3 || typeof it3 !== 'object') return it3;
                 if (typeof it3.group === 'string' && ACCESS_LABEL.test(it3.group)) { hit3 = true; return Object.assign({}, it3, { group: LABEL }); }
                 var lab = String(it3.l || ''), val = String(it3.v || '');
-                if (ACCESS_LABEL.test(lab) || DISABILITY.test(val) || LEGACY_COMMS.test(val)) {
+                if (ACCESS_LABEL.test(lab) || DISABILITY.test(val) || COMMS_ANY.test(val)) {
                   if (lab === LABEL && val === LINE) return it3;
                   hit3 = true; return Object.assign({}, it3, { l: LABEL, v: LINE });
                 }
@@ -205,5 +253,5 @@
     setTimeout(run, 500);
   });
   [900, 3000, 7000].forEach(function (ms) { setTimeout(run, ms); });
-  window.AntcvProfileAccessScrub = { version: VERSION, run: run, _scrubProfile: scrubProfile, _stripCareerClause: stripCareerClause };
+  window.AntcvProfileAccessScrub = { version: VERSION, run: run, _scrubProfile: scrubProfile, _stripCareerClause: stripCareerClause, _commsLine: commsLine };
 })();

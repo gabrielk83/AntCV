@@ -128,10 +128,11 @@ test('rich_block profile (items[].t — the live NIL row shape) is scrubbed too'
 // label on Gabriel's CV; the row is COMMUNICATION and says what works.
 const LINE_EN = 'English and Danish at work; live captions and written follow-ups in meetings.';
 const GAB = 'Gabriel Alexander Karp-Gershon';
-function runWith(cv, name, lang) {
+function runWith(cv, name, lang, jd) {
   const backing = new Map();
   backing.set('personalInfo', JSON.stringify({ name }));
   if (lang) backing.set('language', lang);
+  if (jd) backing.set('antcv:app:kernel:jdText', jd);
   backing.set('sections', JSON.stringify({ cv, cl: [] }));
   const G = load(backing);
   G.run();
@@ -190,4 +191,37 @@ test('COMMS-LINE-002: the COMMS-LINE-001 sentence is rewritten to the new line',
     { id: 'additional', type: 'labeled_list', items: [{ l: 'Kommunikation', v: 'Jeg arbejder på engelsk og dansk og følger møder bedst med liveundertekster og skriftlig opfølgning.' }] },
   ], GAB, 'da');
   assert.equal(da[0].items[0].v, 'Engelsk og dansk i arbejdet; liveundertekster og skriftlig opfølgning i møder.');
+});
+
+// COMMS-LANG-001 (owner 2026-11-05): the second language follows the job. Spanish says
+// castellano or español as the ad does (else by location); Hebrew for Israel; Danish stays
+// when the job needs it, and no signal means Danish.
+test('COMMS-LANG-001: the second language follows the job ad', () => {
+  const c = runWith([], GAB).G._commsLine;
+  const EN = ' at work; live captions and written follow-ups in meetings.';
+  const ES = ' en el trabajo; subtítulos en directo y seguimiento por escrito en las reuniones.';
+  assert.equal(c('en', 'en', ''), 'English and Danish' + EN);
+  assert.equal(c('en', 'zh', ''), 'English and Danish' + EN, 'unsupported output falls back to the English line');
+  assert.equal(c('es', 'es', ''), 'Inglés y español' + ES);
+  assert.equal(c('es', 'es', 'Ingeniero de proyectos en Madrid. Se requiere inglés y español.'), 'Inglés y español' + ES);
+  assert.equal(c('es', 'es', 'Idiomas: castellano e inglés.'), 'Inglés y castellano' + ES);
+  assert.equal(c('es', 'es', 'Project engineer, Barcelona office.'), 'Inglés y castellano' + ES);
+  assert.equal(c('en', 'en', 'Hardware PM, Tel Aviv. Hebrew an advantage.'), 'English and Hebrew' + EN);
+  assert.equal(c('en', 'he', ''), 'English and Hebrew' + EN);
+  assert.equal(c('en', 'en', 'Copenhagen office, fluent Spanish required for the LATAM market.'), 'English and Spanish' + EN);
+  assert.equal(c('en', 'en', 'Copenhagen. Fluent Danish and Spanish required.'), 'English, Danish and Spanish' + EN);
+  assert.equal(c('da', 'da', 'Projektleder til det spanske marked.'), 'Engelsk, dansk og spansk i arbejdet; liveundertekster og skriftlig opfølgning i møder.');
+});
+
+test('COMMS-LANG-001: a stored Communication row follows the stored job ad', () => {
+  const DA_LINE = 'English and Danish at work; live captions and written follow-ups in meetings.';
+  const { out, G, backing } = runWith([
+    { id: 'accessibility', title: 'COMMUNICATION', type: 'labeled_list', items: [{ l: '', v: DA_LINE, labelHidden: true }] },
+    { id: 'additional', type: 'labeled_list', items: [{ l: 'Communication', v: DA_LINE }] },
+  ], GAB, 'en', 'Senior hardware project manager, Herzliya, Israel.');
+  assert.equal(out[0].items[0].v, 'English and Hebrew at work; live captions and written follow-ups in meetings.');
+  assert.equal(out[1].items[0].v, out[0].items[0].v);
+  const after = backing.get('sections');
+  G.run();
+  assert.equal(backing.get('sections'), after, 'second run writes nothing');
 });

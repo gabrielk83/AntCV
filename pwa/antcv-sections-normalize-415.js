@@ -2056,8 +2056,25 @@
     'fokusområde': 'Rollen kræver',
     'strategisk ekspertise': 'Det bringer jeg, med belæg'
   };
-  function plainCoreCompHeaders(list) {
+  // CC-HEADER-LANG-PIN-001 (owner 2026-11-05, live DA check on antcv.pages.dev): the
+  // translate pass sends the header row to the LLM, which free-translates it
+  // ("Det kan jeg, med bevis"). The house pair per output language is pinned on the
+  // core_comp / bring tables after any pass. An English pair in a translated
+  // document is left alone (app.js maps it at render); any other wording on those
+  // two tables is a translation artefact, never user prose.
+  var CC_HEADER_LANG = {
+    en: ['The role needs', 'What I bring, with proof'],
+    da: ['Rollen kræver', 'Det bringer jeg, med belæg'],
+    es: ['Lo que exige el puesto', 'Lo que aporto, con pruebas'],
+    zh: ['岗位要求', '我的贡献与佐证']
+  };
+  function ccDocLang() {
+    try { var l = String(localStorage.getItem('language') || 'en').replace(/[^a-z]/gi, '').slice(0, 2).toLowerCase(); return CC_HEADER_LANG[l] ? l : 'en'; } catch (_) { return 'en'; }
+  }
+  function plainCoreCompHeaders(list, lang) {
     if (!Array.isArray(list)) return null;
+    var L = lang || ccDocLang();
+    var pair = CC_HEADER_LANG[L], en = CC_HEADER_LANG.en;
     var changed = false;
     var out = list.map(function (s) {
       if (!s || s.type !== 'table' || !Array.isArray(s.rows) || !s.rows.length) return s;
@@ -2069,6 +2086,11 @@
         if (Object.prototype.hasOwnProperty.call(CC_HEADER_PLAIN, k)) { hit = true; return CC_HEADER_PLAIN[k]; }
         return c;
       });
+      if (L !== 'en' && nh.length === 2 && (s.id === 'core_comp' || s.id === 'bring')) {
+        var isEn = nh[0] === en[0] && nh[1] === en[1];
+        var isPair = nh[0] === pair[0] && nh[1] === pair[1];
+        if (!isEn && !isPair) { nh = [pair[0], pair[1]]; hit = true; }
+      }
       if (!hit) return s;
       changed = true;
       return Object.assign({}, s, { rows: [nh].concat(s.rows.slice(1)) });

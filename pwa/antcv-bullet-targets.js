@@ -69,7 +69,7 @@
 (function () {
   'use strict';
 
-  const SCRIPT_VERSION = '1.51.5385-gdpr-rights';
+  const SCRIPT_VERSION = '1.51.5425-gdpr-rights';
   const STORAGE_KEY = 'antcv:bullet-targets';
   const STYLE_ID = 'antcv-bullet-targets-styles';
   const STRIP_MARKER = 'data-antcv-bullet-target-strip';

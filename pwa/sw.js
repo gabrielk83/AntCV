@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.5385-gdpr-rights';
+const CACHE = 'antcv-1.51.5425-gdpr-rights';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

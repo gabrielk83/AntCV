@@ -48,6 +48,15 @@ del doc2["submitted"]
 ctx2 = IP.gather(doc2, "lumen", "1st", "", lambda app: ("cv", "cl"))
 check("gather: no frozen version -> the latest generated application, marked not frozen",
       (ctx2["submitted"]["application_id"], ctx2["submitted"]["frozen"]), (4711, False))
+# SUBMITTED-VERSION-001: the shape the tracker island writes - the newest save at the
+# top level, every save in `versions`. gather() must read the newest.
+doc3 = json.loads(json.dumps(DOC))
+doc3["submitted"]["lumen"] = {"snapshot_id": 12, "date": "2026-10-28", "application_id": 4705,
+                              "versions": [{"snapshot_id": 9, "date": "2026-10-20", "application_id": 4700},
+                                           {"snapshot_id": 12, "date": "2026-10-28", "application_id": 4705}]}
+ctx3 = IP.gather(doc3, "lumen", "1st", "", lambda app: ("cv", "cl"))
+check("gather: the island's submitted shape -> the newest saved version",
+      (ctx3["submitted"]["application_id"], ctx3["submitted"]["frozen"]), (4705, True))
 try:
     IP.gather(DOC, "nope", "1st")
     missing = "found"

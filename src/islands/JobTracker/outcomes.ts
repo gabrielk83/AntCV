@@ -184,36 +184,51 @@ export function financialsView(v: unknown): { text: string; check: string; error
 // ---- SUBMITTED-VERSION-001 / INTERVIEW-PREP-001 (2026-11-05) -------------------------
 // Owner: "allow to save and mark the submitted version" and "support for positions that
 // are advancing towards an interview". More doc maps:
-//   submitted[uk]      = [{snapshot_id, date, application_id}]  newest last; the island
-//                        appends after the relay stores an insert-only snapshot
-//                        (/api/application-snapshots)
+//   submitted[uk]      = {snapshot_id, date, application_id, versions: [{...}, ...]}
+//                        the top level mirrors the NEWEST version, which is what
+//                        interview_prep.py gather() reads (sub.get("application_id"));
+//                        `versions` keeps every save, oldest first. The island appends
+//                        after the relay stores an insert-only snapshot
+//                        (/api/application-snapshots).
 //   interview[uk]      = {stage, generated_at, md, json}       the prep-pack script
 //   interview_next[uk] = {date, stage}                         the owner's next-stage date;
 //                        its own key so a pack rewrite never clobbers it
-//   eligibility[uk]    = {verdict: PASS|FAIL|UNVERIFIED, quote, kind}   the clearance gate
+//   eligibility[uk]    = {verdict: PASS|FLAG|FAIL|UNVERIFIED, quote, kind}  the clearance
+//                        gate (discover-positions.py; FLAG = a clearance to obtain)
 
 export const PREP_SCRIPT = 'scripts/job-tracker/interview_prep.py';
+/** The exact commands for one row: build + store the pack, and the terminal mock interview. */
+export function prepCommands(uk: string, stage: string): { pack: string; mock: string } {
+  const st = INTERVIEW_STAGES.includes(stage) ? stage : '1st';
+  return {
+    pack: 'python ' + PREP_SCRIPT + ' pack --uk ' + uk + ' --stage ' + st + ' --write',
+    mock: 'python ' + PREP_SCRIPT + ' mock --uk ' + uk + ' --stage ' + st,
+  };
+}
 
 export interface SubmittedRec { snapshot_id: number; date: string; application_id: number | null; }
+export interface SubmittedEntry extends SubmittedRec { versions: SubmittedRec[]; [k: string]: unknown; }
 
+function submittedRec(e: unknown): SubmittedRec | null {
+  if (!isRec(e)) return null;
+  const id = Number(e.snapshot_id);
+  const date = dayOf(e.date);
+  if (!Number.isInteger(id) || id <= 0 || !date) return null;
+  const app = Number(e.application_id);
+  return { snapshot_id: id, date, application_id: Number.isInteger(app) && app > 0 ? app : null };
+}
+
+/** Every saved version of a row, oldest first. Reads the object shape and a bare list. */
 export function submittedList(v: unknown): SubmittedRec[] {
-  if (!Array.isArray(v)) return [];
-  const out: SubmittedRec[] = [];
-  for (const e of v) {
-    if (!isRec(e)) continue;
-    const id = Number(e.snapshot_id);
-    const date = dayOf(e.date);
-    if (!Number.isInteger(id) || id <= 0 || !date) continue;
-    const app = Number(e.application_id);
-    out.push({ snapshot_id: id, date, application_id: Number.isInteger(app) && app > 0 ? app : null });
-  }
-  return out;
+  const raw = Array.isArray(v) ? v : isRec(v) ? (Array.isArray(v.versions) && v.versions.length ? v.versions : [v]) : [];
+  return raw.map(submittedRec).filter((r): r is SubmittedRec => !!r);
 }
 
 /** Append a saved snapshot; earlier ones stay (a re-submission adds a version). */
-export function addSubmitted(submitted: unknown, uk: string, rec: SubmittedRec): Record<string, SubmittedRec[]> {
-  const map = { ...(isRec(submitted) ? submitted : {}) } as Record<string, SubmittedRec[]>;
-  map[uk] = [...submittedList(map[uk]), rec];
+export function addSubmitted(submitted: unknown, uk: string, rec: SubmittedRec): Record<string, SubmittedEntry> {
+  const map = { ...(isRec(submitted) ? submitted : {}) } as Record<string, SubmittedEntry>;
+  const old = isRec(map[uk]) ? map[uk] : {};
+  map[uk] = { ...old, ...rec, versions: [...submittedList(map[uk]), rec] };
   return map;
 }
 
@@ -235,11 +250,11 @@ export function setNextStage(map: unknown, uk: string, date: string, stage: stri
   return { ...(isRec(map) ? map : {}) as Record<string, { date: string; stage: string }>, [uk]: { date: dayOf(date) || '', stage } };
 }
 
-export type Verdict = 'PASS' | 'FAIL' | 'UNVERIFIED';
+export type Verdict = 'PASS' | 'FLAG' | 'FAIL' | 'UNVERIFIED';
 export function eligibilityView(v: unknown): { verdict: Verdict; quote: string; kind: string } | null {
   if (!isRec(v)) return null;
   const verdict = String(v.verdict || '').trim().toUpperCase();
-  if (verdict !== 'PASS' && verdict !== 'FAIL' && verdict !== 'UNVERIFIED') return null;
+  if (verdict !== 'PASS' && verdict !== 'FLAG' && verdict !== 'FAIL' && verdict !== 'UNVERIFIED') return null;
   return { verdict, quote: typeof v.quote === 'string' ? v.quote.trim() : '', kind: typeof v.kind === 'string' ? v.kind.trim() : '' };
 }
 

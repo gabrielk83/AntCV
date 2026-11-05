@@ -17,7 +17,7 @@ import { CLUSTER_REFRESH_MS, reconcileSnapshot, shouldRefetchOnFocus } from './c
 import {
   SUBMITTED, INTERVIEW, INTERVIEW_STAGES, MAX_FOLLOWUPS, localDay, interviewStage, statusSince,
   followUpState, stampSubmitted, setSubmitted, logSent, financialsView, recordStatusIn, statusHistoryOf,
-  PREP_SCRIPT, submittedList, addSubmitted, interviewPack, nextStageOf, setNextStage, eligibilityView, mdBlocks, mdInline, daysBetween,
+  PREP_SCRIPT, prepCommands, submittedList, addSubmitted, interviewPack, nextStageOf, setNextStage, eligibilityView, mdBlocks, mdInline, daysBetween,
   type SubmittedRec, type PrepPack,
 } from './outcomes';
 
@@ -1138,7 +1138,7 @@ export function JobTracker({ onClose }: { onClose: () => void }): JSX.Element {
         {/* INTERVIEW-PREP-001: the prep pack for an Interview row (list view) */}
         {prepView && (
           <Sheet title={'🎤 Interview prep — ' + prepView.label} onClose={() => setPrepView(null)}>
-            <PrepPanel pack={interviewPack((doc?.interview || {})[prepView.uk])} size={13} />
+            <PrepPanel pack={interviewPack((doc?.interview || {})[prepView.uk])} size={13} uk={prepView.uk} stage={interviewStage(statusHistoryOf(doc, prepView.uk))} />
           </Sheet>
         )}
 
@@ -1252,7 +1252,8 @@ function EligibilityChip({ v }: { v: unknown }): JSX.Element | null {
   const e = eligibilityView(v);
   if (!e) return null;
   const look = e.verdict === 'PASS' ? { bg: '#e6f4e6', fg: '#245a24', t: '✓ eligible' }
-    : e.verdict === 'FAIL' ? { bg: '#fbe3e1', fg: '#8a1f15', t: '✗ not eligible' } : { bg: '#fff3d6', fg: '#6b4d00', t: '? eligibility' };
+    : e.verdict === 'FAIL' ? { bg: '#fbe3e1', fg: '#8a1f15', t: '✗ not eligible' }
+      : e.verdict === 'FLAG' ? { bg: '#fff1d6', fg: '#7a4b00', t: '⚠ ' + (e.kind || 'check eligibility') } : { bg: '#fff3d6', fg: '#6b4d00', t: '? eligibility' };
   return (
     <span title={(e.kind ? e.kind + ': ' : '') + (e.quote ? '“' + e.quote + '”' : e.verdict)}
       style={{ display: 'inline-block', marginTop: 4, background: look.bg, color: look.fg, borderRadius: 4, padding: '0 4px', fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap' }}>{look.t}</span>
@@ -1312,12 +1313,16 @@ function SnapshotBody({ data }: { data: SnapshotData | null }): JSX.Element {
 }
 
 // INTERVIEW-PREP-001: the pack the prep script wrote to doc.interview[uk], or how to get one.
-function PrepPanel({ pack, size }: { pack: PrepPack | null; size: number }): JSX.Element {
+// The commands carry this row's key and stage, so they can be copied as they stand.
+function PrepPanel({ pack, size, uk, stage }: { pack: PrepPack | null; size: number; uk: string; stage: string }): JSX.Element {
+  const cmd = prepCommands(uk, stage);
+  const code: React.CSSProperties = { display: 'block', background: '#eef1f6', borderRadius: 4, padding: '4px 6px', fontSize: size - 1.5, wordBreak: 'break-all', margin: '3px 0', userSelect: 'all' };
   if (!pack) {
     return (
       <div style={{ fontSize: size, color: '#445' }}>
         <button disabled title={'Run ' + PREP_SCRIPT + ' to write the pack'} style={{ ...btn('#c9d2e0', '#556', size), cursor: 'not-allowed' }}>Generate pack</button>
-        <div style={{ marginTop: 6 }}>No prep pack for this role yet. It is generated outside the app: run <code>{PREP_SCRIPT}</code>; the pack appears here on the next reload.</div>
+        <div style={{ marginTop: 6 }}>No prep pack for this role yet. It is generated outside the app; run this, and the pack appears here on the next reload:</div>
+        <code style={code}>{cmd.pack}</code>
       </div>
     );
   }
@@ -1325,6 +1330,8 @@ function PrepPanel({ pack, size }: { pack: PrepPack | null; size: number }): JSX
     <div style={{ fontSize: size }}>
       {(pack.stage || pack.generated_at) && <div style={{ fontSize: size - 1.5, color: '#667', marginBottom: 6 }}>{pack.stage ? 'Stage: ' + pack.stage : ''}{pack.stage && pack.generated_at ? ' · ' : ''}{pack.generated_at ? 'generated ' + String(pack.generated_at).slice(0, 16) : ''}</div>}
       {pack.md ? <MdView md={pack.md} size={size} /> : <div style={{ color: '#667' }}>The pack has structured data only (no text to show).</div>}
+      <div style={{ marginTop: 10, fontSize: size - 1.5, color: '#556' }}>Practise with the terminal mock interview:</div>
+      <code style={code}>{cmd.mock}</code>
     </div>
   );
 }
@@ -1555,7 +1562,9 @@ function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, pinned,
         {p.flag && <Line icon="⚠️" label="Flag" text={p.flag} color="#8a4b12" size={fs(12.5, 14.5)} />}
         {sigBlock && <Line icon="📌" label="Signals" text={sigBlock.replace(/\n+/g, ' · ').slice(0, 240)} color="#3a4d6b" size={fs(12, 13.5)} />}
         {fu && fu.due && <Line icon="⏰" label="Follow-up due" text={'no reply for ' + fu.quiet + ' days since ' + fu.since + ' · ' + fu.sent + '/' + MAX_FOLLOWUPS + ' sent — log it from the List view'} color="#7a4b00" size={fs(12, 13.5)} />}
-        {elig && elig.verdict !== 'PASS' && <Line icon={elig.verdict === 'FAIL' ? '⛔' : '❔'} label={elig.verdict === 'FAIL' ? 'Not eligible' : 'Eligibility unverified'} text={(elig.kind ? elig.kind + ': ' : '') + (elig.quote ? '“' + elig.quote + '”' : 'no quote recorded')} color={elig.verdict === 'FAIL' ? '#8a1f15' : '#6b4d00'} size={fs(12, 13.5)} />}
+        {elig && elig.verdict !== 'PASS' && <Line icon={elig.verdict === 'FAIL' ? '⛔' : elig.verdict === 'FLAG' ? '⚠️' : '❔'}
+          label={elig.verdict === 'FAIL' ? 'Not eligible' : elig.verdict === 'FLAG' ? 'Clearance to obtain' : 'Eligibility unverified'}
+          text={(elig.kind ? elig.kind + ': ' : '') + (elig.quote ? '“' + elig.quote + '”' : 'no quote recorded')} color={elig.verdict === 'FAIL' ? '#8a1f15' : '#6b4d00'} size={fs(12, 13.5)} />}
         {subs.length > 0 && (
           <div style={{ fontSize: fs(12, 13.5), color: '#245a24', margin: '3px 0' }}>📌 <b>Submitted version</b> saved {subs[subs.length - 1].date}{subs.length > 1 ? ' (' + subs.length + ' versions)' : ''}{' '}
             <button onClick={onViewSubmitted} style={{ ...btn('#eef6ee', '#245a24', fs(11, 13)), padding: '1px 8px', border: '1px solid #9cc79c' }}>view</button>
@@ -1570,7 +1579,7 @@ function FocusCard({ row, doc, cluster, mobile, busy, onPrepare, onOpen, pinned,
               {pack && <button onClick={() => setPrepOpen((o) => !o)} style={{ ...btn('#eef3fb', '#1d3a6e', fs(11, 13)), padding: '2px 8px' }}>{prepOpen ? 'Hide pack' : 'Show pack'}</button>}
             </div>
             {nextStage.date && <div style={{ fontSize: fs(11.5, 13), color: '#334', marginTop: 4 }}>Next stage on <b>{nextStage.date}</b>{nextStage.date >= localDay() ? ' — in ' + daysBetween(localDay(), nextStage.date) + ' days' : ' (past)'}</div>}
-            {(!pack || prepOpen) && <div style={{ marginTop: 6, maxHeight: mobile ? 420 : 360, overflow: 'auto' }}><PrepPanel pack={pack} size={fs(12, 14)} /></div>}
+            {(!pack || prepOpen) && <div style={{ marginTop: 6, maxHeight: mobile ? 420 : 360, overflow: 'auto' }}><PrepPanel pack={pack} size={fs(12, 14)} uk={uk} stage={interviewStage(statusHistoryOf(doc, uk))} /></div>}
           </div>
         )}
         {p.sections.map((s, si) => (

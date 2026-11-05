@@ -5,7 +5,7 @@
 // 'include'); no token fishing. Base URL mirrors app.js: localStorage
 // 'proxyUrl' (JSON) with the relay as fallback.
 
-import type { HistoryEntry, FollowupRec, FinancialsRec, SubmittedRec } from './outcomes';
+import type { HistoryEntry, FollowupRec, FinancialsRec, SubmittedEntry } from './outcomes';
 
 const RELAY_FALLBACK = 'https://antcv-access-relay.karp-gabriel-a.workers.dev';
 
@@ -94,7 +94,7 @@ export interface TrackerDoc {
   followups?: Record<string, FollowupRec>;      // submitted date + follow-up log (followups.py and the island)
   financials?: Record<string, FinancialsRec>;   // annual-report summary (company_financials.py; read-only here)
   // SUBMITTED-VERSION-001 / INTERVIEW-PREP-001 (outcomes.ts)
-  submitted?: Record<string, SubmittedRec[]>;   // saved submitted versions, newest last
+  submitted?: Record<string, SubmittedEntry>;   // newest saved version at the top level + versions[] (interview_prep.py reads the top level)
   interview?: Record<string, { stage?: string; generated_at?: string | number; md?: string; json?: unknown }>; // prep pack (script; read-only here)
   interview_next?: Record<string, { date: string; stage: string }>; // owner's next-stage date
   eligibility?: Record<string, { verdict?: string; quote?: string; kind?: string }>; // clearance gate (script; read-only here)

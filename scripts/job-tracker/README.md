@@ -122,7 +122,7 @@ python test_text_guards.py   # synthetic kernel, PDFs built with PyMuPDF
 
 Models, pinned to a commit, safetensors only, CPU:
 - `alexandrainst/scandi-nli-large-v2` for Danish / Swedish;
-- `yaxili96/FactCG-DeBERTa-v3-Large` for English.
+- English: OFF (FACT-GUARD-NLI-EN-OFF-001). `yaxili96/FactCG-DeBERTa-v3-Large` failed `--self-test` on 2026-11-05: as published it does not separate a supported claim from an invented one. English claims are skipped until a model passes; `ANTCV_NLI_EN=1` turns it back on to try one.
 
 Verdicts:
 - CONTRADICTED is a FAIL (Danish / Swedish model only);

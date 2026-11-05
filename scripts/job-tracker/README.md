@@ -117,6 +117,29 @@ tiers (a local NLI model, Workers AI) is in `docs/analysis/TEXT_GUARDS_RESEARCH_
 python test_text_guards.py   # synthetic kernel, PDFs built with PyMuPDF
 ```
 
+**Tier 1, the local NLI claim check (FACT-GUARD-NLI-001, owner-approved 2026-11-05).**
+`fact_guard_nli.py` checks each claim sentence against the kernel facts that share the most words with it.
+
+Models, pinned to a commit, safetensors only, CPU:
+- `alexandrainst/scandi-nli-large-v2` for Danish / Swedish;
+- `yaxili96/FactCG-DeBERTa-v3-Large` for English.
+
+Verdicts:
+- CONTRADICTED is a FAIL (Danish / Swedish model only);
+- UNSUPPORTED is a WARN.
+
+The heavy dependencies live in their own venv, so everything else stays on plain Python:
+
+```
+python -m venv %USERPROFILE%\.antcv\nli-venv
+%USERPROFILE%\.antcv\nli-venv\Scripts\python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+%USERPROFILE%\.antcv\nli-venv\Scripts\python -m pip install "transformers>=4.45,<5" sentencepiece protobuf safetensors huggingface_hub
+%USERPROFILE%\.antcv\nli-venv\Scripts\python fact_guard_nli.py --download     # ~3.2 GB, once
+%USERPROFILE%\.antcv\nli-venv\Scripts\python fact_guard_nli.py --self-test    # label orientation
+python gen-runner.py run --nli ...                                             # opt-in; slower
+python test_fact_guard_nli.py                                                  # model-free, runs in CI
+```
+
 ## Follow-ups (FOLLOWUP-001, 2026-11-05)
 
 `followups.py` keeps the dates in the tracker doc's `followups[uk]` map; the agent writes the draft.
@@ -142,6 +165,33 @@ After an interview stage, offer a short thank-you note and log it with `--kind t
 ```
 python test_followups.py
 ```
+
+## Interview prep pack + mock interview (INTERVIEW-PREP-001, 2026-11-05)
+
+For a row that is advancing to an interview, `interview_prep.py` builds a pack in the owner's format:
+tabs and tap-to-open cards, a tick-off checklist, and salary always. It has no "fix the CV" section, only
+"if they ask about this line, say …".
+
+The pack is built from:
+- the job ad and the hiring manager;
+- the SUBMITTED version: `doc.submitted[uk]` when the tracker has frozen one, else the latest generated
+  application;
+- the kernel, the only source of STAR stories;
+- the annual-report angles (`financials[uk].angles.interview`);
+- the eligibility verdict, the stage history and the salary envelope;
+- fresh web research.
+
+```
+python interview_prep.py pack --uk UK --stage screening|1st|2nd|final|case [--write]
+python interview_prep.py mock --uk UK --stage 1st     # terminal mock interview, feedback per answer
+python test_interview_prep.py
+```
+
+It writes `interview_<uk>_<stage>.html` / `.md` / `.json` (default `~/Downloads/antcv-interview`).
+`--write` also stores `doc.interview[uk]` for the tracker's Interview prep area.
+
+The mock interview asks the pack's stage questions one at a time; an empty line ends an answer. Each
+answer gets feedback grounded in the kernel and a score from 1 to 5, and the transcript is saved.
 
 ## Company financials (COMPANY-FINANCIALS-001, 2026-11-05)
 

@@ -64,10 +64,18 @@ function normaliseTask(raw) {
   return 'unknown';
 }
 
+// LLM-LOG-CUSTOM-PROVIDER-001 (2026-11-03): the PWA tags a user-added endpoint as
+// "custom:<id>". The whitelist dropped every such call, so a user running on a custom
+// LLM left no telemetry at all. Collapse them to one bucket, "custom": the id is the
+// user's own and never belongs in the shared table. "custom:" with no id stays rejected.
+// "anthropic" is the server-side wording for the claude bucket (proxy keys on it).
 function normaliseProvider(raw) {
   if (typeof raw !== 'string') return null;
   const p = raw.trim().toLowerCase();
-  return ALLOWED_PROVIDERS.has(p) ? p : null;
+  if (ALLOWED_PROVIDERS.has(p)) return p;
+  if (p === 'anthropic') return 'claude';
+  if (/^custom:[^\s]+$/.test(p)) return 'custom';
+  return null;
 }
 
 function normaliseErrorClass(raw) {

@@ -553,6 +553,10 @@ check("deadline: a row with an outreach flag counts as in progress",
       cp.is_engaged([1, "Hempel", "PM", "", "", "", "", "", "Identified", "", "📨 approach email", "h", "E2EFDA"]), True)
 check("deadline: a plain proposed row is not in progress",
       cp.is_engaged([1, "Acme", "PM", "", "", "", "", "", "Identified (posting saved)", "", "🔎 proposed", "a", "E2EFDA"]), False)
+# OUTCOME-RECORD-001: a recorded outcome is never overwritten by the deadline sweep.
+for _st in ("No response", "Withdrawn", "Offer declined", "Hired", "Rejected"):
+    check("deadline: outcome status %r counts as engaged" % _st,
+          cp.is_engaged([1, "Acme", "PM", "", "", "", "", "", _st, "", "", "a", "E2EFDA"]), True)
 
 if fails:
     print("FAIL (%d):" % len(fails))

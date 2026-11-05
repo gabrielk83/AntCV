@@ -2934,6 +2934,14 @@ window.__antcvTxtSame =
       }
     } catch (_) {}
   }
+  // LANG-CACHE-APP-SCOPE-001 (owner 2026-11-05, found by the top session): the languageCache was
+  // keyed by language only, so "Use cached EN" on #3525 applied the #3491 snapshot's META
+  // (company, role, subtitle) onto the ASSA ABLOY document. Every snapshot now carries the
+  // application id this tab is on (antcv-jd-scope's per-tab id, "kernel" before an app exists)
+  // and the offer refuses an entry from another application.
+  function __antcvCacheApp() {
+    try { return String((window.AntcvJdScope && window.AntcvJdScope.getCurrentAppId && window.AntcvJdScope.getCurrentAppId()) || "kernel"); } catch (_) { return "kernel"; }
+  }
   function __antcvSnapStandalone() {
     var s = {};
     try { var sl = localStorage.getItem("antcv:clSlogan"); if (null != sl) s.clSlogan = sl; } catch (_) {}
@@ -19657,9 +19665,19 @@ window.__antcvTxtSame =
                 meta: { ...io },
                 hash: o,
                 standalone: __antcvSnapStandalone(),
+                app: __antcvCacheApp(), // LANG-CACHE-APP-SCOPE-001
               },
             },
-            a = Or[e],
+            // LANG-CACHE-APP-SCOPE-001: an entry snapshotted on another application is not offered
+            a = (() => {
+              const c = Or[e];
+              if (!c) return;
+              if (String(c.app || "") !== __antcvCacheApp()) {
+                try { console.warn("[LANG-CACHE-APP-SCOPE-001] cached " + e + " belongs to application " + (c.app || "?") + ", this tab is on " + __antcvCacheApp() + " — ignoring it"); } catch (_) {}
+                return;
+              }
+              return c;
+            })(),
             i = () => {
               (vr(
                 "Translate to " +
@@ -20228,6 +20246,7 @@ window.__antcvTxtSame =
                             meta: { ...(Dr.current || io) },
                             hash: Lr(Br.current || ro, Dr.current || io),
                             standalone: __antcvSnapStandalone(),
+                app: __antcvCacheApp(), // LANG-CACHE-APP-SCOPE-001
                           },
                         };
                         return (u.set("languageCache", n), n);
@@ -42361,6 +42380,11 @@ window.__antcvTxtSame =
                                                       // loaded row's company
                                                       // so auto-sync gates on
                                                       // it.
+                                                      // LANG-CACHE-APP-SCOPE-001: scope the JD keys (jd-scope redirect of antcv:lastJdText /
+                                                      // applicationQuestions / activeAppCompany) to the NEW application before anything is
+                                                      // stamped - the [Fl] effect only runs after render, so the company stamp below and the
+                                                      // JD mirror landed in the PREVIOUS app's namespace (antcv:app:3525:company = Kaleido).
+                                                      try { window.AntcvJdScope && window.AntcvJdScope.setCurrentAppId(String(e.id)); } catch (_) {}
                                                       localStorage.setItem(
                                                         "antcv:activeAppCompany",
                                                         String(n.jd_company || ""),
@@ -48990,6 +49014,11 @@ window.__antcvTxtSame =
                                         try {
                                           // 1.50.252: stamp the loaded row's
                                           // company so auto-sync gates on it.
+                                          // LANG-CACHE-APP-SCOPE-001: scope the JD keys (jd-scope redirect of antcv:lastJdText /
+                                          // applicationQuestions / activeAppCompany) to the NEW application before anything is
+                                          // stamped - the [Fl] effect only runs after render, so the company stamp below and the
+                                          // JD mirror landed in the PREVIOUS app's namespace (antcv:app:3525:company = Kaleido).
+                                          try { window.AntcvJdScope && window.AntcvJdScope.setCurrentAppId(String(e.id)); } catch (_) {}
                                           localStorage.setItem(
                                             "antcv:activeAppCompany",
                                             String(n.jd_company || ""),

@@ -3,10 +3,10 @@
 | Field | Value |
 |---|---|
 | Document ID | DAMC-STY-001 |
-| Version | 0.1 (draft) |
+| Version | 0.2 (draft). 0.2: zero orphans in every document class (owner decision 2026-11-05). |
 | Date | 2026-11-05 |
 | Status | Draft for review |
-| Belongs to | DAMC-IG-001 v0.5 (rule DOC-06) |
+| Belongs to | DAMC-IG-001 v0.6 (rule DOC-06) |
 | Origin | Adapted from the owner's "Typography and Writing Style Guide" (rules for CVs and cover letters, 2026-11-05). CV-only rules dropped; see Appendix B. |
 | Owner (role) | QA lead |
 
@@ -21,8 +21,8 @@ Rules for DAMC's own outputs: reports, summaries, finding records, requests, sli
 | Class | Documents | Rules that apply |
 |---|---|---|
 | 1 Short output | Monthly summary, run report cover page, finding cards, request letters to Legal and IT, staff notices, slide decks and one-page visuals (PowerPoint, Canva, Google Slides) | All sections. Zero orphans. Fixed page or slide counts. |
-| 2 Long reference | Implementation guidelines, the requests file as a whole, evidence packs, SOPs, system card | Sections 1, 2 (global rule), 3 (Class 2 sizes), 4, 6, 7, 8 and 10. No single-word last line and no heading orphan (blocking); other short last lines counted and reported. No character budgets. |
-| 3 Reviewed documents | Human-written project and hardware documents that DAMC checks | Not enforced. Wording problems are reported through Guidelines 8.7–8.8. Typography findings only where a project opts in, at severity S4. |
+| 2 Long reference | Implementation guidelines, the requests file as a whole, evidence packs, SOPs, system card | Sections 1, 2, 3 (Class 2 sizes), 4, 6, 7, 8 and 10. Zero orphans, as in Class 1 (owner decision 2026-11-05). No character budgets. |
+| 3 Reviewed documents | Human-written project and hardware documents | Not enforced. Wording problems are reported through Guidelines 8.7–8.8. Typography findings only where a project opts in, at severity S4. |
 
 ---
 
@@ -57,15 +57,18 @@ The rule covers body text, bullets, both columns of every table, finding cards a
 
 Owner review 2026-11-05 found the title of the v0.3 and v0.4 guidelines PDFs wrapped to a one-word last line ("Control"). Three causes: the renderer's default line breaking fills each line greedily and leaves the remainder; the build checked only width overflow, so it could not see the defect; and v0.1 of this guide excused two-line display type and made long-document orphans advisory. The fix is global:
 
+- **Zero orphans in every class** (owner decision 2026-11-05): the last line of every multi-line block fills at least 60 % and holds at least two words. This covers headings, paragraphs, list items and table cells.
 - **No single-word last line** in any paragraph, list item, table cell or heading, in any class.
 - **No heading orphan:** a wrapped heading's last line fills at least 60 %.
 - **Renderer settings in the template, not per document:**
   - headings use balanced line breaking (CSS `text-wrap: balance`);
   - paragraphs, list items and table cells use orphan-avoiding line breaking (CSS `text-wrap: pretty`);
+  - table cells and paragraphs of up to four lines may use balanced line breaking when the result passes. A balanced block is measured against the full column width, not against its own other lines, so balancing cannot pass a block by shortening every line;
   - in a word processor, use its equivalent setting, or a non-breaking space between the last two words (fix order step 3).
 - **Tokens that never break:** requirement and document IDs (GDPR-01, DAMC-IG-001), ISO dates and legal references (Art. 5(1)(c), § 12) stay on one line. A split such as "GDPR-" / "01" is a defect even where the orphan rule does not apply.
 - **Short table labels** (up to three words, for example "Document ID") stay on one line wherever the table width allows.
-- A hit that remains after the renderer settings is fixed through the fix order below, then re-measured. In print, line breaks can differ slightly from the on-screen layout, so the final measurement is always taken on the exported PDF.
+- **Automatic levers, in order:** table column widths tuned per table; pull back (letter spacing down to −0.5 pt, kept only if the block loses a line); fill (up to +0.2 pt, kept only if the line count stays); balanced breaking for short blocks. Fixes aim for ≥ 65 %.
+- A hit that remains after the renderer settings and levers is fixed through the fix order below (in practice: reworded in the source), then re-measured. In print, line breaks can differ slightly from the on-screen layout, so the final measurement is always taken on the exported PDF.
 - **The check must be able to fail.** Its tests keep a known orphan as a negative control (Guidelines P6, QA-03).
 
 ### Targets
@@ -100,7 +103,7 @@ For each paragraph in the source document:
    - characters to add ≈ `(0.75 − fill) × characters per line`
    - characters to cut ≈ `characters on the last line + 2`
 
-A check like this runs in under a second per document. Run it after every build. A global-rule hit blocks release in every class. For Class 1, any orphan blocks release. For Class 2, record the count of other short last lines in the build record.
+A check like this runs in under a second per document. Run it after every build. Any orphan blocks release, in every class.
 
 Measuring in the exporting engine's own layout (same engine, exact text width, same fonts) is accepted only when its line breaks are confirmed against the text lines of the exported PDF. Record the match rate.
 
@@ -175,7 +178,7 @@ Width and spacing controls exist on some platforms only (Appendix D). Where a pl
 - Justify multi-line prose in narrow columns: the evidence column of a finding table and the summary paragraphs of a Class 1 output.
 - Left-align short labels, IDs and codes. A justified two-line label spreads its few words across the line.
 - Right-align numbers in numeric columns, with the same number of decimals per column. Locale formats follow Guidelines 10.3 and 11.1 (decimal comma in Nordic outputs).
-- If a non-final line would naturally fill less than 85 % of the column, justification opens wide gaps (rivers). Left-align that paragraph instead.
+- If a non-final line would naturally fill less than 85 % of the column, justifying opens wide gaps (rivers): left-align instead.
 - The last line of a justified paragraph stays left-aligned.
 - Class 2 prose is left-aligned.
 
@@ -204,10 +207,10 @@ Starting values for A4, single column, 10.5 pt, 2 cm margins: about 95 character
 - Never split a finding card, a key-figure block, a diagram or a table row across pages.
 - Repeat the table header row on every page. Keep it with the first data rows, and keep a group header with its first row.
 - Keep the approval block together (reviewer role, date, signature), and the sign-off of a letter.
-- To move a block to the next page, insert one spacer paragraph of exact line height before its heading and grow it until the heading moves.
+- To push a block to the next page, put a spacer of exact line height before its heading and grow it until the heading moves.
 - Page counts (Class 1): monthly summary exactly 1 page; run report cover 1 page; request letter 1–2 pages. Page 2 starts with a heading or a whole entry, never a fragment.
 - Class 2: headings kept with the next paragraph; rows, cards and diagrams not split; page counts free.
-- Slides: a heading stays on the slide with its content; a finding card or table never continues on the next slide; the slide count is fixed by the brief.
+- Slides: headings stay with their content; cards and tables never run onto the next slide; the brief fixes the slide count.
 
 ---
 
@@ -271,8 +274,7 @@ Starting values for A4, single column, 10.5 pt, 2 cm margins: about 95 character
 ## 10. Checklist before delivery
 
 - [ ] Checked on the exported PDF, not the preview
-- [ ] Every class: zero single-word last lines and zero heading orphans
-- [ ] Class 1: zero orphans (last line ≥ 60 % and at least two words), tables included. Class 2: count of other short last lines recorded.
+- [ ] Zero orphans in every class: every last line ≥ 60 % and at least two words, headings and tables included
 - [ ] Single-line rows sit on one line
 - [ ] Nothing clipped: no table, code block or diagram wider than the text width
 - [ ] Headings kept with the next paragraph; no split rows, cards or diagrams
@@ -295,18 +297,15 @@ classes:
   reviewed_documents: {enforced: false, opt_in_severity: S4}
 
 orphan:
-  applies_to:
-    short_output: blocking
-    long_reference:
-      single_word_last_line: blocking
-      heading_orphan: blocking
-      short_last_line: advisory
+  applies_to: {short_output: blocking, long_reference: blocking}   # owner decision 2026-11-05
   last_line_min_fill: 0.60        # below this = orphan
   min_words_last_line: 2          # one word = orphan
   target_fill_after_fix: 0.65     # headroom
   ideal_fill: [0.70, 0.95]
   exclude: [display_type_with_manual_break, hard_line_breaks, id_or_code_cells]
-  renderer: {headings: balance, text: pretty}   # CSS text-wrap, set in the template
+  renderer: {headings: balance, text: pretty, short_blocks: balance_if_passes}   # CSS text-wrap
+  balanced_blocks_measured_against: column_width
+  levers: [table_column_widths, condense_pull_back, widen_fill, balance_short_blocks, reword]
   pdf_line_match_required: true   # in-engine measurement must be confirmed against PDF text lines
   negative_control_required: true
   fix_order: [condense_pull_back, widen_fill, nbsp_bind_last_two_words, reorder_free_lists, reword]
@@ -400,7 +399,7 @@ layout:
 
 delivery:
   check_exported_pdf: true
-  zero_orphans_required: {short_output: true, long_reference: false}
+  zero_orphans_required: true
   never_overwrite_delivered_version: true
 ```
 
@@ -411,12 +410,12 @@ delivery:
 | Original section | In this guide |
 |---|---|
 | 1 Core principles | Kept. Principle 5 linked to the generated-file rules. |
-| 2 Orphans | Kept. Blocking for Class 1. Global rule for every class (no single-word last line, no heading orphan) with renderer settings and a negative control. Display-type exclusion narrowed to manual breaks. ID and code cells excluded. |
+| 2 Orphans | Kept. Blocking in every class (owner decision 2026-11-05). Global rule for every class (no single-word last line, no heading orphan) with renderer settings and a negative control. Display-type exclusion narrowed to manual breaks. ID and code cells excluded. |
 | 3 Condensing and sizing | Limits kept. Sizes reset for single-column reports (Class 1) and long references (Class 2). |
 | 4 Alignment | Kept. Numeric columns added. |
 | 5 Line budgets | Recalibrated starting values for a single column, derived from the original ratios; to be measured. |
 | 6 Page flow | Kept. CV items replaced by finding cards, approval blocks and report page counts. |
-| 7 Two-column CV layout | Dropped (photo, panel and main-column order). Replaced by Section 7 Report layout. The accent-colour contrast rule is kept. |
+| 7 Two-column CV layout | Dropped (photo, panel and main-column order); replaced by Section 7. Accent-colour contrast rule kept. |
 | 8 Writing style | Core kept. CV-only items dropped (work conditions, references, CV gaps). People-as-roles and NOT_FOUND added. |
 | 9 Cover letters | Replaced by Section 9 Requests and letters. |
 | 10 Checklist | Kept, adapted. |
@@ -438,7 +437,20 @@ Each country or language added to DAMC's scope adds or confirms its rows here th
 | Scripts without word spaces (e.g. Thai) | As for Chinese and Japanese | Dictionary-based line breaking |
 | Right-to-left scripts (Arabic, Hebrew) | As written; fill measured from the right edge | Mirrored alignment; digit style decided per company (AntCV used Western digits) |
 
-Quotation marks (confirm with the language reviewer): en “ ”; da » « or „ “; sv ” ”; nb « »; fi ” ”; de „ “; fr « »; ja 「 」; zh-Hans “ ”; zh-Hant 「 」.
+Quotation marks (confirm with the language reviewer):
+
+| Language | Marks |
+|---|---|
+| en | “ ” |
+| da | » « or „ “ |
+| sv | ” ” |
+| nb | « » |
+| fi | ” ” |
+| de | „ “ |
+| fr | « » |
+| ja | 「 」 |
+| zh-Hans | “ ” |
+| zh-Hant | 「 」 |
 
 Fonts must cover every character of the script. A missing glyph (shown as an empty box) is a blocking defect.
 
@@ -448,19 +460,37 @@ Fonts must cover every character of the script. A missing glyph (shown as an emp
 
 The outcome is the rule; the setting is only the means. Menu paths change between versions, so confirm each path on the company's installed version `[C]`. Where a cell says "reword", the platform has no setting for that outcome: use fix order step 5.
 
-| Rule (outcome) | Word | PowerPoint | Canva | Google Docs / Slides | HTML/CSS → PDF |
-|---|---|---|---|---|---|
-| No single-word last line | Non-breaking space between the last two words; reword | Non-breaking space; reword | Non-breaking space or manual break; reword | Non-breaking space; reword | `text-wrap: pretty`; non-breaking space |
-| Balanced headings | Manual line break at the balance point; reword | Manual line break; reword | Manual line break; reword | Manual line break | `text-wrap: balance` |
-| Tokens that never break (IDs, dates, references) | Non-breaking hyphen (Ctrl+Shift+Hyphen) and non-breaking space | Non-breaking hyphen (U+2011) or space, if the font has the glyph | Same as PowerPoint `[C]` | Same as PowerPoint | `white-space: nowrap` on the token |
-| Character width (≥ 96 %, ≤ 104 %) | Font › Advanced › Scale | Not available: spacing or reword | Not available: spacing or reword | Not available: reword | `font-stretch` (font must have width variants) |
-| Letter spacing (−0.5 to +0.2 pt) | Font › Advanced › Spacing, in pt | Font › Character Spacing, in pt | Letter spacing, in thousandths of an em `[C]` (convert from pt) | Docs: not available, reword `[C]`; Slides: reword | `letter-spacing`, in pt or em |
-| Keep heading with next | Paragraph › Line and Page Breaks › Keep with next | Heading and content on one slide | Heading and content on one page | Docs: Keep with next `[C]` | `break-after: avoid` |
-| Never split rows, cards, blocks | Row option "Allow row to break across pages" off; Keep lines together | One card per slide region | One card per page | Docs: row and paragraph break options `[C]` | `break-inside: avoid` |
-| Repeat table header | Table Layout › Repeat Header Rows | Repeat the header on each slide by hand | Repeat by hand | Docs: pin header row `[C]` | `<thead>` repeats in print |
-| No autofit, no shrinking | Cell option "Fit text" off; print at 100 %, no "scale to paper size" | Text box: Do not Autofit; print without "scale to fit paper" | Set sizes explicitly; no automatic text resizing `[C]` | Slides: Text fitting › Do not autofit | No `transform: scale`; print scale 100 % |
-| Fonts embedded | Save option: embed fonts in the file; PDF export embeds | Save option: embed fonts | Licensed fonts only; PDF download embeds | Fonts embedded on PDF download | Licensed `@font-face` fonts; embedded on print |
-| Export for measuring | Save as PDF, with document structure tags for accessibility | Export to PDF | Download as PDF (print quality) | Download as PDF | Print to PDF at 100 % scale |
+Word, PowerPoint and Canva:
+
+| Rule (outcome) | Word | PowerPoint | Canva |
+|---|---|---|---|
+| No single-word last line | Non-breaking space between the last two words; reword | Non-breaking space; reword | Non-breaking space or manual break; reword |
+| Balanced headings | Manual line break at the balance point; reword | Manual line break; reword | Manual line break; reword |
+| Tokens that never break (IDs, dates, references) | Non-breaking hyphen (Ctrl+Shift+Hyphen) and non-breaking space | Non-breaking hyphen (U+2011) or space, if the font has the glyph | Same as PowerPoint `[C]` |
+| Character width (≥ 96 %, ≤ 104 %) | Font › Advanced › Scale | Not available: spacing or reword | Not available: spacing or reword |
+| Letter spacing (−0.5 to +0.2 pt) | Font › Advanced › Spacing, in pt | Font › Character Spacing, in pt | Letter spacing, in thousandths of an em `[C]` (convert from pt) |
+| Keep heading with next | Paragraph › Line and Page Breaks › Keep with next | Heading and content on one slide | Heading and content on one page |
+| Never split rows, cards, blocks | Row option "Allow row to break across pages" off; Keep lines together | One card per slide region | One card per page |
+| Repeat table header | Table Layout › Repeat Header Rows | Repeat the header on each slide by hand | Repeat by hand |
+| No autofit, no shrinking | Cell option "Fit text" off; print at 100 %, no "scale to paper size" | Text box: Do not Autofit; print without "scale to fit paper" | Set sizes explicitly; no automatic text resizing `[C]` |
+| Fonts embedded | Save option: embed fonts in the file; PDF export embeds | Save option: embed fonts | Licensed fonts only; PDF download embeds |
+| Export for measuring | Save as PDF, with document structure tags for accessibility | Export to PDF | Download as PDF (print quality) |
+
+Google Docs and Slides, and HTML/CSS to PDF:
+
+| Rule (outcome) | Google Docs and Slides | HTML/CSS → PDF |
+|---|---|---|
+| No single-word last line | Non-breaking space; reword | `text-wrap: pretty`; non-breaking space |
+| Balanced headings | Manual line break | `text-wrap: balance` |
+| Tokens that never break (IDs, dates, references) | Same as PowerPoint | `white-space: nowrap` on the token |
+| Character width (≥ 96 %, ≤ 104 %) | Not available: reword | `font-stretch` (font must have width variants) |
+| Letter spacing (−0.5 to +0.2 pt) | Docs: not available, reword `[C]`; Slides: reword | `letter-spacing`, in pt or em |
+| Keep heading with next | Docs: Keep with next `[C]` | `break-after: avoid` |
+| Never split rows, cards, blocks | Docs: row and paragraph break options `[C]` | `break-inside: avoid` |
+| Repeat table header | Docs: pin header row `[C]` | `<thead>` repeats in print |
+| No autofit, no shrinking | Slides: Text fitting › Do not autofit | No `transform: scale`; print scale 100 % |
+| Fonts embedded | Fonts embedded on PDF download | Licensed `@font-face` fonts; embedded on print |
+| Export for measuring | Download as PDF | Print to PDF at 100 % scale |
 
 **Spreadsheets printed as reports** (Excel, Google Sheets): print at 100 % (no "fit to page" below 100 %); set column widths so cell text wraps on word boundaries; turn on repeating header rows; apply the same orphan and size rules to wrapped cells.
 

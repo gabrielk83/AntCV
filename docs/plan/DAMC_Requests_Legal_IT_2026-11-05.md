@@ -5,9 +5,9 @@
 | Field | Value |
 |---|---|
 | Document ID | DAMC-REQ-001 |
-| Version | 0.3 (draft). 0.3: attachments point to guidelines v0.5; requests follow DAMC-STY-001 Section 9; scope expansion repeats L-01 (step 8). 0.2: entailment (NLI) models in IT-05 scope, evaluation sandbox and monthly tool watch (IT-05 items 10–11). |
+| Version | 0.4 (draft). 0.4: attachments point to guidelines v0.6; wording adjusted for layout only. 0.3: attachments point to guidelines v0.5; requests follow DAMC-STY-001 Section 9; scope expansion repeats L-01 (step 8). 0.2: entailment (NLI) models in IT-05 scope, evaluation sandbox and monthly tool watch (IT-05 items 10–11). |
 | Date | 2026-11-05 |
-| Belongs to | DAMC-IG-001 v0.5 (`docs/plan/DAMC_Implementation_Guidelines_2026-11-05.md`) |
+| Belongs to | DAMC-IG-001 v0.6 (`docs/plan/DAMC_Implementation_Guidelines_2026-11-05.md`) |
 | Sender (role) | PMO lead, DAMC system owner |
 | Phase | Phase 0, Governance |
 
@@ -15,11 +15,11 @@
 
 ## How to use these drafts
 
-1. Replace every `<placeholder>`. Remove requests that do not fit the company's team structure; merge where one team covers two areas.
+1. Replace every `<placeholder>`. Drop or merge requests to fit the company's team structure.
 2. Send through the channel each team uses (ticket system, shared mailbox). One request per team keeps ownership clear.
-3. Attach DAMC-IG-001 v0.5 as PDF. Point to section and requirement IDs; do not paste the guidelines into the request.
+3. Attach DAMC-IG-001 v0.6 as PDF. Point to section and requirement IDs; do not paste the guidelines into the request.
 4. No personal data, no customer names, no project content in any request.
-5. Log every request in the request log (last section) on the day it is sent. Phase 0 cannot close until each row is closed or carried with a date.
+5. Log each request the day it is sent (last section). Phase 0 closes only when each row is closed or carried with a date.
 6. Every IT request says "implement only if not already in place". Ask for what exists before asking for anything new.
 7. Format each request per DAMC-STY-001 Section 9: one to two pages, numbered asks, each with a "done when".
 8. When DAMC's scope expands to a new country, region, site, language or legislation, repeat L-01 sections A–G and the affected IT requests for that scope (scope expansion step, Guidelines 11.4).
@@ -36,7 +36,7 @@
 > - It does not score, rank or monitor people. It does not infer emotions.
 > - It is not built yet. We are in the governance phase (Phase 0) and want your input before any build starts.
 >
-> The implementation guidelines (DAMC-IG-001 v0.5) are attached. References in this request (e.g. GDPR-05, SEC-21) point to requirement IDs in that document.
+> The implementation guidelines (DAMC-IG-001 v0.6) are attached. References in this request (e.g. GDPR-05, SEC-21) point to requirement IDs in that document.
 
 ---
 
@@ -45,7 +45,9 @@
 ### L-01 Legal department (main request)
 
 **To:** `<Legal department / legal counsel for IT, data and technology>`
+
 **Cc:** `<DPO, if separate>`, `<HR contact for employee consultation>`
+
 **Subject:** Legal review request — internal AI document-analysis tool (DAMC), Phase 0
 
 `<Shared context block>`
@@ -62,7 +64,7 @@ We ask Legal to answer the questions below. For each one, a short written answer
 **B. GDPR**
 1. Lawful basis: is legitimate interest (Art. 6(1)(f)) the right basis for scanning project documents? Who writes and approves the legitimate-interest assessment? (GDPR-01)
 2. DPIA: please confirm it is required. Which company template, and who owns it? (GDPR-12)
-3. Retention: please approve or set the periods proposed in GDPR-05 (text cache ≤ 30 days, findings 24 months, audit log per records policy).
+3. Retention: approve or set the GDPR-05 periods (text cache ≤ 30 days, findings 24 months, audit log per records policy).
 4. Staff notice: please approve the text and the distribution channel. (GDPR-02)
 5. Record of processing: who updates the company RoPA entry? (GDPR-09)
 6. Data subject requests: which route and deadline handling should DAMC follow? (GDPR-14)
@@ -90,10 +92,12 @@ We ask Legal to answer the questions below. For each one, a short written answer
 4. Please confirm or correct every item tagged `[C]` or `[V2]` in Appendix B. Until confirmed, the guidelines forbid `[C]` items from driving high-severity findings.
 
 **What we need back:** written answers per question; one named legal contact; sign-off of Appendix B.
-**Proposed timing:** 45-minute kick-off within `<2>` weeks; written answers within `<4>` weeks.
-**Attachments:** DAMC-IG-001 v0.5 (PDF).
 
-Kind regards,
+**Proposed timing:** 45-minute kick-off within `<2>` weeks; written answers within `<4>` weeks.
+
+**Attachments:** DAMC-IG-001 v0.6 (PDF).
+
+Kind regards,\
 `<name>`, `<role>`
 
 ---
@@ -101,6 +105,7 @@ Kind regards,
 ### L-02 Data Protection Officer (if separate from Legal)
 
 **To:** `<DPO>`
+
 **Subject:** DPO consultation — DPIA and privacy design for DAMC (Art. 35(2) GDPR)
 
 `<Shared context block>`
@@ -115,9 +120,10 @@ Under Art. 35(2) GDPR we seek the DPO's advice before the DPIA. We ask for:
 6. The learning data from reviewer disagreement: kept per check and per role, reviewer identity as a keyed hash, no per-person statistics. (LEARN-09)
 
 **What we need back:** DPO opinion in writing; named DPO contact for the DPIA.
+
 **Proposed timing:** `<date>`.
 
-Kind regards,
+Kind regards,\
 `<name>`, `<role>`
 
 ---
@@ -125,6 +131,7 @@ Kind regards,
 ### L-03 Trade compliance / export control
 
 **To:** `<Trade compliance / export control function>`
+
 **Subject:** Export control handling — internal document-analysis tool (DAMC)
 
 `<Shared context block>`
@@ -138,7 +145,7 @@ DAMC will read hardware-process documents (specifications, drawings metadata, BO
 
 **What we need back:** marking list, handling confirmation, classification contact.
 
-Kind regards,
+Kind regards,\
 `<name>`, `<role>`
 
 ---
@@ -150,6 +157,7 @@ Every IT request: **implement only if not already in place. Please tell us first
 ### IT-01 Workplace / endpoint team — managed device
 
 **To:** `<Endpoint / workplace services>`
+
 **Subject:** Managed device for an offline internal analysis tool (DAMC)
 
 `<Shared context block>`
@@ -171,6 +179,7 @@ Linked IDs: ENV-01, SEC-02. Phase 0–1.
 ### IT-02 Network team — egress control
 
 **To:** `<Network / firewall team>`
+
 **Subject:** Default-deny outbound network for the DAMC device
 
 `<Shared context block>`
@@ -179,7 +188,7 @@ Linked IDs: ENV-01, SEC-02. Phase 0–1.
 |---|---|---|
 | 1 | Outbound traffic from the DAMC device denied by default | A test call to a public site is blocked and logged |
 | 2 | Allowlist only the Microsoft 365 endpoints needed for OneDrive sync | OneDrive sync works; nothing else reachable |
-| 3 | Per-executable rule: document-parsing and model processes get no network at all, including M365 | A connection attempt from these processes fails and is logged |
+| 3 | Per-executable rule: document-parsing and model processes get no network at all, including M365 | Connections from these processes fail and are logged |
 | 4 | An empty allowlist must mean deny all, never allow all | Confirmed in rule design |
 | 5 | Blocked attempts logged and forwarded to the SIEM (see IT-06) | Event visible in the SIEM |
 
@@ -190,6 +199,7 @@ Linked IDs: ENV-03, MIR-14 (outbound network disabled). Phase 1.
 ### IT-03 Identity and access team
 
 **To:** `<Identity / Entra ID team>`
+
 **Subject:** Access groups and identity setup for DAMC
 
 `<Shared context block>`
@@ -208,7 +218,9 @@ Linked IDs: SEC-03 to SEC-06. Phase 1 (items 1–3), Phase 5 (item 4).
 ### IT-04 Microsoft 365 / collaboration team — OneDrive and SharePoint
 
 **To:** `<M365 / collaboration platform team>`
+
 **Cc:** `<Identity team>`
+
 **Subject:** Read-only OneDrive access and a restricted report folder for DAMC
 
 `<Shared context block>`
@@ -229,6 +241,7 @@ Linked IDs: ENV-02, ENV-07, SEC-28 to SEC-32. Phase 1 (items 1–4), Phase 5 (it
 ### IT-05 Platform / DevOps team — internal package and model mirror
 
 **To:** `<Platform / DevOps / software repository team>`
+
 **Subject:** Controlled internal mirror for DAMC libraries and model weights
 
 `<Shared context block>`
@@ -268,13 +281,16 @@ We ask for a controlled internal mirror of `pypdf` and the other libraries liste
 | 10 | Evaluation sandbox: an isolated test environment, no network, no live project data, where candidate tools from the mirror are installed and tested against DAMC's gold set | Sandbox exists; one candidate installed and tested |
 | 11 | Monthly tool watch support: a route for the QA lead to request new candidate tools into the mirror (Guidelines 17.5) | Request route documented |
 
-Linked IDs: ENV-05, M7, MIR-12 to MIR-17, SEC-10 to SEC-14, FACT-31 to FACT-34, MON-08 to MON-13. Phase 1 (items 1–9), Phase 3 (items 10–11).
+Linked IDs: ENV-05, M7, MIR-12 to MIR-17, SEC-10 to SEC-14, FACT-31 to FACT-34, MON-08 to MON-13.
+
+Phase 1 (items 1–9), Phase 3 (items 10–11).
 
 ---
 
 ### IT-06 Security operations (SOC) and application security
 
 **To:** `<IT security / SOC / AppSec>`
+
 **Subject:** Security review, monitoring and incident path for DAMC
 
 `<Shared context block>`
@@ -296,6 +312,7 @@ Linked IDs: SEC-01, SEC-11, SEC-16 to SEC-20, INC-01. Phase 0 (item 1), Phase 1�
 ### IT-07 Infrastructure team — backup, certificates, scheduling
 
 **To:** `<Infrastructure / PKI / backup team>`
+
 **Subject:** Backup, signing certificate and scheduling for DAMC
 
 `<Shared context block>`
@@ -315,6 +332,7 @@ Linked IDs: SEC-07, SEC-19, DOC-02, MON-01. Phase 1–3.
 ### IT-08 Service management / change advisory board
 
 **To:** `<IT service management / CAB / software approval>`
+
 **Subject:** Register DAMC as an internal application
 
 `<Shared context block>`
@@ -350,7 +368,7 @@ Linked IDs: CHG-01 to CHG-11, Section 16.3. Phase 0.
 
 - [ ] System owner approved sending
 - [ ] Placeholders filled; teams merged or removed to fit the company structure
-- [ ] Guidelines v0.5 exported to PDF and attached
+- [ ] Guidelines v0.6 exported to PDF and attached
 - [ ] No personal data, customer names or project content in any request
 - [ ] Each request checked against DAMC-STY-001 (Section 9 structure, Section 10 checklist)
 - [ ] Request log updated with send date and due date

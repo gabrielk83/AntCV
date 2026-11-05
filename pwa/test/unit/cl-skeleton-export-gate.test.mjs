@@ -71,16 +71,23 @@ test('CL-SKELETON-EXPORT-GATE-001: an unrescued skeleton CL asks before export, 
   assert.ok(opening, 'opening section must still be present (not silently dropped)');
   assert.match(opening.items[0].t, /\[Role title\]/, 'unrescued skeleton text reaches the payload verbatim');
 
-  let confirmMsg = null;
-  globalThis.confirm = (msg) => { confirmMsg = msg; return false; };
-  assert.throws(() => placeholderGate(p), /placeholder content detected/);
-  assert.match(confirmMsg, /Hiring Team \/ Name/, 'the confirm message names the actual placeholder symptom');
+  // EXPORT-CONTENT-GATE-001 (owner 2026-11-01): a hard block, never a confirm().
+  let alertMsg = null, confirmCalled = false;
+  globalThis.alert = (msg) => { alertMsg = msg; };
+  globalThis.confirm = () => { confirmCalled = true; return true; };
+  let thrown = null;
+  try { placeholderGate(p); } catch (e) { thrown = e; }
+  assert.ok(thrown && thrown.placeholderGate, 'the skeleton CL export is refused');
+  assert.match(thrown.message, /placeholder content detected/);
+  assert.match(alertMsg, /Hiring Team \/ Name/, 'the notice names the actual placeholder symptom');
+  assert.equal(confirmCalled, false, 'no confirm: one click must not ship a template letter');
 });
 
-test('CL-SKELETON-EXPORT-GATE-001: accepting the confirm lets export proceed', () => {
+test('EXPORT-CONTENT-GATE-001: accepting a confirm can no longer let a skeleton CL through', () => {
   const p = unsolicitedPayload(SKELETON_CL);
   globalThis.confirm = () => true;
-  assert.doesNotThrow(() => placeholderGate(p));
+  globalThis.alert = () => {};
+  assert.throws(() => placeholderGate(p), /placeholder content detected/);
 });
 
 test('kill switch (antcv:disable-placeholder-gate) skips the CL check too', () => {

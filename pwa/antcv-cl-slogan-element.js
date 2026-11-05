@@ -30,7 +30,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.1404-slogan-lang-gate';
+  var VERSION = '1.51.5302-slogan-case';
   if (window.__antcvClSloganElement) return;
   window.__antcvClSloganElement = VERSION;
 
@@ -47,6 +47,17 @@
   function del(k) { try { localStorage.removeItem(k); } catch (_) {} }
   function disabled() { var v = get('antcv:disable-cl-slogan-element', '0'); return v === '1' || v === 'true'; }
   function bump() { try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { reason: 'cl-slogan-element' } })); } catch (_) {} }
+  // SLOGAN-CASE-001 (owner 2026-11-03, CL-ACADEMY-001): the headline is SENTENCE CASE unless
+  // antcv:clSloganCase = 'caps'. app.js owns the rule (__antcvSloganCaseMode / __antcvSloganCased,
+  // shared with both previews and the export); these fallbacks only cover a panel drawn first.
+  function caseMode() {
+    try { if (typeof window.__antcvSloganCaseMode === 'function') return window.__antcvSloganCaseMode(); } catch (_) {}
+    return String(get('antcv:clSloganCase', '')).toLowerCase() === 'caps' ? 'caps' : 'sentence';
+  }
+  function cased(s) {
+    try { if (typeof window.__antcvSloganCased === 'function') return window.__antcvSloganCased(s); } catch (_) {}
+    return caseMode() === 'caps' ? String(s || '').toUpperCase() : String(s || '');
+  }
   function sigBump() {
     // the signature render sites listen on their own rev/event (mirror of the sig control)
     set(K.sigRev, String((parseInt(get(K.sigRev, '0'), 10) || 0) + 1));
@@ -79,7 +90,8 @@
   }
 
   // Effective slogan the CL renders: override key, else the specialisation subtitle,
-  // uppercased with " | " shown as " • " (same derivation as the render sites).
+  // in the headline case (SLOGAN-CASE-001) with " | " shown as " • " (same derivation as
+  // the render sites).
   function subtitleFallback() {
     // SLOGAN-SMART-STATEMENT-001: targeted app -> the gen's meta.cl_slogan or
     // NOTHING; the specialization triad never doubles as the slogan (owner
@@ -91,7 +103,7 @@
         var sm = String(m.cl_slogan || '').trim();
         // SLOGAN-QUALITY-GATE-001: a low-quality generated slogan renders NOWHERE.
         if (sm && typeof window.__antcvSloganQualityOk === 'function' && !window.__antcvSloganQualityOk(sm, m)) sm = '';
-        return (sm && !/^\[/.test(sm)) ? sm.toUpperCase() : '';
+        return (sm && !/^\[/.test(sm)) ? cased(sm) : '';
       }
     } catch (_) {}
     function fromObj(o) {
@@ -108,7 +120,7 @@
     s = String(s || '').replace(/\s*\|\s*/g, ' • ').trim();
     if (!s || /^\[/.test(s)) return '';
     if (!spellsCurrentScript(s)) return '';   // wrong-script stale value -> generic hint
-    return s.toUpperCase();
+    return cased(s);
   }
   function nameFirstWord() {
     try {
@@ -126,7 +138,7 @@
     // fallback here too, so the settings-panel preview matches the paper + export.
     var t = c.text;
     try { if (t && typeof window.__antcvSloganLangGate === 'function' && !window.__antcvSloganLangGate(t)) t = ''; } catch (_) {}
-    return (t ? t.toUpperCase() : subtitleFallback());
+    return (t ? cased(t) : subtitleFallback());
   }
   function signoffCfg() {
     return {
@@ -352,6 +364,21 @@
     var input = mkInput(K.text, function () { s.box.__refresh(); });
     var alignRow = mkAlignBtns(K.align, function () { s.box.__refresh(); });
     s.body.appendChild(input); s.body.appendChild(alignRow);
+    // SLOGAN-CASE-001 (owner 2026-11-03, CL-ACADEMY-001): headline case, sentence by default
+    // (the academy letter); click for CAPS, the opt-back. Same key as Settings → COVER LETTER FORMAT.
+    var caseRow = document.createElement('div');
+    caseRow.style.cssText = 'display:flex;align-items:center;gap:5px;font-size:10px;color:#234a46;';
+    caseRow.appendChild(document.createTextNode('Case:'));
+    var caseBtn = document.createElement('button');
+    caseBtn.type = 'button';
+    caseBtn.title = 'Click to switch the headline between Sentence case and CAPS';
+    caseBtn.style.cssText = 'padding:3px 10px;border-radius:5px;border:1px solid rgba(1,183,187,0.45);background:' + ACCENT + ';color:#04231f;font-size:10px;font-weight:600;cursor:pointer;min-width:78px;text-align:center;';
+    caseBtn.addEventListener('click', function (e) {
+      e.preventDefault(); e.stopPropagation();
+      set('antcv:clSloganCase', caseMode() === 'caps' ? 'sentence' : 'caps'); s.box.__refresh(); bump();
+    });
+    caseRow.appendChild(caseBtn);
+    s.body.appendChild(caseRow);
     // SLOGAN-ENHANCE-001 (owner 2026-07-14): Enhance (LLM rewrite) + Fit-it (re-apply the
     // 4-13 word cap). Both call the app-exposed window ops (app.js defines __antcvEnhanceSlogan /
     // __antcvFitSlogan next to `il`), are undoable (they push app undo via vr), and read/write
@@ -388,8 +415,9 @@
       s.preview.style.textDecoration = c.hidden ? 'line-through' : 'none';
       eye.__paint();
       input.__paint();
-      input.placeholder = subtitleFallback() || 'e.g. PROCESSES • PRODUCTS • PEOPLE';
+      input.placeholder = subtitleFallback() || ('e.g. ' + cased('Processes • Products • People'));
       alignRow.__paint();
+      caseBtn.textContent = caseMode() === 'caps' ? 'CAPS' : 'Sentence case';
     };
     s.box.__refresh();
     return s.box;

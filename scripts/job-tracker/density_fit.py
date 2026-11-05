@@ -179,6 +179,7 @@ def _post_llm(provider, model, system, user, max_tokens=3000, timeout=120):
                                  headers={"Content-Type": "application/json",
                                           "Authorization": "Bearer " + _token(),
                                           "x-provider": provider,
+                                          "x-antcv-source": "gen-runner",
                                           "Origin": gr.ORIGIN, "User-Agent": gr.UA})
     with urllib.request.urlopen(req, timeout=timeout) as r:
         raw = r.read().decode("utf-8", "replace")

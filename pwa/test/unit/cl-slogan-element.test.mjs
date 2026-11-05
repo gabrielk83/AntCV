@@ -31,7 +31,9 @@ function load(store0) {
   return { w: sandbox.window, store };
 }
 
-test('defaults: visible, center, empty text -> falls back to the specialisation subtitle uppercased with | as bullet', () => {
+// SLOGAN-CASE-001 (owner 2026-11-03, CL-ACADEMY-001): the headline is sentence case by default;
+// antcv:clSloganCase = 'caps' opts back to capitals.
+test('defaults: visible, center, empty text -> falls back to the specialisation subtitle with | as bullet', () => {
   const { w } = load({ personalInfo: JSON.stringify({ subtitle: 'Processes | Products | People' }) });
   const api = w.AntcvClSloganElement;
   assert.ok(api && typeof api.version === 'string' && /^\d+\.\d+\.\d+/.test(api.version), 'sidecar loaded and exposes a build-version tag');
@@ -39,10 +41,12 @@ test('defaults: visible, center, empty text -> falls back to the specialisation 
   assert.equal(c.hidden, false);
   assert.equal(c.align, 'center');
   assert.equal(c.text, '');
-  assert.equal(api._effectiveText(), 'PROCESSES • PRODUCTS • PEOPLE');
+  assert.equal(api._effectiveText(), 'Processes • Products • People');
+  const caps = load({ personalInfo: JSON.stringify({ subtitle: 'Processes | Products | People' }), 'antcv:clSloganCase': 'caps' });
+  assert.equal(caps.w.AntcvClSloganElement._effectiveText(), 'PROCESSES • PRODUCTS • PEOPLE', 'caps opt-back');
 });
 
-test('override keys win: text uppercased, hidden flag, align sanitized', () => {
+test('override keys win: text in the headline case, hidden flag, align sanitized', () => {
   const { w } = load({
     'antcv:clSlogan': 'Custom tagline',
     'antcv:clSloganHidden': '1',
@@ -52,7 +56,14 @@ test('override keys win: text uppercased, hidden flag, align sanitized', () => {
   assert.equal(c.text, 'Custom tagline');
   assert.equal(c.hidden, true);
   assert.equal(c.align, 'right');
-  assert.equal(w.AntcvClSloganElement._effectiveText(), 'CUSTOM TAGLINE');
+  assert.equal(w.AntcvClSloganElement._effectiveText(), 'Custom tagline');
+  assert.equal(load({ 'antcv:clSlogan': 'Custom tagline', 'antcv:clSloganCase': 'caps' }).w.AntcvClSloganElement._effectiveText(), 'CUSTOM TAGLINE', 'caps opt-back');
+});
+
+test('the shared app.js helper decides the case when it is loaded', () => {
+  const { w } = load({ 'antcv:clSlogan': 'CUSTOM TAGLINE' });
+  w.__antcvSloganCased = (s) => 'cased:' + s;
+  assert.equal(w.AntcvClSloganElement._effectiveText(), 'cased:CUSTOM TAGLINE');
 });
 
 test('placeholder subtitles ([...]) never leak into the effective slogan; garbage align falls to center', () => {

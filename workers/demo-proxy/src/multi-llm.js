@@ -39,6 +39,8 @@
 //    can wait longer for a result if cascading happens.
 // =================================================================
 
+import { rateFor } from './demo-enforcement.js';
+
 const DEFAULT_ORDER = ['anthropic', 'openai', 'mistral', 'gemini'];
 const PER_CALL_TIMEOUT_MS = 60_000;
 
@@ -464,6 +466,108 @@ export function roleHeadOrder(env, role, baseOrder) {
  *                                    OpenAI/Mistral/Gemini.
  * @returns {Promise<object>}
  */
+// =================================================================
+//  LLM-LOG-SERVER-001 (2026-11-03) — server-side llm_calls rows.
+//
+//  D1 llm_calls used to be fed ONLY by the PWA's in-app cascade
+//  (callLLM -> POST /analytics -> relay tee). Every LLM call made
+//  on the Worker itself — JD analysis, supervisor, coherence,
+//  kernel extraction, gen-job sections, script-driven /v1/messages —
+//  left no row, so the table read "silent" for weeks of real use
+//  and the weekly cost-quality tune had nothing to judge. This logs
+//  those calls from where they happen. Needs a D1 binding named DB
+//  (workers/proxy/wrangler.toml); without one it is a no-op, so the
+//  demo-proxy copy of this file is inert. Tagged client_version
+//  "srv:<source>" so PWA rows (client_version v0.24) stay separable
+//  and nothing the PWA already logs is logged twice (the PWA's own
+//  /v1/messages calls carry no x-antcv-source and are not logged here).
+// =================================================================
+const LOG_PROVIDER = { anthropic: 'claude', claude: 'claude', openai: 'openai', mistral: 'mistral', gemini: 'gemini' };
+// rateFor() hands back this very array for a model it does not know.
+const LOG_UNKNOWN_RATE = rateFor('');
+const LOG_WAIT_MS = 1500;   // never hold an LLM response longer than this for a log write
+
+export function providerFromModel(model, fallback) {
+  const m = String(model || '').toLowerCase();
+  if (/^(claude|anthropic)/.test(m)) return 'claude';
+  if (/^(gpt|o\d|chatgpt|openai)/.test(m)) return 'openai';
+  if (/^(mistral|magistral|ministral|codestral|pixtral)/.test(m)) return 'mistral';
+  if (/^gemini/.test(m)) return 'gemini';
+  return LOG_PROVIDER[String(fallback || '').toLowerCase()] || null;
+}
+
+// Anthropic {input_tokens,output_tokens} · OpenAI/Mistral {prompt_tokens,completion_tokens}
+// · Gemini {promptTokenCount,candidatesTokenCount}.
+export function tokensFromUsage(u) {
+  if (!u || typeof u !== 'object') return { input: null, output: null };
+  const pick = (...keys) => {
+    for (const k of keys) { const n = Number(u[k]); if (u[k] != null && Number.isFinite(n) && n >= 0) return Math.round(n); }
+    return null;
+  };
+  return { input: pick('input_tokens', 'prompt_tokens', 'promptTokenCount'),
+           output: pick('output_tokens', 'completion_tokens', 'candidatesTokenCount') };
+}
+
+export function errorClassFor(rec) {
+  if (rec.ok) return null;
+  if (rec.kind === 'parse') return 'parse';
+  if (rec.kind === 'exception') return /timeout|abort/i.test(String(rec.error || '')) ? 'timeout' : 'network';
+  const st = Number(rec.status);
+  if (st === 429) return 'rate_limit';
+  if (st === 401 || st === 403) return 'auth';
+  if (st === 400 || st === 404 || st === 422) return 'validation';
+  return 'other';
+}
+
+// rec: { provider, model, task, source, ok, status, durationMs, usage | input+output,
+//        attempt, kind: 'parse'|'exception'|undefined, error }
+export async function logServerLlmCall(env, rec) {
+  try {
+    if (!env || !env.DB || typeof env.DB.prepare !== 'function' || !rec) return null;
+    const provider = LOG_PROVIDER[String(rec.provider || '').toLowerCase()];
+    if (!provider) return null;
+    const tok = rec.input !== undefined || rec.output !== undefined
+      ? { input: rec.input ?? null, output: rec.output ?? null }
+      : tokensFromUsage(rec.usage);
+    const model = rec.model ? String(rec.model).slice(0, 100) : null;
+    const rate = model ? rateFor(model) : null;
+    const cost = rate && rate !== LOG_UNKNOWN_RATE && (tok.input != null || tok.output != null)
+      ? Number((((tok.input || 0) / 1e6) * rate[0] + ((tok.output || 0) / 1e6) * rate[1]).toFixed(6))
+      : null;            // an unknown model stays NULL: a guessed price must not read as measured
+    const total = tok.input != null && tok.output != null ? tok.input + tok.output : null;
+    const attempt = Math.max(1, Number(rec.attempt) || 1);
+    const status = rec.status != null && Number.isFinite(Number(rec.status)) ? Math.round(Number(rec.status)) : null;
+    const res = await env.DB.prepare(
+      'INSERT INTO llm_calls (ts, user_hash, provider, model, task, success, http_status, error_class, error_message, ' +
+      'latency_ms, prompt_tokens, completion_tokens, total_tokens, was_retry, retry_attempt, estimated_cost_usd, client_version) ' +
+      'VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    ).bind(
+      Math.floor(Date.now() / 1000), provider, model, String(rec.task || 'server').slice(0, 40),
+      rec.ok ? 1 : 0, status,
+      errorClassFor(rec), rec.ok ? null : (String(rec.error || '').slice(0, 200) || null),
+      Number.isFinite(Number(rec.durationMs)) ? Math.round(Number(rec.durationMs)) : null,
+      tok.input, tok.output, total, attempt > 1 ? 1 : 0, attempt, cost,
+      ('srv:' + String(rec.source || 'cascade')).slice(0, 32),
+    ).run();
+    return res && res.meta && res.meta.last_row_id != null ? res.meta.last_row_id : null;
+  } catch (e) {
+    console.warn('[llm-log] insert failed:', e && e.message ? e.message : e);
+    return null;
+  }
+}
+
+// Awaited, but bounded: a slow D1 write must never stall the LLM answer behind it.
+export async function logServerLlmCallBounded(env, rec) {
+  if (!env || !env.DB) return null;
+  let timer;
+  try {
+    return await Promise.race([
+      logServerLlmCall(env, rec),
+      new Promise((resolve) => { timer = setTimeout(() => resolve(null), LOG_WAIT_MS); }),
+    ]);
+  } finally { clearTimeout(timer); }
+}
+
 export async function callAnyLLMForJSON(env, system, userPrompt, opts = {}) {
   // GEN-MODELROLE-001: opts.role ('writer' | 'supervisor' | 'coherence')
   // reorders the cascade head via env.MODEL_ROLES. No role / no map ->
@@ -476,6 +580,9 @@ export async function callAnyLLMForJSON(env, system, userPrompt, opts = {}) {
   const models = opts.models || {};
   const validate = typeof opts.validate === 'function' ? opts.validate : null;
   const attempts = [];
+  const logTask = role || (typeof opts.task === 'string' && opts.task) || 'server';
+  let logN = 0;
+  const logAttempt = (rec) => logServerLlmCallBounded(env, { task: logTask, source: 'cascade', attempt: ++logN, ...rec });
   for (const provider of order) {
     const fn = PROVIDER_FNS[provider];
     if (!fn) {
@@ -512,6 +619,7 @@ export async function callAnyLLMForJSON(env, system, userPrompt, opts = {}) {
           error: String(e && e.message || e),
           duration_ms: Date.now() - t0,
         });
+        await logAttempt({ provider, model, ok: false, kind: 'exception', error: String(e && e.message || e), durationMs: Date.now() - t0 });
         // Exceptions are usually network/timeout — try the next model
         // in this provider's chain before giving up on the provider.
         continue;
@@ -531,6 +639,7 @@ export async function callAnyLLMForJSON(env, system, userPrompt, opts = {}) {
               raw_preview: String(result.text || '').slice(0, 200),
               duration_ms,
             });
+            await logAttempt({ provider, model: result.model || model, ok: false, kind: 'parse', status: result.status, usage: result.usage, durationMs: duration_ms, error: 'response failed caller-supplied validator' });
             // Validation failed — try next model in chain, then next provider.
             continue;
           }
@@ -542,6 +651,7 @@ export async function callAnyLLMForJSON(env, system, userPrompt, opts = {}) {
           ok: true,
           duration_ms,
         });
+        await logAttempt({ provider, model: result.model || model, ok: true, status: result.status, usage: result.usage, durationMs: duration_ms });
         return {
           ok: true,
           provider,
@@ -560,6 +670,7 @@ export async function callAnyLLMForJSON(env, system, userPrompt, opts = {}) {
         error: result.error,
         duration_ms,
       });
+      await logAttempt({ provider, model, ok: false, status: result.status, durationMs: duration_ms, error: result.error });
       // 401 / 403 are credential problems — no point trying more models
       // with the same key. Skip to the next provider immediately.
       if (result.status === 401 || result.status === 403) {

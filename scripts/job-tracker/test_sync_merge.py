@@ -88,10 +88,46 @@ def test_push_409_merge_keeps_cloud_only_entries():
     print("PASS: a 409 push merge no longer drops cloud-only entries either.")
 
 
+def test_outcome_maps_survive_a_merge():
+    # OUTCOME-RECORD-001: status_history / followups / financials are written to the
+    # cloud by the PWA and the scripts. Outside UK_DICT_FIELDS a top-level key came
+    # from LOCAL only, so a pull-then-push would have dropped all three.
+    base = {"rows": [_row("a")]}
+    local = {"rows": [_row("a")], "status_history": {"b": [{"status": "Submitted", "date": "2026-11-01"}]}}
+    cloud = {"rows": [_row("a")],
+             "status_history": {"a": [{"status": "Interview", "date": "2026-11-04", "stage": "1st"}]},
+             "followups": {"a": {"submitted": "2026-10-20", "submitted_source": "owner", "sent": []}},
+             "financials": {"a": {"summary": "Acme annual report: revenue DKK 1.0m."}}}
+    merged, conflicts = S._merge(base, local, cloud)
+    assert set(merged["status_history"]) == {"a", "b"}, merged["status_history"]
+    assert merged["followups"] == cloud["followups"], merged.get("followups")
+    assert merged["financials"] == cloud["financials"], merged.get("financials")
+    assert not conflicts, conflicts
+    print("PASS: status_history / followups / financials survive a merge.")
+
+
+def test_legacy_history_list_does_not_crash_the_merge():
+    # OUTCOME-RECORD-002: the first doc design kept a workbook history[] LIST at
+    # doc.history. It is not a uk-keyed field, and a list value in a uk-keyed field
+    # is kept whole instead of crashing pull / push.
+    assert "history" not in S.UK_DICT_FIELDS
+    legacy = [{"week": "2026-W27"}]
+    base = {"rows": [_row("a")], "history": legacy}
+    merged, conflicts = S._merge(base, {"rows": [_row("a")], "history": legacy}, {"rows": [_row("a")], "history": legacy})
+    assert merged["history"] == legacy, merged["history"]
+    got, cf = S._merge_uk_dict({}, {"followups": ["odd"]}, {"followups": {"a": {}}}, "followups")
+    assert got == ["odd"] and not cf, got
+    got, cf = S._merge_uk_dict({}, {}, {"followups": ["odd"]}, "followups")
+    assert got == ["odd"] and not cf, got
+    print("PASS: a list-valued doc key is kept whole, never crashes the merge.")
+
+
 if __name__ == "__main__":
     test_pull_keeps_local_only_entries()
     test_pull_conflict_prefers_local_and_reports()
     test_pull_force_overwrites()
     test_push_409_merge_keeps_cloud_only_entries()
-    print("\nOK - 4/4")
+    test_outcome_maps_survive_a_merge()
+    test_legacy_history_list_does_not_crash_the_merge()
+    print("\nOK - 6/6")
     sys.exit(0)

@@ -61,13 +61,64 @@ import {
   sanitizeUserContent,
   INJECTION_DEFENSE_PREAMBLE,
 } from './prompt-injection-defense.js';
-import { PROVIDER_MODELS } from './multi-llm.js';
+import { PROVIDER_MODELS, providerFromModel, logServerLlmCallBounded } from './multi-llm.js';
 
 export default {
   async fetch(request, env, ctx) {
-    return handleWithProviderFallback(request, env || {});
+    const e = env || {};
+    // LLM-LOG-SERVER-001: script-driven /v1/messages calls (gen-runner & co) say who they are
+    // with x-antcv-source and are logged to D1 llm_calls. The PWA's own calls carry no such
+    // header: it already logs them client-side, so logging here would count them twice.
+    const source = e.DB ? serverCallSource(request) : null;
+    if (!source) return handleWithProviderFallback(request, e);
+    const id = await identityFromRequestAsync(request, e).catch(() => null);
+    const t0 = Date.now();
+    const resp = await handleWithProviderFallback(request, e);
+    if (id) await logServerResponse(e, request, resp, source, t0);
+    return resp;
   }
 };
+
+// Header -> source tag. POST only, never the /job/ envelope routes (gen-job logs each section
+// itself, below), and the tag must look like a slug so a client cannot write free text into D1.
+function serverCallSource(request) {
+  if (request.method !== 'POST') return null;
+  if (new URL(request.url).pathname.includes('/job/')) return null;
+  const tag = String(request.headers.get('x-antcv-source') || '').trim().toLowerCase();
+  return /^[a-z0-9-]{1,20}$/.test(tag) ? tag : null;
+}
+
+// Write one llm_calls row for a finished /v1/messages response. Never throws, never reads a
+// streamed (SSE) body — awaiting that would hold the response back — and is a no-op without DB.
+async function logServerResponse(env, request, resp, source, t0) {
+  try {
+    if (!env || !env.DB || !resp) return;
+    let data = null;
+    if (/json/i.test(String(resp.headers.get('content-type') || ''))) {
+      try { data = await resp.clone().json(); } catch (_) { data = null; }
+    }
+    const model = data && typeof data === 'object' ? (data.model || null) : null;
+    const provider = providerFromModel(model, request.headers.get('x-provider') || 'anthropic');
+    if (!provider) return;
+    const ok = resp.status < 400;
+    const err = ok ? null : ((data && data.error && (data.error.message || data.error)) || (data && data.message) || ('HTTP ' + resp.status));
+    await logServerLlmCallBounded(env, {
+      provider, model, task: 'generation', source, ok, status: resp.status,
+      durationMs: Date.now() - t0, usage: data && (data.usage || data.usageMetadata) || null,
+      error: typeof err === 'string' ? err : JSON.stringify(err),
+    });
+  } catch (_) { /* logging must never break a generation */ }
+}
+
+// gen-job runs every section by re-entering handleRequest; log each one as it finishes.
+async function loggedRunSection(request, env) {
+  const t0 = Date.now();
+  const resp = await handleRequest(request, env);
+  await logServerResponse(env, request, resp, 'gen-job', t0);
+  return resp;
+}
+
+export const __test = { serverCallSource, logServerResponse, loggedRunSection };
 
 // Cross-provider auto-fallback (owner 2026-06-05): a single provider returning
 // 503/overloaded (e.g. Gemini) used to fail the whole generation with no
@@ -737,7 +788,7 @@ async function handleRequest(request, env = {}) {
     // not a /job path, so handleJobRoute returns null for it -> no recursion.
     if (url.pathname.includes('/job/')) {
       const jobResp = await handleJobRoute(request, env, CORS, {
-        runSection: handleRequest,
+        runSection: loggedRunSection,
         identityFn: identityFromRequestAsync,
         coherenceFn: runCoherenceReview,
       });
@@ -974,11 +1025,23 @@ async function handleRequest(request, env = {}) {
     }
   } catch (_) { userHashForLlm = null; }
 
-  let injectionStats = { redacted: 0, suspicious: [] };
+  let injectionStats = { redacted: 0, suspicious: [], stripped: 0 };
   try {
     const parsed = JSON.parse(bodyText);
     if (parsed && typeof parsed === 'object') {
       let modified = false;
+      // Sanitize one user text; returns the text to forward, or null when unchanged.
+      const sanitized = (text, fieldName) => {
+        const r = sanitizeUserContent(text, { fieldName });
+        injectionStats.stripped += r.stripped;
+        if (r.redacted > 0 || r.suspicious.length > 0) {
+          injectionStats.redacted += r.redacted;
+          injectionStats.suspicious.push(...r.suspicious);
+          return r.clean;
+        }
+        // POSTING-GUARD-001: only invisible characters were found - drop them, no length cap.
+        return r.stripped > 0 ? r.visible : null;
+      };
 
       // OpenAI / Mistral / Anthropic shape: messages: [{role, content}]
       if (Array.isArray(parsed.messages)) {
@@ -994,12 +1057,15 @@ async function handleRequest(request, env = {}) {
               modified = true;
             }
           } else if (m.role === 'user' && typeof m.content === 'string') {
-            const r = sanitizeUserContent(m.content, { fieldName: 'message[' + i + ']' });
-            if (r.redacted > 0 || r.suspicious.length > 0) {
-              m.content = r.clean;
-              injectionStats.redacted += r.redacted;
-              injectionStats.suspicious.push(...r.suspicious);
-              modified = true;
+            const next = sanitized(m.content, 'message[' + i + ']');
+            if (next !== null) { m.content = next; modified = true; }
+          } else if (m.role === 'user' && Array.isArray(m.content)) {
+            // Multi-part message (document/image + text): sanitize the text blocks.
+            for (let j = 0; j < m.content.length; j++) {
+              const b = m.content[j];
+              if (!b || b.type !== 'text' || typeof b.text !== 'string') continue;
+              const next = sanitized(b.text, 'message[' + i + '].content[' + j + ']');
+              if (next !== null) { b.text = next; modified = true; }
             }
           }
         }
@@ -1030,13 +1096,8 @@ async function handleRequest(request, env = {}) {
           if (!c || c.role !== 'user' || !Array.isArray(c.parts)) continue;
           for (let j = 0; j < c.parts.length; j++) {
             if (c.parts[j] && typeof c.parts[j].text === 'string') {
-              const r = sanitizeUserContent(c.parts[j].text, { fieldName: 'contents[' + i + '].parts[' + j + ']' });
-              if (r.redacted > 0 || r.suspicious.length > 0) {
-                c.parts[j].text = r.clean;
-                injectionStats.redacted += r.redacted;
-                injectionStats.suspicious.push(...r.suspicious);
-                modified = true;
-              }
+              const next = sanitized(c.parts[j].text, 'contents[' + i + '].parts[' + j + ']');
+              if (next !== null) { c.parts[j].text = next; modified = true; }
             }
           }
         }
@@ -1110,6 +1171,9 @@ async function handleRequest(request, env = {}) {
     if (demo && demo.headers) Object.assign(out, demo.headers);
     if (injectionStats.redacted > 0) {
       out['X-AntCV-Sanitized-Patterns'] = String(injectionStats.redacted);
+    }
+    if (injectionStats.stripped > 0) {
+      out['X-AntCV-Invisible-Stripped'] = String(injectionStats.stripped);
     }
     if (writingStyleRequest) {
       out['X-AntCV-Writing-Style'] = writingStyleRequest.writingStyle;

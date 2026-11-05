@@ -37,6 +37,7 @@
     closingAlign: 'antcv:clClosingAlign', // CL-SIGNOFF-ALIGN-001: sign-off closing CJLR (default center)
     signName: 'antcv:clSignName',       // CL-SIGNNAME-001: editable sign-off name (default = first word of full name)
     signAlign: 'antcv:clSignNameAlign', // CL-SIGNNAME-001: sign-off name CJLR (default center)
+    textCase: 'antcv:clSloganCase',     // SLOGAN-CASE-001: 'sentence' (default) | 'caps'
     open: 'antcv:clSloganCtrlOpen'
   };
   var ACCENT = 'rgb(1,183,187)';
@@ -51,6 +52,17 @@
     try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { reason: 'cl-slogan-control' } })); } catch (_) {}
   }
   function isOpen() { return get(K.open, '0') === '1'; }
+  // SLOGAN-CASE-001 (owner 2026-11-03, CL-ACADEMY-001): the headline is SENTENCE CASE unless
+  // antcv:clSloganCase = 'caps'. app.js owns the rule (__antcvSloganCaseMode / __antcvSloganCased,
+  // shared with both previews and the export); these fallbacks only cover a panel drawn first.
+  function caseMode() {
+    try { if (typeof window.__antcvSloganCaseMode === 'function') return window.__antcvSloganCaseMode(); } catch (_) {}
+    return String(get('antcv:clSloganCase', '')).toLowerCase() === 'caps' ? 'caps' : 'sentence';
+  }
+  function cased(s) {
+    try { if (typeof window.__antcvSloganCased === 'function') return window.__antcvSloganCased(s); } catch (_) {}
+    return caseMode() === 'caps' ? String(s || '').toUpperCase() : String(s || '');
+  }
   function setOpen(v) { set(K.open, v ? '1' : '0'); }
 
   // SPEC-SLOGAN-LANG-001 (owner 2026-07-13, "should not be danish if I am set to
@@ -72,8 +84,8 @@
     } catch (_) { return true; }
   }
 
-  // The default (placeholder) the slogan falls back to = the candidate subtitle, uppercased,
-  // with "|" turned into " • ". Read from personalInfo (the current-language store the header
+  // The default (placeholder) the slogan falls back to = the candidate subtitle, in the
+  // headline case (SLOGAN-CASE-001), with "|" turned into " • ". Read from personalInfo (the current-language store the header
   // renders + the babel-fish pass keeps current) so the control SHOWS what the empty field
   // will render in THIS app language.
   function subtitleFallback() {
@@ -89,7 +101,7 @@
         var sm = String(m.cl_slogan || '').trim();
         // SLOGAN-QUALITY-GATE-001: a low-quality generated slogan renders NOWHERE.
         if (sm && typeof window.__antcvSloganQualityOk === 'function' && !window.__antcvSloganQualityOk(sm, m)) sm = '';
-        return (sm && !/^\[/.test(sm)) ? sm.toUpperCase() : '';
+        return (sm && !/^\[/.test(sm)) ? cased(sm) : '';
       }
     } catch (_) {}
     function fromObj(o) {
@@ -110,7 +122,7 @@
     s = String(s || '').replace(/\s*\|\s*/g, ' • ').trim();
     if (!s || /^\[/.test(s)) return '';
     if (!spellsCurrentScript(s)) return '';   // wrong-script stale value -> generic hint
-    return s.toUpperCase();
+    return cased(s);
   }
 
   // The default (placeholder) for the sign-off name = the first word of the candidate's full name.
@@ -183,7 +195,7 @@
     var note = document.createElement('div');
     note.style.cssText = 'font-size:9px;opacity:.6;line-height:1.4;';
     note.textContent = 'The teal tagline at the top of the cover letter. Leave empty to use the ' +
-      'specialisation line. Rendered uppercase, with " | " shown as " • ".';
+      'specialisation line. Sentence case by default (Case: CAPS for capitals), with " | " shown as " • ".';
     textRow.appendChild(textIn);
     textRow.appendChild(note);
 
@@ -233,6 +245,29 @@
     });
     setModeActive();
     body.appendChild(placeRow);
+
+    // SLOGAN-CASE-001 (owner 2026-11-03, CL-ACADEMY-001): sentence-case headline by default
+    // (the academy letter); CAPS is the opt-back. The preview, the HTML export and the
+    // DOCX/PDF export (meta.slogan_case) all read antcv:clSloganCase.
+    var caseRow = document.createElement('div');
+    caseRow.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:10px;color:#cdd;flex-wrap:wrap;';
+    caseRow.appendChild(document.createTextNode('Case:'));
+    var caseBtns = {};
+    var setCaseActive = function () {
+      var m = caseMode();
+      for (var ck in caseBtns) {
+        var active = (ck === m);
+        caseBtns[ck].style.background = active ? ACCENT : 'rgba(1,183,187,0.10)';
+        caseBtns[ck].style.color = active ? '#04231f' : ACCENT;
+      }
+    };
+    [['sentence', 'Sentence case'], ['caps', 'CAPS']].forEach(function (p) {
+      var cb = btn(p[1], function () { set(K.textCase, p[0]); setCaseActive(); bump(); try { box.__refresh(); } catch (_) {} });
+      caseBtns[p[0]] = cb;
+      caseRow.appendChild(cb);
+    });
+    setCaseActive();
+    body.appendChild(caseRow);
 
     // CL-CLOSING-EDIT-001: sign-off closing (the line above the name). Default "At your service,".
     var closingRow = document.createElement('div');
@@ -316,9 +351,10 @@
     box.__refresh = function () {
       textIn.value = get(K.text, '');
       var ph = subtitleFallback();
-      textIn.placeholder = ph || 'e.g. PROCESSES • PRODUCTS • PEOPLE';
+      textIn.placeholder = ph || ('e.g. ' + cased('Processes • Products • People'));
       hiddenCb.checked = get(K.hidden, '0') === '1';
       setAlignActive(alignBtns);
+      setCaseActive();
       closingIn.value = get(K.closing, '');
       setAlignActive(closingAlignBtns, K.closingAlign);
       nameIn.value = get(K.signName, '');

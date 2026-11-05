@@ -1,0 +1,41 @@
+AntCV - Proprietary Licence (source visible, all rights reserved)
+
+Copyright (c) 2026 Gabriel Alexander Karp Gershon. All rights reserved.
+
+This repository is public so that its source can be read. Public does not mean
+open source. No licence to use the software is granted except as stated below.
+
+1. Viewing. You may view the source code in this repository on GitHub and read it
+   for the purpose of evaluating it or discussing it with the copyright holder.
+   GitHub's Terms of Service also let GitHub users view and fork this repository
+   on GitHub itself; that fork carries this licence and grants no further rights.
+
+2. Restrictions. Without the copyright holder's prior written permission you may
+   not, in whole or in part:
+   a. copy, modify, translate or create derivative works of the software;
+   b. run, host, deploy or offer the software, or a service built on it, for
+      yourself or for others, whether free of charge or commercially;
+   c. distribute, sublicense, sell, rent or lend the software;
+   d. use the software, its prompts, rules, data or documentation to train,
+      build or benchmark a competing product or model;
+   e. remove or change any copyright, licence or attribution notice.
+
+3. Third-party material. Parts of this repository are third-party works under
+   their own licences, which govern those parts and are not restricted by this
+   licence. They are listed in THIRD_PARTY_NOTICES.md. Package dependencies keep
+   the licences stated by their authors.
+
+4. Personal data. Test data under docs/personas/ is synthetic. Nothing in this
+   licence grants rights to any personal data processed by a deployed AntCV.
+
+5. Contributions. Contributions are accepted only under a separate written
+   agreement with the copyright holder.
+
+6. No warranty. The software is provided "as is", without warranty of any kind,
+   express or implied, including merchantability, fitness for a particular
+   purpose and non-infringement. In no event shall the copyright holder be liable
+   for any claim, damages or other liability arising from or in connection with
+   the software or its use.
+
+7. Permission requests: open an issue on this repository or contact the
+   copyright holder through GitHub (@gabrielk83).

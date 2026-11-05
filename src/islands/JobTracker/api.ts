@@ -5,6 +5,8 @@
 // 'include'); no token fishing. Base URL mirrors app.js: localStorage
 // 'proxyUrl' (JSON) with the relay as fallback.
 
+import type { HistoryEntry, FollowupRec, FinancialsRec } from './outcomes';
+
 const RELAY_FALLBACK = 'https://antcv-access-relay.karp-gabriel-a.workers.dev';
 
 // Signed-in check — the Job Tracker must never surface before login. Prefer the
@@ -86,6 +88,11 @@ export interface TrackerDoc {
     application_id?: number; jd_hash?: string; generated_at?: number;
     cv_export_url?: string; cl_export_url?: string; analysis_url?: string;
   }>;
+  // OUTCOME-RECORD-001 (shapes and writers in outcomes.ts)
+  status_history?: Record<string, HistoryEntry[]>; // dated status changes, Interview entries carry a stage
+  history?: unknown;                            // OUTCOME-RECORD-002: legacy workbook key (an array in JOB-TRACKER-001); never written here
+  followups?: Record<string, FollowupRec>;      // submitted date + follow-up log (followups.py and the island)
+  financials?: Record<string, FinancialsRec>;   // annual-report summary (company_financials.py; read-only here)
   [k: string]: unknown;
 }
 
@@ -322,9 +329,13 @@ export async function fetchClusterTop20(category?: string): Promise<ClusterTop> 
   } catch { return { cluster_id: null, top20: [] }; }
 }
 
+// OUTCOME-RECORD-001: Hired / Offer declined / No response / Withdrawn added. Keep every
+// older string: the Excel mirror, gen-runner.py (is_closed_row, owner_packaged_rows) and
+// check-postings.py (is_engaged) match on them, and rowVisibility.ts buckets them.
 export const TRACKED_STATUSES = [
   'Not started', 'Identified (posting saved)', 'CV/CL drafting',
-  'CV/CL drafted', 'Submitted', 'Interview', 'Offer', 'Rejected', 'Archive / closed',
+  'CV/CL drafted', 'Submitted', 'Interview', 'Offer', 'Hired', 'Offer declined',
+  'Rejected', 'No response', 'Withdrawn', 'Archive / closed',
 ];
 
 // Drop-reason → Dream Envelope dimension. Keyword classifier (deterministic,

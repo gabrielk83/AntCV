@@ -1,5 +1,5 @@
 {
-  "version": "1.9.7",
+  "version": "1.10.1",
   "_note": "GOLD RULES - the ONE machine-readable control site for every AntCV generation (owner 2026-07-13). Narrative + enforcement map: docs/qa/GOLD_STANDARD_LOCKER.md. Consumers: pwa/antcv-bullet-targets.js (prompt block on every generation/Fit-it/Enhance call), scripts/job-tracker/{quality_pass,density_fit,measure_density,gen-runner}.py (persist + sweep enforcement). Served at antcv.pages.dev/gold-rules.json so workers can fetch it (proxy prompt-augment wiring = open follow-up). Change values HERE; code reads them.",
   "density": {
     "runt_fraction": 0.6,
@@ -284,12 +284,13 @@
     " - METRIC MEANING (METRIC-SEMANTIC-001): keep every metric bound to what it measured, in the source's own terms - a \"change cycle cut from roughly 250 days to about 10\" must never become \"late-stage rework reduced 95%\"; prefer the source's raw numbers over derived percentages.",
     " - CONSISTENCY (CONTRADICTION-QA-001): stated years of experience, team sizes and scale figures must match the kernel exactly and be identical everywhere they appear across the CV and cover letter.",
     " - COVER LETTER LENGTH (CL-LENGTH-001): 350-450 words total on one page - a compact opening tied to THIS role, three evidence paragraphs, a short close. Never assume the employer has gaps or problems; never open with a generic \"roles where...\" line.",
+    " - COVER LETTER FORMAT (CL-ACADEMY-001, owner 2026-11-01; the DEFAULT for every letter that answers a job description, OVERRIDES the older labelled-section cover-letter instructions where they conflict): write the academy letter, about 400 words. meta.cl_slogan is a SENTENCE-CASE headline (not capitals, no full stop, 4-10 words) naming what THIS employer gets (shape only: 'Smart locks that households trust and buy'). The greeting names the hiring manager or the team the JD names ('Dear EndoIntelligence team,'). The OPENING states the employer's need in its own terms from the JD in two or three sentences, then 'That is where I add most: <one clause>.' Each evidence part (why_content, the WHAT I BRING rows, the WHO I AM summary) is a short bold one-line subheading plus ONE paragraph that starts with 'I will' or 'I would' (mix both across the letter) and ends with ONE real proof point from the source in its own terms. HOW I WILL CONTRIBUTE is 'What I would want to understand first': one honest line where the field is new to the candidate, then exactly TWO questions for the first 90 days that name stakeholders the JD names. contribute_closing is 'My goal: <one line>'. closure_content is ONE closing invitation ('I would welcome a conversation about ...') that does not repeat the goal; no phrase appears twice in the letter. The renderer adds the sign-off 'Kind regards,' (da 'Med venlig hilsen,'). The letter carries no hearing, captions or communication-needs line (COMMS-LINE-001) and no eligibility or citizenship line unless the JD asks for it.",
     " - EVERY experience role carries its own Results line (ROLE-RESULTS-MANDATORY-001): the role's strongest REAL outcome in the source's own terms; a role without a Results line is an incomplete generation.",
     " - RESULT IMPACT TYPES (RESULTS-IMPACT-TYPES-001, owner 2026-10-01): write every Results line and achievement bullet as ONE of four impact types: PERFORMANCE (what increased, decreased or improved: time, cost, quality, efficiency, delivery, with its number), DELIVERABLES (what was created or completed: a product, plan, process, system, workshop series or report, with a count or scope), IMPROVEMENTS (what works better: faster, clearer, easier, standardised) or AUDIENCE (who benefited and at what scale: users, customers, teams, sites, countries). Per job, the type the job description asks for most gets weight when you choose a role's bullets and Results line (cost and schedule language favours PERFORMANCE; build and launch language favours DELIVERABLES; process language favours IMPROVEMENTS; customer, user and market language favours AUDIENCE). JD relevance (EVIDENCE-RANK-002) still ranks first and motivation lines stay as they are. Spread the types across roles so the CV shows more than one kind of impact; never invent a number or a scale to fit a type.",
     " - TRACKMAN IS AN INTERNSHIP (ROLE-BODY-NOTE-001, owner 2026-10-01): the Trackman role's body makes clear it is an internship (for example the first bullet label reads 'Hardware Project Management (internship):'); the role line itself (title, company, years) stays unchanged.",
     " - SKILLS (SKILLS-GROUPED-001, owner 2026-10-01): do not go overboard on skills; keep them few and grouped: hard skills in the Core Competencies table and Tools & Methods, soft skills in the 'Work style:' line, never one long mixed list.",
-    " - HOUSE SECTIONS ARE MANDATORY (HOUSE-SECTIONS-001): a commercial CV always carries Profile, 'Work style:' line, the Core Competencies table ('The role needs' | 'What I bring, with proof'), Experience, Education, and the sidebar set (Tools & Methods, Certificates, Languages, Interests - all six items - and Accessibility). Never drop a house section to hit a length target; compress WITHIN sections instead.",
-    " - ACCESSIBILITY LINE (owner 2026-09-03, supersedes 2026-08-16): 'Hearing impaired; clear spoken communication and written follow-ups work well.' - the full line, never a bare 'Hearing impaired.' It belongs in the CV only; a cover letter carries no hearing line.",
+    " - HOUSE SECTIONS ARE MANDATORY (HOUSE-SECTIONS-001): a commercial CV always carries Profile, 'Work style:' line, the Core Competencies table ('The role needs' | 'What I bring, with proof'), Experience, Education, and the sidebar set (Tools & Methods, Certificates, Languages, Interests - all six items - and Communication - stored as the accessibility item). Never drop a house section to hit a length target; compress WITHIN sections instead.",
+    " - COMMUNICATION LINE (COMMS-LINE-001, owner 2026-11-01, supersedes the 2026-09-03 and 2026-10-25 accessibility lines): the CV never names a disability or diagnosis (no 'hearing impaired', 'deaf', 'cochlear implant', 'disability'). The row is titled 'Communication' (da 'Kommunikation') and says what works: 'I work in English and Danish and follow meetings best with live captions and written follow-ups.' It belongs in the CV only; a cover letter carries no hearing or communication-needs line. Adjustments are asked for when the candidate is invited to an interview, written as logistics (captions on in Teams, agenda in writing beforehand), not in the application.",
     " - SLOGAN FUSION (SLOGAN-PERSONALITY-IMPACT-001): the positioning line fuses IMPACT with the candidate's PERSONALITY - prefer a word that carries both the temperament and the craft (gold: 'AN ELECTRO-OPTICS ENGINEER WHO TURNS MEASURED LIGHT INTO SHIPPED PRODUCT' - 'measured' is both the work style and the metrology).",
     " - GREETING (CL-GREETING-001): the cover letter ALWAYS opens with a greeting to the hiring manager - BY NAME when the JD, the recruiter search or the application notes provide one ('Dear Firstname Lastname,'), else 'Dear Hiring Team,' (localised). A letter without a greeting is an incomplete generation.",
     " - TARGET ROLE (TARGET-ROLE-001, owner 2026-09-29, Veo): meta.role is the title of the POSTING itself - the posting header or the 'we are looking for a <title>' line. A title the JD names as a partner, manager or neighbouring team ('you will partner with our Director of Hardware Engineering', 'reporting to the Head of X') is NEVER the target role. When the pasted text has no header, take the title whose responsibilities the JD describes as 'you will...'.",
@@ -307,7 +308,7 @@
     " - PROFILE IS NEVER A BUZZWORD LIST (PROFILE-NO-BUZZWORD-LIST-001, owner 2026-10-01): every profile sentence has a subject and a real verb and names something concrete (a product, a decision, a result). Never stack 3+ adjectives, trait labels or abstract nouns joined by commas, slashes or bullets (\"Results-driven, detail-oriented, strategic leader\"; \"Stakeholder management, risk, agile, delivery\"). Banned in the profile: results-driven, detail-oriented, self-starter, dynamic, proactive, innovative, motivated, passionate, team player, strong communicator, track record, proven ability, synergy. Test: if a sentence could sit in any other candidate's CV, rewrite it as a behaviour or a result.",
     " - PROFILE HEADING SLOGAN (PROFILE-SLOGAN-001, owner 2026-10-01): return cv_overrides.profile_slogan - the slogan part of the CV profile HEADING, which renders as \"Profile: <slogan>\" (e.g. \"Profile: Make the case before the spec\") so it still reads as the profile section; return the slogan only, without the word Profile. 3-8 words, a headline (no full stop), in the output language, showing you know what THIS employer needs: their product + their need (shape only: 'Make the case before the spec', 'From first prototype to quantum delivery'). It MUST NOT repeat the cover-letter slogan (meta.cl_slogan): share NO content word with it (ignore a/the/of/and/with/for/to/in) and take a different angle - the cl_slogan says who the candidate is to them, the profile_slogan says what their product or team needs. Not a bare job title, not a skills list. Without a JD: the kind of work the candidate does best, in a few words.",
     " - EDUCATION DETAIL (EDU-DETAIL-001, owner 2026-10-05): every degree keeps its stored detail line - the field or specialisation, the thesis and its grade when stored (shape only: 'optics, photonics and nanotechnology; thesis grade 93'). Never drop it to save space; trim experience bullets first. Two degrees taken in parallel stay two entries (STORED-FACTS-001) and each is marked '(double degree)' when the source says so. Interests keep all six items and the personality line (HOUSE-SECTIONS-001); never cut them to hit a page budget.",
-    " - LINEAR CV CLOSING TABLES (LINEAR-DETAILS-ENRICHED-001, owner 2026-10-05, CV_Veo_Director_enriched): in the linear layout the closing details are THREE label | content tables, each under its own heading: CREDENTIALS (Standards, Courses/Certificates, Patent), LANGUAGES & PERSONAL (Languages, Rugby, Interests, Accessibility), AVAILABILITY & REFERENCES (Availability, References); never one combined details table and never a courses row under Education. Keep each of those items its own SHORT section (a one-liner whose section title is the row label) so the layout can place it as a row; never merge them into one block. Page 2 of the experience opens with 'Professional experience (Cont.)' after ONE explicit page break, roles kept whole (LINEAR-CONT-001).",
+    " - LINEAR CV CLOSING TABLES (LINEAR-DETAILS-ENRICHED-001, owner 2026-10-05, CV_Veo_Director_enriched): in the linear layout the closing details are THREE label | content tables, each under its own heading: CREDENTIALS (Standards, Courses/Certificates, Patent), LANGUAGES & PERSONAL (Languages, Rugby, Interests, Communication), AVAILABILITY & REFERENCES (Availability, References); never one combined details table and never a courses row under Education. Keep each of those items its own SHORT section (a one-liner whose section title is the row label) so the layout can place it as a row; never merge them into one block. Page 2 of the experience opens with 'Professional experience (Cont.)' after ONE explicit page break, roles kept whole (LINEAR-CONT-001).",
     " - PROOF POINTS FIRST (PROOF-POINTS-FIRST-001, owner 2026-10-23, course reviewer feedback on the Veo CV): with the nordic-minimal writing style or the copenhagen-modern package the CV is TWO columns by default and the LEFT column (the sidebar) opens with a PROOF POINTS block: 4-5 short lines, each one number taken from the source in the source's own terms (shape only: 'Change cycle ~250 to ~10 days', '20,000 units/week test line'), so the reader meets the numbers in the first ten seconds. The block carries only numbers that already stand in a Results line or a Core Competencies row; never a new figure. The classic full-width heading stack is not the default for these two.",
     " - PROOF POINT ORDER (PROOF-POINTS-ORDER-001, owner 2026-10-23): rank proof points and Core Competencies rows by what THIS ad stresses, not by habit: an ad that stresses DFM/DFA, mass production, volume or consumer electronics gets the VOLUME numbers first (units per week, units shipped, production lines) and a verification count (requirements verified) steps back; shipped consumer hardware ranks before automotive verification; a cost ad gets cost cuts first; a delivery ad gets cycle times first.",
     " - BUDGET SIZE (BUDGET-SIZE-001, owner 2026-10-23): 'owned the budget' is credible only with its size: state the stored figure or range ('a budget of about X', 'a six-figure budget') when the source carries one; when the source has no size, write the responsibility without 'owned' ('ran the electro-optics budget') and never invent a figure. An ad that asks to 'build and own Capex/Opex budgets' makes a stored budget size a first-tier proof point, so a missing size is a question for the candidate, not a guess.",
@@ -363,7 +364,7 @@
         "Languages",
         "Rugby",
         "Interests",
-        "Accessibility"
+        "Communication"
       ],
       "availability_references": [
         "Availability",
@@ -526,9 +527,12 @@
     "words_min": 350,
     "words_max": 450,
     "evidence_paragraphs": 3,
+    "format": "academy",
+    "sign_off": { "en": "Kind regards,", "da": "Med venlig hilsen,", "es": "Saludos cordiales," },
+    "_format_doc": "CL-ACADEMY-001 (owner 2026-11-01): academy letter is the default (sentence-case headline, about 400 words, I will / I would, two first-90-days questions, My goal, one closing invitation, Kind regards, no hearing or communication line). Sign-off default: pwa/antcv-cl-academy-format.js.",
     "_doc": "CL-LENGTH-001 (owner 2026-08-16, Nvidia critique): 350-450 words, one page, exactly three evidence paragraphs; enforced in cl_fit + prompt_block."
   },
-  "accessibility_line": "Hearing impaired; clear spoken communication and written follow-ups work well.",
+  "accessibility_line": "I work in English and Danish and follow meetings best with live captions and written follow-ups.",
   "profile": {
     "_doc": "PROFILE-VOICE-001 / PROFILE-NO-BUZZWORD-LIST-001 / PROFILE-SLOGAN-001 (owner 2026-10-01). Checks: pwa/antcv-profile-rules.js (shared by the CV PROFILE HEADING control and the unit test). Heading: pwa/antcv-cv-profile-heading.js.",
     "heading_default": "slogan",
@@ -581,5 +585,28 @@
     "owned_requires_size": true,
     "no_size_verb": "ran",
     "shareable_flag": "public"
+  },
+  "communication": {
+    "_doc": "COMMS-LINE-001 (owner 2026-11-01, Improve Academy advice): describe what works instead of the label. Section id stays 'accessibility'; title and row label read Communication. Enforced for Gabriel by pwa/antcv-profile-access-scrub.js.",
+    "label": {
+      "en": "Communication",
+      "da": "Kommunikation",
+      "es": "Comunicación"
+    },
+    "line": {
+      "en": "I work in English and Danish and follow meetings best with live captions and written follow-ups.",
+      "da": "Jeg arbejder på engelsk og dansk og følger møder bedst med liveundertekster og skriftlig opfølgning.",
+      "es": "Trabajo en inglés y danés y sigo mejor las reuniones con subtítulos en directo y seguimiento por escrito."
+    },
+    "never_in_cv": [
+      "hearing impaired",
+      "hearing-impaired",
+      "deaf",
+      "cochlear",
+      "disability",
+      "disabled"
+    ],
+    "cover_letter": "none",
+    "interview_request_example": "Thank you for the invitation. I follow conversations best with live captions. Could we hold the interview in Teams with captions on, and could you send the agenda in writing beforehand? I am happy to help with the set-up."
   }
 }

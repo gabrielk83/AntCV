@@ -43,8 +43,10 @@ const STAMP_MIN =
 // ---------------------------------------------------------------- leg 1: wiring
 
 test('leg 1: app.js update() routes its PUT body through the content-language stamp', () => {
+  // APP-ROW-WRITE-GUARD-001 (1.51.5282) runs first; the stamped PUT body is unchanged.
   const wired =
-    'update(e,t){return this._call("/api/applications/"+e,{method:"PUT",body:JSON.stringify(' +
+    'update(e,t){try{const __g=window.__antcvRowWriteGuard&&window.__antcvRowWriteGuard(e,t);if(__g)return Promise.reject(__g)}catch(_){}' +
+    'return this._call("/api/applications/"+e,{method:"PUT",body:JSON.stringify(' +
     STAMP_MIN + '(t||{}))})}';
   assert.equal(count(min, wired), 1, 'the stamped update() must appear exactly once in app.js');
   // Negative control on the shape this replaced: the un-stamped body must be gone.

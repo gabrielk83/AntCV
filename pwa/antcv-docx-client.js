@@ -378,9 +378,29 @@ async function runOrphanPreflight(payload) {
 // hydration gate already tried and failed to fix. Kill:
 // localStorage['antcv:disable-placeholder-gate']='1' (shared switch — this is
 // the same feature family).
+//
+// EXPORT-CONTENT-GATE-001 (owner 2026-11-01, D1 3524 Ambu / 3525 ASSA ABLOY): the gate is
+// now a HARD block, not a confirm(). The owner exported an unfilled template letter and
+// another application's letter; a confirm is one click from shipping it. Detection lives
+// in antcv-export-content-gate.js (template / instruction text in any CV or CL section,
+// a letter that never names the company, content owned by another application); the
+// local table + CL-id check below is the fallback when that sidecar is not loaded. The
+// thrown error carries placeholderGate=true so app.js does NOT fall back to browser
+// print / inline DOCX. Blank "CV Template" / "Cover Letter Template" downloads are exempt.
 function placeholderGate(payload) {
   try {
     if (typeof localStorage !== 'undefined' && localStorage.getItem('antcv:disable-placeholder-gate') === '1') return;
+    if (/template/i.test(String((payload && payload.filename) || ''))) return;
+    const gate = (typeof window !== 'undefined') && window.AntcvExportContentGate;
+    if (gate && typeof gate.checkPayload === 'function'
+        && localStorage.getItem('antcv:disable-export-content-gate') !== '1') {
+      const res = gate.checkPayload(payload);
+      if (res && !res.ok) {
+        try { gate.showBlock(res); } catch (_) {}
+        const e = new Error(gate.message(res)); e.placeholderGate = true; e.reasons = res.reasons; throw e;
+      }
+      return;
+    }
     const secs = (payload && payload.sections) || [];
     const isPh = (v) => /^\s*\[[^\]]{2,80}\]\s*$/.test(String(v == null ? '' : v));
     let phTables = 0;
@@ -399,11 +419,11 @@ function placeholderGate(payload) {
     }
     if (!phTables && !phClSections) return;
     const msg = phClSections
-      ? 'This cover letter still contains PLACEHOLDER text (e.g. "Dear [Hiring Team / Name]") in ' + phClSections
-        + ' section(s) — the generation did not complete. Export anyway?'
-      : 'This document contains a PLACEHOLDER table ("[Focus area 1]" rows) — a failed/stale generation snapshot. Export anyway?';
-    const ok = (typeof confirm === 'function') ? confirm(msg) : true;
-    if (!ok) { const e = new Error('Export cancelled: placeholder content detected — regenerate first.'); e.placeholderGate = true; throw e; }
+      ? 'Export blocked: this cover letter still contains PLACEHOLDER text (e.g. "Dear [Hiring Team / Name]") in ' + phClSections
+        + ' section(s) — the generation did not complete. Generate for this application, then export again.'
+      : 'Export blocked: this document contains a PLACEHOLDER table ("[Focus area 1]" rows) — a failed/stale generation snapshot. Generate first.';
+    try { if (typeof alert === 'function') alert(msg); } catch (_) {}
+    const e = new Error(msg + ' (placeholder content detected — regenerate first)'); e.placeholderGate = true; throw e;
   } catch (e) { if (e && e.placeholderGate) throw e; /* detector errors never block */ }
 }
 
@@ -1075,6 +1095,10 @@ export function buildPayload({
           else if (targeted) { out.slogan_hidden = true; return out; }
           const al = String(localStorage.getItem('antcv:clSloganAlign') || 'center').replace(/["']/g, '').toLowerCase();
           out.slogan_align = (al === 'left' || al === 'right' || al === 'center') ? al : 'center';
+          // SLOGAN-CASE-001 (owner 2026-11-03, CL-ACADEMY-001): forward the headline case the
+          // preview uses ('sentence' by default, 'caps' = the opt-back) so the worker prints the
+          // same text. A worker without SLOGAN-CASE-001 ignores the field and keeps capitals.
+          try { if (typeof window !== 'undefined' && typeof window.__antcvSloganCaseMode === 'function') out.slogan_case = window.__antcvSloganCaseMode(); } catch (_) {}
           // APPLINE-EDIT-001 (owner 2026-07-29): the application line is editable in the
           // preview now, over the standalone antcv:clAppLine override. Forward it so the
           // DOCX/PDF prints what the owner typed instead of re-composing "Application for
@@ -1334,7 +1358,16 @@ function hydrateClProse(list, doc, meta) {
     try {
       const g = JSON.parse(localStorage.getItem('antcv:clProseGuard') || 'null');
       const key = String(m.company || '').trim() + '|' + String(m.role || '').trim();
-      if (g && typeof g === 'object' && g[key] && typeof g[key] === 'object') bucket = g[key];
+      // LANG-GUARD-KEY-001 parity: the guard files buckets under company|role|lang; the
+      // lang-less key is the pre-1.51 legacy shape.
+      const lang = String(localStorage.getItem('language') || 'en').replace(/["']/g, '').toLowerCase().slice(0, 2) || 'en';
+      const b = g && typeof g === 'object' ? (g[key + '|' + lang] || g[key]) : null;
+      if (b && typeof b === 'object') bucket = b;
+      // CL-GUARD-COMPANY-001: a bucket whose prose never names the targeted company was
+      // captured from another application's letter — never hydrate from it.
+      const cm = (typeof window !== 'undefined') && window.AntcvCompanyMatch;
+      if (bucket && cm && cm.isTargeted(m.company)
+          && !cm.names(JSON.stringify(Object.keys(bucket).filter((k) => k.charAt(0) !== '_').map((k) => bucket[k])), m.company)) bucket = null;
     } catch (_) {}
     const metaText = { opening: m.opening, greeting: m.greeting };
     let hydrated = 0;
@@ -3932,6 +3965,11 @@ export function applyOutcomesMode(docSections, doc) {
         // torn off, only the result stayed"): NEVER consume a role's only content into a
         // Result — if deriving would leave ZERO bullets, skip the derive and keep the
         // bullet as content (no Results line) instead.
+        // JT-EC-RESULTS-DERIVE-001 (row 140, 2026-11-05): the Earlier career role is a
+        // summary of short roles, each line dated "(YYYY - YYYY)". The years read as a metric,
+        // so the derive moved the longest line into "Results:". A summary has no single
+        // outcome: skip the derive, keep every line as a bullet.
+        if (String(r && r.id || '') === 'earlier-career') return { ...r, bullets: _txBl(r.bullets) };
         const d = deriveResultFromRole(r, __unsolicited);
         if (!d) return { ...r, bullets: _txBl(r.bullets) };
         const keptBullets = (Array.isArray(r.bullets) ? r.bullets : []).filter((_, i) => i !== d.index);

@@ -42,3 +42,13 @@ jobs:
         run: node scripts/check-cache-bust.mjs --set
       - name: PWA suite
         run: node scripts/run-tests.mjs pwa
+      # JOBTRACKER-PYTEST-CI-001 (2026-11-05): the job-tracker python belts (discovery
+      # sources, gates, posting sweep, text guards, checklist) ran on the owner's PC only.
+      # Here, not in deploy.yml: a deploy.yml edit re-deploys the PWA on its push to main.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Job-tracker python deps (PyMuPDF for PDF checks, openpyxl for the Excel mirror)
+        run: python -m pip install --disable-pip-version-check pymupdf openpyxl
+      - name: Job-tracker python belts (network-free)
+        run: node scripts/run-tests.mjs scripts/job-tracker

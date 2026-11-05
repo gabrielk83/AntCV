@@ -34,6 +34,12 @@
 // A content-quality gate (validateContentQuality) flags fetches that
 // still look like consent boilerplate or are too short, so the PWA
 // can prompt for manual paste instead of feeding noise to the LLM.
+// POSTING-GUARD-001 (2026-11-05): htmlToTextGuarded drops hidden HTML
+// before extraction and invisible characters after entity decoding; every
+// success response carries `guard` (counts + verdict line, see
+// ./posting-guard.js). Advisory only: it never blocks a fetch.
+
+import { dropHiddenHtml, decodeInvisibleEntities, guardText, guardSummary } from './posting-guard.js';
 
 const FETCH_TIMEOUT_MS = 10000;
 const MAX_HTML_BYTES = 2_000_000;     // 2 MB hard cap before reading body
@@ -496,8 +502,12 @@ function extractMainContent(html) {
 }
 
 
-function htmlToText(html) {
-  let s = html;
+// Returns { text, guard }: guard is the posting-guard findings for this text.
+function htmlToTextGuarded(html) {
+  // POSTING-GUARD-001: hidden elements (display:none, aria-hidden, off-screen,
+  // white-on-white, ...) never reach the text; their content is only counted.
+  const dropped = dropHiddenHtml(html);
+  let s = dropped.html;
   // Drop blocks that never carry JD body text. Order matters —
   // strip scripts/styles before stripping tags so we don't leak
   // their text content.
@@ -521,7 +531,12 @@ function htmlToText(html) {
 
   // Decode entities AFTER tag-strip so we don't accidentally create
   // new tags from entity-encoded angle brackets.
-  s = decodeEntities(s);
+  s = decodeEntities(decodeInvisibleEntities(s));
+
+  // POSTING-GUARD-001: strip zero-width / bidi / soft-hyphen / BOM / tag
+  // characters (entity-encoded ones included) and scan what is left.
+  const guarded = guardText(s, dropped);
+  s = guarded.text;
 
   // Collapse whitespace. Keep newlines but compress repeats.
   s = s.replace(/[ \t]+/g, ' ');
@@ -538,7 +553,7 @@ function htmlToText(html) {
   s = s.replace(/^[\s…·.]*(show|see|read)\s+(more|less)[\s…·.]*$/gim, '');
   s = s.replace(/\n{3,}/g, '\n\n').trim();
 
-  return s;
+  return { text: s, guard: guarded.findings };
 }
 
 
@@ -625,7 +640,7 @@ async function tryEightfoldJson(apiUrl, originalUrl, getCORS, request, env, t0, 
   try { data = await resp.json(); } catch { return null; }
   if (!data || typeof data !== 'object') return null;
   const jd = data.job_description || data.jobDescription || data.description || '';
-  let text = htmlToText(String(jd));
+  let { text, guard } = htmlToTextGuarded(String(jd));
   if (text.length < MIN_GOOD_TEXT_CHARS) return null;
   const name = String(data.name || data.posting_name || '').trim();
   const dept = String(data.department || data.business_unit || '').trim();
@@ -650,6 +665,7 @@ async function tryEightfoldJson(apiUrl, originalUrl, getCORS, request, env, t0, 
     extracted_chars: text.length,
     truncated,
     wall_hint: validateContentQuality(text),
+    guard: guardSummary(guard),
   }), { status: 200, headers: { 'Content-Type': 'application/json', ...CORS } });
 }
 
@@ -677,7 +693,8 @@ export function extractJobPostingJsonLd(html) {
         var ty = n['@type'];
         var isJob = ty === 'JobPosting' || (Array.isArray(ty) && ty.indexOf('JobPosting') >= 0);
         if (!isJob) continue;
-        var desc = htmlToText(String(n.description || ''));
+        var guarded = htmlToTextGuarded(String(n.description || ''));
+        var desc = guarded.text;
         if (desc.length < MIN_GOOD_TEXT_CHARS) continue;
         var org = n.hiringOrganization;
         var company = (org && typeof org === 'object') ? String(org.name || '').trim() : (typeof org === 'string' ? org.trim() : '');
@@ -687,7 +704,7 @@ export function extractJobPostingJsonLd(html) {
           var addr = jl && jl.address;
           if (addr && typeof addr === 'object') loc = [addr.addressLocality, addr.addressRegion, addr.addressCountry].filter(Boolean).join(', ');
         } catch (_) {}
-        return { description: desc, title: String(n.title || '').trim(), company: company, location: loc };
+        return { description: desc, title: String(n.title || '').trim(), company: company, location: loc, guard: guarded.guard };
       }
     }
   } catch (_) {}
@@ -859,13 +876,13 @@ export async function handleFetchJdUrl(request, env, getCORS) {
   // L1: locate the main JD content region.
   let { html: mainHtml, via: extractedVia } = extractMainContent(cleaned);
 
-  // Convert to text.
-  let text = htmlToText(mainHtml);
+  // Convert to text. `guard` follows whichever text wins below.
+  let { text, guard } = htmlToTextGuarded(mainHtml);
 
   // Safety net: if main-content extraction produced almost nothing
   // (over-aggressive removal), fall back to the cleaned full document.
   if (text.length < MIN_GOOD_TEXT_CHARS && extractedVia !== 'whole-document') {
-    text = htmlToText(cleaned);
+    ({ text, guard } = htmlToTextGuarded(cleaned));
   }
 
   // JD-FETCH-JSONLD-001: SPA career sites (SuccessFactors, Workday…) embed the full JD as
@@ -876,6 +893,7 @@ export async function handleFetchJdUrl(request, env, getCORS) {
     const __hdr = [__jsonLd.title, __jsonLd.location].filter(Boolean).join(' — ');
     text = (__hdr && !__jsonLd.description.slice(0, 200).includes(__jsonLd.title) ? __hdr + '\n\n' : '') + __jsonLd.description;
     extractedVia = 'schema-jsonld';
+    guard = __jsonLd.guard;
     if (__jsonLd.company && !liCompany) liCompany = __jsonLd.company;
     if (__jsonLd.title) title = __jsonLd.title;
   }
@@ -889,9 +907,10 @@ export async function handleFetchJdUrl(request, env, getCORS) {
   // fuller document (nav noise is harmless to the JD-analysis prompt; a title-only "JD" is
   // useless). Never overrides a clean schema.org JobPosting result.
   if (extractedVia !== 'schema-jsonld' && extractedVia !== 'whole-document' && text.length < 700) {
-    const whole = htmlToText(cleaned);
-    if (whole.length > text.length * 3 && whole.length >= MIN_GOOD_TEXT_CHARS) {
-      text = whole;
+    const whole = htmlToTextGuarded(cleaned);
+    if (whole.text.length > text.length * 3 && whole.text.length >= MIN_GOOD_TEXT_CHARS) {
+      text = whole.text;
+      guard = whole.guard;
       extractedVia = 'whole-document-stub-rescue';
     }
   }
@@ -928,6 +947,7 @@ export async function handleFetchJdUrl(request, env, getCORS) {
     extracted_chars: text.length,
     truncated,
     wall_hint: wallHint,
+    guard: guardSummary(guard),   // POSTING-GUARD-001: counts + verdict line, advisory
   }), {
     status: 200,
     headers: { 'Content-Type': 'application/json', ...CORS },

@@ -106,7 +106,7 @@ These are binding for every nordic-minimal output. They are not style suggestion
 
 1. **Specialization line.** Simple and catchy, three concepts at most — the pattern is `Processes • Products • People`. Unsolicited applications ALWAYS carry the candidate's stored specialization line; never drop it for an uopfordret ansøgning.
 2. **Banned word: `discuss`** (and inflections: discusses, discussed, discussing). Use "talk through", "walk through", or name the concrete topic instead.
-3. **Accessibility.** When the candidate has an accessibility item, the text must state explicitly that the request concerns a hearing-impaired person. Never an unspecified "accommodations requested" — the reader must know the nature of the accommodation.
+3. **Accessibility.** When the candidate has an accessibility item, the text must use the Communication label and describe what works, never a disability label (COMMS-LINE-001). Never an unspecified "accommodations requested" — the reader must know the nature of the accommodation.
 4. **Patents keep their numbers.** Every patent entry in publications/patents carries its patent number verbatim. Dropping the number to save space is not a valid compression.
 5. **Work style ends with a people skill.** The final item or sentence of the work-style section is always a people skill (e.g. clear written follow-ups, calm under disagreement, direct one-to-one communication) — never a process or tooling point.
 6. **Punctuation: `-`, never `—`.** Applies to year ranges, compression dashes, and table separators (`parser_safe_separator: "hyphen"`).

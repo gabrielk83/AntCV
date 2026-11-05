@@ -16,19 +16,34 @@
  *    CLAUSE ("…, which has not limited his career") even when the rest of
  *    the sentence stays.
  *  - ACCESSIBILITY row (additional items, label Accessibility): drop the
- *    banned career-comment sentence/clause; the row's factual content stays
- *    (length-tightening remains the generation's job — spec rule 9/20).
+ *    banned career-comment sentence/clause.
+ *  - COMMS-LINE-001 (owner 2026-11-01, Gabriel only): the accessibility section
+ *    is retitled COMMUNICATION and carries the canonical "what works" line; an
+ *    Accessibility row in ADDITIONAL is relabelled the same way. No disability
+ *    label ("hearing impaired", "cochlear implant") reaches the CV.
  * Kill: localStorage['antcv:disable-profile-access-scrub']='1'.
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.109-profile-access-scrub';
+  var VERSION = '1.51.5200-comms-line';
   if (window.__antcvProfileAccessScrub === VERSION) return;
   window.__antcvProfileAccessScrub = VERSION;
 
   var CAREER_CLAUSE = /,?\s*(?:which|and|it|this|that)?\s*ha(?:s|ve)\s+not\s+limited\s+(?:his|her|their|my)\s+career[^.;]*/gi;
   var DISABILITY = /hearing[- ]impair|cochlear|disabilit|accessibilit|hearing aid/i;
   var FILLER = /people\s+from\s+many\s+backgrounds/i;
+  // COMMS-LINE-001 (owner 2026-11-01): canonical Communication row, per output language.
+  var COMMS_LINE = {
+    en: 'I work in English and Danish and follow meetings best with live captions and written follow-ups.',
+    da: 'Jeg arbejder på engelsk og dansk og følger møder bedst med liveundertekster og skriftlig opfølgning.',
+    es: 'Trabajo en inglés y danés y sigo mejor las reuniones con subtítulos en directo y seguimiento por escrito.'
+  };
+  var COMMS_TITLE = { en: 'COMMUNICATION', da: 'KOMMUNIKATION', es: 'COMUNICACIÓN' };
+  var COMMS_LABEL = { en: 'Communication', da: 'Kommunikation', es: 'Comunicación' };
+  var ACCESS_LABEL = /^\s*(accessib\w*|tilg[æa]ngelighed|accesibilidad|无障碍\S*)\s*:?\s*$/i;
+  function commsLang() {
+    try { var l = String(localStorage.getItem('language') || '').replace(/[^a-z]/gi, '').slice(0, 2).toLowerCase(); return COMMS_LINE[l] ? l : 'en'; } catch (_) { return 'en'; }
+  }
 
   function disabled() { try { var v = localStorage.getItem('antcv:disable-profile-access-scrub'); return v === '1' || v === 'true'; } catch (_) { return false; } }
   function readJson(k, d) { try { var v = JSON.parse(localStorage.getItem(k) || 'null'); return v == null ? d : v; } catch (_) { return d; } }
@@ -117,27 +132,44 @@
       var r2 = walkStrings(secs.cl, stripCareerClause);
       if (r1[0] || r2[0]) { changed = true; secs = Object.assign({}, secs, { cv: r1[1], cl: r2[1] }); }
 
-      // 3) ACCESS-MIDDLE-001 (spec rule 34, owner 2026-07-04): the accessibility
-      // row targets the MIDDLE ground — "Hearing impaired." alone is too little,
-      // the full accommodation paragraph too much. Canonicalise BOTH extremes to
-      // the owner's one-liner. NAME-GUARDED to Gabriel (persona-contamination
-      // rule: never write one candidate's facts onto another).
+      // 3) COMMS-LINE-001 (owner 2026-11-01, Improve Academy advice from Anne;
+      // supersedes ACCESS-MIDDLE-001 and the 2026-10-25 accessibility line): the CV
+      // never carries a disability label. The row is titled COMMUNICATION and says
+      // what works, not the condition. The stored section id stays 'accessibility'
+      // (plumbing: grouping, ranking and repair all key on it). NAME-GUARDED to
+      // Gabriel (persona-contamination rule: never write one candidate's facts
+      // onto another).
       try {
         var __pi = readJson('personalInfo', {}) || {}; __pi = __pi.personalInfo || __pi;
         if (/\bgabriel\b/i.test(String(__pi.name || ''))) {
-          var CANON = 'Hearing impaired (cochlear implant); written follow-up works well.';
+          var L = commsLang();
+          var LINE = COMMS_LINE[L], TITLE = COMMS_TITLE[L], LABEL = COMMS_LABEL[L];
           var cv3 = (secs.cv || []).map(function (s3) {
-            if (!s3 || s3.id !== 'accessibility' || !Array.isArray(s3.items)) return s3;
-            var hit3 = false;
-            var items3 = s3.items.map(function (it3) {
-              if (!it3 || typeof it3.v !== 'string') return it3;
-              var v3 = it3.v.trim();
-              if (!/hearing/i.test(v3)) return it3;
-              var tooShort = v3.length < 25, tooLong = v3.length > 90;
-              if ((tooShort || tooLong) && v3 !== CANON) { hit3 = true; return Object.assign({}, it3, { v: CANON }); }
-              return it3;
-            });
-            if (hit3) { changed = true; return Object.assign({}, s3, { items: items3 }); }
+            if (!s3 || typeof s3 !== 'object') return s3;
+            if (s3.id === 'accessibility') {
+              var want = Object.assign({}, s3, { title: TITLE });
+              if (Array.isArray(s3.items) && s3.type !== 'text') {
+                want.items = [{ l: '', v: LINE, labelHidden: true }];
+              } else {
+                want.type = 'text'; want.content = LINE; delete want.items;
+              }
+              if (JSON.stringify(want) !== JSON.stringify(s3)) { changed = true; return want; }
+              return s3;
+            }
+            if (Array.isArray(s3.items) && (s3.id === 'additional' || s3.id === 'languages' || s3.id === 'interests')) {
+              var hit3 = false;
+              var items3 = s3.items.map(function (it3) {
+                if (!it3 || typeof it3 !== 'object') return it3;
+                if (typeof it3.group === 'string' && ACCESS_LABEL.test(it3.group)) { hit3 = true; return Object.assign({}, it3, { group: LABEL }); }
+                var lab = String(it3.l || ''), val = String(it3.v || '');
+                if (ACCESS_LABEL.test(lab) || DISABILITY.test(val)) {
+                  if (lab === LABEL && val === LINE) return it3;
+                  hit3 = true; return Object.assign({}, it3, { l: LABEL, v: LINE });
+                }
+                return it3;
+              });
+              if (hit3) { changed = true; return Object.assign({}, s3, { items: items3 }); }
+            }
             return s3;
           });
           if (changed) secs = Object.assign({}, secs, { cv: cv3 });

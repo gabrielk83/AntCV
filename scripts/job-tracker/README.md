@@ -86,3 +86,87 @@ generation. `--out DIR` on `course_checklist.py` writes the same report for any 
 ```
 python test_checklist_default.py  # default-on, opt-out, crash isolation (no network)
 ```
+
+## Text guards (TEXT-GUARDS-001, 2026-11-05)
+
+Tier-0 checks: deterministic, no model, no network, English / Danish / Swedish. They are ported from
+ai-job-search PRs #783 and #807 (MIT) and extended for Danish and Swedish. Word lists and thresholds
+live in `guard_rules.json`.
+
+| Tool | Flags | Exit 1 on |
+|---|---|---|
+| `fact_guard.py --draft X --kernel k.json [--jd jd.txt]` | figures, credentials, names in the draft that the kernel does not support (see below) | any FAIL |
+| `echo_check.py --draft X --jd jd.txt [--letters DIR]` | LIFT: 5+ shared words; NEAR-LIFT: a reworded job-ad sentence; REUSE: a sentence from an earlier letter | LIFT, REUSE |
+| `ats_text.py CV.pdf [--email] [--phone]` | what an ATS parses: glyph junk, contact as literal text, the two columns interleaving | any FAIL |
+
+What `fact_guard.py` accepts as support for a figure:
+- A kernel figure in any number format: 1.200 / 1,200 / 1 200, 2,2 mio. / 2.2M, number words.
+- A year range such as 2017-20.
+- Years of experience within the career span.
+- A hedged figure rounded DOWN from a kernel figure ("over 40" from 45). Rounding up is never accepted.
+
+The job ad never supports a figure or a credential. A name found only in the job ad is a WARN: it is fine
+for the employer's own names and a fabrication when claimed as the candidate's skill.
+
+`gen-runner.py run` runs `fact_guard.py` and `echo_check.py` over every generated `cv_*` / `cl_*` section
+and writes `guards_<uk>.json`. Opt out with `--no-guards`. `export_pdfs.py` runs `ats_text.py` on every
+exported CV and prints `ATS ...` on a FAIL. The checks advise; they never block. Research on stronger
+tiers (a local NLI model, Workers AI) is in `docs/analysis/TEXT_GUARDS_RESEARCH_2026-11-05.md`.
+
+```
+python test_text_guards.py   # synthetic kernel, PDFs built with PyMuPDF
+```
+
+## Follow-ups (FOLLOWUP-001, 2026-11-05)
+
+`followups.py` keeps the dates in the tracker doc's `followups[uk]` map; the agent writes the draft.
+
+```
+python followups.py stamp                # nightly: date the first sweep that sees a row as Submitted
+python followups.py due [--json]         # Submitted rows quiet 10+ days with fewer than 2 follow-ups
+python followups.py log --uk UK          # after the owner SENT it (--kind thanks for a thank-you note)
+python followups.py set-submitted --uk UK --date 2026-10-20   # the real date, replaces "first-seen"
+```
+
+Drafting rules:
+- Length and language: 60-120 words, in the application's language.
+- Address: the hiring manager when `notes[uk].hm` is set, else the team.
+- Content: one sentence restating interest in this role, and one concrete value reminder taken from the
+  submitted CV or cover letter. No new claims: every claim must already be in the submitted materials.
+- Close: one polite question about the timeline. No "just checking in".
+- At most two follow-ups per application. The tool refuses a third.
+- Drafts only: the owner sends it, then runs `log`.
+
+After an interview stage, offer a short thank-you note and log it with `--kind thanks`.
+
+```
+python test_followups.py
+```
+
+## Company financials (COMPANY-FINANCIALS-001, 2026-11-05)
+
+`company_financials.py` reads the employer's newest Danish annual report from Virk's open filings index
+(`distribution.virk.dk/offentliggoerelser`, no key). These are the figures Proff shows. Proff itself is not
+read: its robots.txt bars AI agents (anthropic-ai, ClaudeBot) from the whole site.
+
+The summary line covers revenue or gross profit, operating result, net result, equity, total assets and
+average employees, with the change from the prior year. `gen-runner.py` adds it to the employer research
+in the prompt and caches it 90 days in `doc.financials[uk]`.
+
+Where the CVR number comes from, in order:
+1. The cache.
+2. A Jobnet ad's `cvr`. Discovery passes it as `"cvr"`, and it is stored on the row.
+3. The CVR register, when `ANTCV_CVR_USER` / `ANTCV_CVR_PASS` are set (free system-to-system access from
+   Erhvervsstyrelsen, cvrselvbetjening@erst.dk).
+4. cvrapi.dk, which has a small daily quota.
+5. A "CVR" label in research snippets.
+
+The filed company name is compared with the employer's name, and a mismatch stays in the line as `CHECK:`.
+
+```
+python company_financials.py show --name "Novo Nordisk" --cvr 24256790
+python company_financials.py enrich [--uk UK] [--dry]   # fill live rows
+python test_company_financials.py
+```
+
+Swedish employers (Bolagsverket) are not covered yet.

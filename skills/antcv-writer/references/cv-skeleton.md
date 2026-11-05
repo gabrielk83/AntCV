@@ -216,7 +216,7 @@ Record the choice in the role's change_log entry (`reason: "roleform_merged"` or
 
 ### `additional_information`
 
-**Purpose.** Languages, volunteer roles, accessibility considerations, hobbies that signal cultural fit. Sidebar.
+**Purpose.** Languages, volunteer roles, communication set-up, hobbies that signal cultural fit. Sidebar.
 
 **Format.** Default `structured-grid` or `bullets`, depending on style.
 
@@ -224,7 +224,7 @@ Record the choice in the role's change_log entry (`reason: "roleform_merged"` or
 - Languages: list with proficiency markers (e.g. "Native, Bilingual, Professional, Conversational"). Match the user's actual proficiency.
 - Volunteer roles: title and organisation, no narrative.
 - Hobbies: include only when they signal a relevant trait (e.g. "Rugby — Operations Manager, Copenhagen Wolves RFC" signals operations experience). Omit purely-personal hobbies for senior commercial roles.
-- **Accessibility items state the impairment** (owner rule, 2026-06-12): when the user has an accessibility entry, the text says explicitly that the request concerns a hearing-impaired person — never an unspecified accommodation line.
+- **Communication, not disability** (COMMS-LINE-001, owner 2026-11-01, supersedes the 2026-06-12 "state the impairment" rule): an accessibility entry renders under the label **Communication** and says what works (languages, live captions, written follow-ups) — never a diagnosis or disability label ("hearing impaired", "deaf", "cochlear implant"). Gabriel's line: "I work in English and Danish and follow meetings best with live captions and written follow-ups." Cover letters carry no such line.
 
 ---
 

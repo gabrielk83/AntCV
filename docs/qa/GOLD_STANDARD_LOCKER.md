@@ -88,12 +88,12 @@ Owner 2026-10-23: the course reviewer's seven points become defaults, and the wr
 
 ## 7. EU AI Act and GDPR (2026-10-23)
 
-Owner 2026-10-23: AntCV follows the EU AI Act and the GDPR. Duty map and open items: `docs/compliance/EU_AI_ACT_GDPR.md`. `pwa/gold-rules.json` 1.9.7.
+Owner 2026-10-23: AntCV follows the EU AI Act and the GDPR. Duty map and open items: `docs/compliance/EU_AI_ACT_GDPR.md`. `pwa/gold-rules.json` 1.10.1.
 
 | Rule | Enforcement |
 |---|---|
 | SPECIAL-CATEGORIES-001: the writer never infers, adds or expands GDPR Art. 9 data (health, belief, politics, union, ethnicity, sex life) or criminal records; such a fact stays only where the candidate wrote it; no ID number, date of birth, marital status or children unless the source states it and the job's country expects it | prompt block |
 | CL-GDPR-CV-001 (existing): an unsolicited letter offers the CV on request instead of attaching it | prompt block |
 | REFERENCES-RELATION-001 (existing): only referees marked agreed are named; contact details on request | prompt block |
-| GDPR-RIGHTS-001: account delete reaches every user-keyed D1 table; `GET /api/prefs/export` returns the server-side copy (API key values masked); the Personal launcher offers "Copy of my cloud data" and links `privacy.html` | `workers/access-relay/src/gdpr-user-data.js` (`USER_TABLES`), `tests/gdpr-user-data.test.mjs` (fails when a new `user_hash` table is not listed), `pwa/antcv-data-export-360.js` |
+| GDPR-RIGHTS-001: `GET /api/prefs/export` returns the server-side copy over the same tables the account delete erases (ACCOUNT-ERASE-COMPLETE-001) (API key values masked); the Personal launcher offers "Copy of my cloud data" and links `privacy.html` | `workers/access-relay/src/gdpr-user-data.js` (`USER_TABLES`), `tests/gdpr-user-data.test.mjs` (fails when a `user_hash` table is missing or the copy and the delete differ), `pwa/antcv-data-export-360.js` |
 | PRIVACY-NOTICE-001: GDPR Art. 13 notice and AI use text | `pwa/privacy.html` |

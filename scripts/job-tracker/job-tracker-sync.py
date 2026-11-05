@@ -246,9 +246,12 @@ def cmd_pull(render=False, force=False):
 # role intel, the owner's typed signals and the generation state - i.e. most of
 # the doc's value - and until 2026-08-20 the sync merged NONE of them
 # (JOBTRACKER-PULL-CLOBBERS-LOCAL-SUPPORT-001).
+# OUTCOME-RECORD-001: status_history / followups / financials are uk-keyed too. Outside
+# this list a top-level key is taken from LOCAL only, so a pull-then-push would drop them.
+# OUTCOME-RECORD-002: NOT `history` - the first doc design kept a workbook history[] list there.
 UK_DICT_FIELDS = ("urls", "jd", "support", "signals", "notes", "webintel", "gen",
                   "queue", "brandfit", "brand", "artifacts", "sigfiles", "pin",
-                  "park", "discovered")
+                  "park", "discovered", "status_history", "followups", "financials")
 
 def _merge_uk_dict(base, local, remote, field):
     """Per-KEY 3-way for one uk-keyed dict. Union of both sides - a key present
@@ -259,6 +262,10 @@ def _merge_uk_dict(base, local, remote, field):
     b = (base or {}).get(field) or {}
     l = (local or {}).get(field) or {}
     r = (remote or {}).get(field) or {}
+    if not all(isinstance(x, dict) for x in (b, l, r)):
+        # OUTCOME-RECORD-002: a non-dict value has no per-key merge; keep it whole
+        # (local when local has the field) instead of crashing pull / push.
+        return (l if field in (local or {}) else r), []
     out, conflicts = dict(r), []
     for k, lv in l.items():
         if k not in r:

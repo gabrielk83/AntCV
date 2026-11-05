@@ -5,9 +5,9 @@
 | Field | Value |
 |---|---|
 | Document ID | DAMC-REQ-001 |
-| Version | 0.1 (draft) |
+| Version | 0.2 (draft). 0.2: entailment (NLI) models in IT-05 scope, evaluation sandbox and monthly tool watch (IT-05 items 10–11). |
 | Date | 2026-11-05 |
-| Belongs to | DAMC-IG-001 v0.3 (`docs/plan/DAMC_Implementation_Guidelines_2026-11-05.md`) |
+| Belongs to | DAMC-IG-001 v0.4 (`docs/plan/DAMC_Implementation_Guidelines_2026-11-05.md`) |
 | Sender (role) | PMO lead, DAMC system owner |
 | Phase | Phase 0, Governance |
 
@@ -17,7 +17,7 @@
 
 1. Replace every `<placeholder>`. Remove requests that do not fit the company's team structure; merge where one team covers two areas.
 2. Send through the channel each team uses (ticket system, shared mailbox). One request per team keeps ownership clear.
-3. Attach DAMC-IG-001 v0.3 as PDF. Point to section and requirement IDs; do not paste the guidelines into the request.
+3. Attach DAMC-IG-001 v0.4 as PDF. Point to section and requirement IDs; do not paste the guidelines into the request.
 4. No personal data, no customer names, no project content in any request.
 5. Log every request in the request log (last section) on the day it is sent. Phase 0 cannot close until each row is closed or carried with a date.
 6. Every IT request says "implement only if not already in place". Ask for what exists before asking for anything new.
@@ -34,7 +34,7 @@
 > - It does not score, rank or monitor people. It does not infer emotions.
 > - It is not built yet. We are in the governance phase (Phase 0) and want your input before any build starts.
 >
-> The implementation guidelines (DAMC-IG-001 v0.3) are attached. References in this request (e.g. GDPR-05, SEC-21) point to requirement IDs in that document.
+> The implementation guidelines (DAMC-IG-001 v0.4) are attached. References in this request (e.g. GDPR-05, SEC-21) point to requirement IDs in that document.
 
 ---
 
@@ -89,7 +89,7 @@ We ask Legal to answer the questions below. For each one, a short written answer
 
 **What we need back:** written answers per question; one named legal contact; sign-off of Appendix B.
 **Proposed timing:** 45-minute kick-off within `<2>` weeks; written answers within `<4>` weeks.
-**Attachments:** DAMC-IG-001 v0.3 (PDF).
+**Attachments:** DAMC-IG-001 v0.4 (PDF).
 
 Kind regards,
 `<name>`, `<role>`
@@ -250,6 +250,7 @@ We ask for a controlled internal mirror of `pypdf` and the other libraries liste
 | Office files | DOCX and XLSX readers `<names after tool choice>` |
 | OCR | `<OCR engine>` |
 | Local AI | `<local model runtime>`; model weights `<model name, version>` from an approved source, hash-pinned |
+| Entailment (NLI) models | English: `MoritzLaurer/DeBERTa-v3-large-mnli-fever-anli-ling-wanli` (preferred candidate) and FactCG (lower priority for English); multilingual candidate for Nordic text `<to be selected>`. All hash-pinned; adopted only after DAMC gold-set tests (Guidelines 8.10). |
 | Language | Spell checkers, tokenisers, language-ID data `<names>` |
 | Advisory data | Vulnerability advisory data mirrored internally for offline scans |
 
@@ -262,8 +263,10 @@ We ask for a controlled internal mirror of `pypdf` and the other libraries liste
 | 7 | Pre-commit and CI secret scanning | A planted test secret blocks the commit |
 | 8 | One-way transfer path for monthly reference-data refresh: a connected workstation downloads and scans, then a controlled transfer to the DAMC device | Path documented and tested once |
 | 9 | Monthly check of upstream releases and advisories; security fixes promoted outside the cycle after DAMC's regression tests pass | Owner and schedule named |
+| 10 | Evaluation sandbox: an isolated test environment, no network, no live project data, where candidate tools from the mirror are installed and tested against DAMC's gold set | Sandbox exists; one candidate installed and tested |
+| 11 | Monthly tool watch support: a route for the QA lead to request new candidate tools into the mirror (Guidelines 17.5) | Request route documented |
 
-Linked IDs: ENV-05, M7, MIR-12 to MIR-17, SEC-10 to SEC-14. Phase 1.
+Linked IDs: ENV-05, M7, MIR-12 to MIR-17, SEC-10 to SEC-14, FACT-31 to FACT-34, MON-08 to MON-13. Phase 1 (items 1–9), Phase 3 (items 10–11).
 
 ---
 
@@ -345,6 +348,6 @@ Linked IDs: CHG-01 to CHG-11, Section 16.3. Phase 0.
 
 - [ ] System owner approved sending
 - [ ] Placeholders filled; teams merged or removed to fit the company structure
-- [ ] Guidelines v0.3 exported to PDF and attached
+- [ ] Guidelines v0.4 exported to PDF and attached
 - [ ] No personal data, customer names or project content in any request
 - [ ] Request log updated with send date and due date

@@ -67,6 +67,14 @@ RULES = [
      r"(?=\s*(?:$|[.,;:!)\]]|\s(?:above|below|here)\b))"
      r"|\bi(?:'ve|\s+have)?\s+kept\s+(?:the\s+)?(?:same\s+|exact\s+|original\s+)?(?:format|structure|wording)\b"
      r"|\b(?:my|your)\s+previous\s+(?:version|draft|output|response|answer)\b"),
+    # the model narrating its edit of "this section" (META-RESIDUE-001, the remnants the 2026-11-05
+    # stored-application clean-up found after the other rules had stripped their neighbours)
+    ("self-edit",
+     r"\b(?:this|the)\s+section\s+(?:stays|remains|is\s+(?:kept|returned|left))\s+(?:as[- ]is|unchanged)\b"
+     r"|\breturning\s+(?:this|the)\s+section\s+(?:unchanged|as[- ]is)\b"
+     r"|\b(?:no\s+)?trimming\s+is\s+(?:not\s+)?(?:required|needed)\b"
+     r"|\bthe\s+(?:corrected|revised|updated|rewritten|shortened)\s+version\s+(?:below|above)\b"
+     r"|\bthe\s+stated\s+fixes\b|\bremoving\s+(?:the\s+)?detail\s+here\b"),
     ("here-is",
      r"\bhere(?:'s|\s+is|\s+are)\s+(?:the|a|an|my|your)\s+"
      r"(?:revised|corrected|updated|rewritten|tightened|shortened|improved|requested|version|section|draft|output|response)\b"

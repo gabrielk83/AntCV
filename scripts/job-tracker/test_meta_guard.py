@@ -66,6 +66,15 @@ CASES = [
     ("da clean: instruktioner", "Udarbejdede instruktioner til operatører og fulgte op på afvigelser.", False),
     ("sv clean: instruktioner", "Skrev instruktioner för monteringslinjen och följde upp avvikelser.", False),
     ("empty", "", False),
+    # META-RESIDUE-001: remnants left once the other rules had stripped their neighbours (2026-11-05)
+    ("residue: section stays as-is", "This section stays as-is.", True),
+    ("residue: returning unchanged", "Returning this section unchanged:", True),
+    ("residue: no trimming required",
+     "So no trimming is required in this section; removing detail here would contradict the stated fixes.", True),
+    ("residue: corrected version below",
+     "The corrected version below therefore retains that detail while removing internal redundancy.", True),
+    ("clean: version below as content", "Released version 2.1 below budget and two weeks early.", False),
+    ("clean: section of the plant", "Ran the coating section of the plant through a 30% capacity ramp.", False),
 ]
 
 fails = 0

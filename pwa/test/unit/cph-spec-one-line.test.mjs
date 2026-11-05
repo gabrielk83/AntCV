@@ -24,8 +24,16 @@ test('the allowance is the smaller of the name allowance and the photo-cleared w
   assert.ok(block.includes('__fit.specFs = Math.max(11, Math.min(18, Math.floor((__sfs * __allow / __Ws1) * 2) / 2))'), 'floor 11 px, fitted on the one-line width');
 });
 
-test('an explicit owner specialisation size still switches the shrink off', () => {
-  assert.ok(/if \(__ds\.length >= 3 && !\(typeof __fsOv\.specialisation === 'number' && __fsOv\.specialisation > 0\)\)/.test(src), 'owner size gate unchanged');
+test('CPH-SPEC-ONE-LINE-001b: an explicit owner size is a ceiling - shrunk to one line only when it would wrap in the cap', () => {
+  assert.ok(src.includes("var __ownerSpec = (typeof __fsOv.specialisation === 'number' && __fsOv.specialisation > 0);"), 'owner size detected, no longer a hard gate');
+  assert.ok(src.includes('var __WsOwner = (__sfs > 0 && __Ws1 > 40) ? (__Ws1 * __ownerPx / __sfs) : 0;'), 'solved from the owner size (idempotent)');
+  assert.ok(src.includes('__fit.specFs = Math.max(11, Math.min(__ownerPx, Math.floor((__ownerPx * __capW / __WsOwner) * 2) / 2));'), 'owner px is the ceiling, 11 px the floor');
+  assert.ok(src.includes("if (__fit.specFs != null && (!__userSet('specialisation') || __fit.specShrunkOwner))"), 'the fitted size is emitted over an owner size only when shrunk for the cap');
+  // worked example: owner 12 pt (16 px), 489 px line, 370 px cap -> 11.5 px, one line; a 300 px line keeps 16 px
+  const ownerPx = 16, capW = 366;
+  const fit = (Ws) => (Ws > capW ? Math.max(11, Math.min(ownerPx, Math.floor((ownerPx * capW / Ws) * 2) / 2)) : null);
+  assert.equal(fit(489), 11.5);
+  assert.equal(fit(300), null);
 });
 
 test('worked example: 489 px at 16 px inside a 370 px cap lands on 11.5 px, one line', () => {

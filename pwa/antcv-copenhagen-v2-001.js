@@ -33,7 +33,7 @@
 (function () {
   'use strict';
   if (window.__antcvCopenhagenV2) return;
-  window.__antcvCopenhagenV2 = '1.51.5605-spec-one-line';
+  window.__antcvCopenhagenV2 = '1.51.5625-spec-owner-ceiling';
 
   var FLAG = 'antcv:copenhagen-v2';
   var STYLE_ID = 'antcv-copenhagen-v2-style';
@@ -102,7 +102,7 @@
 
   // CPH-FIT-STABLE-001: the chosen name/contact fit persists across applies so
   // re-measurement can only TIGHTEN it, never snap the lines back to full size.
-  var __fit = { nameLs: null, nameFs: null, contFs: null, contK: null, specFs: null, specMaxW: null };
+  var __fit = { nameLs: null, nameFs: null, contFs: null, contK: null, specFs: null, specMaxW: null, specShrunkOwner: false };
 
   function buildCSS() {
     var side = sidebarSide();
@@ -343,7 +343,8 @@
             // ink is <= 0.92x the name target width (floor 11px). Released
             // with hysteresis when clearly roomy again, so it cannot thrash.
             try {
-              if (__ds.length >= 3 && !(typeof __fsOv.specialisation === 'number' && __fsOv.specialisation > 0)) {
+              if (__ds.length >= 3) {
+                var __ownerSpec = (typeof __fsOv.specialisation === 'number' && __fsOv.specialisation > 0);
                 var __specEl = __ds[1];
                 var __Ws = __rngW(__specEl) / __sc;
                 // CPH-SPEC-ONE-LINE-001 (owner 2026-11-05 "header line feels very empty -
@@ -367,12 +368,32 @@
                   if (__w1 > 40) __Ws1 = __w1;
                 } catch (_) {}
                 var __sfs = parseFloat(getComputedStyle(__specEl).fontSize) || 18;
-                var __allow = 0.92 * __target;
-                if (__fit.specMaxW != null && __fit.specMaxW > 140) __allow = Math.min(__allow, __fit.specMaxW - 4);
-                if (__Ws1 > 40 && __allow > 60 && __Ws1 > __allow) {
-                  __fit.specFs = Math.max(11, Math.min(18, Math.floor((__sfs * __allow / __Ws1) * 2) / 2));
-                } else if (__Ws1 > 40 && __allow > 60 && __Ws1 <= __allow * 0.9) {
-                  __fit.specFs = null;
+                var __capW = (__fit.specMaxW != null && __fit.specMaxW > 140) ? (__fit.specMaxW - 4) : null;
+                if (!__ownerSpec) {
+                  var __allow = 0.92 * __target;
+                  if (__capW != null) __allow = Math.min(__allow, __capW);
+                  __fit.specShrunkOwner = false;
+                  if (__Ws1 > 40 && __allow > 60 && __Ws1 > __allow) {
+                    __fit.specFs = Math.max(11, Math.min(18, Math.floor((__sfs * __allow / __Ws1) * 2) / 2));
+                  } else if (__Ws1 > 40 && __allow > 60 && __Ws1 <= __allow * 0.9) {
+                    __fit.specFs = null;
+                  }
+                } else {
+                  // CPH-SPEC-ONE-LINE-001b (owner 2026-11-05, live #3525: Font sizes pinned the
+                  // specialisation at 12 pt and the band wrapped it under CPH-SPEC-PHOTO-CLEAR-001):
+                  // an explicit owner size is a CEILING, not a reason to wrap. Solve from the
+                  // OWNER size (scale-invariant: ink/px is constant per text), so the result is
+                  // idempotent across passes: shrink to one line inside the photo-cleared width
+                  // (floor 11 px); the owner size returns as soon as the line fits it.
+                  var __ownerPx = Math.round(__pt2px(__fsOv.specialisation) * 2) / 2;
+                  var __WsOwner = (__sfs > 0 && __Ws1 > 40) ? (__Ws1 * __ownerPx / __sfs) : 0;
+                  if (__capW != null && __WsOwner > __capW) {
+                    __fit.specFs = Math.max(11, Math.min(__ownerPx, Math.floor((__ownerPx * __capW / __WsOwner) * 2) / 2));
+                    __fit.specShrunkOwner = true;
+                  } else {
+                    __fit.specFs = null;
+                    __fit.specShrunkOwner = false;
+                  }
                 }
               }
             } catch (_) {}
@@ -457,7 +478,7 @@
     if (__fit.contFs != null && !__userSet('contactSize')) css += BAND + ' > div:last-of-type:not(:first-of-type){font-size:' + __fit.contFs + 'px !important;}';
     if (__fit.contK != null) css += BAND + ' > div:last-of-type:not(:first-of-type){transform:scaleX(' + __fit.contK.toFixed(3) + ') !important;transform-origin:center !important;}';
     // SPEC-SHORTER-001: fitted spec size beats the static 18px rule above.
-    if (__fit.specFs != null && !__userSet('specialisation')) css += BAND + ' > div:nth-of-type(2):not(:last-of-type){font-size:' + __fit.specFs + 'px !important;}';
+    if (__fit.specFs != null && (!__userSet('specialisation') || __fit.specShrunkOwner)) css += BAND + ' > div:nth-of-type(2):not(:last-of-type){font-size:' + __fit.specFs + 'px !important;}';   // CPH-SPEC-ONE-LINE-001b
     if (__fit.specMaxW != null) css += BAND + ' > div:nth-of-type(2):not(:last-of-type){max-width:' + __fit.specMaxW + 'px !important;margin-left:auto !important;margin-right:auto !important;white-space:normal !important;text-align:center !important;}';
     // HDR-TYPE-CONTROLS-001 (owner 2026-07-29 "make sure nothing prevents the
     // user from controlling these values"): the panel's letter-spacing deltas

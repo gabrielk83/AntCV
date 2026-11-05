@@ -230,7 +230,7 @@ allows `/jobs` and the terms carry no automated-access clause.
 for Danish DDIS clearance review, no clearance held. `discover-positions.py add` does not propose a
 posting that requires Danish / Swedish / US / UK citizenship, a clearance the hire must already hold,
 or ITAR "US persons". It proposes with a ⚠ a posting where the hire must be able to OBTAIN a clearance
-(Terma, Weibel, Thales word it this way), and writes `doc.eligibility[uk]`. A defence employer whose ad
+(defence employers usually word it this way), and writes `doc.eligibility[uk]`. A defence employer whose ad
 says nothing is UNVERIFIED: read its careers page first. Rows already tracked:
 `python scripts/job-tracker/discover-positions.py eligibility [--write]`. The live sweep on 2026-11-05
 found 5 obtain-a-clearance rows and 1 unverified row, all defence employers.
@@ -245,7 +245,7 @@ fetch hygiene, source health.** From the ai-job-search review (github.com/ai-job
   `/bff/FindJob/JobAdDetails/<id>` (200 live, 404 gone) instead (POSTING-JOBNET-001).
 - **freehire.me** pools ~50 ATS platforms (Workday, Greenhouse, Emply, hr-manager, SmartRecruiters)
   plus jobnet/jobindex/thehub, filtered to Denmark and the last 14 days. It is the only source that
-  reads employer career sites (Ibsen Photonics, the Birkerød photonics Workday roles). Rows carry `via`
+  reads employer career sites (e.g. the Workday sites of Danish photonics employers). Rows carry `via`
   (the board it came from). One-person service with no SLA: an extra source, never the only one.
 - **Jobdanmark** (`POST /api/jobsearch/search/1`): a further general board, strongest on healthcare and
   municipal roles.

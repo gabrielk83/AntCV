@@ -25,7 +25,7 @@ angle) and the tracker doc map financials[uk] (the PWA keeps unknown top-level k
 `angles` holds the recruiter questions, letter angles and interview prep (FIN-ANGLES-001).
 
 Usage:
-  python company_financials.py show --name "Ibsen Photonics" [--cvr 12345678] [--json]
+  python company_financials.py show --name "Example Optics A/S" [--cvr 12345678] [--json]
   python company_financials.py enrich [--uk UK] [--limit 20] [--dry]
 Sweden (proff.se figures come from Bolagsverket) is not covered yet.
 """

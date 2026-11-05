@@ -368,7 +368,7 @@ _HOLD = re.compile(r"\b(hold|holds|holding|active|current|existing|valid|already
                    r"er sikkerhedsgodkendt|har en sikkerhedsgodkendelse|innehar", re.I)
 # Defence employer: by NAME (a customer named in the body is not the employer), or by two or
 # more body sentences about defence work that are not a candidate-background list ("experience
-# from medtech, aerospace or defence" - Coloplast, live sweep 2026-11-05).
+# from medtech, aerospace or defence" - a medtech ad, live sweep 2026-11-05).
 _DEFENCE_CO = re.compile(r"\bterma\b|\bmbda\b|\bweibel\b|\bsystematic\b|\bsaab\b|kongsberg|\bfmi\b|\bdalo\b|"
                          r"forsvar|defen[cs]e|military|thales|rheinmetall|\bbae\b|lockheed|raytheon|"
                          r"hensoldt|leonardo", re.I)

@@ -291,25 +291,25 @@ check("eligibility: a clearance to obtain -> FLAG, quoted",
       EG("Du skal kunne sikkerhedsgodkendes efter gældende regler.")[0], "FLAG")
 check("eligibility: ITAR US persons -> FAIL", EG("Due to ITAR, applicants must be U.S. persons with clearance.")[0], "FAIL")
 check("eligibility: a defence employer saying nothing -> UNVERIFIED",
-      EG("We build radar systems for naval platforms.", "Terma A/S")[0], "UNVERIFIED")
+      EG("We build radar systems for naval platforms.", "Nordic Defence Systems A/S")[0], "UNVERIFIED")
 check("eligibility: a civil employer saying nothing -> PASS", EG("We build spectrometers.", "Ibsen Photonics")[0], "PASS")
 check("eligibility: defence named as acceptable background is not a defence employer",
-      EG("Experience from medtech, aerospace or defence is an advantage. We make ostomy products.", "Coloplast")[0],
+      EG("Experience from medtech, aerospace or defence is an advantage. We make ostomy products.", "Medico Devices A/S")[0],
       "PASS")
 check("eligibility: a customer named in the body is not the employer",
-      EG("Our customers include Saab and Volvo. You design locks.", "ASSA ABLOY")[0], "PASS")
+      EG("Our customers include Saab and Volvo. You design locks.", "Nordic Locks A/S")[0], "PASS")
 check("eligibility: two sentences about defence work in the body -> UNVERIFIED",
-      EG("You will build radar for military platforms. Our defence programmes run for decades.", "MITS Industries")[0],
+      EG("You will build radar for military platforms. Our defence programmes run for decades.", "RF Industries ApS")[0],
       "UNVERIFIED")
 check("eligibility: 'Danish customers' is not a citizenship rule",
       EG("You will support Danish customers; experience is required.")[0], "PASS")
 check("eligibility: the gate rejects a FAIL candidate with the reason",
       "eligibility gate" in (G(dict(PM, company="Some Co", jd="Dansk statsborgerskab er et krav.")) or ""), True)
 res, out, state = run_add({"rows": [], "urls": {}, "discovered": {}}, [
-    dict(OPT, role="Systems Engineer", company="Terma A/S", url="https://terma.example/j/9",
+    dict(OPT, role="Systems Engineer", company="Nordic Defence Systems A/S", url="https://defence.example/j/9",
          jd="Systems engineer for radar. " * 40 + "You must be able to obtain a security clearance.")])
 flag9 = state["doc"]["rows"][0][10]
-sw = dp.eligibility_sweep({"rows": [[1, "Terma A/S", "SE", "", "", "", "", "", "Identified (posting saved)", "", "", "t1", ""],
+sw = dp.eligibility_sweep({"rows": [[1, "Nordic Defence Systems A/S", "SE", "", "", "", "", "", "Identified (posting saved)", "", "", "t1", ""],
                                     [2, "Old Co", "PM", "", "", "", "", "", "Archive / closed", "", "", "o1", ""],
                                     [3, "Ibsen", "LE", "", "", "", "", "", "Submitted", "", "", "i1", ""]],
                            "jd": {"t1": "Radar work. You must hold an active security clearance.",

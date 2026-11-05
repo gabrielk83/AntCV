@@ -40,6 +40,7 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mupev15f_bqmz","started":"2026-10-01T10:48:17.049Z","host":"vm","worktree":null,"branch":"claude/project-thread-cub2nb","range":"1.51.4786-1.51.4790","task":"impact types in result bullets (thread cub2nb)","beat":"2026-10-01T10:48:17.054Z"}
 {"id":"sh_mw3dvp3b_1rg5","started":"2026-11-05T10:09:17.299Z","host":"Gabo-PC","worktree":"quirky-hopper-4727c2","branch":"claude/outcome-submitted-version","range":"1.51.5362-1.51.5381","task":"OUTCOME-RECORD-002 status_history fix-forward + submitted-version snapshots, interview prep area, eligibility chip","beat":"2026-11-05T10:09:17.356Z"}
 {"id":"sh_mw3f4dtm_gpd","started":"2026-11-05T10:44:02.215Z","host":"Gabo-PC","worktree":"gracious-goldwasser-ac89f6","branch":"claude/musing-euler-71ad39","range":"1.51.5405-1.51.5424","task":"NO-ORPHAN-001 table cells in export preflight","beat":"2026-11-05T10:44:02.272Z"}
+{"id":"sh_mw3faenm_1oa1","started":"2026-11-05T10:48:43.344Z","host":"Gabo-PC","worktree":"shift388","branch":"HEAD","range":"1.51.5425-1.51.5444","task":"land #388 GDPR rights (reopened): re-sync with main, re-bump","beat":"2026-11-05T10:48:43.516Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

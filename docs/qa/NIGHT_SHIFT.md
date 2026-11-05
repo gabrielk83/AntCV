@@ -39,7 +39,6 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 <!-- SHIFT:BEGIN — one JSON object per line; managed by scripts/shift.mjs, safe to hand-edit a line if a session died without releasing -->
 {"id":"sh_mupev15f_bqmz","started":"2026-10-01T10:48:17.049Z","host":"vm","worktree":null,"branch":"claude/project-thread-cub2nb","range":"1.51.4786-1.51.4790","task":"impact types in result bullets (thread cub2nb)","beat":"2026-10-01T10:48:17.054Z"}
 {"id":"sh_mw3gm2iw_3b14","started":"2026-11-05T11:25:47.004Z","host":"Gabo-PC","worktree":"gracious-goldwasser-ac89f6","branch":"claude/musing-euler-71ad39","range":"1.51.5565-1.51.5584","task":"NO-ORPHAN-002 CL + marker rows + bullets, label reword, body width, LO audit","beat":"2026-11-05T11:25:47.060Z"}
-{"id":"sh_mw3h75ri_3v25","started":"2026-11-05T11:42:10.963Z","host":"Gabo-PC","worktree":"recursing-meninsky-073b65","branch":"claude/relaxed-joliot-5b27fd","range":"1.51.5605-1.51.5624","task":"CPH-SPEC-ONE-LINE-001: specialisation shrinks to one line inside the photo-cleared band width","beat":"2026-11-05T11:42:11.007Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

@@ -41,7 +41,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.5905-proof-points-lang-b';
+  var VERSION = '1.51.5965-proof-points-lang-c';
   if (window.__antcvProofPoints === VERSION) return;
   window.__antcvProofPoints = VERSION;
 
@@ -63,16 +63,30 @@
   function readJson(k, d) { try { var v = JSON.parse(get(k) || 'null'); return v == null ? d : v; } catch (_) { return d; } }
   function bare(v) { return String(v == null ? '' : v).replace(/^"|"$/g, '').trim(); }
   function disabled() { var v = get('antcv:disable-proof-points'); return v === '1' || v === 'true'; }
-  function lang() { var v = bare(get('language')).replace(/[^a-z]/gi, '').slice(0, 2).toLowerCase(); return v || 'en'; }
+  function lang() {
+    if (lastTarget.lang && Date.now() - lastTarget.at < 10000) return lastTarget.lang;   // PROOF-POINTS-LANG-001c
+    var v = bare(get('language')).replace(/[^a-z]/gi, '').slice(0, 2).toLowerCase(); return v || 'en';
+  }
   // 1.51.5905: the window flag covers this tab; the localStorage marker (lang:epoch ms, written by
   // app.js with the pass, removed in its finally) covers a pass running in another tab of the same
   // profile. A marker older than 5 min is a crashed pass and is ignored.
+  // PROOF-POINTS-LANG-001c (1.51.5965): the ribbon key settles late - live, localStorage.language
+  // read 'en' for ~600 ms after an EN -> DA apply (It() sets it at the start, a sidecar writes it
+  // back during the pass) - so the belt remembers the pass target and lang() holds it for 10 s
+  // after the pass ends.
+  var lastTarget = { lang: '', at: 0 };
   function translating() {
-    try { if (window.__antcvTranslateBusy) return true; } catch (_) {}
-    try {
-      var m = String(get('antcv:translateBusy') || ''), at = parseInt(m.split(':')[1], 10);
-      return !!m && (!isFinite(at) || Date.now() - at < 300000);
-    } catch (_) { return false; }
+    var t = '';
+    try { if (window.__antcvTranslateBusy) t = String(window.__antcvTranslateBusy); } catch (_) {}
+    if (!t) {
+      try {
+        var m = String(get('antcv:translateBusy') || ''), at = parseInt(m.split(':')[1], 10);
+        if (m && (!isFinite(at) || Date.now() - at < 300000)) t = m.split(':')[0];
+      } catch (_) {}
+    }
+    if (!t) return false;
+    lastTarget = { lang: t.replace(/[^a-z]/gi, '').slice(0, 2).toLowerCase() || 'en', at: Date.now() };
+    return true;
   }
   function stamp() { var s = readJson(STAMP, null); return s && typeof s === 'object' ? s : null; }
   function writeStamp(l, h) {

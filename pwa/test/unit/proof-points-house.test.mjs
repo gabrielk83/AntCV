@@ -191,7 +191,7 @@ test('PROOF-POINTS-LANG-001: while a translate pass is in flight the belt does n
   const mm = new Map(Object.entries(base));
   const ls = { getItem: (k) => (mm.has(k) ? mm.get(k) : null), setItem: (k, v) => mm.set(k, String(v)), removeItem: (k) => mm.delete(k) };
   // the sandbox window is the belt's window; app.js sets window.__antcvTranslateBusy to the target language around the pass
-  const sb = { window: { addEventListener() {}, dispatchEvent() {}, __antcvTranslateBusy: 'da' }, document: { body: { dataset: {} }, head: null, getElementById: () => null, createElement: () => ({ style: {} }) },
+  const sb = { window: { addEventListener() {}, dispatchEvent() {}, __antcvTranslateBusy: 'en' }, document: { body: { dataset: {} }, head: null, getElementById: () => null, createElement: () => ({ style: {} }) },
     localStorage: ls, setTimeout: () => 0, CustomEvent: function () {}, JSON, Array, Object, String, Number, Math, RegExp, parseFloat, parseInt, Error };
   vm.createContext(sb); vm.runInContext(src, sb);
   sb.window.AntcvProofPoints.run();
@@ -200,13 +200,32 @@ test('PROOF-POINTS-LANG-001: while a translate pass is in flight the belt does n
   sb.window.AntcvProofPoints.run();
   assert.notEqual(mm.get('sections'), base.sections, 'writes once the pass is over');
   // the shared marker: a pass in another tab of the same profile
-  const m3 = new Map(Object.entries(base)); m3.set('antcv:translateBusy', 'da:' + Date.now());
+  const m3 = new Map(Object.entries(base)); m3.set('antcv:translateBusy', 'en:' + Date.now());
   const ls3 = { getItem: (k) => (m3.has(k) ? m3.get(k) : null), setItem: (k, v) => m3.set(k, String(v)), removeItem: (k) => m3.delete(k) };
   const sb3 = Object.assign({}, sb, { window: { addEventListener() {}, dispatchEvent() {} }, localStorage: ls3, Date });
   vm.createContext(sb3); vm.runInContext(src, sb3);
   sb3.window.AntcvProofPoints.run();
   assert.equal(m3.get('sections'), base.sections, 'no write while antcv:translateBusy is fresh in the store');
-  m3.set('antcv:translateBusy', 'da:' + (Date.now() - 400000));
+  m3.set('antcv:translateBusy', 'en:' + (Date.now() - 400000));
   sb3.window.AntcvProofPoints.run();
   assert.notEqual(m3.get('sections'), base.sections, 'a stale marker (crashed pass) is ignored');
+});
+
+test('PROOF-POINTS-LANG-001c: for 10 s after a pass the belt follows the pass target, not the late ribbon key', () => {
+  const enBlock = { id: 'proof_points', type: 'rich_block', loc: 'sidebar', on: true, title: 'Proof points', items: [
+    { b: '250 → 10 dage', t: 'skar ændringscyklussen hos Innoviz', bullets: [] }, { b: '150 brugere', t: 'forenkling af rapportering', bullets: [] }, { b: '10x', t: 'lavere produktomkostning', bullets: [] } ] };
+  const seed = Object.assign({}, base, { 'antcv:proofPointsAuto': JSON.stringify({ lang: 'en', hash: 'x' }),
+    sections: JSON.stringify({ cv: [{ id: 'profile', type: 'text', loc: 'main', on: true, content: 'x' }, enBlock, { id: 'tools', type: 'labeled_list', loc: 'sidebar', on: true, items: [{ l: 'Software', v: 'Jira' }] }], cl: [] }) });
+  const mm = new Map(Object.entries(seed));
+  const ls = { getItem: (k) => (mm.has(k) ? mm.get(k) : null), setItem: (k, v) => mm.set(k, String(v)), removeItem: (k) => mm.delete(k) };
+  const sb = { window: { addEventListener() {}, dispatchEvent() {}, __antcvTranslateBusy: 'da' }, document: { body: { dataset: {} }, head: null, getElementById: () => null, createElement: () => ({ style: {} }) },
+    localStorage: ls, setTimeout: () => 0, CustomEvent: function () {}, JSON, Array, Object, String, Number, Math, RegExp, parseFloat, parseInt, Error, Date, isFinite };
+  vm.createContext(sb); vm.runInContext(src, sb);
+  sb.window.AntcvProofPoints.run();                       // in flight: no write
+  sb.window.__antcvTranslateBusy = '';                     // pass over; localStorage.language still 'en' (settles late)
+  sb.window.AntcvProofPoints.run();
+  const pp = JSON.parse(mm.get('sections')).cv.find((s) => s.id === 'proof_points');
+  assert.equal(pp.title, 'Resultater i tal', 'DA mode: house title pinned');
+  assert.deepEqual(pp.items.map((i) => [i.b, i.t]), enBlock.items.map((i) => [i.b, i.t]), 'DA mode: the translated lines are kept, not rebuilt from the EN kernel');
+  assert.equal(JSON.parse(mm.get('antcv:proofPointsAuto')).lang, 'da');
 });

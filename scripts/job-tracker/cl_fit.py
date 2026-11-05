@@ -130,6 +130,7 @@ def _llm(gr, sys_p, user):
             "messages": [{"role": "user", "content": user}]}
     req = urllib.request.Request(DF.PROXY + "/v1/messages", data=json.dumps(body).encode(),
                                  headers={"Content-Type": "application/json", "x-provider": "anthropic",
+                                          "x-antcv-source": "gen-runner",
                                           "User-Agent": gr.UA, "Origin": gr.ORIGIN,
                                           "Authorization": "Bearer " + gr._token()})
     with urllib.request.urlopen(req, timeout=180) as r:

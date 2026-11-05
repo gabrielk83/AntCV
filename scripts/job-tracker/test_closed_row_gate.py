@@ -61,6 +61,11 @@ live = [1, "Acme", "Closed-loop Control Engineer", "", "", "", "", "OPEN",
         "Identified (posting saved)", "Review", "note", "a", "E2EFDA"]
 check("a role NAMED 'Closed-loop' is not treated as closed", gr.is_closed_row(live), False)
 check("a short legacy row does not throw", gr.is_closed_row([1, "A", "B"]), False)
+# OUTCOME-RECORD-001: terminal outcomes are closed, in step with rowVisibility.ts isClosedRow.
+for _st in ("Offer declined", "No response", "Hired"):
+    check("outcome status %r is closed" % _st, gr.is_closed_row(row("a", status=_st)), True)
+for _st in ("Submitted", "Interview", "Offer"):
+    check("in-flight status %r is NOT closed" % _st, gr.is_closed_row(row("a", status=_st)), False)
 
 # ---- eligible_rows ----------------------------------------------------------
 check("a live row with a JD is eligible", ukeys(doc([row("live")])), ["live"])

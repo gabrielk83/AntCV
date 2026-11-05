@@ -134,6 +134,23 @@ CREATE TABLE IF NOT EXISTS kernel_showcase (
   FOREIGN KEY (user_hash) REFERENCES user_kernel(user_hash) ON DELETE CASCADE
 );
 
+-- SUBMITTED-VERSION-001 (2026-11-05): frozen copy of what an employer read when the
+-- owner marked a tracker row Submitted. INSERT-ONLY: no handler updates or deletes a
+-- row (account erase does, via USER_ERASE_STATEMENTS); a re-submission adds one.
+-- `json` = {posting:{url,jd_text,company,role}, exports:{...}, application:{id, jd_*,
+-- meta, cv_sections, cl_sections, style_config, updated_at} | null}. created_at is
+-- epoch ms. The relay also CREATEs this inline (IF NOT EXISTS).
+CREATE TABLE IF NOT EXISTS application_snapshot (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_hash      TEXT NOT NULL,
+  application_id INTEGER,                    -- NULL when the row had no AntCV application (hand-made package)
+  uk             TEXT NOT NULL,              -- tracker row key (doc.rows[i][11])
+  kind           TEXT NOT NULL,              -- 'submitted'
+  json           TEXT NOT NULL,
+  created_at     INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_application_snapshot_user_uk ON application_snapshot (user_hash, uk, created_at);
+
 -- Per-user job-search workbook (JOB-TRACKER-001). One JSON `doc` per user
 -- holding the dream-envelope, weekly-tracker rows, top-5, history, contacts
 -- and application-log. Source of truth for the local Excel workbook + (later)

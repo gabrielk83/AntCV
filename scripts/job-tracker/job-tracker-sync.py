@@ -251,7 +251,9 @@ def cmd_pull(render=False, force=False):
 # OUTCOME-RECORD-002: NOT `history` - the first doc design kept a workbook history[] list there.
 UK_DICT_FIELDS = ("urls", "jd", "support", "signals", "notes", "webintel", "gen",
                   "queue", "brandfit", "brand", "artifacts", "sigfiles", "pin",
-                  "park", "discovered", "status_history", "followups", "financials")
+                  "park", "discovered", "status_history", "followups", "financials",
+                  # SUBMITTED-VERSION-001 / INTERVIEW-PREP-001 / the clearance gate
+                  "submitted", "interview", "interview_next", "eligibility")
 
 def _merge_uk_dict(base, local, remote, field):
     """Per-KEY 3-way for one uk-keyed dict. Union of both sides - a key present

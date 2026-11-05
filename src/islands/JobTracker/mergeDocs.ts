@@ -14,7 +14,8 @@ type Row = unknown[];
 type Doc = { rows?: Row[]; envelope?: unknown; [k: string]: unknown };
 
 export const MERGE_MAPS = ['urls', 'jd', 'gen', 'queue', 'brandfit', 'brand', 'signals', 'sigfiles', 'support',
-  'webintel', 'scores', 'artifacts', 'discovered', 'pin', 'park', 'status_history', 'followups'];
+  'webintel', 'scores', 'artifacts', 'discovered', 'pin', 'park', 'status_history', 'followups',
+  'submitted', 'interview_next'];
 
 function same(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
@@ -44,7 +45,9 @@ function mergeFollowup(sv: unknown, lv: unknown, bv: unknown): unknown {
   }
   return out;
 }
-const INNER: Record<string, (sv: unknown, lv: unknown, bv: unknown) => unknown> = { status_history: mergeHistory, followups: mergeFollowup };
+// SUBMITTED-VERSION-001: submitted[uk] is a dated list too; a version saved in another
+// tab must survive a rebase, so it merges like status_history.
+const INNER: Record<string, (sv: unknown, lv: unknown, bv: unknown) => unknown> = { status_history: mergeHistory, followups: mergeFollowup, submitted: mergeHistory };
 
 export function mergeDocs<T extends Doc>(server: T, local: T, base?: T | null): T {
   const out = { ...server } as T;

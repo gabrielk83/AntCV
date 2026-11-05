@@ -113,6 +113,32 @@ n_before = len(asked)
 CF.enrich(doc, ["lumen"], datetime.date(2026, 12, 1), getter=getter)
 check("enrich: a record under 90 days old is not fetched again", len(asked), n_before)
 
+# ---- FIN-ANGLES-001: figures -> recruiter questions, letter angle, interview prep ----------
+check("signals: the synthetic filing reads as gross-profit growth, a turnaround and hiring",
+      [k for k, _ in CF.signals(f)], ["turnaround", "growth", "hiring"])
+LOSS = {"currency": "DKK", "revenue": 80e6, "operating_result": -3e6, "net_result": -12.4e6, "equity": -2e6,
+        "assets": 40e6, "employees": 50, "prior": {"revenue": 90e6, "net_result": -1e6, "employees": 60}}
+keys = [k for k, _ in CF.signals(LOSS)]
+check("signals: loss (second year), decline, thin margin, negative equity, shrinking",
+      keys, ["loss", "decline", "thin_margin", "negative_equity", "shrinking"])
+check("signals: the loss reads as an amount, not a minus sign", CF.signals(LOSS)[0][1],
+      "net loss of DKK 12.4m (second loss year)")
+a = CF.angles(LOSS)
+check("angles: one recruiter question per signal", len(a["questions"]), 5)
+check("angles: negative equity gives no letter angle (a risk for the candidate, not a pitch)",
+      len(a["cl_angles"]), 4)
+check("angles: the loss angle says lead with cost/time proof and never mention the loss",
+      ("cost" in a["cl_angles"][0], "never mention the loss" in a["cl_angles"][0]), (True, True))
+check("angles: interview prep gets likely questions and what to rehearse",
+      (len(a["interview"]["likely_questions"]), len(a["interview"]["rehearse"])), (5, 5))
+check("angles: a quiet year gives nothing", CF.angles({"currency": "DKK", "net_result": 5e6, "prior": {"net_result": 4e6}}),
+      {"signals": [], "questions": [], "cl_angles": [], "interview": {"likely_questions": [], "rehearse": []}})
+res = CF.lookup("Lumen Optics", cvr="12345678", getter=getter)
+check("lookup: angles ride along with the summary", res["angles"]["signals"][0].startswith("back to profit"), True)
+res = CF.lookup("Acme Robotics", cvr="12345678", getter=getter)
+check("lookup: a filing under another name gives no angles (never pitch on another firm's figures)",
+      res["angles"]["questions"], [])
+
 if fails:
     print("FAIL (%d):" % len(fails))
     for f in fails:

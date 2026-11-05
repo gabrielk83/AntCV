@@ -46,10 +46,19 @@ MODELS = {
     "scandi": {"id": "alexandrainst/scandi-nli-large-v2",
                "rev": os.environ.get("ANTCV_NLI_SCANDI_REV", "6172daba8d0b47341488abdad4e8e375b1d18956"),
                "langs": ("da", "sv"), "kind": "nli3"},
+    # OFF by default (FACT-GUARD-NLI-EN-OFF-001): the self-test on 2026-11-05 found FactCG as
+    # published does not separate a supported claim from an invented one in either input order
+    # (support 0.71 vs 0.83; all weights load, no warnings). English claims are skipped until a
+    # model passes --self-test; ANTCV_NLI_EN=1 turns it on to try one.
     "factcg": {"id": "yaxili96/FactCG-DeBERTa-v3-Large",
                "rev": os.environ.get("ANTCV_NLI_FACTCG_REV", "0430e3509dbd28d2dff7a117c0eae25359ff3e80"),
-               "langs": ("en",), "kind": "binary", "support_index": 1},
+               "langs": ("en",), "kind": "binary", "support_index": 1,
+               "enabled": os.environ.get("ANTCV_NLI_EN") == "1"},
 }
+
+
+def enabled(lang):
+    return MODELS[model_for(lang)].get("enabled", True)
 SUPPORT_MIN, CONTRADICT_MIN, TOP_K, MIN_WORDS = 0.5, 0.6, 4, 6
 
 
@@ -142,6 +151,8 @@ def verdict(support, contra):
 def check(draft, kernel_text, lang=None, scorer=None, k=TOP_K):
     """[{sentence, verdict, severity, support, contradiction, evidence}] for the claim sentences."""
     lang = lang or G.detect_lang(draft)
+    if not enabled(lang):
+        return []                                        # no model that passed --self-test
     scorer = scorer or Scorer()
     facts = kernel_facts(kernel_text)
     out = []
@@ -189,6 +200,9 @@ def self_test():
     sc = Scorer()
     ok = True
     for lang, prem, hyp, want in SELF_TEST:
+        if not enabled(lang):
+            print("%s skipped (model off; ANTCV_NLI_EN=1 to test it)" % lang)
+            continue
         s, c = sc.score(prem, hyp, lang)
         got = verdict(s, c)[0]
         ok &= got == want

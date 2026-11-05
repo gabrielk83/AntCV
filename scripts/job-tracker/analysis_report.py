@@ -19,9 +19,9 @@ import measure_density as MD
 PROXY = os.environ.get("ANTCV_PROXY", "https://cv-proxy.karp-gabriel-a.workers.dev").rstrip("/")
 
 
-def _post(provider, model, sys_p, user, timeout=180):
+def _post(provider, model, sys_p, user, timeout=180, max_tokens=4000):
     gr = MD._gen_runner()
-    body = {"model": model, "max_tokens": 4000, "system": sys_p,
+    body = {"model": model, "max_tokens": max_tokens, "system": sys_p,
             "messages": [{"role": "user", "content": user}], "stream": True}
     req = urllib.request.Request(PROXY + "/v1/messages", data=json.dumps(body).encode(),
                                  headers={"Content-Type": "application/json", "x-provider": provider,

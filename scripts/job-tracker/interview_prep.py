@@ -53,6 +53,17 @@ def salary_line(doc):
     return ""
 
 
+def status_history(doc, uk):
+    """A row's dated status list, as the tracker island keeps it (OUTCOME-RECORD-002):
+    status_history[uk], else a MAP-shaped legacy history[uk]. The doc also holds a legacy
+    `history` ARRAY (not per row), which is never read as a row's history."""
+    for key in ("status_history", "history"):
+        m = doc.get(key)
+        if isinstance(m, dict) and isinstance(m.get(uk), list):
+            return m[uk]
+    return []
+
+
 def gather(doc, uk, stage, kernel_digest="", app_text=None, research=""):
     """Everything the pack may use, as plain text blocks. `app_text(app_id)` -> (cv, cl) text."""
     row = next((r for r in doc.get("rows") or [] if isinstance(r, list) and len(r) > 11 and r[11] == uk), None)
@@ -71,7 +82,7 @@ def gather(doc, uk, stage, kernel_digest="", app_text=None, research=""):
         "financials": {"summary": fin.get("summary", ""), "interview": (fin.get("angles") or {}).get("interview") or {},
                        "questions": (fin.get("angles") or {}).get("questions") or []},
         "eligibility": (doc.get("eligibility") or {}).get(uk) or {},
-        "history": (doc.get("history") or {}).get(uk) or [],
+        "history": status_history(doc, uk),
         "salary_envelope": salary_line(doc),
         "kernel": kernel_digest[:7000],
         "research": research[:2500],

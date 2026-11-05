@@ -31,8 +31,9 @@ DOC = {"rows": [[1, "Lumen Optics A/S", "Hardware PM", "Farum", "", "", "", "", 
                                            "interview": {"likely_questions": ["How have you handled a ramp-up?"],
                                                          "rehearse": ["A ramp-up story with volumes."]}}}},
        "eligibility": {"lumen": {"verdict": "FLAG", "kind": "clearance to obtain", "quote": "..."}},
-       "history": {"lumen": [{"status": "Submitted", "date": "2026-10-20"}, {"status": "Interview", "date": "2026-11-01",
-                                                                            "stage": "screening"}]},
+       "status_history": {"lumen": [{"status": "Submitted", "date": "2026-10-20"}, {"status": "Interview", "date": "2026-11-01",
+                                                                                   "stage": "screening"}]},
+       "history": [{"at": "2026-09-01", "what": "legacy doc-level log"}],
        "envelope": [["Salary", "~60,000 DKK/month", "55,000-75,000 DKK/mo by scope"], ["Commuting", "45 min", ""]]}
 seen = []
 ctx = IP.gather(DOC, "lumen", "1st", "KERNEL", lambda app: seen.append(app) or ("CV TEXT", "CL TEXT"), "web")
@@ -93,6 +94,10 @@ log = IP.mock(PACK, "KERNEL", ask=lambda _: next(answers), say=out.append, llm=l
 check("mock: one answer recorded with feedback, then the user quits", [(e["q"], e["feedback"]) for e in log],
       [("Why us?", "Score 4/5. Good.")])
 check("mock: follow-up shown after the feedback", "Follow-up they may ask: And?" in out, True)
+check("history: status_history wins; the legacy history ARRAY is never read as a row's list",
+      (len(IP.status_history(DOC, "lumen")), IP.status_history({"history": [1, 2]}, "lumen"),
+       IP.status_history({"history": {"lumen": [{"status": "Submitted"}]}}, "lumen")),
+      (2, [], [{"status": "Submitted"}]))
 check("salary line: read from the envelope row", IP.salary_line({"envelope": [["Løn", "50k", ""]]}), "50k")
 
 if fails:

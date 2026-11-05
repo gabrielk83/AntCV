@@ -19226,7 +19226,19 @@ window.__antcvTxtSame =
           // (save_as_new), set it ACTIVE, and stamp activeAppCompany. Once the active app
           // IS the targeted company, the showcase + kernel-restore never revert it.
           // Dedup: a per-company in-flight flag + the stamp stop it re-firing each tick.
-          const __realCo = __ioCo && __ioCo !== "unsolicited";
+          // LANG-CACHE-APP-SCOPE-001d (owner 2026-11-05): since 001 the application-switch twins move
+          // the jd-scope id and stamp the NEW app's company BEFORE React commits the new meta, so a
+          // tick in that ~200 ms window reads the new stamp against the OLD io.company and sees
+          // "drift". That is a switch in flight, not a drifting draft: never auto-commit the old
+          // document to another row from here. The scope id ahead of Fl is the tell.
+          const __switchInFlight = (() => {
+            try {
+              var m = window.AntcvJdScope && window.AntcvJdScope.getCurrentAppId && window.AntcvJdScope.getCurrentAppId();
+              return !!(m && null != __activeId && String(m) !== String(__activeId));
+            } catch (_) { return !1; }
+          })();
+          __switchInFlight && console.log("[apps] LANG-CACHE-APP-SCOPE-001d: application switch in flight (scope " + window.__antcvCurrentAppId + " ahead of active " + __activeId + ") — auto-commit skipped this tick");
+          const __realCo = __ioCo && __ioCo !== "unsolicited" && !__switchInFlight;
           if (__realCo) {
             try {
               const __k = "__antcvAutoCommit:" + __ioCo;

@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.6065-lang-cache-app-scope-c';
+  const TARGET_VERSION = '1.51.6085-lang-cache-app-scope-d';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.6065-lang-cache-app-scope-c',
     '1.51.6045-lang-cache-app-scope-b',
     '1.51.6025-no-orphan-roles',
     '1.51.6005-lang-cache-app-scope',

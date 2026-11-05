@@ -90,3 +90,10 @@ test('LANG-CACHE-APP-SCOPE-001c: __antcvCacheOwn behaviour', () => {
   assert.deepEqual(run('3525', null).out, {});
   assert.equal(run('3525', { da: { app: '3525' } }).warn.length, 0);
 });
+
+test('LANG-CACHE-APP-SCOPE-001d: the auto-sync drift branch is skipped while a switch is in flight (scope id ahead of Fl)', () => {
+  assert.equal(count(src, 'const __realCo = __ioCo && __ioCo !== "unsolicited" && !__switchInFlight;'), 1, 'source: the drift gate carries the in-flight guard');
+  assert.equal(count(src, 'return !!(m && null != __activeId && String(m) !== String(__activeId));'), 1, 'source: compares the jd-scope id with the active id read at tick time');
+  assert.equal(count(min, 'const $rc=r&&"unsolicited"!==r&&!__sw;if($rc){try{const $k="__antcvAutoCommit:"'), 1, 'mirror: same gate');
+  assert.equal(count(min, 'return!!(m&&null!=e&&String(m)!==String(e))'), 1, 'mirror: same compare against the effect\'s active id');
+});

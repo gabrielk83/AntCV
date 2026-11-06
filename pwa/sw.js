@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.6125-tab-doc-lease';
+const CACHE = 'antcv-1.51.6145-academy-empty';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

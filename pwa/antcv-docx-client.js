@@ -1769,7 +1769,7 @@ function applyAcademyFormat(list, o) {
     if (!name) { try { const p = JSON.parse(localStorage.getItem('personalInfo') || '{}') || {}; name = String((p.personalInfo ? p.personalInfo.name : p.name) || ''); } catch (_) {} }
     const res = window.AntcvAcademyFormat.apply(list, {
       lang: o.language, jdText: jd, company: (o.meta && o.meta.company) || '', role: (o.meta && o.meta.role) || '', name,
-      nowYear: _payloadNowYear(), source: o.source,
+      nowYear: _payloadNowYear(), source: o.source, personalInfo: pi,
     });
     if (!res || !Array.isArray(res.sections)) return list;
     try {

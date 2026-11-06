@@ -230,6 +230,85 @@ test('audit flags an English Results line in a Danish CV', () => {
   assert.ok(AF.audit(s, DA).issues.some((i) => i.code === 'LANG' && /sirin\.results/.test(i.where)));
 });
 
+// ── ACADEMY-EMPTY-001: no heading without real content, no template rows, no other person's rows
+const ANITA = { name: 'Anita Myre-Kornfeldt', education: [{ deg: 'BSc-equivalent in Seasonal Resource Management', sch: 'Institute of Logistics' }] };
+const GABRIEL_PI = { name: NAME, accessibility: 'English and Danish at work; live captions and written follow-ups in meetings.' };
+function skeletonish() {
+  // the owner's margin preview of 2026-11-06, as stored sections
+  return [
+    { id: 'profile', type: 'rich_block', loc: 'main', on: true, title: 'PROFILE', items: [{ b: '', t: 'I run logistics for colonies through hard winters, with written contingency plans.' }] },
+    { id: 'experience', type: 'experience', loc: 'main', on: true, title: 'EXPERIENCE', roles: [{ id: 'r1', title: 'Logistics Lead', company: 'HiveIn', years: '2024 - present', bullets: ['Plan the winter stores.'] }] },
+    { id: 'core_comp', type: 'table', loc: 'main', on: true, title: 'CORE COMPETENCIES', rows: [['The role needs', 'What I bring, with proof'], ['Planning', 'Winter stores planned two seasons ahead']] },
+    { id: 'tools', type: 'rich_block', loc: 'sidebar', on: true, title: 'TOOLS & METHODS', items: [] },
+    { id: 'certs', type: 'rich_block', loc: 'sidebar', on: true, title: 'CERTIFICATES & COURSES', items: [{ grp: true, t: 'Courses' }] },
+    { id: 'education', type: 'education', loc: 'sidebar', on: true, title: 'EDUCATION', items: [
+      { deg: 'MBA', sch: 'Technion - Strategy, Finance; China biz-plan competition / Tsinghua Uni. honourable mention.' },
+      { deg: 'M.Sc. Electrical Engineering', sch: 'Tel Aviv University - VLSI, optics, photonics and nanotechnology.' },
+      { deg: 'B.Sc. Physics & B.Sc. EE', sch: 'Tel Aviv University' },
+      { deg: 'FVU Dansk', sch: 'KVUC, ongoing' }] },
+    { id: 'regulatory', type: 'rich_block', loc: 'sidebar', on: true, title: 'REGULATORY CONTEXT', items: [] },
+    { id: 'languages', type: 'labeled_list', loc: 'sidebar', on: true, title: 'LANGUAGES', items: [{ l: '[Language]', v: 'native / fluent' }, { l: '[Language]', v: '[level]' }] },
+    { id: 'accessibility', type: 'labeled_list', loc: 'sidebar', on: true, title: 'COMMUNICATION', items: [{ l: '', v: 'I work in English and Danish and follow meetings best with live captions and written follow-ups.' }] },
+    { id: 'additional', type: 'labeled_list', loc: 'sidebar', on: true, title: 'ADDITIONAL INFORMATION', items: [{ l: '', v: 'Add only items that support the JD - portfolio or links, availability, work permit, relocation, or disclosures. Drop if not needed.' }] },
+  ];
+}
+const EN_ANITA = { lang: 'en', jdText: JD, company: 'Kaleido Technology', name: ANITA.name, personalInfo: ANITA, nowYear: 2026 };
+
+test('isPlaceholder: brackets and skeleton instructions, never Markdown links', () => {
+  assert.equal(AF.isPlaceholder('[Language]: [level]'), true);
+  assert.equal(AF.isPlaceholder('Add only items that support the JD - portfolio or links. Drop if not needed.'), true);
+  assert.equal(AF.isPlaceholder('Details via [Google Scholar](https://scholar.google.com/citations?user=x)'), false);
+  assert.equal(AF.isPlaceholder('Dansk: mellemniveau (B2)'), false);
+});
+
+test('export: a section without real content leaves the CV, headings included', () => {
+  const { sections } = AF.apply(skeletonish(), EN_ANITA);
+  for (const id of ['tools', 'certs', 'regulatory', 'languages', 'additional']) assert.equal(byId(sections, id).on, false, id);
+  for (const id of ['profile', 'experience', 'core_comp']) assert.notEqual(byId(sections, id).on, false, id);
+});
+
+test('another person never gets the owner\'s education or Communication line', () => {
+  const { sections, changes } = AF.apply(skeletonish(), EN_ANITA);
+  assert.equal(byId(sections, 'education').on, false, 'all four rows are the owner\'s, so the heading goes too');
+  assert.equal(byId(sections, 'accessibility').on, false, 'Anita stores no communication line');
+  assert.ok(changes.some((c) => /another person's row hidden/.test(c)));
+  const audit = AF.audit(skeletonish(), EN_ANITA).issues.map((i) => i.code);
+  for (const c of ['LEAK', 'PLACEHOLDER', 'EMPTY_SECTION']) assert.ok(audit.includes(c), c);
+  // a mixed list keeps the person's own row
+  const mixed = skeletonish();
+  mixed[5].items.unshift({ deg: 'BSc-equivalent in Seasonal Resource Management', sch: 'Institute of Logistics' });
+  const edu = byId(AF.apply(mixed, EN_ANITA).sections, 'education');
+  assert.notEqual(edu.on, false);
+  assert.deepEqual(Object.keys(edu.hidden).map(Number).sort(), [1, 2, 3, 4]);
+});
+
+test('the owner\'s own CV keeps his rows; a stale COMMS-LINE-001 sentence is re-worded to COMMS-LINE-002', () => {
+  const { sections } = AF.apply(skeletonish(), Object.assign({}, EN_ANITA, { name: NAME, personalInfo: GABRIEL_PI }));
+  const edu = byId(sections, 'education');
+  assert.notEqual(edu.on, false);
+  assert.equal(Object.keys(edu.hidden || {}).length, 0);
+  const acc = byId(sections, 'accessibility');
+  assert.notEqual(acc.on, false);
+  assert.equal(acc.items[0].v, 'English and Danish at work; live captions and written follow-ups in meetings.');
+});
+
+test('plan() names what the preview hides, by section id and row text', () => {
+  const p = AF.plan(skeletonish(), EN_ANITA);
+  assert.deepEqual(p.sections.sort(), ['accessibility', 'additional', 'certs', 'education', 'languages', 'regulatory', 'tools']);
+  const mixed = skeletonish();
+  mixed[5].items.unshift({ deg: 'BSc-equivalent in Seasonal Resource Management', sch: 'Institute of Logistics' });
+  const q = AF.plan(mixed, EN_ANITA);
+  assert.equal(q.rows.education.length, 4);
+  assert.match(q.rows.education[0], /^MBA Technion/);
+});
+
+test('index.html loads the preview half with a ?v, after the rules', () => {
+  const a = index.indexOf('antcv-academy-format.js?v='), b = index.indexOf('antcv-academy-preview.js?v=');
+  assert.ok(a > 0 && b > a);
+  const src = readFileSync(new URL('../../antcv-academy-preview.js', import.meta.url), 'utf8');
+  assert.ok(!/localStorage\.setItem|dispatchEvent/.test(src), 'the preview half never writes storage or dispatches events');
+});
+
 // ── export integration (antcv-docx-client buildPayload) ─────────────────────
 function seed() {
   store.clear();

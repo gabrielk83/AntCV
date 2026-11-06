@@ -48,7 +48,7 @@
  */
 (function (root) {
   'use strict';
-  var VERSION = '1.51.6105-academy-format';
+  var VERSION = '1.51.6145-academy-empty';
 
   // Mirror of pwa/gold-rules.json academy_format (test: academy-format.test.mjs).
   var RULES = {
@@ -512,6 +512,128 @@
     return null;
   }
 
+  // ── real content only (ACADEMY-EMPTY-001, owner 2026-11-06) ─────────────────
+  // Owner on a margin preview: "go to academy rule. notice that you lest sub headings empty on
+  // application" - TOOLS & METHODS, CERTIFICATES and REGULATORY CONTEXT headings with no rows,
+  // "[Language]: [level]" rows, the skeleton's ADDITIONAL INFORMATION instruction. The house CV has
+  // no heading without real content and no template text, in the preview and the export.
+  var MD_LINK = /\[[^\]\n]{1,200}\]\((?:https?:|mailto:)[^)\s]*\)/g;
+  var BENIGN = /^\s*(verify|sic|x|\d{1,3}|…|\.\.\.)\s*$/i;
+  var INSTRUCTION = /(NO-JD RULE|\bEVIDENCE:\s|ADAPT-WITH-THE-TEAM|ONLY when candidate-confirmed|Identity tied to the role|Write in the target language|Real proof points only|Never invent a number|Use Company Info|Employer priority \d|Focus area \d|Strategic expertise -|Add only items that support the JD|Drop if not needed|short label\b)/i;
+  function isPlaceholder(text) {
+    var t = String(text == null ? '' : text).replace(MD_LINK, ' ');
+    var m, re = /\[([^\[\]]{1,600})\]/g;
+    while ((m = re.exec(t))) { if (!BENIGN.test(m[1])) return true; }
+    return INSTRUCTION.test(t);
+  }
+  function rowText(it) {
+    if (typeof it === 'string') return it;
+    if (!it || typeof it !== 'object') return '';
+    return [it.bOff ? '' : it.b, it.tOff ? '' : it.t, it.l, it.v, it.value, it.deg, it.sch, it.text, it.citation]
+      .filter(function (p) { return typeof p === 'string' && p.trim(); }).join(' ');
+  }
+  function rowReal(it) {
+    if (isGrp(it)) return false;
+    var t = rowText(it).trim();
+    return !!t && !isPlaceholder(t);
+  }
+  function sectionReal(s) {
+    if (!s || typeof s !== 'object' || s.on === false) return false;
+    if (s.type === 'experience') return (s.roles || []).some(function (r) { return r && r.on !== false && (String(r.title || '').trim() || String(r.company || '').trim()) && !isPlaceholder(String(r.title || '') + ' ' + String(r.company || '')); });
+    if (s.type === 'table') return (s.rows || []).slice(1).some(function (row) { return Array.isArray(row) && row.some(function (c) { return String(c || '').trim() && !isPlaceholder(c); }); });
+    if (typeof s.content === 'string' && !Array.isArray(s.items)) return !!s.content.trim() && !isPlaceholder(s.content);
+    if (Array.isArray(s.items)) return visibleItems(s).some(function (i) { return rowReal(s.items[i]); });
+    return true;   // a type this file does not know: never hidden
+  }
+  // Owner facts that must never print under another person's name (persona-contamination family:
+  // the owner's EDU-CANON-PIN rows and his Communication line showed in Anita Myre-Kornfeldt's CV,
+  // 2026-11-06). Gabriel's own CV is never touched by this test.
+  var OWNER_FACT = [
+    /\bTechnion\b[\s\S]*\bTsinghua\b|\bTsinghua\b[\s\S]*\bTechnion\b/i,
+    /^(?=[\s\S]*\bTel Aviv Univ)(?=[\s\S]*\b(?:VLSI|nanotechnolog\w*|Physics|EE|Electrical)\b)/i,
+    /\bKVUC\b/,
+    /\b(?:live captions|liveundertekster|subtítulos en directo|cochlear|hearing[- ]impaired|hørehæmmet)\b/i,
+    /\bPatent (?:No\.|nr\.|n\.º)\s*241997\b|\b241997\b/i,
+    /\b(?:Innoviz|Sirin Labs|Meprolight|Kanzen Konsulenter|Copenhagen Wolves)\b/i,
+    /\bKarp\b/,
+  ];
+  function ownerFact(text) { var t = String(text || ''); return OWNER_FACT.some(function (re) { return re.test(t); }); }
+  function hasComms(pi) {
+    if (!pi || typeof pi !== 'object') return null;            // unknown: keep the row
+    var a = pi.accessibility, c = pi.communication;
+    if (typeof a === 'string' && a.trim()) return true;
+    if (a && typeof a === 'object' && Object.keys(a).length) return true;
+    if (c && typeof c === 'object' && Object.keys(c).filter(function (k) { return k.charAt(0) !== '_'; }).length) return true;
+    if (typeof c === 'string' && c.trim()) return true;
+    return false;
+  }
+  // COMMS-LINE-002 for the owner when a stale tab wrote the COMMS-LINE-001 sentence back.
+  var COMMS_002 = { en: 'English and Danish at work; live captions and written follow-ups in meetings.', da: 'Engelsk og dansk i arbejdet; liveundertekster og skriftlig opfølgning i møder.' };
+  var COMMS_001 = /follow meetings best with live captions|følger møder bedst med liveundertekster/i;
+  // Rows to hide / sections to drop, by stored index. Shared by apply() (export) and plan()
+  // (the margin preview, antcv-academy-preview.js).
+  function contentPlan(sections, o) {
+    var foreign = !!o.name && !isGabriel(o.name);
+    var comms = hasComms(o.pi);
+    var rows = {}, drop = {}, notes = [];
+    (Array.isArray(sections) ? sections : []).forEach(function (s, si) {
+      if (!s || typeof s !== 'object' || s.on === false) return;
+      var id = sid(s) || ('#' + si);
+      if (id === 'accessibility' && comms === false) { drop[si] = 1; notes.push('communication: ' + (foreign ? 'the person has no stored line (owner text hidden)' : 'no stored line, hidden')); return; }
+      // roles are never hidden here (that would hide the CV); the audit names the fault
+      if (s.type === 'experience' && foreign && (s.roles || []).some(function (r) { return r && r.on !== false && ownerFact(String(r.title || '') + ' ' + String(r.company || '')); })) {
+        notes.push('experience: another person\'s roles (owner facts) in this CV, not hidden');
+      }
+      if (Array.isArray(s.items) && s.type !== 'experience') {
+        var hide = [];
+        visibleItems(s).forEach(function (i) {
+          var it = s.items[i];
+          if (isGrp(it)) return;
+          var t = rowText(it);
+          if (t.trim() && isPlaceholder(t)) { hide.push(i); notes.push(id + ': placeholder row hidden'); }
+          else if (foreign && ownerFact(t)) { hide.push(i); notes.push(id + ': another person\'s row hidden (owner facts)'); }
+        });
+        // a group header with no real row under it goes too
+        var vis = visibleItems(s), cur = null, curReal = false;
+        vis.concat([-1]).forEach(function (i) {
+          if (i < 0 || isGrp(s.items[i])) {
+            if (cur != null && !curReal) hide.push(cur);
+            cur = i < 0 ? null : i; curReal = false; return;
+          }
+          if (hide.indexOf(i) < 0 && rowReal(s.items[i])) curReal = true;
+        });
+        if (hide.length) rows[si] = hide;
+      }
+      var probe = rows[si] ? Object.assign({}, s, { hidden: Object.assign({}, s.hidden || {}, rows[si].reduce(function (m, i) { m[i] = true; return m; }, {})) }) : s;
+      if (!sectionReal(probe)) { drop[si] = 1; notes.push(id + ': no real content, heading hidden'); }
+    });
+    return { rows: rows, drop: drop, notes: notes };
+  }
+  function applyContent(sections, o, changes) {
+    var p = contentPlan(sections, o);
+    var out = sections.map(function (s, si) {
+      if (!s || typeof s !== 'object') return s;
+      if (p.drop[si]) return Object.assign({}, s, { on: false });
+      var r = s;
+      if (p.rows[si]) {
+        var h = Object.assign({}, s.hidden || {});
+        p.rows[si].forEach(function (i) { h[i] = true; });
+        r = Object.assign({}, s, { hidden: h });
+      }
+      if (sid(r) === 'accessibility' && isGabriel(o.name) && Array.isArray(r.items)) {
+        var line = COMMS_002[o.lang] || COMMS_002.en;
+        var items = r.items.map(function (it) {
+          if (it && typeof it === 'object' && COMMS_001.test(String(it.v || it.t || ''))) return Object.assign({}, it, typeof it.v === 'string' ? { v: line } : { t: line });
+          return it;
+        });
+        if (JSON.stringify(items) !== JSON.stringify(r.items)) { r = Object.assign({}, r, { items: items }); p.notes.push('communication: COMMS-LINE-002 wording'); }
+      }
+      return r;
+    });
+    p.notes.forEach(function (n) { changes.push(n); });
+    return out;
+  }
+
   // ── main-column labels ──────────────────────────────────────────────────────
   function fixWorkStyle(s, o, changes) {
     if (o.lang === 'en' || !Array.isArray(s.items)) return s;
@@ -542,6 +664,7 @@
       name: o.name || '', nowYear: o.nowYear || new Date().getFullYear(),
       research: o.research != null ? !!o.research : isResearch(jd, o.role),
       sports: SPORTS_JD.test(jd), source: o.source || null, checkResults: !!o.checkResults,
+      pi: (o.personalInfo && (o.personalInfo.personalInfo || o.personalInfo)) || null,
     };
   }
   function apply(sections, o0) {
@@ -575,6 +698,7 @@
     // Patent row (house sidebar "Patent"), after education, when the CV shows none.
     if (!o.research && !out.some(function (s) { return s && s.on !== false && (sid(s) === 'patent' || (s.loc === 'sidebar' && /patent/i.test(String(s.title || '')))); })) {
       var p = patentSection(o.source || sections, o.lang);
+      if (p && o.name && !isGabriel(o.name) && ownerFact(p.items[0].t)) p = null;   // never the owner's patent under another name
       if (p) {
         var at = -1;
         out.forEach(function (s, i) { if (s && s.on !== false && s.loc === 'sidebar' && sid(s) === 'education') at = i; });
@@ -583,12 +707,34 @@
         changes.push('patent: sidebar row added');
       }
     }
+    // ACADEMY-EMPTY-001: placeholder rows, another person's rows and headings without content go last
+    out = applyContent(out, o, changes);
     return { sections: out, changes: changes };
+  }
+
+  // The same content rules for the PREVIEW (antcv-academy-preview.js hides DOM, never storage):
+  // { sections: [id...] to hide, rows: { id: [row text...] } }.
+  function plan(sections, o0) {
+    var o = opts(o0), p = contentPlan(Array.isArray(sections) ? sections : [], o);
+    var outS = [], outR = {};
+    (Array.isArray(sections) ? sections : []).forEach(function (s, si) {
+      if (!s || typeof s !== 'object') return;
+      var id = String(s.id || '');
+      if (!id) return;
+      if (p.drop[si]) { outS.push(id); return; }
+      if (p.rows[si]) outR[id] = p.rows[si].map(function (i) { return rowText(s.items[i]); }).filter(Boolean);
+    });
+    return { sections: outS, rows: outR, notes: p.notes };
   }
 
   function audit(sections, o0) {
     var o = opts(o0), issues = [];
     var add = function (code, where, detail) { issues.push({ code: code, where: where, detail: detail }); };
+    var cp = contentPlan(Array.isArray(sections) ? sections : [], o);
+    cp.notes.forEach(function (n) {
+      var where = n.split(':')[0];
+      add(/another person/.test(n) || /owner text/.test(n) ? 'LEAK' : (/placeholder/.test(n) ? 'PLACEHOLDER' : (/no real content/.test(n) ? 'EMPTY_SECTION' : 'COMMS')), where, n.slice(where.length + 2));
+    });
     (Array.isArray(sections) ? sections : []).forEach(function (s) {
       if (!s || typeof s !== 'object' || s.on === false) return;
       var id = sid(s);
@@ -652,7 +798,7 @@
     return { ok: !issues.length, issues: issues };
   }
 
-  var api = { version: VERSION, RULES: RULES, langOf: langOf, wrongLang: wrongLang, audit: audit, apply: apply, labels: labels };
+  var api = { version: VERSION, RULES: RULES, langOf: langOf, wrongLang: wrongLang, audit: audit, apply: apply, plan: plan, labels: labels, isPlaceholder: isPlaceholder, ownerFact: ownerFact };
   root.AntcvAcademyFormat = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

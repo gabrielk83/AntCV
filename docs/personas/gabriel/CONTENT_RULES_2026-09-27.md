@@ -182,3 +182,14 @@ Owner, 2026-11-05: "make sure the application fully match academy format - for s
 | Languages order conflict | gold-rules LANGUAGES-ORDER-001 (revised 2026-10-23, course reviewer on Veo v7) says English first; the house template since 2026-11-01 and this file say Danish first. The margin export uses Danish first (`academy_format.languages_first`); the stored sort and the other layouts keep English first until the owner decides. |
 
 Code: `pwa/antcv-academy-format.js` (pure, payload only; `audit()` + `apply()`), called from `antcv-docx-client.js` buildPayload after sanitizeForExport; rules in `pwa/gold-rules.json` `academy_format` + prompt line; tests `pwa/test/unit/academy-format.test.mjs`. Kill switch `antcv:disable-academy-format=1`. Measured on the stored D1 sections (local worker + LibreOffice, before the export preflight): #3491 da 4 -> 2 pages, raw orphans 57 -> 32; #3527 en 3 -> 2 pages, 48 -> 26.
+
+### Real content only (ACADEMY-EMPTY-001, owner 2026-11-06)
+
+Owner on a margin preview: "go to academy rule. notice that you lest sub headings empty on application" (TOOLS & METHODS, CERTIFICATES and REGULATORY CONTEXT headings with no rows, "[Language]: [level]" rows, the skeleton's ADDITIONAL INFORMATION instruction, and the owner's education and Communication line under Anita Myre-Kornfeldt's name).
+
+| Rule | In the app |
+|---|---|
+| No empty heading | A section with no real row (all rows hidden, empty, placeholders or group headers with nothing under them) is not rendered: export (`apply()`, `on:false`) and margin preview (`pwa/antcv-academy-preview.js`, DOM `display:none`, never writes storage). A blank template (fewer than 3 real sections) keeps its skeleton in the preview. |
+| No template text | Rows with a bracket placeholder (Markdown links excepted) or skeleton instruction text ("Add only items that support the JD ... Drop if not needed") are hidden. |
+| No other person's rows | Under any name but the owner's, rows that carry the owner's facts (Technion + Tsinghua, Tel Aviv University degrees, KVUC, live captions / hearing wording, patent 241997, Innoviz / Sirin / Meprolight / Kanzen / Copenhagen Wolves, "Karp") are hidden, and the owner's patent row is never added. The Communication row shows only when the person stores a communication / accessibility line. Experience roles are not filtered (hiding them would hide the CV): an export with the owner's roles under another name is a data fault the audit reports as LEAK. |
+| Owner wording | For the owner, a Communication row that still holds the COMMS-LINE-001 sentence exports in COMMS-LINE-002 wording. |

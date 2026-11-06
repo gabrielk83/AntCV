@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.6125-tab-doc-lease';
+  const TARGET_VERSION = '1.51.6145-academy-empty';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.6125-tab-doc-lease',
     '1.51.6105-academy-format',
     '1.51.6085-lang-cache-app-scope-d',
     '1.51.6065-lang-cache-app-scope-c',

@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.6145-academy-empty';
+const CACHE = 'antcv-1.51.6165-autosync-stale-rev';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

@@ -19342,13 +19342,21 @@ window.__antcvTxtSame =
               __dgPayload.meta = io && "object" == typeof io ? io : {};
             }
             oo.update(__activeId, __dgPayload)
-              .then(() => {
+              .then((r) => {
                 try {
-                  console.log(
-                    "[apps] auto-sync to active app",
-                    __activeId,
-                    "ok",
-                  );
+                  // AUTOSYNC-STALE-REV-001: antcv-app-rev-guard turns a 409 into a resolved
+                  // {ok:false, skipped:'stale_rev'}; that is a save that did NOT happen, never "ok".
+                  r && !1 === r.ok && r.skipped
+                    ? console.warn(
+                        "[apps] auto-sync to active app",
+                        __activeId,
+                        "SKIPPED (" + r.skipped + "): the server row is newer than this tab's stamp - this tick's edits were NOT saved; reload the application to pick up the fresh content (AUTOSYNC-STALE-REV-001)",
+                      )
+                    : console.log(
+                        "[apps] auto-sync to active app",
+                        __activeId,
+                        "ok",
+                      );
                 } catch (e) {}
               })
               .catch((e) => {

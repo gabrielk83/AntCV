@@ -48,7 +48,7 @@
  */
 (function (root) {
   'use strict';
-  var VERSION = '1.51.6145-academy-empty';
+  var VERSION = '1.51.6205-academy-pages';
 
   // Mirror of pwa/gold-rules.json academy_format (test: academy-format.test.mjs).
   var RULES = {

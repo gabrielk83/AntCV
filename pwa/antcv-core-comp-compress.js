@@ -16,7 +16,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.4746-value-for-role';
+  var VERSION = '1.51.6205-academy-pages';
   if (window.__antcvCoreCompCompress === VERSION) return;
   window.__antcvCoreCompCompress = VERSION;
 
@@ -98,13 +98,23 @@
     try { var p = JSON.parse(localStorage.getItem('personalInfo') || '{}') || {}; p = p.personalInfo || p; return /\bgabriel\b/i.test(String((p || {}).name || '')); }
     catch (_) { return false; }
   }
+  // DANGLING-CONNECTOR-001 (2026-11-06, #3527 PEAK Wind live export): the word-boundary cut left
+  // "Client projects &" and "Digital products &" in the Focus Area column - a label that ends on a
+  // connector (gold rule: never a dangling connector). The trailing connector goes with the cut, and
+  // a label already stored that way is repaired (idempotent: the result ends on a content word).
+  var DANGLING = /(?:[\s,;:.\-]+|\s+(?:&|\+|\/|and|or|og|eller|with|med|con|for|of|to|til|the|an))+$/i;
+  function trimDangling(s) {
+    var v = String(s == null ? '' : s);
+    var t = v.replace(DANGLING, '');
+    return t.length >= 3 ? t : v;
+  }
   function capWords(s, cap) {
     var v = String(s == null ? '' : s);
     if (v.length <= cap) return v;
     var cut = v.slice(0, cap);
     var sp = cut.lastIndexOf(' ');
     if (sp > cap * 0.6) cut = cut.slice(0, sp);           // trim back to the last word boundary
-    return cut.replace(/[\s,;:.\-]+$/, '');                // drop a trailing separator
+    return trimDangling(cut.replace(/[\s,;:.\-]+$/, ''));  // drop a trailing separator or connector
   }
 
   function isTbl(s) { return !!(s && s.type === 'table' && Array.isArray(s.rows) && (s.id === 'core_comp' || s.id === 'bring' || /core competenc|what i bring/i.test(String(s.title || '')))); }
@@ -139,7 +149,7 @@
             if (i === 0 || !Array.isArray(row)) return;     // skip header row
             // Focus Area: abbreviate (Docs/Reqs/Mgmt), tighten ("X team Coordination" → "X Coordination"),
             // expand any banned "Coord." → full word, cap to CAP_FOCUS.
-            if (typeof row[0] === 'string') { var fa = capWords(expand(tighten(abbreviate(gab ? canon(row[0]) : row[0]))), CAP_FOCUS); if (fa !== row[0]) { row[0] = fa; changed = true; } }
+            if (typeof row[0] === 'string') { var fa = trimDangling(capWords(expand(tighten(abbreviate(gab ? canon(row[0]) : row[0]))), CAP_FOCUS)); if (fa !== row[0]) { row[0] = fa; changed = true; } }
             // Strategic Expertise: expand banned "Coord.", then cap to the per-doc width.
             if (typeof row[1] === 'string') { var se = capWords(expand(row[1]), capFor(s)); if (se !== row[1]) { row[1] = se; changed = true; } }
             // Pin the EO row's Strategic Expertise to the owner's exact string (heals the dropped "(EO)").

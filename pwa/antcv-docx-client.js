@@ -1255,7 +1255,7 @@ export function buildPayload({
       : {}),
     style: buildStyle(styleConfig, navyColor),
     font_sizes: buildFontSizes(fontSizes),
-    sections: bindOrphansInSections(normalizeSections(applyChinaLayoutZh(docSections, doc, language))),
+    sections: (__academy ? _dropPreviewPagePlan : (x) => x)(bindOrphansInSections(normalizeSections(applyChinaLayoutZh(docSections, doc, language)))),
     meta_signature: {
       generator: 'AntCV',
       generator_version: (typeof window !== 'undefined' && window.ANTCV_VERSION) || '',
@@ -1275,7 +1275,7 @@ export function buildPayload({
        sections, mirroring the preview-side renderer in
        antcv-item-pages-render.js. Older workers silently ignore. */
     ...(typeof readItemPages === 'function'
-      ? { item_pages: readItemPages() }
+      ? { item_pages: __academy ? _clampItemPages(readItemPages()) : readItemPages() }
       : {}),
     /* BALANCE-OVERFLOW-001 (owner 2026-06-24, FLAG-GATED, default OFF): when the CV
        sidebar paginates DEEPER than the main, the worker normally renders the overflow
@@ -1758,6 +1758,43 @@ function _academyFormatOn(doc, layout) {
     const af = (typeof window !== 'undefined') && window.AntcvAcademyFormat;
     return !!(af && typeof af.apply === 'function');
   } catch (_) { return false; }
+}
+// ACADEMY-PAGES-001 (2026-11-06, #3527 PEAK Wind live export): the page plan (manual itemPages +
+// the coordinator's autoPages) is measured on the PREVIEW, which still shows every stored role and
+// row. After the academy projection the plan overshoots: the real export kept row_pages / _page 3 for
+// Interests, Communication and References and printed a 3rd page while page 2 was half empty. Breaks
+// past the 2-page budget are dropped (the worker flows that content on); the page-2 breaks stay,
+// because the export preflight's widths are measured for that segmented sidebar (dropping the whole
+// plan: 2 pages but Word orphans 1 -> 6). Measured on the captured payload: 3 -> 2 pages in
+// LibreOffice and Word, orphans unchanged (LO 2, Word 1).
+const ACADEMY_PAGE_BUDGET = 2;
+function _dropPreviewPagePlan(list) {
+  if (!Array.isArray(list)) return list;
+  const over = (v) => Number(v) > ACADEMY_PAGE_BUDGET;
+  return list.map((s) => {
+    if (!s || typeof s !== 'object') return s;
+    const out = { ...s };
+    if (out.row_pages && typeof out.row_pages === 'object') {
+      const rp = {};
+      Object.keys(out.row_pages).forEach((k) => { if (!over(out.row_pages[k])) rp[k] = out.row_pages[k]; });
+      out.row_pages = rp;
+    }
+    if (Array.isArray(out.items)) out.items = out.items.map((it) => (it && typeof it === 'object' && over(it._page)) ? (({ _page, ...rest }) => rest)(it) : it);
+    if (Array.isArray(out.roles)) out.roles = out.roles.map((r) => (r && typeof r === 'object' && over(r.page)) ? (({ page, ...rest }) => rest)(r) : r);
+    return out;
+  });
+}
+function _clampItemPages(map) {
+  if (!map || typeof map !== 'object') return map;
+  const out = {};
+  Object.keys(map).forEach((sid) => {
+    const m = map[sid];
+    if (!m || typeof m !== 'object') { out[sid] = m; return; }
+    const o = {};
+    Object.keys(m).forEach((k) => { if (!(Number(m[k]) > ACADEMY_PAGE_BUDGET)) o[k] = m[k]; });
+    out[sid] = o;
+  });
+  return out;
 }
 function applyAcademyFormat(list, o) {
   if (!o || !o.on || !Array.isArray(list)) return list;

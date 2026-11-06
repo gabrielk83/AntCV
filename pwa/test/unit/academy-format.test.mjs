@@ -331,6 +331,19 @@ test('buildPayload: a margin CV exports in the academy shape', () => {
   assert.ok(!p.sections.some((s) => s.id === 'outcomes'), 'results mode folds the outcomes block into the roles');
 });
 
+test('buildPayload: the preview page plan does not reach the academy export (ACADEMY-PAGES-001)', () => {
+  seed();
+  // the live #3527 export carried role.page 2 from the 4th role and row_pages 3 for the sidebar tail
+  const withPlan = () => { const f = fixture(); f[4].roles[3].page = 2; f[4].roles[4].page = 3; return { cv: f, cl: [] }; };
+  const ex = buildPayload({ sections: withPlan(), meta: { company: 'Kaleido Technology' }, doc: 'cv', language: 'da', personalInfo: { name: NAME } })
+    .sections.find((s) => s.type === 'experience');
+  assert.equal(ex.roles[3].page, 2, 'a page-2 break inside the budget stays');
+  assert.equal(ex.roles[4].page, undefined, 'a break to page 3 is dropped: the content flows on page 2');
+  const band = buildPayload({ sections: withPlan(), meta: { company: 'Kaleido Technology' }, doc: 'cv', language: 'da', personalInfo: { name: NAME }, layout: 'two_column' })
+    .sections.find((s) => s.type === 'experience');
+  assert.equal(band.roles[4].page, 3, 'the band layout keeps its page plan');
+});
+
 test('buildPayload: band / linear layouts and the kill switch keep the stored shape', () => {
   seed();
   for (const layout of ['two_column', 'linear']) {

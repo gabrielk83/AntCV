@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.6445-open-stale-tab';
+const CACHE = 'antcv-1.51.6465-stale-notice';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',
@@ -26,6 +26,7 @@ const SHELL = [
   './antcv-pub-injected-reaper-352.js',
   './antcv-cloud-put-shrink-guard-355.js',
   './antcv-app-rev-guard.js',
+  './antcv-doc-stale-notice.js',
   './antcv-jd-watch.js',
   './antcv-spell-annotator-384.js',
   './antcv-orphan-cloud-persist-385.js',

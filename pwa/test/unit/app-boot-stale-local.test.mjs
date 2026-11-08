@@ -46,7 +46,10 @@ function relay(clock) {
       const url = typeof input === 'string' ? input : input.url;
       const method = ((init && init.method) || 'GET').toUpperCase();
       let body = null; try { body = init && init.body ? JSON.parse(init.body) : null; } catch (_) {}
-      if (method === 'GET') return Promise.resolve(jsonRes(200, { ok: true, application: app() }));
+      if (method === 'GET') {
+        if (this.failNextGet) { this.failNextGet = false; return Promise.reject(new Error('offline')); }
+        return Promise.resolve(jsonRes(200, { ok: true, application: app() }));
+      }
       writes.push({ method, url, body });
       if (method === 'POST') { if (body && body.meta) row.meta = body.meta; row.updated_at = clock.t += 1; return Promise.resolve(jsonRes(200, { ok: true, application: app() })); }
       if (method === 'PUT') {
@@ -79,7 +82,8 @@ function tab(shared, session, r, clock, timers) {
     setItem: (k, v) => session.set(k, String(v)),
     removeItem: (k) => session.delete(k),
   };
-  const win = { addEventListener() {}, removeEventListener() {}, localStorage: store, sessionStorage, AntcvJdScope: { getCurrentAppId: () => '77' } };
+  const events = [];
+  const win = { addEventListener() {}, removeEventListener() {}, dispatchEvent: (e) => { events.push({ type: e.type, detail: JSON.parse(JSON.stringify(e.detail || {})) }); return true; }, localStorage: store, sessionStorage, AntcvJdScope: { getCurrentAppId: () => '77' } };
   const sb = {
     window: win, document: { visibilityState: 'visible', addEventListener() {} }, localStorage: store, sessionStorage,
     setTimeout: (fn, ms) => { const t = { fn, ms, dead: false }; timers.push(t); return t; },
@@ -87,16 +91,17 @@ function tab(shared, session, r, clock, timers) {
     setInterval: () => 0,
     Date: { now: () => clock.t }, Math, JSON, String, Object, Array, Number, Promise, RegExp, isFinite,
     Response: FakeResponse,
+    CustomEvent: class { constructor(type, init) { this.type = type; this.detail = init && init.detail; } },
     console: { info() {}, log() {}, warn() {} },
   };
-  win.fetch = r.fetch;
+  win.fetch = r.fetch.bind(r);
   vm.createContext(sb);
   vm.runInContext(ISO, sb);
   vm.runInContext(GUARD, sb);
   const g = win.AntcvAppRevGuard;
   const f = (url, init) => win.fetch('https://relay.example/api/' + url, init);
   return {
-    sb, g, win, store,
+    sb, g, win, store, events,
     get: (id) => f('applications/' + id),
     put: (id, body) => f('applications/' + id, { method: 'PUT', body: JSON.stringify(body) }),
     post: (body) => f('applications', { method: 'POST', body: JSON.stringify(body) }),
@@ -426,4 +431,58 @@ test('OPEN-STALE-TAB-001: every app.js path that puts a row into the editor stam
   assert.equal(one(appSrc, src('e.id', 'n')), 2);
   assert.equal(one(appSrc, src('recent.id', 'n')), 1);
   assert.equal(one(appSrc, src('e.id || e.application_id', 'e')), 2);
+});
+
+// ─── OPEN-STALE-NOTICE-001: the guard says when the tab stops and resumes saving ──
+
+const staleEvents = (a) => a.events.filter((e) => e.type === 'antcv:doc-stale' || e.type === 'antcv:doc-fresh');
+
+test('a skip because the row\'s sections changed fires antcv:doc-stale once; reopening fires antcv:doc-fresh', async () => {
+  const w = world();
+  const a = await openTab(w);
+  w.r.row.jd_company = 'Elma Instruments';
+  w.r.foreignPut({ cv_sections: V2.cv });
+  await a.put(77, whole(V1));
+  await a.put(77, whole(V1)); // the next auto-sync tick: still stale, no second event
+  let ev = staleEvents(a);
+  assert.equal(ev.length, 1);
+  assert.equal(ev[0].type, 'antcv:doc-stale');
+  assert.equal(ev[0].detail.id, '77');
+  assert.equal(ev[0].detail.reason, 'sections-changed');
+  assert.equal(ev[0].detail.company, 'Elma Instruments');
+  assert.equal(ev[0].detail.rowRev, w.r.row.updated_at);
+  assert.equal(a.g.docStale().reason, 'sections-changed');
+  const n = (await (await a.get(77)).json()).application;
+  a.g.markLoaded(77, n);
+  ev = staleEvents(a);
+  assert.equal(ev.length, 2);
+  assert.equal(ev[1].type, 'antcv:doc-fresh');
+  assert.equal(a.g.docStale(), null);
+});
+
+test('no notice when the conflict check could not read the row (offline), nor for a rev-only move', async () => {
+  const w = world();
+  const a = await openTab(w);
+  w.r.foreignPut({ cv_sections: V2.cv });
+  w.r.failNextGet = true;
+  const res = await (await a.put(77, whole(V1))).json();
+  assert.equal(res.skipped, 'stale_rev', 'still not saved');
+  assert.equal(staleEvents(a).length, 0, 'but nothing proves the tab is stale');
+
+  const b = await openTab(world());
+  b.g.markLoaded(77, (await (await b.get(77)).json()).application);
+  const before = staleEvents(b).length;
+  await b.post({ jd_text: 'x', meta: META }); // moves the rev, not the sections
+  assert.equal((await (await b.put(77, whole(V1))).json()).ok, true);
+  assert.equal(staleEvents(b).length, before);
+});
+
+test('a boot that was to load the row and did not fires antcv:doc-stale (boot-not-loaded)', async () => {
+  const w = world();
+  const b = w.open();
+  await b.g.bootCheck(77, () => Promise.resolve({ application: { id: 77, updated_at: 1, cv_sections: V2.cv, cl_sections: V2.cl } }));
+  b.g.bootDone();
+  const ev = staleEvents(b);
+  assert.equal(ev.length, 1);
+  assert.equal(ev[0].detail.reason, 'boot-not-loaded');
 });

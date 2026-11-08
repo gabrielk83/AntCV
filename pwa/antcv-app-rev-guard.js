@@ -76,10 +76,16 @@
  *   - every app.js path that puts a row into the editor (mount-hydrate, the topbar and
  *     Settings switches, the unsolicited fallback, both /api/prefs restores) calls
  *     markLoaded(id, row), so docRev follows the document.
+ *
+ * OPEN-STALE-NOTICE-001 (2026-11-09): a stale tab stopped saving with only a console line. The
+ * guard now fires `antcv:doc-stale` {id, reason, rowRev, docRev, company} when a sections PUT is
+ * skipped because the row's sections changed elsewhere (or the boot load did not happen), and
+ * `antcv:doc-fresh` once the document is based on the row again (a load, a saved write, or the row
+ * coming back to the document's sections). antcv-doc-stale-notice.js puts it on screen.
  */
 (function () {
   'use strict';
-  var SCRIPT_VERSION = '1.51.6445-open-stale-tab';
+  var SCRIPT_VERSION = '1.51.6465-stale-notice';
   if (window.__antcvAppRevGuardInstalled) return;
   window.__antcvAppRevGuardInstalled = SCRIPT_VERSION;
   try { if (localStorage.getItem('antcv:disable-app-rev-guard') === '1') return; } catch (_) {}
@@ -120,6 +126,15 @@
     for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); }
     return s.length + ':' + (h >>> 0).toString(36);
   }
+  // OPEN-STALE-NOTICE-001: tell the page when this tab stops saving its document and when it
+  // saves again (antcv-doc-stale-notice.js shows it). Events fire on a change only.
+  var stale = null; // null = saving; else { id, reason, rowRev, docRev, company }
+  function setStale(info) {
+    var was = !!stale;
+    stale = info || null;
+    if (was === !!stale) return;
+    try { window.dispatchEvent(new CustomEvent(stale ? 'antcv:doc-stale' : 'antcv:doc-fresh', { detail: stale || {} })); } catch (_) {}
+  }
   var seenFp = Object.create(null); // appId -> { rev, fp } of the last row response this guard read
   // A row response for the document's row: the same rev fills in the relay's fingerprint;
   // a newer rev with the same sections moves docRev forward. Different sections move nothing.
@@ -131,7 +146,7 @@
     var d = readDocRev();
     if (!d || String(d.id) !== String(id)) return;
     if (Number(d.rev) === rev) { if (d.fp !== fp) writeDocRev(id, rev, fp); return; }
-    if (d.fp === fp && rev > Number(d.rev)) writeDocRev(id, rev, fp);
+    if (d.fp === fp && rev > Number(d.rev)) { writeDocRev(id, rev, fp); setStale(null); }
   }
   // A successful PUT keeps the document in sync with the row when it carried the whole
   // document, or when it was based on the rev the document had (pinned = that rev).
@@ -140,7 +155,7 @@
     var whole = Array.isArray(sent.cv_sections) && Array.isArray(sent.cl_sections) && !!sent.meta && typeof sent.meta === 'object';
     var d = readDocRev();
     var based = pinned != null || !!(d && String(d.id) === String(id) && sent.base_rev != null && Number(sent.base_rev) === Number(d.rev));
-    if (whole || based) writeDocRev(id, app.updated_at, fpOf(app));
+    if (whole || based) { writeDocRev(id, app.updated_at, fpOf(app)); setStale(null); }
     else observeRow(id, app);
   }
   // The rev a sections PUT must be based on: the document's, when the PUT targets its row.
@@ -209,6 +224,7 @@
     if (s && s.rev === Number(rev)) fp = s.fp; // the relay's own bytes for that rev
     writeDocRev(id, rev, fp);
     if (gate.state === 'stale') gate.state = 'open';
+    setStale(null);
   }
   function bootCheck(id, getRow) {
     return Promise.resolve().then(getRow).then(function (res) {
@@ -244,6 +260,7 @@
       // The row was to be loaded and was not: the local copy is still stale. Save nothing.
       dropGate(); gate.state = 'stale';
       try { console.warn('[app-rev-guard] BOOT-STALE-LOCAL-001: the cloud row was not loaded - this tab saves no document until it is reloaded'); } catch (_) {}
+      setStale({ id: id != null ? String(id) : (readDocRev() || {}).id || '', reason: 'boot-not-loaded' });
       return;
     }
     openGate();
@@ -255,7 +272,7 @@
   function docConflict(input, init, id, conflictRev) {
     var d = readDocRev();
     var url = typeof input === 'string' ? input : (input && input.url) || '';
-    var check;
+    var check, why = '', company = '';
     if (init && init.__antcvDocRetry != null) check = Promise.resolve(null);
     else if (d && d.fp && String(d.id) === String(id)) {
       check = orig.call(window, url, { method: 'GET', credentials: (init && init.credentials) || 'include', headers: init && init.headers })
@@ -265,11 +282,15 @@
           if (!app || app.updated_at == null || (app.id != null && String(app.id) !== String(id))) return null;
           remember(id, app.updated_at, false);
           observeRow(id, app);
-          return fpOf(app) === d.fp ? Number(app.updated_at) : null;
+          if (fpOf(app) === d.fp) return Number(app.updated_at);
+          why = 'sections-changed'; company = String(app.jd_company || '');
+          return null;
         });
     } else {
       // A stamp without a fingerprint: only a rev this tab produced (the AUTOSYNC-STALE-REV-001 rule).
-      check = Promise.resolve(conflictRev != null && ownRevs[id] && ownRevs[id][String(conflictRev)] ? Number(conflictRev) : null);
+      var own = conflictRev != null && ownRevs[id] && ownRevs[id][String(conflictRev)];
+      if (!own) why = 'foreign-rev';
+      check = Promise.resolve(own ? Number(conflictRev) : null);
     }
     return check.catch(function () { return null; }).then(function (rev) {
       if (rev != null && init && typeof init.body === 'string') {
@@ -290,6 +311,8 @@
         console.info('[app-rev-guard] OPEN-STALE-TAB-001: SKIPPED a PUT for application ' + id + ' - its sections changed since this tab loaded them (row rev ' +
           conflictRev + ', document rev ' + (d && d.rev) + '). Reopen the application from the menu, or reload, to pick up the newer row.');
       } catch (_) {}
+      // A failed check (offline) or a row that moved again mid-retry proves nothing: no notice.
+      if (why) setStale({ id: String(id), reason: why, rowRev: conflictRev, docRev: d && d.rev, company: company });
       return new Response(JSON.stringify({ ok: false, skipped: 'stale_rev', updated_at: conflictRev }), {
         status: 200, headers: { 'content-type': 'application/json' },
       });
@@ -430,6 +453,6 @@
     revOf: function (id) { return revById[String(id)]; },
     ownsRev: function (id, rev) { return !!(ownRevs[String(id)] && ownRevs[String(id)][String(rev)]); },
     docRev: readDocRev, fingerprint: fpOf, markLoaded: markLoaded, bootDecision: bootDecision, bootCheck: bootCheck, bootDone: bootDone,
-    gateState: gateState, bootInfo: function () { return { state: gateState(), held: gate.held.length, decision: gate.decision }; },
+    gateState: gateState, docStale: function () { return stale ? Object.assign({}, stale) : null; }, bootInfo: function () { return { state: gateState(), held: gate.held.length, decision: gate.decision }; },
   };
 })();

@@ -33,13 +33,15 @@
  * keeps in AntcvJdScope (the row its auto-sync writes; the questions nsKey is
  * keyed by it). No row id -> no write. PUT only after that row was read, and
  * only when the local stores differ from what the row holds.
+ * 1.2: that signature is kept per row; 1.1 reset it on every id change, and a
+ * boot blip of the scope id (3536 -> kernel -> 3536) re-sent the same stores.
  *
  * Kill-switch: localStorage['antcv:disable-analysis-persist'] = '1'.
  */
 (function () {
   'use strict';
   if (window.__antcvAnalysisPersistInstalled) return;
-  var VERSION = '1.1';
+  var VERSION = '1.2';
   window.__antcvAnalysisPersistInstalled = VERSION;
 
   var KILL = 'antcv:disable-analysis-persist';
@@ -108,15 +110,17 @@
   }
 
   // ---- persist (dedicated partial PUT) --------------------------------------
-  var lastPushed = '';
+  // Per-row signature of what the row is known to hold, so a short scope blip
+  // (row id -> 'kernel' -> same row) never re-sends the same stores.
+  var pushedSig = {};
   var inFlight = false;
   function persist(reason) {
     if (killed() || inFlight) return;
     syncTarget();
     var id = activeId; if (id == null || restoredFor !== id) return;
     var payload = collectLocal(id); if (!payload) return;
-    var sig = id + '|' + JSON.stringify(payload);
-    if (sig === lastPushed) return;
+    var sig = JSON.stringify(payload);
+    if (pushedSig[id] === sig) return;
     var last = Number(rawGet(LAST_TRY) || 0);
     if (last && Date.now() - last < 8000 && reason !== 'forced') return;
     try { localStorage.setItem(LAST_TRY, String(Date.now())); } catch (_) {}
@@ -125,7 +129,7 @@
     inFlight = true;
     req.then(function (r) {
       inFlight = false;
-      if (r && r.ok) { lastPushed = sig; try { console.debug('[analysis-persist] pushed gap_state/questions for app ' + id); } catch (_) {} }
+      if (r && r.ok) { pushedSig[id] = sig; try { console.debug('[analysis-persist] pushed gap_state/questions for app ' + id); } catch (_) {} }
     }).catch(function () { inFlight = false; });
   }
 
@@ -159,7 +163,7 @@
         if (!cqj || cqj === 'null') { try { localStorage.setItem(qjk, extra.questionsJd); wrote++; } catch (_) {} }
       }
       restoredFor = id;
-      lastPushed = id + '|' + JSON.stringify(extra);   // the row already holds this: no echo PUT
+      pushedSig[id] = JSON.stringify(extra);   // the row already holds this: no echo PUT
       if (wrote) {
         try { console.debug('[analysis-persist] restored ' + wrote + ' analysis store(s) for app ' + id); } catch (_) {}
         try { window.dispatchEvent(new Event('antcv:sections-updated')); } catch (_) {}
@@ -180,10 +184,7 @@
   function syncTarget() {
     if (killed()) return;
     var id = tabRowId();
-    if (id !== activeId) {
-      activeId = id;
-      lastPushed = '';             // new row -> allow a fresh push
-    }
+    activeId = id;
     if (id != null) restore(id);   // pull its stored analysis stores (once per row)
   }
 

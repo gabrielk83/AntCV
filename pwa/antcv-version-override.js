@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.6505-stale-notice-pos';
+  const TARGET_VERSION = '1.51.6525-analysis-once';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.6505-stale-notice-pos',
     '1.51.6485-analysis-row',
     '1.51.6465-stale-notice',
     '1.51.6445-open-stale-tab',

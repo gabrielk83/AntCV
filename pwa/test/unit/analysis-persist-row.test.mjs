@@ -139,6 +139,26 @@ test('a local edit after restore is pushed to the tab row', async () => {
   assert.equal(rows[3537].analysis_extra.questions, AXIS_Q);
 });
 
+test('a scope blip (3536 -> kernel -> 3536) does not re-send the same stores', async () => {
+  // Seen on production 1.51.6485: two identical analysis_extra PUTs to #3536, 20 s apart.
+  const rows = rowsFixture();
+  const t = boot({ rows, globalActive: 3537, tabRow: 3536, local: { 'antcv:app:3536:questions': ELMA_Q } });
+  await t.advance(2000);
+  t.settle(); await t.advance(9000);
+  assert.equal(t.r.writes().length, 1);
+  t.ctx.AntcvJdScope.setCurrentAppId('kernel');
+  await t.advance(8000);
+  assert.equal(t.ctx.AntcvAnalysisPersist.target(), null);
+  t.ctx.AntcvJdScope.setCurrentAppId('3536');
+  await t.advance(8000);
+  t.settle(); await t.advance(9000);
+  assert.equal(t.r.writes().length, 1, JSON.stringify(t.r.writes()));
+  t.shared.set('antcv:app:3536:questions', '[]');   // a real edit still goes out
+  t.settle(); await t.advance(9000);
+  assert.equal(t.r.writes().length, 2);
+  assert.equal(rows[3536].analysis_extra.questions, '[]');
+});
+
 test('no row yet (kernel scope) -> no GET, no PUT', async () => {
   const rows = rowsFixture();
   const t = boot({ rows, globalActive: 3537, tabRow: null, local: { 'antcv:app:kernel:questions': ELMA_Q } });

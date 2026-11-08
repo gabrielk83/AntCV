@@ -39,7 +39,6 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 <!-- SHIFT:BEGIN — one JSON object per line; managed by scripts/shift.mjs, safe to hand-edit a line if a session died without releasing -->
 {"id":"sh_mupev15f_bqmz","started":"2026-10-01T10:48:17.049Z","host":"vm","worktree":null,"branch":"claude/project-thread-cub2nb","range":"1.51.4786-1.51.4790","task":"impact types in result bullets (thread cub2nb)","beat":"2026-10-01T10:48:17.054Z"}
 {"id":"sh_mw3hijam_7jnk","started":"2026-11-05T11:51:01.722Z","host":"Gabo-PC","worktree":"ecstatic-heisenberg-9cfa6d","branch":"claude/ecstatic-heisenberg-9cfa6d","range":"1.51.5665-1.51.5684","task":"MARGIN-LAYOUT-001: header card inside the sidebar (house margin format), no band","beat":"2026-11-05T11:51:01.779Z"}
-{"id":"sh_mw8fvddz_21px","started":"2026-11-08T23:03:52.243Z","host":"Gabo-PC","worktree":"hungry-keller-685b36","branch":"claude/hungry-keller-685b36","range":"1.51.6485-1.51.6504","task":"ANALYSIS-PERSIST-ROW-001: analysis-persist PUTs this tab's analysis_extra to the GLOBAL active row","beat":"2026-11-08T23:03:52.298Z"}
 {"id":"sh_mw8gcn3q_5wet","started":"2026-11-08T23:17:17.989Z","host":"Gabo-PC","worktree":"great-hodgkin-90bb23","branch":"claude/great-hodgkin-90bb23","range":"1.51.6505-1.51.6524","task":"OPEN-STALE-NOTICE-001b: lift the not-saving chip above the bottom toolbar","beat":"2026-11-08T23:17:18.043Z"}
 <!-- SHIFT:END -->
 

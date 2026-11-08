@@ -48,7 +48,7 @@
  */
 (function (root) {
   'use strict';
-  var VERSION = '1.51.6305-links';
+  var VERSION = '1.51.6365-trackman-title';
 
   // Mirror of pwa/gold-rules.json academy_format (test: academy-format.test.mjs).
   var RULES = {
@@ -715,6 +715,34 @@
     if (o.ai) out = linkAntcv(out, changes);
     return { sections: out, changes: changes };
   }
+  // TRACKMAN-TITLE-001 (owner 2026-11-08): the Trackman CV title is "Project Management Intern,
+  // Hardware Development & Supply" (the LinkedIn title, kernel v13r; gold-rules roles.canon_titles
+  // fixes the role line of a stored document once normalize-415 runs). Documents generated before
+  // carry the old title in role lines and prose; the export swaps the exact old phrases (English and
+  // the Danish rendering seen in #3491) for the title in the document's language. Nothing else moves.
+  var TRACKMAN_TITLE = {
+    en: 'Project Management Intern, Hardware Development & Supply',
+    da: 'Praktikant i projektledelse, hardwareudvikling og forsyning',
+    es: 'Becario de Gestión de Proyectos, Desarrollo y Suministro de Hardware',
+    zh: '项目管理实习生，硬件开发与供应',
+  };
+  var OLD_TRACKMAN_TITLE = /\bProject Manager, Hardware Development (?:&|and|og) Supply\b|\bProjektleder, hardwareudvikling og (?:leverandører|forsyning)\b/gi;
+  function retitle(sections, lang) {
+    var want = TRACKMAN_TITLE[lang] || TRACKMAN_TITLE.en, n = 0;
+    var walk = function (x) {
+      if (typeof x === 'string') { OLD_TRACKMAN_TITLE.lastIndex = 0; if (!OLD_TRACKMAN_TITLE.test(x)) return x; n++; OLD_TRACKMAN_TITLE.lastIndex = 0; return x.replace(OLD_TRACKMAN_TITLE, want); }
+      if (Array.isArray(x)) { var a = x.map(walk); return a.some(function (v, i) { return v !== x[i]; }) ? a : x; }
+      if (x && typeof x === 'object') {
+        var o = null;
+        Object.keys(x).forEach(function (k) { var v = walk(x[k]); if (v !== x[k]) { o = o || Object.assign({}, x); o[k] = v; } });
+        return o || x;
+      }
+      return x;
+    };
+    var out = Array.isArray(sections) ? walk(sections) : sections;
+    return { sections: out, count: n };
+  }
+
   // AI-REPO-LINK-001 for every document the academy projection does not shape (the letter, the
   // band and linear CVs): link the first AntCV mention when the job is AI-oriented.
   function repoLink(sections, o0) {
@@ -981,7 +1009,7 @@
     return { ok: !issues.length, issues: issues };
   }
 
-  var api = { version: VERSION, RULES: RULES, langOf: langOf, wrongLang: wrongLang, audit: audit, apply: apply, plan: plan, balance: balance, BAL: BAL, repoLink: repoLink, aiOriented: aiOriented, ANTCV_URL: ANTCV_URL, labels: labels, isPlaceholder: isPlaceholder, ownerFact: ownerFact };
+  var api = { version: VERSION, RULES: RULES, langOf: langOf, wrongLang: wrongLang, audit: audit, apply: apply, plan: plan, balance: balance, BAL: BAL, repoLink: repoLink, aiOriented: aiOriented, ANTCV_URL: ANTCV_URL, retitle: retitle, TRACKMAN_TITLE: TRACKMAN_TITLE, labels: labels, isPlaceholder: isPlaceholder, ownerFact: ownerFact };
   root.AntcvAcademyFormat = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

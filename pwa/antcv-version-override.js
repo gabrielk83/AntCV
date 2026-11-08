@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.6345-elma-preview';
+  const TARGET_VERSION = '1.51.6365-trackman-title';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.6345-elma-preview',
     '1.51.6325-bind-cap',
     '1.51.6305-links',
     '1.51.6265-academy-balance',

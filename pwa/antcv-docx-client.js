@@ -1860,7 +1860,19 @@ function _applyRepoLink(list, o) {
     return (res && Array.isArray(res.sections)) ? res.sections : list;
   } catch (_) { return list; }
 }
-function applyAcademyFormat(list, o) {
+// TRACKMAN-TITLE-001 (owner 2026-11-08): every CV and letter export swaps the old Trackman title for
+// "Project Management Intern, Hardware Development & Supply" in the document's language.
+function _applyRetitle(list, o) {
+  try {
+    const af = (typeof window !== 'undefined') && window.AntcvAcademyFormat;
+    if (!af || typeof af.retitle !== 'function' || !Array.isArray(list)) return list;
+    const r = af.retitle(list, o && o.language);
+    if (r && r.count) { try { console.info('[TRACKMAN-TITLE-001] ' + r.count + ' old title(s) replaced'); } catch (_) {} }
+    return (r && Array.isArray(r.sections)) ? r.sections : list;
+  } catch (_) { return list; }
+}
+function applyAcademyFormat(list0, o) {
+  const list = _applyRetitle(list0, o);
   if (o && !o.on) return _applyRepoLink(list, o);
   if (!o || !o.on || !Array.isArray(list)) return list;
   try {

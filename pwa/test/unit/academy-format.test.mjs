@@ -434,6 +434,35 @@ test('AI job, cover letter: the first AntCV mention links; a letter that spells 
   assert.ok(!q.sections.find((s) => s.id === 'opening').content.includes('[AntCV]'));
 });
 
+// ── TRACKMAN-TITLE-001: the old Trackman title never reaches an export
+test('retitle: the exact old Trackman title becomes the LinkedIn title in the document language; nothing else moves', () => {
+  const secs = [
+    { id: 'experience', type: 'experience', roles: [{ id: 'trackman', title: 'Project Manager, Hardware Development & Supply', company: 'Trackman A/S', bullets: ['Organise the review baseline.'] }] },
+    { id: 'opening', type: 'text', content: 'As Project Manager, Hardware Development & Supply at Trackman I organise reviews. I want Project Manager roles.' },
+  ];
+  const en = AF.retitle(secs, 'en');
+  assert.equal(en.count, 2);
+  assert.equal(en.sections[0].roles[0].title, 'Project Management Intern, Hardware Development & Supply');
+  assert.equal(en.sections[1].content, 'As Project Management Intern, Hardware Development & Supply at Trackman I organise reviews. I want Project Manager roles.');
+  assert.equal(secs[0].roles[0].title, 'Project Manager, Hardware Development & Supply', 'input untouched');
+  const da = AF.retitle([{ id: 'experience', type: 'experience', roles: [{ id: 'trackman', title: 'Projektleder, hardwareudvikling og leverandører' }] }], 'da');
+  assert.equal(da.sections[0].roles[0].title, 'Praktikant i projektledelse, hardwareudvikling og forsyning');
+  const fx = AF.retitle(fixture(), 'da');
+  assert.equal(fx.count, 1, 'the fixture Trackman role carries the old Danish title (#3491)');
+  const other = fixture(); other[4].roles[0].title = 'Hardwarepraktik';
+  assert.equal(AF.retitle(other, 'da').count, 0, 'any other title is left alone');
+});
+
+test('buildPayload: a stored letter and CV with the old title export the new one', () => {
+  seed();
+  const cl = [{ id: 'opening', type: 'text', loc: 'main', content: 'In my current role as Project Manager, Hardware Development & Supply I organise supplier reviews.' }];
+  const p = buildPayload({ sections: { cv: [], cl }, meta: { company: 'Kaleido Technology' }, doc: 'cl', language: 'en', personalInfo: { name: NAME } });
+  assert.match(p.sections.find((s) => s.id === 'opening').content, /as Project Management Intern, Hardware Development & Supply I organise/);
+  const f = fixture(); f[4].roles[0].title = 'Projektleder, hardwareudvikling og leverandører';
+  const q = buildPayload({ sections: { cv: f, cl: [] }, meta: { company: 'Kaleido Technology' }, doc: 'cv', language: 'da', personalInfo: { name: NAME } });
+  assert.equal(q.sections.find((s) => s.type === 'experience').roles[0].title, 'Praktikant i projektledelse, hardwareudvikling og forsyning');
+});
+
 test('buildPayload: band / linear layouts and the kill switch keep the stored shape', () => {
   seed();
   for (const layout of ['two_column', 'linear']) {

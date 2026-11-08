@@ -20,7 +20,7 @@ const sidecar = fs.readFileSync(path.join(root, 'antcv-sections-normalize-415.js
 
 const LANGS = ['en', 'da', 'es', 'zh'];
 const CANONICAL_IDS = [
-  'kanzen', 'innoviz-ccr', 'innoviz-sa', 'sirin', 'mepro-tl', 'mepro-eng',
+  'trackman', 'kanzen', 'innoviz-ccr', 'innoviz-sa', 'sirin', 'mepro-tl', 'mepro-eng',
   'tau-security', 'tau-research', 'tau-teaching', 'tau-council', 'idf',
   'volunteer-wolves', 'earlier-career',
 ];

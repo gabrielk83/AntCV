@@ -242,6 +242,7 @@
   // ("Videnskabelig assistent" vs "Forskningsassistent") can never fork the
   // same position across languages. Strict JSON between the markers.
   var ROLE_CANON_FALLBACK = /* GOLD-ROLES-MIRROR-BEGIN */ {
+    "trackman": { "en": "Project Management Intern, Hardware Development & Supply", "da": "Praktikant i projektledelse, hardwareudvikling og forsyning", "es": "Becario de Gestión de Proyectos, Desarrollo y Suministro de Hardware", "zh": "项目管理实习生，硬件开发与供应" },
     "kanzen": { "en": "Product / Project Expert", "da": "Produkt- og projektekspert", "es": "Experto en Producto y Proyectos", "zh": "产品/项目专家" },
     "innoviz-ccr": { "en": "Change Request Lead", "da": "Ansvarlig for ændringsanmodninger", "es": "Líder de Solicitudes de Cambio", "zh": "变更请求负责人" },
     "innoviz-sa": { "en": "System Architect", "da": "Systemarkitekt", "es": "Arquitecto de Sistemas", "zh": "系统架构师" },

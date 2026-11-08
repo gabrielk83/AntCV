@@ -18018,6 +18018,7 @@ window.__antcvTxtSame =
                           Array.isArray(e.cl_sections)
                         )
                           try {
+                            try { window.AntcvAppRevGuard && window.AntcvAppRevGuard.markLoaded && window.AntcvAppRevGuard.markLoaded(e.id || e.application_id, e); } catch (_) {} // OPEN-STALE-TAB-001: the document is now based on this row's rev.
                             ao({
                               // SECTIONS-EMPTY-TEMPLATE-FLOOR-001: template, never blank
                               cv: Array.isArray(e.cv_sections) && e.cv_sections.length
@@ -23876,6 +23877,7 @@ window.__antcvTxtSame =
                       // a different app gets [] so it can never wear another
                       // application's letter.
                       const __sameApp = String(window.__antcvContentAppId || "") === String(e.id);
+                      try { window.AntcvAppRevGuard && window.AntcvAppRevGuard.markLoaded && window.AntcvAppRevGuard.markLoaded(e.id || e.application_id, e); } catch (_) {} // OPEN-STALE-TAB-001: the document is now based on this row's rev.
                       ao({
                         cv: Array.isArray(e.cv_sections) && e.cv_sections.length
                           ? e.cv_sections
@@ -42365,7 +42367,8 @@ window.__antcvTxtSame =
                                                 // so it looked like nothing happened.
                                                 // Surface the loaded CV: switch to the
                                                 // editor and close the Settings panel.
-                                                (__hasReal ? (ao({
+                                                (__hasReal ? ((() => { try { window.AntcvAppRevGuard && window.AntcvAppRevGuard.markLoaded && window.AntcvAppRevGuard.markLoaded(e.id, n); } catch (_) {} })(), // OPEN-STALE-TAB-001
+                                                  ao({
                                                   cv: (n.cv_sections && n.cv_sections.length) ? n.cv_sections : me().cv, // SECTIONS-EMPTY-TEMPLATE-FLOOR-001
                                                   cl: (n.cl_sections && n.cl_sections.length) ? n.cl_sections : me().cl,
                                                 }),
@@ -43688,6 +43691,10 @@ window.__antcvTxtSame =
                                 const detail = await oo.get(recent.id);
                                 if (!detail || !detail.application) return;
                                 const n = detail.application;
+                                try {
+                                  // OPEN-STALE-TAB-001: the document is now based on this row's rev.
+                                  window.AntcvAppRevGuard && window.AntcvAppRevGuard.markLoaded && window.AntcvAppRevGuard.markLoaded(recent.id, n);
+                                } catch (_) {}
                                 try {
                                   ao({
                                     cv: (n.cv_sections && n.cv_sections.length) ? n.cv_sections : me().cv, // SECTIONS-EMPTY-TEMPLATE-FLOOR-001
@@ -49006,7 +49013,8 @@ window.__antcvTxtSame =
                                     // surface the loaded CV — switch to the
                                     // editor view and hydrate sections + meta
                                     // (incl. subtitle) from the saved record.
-                                    (__hasReal ? (ao({
+                                    (__hasReal ? ((() => { try { window.AntcvAppRevGuard && window.AntcvAppRevGuard.markLoaded && window.AntcvAppRevGuard.markLoaded(e.id, n); } catch (_) {} })(), // OPEN-STALE-TAB-001
+                                      ao({
                                       cv: (n.cv_sections && n.cv_sections.length) ? n.cv_sections : me().cv, // SECTIONS-EMPTY-TEMPLATE-FLOOR-001
                                       cl: (n.cl_sections && n.cl_sections.length) ? n.cl_sections : me().cl,
                                     }),

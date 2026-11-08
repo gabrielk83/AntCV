@@ -57,17 +57,36 @@
  *     In sync -> released in order. Cloud row loaded -> dropped ({ok:false,
  *     skipped:'stale_doc'}), and so is any such write in the next 1.5 s (timers armed by
  *     the stale React state). No decision within 60 s of the first held write -> released.
+ *
+ * OPEN-STALE-TAB-001 (2026-11-08): the same overwrite from a tab that stays OPEN. Two
+ * routes, both reproduced on 1.51.6425: (a) any GET of the row after the foreign edit
+ * re-stamps revById, so the next auto-sync PUT carries the fresh rev; (b) the tab's own
+ * upsert POST lands after the foreign edit, and its rev counts as "this tab's own", so the
+ * PUT is accepted directly or after the self-retry. Now:
+ *   - `antcv:docRev` also keeps `fp`, a fingerprint of the row's cv_sections + cl_sections
+ *     as the relay returned them at that rev. Every GET/POST/PUT response for the
+ *     document's row whose sections still match `fp` moves docRev.rev forward (an upsert
+ *     or a partial write moved the rev, not the document). A response whose sections
+ *     differ moves nothing.
+ *   - a PUT that carries sections to the document's row gets base_rev = docRev.rev, not
+ *     the last rev any request saw. Other PUTs keep revById.
+ *   - a 409 on such a PUT: the guard GETs the row; same sections -> re-sent once on the
+ *     row's rev; different sections -> {ok:false, skipped:'stale_rev'} and the tab stays
+ *     stale until it loads the row (reload, or reopen from the menu).
+ *   - every app.js path that puts a row into the editor (mount-hydrate, the topbar and
+ *     Settings switches, the unsolicited fallback, both /api/prefs restores) calls
+ *     markLoaded(id, row), so docRev follows the document.
  */
 (function () {
   'use strict';
-  var SCRIPT_VERSION = '1.51.6425-boot-stale-local';
+  var SCRIPT_VERSION = '1.51.6445-open-stale-tab';
   if (window.__antcvAppRevGuardInstalled) return;
   window.__antcvAppRevGuardInstalled = SCRIPT_VERSION;
   try { if (localStorage.getItem('antcv:disable-app-rev-guard') === '1') return; } catch (_) {}
 
   var revById = Object.create(null); // appId -> updated_at last loaded/saved BY THIS TAB
   var ownRevs = Object.create(null); // appId -> { rev: 1 } revs THIS tab produced (POST/PUT responses)
-  var stats = { posts: 0, selfRetries: 0, skips: 0, bootHeld: 0, bootReleased: 0, bootDropped: 0 };
+  var stats = { posts: 0, selfRetries: 0, skips: 0, bootHeld: 0, bootReleased: 0, bootDropped: 0, docRetries: 0, docSkips: 0 };
   var RE = /\/api\/applications\/(\d+)(?:[?#]|$)/;
   var RE_COLL = /\/api\/applications(?:[?#]|$)/;
   function idOf(url) { try { var m = RE.exec(String(url || '')); return m ? m[1] : null; } catch (_) { return null; } }
@@ -85,18 +104,50 @@
       return (d && d.id != null && d.rev != null && isFinite(Number(d.rev))) ? d : null;
     } catch (_) { return null; }
   }
-  function writeDocRev(id, rev) {
+  function writeDocRev(id, rev, fp) {
     if (id == null || rev == null || !isFinite(Number(rev))) return;
-    try { localStorage.setItem(DOC_REV, JSON.stringify({ id: String(id), rev: Number(rev), at: Date.now() })); } catch (_) {}
+    var d = { id: String(id), rev: Number(rev), at: Date.now() };
+    if (fp) d.fp = fp;
+    try { localStorage.setItem(DOC_REV, JSON.stringify(d)); } catch (_) {}
+  }
+  // OPEN-STALE-TAB-001: fingerprint of a row's document (cv_sections + cl_sections) as the
+  // relay returns it; null when the response carries neither.
+  function fpOf(app) {
+    if (!app || typeof app !== 'object' || !('cv_sections' in app || 'cl_sections' in app)) return null;
+    var s;
+    try { s = JSON.stringify([app.cv_sections == null ? null : app.cv_sections, app.cl_sections == null ? null : app.cl_sections]); } catch (_) { return null; }
+    var h = 0x811c9dc5;
+    for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+    return s.length + ':' + (h >>> 0).toString(36);
+  }
+  var seenFp = Object.create(null); // appId -> { rev, fp } of the last row response this guard read
+  // A row response for the document's row: the same rev fills in the relay's fingerprint;
+  // a newer rev with the same sections moves docRev forward. Different sections move nothing.
+  function observeRow(id, app) {
+    var fp = fpOf(app);
+    if (!fp || app.updated_at == null || !isFinite(Number(app.updated_at))) return;
+    var rev = Number(app.updated_at);
+    seenFp[String(id)] = { rev: rev, fp: fp };
+    var d = readDocRev();
+    if (!d || String(d.id) !== String(id)) return;
+    if (Number(d.rev) === rev) { if (d.fp !== fp) writeDocRev(id, rev, fp); return; }
+    if (d.fp === fp && rev > Number(d.rev)) writeDocRev(id, rev, fp);
   }
   // A successful PUT keeps the document in sync with the row when it carried the whole
-  // document, or when it was based on the rev the document already had.
-  function noteDocWrite(id, rev, sent) {
+  // document, or when it was based on the rev the document had (pinned = that rev).
+  function noteDocWrite(id, app, sent, pinned) {
     if (!sent || typeof sent !== 'object') return;
     var whole = Array.isArray(sent.cv_sections) && Array.isArray(sent.cl_sections) && !!sent.meta && typeof sent.meta === 'object';
     var d = readDocRev();
-    var based = !!(d && String(d.id) === String(id) && sent.base_rev != null && Number(sent.base_rev) === Number(d.rev));
-    if (whole || based) writeDocRev(id, rev);
+    var based = pinned != null || !!(d && String(d.id) === String(id) && sent.base_rev != null && Number(sent.base_rev) === Number(d.rev));
+    if (whole || based) writeDocRev(id, app.updated_at, fpOf(app));
+    else observeRow(id, app);
+  }
+  // The rev a sections PUT must be based on: the document's, when the PUT targets its row.
+  function docBase(id, body) {
+    if (!body || !(Array.isArray(body.cv_sections) || Array.isArray(body.cl_sections))) return null;
+    var d = readDocRev();
+    return d && String(d.id) === String(id) ? Number(d.rev) : null;
   }
   // Pure: keep the local copy only when it is based on the row's current rev.
   function bootDecision(o) {
@@ -148,8 +199,17 @@
     if (gate.state === 'drop' && Date.now() >= gate.until) gate.state = 'open';
     return gate.state;
   }
-  // A caller that has loaded the row since may let a 'stale' tab save again.
-  function markLoaded(id, rev) { writeDocRev(id, rev); if (gate.state === 'stale') gate.state = 'open'; }
+  // app.js calls this wherever it puts a row into the editor (the row object, or a bare rev).
+  // The document is then based on that rev; a 'stale' tab may save again.
+  function markLoaded(id, row) {
+    var rev = row && typeof row === 'object' ? row.updated_at : row;
+    if (id == null || rev == null || !isFinite(Number(rev))) return;
+    var fp = row && typeof row === 'object' ? fpOf(row) : null;
+    var s = seenFp[String(id)];
+    if (s && s.rev === Number(rev)) fp = s.fp; // the relay's own bytes for that rev
+    writeDocRev(id, rev, fp);
+    if (gate.state === 'stale') gate.state = 'open';
+  }
   function bootCheck(id, getRow) {
     return Promise.resolve().then(getRow).then(function (res) {
       var app = res && res.application;
@@ -157,7 +217,13 @@
       var dec = bootDecision({ chosenId: id, docRev: readDocRev(), rowRev: app && app.updated_at,
         rowEmpty: !!app && !full(app.cv_sections) && !full(app.cl_sections) });
       gate.decision = dec;
-      if (!dec.load) { if (gate.state === 'held') openGate(); return { load: false, decision: dec }; }
+      if (!dec.load) {
+        // OPEN-STALE-TAB-001: the kept local copy is based on this row now - in sync (fill in the
+        // fingerprint a 1.51.6425 stamp lacks), or an empty row the local copy will fill.
+        if ((dec.reason === 'in-sync' || dec.reason === 'row-empty') && app) markLoaded(id, app);
+        if (gate.state === 'held') openGate();
+        return { load: false, decision: dec };
+      }
       var kept = backupLocal(id, dec, app.updated_at);
       try {
         console.warn('[app-rev-guard] BOOT-STALE-LOCAL-001: the local copy of application ' + id + ' predates the cloud row (' +
@@ -172,7 +238,7 @@
   }
   // app.js calls this when mount-hydrate ends: with the row it loaded, or bare.
   function bootDone(id, row) {
-    if (id != null && row && row.updated_at != null) { writeDocRev(id, row.updated_at); dropGate(); return; }
+    if (id != null && row && row.updated_at != null) { markLoaded(id, row); dropGate(); return; }
     if (gate.state !== 'held') return;
     if (gate.decision && gate.decision.load) {
       // The row was to be loaded and was not: the local copy is still stale. Save nothing.
@@ -181,6 +247,53 @@
       return;
     }
     openGate();
+  }
+
+  // OPEN-STALE-TAB-001: a sections PUT based on the document's rev met a newer row. The row's
+  // sections still the document's base (an upsert or a partial write moved the rev) -> re-sent
+  // once on the row's rev. Different sections -> the document changed elsewhere: skipped.
+  function docConflict(input, init, id, conflictRev) {
+    var d = readDocRev();
+    var url = typeof input === 'string' ? input : (input && input.url) || '';
+    var check;
+    if (init && init.__antcvDocRetry != null) check = Promise.resolve(null);
+    else if (d && d.fp && String(d.id) === String(id)) {
+      check = orig.call(window, url, { method: 'GET', credentials: (init && init.credentials) || 'include', headers: init && init.headers })
+        .then(function (r) { return r && r.ok ? r.json() : null; })
+        .then(function (j) {
+          var app = j && j.application;
+          if (!app || app.updated_at == null || (app.id != null && String(app.id) !== String(id))) return null;
+          remember(id, app.updated_at, false);
+          observeRow(id, app);
+          return fpOf(app) === d.fp ? Number(app.updated_at) : null;
+        });
+    } else {
+      // A stamp without a fingerprint: only a rev this tab produced (the AUTOSYNC-STALE-REV-001 rule).
+      check = Promise.resolve(conflictRev != null && ownRevs[id] && ownRevs[id][String(conflictRev)] ? Number(conflictRev) : null);
+    }
+    return check.catch(function () { return null; }).then(function (rev) {
+      if (rev != null && init && typeof init.body === 'string') {
+        try {
+          var b = JSON.parse(init.body);
+          if (b && typeof b === 'object') {
+            b.base_rev = rev;
+            var init2 = Object.assign({}, init, { body: JSON.stringify(b) });
+            try { Object.defineProperty(init2, '__antcvDocRetry', { value: rev, enumerable: false }); } catch (_) { init2.__antcvDocRetry = rev; }
+            stats.docRetries++;
+            try { console.info('[app-rev-guard] OPEN-STALE-TAB-001: application ' + id + ' moved to rev ' + rev + ' with the same sections - re-sent the PUT on that rev'); } catch (_) {}
+            return inner(input, init2);
+          }
+        } catch (_) {}
+      }
+      stats.skips++; stats.docSkips++;
+      try {
+        console.info('[app-rev-guard] OPEN-STALE-TAB-001: SKIPPED a PUT for application ' + id + ' - its sections changed since this tab loaded them (row rev ' +
+          conflictRev + ', document rev ' + (d && d.rev) + '). Reopen the application from the menu, or reload, to pick up the newer row.');
+      } catch (_) {}
+      return new Response(JSON.stringify({ ok: false, skipped: 'stale_rev', updated_at: conflictRev }), {
+        status: 200, headers: { 'content-type': 'application/json' },
+      });
+    });
   }
 
   var orig = window.fetch;
@@ -197,7 +310,7 @@
           if (res && res.ok) {
             res.clone().json().then(function (j) {
               var app = j && j.application;
-              if (app && app.id != null && app.updated_at != null) { stats.posts++; remember(String(app.id), app.updated_at, true); }
+              if (app && app.id != null && app.updated_at != null) { stats.posts++; remember(String(app.id), app.updated_at, true); observeRow(String(app.id), app); }
             }).catch(function () {});
           }
         } catch (_) {}
@@ -205,13 +318,19 @@
       });
     }
 
-    // Inject base_rev into a PUT body when this tab has a stamp for the row.
-    if (method === 'PUT' && init && typeof init.body === 'string' && revById[id] != null) {
+    // Inject base_rev into a PUT body: the document's rev for a sections PUT to its row
+    // (OPEN-STALE-TAB-001), else this tab's last stamp for the row.
+    var pinned = init && init.__antcvDocRetry != null ? init.__antcvDocRetry : null;
+    if (method === 'PUT' && init && typeof init.body === 'string' && pinned == null) {
       try {
         var body = JSON.parse(init.body);
         if (body && typeof body === 'object' && body.base_rev === undefined) {
-          body.base_rev = revById[id];
-          init = Object.assign({}, init, { body: JSON.stringify(body) });
+          pinned = docBase(id, body);
+          var base = pinned != null ? pinned : revById[id];
+          if (base != null) {
+            body.base_rev = base;
+            init = Object.assign({}, init, { body: JSON.stringify(body) });
+          }
         }
       } catch (_) {}
     }
@@ -220,6 +339,7 @@
       try {
         if (method === 'PUT' && res && res.status === 409) {
           return res.clone().json().catch(function () { return null; }).then(function (j) {
+            if (j && j.error === 'conflict' && pinned != null) return docConflict(input, init, id, j.updated_at);
             if (j && j.error === 'conflict') {
               // AUTOSYNC-STALE-REV-001: a conflict against a rev THIS tab produced (its own
               // upsert raced this PUT) is not a foreign writer - advance and re-send once.
@@ -260,8 +380,8 @@
               if (method === 'PUT') { // BOOT-STALE-LOCAL-001
                 var sent = null;
                 try { sent = JSON.parse(init.body); } catch (_) {}
-                noteDocWrite(id, app.updated_at, sent);
-              }
+                noteDocWrite(id, app, sent, pinned);
+              } else observeRow(id, app); // OPEN-STALE-TAB-001
             }
           }).catch(function () {});
         }
@@ -309,7 +429,7 @@
     version: SCRIPT_VERSION, stats: stats,
     revOf: function (id) { return revById[String(id)]; },
     ownsRev: function (id, rev) { return !!(ownRevs[String(id)] && ownRevs[String(id)][String(rev)]); },
-    docRev: readDocRev, markLoaded: markLoaded, bootDecision: bootDecision, bootCheck: bootCheck, bootDone: bootDone,
+    docRev: readDocRev, fingerprint: fpOf, markLoaded: markLoaded, bootDecision: bootDecision, bootCheck: bootCheck, bootDone: bootDone,
     gateState: gateState, bootInfo: function () { return { state: gateState(), held: gate.held.length, decision: gate.decision }; },
   };
 })();

@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.6425-boot-stale-local';
+  const TARGET_VERSION = '1.51.6445-open-stale-tab';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.6425-boot-stale-local',
     '1.51.6405-cc-company',
     '1.51.6386-role-wrap',
     '1.51.6385-role-line',

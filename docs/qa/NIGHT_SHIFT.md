@@ -39,7 +39,6 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 <!-- SHIFT:BEGIN — one JSON object per line; managed by scripts/shift.mjs, safe to hand-edit a line if a session died without releasing -->
 {"id":"sh_mupev15f_bqmz","started":"2026-10-01T10:48:17.049Z","host":"vm","worktree":null,"branch":"claude/project-thread-cub2nb","range":"1.51.4786-1.51.4790","task":"impact types in result bullets (thread cub2nb)","beat":"2026-10-01T10:48:17.054Z"}
 {"id":"sh_mw3hijam_7jnk","started":"2026-11-05T11:51:01.722Z","host":"Gabo-PC","worktree":"ecstatic-heisenberg-9cfa6d","branch":"claude/ecstatic-heisenberg-9cfa6d","range":"1.51.5665-1.51.5684","task":"MARGIN-LAYOUT-001: header card inside the sidebar (house margin format), no band","beat":"2026-11-05T11:51:01.779Z"}
-{"id":"sh_mw7vdea2_ggch","started":"2026-11-08T13:30:01.267Z","host":"Gabo-PC","worktree":"sleepy-chaum-2d6a41","branch":"claude/sleepy-chaum-2d6a41","range":"1.51.6345-1.51.6364","task":"ELMA-PREVIEW-001: core-comp table blink, empty CL marker for CV-only applications, preview page count vs export (re-claim, overtaken at 6285)","beat":"2026-11-08T13:30:01.318Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

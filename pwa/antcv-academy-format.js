@@ -48,7 +48,7 @@
  */
 (function (root) {
   'use strict';
-  var VERSION = '1.51.6205-academy-pages';
+  var VERSION = '1.51.6265-academy-balance';
 
   // Mirror of pwa/gold-rules.json academy_format (test: academy-format.test.mjs).
   var RULES = {
@@ -712,6 +712,115 @@
     return { sections: out, changes: changes };
   }
 
+  // ── page-1 balance (ACADEMY-BALANCE-001, owner 2026-11-08) ──────────────────
+  // Owner: "you can increas white spaces in the main bar to improve this - and this is a general
+  // role - you do not want page 1 to be too coruded while page 2 is sparse". A role never splits, so
+  // when the page-2 break sits before a role, page 1 ends with that role's height free (#3527: 70 pt
+  // in LibreOffice, 91 pt in Word, page 2 245 pt free). balance() estimates the page-1 main column
+  // in points and returns wider section / role gaps that use part of the free height; page 2 has
+  // the room for the same gaps. Heights are LibreOffice-calibrated on #3527 (Word sets ~20 pt
+  // tighter, so the estimate errs towards less space). measure(text, widthPx, fontPx) -> lines.
+  // Geometry in points, fitted top-to-top on the LibreOffice render of #3527 (1.51.6145 export):
+  // a 4-line profile + 2-line work style + 4-row table + 3 roles ended at 756.2 pt, which this model
+  // reproduces from the true line counts.
+  var BAL = {
+    top: 15.1, bottom: 826,          // main text area on page 1 (worker margins 0, cell 12 pt)
+    firstHead: 27.5,                 // first heading top -> its first content line top
+    headBefore: 13.3, headBeforeTbl: 16.0, headToRole: 30.5, headToTbl: 34.4, headToText: 27.5,
+    body: 14.7, bodyLine: 10.5, bodyGap: 10.2,
+    bullet: 13.4, bulletLine: 10.5, bulletGap: 1.0,
+    tblHeadRow: 29.7, cell: 12.2, cellLine: 10.0, rowPad: 15.7,
+    roleHead: 16.3, roleWrap: 12.8, resultsGap: 9.9, roleGapAfter: 8.9,
+    share: 0.6, maxGapPt: 10, minFreePt: 24,
+    baseRoleGapPt: 6,                // worker default 120 DXA
+  };
+  // measure(text, widthPx, fontPx, spacingPt) -> line count; condense / width keys the export
+  // preflight wrote (item_condense in tenths of a point per character, item_scale in %) are applied.
+  function balance(payload, measure, met) {
+    if (!payload || !Array.isArray(payload.sections) || typeof measure !== 'function' || !met) return null;
+    var heads = 0, roles = 0, broke = false, bot = null, prev = null;
+    var fit = function (s, path) {
+      var c = s && s.item_condense && Number(s.item_condense[path]);
+      var k = s && s.item_scale && Number(s.item_scale[path]);
+      return { sp: isFinite(c) ? c / 10 : 0, k: isFinite(k) && k > 0 ? k / 100 : 1 };
+    };
+    var lines = function (t, w, px, s, path) {
+      var f = fit(s, path);
+      var n = measure(String(t || ''), w / f.k, px, f.sp / f.k);
+      return n > 0 ? n : 1;
+    };
+    var main = payload.sections.filter(function (s) { return s && s.on !== false && s.loc !== 'sidebar'; });
+    for (var i = 0; i < main.length && !broke; i++) {
+      var s = main[i];
+      if (s.row_pages && Object.keys(s.row_pages).length && s.type !== 'experience') return null;   // its own breaks: no estimate
+      var headed = !!(s.title && !s.headlineOff);
+      var top;                                   // top of this block's first content line
+      if (headed) {
+        var follow = s.type === 'experience' ? BAL.headToRole : s.type === 'table' ? BAL.headToTbl : BAL.headToText;
+        if (bot == null) top = BAL.top + BAL.firstHead;
+        else { top = bot + (prev === 'table' ? BAL.headBeforeTbl : BAL.headBefore) + follow; heads++; }
+      } else {
+        top = bot == null ? BAL.top : bot + BAL.bodyGap;
+      }
+      if (s.type === 'experience') {
+        var rs = (s.roles || []).filter(function (r) { return r && r.on !== false; });
+        var y = top;
+        for (var j = 0; j < rs.length; j++) {
+          var r = rs[j], RI = (s.roles || []).indexOf(r);
+          if (Number(r.page) >= 2) { broke = true; break; }
+          if (j > 0) y = bot + BAL.roleGapAfter;
+          var lineText = [r.title, r.company].filter(Boolean).join(' | ') + '    ' + String(r.years || '');
+          var by = y + BAL.roleHead + (lines(lineText, met.cellWpx, met.expSubPx, s, 'roles.' + RI + '.title') - 1) * BAL.roleWrap;
+          var lastTop = null;
+          (r.bullets || []).forEach(function (b, bi) {
+            var n = lines(bulletText(b), met.bulletWpx, met.bulletPx, s, 'roles.' + RI + '.bullets.' + bi);
+            bot = by + (n - 1) * BAL.bullet + BAL.bulletLine;
+            lastTop = by + (n - 1) * BAL.bullet;
+            by = by + n * BAL.bullet + BAL.bulletGap;
+          });
+          if (lastTop == null) bot = y + BAL.bulletLine;
+          if (typeof r.results === 'string' && r.results.trim()) {
+            var ry = bot + BAL.resultsGap;
+            var nr = lines('Results: ' + r.results, met.cellWpx, met.bulletPx, s, 'roles.' + RI + '.results');
+            bot = ry + (nr - 1) * BAL.bullet + BAL.bulletLine;
+          }
+          roles++;
+        }
+        prev = 'experience';
+        continue;
+      }
+      if (s.type === 'table' && Array.isArray(s.rows)) {
+        var cw = met.tableCols ? met.tableCols(s) : [met.cellWpx * 0.3, met.cellWpx * 0.7];
+        var ty = top + BAL.tblHeadRow;
+        s.rows.slice(1).forEach(function (row, ri) {
+          var n = Math.max(lines(row[0], cw[0], met.tblCellPx, s, 'rows.' + (ri + 1) + '.0'), lines(row[1], cw[1], met.tblCellPx, s, 'rows.' + (ri + 1) + '.1'));
+          bot = ty + (n - 1) * BAL.cell + BAL.cellLine;
+          ty = ty + (n - 1) * BAL.cell + BAL.cellLine + BAL.rowPad;
+        });
+        if (s.rows.length < 2) bot = top + BAL.cellLine;
+        prev = 'table';
+        continue;
+      }
+      var py = top, any = false;
+      var paras = Array.isArray(s.items)
+        ? s.items.filter(function (it, k) { return !(s.hidden && s.hidden[k]) && rowText(it).trim(); }).map(function (it) { return { t: rowText(it), k: s.items.indexOf(it) }; })
+        : (typeof s.content === 'string' && s.content.trim() ? [{ t: s.content, k: null }] : []);
+      paras.forEach(function (p) {
+        var n = lines(p.t, met.cellWpx, met.bodyPx, s, p.k == null ? 'content' : 'items.' + p.k);
+        if (any) py = bot + BAL.bodyGap;
+        bot = py + (n - 1) * BAL.body + BAL.bodyLine;
+        any = true;
+      });
+      if (any) prev = 'text';
+    }
+    if (!broke || bot == null) return null;     // no forced page-2 break: page 1 is filled by the flow
+    var free = BAL.bottom - bot;
+    var gaps = heads + roles;
+    if (free < BAL.minFreePt || !gaps) return { usedToPt: Math.round(bot * 10) / 10, freePt: Math.round(free), gapPt: 0 };
+    var gapPt = Math.min(BAL.maxGapPt, BAL.share * free / gaps);
+    return { usedToPt: Math.round(bot * 10) / 10, freePt: Math.round(free), gaps: gaps, gapPt: Math.round(gapPt * 10) / 10 };
+  }
+
   // The same content rules for the PREVIEW (antcv-academy-preview.js hides DOM, never storage):
   // { sections: [id...] to hide, rows: { id: [row text...] } }.
   function plan(sections, o0) {
@@ -798,7 +907,7 @@
     return { ok: !issues.length, issues: issues };
   }
 
-  var api = { version: VERSION, RULES: RULES, langOf: langOf, wrongLang: wrongLang, audit: audit, apply: apply, plan: plan, labels: labels, isPlaceholder: isPlaceholder, ownerFact: ownerFact };
+  var api = { version: VERSION, RULES: RULES, langOf: langOf, wrongLang: wrongLang, audit: audit, apply: apply, plan: plan, balance: balance, BAL: BAL, labels: labels, isPlaceholder: isPlaceholder, ownerFact: ownerFact };
   root.AntcvAcademyFormat = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

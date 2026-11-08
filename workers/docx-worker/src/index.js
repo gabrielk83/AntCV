@@ -24892,7 +24892,11 @@ function mergeStyle(input, packageId, legacyAtsTier) {
       // treatment (clamped 0..60, converted to DXA at use sites).
       k === "bodyEdgePad" || k === "sidebarEdgePad" || k === "seamGap" ||
       k === "mainSectionGap" || k === "sidebarSectionGap" ||
-      k === "bodySectionGap" || k === "candidateGap"
+      k === "bodySectionGap" || k === "candidateGap" ||
+      // ACADEMY-BALANCE-001 (2026-11-08): the role gap (renderExperience reads style.roleGap, px ->
+      // DXA x15) was dropped here, so a payload could never set it; the academy export now spreads
+      // free page-1 height over the role gaps as well as the section gaps.
+      k === "roleGap"
     ) {
       const n = Number(v);
       if (Number.isFinite(n) && n >= 0 && n <= 60) s[k] = n;

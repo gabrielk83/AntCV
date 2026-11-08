@@ -193,3 +193,14 @@ Owner on a margin preview: "go to academy rule. notice that you lest sub heading
 | No template text | Rows with a bracket placeholder (Markdown links excepted) or skeleton instruction text ("Add only items that support the JD ... Drop if not needed") are hidden. |
 | No other person's rows | Under any name but the owner's, rows that carry the owner's facts (Technion + Tsinghua, Tel Aviv University degrees, KVUC, live captions / hearing wording, patent 241997, Innoviz / Sirin / Meprolight / Kanzen / Copenhagen Wolves, "Karp") are hidden, and the owner's patent row is never added. The Communication row shows only when the person stores a communication / accessibility line. Experience roles are not filtered (hiding them would hide the CV): an export with the owner's roles under another name is a data fault the audit reports as LEAK. |
 | Owner wording | For the owner, a Communication row that still holds the COMMS-LINE-001 sentence exports in COMMS-LINE-002 wording. |
+
+### Page budget and balance (ACADEMY-PAGES-001 / ACADEMY-BALANCE-001, owner 2026-11-06 / 2026-11-08)
+
+Owner 2026-11-08: "you can increas white spaces in the main bar to improve this - and this is a general role - you do not want page 1 to be too coruded while page 2 is sparse. if needed do even more sparsing of page 1 to keep everthing readable."
+
+| Rule | In the app (margin CV export) |
+|---|---|
+| 2 pages | The page plan comes from the preview, which still shows every stored role; after the academy projection, breaks past page 2 are dropped (1.51.6205). #3527: 3 -> 2 pages in LibreOffice and Word. |
+| Roles whole | A role never splits (worker keepNext chain, ROLE-KEEP-WHOLE-001); the page-2 break sits before a role. |
+| Page-1 balance | After the export preflight, `AntcvAcademyFormat.balance` estimates where page 1's main column ends (geometry fitted on the LibreOffice render of #3527; canvas text widths in the app) and gives 60 % of the free height to the section and role gaps, at most 10 pt each, when 24 pt or more is free. #3527: page 1 ended 70 pt short (LO) / 91 pt (Word); with +8.4 pt per gap it ends 28 / 49 pt short, page 2 still 195 pt short, orphans unchanged. The role gaps need docx-worker with ACADEMY-BALANCE-001 (`style.roleGap` was dropped by mergeStyle); an older worker widens the section gaps only. Kill switch `antcv:disable-academy-balance=1`. |
+| Photo | The export carries the photo in `personal_info.photo_b64` (the margin card draws the 84 px ringed photo). The photo-less PDFs of 2026-11-08 came from a capture whose photo was blanked to keep the file small, not from the app. |

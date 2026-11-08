@@ -344,6 +344,56 @@ test('buildPayload: the preview page plan does not reach the academy export (ACA
   assert.equal(band.roles[4].page, 3, 'the band layout keeps its page plan');
 });
 
+// ── ACADEMY-BALANCE-001: page 1 is not left a role-height short while page 2 is sparse
+const MET = { cellWpx: 482, bulletWpx: 468, bodyPx: 14, bulletPx: 14, expSubPx: 14, tblCellPx: 13.33, tableCols: () => [119, 318] };
+const charMeasure = (t, w, px, sp) => {   // greedy wrap, mean glyph 0.43 em (0.40 em in 10 pt cells)
+  const cw = (px < 13.5 ? 0.40 : 0.43) * px + (sp || 0) * 96 / 72; let n = 1, x = 0;
+  String(t).split(/\s+/).forEach((wd) => { const ww = (wd.length + 1) * cw; if (x && x + ww > w) { n++; x = ww; } else x += ww; });
+  return n;
+};
+const live3527 = () => JSON.parse(readFileSync(new URL('./fixtures/academy-3527-payload.json', import.meta.url), 'utf8'));
+
+test('balance(): the #3527 export ends page 1 at the measured 756.2 pt and spreads 60 % of the free 70 pt', () => {
+  const r = AF.balance(live3527(), charMeasure, MET);
+  assert.equal(r.usedToPt, 756.2, 'LibreOffice render of the captured payload ends at 756.2 pt');
+  assert.equal(r.freePt, 70);
+  assert.equal(r.gaps, 5, '2 headings after PROFILE + 3 page-1 roles');
+  assert.equal(r.gapPt, 8.4);
+});
+
+test('balance(): no forced page-2 role break, a page block with its own breaks, or too little room -> no change', () => {
+  const p = live3527();
+  p.sections.find((s) => s.type === 'experience').roles.forEach((r) => { delete r.page; });
+  assert.equal(AF.balance(p, charMeasure, MET), null, 'page 1 filled by the flow');
+  const q = live3527();
+  q.sections.find((s) => s.id === 'core_comp').row_pages = { 3: 2 };
+  assert.equal(AF.balance(q, charMeasure, MET), null);
+  const tight = AF.balance(live3527(), (t, w, px, sp) => charMeasure(t, w, px, sp) + 1, MET);
+  assert.equal(tight.gapPt, 0, 'one more line per paragraph leaves under 24 pt: nothing added');
+});
+
+test('runAcademyBalance: widens the section + role gaps on a margin CV only', async () => {
+  const { runAcademyBalance } = await import('../../antcv-docx-client.js');
+  const calls = [];
+  globalThis.document = { createElement: () => ({ getContext: () => ({ font: '', measureText: (s) => { calls.push(s); return { width: s.length * 6.02 }; } }) }) };
+  window.AntcvOrphanExportPreflight = { _metricsFromPayload: () => Object.assign({ family: 'Calibri' }, MET), _tableColWidthsPx: () => [119, 318] };
+  store.clear();
+  try {
+    const p = live3527();
+    const r = runAcademyBalance(p);
+    assert.ok(r && r.gapPt > 0, JSON.stringify(r));
+    assert.ok(p.style.mainSectionGap > 14 && p.style.mainSectionGap <= 60);
+    assert.equal(p.style.roleGap, Math.round((6 + r.gapPt) / 0.75 * 10) / 10);
+    const band = Object.assign(live3527(), { layout: 'two_column' });
+    assert.equal(runAcademyBalance(band), null);
+    assert.equal(band.style.roleGap, undefined);
+    store.set('antcv:disable-academy-balance', '1');
+    const off = live3527();
+    assert.equal(runAcademyBalance(off), null);
+    assert.equal(off.style.roleGap, undefined, 'kill switch');
+  } finally { delete globalThis.document; delete window.AntcvOrphanExportPreflight; store.clear(); }
+});
+
 test('buildPayload: band / linear layouts and the kill switch keep the stored shape', () => {
   seed();
   for (const layout of ['two_column', 'linear']) {

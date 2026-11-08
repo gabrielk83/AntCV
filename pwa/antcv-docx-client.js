@@ -530,6 +530,7 @@ export async function exportDocxViaWorker({
   // hang or fail because of orphan control. Kill: antcv:disable-orphan-preflight.
   placeholderGate(payload);
   await runOrphanPreflight(payload);
+  runAcademyBalance(payload);   // ACADEMY-BALANCE-001: after the preflight, before the POST
 
   const headers = { 'Content-Type': 'application/json' };
   const secret = (typeof window !== 'undefined' && window.ANTCV_DOCX_SECRET) || '';
@@ -1795,6 +1796,54 @@ function _clampItemPages(map) {
     out[sid] = o;
   });
   return out;
+}
+// ACADEMY-BALANCE-001 (owner 2026-11-08: "you can increas white spaces in the main bar to improve
+// this - and this is a general role - you do not want page 1 to be too coruded while page 2 is
+// sparse"). Runs after the export preflight (its condense / width keys and NBSP binds change the line
+// counts). AntcvAcademyFormat.balance estimates where page 1's main column ends before the page-2
+// role break; part of the free height goes into wider section and role gaps (page 2 takes the same
+// gaps and has the room). #3527: page 1 ended 70 pt short in LibreOffice -> 8.4 pt per gap; page 1
+// then ends 28 pt short, page 2 still 195 pt short, 2 pages in both engines, orphans unchanged.
+// style.roleGap needs docx-worker with ACADEMY-BALANCE-001; an older worker drops it and widens the
+// section gaps only. Kill: antcv:disable-academy-balance=1 (or the academy-format switch).
+function _canvasMeasure(family) {
+  let ctx = null;
+  try { ctx = (typeof document !== 'undefined') && document.createElement('canvas').getContext('2d'); } catch (_) {}
+  if (!ctx) return null;
+  return (text, widthPx, fontPx, spPt) => {
+    ctx.font = fontPx + 'px "' + family + '", Carlito, Calibri, sans-serif';
+    const sp = (Number(spPt) || 0) * 96 / 72;
+    const space = ctx.measureText(' ').width + sp;
+    let n = 1, x = 0;
+    String(text == null ? '' : text).split(/ +/).forEach((w) => {   // an NBSP bind keeps its words together
+      if (!w) return;
+      const ww = ctx.measureText(w).width + sp * w.length;
+      if (x && x + space + ww > widthPx) { n++; x = ww; } else x += (x ? space : 0) + ww;
+    });
+    return n;
+  };
+}
+function runAcademyBalance(payload) {
+  try {
+    if (!payload || payload.doc !== 'cv' || payload.layout !== 'margin') return null;
+    if (localStorage.getItem('antcv:disable-academy-format') === '1' || localStorage.getItem('antcv:disable-academy-balance') === '1') return null;
+    const af = (typeof window !== 'undefined') && window.AntcvAcademyFormat;
+    const pf = (typeof window !== 'undefined') && window.AntcvOrphanExportPreflight;
+    if (!af || typeof af.balance !== 'function' || !pf || typeof pf._metricsFromPayload !== 'function') return null;
+    const met = pf._metricsFromPayload(payload);
+    if (typeof pf._tableColWidthsPx === 'function') met.tableCols = (s) => pf._tableColWidthsPx(s, met, false);
+    const measure = _canvasMeasure(met.family || 'Calibri');
+    if (!measure) return null;
+    const r = af.balance(payload, measure, met);
+    try { window.__antcvAcademyBalance = r; } catch (_) {}
+    if (!r || !r.gapPt) return r;
+    const st = payload.style || (payload.style = {});
+    const base = Number(st.mainSectionGap);
+    st.mainSectionGap = Math.min(60, Math.round(((Number.isFinite(base) ? base : 8) + r.gapPt / 0.75) * 10) / 10);
+    st.roleGap = Math.min(60, Math.round((af.BAL.baseRoleGapPt + r.gapPt) / 0.75 * 10) / 10);
+    try { console.info('[ACADEMY-BALANCE-001] page 1 ends ' + r.freePt + ' pt short; ' + r.gaps + ' gaps get +' + r.gapPt + ' pt'); } catch (_) {}
+    return r;
+  } catch (_) { return null; }
 }
 function applyAcademyFormat(list, o) {
   if (!o || !o.on || !Array.isArray(list)) return list;
@@ -3428,7 +3477,7 @@ function _collapseRoleBullets(r) {
   const kept = _keepMinBullets(r.bullets, collapsed);
   return kept === r.bullets ? r : { ...r, bullets: kept };
 }
-export { _dedupNearBullets, _collapseRoleBullets, _keepMinBullets, _backfillRoleBullets, sanitizeForExport, placeholderGate };
+export { runAcademyBalance, _dedupNearBullets, _collapseRoleBullets, _keepMinBullets, _backfillRoleBullets, sanitizeForExport, placeholderGate };
 // PAN-IDRAET-PREVIEW-HIDE-001: expose the SAME collapse predicate the export uses so
 // the preview-hide sidecar (antcv-neardup-preview-hide.js) can never drift from it.
 // PAN-IDRAET-BACKFILL-001: also expose the raw near-dup collapse + the distinct-data
@@ -4325,6 +4374,7 @@ export async function exportPdfViaWorker(opts) {
   // CloudConvert PDF). Same bounded, swallow-all preflight as exportDocxViaWorker.
   placeholderGate(payload);
   await runOrphanPreflight(payload);
+  runAcademyBalance(payload);   // ACADEMY-BALANCE-001: after the preflight, before the POST
 
   const headers = { 'Content-Type': 'application/json', 'Accept': 'application/pdf' };
   const secret = (typeof window !== 'undefined' && window.ANTCV_DOCX_SECRET) || '';

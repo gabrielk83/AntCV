@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.6225-upsert-dedupe';
+const CACHE = 'antcv-1.51.6265-academy-balance';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

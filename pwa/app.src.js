@@ -17241,6 +17241,18 @@ window.__antcvTxtSame =
                 Array.isArray(i.cl) && (a.cl_sections = i.cl));
               const l = void 0 !== e.rationale ? e.rationale : yo;
               l && "object" == typeof l && (a.rationale = l);
+              // UPSERT-DEDUPE-001 (2026-11-08): the effect that calls no() runs on every
+              // `ro` change, and belts / autosave give `ro` a new identity every ~2.4 s
+              // with the same content. Each one POSTed the same body (5 x 9961 bytes,
+              // 2.4 s apart, measured locally), bumped updated_at and raced the auto-sync
+              // PUT. Skip a POST whose relay + body equal the last one sent; a failed
+              // POST clears the signature so the retry goes out.
+              const __ps = JSON.stringify([t, a]);
+              if (__ps === window.__antcvAppPostSig) {
+                try { window._antcvAppPostSkips = (window._antcvAppPostSkips || 0) + 1; } catch (e) {}
+                return;
+              }
+              window.__antcvAppPostSig = __ps;
               try {
                 const o = await fetch(t + "/api/applications", {
                   method: "POST",
@@ -17272,6 +17284,7 @@ window.__antcvTxtSame =
                       at: new Date().toISOString(),
                     };
                   } catch (e) {}
+                  window.__antcvAppPostSig = null;
                   console.warn("[cloudWriteApplication] non-OK", o.status, r);
                   try {
                     Object.assign(to.current, e);
@@ -17285,6 +17298,7 @@ window.__antcvTxtSame =
                     at: new Date().toISOString(),
                   };
                 } catch (e) {}
+                window.__antcvAppPostSig = null;
                 console.warn(
                   "[cloudWriteApplication] network error:",
                   (t && t.message) || t,
@@ -17322,6 +17336,7 @@ window.__antcvTxtSame =
             lastWrite: window._antcvAppLastWrite || null,
             lastError: window._antcvAppLastError || null,
             pending_keys: Object.keys(to.current || {}),
+            post_skips: window._antcvAppPostSkips || 0,
           })));
       } catch (e) {}
       const oo = {

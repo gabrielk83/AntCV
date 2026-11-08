@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.1644-compl-selflimit';
+  var VERSION = '1.51.6405-cc-company';
   if (window.__antcvSectionsNormalize === VERSION) return;
   window.__antcvSectionsNormalize = VERSION;
 
@@ -2072,7 +2072,22 @@
   function ccDocLang() {
     try { var l = String(localStorage.getItem('language') || 'en').replace(/[^a-z]/gi, '').slice(0, 2).toLowerCase(); return CC_HEADER_LANG[l] ? l : 'en'; } catch (_) { return 'en'; }
   }
-  function plainCoreCompHeaders(list, lang) {
+  // CC-HEADER-COMPANY-001 (owner 2026-11-08, #3536 Elma: "no table of what Elma looks for - and i do want it by
+  // default"; house 1054 heads it "Elma efterspørger"): a first head that names the employer ("<company>
+  // efterspørger", "<company> looks for") with the house second head is the house's own wording, not a
+  // translation artefact, so the pin keeps it. The company is meta.company's first word.
+  var CC_COMPANY_HEAD = /^(\S.{0,60}?)\s+(efterspørger|eftersøger|søger|looks for|asks for|is looking for|needs)$/i;
+  function ccCompanyWord(company) {
+    var c = company;
+    if (c == null) { try { c = (JSON.parse(localStorage.getItem('meta') || '{}') || {}).company; } catch (_) { c = ''; } }
+    return String(c || '').replace(/[^0-9A-Za-zÀ-ÿ]+/g, ' ').trim().split(/\s+/)[0].toLowerCase();
+  }
+  function isCompanyHead(head, company) {
+    var m = CC_COMPANY_HEAD.exec(String(head == null ? '' : head).trim());
+    var w = ccCompanyWord(company);
+    return !!(m && w.length >= 2 && m[1].toLowerCase().split(/\s+/)[0] === w);
+  }
+  function plainCoreCompHeaders(list, lang, company) {
     if (!Array.isArray(list)) return null;
     var L = lang || ccDocLang();
     var pair = CC_HEADER_LANG[L], en = CC_HEADER_LANG.en;
@@ -2090,7 +2105,8 @@
       if (L !== 'en' && nh.length === 2 && (s.id === 'core_comp' || s.id === 'bring')) {
         var isEn = nh[0] === en[0] && nh[1] === en[1];
         var isPair = nh[0] === pair[0] && nh[1] === pair[1];
-        if (!isEn && !isPair) { nh = [pair[0], pair[1]]; hit = true; }
+        var isCompany = (nh[1] === pair[1] || nh[1] === en[1]) && isCompanyHead(nh[0], company);
+        if (!isEn && !isPair && !isCompany) { nh = [pair[0], pair[1]]; hit = true; }
       }
       if (!hit) return s;
       changed = true;

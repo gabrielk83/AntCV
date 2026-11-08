@@ -49,3 +49,14 @@ test('es / zh pairs', () => {
 test('legacy DA pair still maps even when the language is unknown', () => {
   assert.deepEqual(plain([table('core_comp', [['Fokusområde', 'Strategisk ekspertise'], ['A', 'a']])], 'en')[0].rows[0], DA);
 });
+
+// CC-HEADER-COMPANY-001 (owner 2026-11-08, #3536 Elma): the house heads the table with the employer's name
+// (pkgs_1054 needs_heads "Elma efterspørger" | "Det bringer jeg, med belæg"); the pin keeps that wording.
+test('da: "<company> efterspørger" with the house second head is kept; another company or a free second head is pinned', () => {
+  const CO = 'Elma Instruments (via Compass HR)';
+  assert.equal(plain([table('core_comp', [['Elma efterspørger', 'Det bringer jeg, med belæg'], ['Pris og margin', 'Prisgrundlag for 4 kunder']])], 'da', CO), null);
+  assert.equal(plain([table('core_comp', [['Elma eftersøger', 'Det bringer jeg, med belæg'], ['A', 'a']])], 'da', CO), null);
+  assert.deepEqual(plain([table('core_comp', [['Kaleido efterspørger', 'Det bringer jeg, med belæg'], ['A', 'a']])], 'da', CO)[0].rows[0], DA);
+  assert.deepEqual(plain([table('core_comp', [['Elma efterspørger', 'Det kan jeg, med bevis'], ['A', 'a']])], 'da', CO)[0].rows[0], DA);
+  assert.deepEqual(plain([table('core_comp', [['Elma efterspørger', 'Det bringer jeg, med belæg'], ['A', 'a']])], 'da', '')[0].rows[0], DA, 'no company on record: house pair');
+});

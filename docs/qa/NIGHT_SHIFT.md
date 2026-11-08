@@ -41,6 +41,7 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mw3hijam_7jnk","started":"2026-11-05T11:51:01.722Z","host":"Gabo-PC","worktree":"ecstatic-heisenberg-9cfa6d","branch":"claude/ecstatic-heisenberg-9cfa6d","range":"1.51.5665-1.51.5684","task":"MARGIN-LAYOUT-001: header card inside the sidebar (house margin format), no band","beat":"2026-11-05T11:51:01.779Z"}
 {"id":"sh_mw7ss3as_brq3","started":"2026-11-08T12:17:28.142Z","host":"Gabo-PC","worktree":"gracious-goldwasser-ac89f6","branch":"claude/musing-euler-71ad39","range":"1.51.6245-1.51.6264","task":"NO-ORPHAN-005 bind cap: line above a bind stays >= 75% full, else reword","beat":"2026-11-08T12:17:28.216Z"}
 {"id":"sh_mw7u1gqv_5vqd","started":"2026-11-08T12:52:44.981Z","host":"Gabo-PC","worktree":"sleepy-chaum-2d6a41","branch":"claude/sleepy-chaum-2d6a41","range":"1.51.6285-1.51.6304","task":"ELMA-PREVIEW-001: core-comp table blink, empty CL marker for CV-only applications, preview page count vs export","beat":"2026-11-08T12:52:45.037Z"}
+{"id":"sh_mw7ug1p9_6fj","started":"2026-11-08T13:04:05.321Z","host":"Gabo-PC","worktree":"nervous-napier-68c925","branch":"ship-academy","range":"1.51.6305-1.51.6324","task":"LINKEDIN-LINK-001 + AI-REPO-LINK-001 + DATE-PRESENT-SAME-YEAR-001: links in document colour, AntCV repo link on AI jobs, 'Nov 2026 - present' kept","beat":"2026-11-08T13:04:05.375Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

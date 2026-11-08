@@ -394,6 +394,46 @@ test('runAcademyBalance: widens the section + role gaps on a margin CV only', as
   } finally { delete globalThis.document; delete window.AntcvOrphanExportPreflight; store.clear(); }
 });
 
+// ── AI-REPO-LINK-001: AI-oriented jobs get the AntCV repository link, other jobs never
+const AI_JD = 'CIP is hiring an AI Business Manager for Digital Development: you will run generative AI and machine learning use cases, LLM copilots for the investment teams, and AI governance.';
+const PEAK_JD = 'PEAK Wind supports renewable energy assets worldwide through data management, reporting solutions, analytics, digital products, and AI capabilities.';
+function withAntcv() {
+  const f = fixture();
+  f[4].roles[1].bullets = ['Byggede testopstilling nummer 1 til Kanzen og fulgte data op med teamet.', 'Byggede testopstilling nummer 2 til Kanzen og fulgte data op med teamet.',
+    'Byggede testopstilling nummer 3 til Kanzen og fulgte data op med teamet.', 'Built and shipped AntCV solo, an LLM-based product, from scope and pricing to delivery.'];
+  return f;
+}
+
+test('aiOriented: an AI title or a JD dense in AI terms; one passing "AI capabilities" is not enough', () => {
+  assert.equal(AF.aiOriented('', 'AI Business Manager, Digital Development'), true);
+  assert.equal(AF.aiOriented('', 'Product Manager (Agentic AI Applications)'), true);
+  assert.equal(AF.aiOriented(AI_JD, 'Business Manager'), true);
+  assert.equal(AF.aiOriented(PEAK_JD, 'Product & Project Delivery Consultant'), false);
+  assert.equal(AF.aiOriented(JD, 'Senior Optical Design Engineer'), false);
+});
+
+test('AI job, margin CV: the AntCV bullet survives the 3-bullet cap and links to the repository', () => {
+  const { sections, changes } = AF.apply(withAntcv(), Object.assign({}, DA, { jdText: AI_JD, role: 'AI Business Manager' }));
+  const kanzen = byId(sections, 'experience').roles.find((r) => r.id === 'kanzen');
+  assert.equal(kanzen.bullets.length, 3);
+  assert.ok(kanzen.bullets.some((b) => b.includes('[AntCV](https://github.com/gabrielk83/AntCV)')), JSON.stringify(kanzen.bullets));
+  assert.ok(changes.includes('AntCV mention linked to the repository (AI-oriented job)'));
+  const plain = AF.apply(withAntcv(), Object.assign({}, DA, { jdText: PEAK_JD, role: 'Product & Project Delivery Consultant' })).sections;
+  assert.ok(!JSON.stringify(plain).includes('github.com/gabrielk83/AntCV'), 'never on a non-AI job');
+});
+
+test('AI job, cover letter: the first AntCV mention links; a letter that spells the URL out is left alone', async () => {
+  seed();
+  store.set('antcv:lastJdText', AI_JD);
+  const cl = [{ id: 'opening', type: 'text', loc: 'main', content: 'AntCV, the LLM product I built, shows how I run AI work from scope to delivery. AntCV is open.' }];
+  const p = buildPayload({ sections: { cv: [], cl }, meta: { company: 'CIP', role: 'AI Business Manager' }, doc: 'cl', language: 'en', personalInfo: { name: NAME } });
+  const txt = p.sections.find((s) => s.id === 'opening').content;
+  assert.equal((txt.match(/\]\(https:\/\/github\.com\/gabrielk83\/AntCV\)/g) || []).length, 1, txt);
+  const spelled = [{ id: 'opening', type: 'text', loc: 'main', content: 'AntCV (github.com/gabrielk83/AntCV) shows how I run AI work.' }];
+  const q = buildPayload({ sections: { cv: [], cl: spelled }, meta: { company: 'CIP', role: 'AI Business Manager' }, doc: 'cl', language: 'en', personalInfo: { name: NAME } });
+  assert.ok(!q.sections.find((s) => s.id === 'opening').content.includes('[AntCV]'));
+});
+
 test('buildPayload: band / linear layouts and the kill switch keep the stored shape', () => {
   seed();
   for (const layout of ['two_column', 'linear']) {

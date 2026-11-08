@@ -48,7 +48,7 @@
  */
 (function (root) {
   'use strict';
-  var VERSION = '1.51.6265-academy-balance';
+  var VERSION = '1.51.6305-links';
 
   // Mirror of pwa/gold-rules.json academy_format (test: academy-format.test.mjs).
   var RULES = {
@@ -245,14 +245,16 @@
       return b.replace(/^([^:.]{2,48}) \(internship\):/, '$1' + loc[1] + ':');
     });
   }
-  function pickBullets(bullets, max, cap) {
+  function pickBullets(bullets, max, cap, prefer) {
     var src = Array.isArray(bullets) ? bullets : [];
     var arr = src.map(function (b) { return shortenBullet(b, cap); });
     var shortened = arr.filter(function (b, i) { return b !== src[i]; }).length;
     // up to `max` bullets that fit two lines; a longer one only fills a role up to TWO bullets
     // (1051 roles carry 1-3 bullets; three is the ceiling, not the target)
     var keep = {}, n = 0, floor = Math.min(2, max);
-    arr.forEach(function (b, i) { if (n < max && bulletText(b).trim() && bulletText(b).length <= cap) { keep[i] = 1; n++; } });
+    // AI-REPO-LINK-001: on an AI-oriented job the bullet that names AntCV is kept first
+    if (prefer) arr.forEach(function (b, i) { if (n < max && prefer.test(bulletText(b))) { keep[i] = 1; n++; } });
+    arr.forEach(function (b, i) { if (n < max && !keep[i] && bulletText(b).trim() && bulletText(b).length <= cap) { keep[i] = 1; n++; } });
     arr.forEach(function (b, i) { if (n < floor && !keep[i] && bulletText(b).trim()) { keep[i] = 1; n++; } });
     var kept = arr.filter(function (_, i) { return keep[i]; });
     return { kept: kept, cut: arr.length - kept.length, shortened: shortened };
@@ -335,7 +337,7 @@
       var r = roles[i];
       var li = localiseIntern(r.bullets, o.lang);
       if (li !== r.bullets && JSON.stringify(li) !== JSON.stringify(r.bullets)) { r.bullets = li; changes.push('role ' + (r.id || i) + ': internship note localised'); }
-      var pb = pickBullets(r.bullets, RULES.role_bullets_max, RULES.bullet_max_chars);
+      var pb = pickBullets(r.bullets, RULES.role_bullets_max, RULES.bullet_max_chars, o.ai ? ANTCV_WORD : null);
       if (pb.cut || pb.shortened) {
         r.bullets = pb.kept;
         changes.push('role ' + (r.id || i) + ': ' + (pb.cut ? pb.cut + ' bullet(s) cut' : '') + (pb.cut && pb.shortened ? ', ' : '') + (pb.shortened ? pb.shortened + ' shortened to a sentence or clause' : ''));
@@ -665,6 +667,7 @@
       research: o.research != null ? !!o.research : isResearch(jd, o.role),
       sports: SPORTS_JD.test(jd), source: o.source || null, checkResults: !!o.checkResults,
       pi: (o.personalInfo && (o.personalInfo.personalInfo || o.personalInfo)) || null,
+      ai: aiOriented(jd, o.role),
     };
   }
   function apply(sections, o0) {
@@ -709,7 +712,78 @@
     }
     // ACADEMY-EMPTY-001: placeholder rows, another person's rows and headings without content go last
     out = applyContent(out, o, changes);
+    if (o.ai) out = linkAntcv(out, changes);
     return { sections: out, changes: changes };
+  }
+  // AI-REPO-LINK-001 for every document the academy projection does not shape (the letter, the
+  // band and linear CVs): link the first AntCV mention when the job is AI-oriented.
+  function repoLink(sections, o0) {
+    var o = opts(o0), changes = [];
+    if (!o.ai) return { sections: sections, changes: changes };
+    return { sections: linkAntcv(sections, changes), changes: changes };
+  }
+
+  // ── AntCV repository link on AI jobs (AI-REPO-LINK-001, owner 2026-11-08) ───
+  // Owner: "make sure that if it is an AI-oriented position (like CIP) add a link to the antcv git".
+  // AI-oriented = the target title names AI / ML / LLM / generative / agentic work, or the ad carries
+  // three different AI terms at least five times (the stored category does not say it: Templafy's
+  // "Product Manager (Agentic AI Applications)" is product_management). The first AntCV mention in a
+  // bullet or text row becomes a Markdown link, which the worker renders as a real hyperlink in the
+  // run's own colour. Never on other jobs. Results lines and titles are plain text in the worker, so
+  // they are skipped.
+  var ANTCV_URL = 'https://github.com/gabrielk83/AntCV';
+  var ANTCV_WORD = /\bAntCV\b/;
+  var AI_TITLE = /\b(?:AI|A\.I\.|ML|LLMs?|GenAI)\b|artificial intelligence|machine learning|generative|agentic|kunstig intelligens|inteligencia artificial/i;
+  var AI_TERMS = /\b(?:AI|A\.I\.|ML|LLMs?|GenAI|NLP|RAG|artificial intelligence|machine learning|large language models?|generative|agentic|AI agents?|copilots?|prompt engineering|data science|neural networks?|kunstig intelligens|maskinlæring|inteligencia artificial)\b/gi;
+  function aiOriented(jd, role) {
+    if (AI_TITLE.test(String(role || ''))) return true;
+    var seen = {}, total = 0;
+    (String(jd || '').match(AI_TERMS) || []).forEach(function (w) { seen[w.toLowerCase().replace(/s$/, '')] = 1; total++; });
+    return Object.keys(seen).length >= 3 && total >= 5;
+  }
+  function linkOnce(text) {
+    var s = String(text);
+    if (s.indexOf(ANTCV_URL) >= 0 || s.indexOf('github.com/gabrielk83/AntCV') >= 0) return null;   // already linked / spelled out
+    var m = s.match(ANTCV_WORD);
+    if (!m) return null;
+    return s.slice(0, m.index) + '[AntCV](' + ANTCV_URL + ')' + s.slice(m.index + m[0].length);
+  }
+  function linkAntcv(sections, changes) {
+    if (!Array.isArray(sections)) return sections;
+    if (sections.some(function (s) { return s && s.on !== false && JSON.stringify(s).indexOf('github.com/gabrielk83/AntCV') >= 0; })) return sections;
+    var done = false;
+    var out = sections.map(function (s) {
+      if (done || !s || typeof s !== 'object' || s.on === false) return s;
+      if (s.type === 'experience' && Array.isArray(s.roles)) {
+        var roles = s.roles.map(function (r) {
+          if (done || !r || r.on === false || !Array.isArray(r.bullets)) return r;
+          var bl = r.bullets.map(function (b) {
+            if (done) return b;
+            if (typeof b === 'string') { var t = linkOnce(b); if (t) { done = true; return t; } return b; }
+            if (b && typeof b === 'object' && typeof b.t === 'string') { var u = linkOnce(b.t); if (u) { done = true; return Object.assign({}, b, { t: u }); } }
+            return b;
+          });
+          return done ? Object.assign({}, r, { bullets: bl }) : r;
+        });
+        return done ? Object.assign({}, s, { roles: roles }) : s;
+      }
+      if (Array.isArray(s.items)) {
+        var items = s.items.map(function (it, i) {
+          if (done || (s.hidden && s.hidden[i])) return it;
+          if (typeof it === 'string') { var t = linkOnce(it); if (t) { done = true; return t; } return it; }
+          if (it && typeof it === 'object') {
+            var k = typeof it.t === 'string' && ANTCV_WORD.test(it.t) ? 't' : (typeof it.v === 'string' && ANTCV_WORD.test(it.v) ? 'v' : null);
+            if (k) { var v = linkOnce(it[k]); if (v) { done = true; var p = {}; p[k] = v; return Object.assign({}, it, p); } }
+          }
+          return it;
+        });
+        return done ? Object.assign({}, s, { items: items }) : s;
+      }
+      if (typeof s.content === 'string') { var c = linkOnce(s.content); if (c) { done = true; return Object.assign({}, s, { content: c }); } }
+      return s;
+    });
+    if (changes) changes.push(done ? 'AntCV mention linked to the repository (AI-oriented job)' : 'AI-oriented job: no AntCV mention to link');
+    return out;
   }
 
   // ── page-1 balance (ACADEMY-BALANCE-001, owner 2026-11-08) ──────────────────
@@ -907,7 +981,7 @@
     return { ok: !issues.length, issues: issues };
   }
 
-  var api = { version: VERSION, RULES: RULES, langOf: langOf, wrongLang: wrongLang, audit: audit, apply: apply, plan: plan, balance: balance, BAL: BAL, labels: labels, isPlaceholder: isPlaceholder, ownerFact: ownerFact };
+  var api = { version: VERSION, RULES: RULES, langOf: langOf, wrongLang: wrongLang, audit: audit, apply: apply, plan: plan, balance: balance, BAL: BAL, repoLink: repoLink, aiOriented: aiOriented, ANTCV_URL: ANTCV_URL, labels: labels, isPlaceholder: isPlaceholder, ownerFact: ownerFact };
   root.AntcvAcademyFormat = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

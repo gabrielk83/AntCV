@@ -20,7 +20,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.6265-academy-balance';
+  var VERSION = '1.51.6305-links';
   if (window.__antcvAcademyPreview === VERSION) return;
   window.__antcvAcademyPreview = VERSION;
 

@@ -24625,9 +24625,11 @@ function inlineRuns(text, baseRun) {
     found = true;
     const before = s.slice(cursor, m.index);
     if (before) out.push(...styledRuns(before, baseRun));
+    // LINKEDIN-LINK-001 / AI-REPO-LINK-001 (owner 2026-11-08: "keep the document color sceme, not a
+    // hyperlink blue"): the link keeps its paragraph's colour and is marked by the underline only.
     out.push(new ExternalHyperlink({
       link: m[2],
-      children: [new TextRun({ ...baseRun, text: m[1], underline: {}, color: "0B4F8A" })]
+      children: [new TextRun({ ...baseRun, text: m[1], underline: {} })]
     }));
     cursor = m.index + m[0].length;
   }
@@ -28650,13 +28652,20 @@ function renderExperience(s, ctx) {
     // "(present)"-style parenthetical, then replace a standalone present-token with
     // the current year. Scoped to the date field only, so body prose ("represent",
     // "presentation") is untouched.
+    // DATE-PRESENT-SAME-YEAR-001 (owner 2026-11-08, #3527 export "Nov 2026 - 2026"): a role that
+    // STARTED this year keeps its open end ("Nov 2026 - present", house TRACKMAN-START-001) - the
+    // current year as its end reads as a closed role inside one year. Older open roles still end
+    // on the current year ("2022 - present" -> "2022 - 2026").
     const __scrubYears = (y) => {
       if (!y) return y;
       const Y = String(new Date().getFullYear());
-      return String(y)
+      const out = String(y)
         .replace(/\s*\(\s*(?:present|nuv[æa]rende|nutid|ongoing|current(?:ly)?|now|p[åa]g[åa]ende|actual)\s*\)/gi, "")
         .replace(/\b(?:present|nuv[æa]rende|nutid|ongoing|currently|current|now|p[åa]g[åa]ende)\b/gi, Y)
         .replace(/\s{2,}/g, " ").trim();
+      const ys = out.match(/\b(?:19|20)\d{2}\b/g) || [];
+      if (ys.length >= 2 && ys[0] === Y && ys[ys.length - 1] === Y && out !== String(y).replace(/\s{2,}/g, " ").trim()) return String(y).replace(/\s{2,}/g, " ").trim();
+      return out;
     };
     const __yrsRaw = __scrubYears(role.years);
     // ROLE-LOCATION-001: compose the right-hand meta text.

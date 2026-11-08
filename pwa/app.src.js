@@ -2910,7 +2910,8 @@ window.__antcvTxtSame =
         if (m.index > cursor) out.push(s.slice(cursor, m.index));
         // CPH-RENDER-FLAGS-001 flag 7: body links render #0B4F8A (mockup) rather
         // than the Office default #0563C1, which reads bright next to the teal.
-        out.push(React.createElement("a", { key: "mdl" + k++, href: m[2], target: "_blank", rel: "noopener noreferrer", style: { color: "#0B4F8A", textDecoration: "underline" } }, m[1]));
+        // LINKEDIN-LINK-001 / AI-REPO-LINK-001 (owner 2026-11-08: "keep the document color sceme, not a hyperlink blue"): links inherit the text colour, underline only (export: docx-worker inlineRuns).
+        out.push(React.createElement("a", { key: "mdl" + k++, href: m[2], target: "_blank", rel: "noopener noreferrer", style: { color: "inherit", textDecoration: "underline" } }, m[1]));
         cursor = m.index + m[0].length;
       }
       if (!found) return null;

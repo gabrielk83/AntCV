@@ -730,7 +730,7 @@ export function buildPayload({
     ),
     doc,
     { language, forceResults: __academy }
-  ), doc), { on: __academy, language, meta, personalInfo, source: __srcSections });
+  ), doc), { on: __academy, language, meta, personalInfo, source: __srcSections, doc });
 
   // Strip the data: prefix from photo dataURL if present.
   const photo_b64 = stripDataUrlPrefix(photo);
@@ -1845,7 +1845,23 @@ function runAcademyBalance(payload) {
     return r;
   } catch (_) { return null; }
 }
+// AI-REPO-LINK-001 (owner 2026-11-08: "if it is an AI-oriented position (like CIP) add a link to the
+// antcv git"): the letter and the band / linear CVs get the same link the academy projection adds to
+// the margin CV (AntcvAcademyFormat.repoLink: first AntCV mention -> Markdown link, AI jobs only).
+function _applyRepoLink(list, o) {
+  try {
+    const af = (typeof window !== 'undefined') && window.AntcvAcademyFormat;
+    if (!af || typeof af.repoLink !== 'function' || !Array.isArray(list)) return list;
+    if (localStorage.getItem('antcv:disable-ai-repo-link') === '1') return list;
+    let jd = '';
+    try { jd = String(localStorage.getItem('antcv:lastJdText') || ''); } catch (_) {}
+    const res = af.repoLink(list, { lang: o.language, jdText: jd, role: (o.meta && o.meta.role) || '' });
+    if (res && res.changes && res.changes.length) { try { console.info('[AI-REPO-LINK-001] ' + o.doc + ': ' + res.changes.join(' | ')); } catch (_) {} }
+    return (res && Array.isArray(res.sections)) ? res.sections : list;
+  } catch (_) { return list; }
+}
 function applyAcademyFormat(list, o) {
+  if (o && !o.on) return _applyRepoLink(list, o);
   if (!o || !o.on || !Array.isArray(list)) return list;
   try {
     let jd = '';

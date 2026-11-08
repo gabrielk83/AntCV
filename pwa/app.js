@@ -107,7 +107,7 @@
       while ((m = re.exec(s)) !== null) {
         found = true;
         if (m.index > cursor) out.push(s.slice(cursor, m.index));
-        out.push(React.createElement("a", { key: "mdl" + k++, href: m[2], target: "_blank", rel: "noopener noreferrer", style: { color: "#0B4F8A", textDecoration: "underline" } }, m[1]));
+        out.push(React.createElement("a", { key: "mdl" + k++, href: m[2], target: "_blank", rel: "noopener noreferrer", style: { color: "inherit", textDecoration: "underline" } }, m[1]));
         cursor = m.index + m[0].length;
       }
       if (!found) return null;

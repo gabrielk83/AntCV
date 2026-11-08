@@ -97,6 +97,16 @@
  * "Hørsholm", the academy template's place style); the Results lead is measured in the export language
  * ("Resultater: "), upright on Copenhagen.
  *
+ * NO-ORPHAN-005 (owner 2026-11-08, on the #3527 export: the early wraps "is not okay"; owner chose "cap binds"):
+ * a bind chain moved its words down as one block and left the line above at 45-70%. A bind may no longer shorten
+ * the line above the last under BIND_PREV_MIN (75%) of the column; a runt the capped bind cannot clear, and a
+ * 60-64% near miss whose bind was capped, go to the reword. Sidebar rows join the reword in that case only (a
+ * "side" brief: one line beside the bold lead when the row has two lines); kinds without a reword hold the
+ * line above at RUNT_FRAC. The L3 re-measure bind obeys the same cap. When the reword fails (no route, error,
+ * attempted cap, a rewrite the gates reject) a capped orphan ships its old bind (summary.fallbackBound): the
+ * early wrap is the last resort, never an orphan for want of an LLM answer. A rich_block PROFILE row (margin and
+ * academy layouts) now takes the reword like the text profile did (it was bind-only, so its capped runt had no fix).
+ *
  * Kill: localStorage['antcv:disable-orphan-preflight']='1'.
  * Test hooks: run(payload, { measureLines, fetchImpl, storage }) — the unit tests
  * inject a deterministic measurer + fetch; the DOM measurer is only built lazily.
@@ -104,7 +114,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.6025-no-orphan-roles';
+  var VERSION = '1.51.6325-bind-cap';
   if (window.__antcvOrphanExportPreflight === VERSION) return;
   window.__antcvOrphanExportPreflight = VERSION;
 
@@ -134,6 +144,11 @@
   // NO-ORPHAN-004: what a fix aims for (the owner floor stays RUNT_FRAC 0.60). Measured gap on a real CV: the
   // browser set last lines at 60-62% that LibreOffice / Word set at 57-59%.
   var FILL_AIM = 0.64;
+  // NO-ORPHAN-005 (owner 2026-11-08: the early wraps "is not okay"): a bind moves its words down as one block, so
+  // the line above ends early ("…programmes with supplier scoring / on quality, lead time…"). The line above a bind
+  // keeps >= BIND_PREV_MIN of the column; what the capped bind cannot fix goes to the reword. Kinds without a reword
+  // keep the owner floor (RUNT_FRAC) for that line.
+  var BIND_PREV_MIN = 0.75;
   // worker style._resultsLabel (generateDocx __RESULTS)
   var RESULTS_LABEL = { da: 'Resultater: ', es: 'Resultados: ' };
   // NO-ORPHAN-004: country names a role-line place may end with ("Hørsholm, Denmark")
@@ -383,6 +398,14 @@
     var last = widths[widths.length - 1];
     return last > 0 && colWpx > 0 && (last / colWpx) < (frac || RUNT_FRAC);
   }
+  // NO-ORPHAN-005: true when a bind shortened the line above the last under `floor` of the column. A line that
+  // was already short before the bind (a long word wrapped) is not the bind's doing.
+  function bindStarves(widths, base, colWpx, floor) {
+    if (!widths || widths.length < 2 || !base || !(colWpx > 0)) return false;
+    var i = widths.length - 2;
+    var before = base[i] > 0 ? base[i] : colWpx;
+    return widths[i] < before - 0.5 && (widths[i] / colWpx) < floor;
+  }
   // A bind that makes a token wider than the column renders as an overflow (Word then breaks it mid-word).
   function overflowsCol(widths, colWpx) {
     if (!widths || !(colWpx > 0)) return false;
@@ -402,11 +425,14 @@
   // ── L3 gates ────────────────────────────────────────────────────────────────
   // safeShorten mirrors the shipped gate (numbers + acronyms verbatim) and adds
   // the owner's banned-separator rule (no em/en dashes ever enter stored text).
+  // NO-ORPHAN-005: a number's trailing sentence punctuation is not part of it ("delivered 2 Nov 2026." matched
+  // "2026." and rejected every rewrite that moved or dropped the full stop)
+  function numsOf(s) { return (String(s).match(/\d[\d.,%/-]*/g) || []).map(function (n) { return n.replace(/[.,/-]+$/, ''); }); }
   function safeShorten(orig, short) {
     orig = String(orig || ''); short = String(short || '').trim();
     if (!short || short.length >= orig.length || short.length < orig.length * 0.45) return false;
     if (/[—–]/.test(short) && !/[—–]/.test(orig)) return false;
-    var nums = orig.match(/\d[\d.,%/-]*/g) || [];
+    var nums = numsOf(orig);
     for (var i = 0; i < nums.length; i++) { if (short.indexOf(nums[i]) === -1) return false; }
     var acr = orig.match(/\b[A-Z][A-Z0-9]{1,}\b/g) || [];
     for (var j = 0; j < acr.length; j++) { if (short.indexOf(acr[j]) === -1) return false; }
@@ -425,11 +451,11 @@
     facts = String(facts || '');
     if (!facts.trim()) return false;                       // nothing stored to lengthen from
     if (out.length > orig.length * 1.9 + 20) return false; // bounded growth — fill the line, not the page
-    var nums = orig.match(/\d[\d.,%/-]*/g) || [];
+    var nums = numsOf(orig);
     for (var i = 0; i < nums.length; i++) { if (out.indexOf(nums[i]) === -1) return false; }
     var acr = orig.match(/\b[A-Z][A-Z0-9]{1,}\b/g) || [];
     for (var j = 0; j < acr.length; j++) { if (out.indexOf(acr[j]) === -1) return false; }
-    var newNums = out.match(/\d[\d.,%/-]*/g) || [];
+    var newNums = numsOf(out);
     for (var k = 0; k < newNums.length; k++) {
       if (orig.indexOf(newNums[k]) === -1 && facts.indexOf(newNums[k]) === -1) return false;
     }
@@ -444,7 +470,7 @@
     if (!b && typeof window.ANTCV_RELAY_URL === 'string') b = String(window.ANTCV_RELAY_URL).replace(/\/+$/, '');
     return b;
   }
-  var L3_SYSTEM = 'You are a precise CV line editor. Each input item is {"line","facts"}: "line" is one CV line (an experience bullet, a Results line, or a profile sentence group) whose LAST typeset line in the EXPORTED PDF fills under 60% of the column (a dangling runt); "facts" is stored source material about the SAME role from the candidate\'s own data (may be empty). Rewrite EACH line so it fills complete typeset lines with NO short dangling last line. You may SHORTEN (shorter synonyms, drop filler like "the", "a", "that", "in order to", "various", redundant qualifiers) OR LENGTHEN by folding in ONE concrete detail taken ONLY from "facts" — never invent a fact, number, tool, or claim that is not in "line" or "facts". An item may carry "kind": "label" is a short table label naming one job need - keep its key noun phrase and return at most "fitChars" characters so it sits on ONE line; "letter" is a cover-letter sentence or bullet - keep its voice and its first person. An item may carry "maxLines": that line is TOO LONG for the layout — shorten it decisively so it fits within that many typeset lines (keep only the strongest content; a two-line bullet beats a three-line one). Keep the SAME meaning and the SAME leading verb form. PRESERVE VERBATIM every number, %, year, patent/standard code, tool name, proper noun, acronym, and any <b>/<i> tags from the original. NEVER use an em dash or en dash. Do NOT merge lines. Return ONLY a JSON array of strings, the SAME length and order as the input.';
+  var L3_SYSTEM = 'You are a precise CV line editor. Each input item is {"line","facts"}: "line" is one CV line (an experience bullet, a Results line, or a profile sentence group) whose LAST typeset line in the EXPORTED PDF fills under 60% of the column (a dangling runt); "facts" is stored source material about the SAME role from the candidate\'s own data (may be empty). Rewrite EACH line so it fills complete typeset lines with NO short dangling last line. You may SHORTEN (shorter synonyms, drop filler like "the", "a", "that", "in order to", "various", redundant qualifiers) OR LENGTHEN by folding in ONE concrete detail taken ONLY from "facts" — never invent a fact, number, tool, or claim that is not in "line" or "facts". An item may carry "kind": "label" is a short table label naming one job need - keep its key noun phrase and return at most "fitChars" characters so it sits on ONE line; "letter" is a cover-letter sentence or bullet - keep its voice and its first person; "side" is a short value shown after a bold lead in a narrow sidebar - keep its meaning and, when "fitChars" is given, return at most "fitChars" characters so lead and value share ONE line. An item may carry "maxChars" (and "minChars"), measured from the real column: a SHORTER rewrite must have between "minChars" and "maxChars" visible characters (that sets one line fewer with full lines); "fillChars" and "fillMax" (only with facts): a LONGER rewrite must have between "fillChars" and "fillMax" characters. An item may carry "maxLines": that line is TOO LONG for the layout — shorten it decisively so it fits within that many typeset lines (keep only the strongest content; a two-line bullet beats a three-line one). Keep the SAME meaning and the SAME leading verb form. PRESERVE VERBATIM every number, %, year, patent/standard code, tool name, proper noun, acronym, and any <b>/<i> tags from the original. NEVER use an em dash or en dash. Do NOT merge lines. Return ONLY a JSON array of strings, the SAME length and order as the input.';
 
   // ── kernel FACTS for the LENGTHEN leg ────────────────────────────────────────
   function normKey(s) { return String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); }
@@ -457,7 +483,7 @@
   function kernelFactsFor(tg, storage) {
     try {
       var p = kernelPI(storage);
-      if (tg.kind === 'profile') {
+      if (tg.kind === 'profile' || tg.profileRow) {
         var bits = [];
         if (typeof p.background === 'string' && p.background.trim()) bits.push(p.background.trim());
         if (typeof p.workStyle === 'string' && p.workStyle.trim()) bits.push(p.workStyle.trim());
@@ -666,9 +692,12 @@
         var leadHtml = leadText ? (leadBold ? '<b>' : '') + (s.leadItalic && !bullet ? '<i>' : '') + esc(leadText) + (s.leadItalic && !bullet ? '</i>' : '') + (leadBold ? '</b>' : '') : '';
         var a = alignAt(s, 'items.' + i2 + '.t') || alignAt(s, 'items.' + i2);
         var g = geo(side, met, bullet, bullet && !side);
+        // NO-ORPHAN-005: a rich_block PROFILE row (margin / academy layouts) takes the reword like the text profile
+        var profileRow = !side && String(s.id || '') === 'profile';
         out.push({
           kind: side ? 'side_label' : (it.mk ? 'rich_mk' : 'main_rich'),
-          noRewrite: side || (!it.mk && !isCl),
+          noRewrite: side || (!it.mk && !isCl && !profileRow),
+          profileRow: profileRow,
           sid: s.id || '', itemIdx: i2, sec: s, condensePath: 'items.' + i2,
           widthPx: g.widthPx, fontPx: g.fontPx, family: g.family, align: 'left',
           prefixHtml: (emoji ? esc(emoji + ' ') : '') + leadHtml,
@@ -1018,11 +1047,19 @@
     if (!bindable) return isRuntLines(base, tg.widthPx) ? { runt: true, baseLines: base.length } : {};   // counted, nothing to bind
     var baseOver = overflowsCol(base, tg.widthPx);
     var maxN = Math.min(MAX_BIND, bindableSpaces(raw).length - 1);
+    // NO-ORPHAN-005: a target with a reword (sidebar rows: when capped) holds the line above at BIND_PREV_MIN
+    var reword = canReword(tg);
+    var prevMin = reword ? BIND_PREV_MIN : RUNT_FRAC;
+    var capped = false, fallback = null;
     for (var n = 1; n <= maxN; n++) {
       var cand = bindLastN(raw, n);
       var l = measureTarget(measure, tg, cand);
       if (l.length > base.length) break;                 // binding overflowed a new line — stop
       if (!baseOver && overflowsCol(l, tg.widthPx)) break; // bound token wider than the column — stop
+      // Past the cap (a longer bind only shortens that line further) a reword target keeps the first bind that
+      // clears the runt as a FALLBACK, used only when the reword fails; a kind without a reword stops here.
+      var starved = bindStarves(l, base, tg.widthPx, prevMin);
+      if (starved) { capped = true; if (!reword) break; }
       // A justified paragraph (table column 2, text_bullets): the line the bind shortened must stay full
       // enough not to stretch into rivers (rule 30's JUSTIFY_MIN).
       // NO-ORPHAN-004: a justified row that is not a table cell is bound and set LEFT instead (rule 30's remedy);
@@ -1036,11 +1073,49 @@
       // NO-ORPHAN-004: the bound layout must still hold at 98% of the column (an engine that sets text wider)
       var l98 = measureTarget(measure, tg, cand, 0, 100, SAFE_FIT);
       if (l98.length !== l.length || isRuntLines(l98, tg.widthPx * SAFE_FIT)) continue;
+      if (starved) { fallback = { cand: cand, left: needLeft }; break; }
       tg.set(cand);
       if (needLeft) setLeft(tg);
       return { fixed: true, n: n, baseLines: base.length, left: needLeft };
     }
-    return isRuntLines(base, tg.widthPx) ? { runt: true, baseLines: base.length } : {};
+    if (isRuntLines(base, tg.widthPx)) return { runt: true, baseLines: base.length, capped: capped, fallback: fallback };
+    // NO-ORPHAN-005: a near miss (last line 60-64%, under 60% in Word / LibreOffice) whose bind was capped is reworded
+    if (capped && reword) return { runt: true, nearMiss: true, baseLines: base.length, capped: true };
+    return {};
+  }
+  // NO-ORPHAN-005: the reword (L3) takes every kind not marked noRewrite, and sidebar rows whose bind was capped.
+  function canReword(tg) { return tg.kind === 'side_label' || !tg.noRewrite; }
+  // NO-ORPHAN-005: the reword brief had no width, so one-line rewrites of a two-line bullet came back too long and
+  // failed the re-measure. The budget comes from this paragraph's own measured characters per line:
+  // max/min = a SHORTER rewrite that sets one line fewer (min keeps that last line >= 70%); fillMin/fillMax = a
+  // LONGER (fact-backed) rewrite that fills the current last line to >= 75% without adding a line. Every line
+  // break loses ~8-10% to the word that did not fit (a 239-char profile rewrite budgeted at 0.96 still set four
+  // lines, the first at 86%), so multi-line budgets count WRAP_KEEP of each full line; one line keeps 0.92 (a
+  // 35-char sidebar rewrite at the 0.96 budget wrapped at its hyphen in Word).
+  function visLen(h) { return String(h || '').replace(/<[^>]+>/g, '').replace(/&(amp|lt|gt|quot|#39|nbsp);/g, 'x').length; }
+  function charBudget(measure, r) {
+    try {
+      var bw = measureTarget(measure, r.tg, r.text);
+      if (!bw || bw.length < 2) return null;
+      var tot = 0; for (var i = 0; i < bw.length; i++) tot += bw[i];
+      var pre = visLen(r.tg.prefixHtml), len = pre + visLen(r.text);
+      if (!(tot > 0) || !(r.tg.widthPx > 0)) return null;
+      var cpl = len * r.tg.widthPx / tot;
+      var WRAP_KEEP = 0.9;
+      var fit = function (n) { return n <= 1 ? cpl * 0.92 : n * cpl * WRAP_KEEP; };       // chars that set n lines
+      var reach = function (n, frac) { return (n - 1) * cpl * WRAP_KEEP + frac * cpl; };  // chars whose line n is frac full
+      var lines = r.maxLines ? Math.min(r.maxLines, bw.length - 1) : bw.length - 1;
+      var max = Math.floor(fit(lines)) - pre;
+      if (max < 8) return null;
+      var min = lines >= 2 ? Math.ceil(reach(lines, 0.7)) - pre : 0;
+      var out = { max: max, min: min > 0 && min < max ? min : 0 };
+      if (!r.maxLines) {
+        out.fillMin = Math.ceil(reach(bw.length, 0.75)) - pre;
+        out.fillMax = Math.floor(fit(bw.length)) - pre;
+        if (!(out.fillMax > out.fillMin)) { delete out.fillMin; delete out.fillMax; }
+      }
+      return out;
+    } catch (_) { return null; }
   }
 
   // NO-ORPHAN-004: LEFT override at the target's own align key, never over an explicit choice.
@@ -1215,6 +1290,19 @@
 
       var targeted = isTargetedMeta(storage);
       var residue = [];
+      // NO-ORPHAN-005: a capped runt whose reword fails (no route, error, rejected rewrite) ships its old bind:
+      // an early wrap is the last resort, an orphan is never shipped for want of an LLM answer.
+      var fallbacks = [];
+      var settle = function () {
+        fallbacks.forEach(function (fb) {
+          if (fb.tg.get() !== fb.text) return;            // reworded (or changed) — keep that
+          fb.tg.set(fb.cand);
+          if (fb.left) setLeft(fb.tg);
+          summary.fallbackBound = (summary.fallbackBound || 0) + 1;
+        });
+        summary.ms = Date.now() - t0;
+        return summary;
+      };
       var noCondense = condenseDisabled(storage);
       summary.condensed = 0;
       targets.forEach(function (tg) {
@@ -1259,9 +1347,15 @@
         // NO-ORPHAN-001: the condense + bind-only kinds (tables, education, lists, ...) stop here too; what is
         // left is listed in summary.unfixed (sid:path) so the export log names every orphan that ships.
         else if (r.runt) {
-          summary.runts++;
-          if (tg.kind !== 'side_label' && !tg.noRewrite) residue.push({ tg: tg, text: tg.get(), baseLines: r.baseLines, maxLines: overLines ? MAX_BULLET_LINES : undefined });
-          else (summary.unfixed = summary.unfixed || []).push((tg.sid || '?') + ':' + tg.condensePath);
+          if (r.nearMiss) summary.nearMiss = (summary.nearMiss || 0) + 1; else summary.runts++;
+          if (r.capped) summary.capped = (summary.capped || 0) + 1;
+          // NO-ORPHAN-005: a sidebar row joins the reword only when its bind was capped (bind-only otherwise)
+          var toL3 = tg.kind === 'side_label' ? !!r.capped : !tg.noRewrite;
+          if (toL3) {
+            residue.push({ tg: tg, text: tg.get(), baseLines: r.baseLines, maxLines: overLines ? MAX_BULLET_LINES : undefined });
+            if (r.fallback) fallbacks.push({ tg: tg, text: tg.get(), cand: r.fallback.cand, left: r.fallback.left });
+          }
+          else if (!r.nearMiss) (summary.unfixed = summary.unfixed || []).push((tg.sid || '?') + ':' + tg.condensePath);
           return;
         }
         if (overLines) {
@@ -1274,7 +1368,7 @@
       if (!residue.length) { summary.ms = Date.now() - t0; return Promise.resolve(summary); }
 
       // budget: never start the LLM leg if measurement already ate the envelope
-      if (Date.now() - t0 > 9000) { summary.ms = Date.now() - t0; summary.l3 = 'skipped-budget'; return Promise.resolve(summary); }
+      if (Date.now() - t0 > 9000) { summary.l3 = 'skipped-budget'; return Promise.resolve(settle()); }
 
       // attempted-map cap (per text signature) so a line the LLM cannot fix does
       // not cost a call on every export
@@ -1283,10 +1377,10 @@
         var a = attempted[String(hash(r.text))];
         return !a || (a.n || 0) < L3_MAX_PER_LINE;
       });
-      if (!fresh.length) { summary.ms = Date.now() - t0; summary.l3 = 'all-attempted'; return Promise.resolve(summary); }
+      if (!fresh.length) { summary.l3 = 'all-attempted'; return Promise.resolve(settle()); }
       var base = proxyBase(storage);
       var fetchImpl = opts.fetchImpl || (typeof window !== 'undefined' && window.fetch ? window.fetch.bind(window) : null);
-      if (!base || !fetchImpl) { summary.ms = Date.now() - t0; summary.l3 = 'no-route'; return Promise.resolve(summary); }
+      if (!base || !fetchImpl) { summary.l3 = 'no-route'; return Promise.resolve(settle()); }
       fresh.forEach(function (r) {
         var k = String(hash(r.text)); var a = attempted[k] || { n: 0 };
         attempted[k] = { n: (a.n || 0) + 1 };
@@ -1300,8 +1394,19 @@
         var it = { line: r.text, facts: r.facts || '' };
         if (r.maxLines) it.maxLines = r.maxLines;   // rule 46: hard line cap for over-long targeted bullets
         // NO-ORPHAN-002: a table label gets a one-line brief; cover-letter lines keep the letter voice
-        if (r.tg.label) { it.kind = 'label'; it.fitChars = r.tg.fitChars; }
+        if (r.tg.label) { it.kind = 'label'; it.fitChars = r.tg.fitChars; return it; }
+        var cb = charBudget(measure, r);
+        if (r.tg.kind === 'side_label') {
+          // NO-ORPHAN-005: a two-line sidebar row is briefed to one line beside its bold lead
+          it.kind = 'side';
+          if (r.baseLines === 2 && cb) { it.fitChars = cb.max; return it; }
+        }
         else if (r.tg.doc === 'cl') it.kind = 'letter';
+        if (cb) {
+          it.maxChars = cb.max;
+          if (cb.min) it.minChars = cb.min;
+          if (it.facts && cb.fillMin) { it.fillChars = cb.fillMin; it.fillMax = cb.fillMax; }
+        }
         return it;
       });
       return fetchImpl(base + '/', {
@@ -1321,7 +1426,7 @@
         var arr; try { arr = JSON.parse(String(raw).replace(/```json|```/g, '').trim()); } catch (_) { arr = null; }
         if (!Array.isArray(arr) || arr.length !== fresh.length) {
           try { console.warn('[orphan-preflight] unusable LLM response'); } catch (_) {}
-          summary.l3 = 'bad-response'; summary.ms = Date.now() - t0; return summary;
+          summary.l3 = 'bad-response'; return settle();
         }
         for (var i = 0; i < fresh.length; i++) {
           var r = fresh[i], tg = r.tg;
@@ -1339,13 +1444,19 @@
           var lineCap = r.maxLines || r.baseLines;
           if (lines.length > lineCap) continue;
           var accepted = null;
-          if (!isRuntLines(lines, tg.widthPx)) accepted = short;
+          if (!isRuntLines(lines, tg.widthPx)) {
+            // NO-ORPHAN-005: like a bind, the rewrite must hold at 98% of the column (Word set a rewrite the browser
+            // fitted on one sidebar line on two, the second holding "optics")
+            var l98r; try { l98r = measureTarget(measure, tg, short, 0, 100, SAFE_FIT); } catch (_) { l98r = lines; }
+            if (l98r.length <= lineCap && !isRuntLines(l98r, tg.widthPx * SAFE_FIT)) accepted = short;
+          }
           else {
             var maxN = Math.min(MAX_BIND, Math.max(0, bindableSpaces(short).length - 1));
             for (var n = 1; n <= maxN; n++) {
               var cand = bindLastN(short, n);
               var l2; try { l2 = measureTarget(measure, tg, cand); } catch (_) { l2 = []; }
               if (l2.length > lines.length) break;
+              if (bindStarves(l2, lines, tg.widthPx, BIND_PREV_MIN)) break;   // NO-ORPHAN-005: no early wrap
               if (!isRuntLines(l2, tg.widthPx)) { accepted = cand; break; }
             }
           }
@@ -1360,13 +1471,12 @@
           try { window.dispatchEvent(new CustomEvent('antcv:sections-updated', { detail: { reason: 'orphan-preflight-retighten' } })); } catch (_) {}
         }
         try { console.log('[orphan-preflight] L3 re-tightened ' + summary.rewritten + '/' + fresh.length); } catch (_) {}
-        summary.ms = Date.now() - t0;
-        return summary;
+        return settle();
       }).catch(function (e) {
         clearTimeout(timer);
         try { console.warn('[orphan-preflight] L3 failed', e && e.message); } catch (_) {}
-        summary.l3 = 'error'; summary.ms = Date.now() - t0;
-        return summary;                                   // L2 fixes already landed — never fail the export
+        summary.l3 = 'error';
+        return settle();                                  // L2 fixes already landed — never fail the export
       });
     } catch (e) {
       try { console.warn('[orphan-preflight] failed', e && e.message); } catch (_) {}
@@ -1394,6 +1504,8 @@
     _hasUnderfilledMidline: hasUnderfilledMidline,
     _safeShorten: safeShorten,
     _safeRewrite: safeRewrite,
+    _bindStarves: bindStarves,
+    BIND_PREV_MIN: BIND_PREV_MIN,
     _kernelFactsFor: kernelFactsFor,
     _packTokens: packTokens,
     _packSidebar: packSidebar,

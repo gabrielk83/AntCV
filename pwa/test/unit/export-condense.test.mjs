@@ -192,7 +192,7 @@ test('table cell: a single long word alone on the last line (>= 60% fill) is bou
   assert.equal(sum.bound, 1);
 });
 
-test('justified cell: a bind that would stretch the line above under 85% is refused and reported; a left row binds', async () => {
+test('justified cell: a bind that would stretch the line above under 85% is refused and reported; a left row is capped at 75% (NO-ORPHAN-005)', async () => {
   const { api } = load();
   const text = words(22);
   // Stub for the data cell: each bound space drags 30 px from line 1 to line 2 (base 354 | 100 px). Line 1
@@ -212,8 +212,13 @@ test('justified cell: a bind that would stretch the line above under 85% is refu
   const pl = cv([]);
   pl.sections.push(tbl([HDR, ['Lead', text]], { rowAlign: [null, 'left'] }));
   const sl = await api.run(pl, { measureLines: stub, fetchImpl: noFetch });
-  assert.equal(sl.bound, 1);
-  // 4 binds reach 62% (the floor); NO-ORPHAN-004 binds to the 64% aim: 5 binds, 70%
+  // the 64% aim needs 5 binds, which leave line 1 at 57%; the third bind already drops it under 75% (264 of
+  // 354.5 px), so NO-ORPHAN-005 refuses the bind and the cell goes to the reword. No reword route here, so the
+  // 5-bind fix ships as the fallback (an early wrap beats an orphan).
+  assert.equal(sl.bound, 0);
+  assert.equal(sl.capped, 1);
+  assert.equal(sl.residue, 1);
+  assert.equal(sl.fallbackBound, 1);
   assert.equal(pl.sections[1].rows[1][1].split(NB).length - 1, 5);
 });
 
@@ -399,16 +404,18 @@ test('role line: too long to condense -> the place drops its country (academy pl
 test('a justified sidebar row whose bind would stretch the line above is bound and set LEFT; a table cell is not', async () => {
   const { api } = load({ 'antcv:disable-export-condense': '1' });   // isolate the bind
   const p = cv([]);
-  p.sections.push({ id: 'certs', type: 'rich_block', loc: 'sidebar', items: [{ b: '', t: words(11) }] });
+  // 25 words at 40 chars/line: 10 | 10 | 5 (46%). Two binds: line 3 at 66%, line 2 at 31 chars = 76% (over the
+  // NO-ORPHAN-005 75% cap, under the 85% justify floor) -> bound and set LEFT
+  p.sections.push({ id: 'certs', type: 'rich_block', loc: 'sidebar', items: [{ b: '', t: words(25) }] });
   const sum = await api.run(p, { measureLines: measureW, fetchImpl: noFetch });
   const s = p.sections[1];
   assert.ok(s.items[0].t.includes(NBS), 'bound');
   assert.equal(s.item_alignment['items.0'], 'left');
   assert.ok(sum.leftAligned >= 1);
   const q = cv([]);
-  q.sections.push({ id: 'certs', type: 'rich_block', loc: 'sidebar', item_alignment: { 'items.0': 'justify' }, items: [{ b: '', t: words(11) }] });
+  q.sections.push({ id: 'certs', type: 'rich_block', loc: 'sidebar', item_alignment: { 'items.0': 'justify' }, items: [{ b: '', t: words(25) }] });
   await api.run(q, { measureLines: measureW, fetchImpl: noFetch });
-  assert.equal(q.sections[1].items[0].t, words(11), 'an explicit justify is the user’s choice: no bind');
+  assert.equal(q.sections[1].items[0].t, words(25), 'an explicit justify is the user’s choice: no bind');
 });
 
 test('the Results lead is measured in the export language, upright on Copenhagen', () => {

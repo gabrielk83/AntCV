@@ -178,8 +178,10 @@ test('L3: batched rewrite applied when safeRewrite + re-measure pass', async () 
   assert.equal(payload.sections[0].roles[0].bullets[0], short);
   assert.equal(body.model, 'claude-sonnet-5');
   // v3 request shape: each residue item carries the line + its kernel FACTS
-  // (empty here — no personalInfo in storage).
-  assert.deepEqual(JSON.parse(body.messages[0].content), [{ line: orig, facts: '' }], 'one batched call carries the residue');
+  // (empty here — no personalInfo in storage). NO-ORPHAN-005: plus the measured character budget for one line
+  // fewer: 175 chars over 3 lines = 83.9 chars/line -> max floor(2 x 83.9 x 0.9) = 151 (each break loses ~10%),
+  // min ceil(83.9 x 0.9 + 0.7 x 83.9) = 135.
+  assert.deepEqual(JSON.parse(body.messages[0].content), [{ line: orig, facts: '', maxChars: 151, minChars: 135 }], 'one batched call carries the residue');
   assert.ok(events.includes('antcv:sections-updated'));
   const attempted = JSON.parse(store.get('antcv:orphanPreflightAttempted'));
   assert.equal(Object.keys(attempted).length, 1, 'attempt recorded');
@@ -284,27 +286,133 @@ test('sidebar labeled_list values are targets with sidebar metrics + bold label 
   assert.equal(targets[1].prefixHtml, '', 'labelHidden row measures value only');
 });
 
-test('sidebar runts are L2-bound in the payload and NEVER become L3 residue', async () => {
-  // side cell 245.9px @6px/char ≈ 40 chars/line; 1-char words make an
-  // unbindable runt (MAX_BIND glue is far under 0.40 of the column).
-  const unbindable = Array(60).fill('a').join(' ') + '.';
-  const bindable = Array(17).fill('word').join(' ') + '.';
+test('sidebar runts are L2-bound in the payload; one whose binds never reach the line above stays out of L3', async () => {
+  // side cell 245.9px @6px/char = 40 chars/line. "Lab": 7 | 8 | 5 words, last line 25 chars (61%, under the 64%
+  // aim) -> the bind that reaches line 2 takes one word down (73%) and leaves line 2 at 34 chars (83%). "Reg": a runt that no bind clears and
+  // whose binds never reach the line above (its long first word fills line 1) -> not capped, stays L2-only.
+  const NB = String.fromCharCode(160);
+  const bindable = Array(19).fill('word').join(' ') + ' word.';
+  const lone = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa b c';
   const payload = cvPayload([
     { id: 'tools', type: 'labeled_list', loc: 'sidebar', items: [
       { l: 'Lab', v: bindable },
-      { l: 'Reg', v: unbindable },
+      { l: 'Reg', v: lone },
     ] },
   ]);
   let fetchCalls = 0;
-  const { api } = load({ proxyUrl: 'https://relay.example' });
+  const { api } = load({ proxyUrl: 'https://relay.example', 'antcv:disable-export-condense': '1' });
   const sum = await api.run(payload, { measureLines: fakeMeasure, fetchImpl: () => { fetchCalls++; return Promise.resolve({ json: () => Promise.resolve({ content: [{ text: '[]' }] }) }); } });
-  assert.equal(sum.residue, 0, 'sidebar runts never reach the L3 residue list');
+  assert.equal(sum.bound, 1, 'the Lab row is bound');
+  assert.ok(payload.sections[0].items[0].v.includes(NB), 'a bound sidebar value carries NBSP glue');
+  assert.equal(sum.residue, 0, 'an uncapped sidebar runt never reaches the L3 residue list');
   assert.equal(fetchCalls, 0, 'no LLM call for sidebar-only runts');
-  assert.equal(sum.runts >= 1, true, 'the fixture did runt');
-  if (sum.bound >= 1) {
-    const vals = [payload.sections[0].items[0].v, payload.sections[0].items[1].v].join('');
-    assert.ok(vals.includes(' '), 'a bound sidebar value carries NBSP glue');
-  }
+});
+
+// ── NO-ORPHAN-005: the line above a bind keeps >= 75% of the column ─────────
+test('NO-ORPHAN-005 bindStarves: blames only a bind that shortened the line above under the floor', () => {
+  const { api } = load();
+  assert.equal(api.BIND_PREV_MIN, 0.75);
+  assert.equal(api._bindStarves([300, 200], [480, 20], 500, 0.75), true);    // 60% after the bind
+  assert.equal(api._bindStarves([400, 200], [480, 20], 500, 0.75), false);   // 80% holds
+  assert.equal(api._bindStarves([300, 200], [300, 20], 500, 0.75), false);   // already short before the bind
+  assert.equal(api._bindStarves([300, 200], [480, 20], 500, 0.60), false);   // bind-only kinds: owner floor
+  assert.equal(api._bindStarves([200], [480], 500, 0.75), false);            // one line: nothing above
+});
+
+test('NO-ORPHAN-005: the rewrite gate keeps a number\'s digits, not its trailing full stop', () => {
+  const { api } = load();
+  const orig = 'Maturity findings and a four-week pilot plan delivered 2 Nov 2026.';
+  assert.equal(api._safeRewrite(orig, 'Maturity findings, pilot plan: 2 Nov 2026', ''), true);
+  assert.equal(api._safeRewrite(orig, 'Maturity findings, pilot plan in Nov', ''), false, 'dropping 2 / 2026 still fails');
+});
+
+test('NO-ORPHAN-005: a sidebar row whose bind would starve the line above goes to L3 with a one-line side brief', async () => {
+  // "Reg: " + 7 words fills line 1 (39 of 40 chars); "word." runts line 2. One bind leaves line 1 at 83% but
+  // line 2 at 24%; two binds would drop line 1 to 71% -> capped -> L3.
+  const capped = Array(7).fill('word').join(' ') + ' word.';
+  const rewrite = 'word word word word word word.';
+  const payload = cvPayload([
+    { id: 'tools', type: 'labeled_list', loc: 'sidebar', items: [{ l: 'Reg', v: capped }] },
+  ]);
+  let req = null;
+  const { api } = load({ proxyUrl: 'https://relay.example', 'antcv:disable-export-condense': '1' });
+  const sum = await api.run(payload, { measureLines: fakeMeasure, fetchImpl: (u, o) => { req = JSON.parse(o.body); return Promise.resolve({ json: () => Promise.resolve({ content: [{ text: JSON.stringify([rewrite]) }] }) }); } });
+  assert.equal(sum.bound, 0, 'no early-wrap bind');
+  assert.equal(sum.capped, 1);
+  assert.equal(sum.residue, 1, 'the capped sidebar row reaches the reword');
+  const inputs = JSON.parse(req.messages[0].content);
+  assert.equal(inputs[0].kind, 'side');
+  assert.ok(inputs[0].fitChars > 0 && inputs[0].fitChars <= 40, 'two-line row briefed to one line');
+  assert.match(req.system, /"side" is a short value shown after a bold lead/);
+  assert.equal(sum.rewritten, 1);
+  assert.equal(payload.sections[0].items[0].v, rewrite, 'the one-line rewrite ships');
+});
+
+test('NO-ORPHAN-005: a capped orphan whose reword fails ships its old bind as the fallback; a rejected rewrite too', async () => {
+  const capped = Array(7).fill('word').join(' ') + ' word.';
+  const NB = String.fromCharCode(160);
+  const mk = () => cvPayload([{ id: 'tools', type: 'labeled_list', loc: 'sidebar', items: [{ l: 'Reg', v: capped }] }]);
+  // reword route down
+  const p1 = mk();
+  const { api } = load({ proxyUrl: 'https://relay.example', 'antcv:disable-export-condense': '1' });
+  const s1 = await api.run(p1, { measureLines: fakeMeasure, fetchImpl: () => Promise.reject(new Error('offline')) });
+  assert.equal(s1.l3, 'error');
+  assert.equal(s1.fallbackBound, 1);
+  const v1 = p1.sections[0].items[0].v;
+  assert.ok(v1.includes(NB), 'the old bind ships');
+  assert.equal(api._isRuntLines(fakeMeasure({ html: 'Reg: ' + v1, widthPx: 245.9 }), 245.9), false, 'no orphan shipped');
+  // a rewrite the gates reject (drops nothing, but grows the row to 3 lines)
+  const p2 = mk();
+  const { api: api2 } = load({ proxyUrl: 'https://relay.example', 'antcv:disable-export-condense': '1' });
+  const long = capped + ' and much more text that cannot fit anywhere in two lines of this narrow sidebar column';
+  const s2 = await api2.run(p2, { measureLines: fakeMeasure, fetchImpl: () => Promise.resolve({ json: () => Promise.resolve({ content: [{ text: JSON.stringify([long]) }] }) }) });
+  assert.equal(s2.rewritten, 0);
+  assert.equal(s2.fallbackBound, 1);
+  assert.equal(p2.sections[0].items[0].v, v1, 'same fallback bind');
+});
+
+test('NO-ORPHAN-005: a capped near miss (60-64%) goes to the reword and is not counted as an orphan', async () => {
+  // bullet column 497.8px = 82 chars. Line 1: 12 x "word" + a 20-char word (80 chars); line 2: three 16-char
+  // words (50 chars = 60.3%). The bind that fills line 2 takes the 20-char word down and leaves line 1 at 71%.
+  const w16 = 'abcdefghijklmnop', w20 = 'abcdefghijklmnopqrst';
+  const text = Array(12).fill('word').join(' ') + ' ' + w20 + ' ' + [w16, w16, w16].join(' ');
+  const payload = cvPayload([expSection([text])]);
+  const { api } = load({ proxyUrl: 'https://relay.example', 'antcv:disable-export-condense': '1' });
+  const sum = await api.run(payload, { measureLines: fakeMeasure, fetchImpl: () => Promise.reject(new Error('offline')) });
+  assert.equal(sum.runts, 0, 'not an orphan by the owner floor');
+  assert.equal(sum.nearMiss, 1);
+  assert.equal(sum.capped, 1);
+  assert.equal(sum.residue, 1, 'reworded instead of bound');
+  assert.equal(payload.sections[0].roles[0].bullets[0], text, 'no early-wrap bind in the payload');
+});
+
+test('NO-ORPHAN-005: a rich_block profile row takes the reword (with profile facts); other main prose rows stay bind-only', () => {
+  const { api } = load();
+  const payload = cvPayload([
+    { id: 'profile', type: 'rich_block', loc: 'main', items: [{ b: '', t: 'Profile sentence that wraps.' }] },
+    { id: 'work_style', type: 'rich_block', loc: 'main', items: [{ b: 'Work style', t: 'Calm and structured.' }] },
+  ]);
+  const tg = api._collectTargets(payload, api._metricsFromPayload(payload));
+  const prof = tg.find((x) => x.sid === 'profile'), ws = tg.find((x) => x.sid === 'work_style');
+  assert.equal(prof.noRewrite, false);
+  assert.equal(prof.profileRow, true);
+  assert.equal(ws.noRewrite, true);
+  const facts = api._kernelFactsFor(prof, { getItem: (k) => (k === 'personalInfo' ? JSON.stringify({ background: 'Built test benches.', workStyle: 'Calm.' }) : null) });
+  assert.match(facts, /Built test benches/);
+});
+
+test('NO-ORPHAN-005: a bind that keeps the line above at >= 75% still ships (main bullet)', async () => {
+  // 82 chars/line: 16 x "word" (79) | 14 x "word" + a 10-char word (80) | four 11-char words (47 = 57%). The bind
+  // that reaches line 2 takes the 10-char word down: line 3 at 70%, line 2 at 69 chars (84%).
+  const text = Array(30).fill('word').join(' ') + ' abcdefghij ' + Array(4).fill('abcdefghijk').join(' ');
+  const payload = cvPayload([expSection([text])]);
+  const { api } = load({ 'antcv:disable-export-condense': '1' });
+  const sum = await api.run(payload, { measureLines: fakeMeasure, fetchImpl: () => Promise.reject(new Error('no')) });
+  const out = payload.sections[0].roles[0].bullets[0];
+  const m = fakeMeasure({ html: out, widthPx: 497.8 });
+  assert.equal(sum.bound, 1);
+  assert.ok(m[m.length - 2] / 497.8 >= 0.75, 'line above the bind >= 75%');
+  assert.equal(api._isRuntLines(m, 497.8, 0.64), false, 'last line reaches the fill aim');
 });
 
 // ── profile + results targets ────────────────────────────────────────────────

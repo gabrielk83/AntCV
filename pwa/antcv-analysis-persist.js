@@ -24,12 +24,22 @@
  *            gap_state keys write as-is (company/role is portable); questions
  *            write to THIS tab's nsKey (the stored key's tabId is not portable).
  *
+ * ANALYSIS-PERSIST-ROW-001 (1.1, 2026-11-09): "the active app" was GET /api/active
+ * with no device_id = the account's GLOBAL pointer, not the row this tab edits.
+ * Seen on 1.51.6445: a tab on #3536 (Elma) PUT its questions/questionsJd into
+ * #3537 (Axis, the global pointer) ~7 s after boot; the relay replaces the whole
+ * analysis_extra column, and #3537 already held a questionsJd fingerprint of a
+ * JD that is not its own. The target is now the tab's own row: the id app.js
+ * keeps in AntcvJdScope (the row its auto-sync writes; the questions nsKey is
+ * keyed by it). No row id -> no write. PUT only after that row was read, and
+ * only when the local stores differ from what the row holds.
+ *
  * Kill-switch: localStorage['antcv:disable-analysis-persist'] = '1'.
  */
 (function () {
   'use strict';
   if (window.__antcvAnalysisPersistInstalled) return;
-  var VERSION = '1.0';
+  var VERSION = '1.1';
   window.__antcvAnalysisPersistInstalled = VERSION;
 
   var KILL = 'antcv:disable-analysis-persist';
@@ -60,12 +70,14 @@
     init.credentials = 'include';
     return origFetch.call(window, base + path, init);
   }
-  function questionsKey() {
-    try { if (window.AntcvJdScope && window.AntcvJdScope.nsKey) return window.AntcvJdScope.nsKey('questions'); } catch (_) {}
+  // `id` pins the slot to one row, so a GET that lands after a row switch never
+  // fills the new row's slot (the scope's own id moves with the switch).
+  function questionsKey(id) {
+    try { if (window.AntcvJdScope && window.AntcvJdScope.nsKey) return window.AntcvJdScope.nsKey('questions', id); } catch (_) {}
     return 'antcv:applicationQuestions';
   }
-  function questionsJdKey() {
-    try { if (window.AntcvJdScope && window.AntcvJdScope.nsKey) return window.AntcvJdScope.nsKey('questionsJd'); } catch (_) {}
+  function questionsJdKey(id) {
+    try { if (window.AntcvJdScope && window.AntcvJdScope.nsKey) return window.AntcvJdScope.nsKey('questionsJd', id); } catch (_) {}
     return 'antcv:applicationQuestionsJd';
   }
 
@@ -74,7 +86,7 @@
     var meta = readJSON('meta') || {};
     return 'gapState_' + ((meta.company || '') + '_' + (meta.role || '')) + '_';
   }
-  function collectLocal() {
+  function collectLocal(id) {
     var out = { gap_state: {} };
     var pfx = gapPrefix();
     try {
@@ -86,9 +98,9 @@
         }
       }
     } catch (_) {}
-    var q = rawGet(questionsKey());
+    var q = rawGet(questionsKey(id));
     if (q && q !== 'null') out.questions = q;
-    var qj = rawGet(questionsJdKey());
+    var qj = rawGet(questionsJdKey(id));
     if (qj && qj !== 'null') out.questionsJd = qj;
     // Nothing worth persisting?
     if (!Object.keys(out.gap_state).length && out.questions === undefined && out.questionsJd === undefined) return null;
@@ -100,8 +112,9 @@
   var inFlight = false;
   function persist(reason) {
     if (killed() || inFlight) return;
-    var id = activeId; if (id == null) return;
-    var payload = collectLocal(); if (!payload) return;
+    syncTarget();
+    var id = activeId; if (id == null || restoredFor !== id) return;
+    var payload = collectLocal(id); if (!payload) return;
     var sig = id + '|' + JSON.stringify(payload);
     if (sig === lastPushed) return;
     var last = Number(rawGet(LAST_TRY) || 0);
@@ -117,55 +130,61 @@
   }
 
   // ---- restore (absent-only, never clobbers a fresh local edit) -------------
-  var restoredFor = null;
+  var restoredFor = null, restoring = null;
   function restore(id) {
-    if (killed() || id == null || restoredFor === id) return;
+    if (killed() || id == null || restoredFor === id || restoring === id) return;
     var req = relayFetch('/api/applications/' + id, { method: 'GET' });
     if (!req) return;
+    restoring = id;
     req.then(function (r) { return r && r.ok ? r.json() : null; }).then(function (j) {
-      if (!j) return;
+      if (restoring === id) restoring = null;
+      if (!j || activeId !== id) return;   // the tab moved to another row meanwhile
       var app = j.application || j;
       var extra = app && app.analysis_extra;
       if (typeof extra === 'string') { try { extra = JSON.parse(extra); } catch (_) { extra = null; } }
-      if (!extra || typeof extra !== 'object') { restoredFor = id; return; }
+      if (!extra || typeof extra !== 'object') { restoredFor = id; persist('restored'); return; }
       var wrote = 0;
       var gs = extra.gap_state || {};
       Object.keys(gs).forEach(function (k) {
         var cur = rawGet(k);
         if (!cur || cur === 'null' || cur === '{}') { try { localStorage.setItem(k, gs[k]); wrote++; } catch (_) {} }
       });
-      // questions/questionsJd -> THIS tab's namespaced key (stored tabId isn't portable).
+      // questions/questionsJd -> THIS tab's namespaced key for this row (stored tabId isn't portable).
       if (extra.questions !== undefined) {
-        var qk = questionsKey(), cq = rawGet(qk);
+        var qk = questionsKey(id), cq = rawGet(qk);
         if (!cq || cq === 'null') { try { localStorage.setItem(qk, extra.questions); wrote++; } catch (_) {} }
       }
       if (extra.questionsJd !== undefined) {
-        var qjk = questionsJdKey(), cqj = rawGet(qjk);
+        var qjk = questionsJdKey(id), cqj = rawGet(qjk);
         if (!cqj || cqj === 'null') { try { localStorage.setItem(qjk, extra.questionsJd); wrote++; } catch (_) {} }
       }
       restoredFor = id;
+      lastPushed = id + '|' + JSON.stringify(extra);   // the row already holds this: no echo PUT
       if (wrote) {
         try { console.debug('[analysis-persist] restored ' + wrote + ' analysis store(s) for app ' + id); } catch (_) {}
         try { window.dispatchEvent(new Event('antcv:sections-updated')); } catch (_) {}
       }
-    }).catch(function () {});
+      persist('restored');
+    }).catch(function () { if (restoring === id) restoring = null; });
   }
 
-  // ---- learn the active application id --------------------------------------
+  // ---- the row this tab's document belongs to (ANALYSIS-PERSIST-ROW-001) ----
+  // AntcvJdScope.getCurrentAppId() follows app.js's active-row state (Fl), the row
+  // its auto-sync PUTs to. 'kernel' (no row yet) or anything non-numeric -> null.
+  function tabRowId() {
+    var id = null;
+    try { if (window.AntcvJdScope && window.AntcvJdScope.getCurrentAppId) id = window.AntcvJdScope.getCurrentAppId(); } catch (_) {}
+    return (id != null && /^\d+$/.test(String(id))) ? String(id) : null;
+  }
   var activeId = null;
-  function pollActive() {
+  function syncTarget() {
     if (killed()) return;
-    var req = relayFetch('/api/active', { method: 'GET' });
-    if (!req) return;
-    req.then(function (r) { return r && r.ok ? r.json() : null; }).then(function (j) {
-      var id = j && (j.application_id != null ? j.application_id : (j.active && j.active.application_id));
-      if (id == null) return;
-      if (String(id) !== String(activeId)) {
-        activeId = id;
-        lastPushed = '';           // new app -> allow a fresh push
-        restore(id);               // pull its stored analysis stores
-      }
-    }).catch(function () {});
+    var id = tabRowId();
+    if (id !== activeId) {
+      activeId = id;
+      lastPushed = '';             // new row -> allow a fresh push
+    }
+    if (id != null) restore(id);   // pull its stored analysis stores (once per row)
   }
 
   // ---- wiring ---------------------------------------------------------------
@@ -181,14 +200,15 @@
   window.addEventListener('antcv:sections-updated', function () {
     clearTimeout(debounce); debounce = setTimeout(function () { persist('settle'); }, 1500);
   });
-  setTimeout(pollActive, 1500);
-  setInterval(pollActive, 8000);
+  setTimeout(syncTarget, 1500);
+  setInterval(syncTarget, 8000);
 
   window.AntcvAnalysisPersist = {
     version: VERSION,
     push: function () { persist('forced'); },
     restore: function () { restoredFor = null; restore(activeId); },
-    _collect: collectLocal
+    target: function () { return activeId; },
+    _collect: function () { return collectLocal(activeId); }
   };
   try { console.debug('[analysis-persist] installed v' + VERSION); } catch (_) {}
 })();

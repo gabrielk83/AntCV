@@ -48,7 +48,7 @@
  */
 (function (root) {
   'use strict';
-  var VERSION = '1.51.6365-trackman-title';
+  var VERSION = '1.51.6385-role-line';
 
   // Mirror of pwa/gold-rules.json academy_format (test: academy-format.test.mjs).
   var RULES = {
@@ -231,6 +231,14 @@
     }
     return b;
   }
+  // ROLE-LINE-ONE-001 (owner 2026-11-08, #3536: "the experiance lines are too compressed leftwards, should be one
+  // line not two or 3 lines"): the role line keeps the years and the PLACE (house 1051/1054: "København", "Tel Aviv").
+  // "Copenhagen, Denmark (alongside Innoviz until 2025)" took most of the line and pushed the title onto 3-5 lines.
+  // Place = the text before the first comma, without a bracketed note. The preview shows the same (roles adapter).
+  function place(loc) {
+    var s = String(loc == null ? '' : loc).replace(/\s*\([^)]*\)/g, ' ').replace(/\s{2,}/g, ' ').trim();
+    return s.split(/\s*,\s*/)[0] || s;
+  }
   // ROLE-BODY-NOTE-001 in a translated CV: the old English-only note left "Internship: " on a
   // Danish role (next to a bullet that already opened "Praktik:"). Localise it, or drop the
   // duplicate.
@@ -335,6 +343,9 @@
     }
     detailed.forEach(function (i) {
       var r = roles[i];
+      if (typeof r.location === 'string' && r.location.trim() && place(r.location) !== r.location.trim()) {
+        r.location = place(r.location); changes.push('role ' + (r.id || i) + ': location shortened to the place');
+      }
       var li = localiseIntern(r.bullets, o.lang);
       if (li !== r.bullets && JSON.stringify(li) !== JSON.stringify(r.bullets)) { r.bullets = li; changes.push('role ' + (r.id || i) + ': internship note localised'); }
       var pb = pickBullets(r.bullets, RULES.role_bullets_max, RULES.bullet_max_chars, o.ai ? ANTCV_WORD : null);
@@ -1009,7 +1020,7 @@
     return { ok: !issues.length, issues: issues };
   }
 
-  var api = { version: VERSION, RULES: RULES, langOf: langOf, wrongLang: wrongLang, audit: audit, apply: apply, plan: plan, balance: balance, BAL: BAL, repoLink: repoLink, aiOriented: aiOriented, ANTCV_URL: ANTCV_URL, retitle: retitle, TRACKMAN_TITLE: TRACKMAN_TITLE, labels: labels, isPlaceholder: isPlaceholder, ownerFact: ownerFact };
+  var api = { version: VERSION, RULES: RULES, langOf: langOf, wrongLang: wrongLang, audit: audit, apply: apply, plan: plan, balance: balance, BAL: BAL, repoLink: repoLink, aiOriented: aiOriented, ANTCV_URL: ANTCV_URL, retitle: retitle, TRACKMAN_TITLE: TRACKMAN_TITLE, labels: labels, isPlaceholder: isPlaceholder, ownerFact: ownerFact, place: place };
   root.AntcvAcademyFormat = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

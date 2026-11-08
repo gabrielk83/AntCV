@@ -27,7 +27,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.4566-role-location';
+  var VERSION = '1.51.6385-role-line';
 
   // ROLE-LOCATION-001 (EXEC-LINEAR step 2, 2026-09-27): a role carries an optional
   // `location` (4th segment). The role LINE has two formats, stored in
@@ -39,6 +39,16 @@
   var RLF_KEY = 'antcv:roleLineFormat';
   function roleLineFormat() {
     try { return localStorage.getItem(RLF_KEY) === 'meta' ? 'meta' : 'classic'; } catch (_) { return 'classic'; }
+  }
+  // ROLE-LINE-ONE-001 (owner 2026-11-08): in the margin (academy) CV the role line shows the PLACE, not the whole
+  // stored location - the export does the same in AntcvAcademyFormat.apply(). Same gate as antcv-academy-preview.
+  function placeOf(loc) {
+    try {
+      var af = window.AntcvAcademyFormat;
+      if (!af || typeof af.place !== 'function' || localStorage.getItem('antcv:disable-academy-format') === '1') return loc;
+      if (!document.body || document.body.getAttribute('data-antcv-cv-margin') !== '1') return loc;
+      return af.place(loc);
+    } catch (_) { return loc; }
   }
 
   // CPH-RENDER-FLAGS-001 flag 3 (spec COPENHAGEN_MODERN_NORDIC_PALETTE_SPEC.md,
@@ -361,7 +371,7 @@
     );
     var locNode = (meta || hasLoc) ? [
       ' | ',
-      h(B, { path: ['items', i, 'location'], value: locSeg.t || '', placeholder: '[Location]' })
+      h(B, { path: ['items', i, 'location'], value: placeOf(locSeg.t || ''), placeholder: '[Location]' })
     ] : [];
     var right = h('span', {
       style: {

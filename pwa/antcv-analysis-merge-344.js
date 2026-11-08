@@ -23,7 +23,7 @@
  *
  * This sidecar's job
  * ------------------
- *   1. When the Analysis view opens (and a JD is present), fetch
+ *   1. When the Analysis view opens (and this tab's row has a JD), fetch
  *      /api/jd-analysis exactly as antcv-recheck-fit.js does.
  *   2. Merge { recruiter, red_flags } into the persisted `rationale` object
  *      (localStorage key "rationale") so app.js's `yo` carries them.
@@ -50,7 +50,7 @@
 (function () {
   'use strict';
 
-  var SCRIPT_VERSION = '1.50.820-recruiter-fold';
+  var SCRIPT_VERSION = '1.51.6545-tab-row';
   if (window.__antcvAnalysisMerge344 === SCRIPT_VERSION) return;
   window.__antcvAnalysisMerge344 = SCRIPT_VERSION;
 
@@ -117,15 +117,28 @@
   // --- jd-analysis fetch (parallels antcv-recheck-fit.js postJdAnalysis) ---
   var inflight = false;
   var lastFetchedKey = '';
+  // row -> { key, a }: an answer that landed while the tab was off that row.
+  var parkedByRow = {};
 
-  async function fetchActiveJd(proxyUrl) {
+  // SIDECAR-ROW-001 (2026-11-09): the JD came from GET /api/active with no device_id
+  // = the account's GLOBAL pointer, not the row this tab edits (the
+  // ANALYSIS-PERSIST-ROW-001 class). A tab on #3536 with the pointer on #3537 merged
+  // #3537's recruiter / red flags / gaps into #3536's rationale, and the auto-sync
+  // saved it there. The row is now the id app.js keeps in AntcvJdScope (its auto-sync
+  // target); the JD is that row's scoped slot (app.js mirrors a loaded row's JD there),
+  // else the row's own jd_text. 'kernel' or anything non-numeric -> no row, no merge.
+  function tabRowId() {
+    var id = null;
+    try { if (window.AntcvJdScope && window.AntcvJdScope.getCurrentAppId) id = window.AntcvJdScope.getCurrentAppId(); } catch (_) {}
+    return (id != null && /^\d+$/.test(String(id))) ? String(id) : null;
+  }
+  async function fetchTabJd(proxyUrl, id) {
+    var local = '';
+    try { local = String((window.AntcvJdScope && window.AntcvJdScope.getJd(id)) || ''); } catch (_) {}
+    if (local.trim().length >= 50) return local;
     if (!proxyUrl) return '';
     try {
-      var r = await fetch(proxyUrl + '/api/active', { credentials: 'include' });
-      if (!r.ok) return '';
-      var j = await r.json();
-      if (!j || !j.ok || !j.application_id) return '';
-      var r2 = await fetch(proxyUrl + '/api/applications/' + j.application_id, { credentials: 'include' });
+      var r2 = await fetch(proxyUrl + '/api/applications/' + id, { credentials: 'include' });
       if (!r2.ok) return '';
       var j2 = await r2.json();
       if (!j2 || !j2.ok || !j2.application) return '';
@@ -154,34 +167,48 @@
       __quickGen = (__gs === 'fast') || !!window.__antcvQuickGen;
     } catch (_) { __quickGen = !!window.__antcvQuickGen; }
     if (__quickGen) return;
+    var rowId = tabRowId();
+    if (rowId == null) return;
     var proxyUrl = readProxyUrl();
     if (!proxyUrl) return;
 
     inflight = true;
     try {
-      var jd = await fetchActiveJd(proxyUrl);
-      if (!jd || jd.length < 50) { inflight = false; return; }
-      var key = String(jd.length) + ':' + jd.slice(0, 40);
-      if (key === lastFetchedKey) { inflight = false; return; }
-      lastFetchedKey = key;
+      var jd = await fetchTabJd(proxyUrl, rowId);
+      if (!jd || jd.length < 50 || tabRowId() !== rowId) { inflight = false; return; }
+      var key = rowId + ':' + String(jd.length) + ':' + jd.slice(0, 40);
+      var a = null;
+      var parked = parkedByRow[rowId];
+      if (parked && parked.key === key) {
+        delete parkedByRow[rowId];
+        a = parked.a;
+        inflight = false;
+      } else {
+        if (key === lastFetchedKey) { inflight = false; return; }
+        lastFetchedKey = key;
 
-      var res = await fetch(proxyUrl + '/api/jd-analysis', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jd_text: jd,
-          candidate_summary: readSectionsForSummary(),
-          search_recruiter: true,
-        }),
-      });
-      var raw = await res.text();
-      var data = null;
-      try { data = raw ? JSON.parse(raw) : null; } catch (_) { data = null; }
-      inflight = false;
-      if (!res.ok || !data || !data.ok) return;
+        var res = await fetch(proxyUrl + '/api/jd-analysis', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jd_text: jd,
+            candidate_summary: readSectionsForSummary(),
+            search_recruiter: true,
+          }),
+        });
+        var raw = await res.text();
+        var data = null;
+        try { data = raw ? JSON.parse(raw) : null; } catch (_) { data = null; }
+        inflight = false;
+        if (!res.ok || !data || !data.ok) return;
 
-      var a = data.analysis || data;
+        a = data.analysis || data;
+        // The tab left that row while the analysis ran (a row switch, or the boot
+        // scope blip 3536 -> kernel -> 3536): keep the answer for that row instead
+        // of merging it into whatever rationale the tab holds now.
+        if (tabRowId() !== rowId) { parkedByRow[rowId] = { key: key, a: a }; return; }
+      }
       var merged = readRationale() || rationale; // re-read in case it changed
       if (!merged || typeof merged !== 'object') return;
       // Attach recruiter + red_flags (+ questions for completeness) so the

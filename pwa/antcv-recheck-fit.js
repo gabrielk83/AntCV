@@ -28,7 +28,7 @@
  * Flow
  * ----
  *   1. User clicks 🎯 (bottom-right). Panel opens with two mode tabs.
- *   2. JD source: textarea (pre-filled from /api/active if available)
+ *   2. JD source: textarea (pre-filled from this tab's application)
  *      plus PDF / Word / Image upload buttons.
  *   3. User picks a mode (default: Fit vs CV) and clicks Run.
  *   4. Sidecar POSTs to the appropriate endpoint with the JD text
@@ -44,8 +44,8 @@
  *
  * Not stored in localStorage:
  *   - The JD text (lives in React refs inside app.js). The user
- *     pastes it into our textarea, or we try to fetch it via
- *     /api/active from D1, or they upload a file we extract text from.
+ *     pastes it into our textarea, or we read this tab's row JD
+ *     (AntcvJdScope slot, else its D1 jd_text), or they upload a file.
  */
 (function () {
   'use strict';
@@ -96,17 +96,28 @@
     } catch (_) { return 'en'; }
   }
 
-  // Try to pre-fill the JD textarea from the active application in
-  // D1. Best-effort; if the relay isn't reachable or the user has no
-  // active application, we silently leave the field empty.
-  async function fetchActiveJd(proxyUrl) {
+  // Try to pre-fill the JD textarea from the application THIS tab edits.
+  // Best-effort; if the relay isn't reachable or the tab has no row yet,
+  // we silently leave the field empty.
+  // SIDECAR-ROW-001 (2026-11-09): this read GET /api/active with no
+  // device_id = the account's GLOBAL pointer, so a tab on #3536 got #3537's
+  // JD in its box. The row is now the id app.js keeps in AntcvJdScope (its
+  // auto-sync target); the JD is that row's scoped slot, else its jd_text.
+  function tabRowId() {
+    let id = null;
+    try { if (window.AntcvJdScope && window.AntcvJdScope.getCurrentAppId) id = window.AntcvJdScope.getCurrentAppId(); } catch (_) {}
+    return (id != null && /^\d+$/.test(String(id))) ? String(id) : null;
+  }
+  async function fetchTabJd(proxyUrl) {
+    const id = tabRowId();
+    if (id == null) return null;
+    try {
+      const local = String((window.AntcvJdScope && window.AntcvJdScope.getJd(id)) || '');
+      if (local.trim()) return local;
+    } catch (_) {}
     if (!proxyUrl) return null;
     try {
-      const r = await fetch(proxyUrl + '/api/active', { credentials: 'include' });
-      if (!r.ok) return null;
-      const j = await r.json();
-      if (!j || !j.ok || !j.application_id) return null;
-      const r2 = await fetch(proxyUrl + '/api/applications/' + j.application_id, { credentials: 'include' });
+      const r2 = await fetch(proxyUrl + '/api/applications/' + id, { credentials: 'include' });
       if (!r2.ok) return null;
       const j2 = await r2.json();
       if (!j2 || !j2.ok || !j2.application) return null;
@@ -826,12 +837,10 @@
       className: 'antcv-rf-textarea',
       placeholder: T.jdLabel + '…',
     });
-    // Pre-fill from /api/active if possible (best-effort)
-    if (proxyUrl) {
-      fetchActiveJd(proxyUrl).then(jd => {
-        if (jd && !jdField.value) jdField.value = jd;
-      }).catch(() => {});
-    }
+    // Pre-fill from this tab's own application if possible (best-effort)
+    fetchTabJd(proxyUrl).then(jd => {
+      if (jd && !jdField.value) jdField.value = jd;
+    }).catch(() => {});
 
     // Doc target selector — only shown when CL is available
     const docTargetSel = el('select', { className: 'antcv-rf-select' },
@@ -1305,7 +1314,7 @@
   window.AntcvRecheckFit = {
     open: openModal,
     close: closeModal,
-    version: '1.50.152',
+    version: '1.51.6545-tab-row',
     // v1.40.133 internals exposed for tests
     _extractTextFromFile: extractTextFromFile,
     _postJdAnalysis: postJdAnalysis,

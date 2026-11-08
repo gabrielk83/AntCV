@@ -26,7 +26,7 @@
  *
  * PRIMARY (generation) language per app is learned two ways, both fail-OPEN (an unknown
  * primary never strips — worst case is no protection, never a blocked save or data loss):
- *   - on the active application changing: one read-only GET of the cloud row -> the
+ *   - on this tab's row changing: one read-only GET of the cloud row -> the
  *     script its stored canonical is actually in;
  *   - on a generation completing: the just-generated content's script (a real Generate
  *     is the app's true birth language and must always save).
@@ -41,7 +41,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.2106-parallel-translation-keep';
+  var VERSION = '1.51.6545-tab-row';
   if (window.__antcvParallelTranslationKeep === VERSION) return;
   window.__antcvParallelTranslationKeep = VERSION;
 
@@ -131,35 +131,48 @@
   }
 
   // ---- learn the primary language -----------------------------------------
+  // stampedAt[id] = count of generation stamps on that row; a learn answer that was
+  // asked for before the latest stamp is older than the stamp and is dropped.
+  var stampedAt = {}, learning = {};
   function learnPrimary(id) {
-    if (id == null) return;
+    if (id == null || learning[id]) return;
     // Use the ORIGINAL fetch (via relayGet) so our own learning GET is never
     // re-entrantly guarded, and carries the Bearer the relay requires.
     var req = relayGet('/api/applications/' + id); if (!req) return;
+    var s0 = stampedAt[id] || 0;
+    learning[id] = 1;
     req
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (j) {
-        if (!j) return;
+        delete learning[id];
+        if (!j || (stampedAt[id] || 0) !== s0) return;
         var a = j.application || j;
         var sc = scriptOf(a.cv_sections, a.cl_sections);   // 'zh'.. | 'la' | null(detector not ready)
         if (sc == null) return;                            // try again next poll
         primaryByAppId[id] = sc;                           // Latin canonical stamps 'la' (the safe default)
       })
-      .catch(function () {});
+      .catch(function () { delete learning[id]; });
   }
 
+  // ---- the row this tab writes (SIDECAR-ROW-001, 2026-11-09) ---------------
+  // "the active app" was GET /api/active with no device_id = the account's GLOBAL
+  // pointer, not the row this tab writes. With the pointer on #3537 and the tab on
+  // #3536, #3536's primary was never learned (its PUTs went unguarded), and a
+  // generation here stamped #3537 with this tab's script, so a later Latin save of
+  // #3537 from this tab could drop its sections. The row is now the id app.js keeps in
+  // AntcvJdScope (the row its auto-sync PUTs to). 'kernel' (no row yet, or the boot
+  // blip 3536 -> kernel -> 3536) keeps the last row: no re-learn when it comes back.
+  function tabRowId() {
+    var id = null;
+    try { if (window.AntcvJdScope && window.AntcvJdScope.getCurrentAppId) id = window.AntcvJdScope.getCurrentAppId(); } catch (_) {}
+    return (id != null && /^\d+$/.test(String(id))) ? String(id) : null;
+  }
   var lastActive = null;
   function pollActive() {
     if (disabled()) return;
-    var req = relayGet('/api/active'); if (!req) return;   // logged out -> skip (no 401 spam)
-    req
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (j) {
-        var id = j && (j.application_id != null ? j.application_id : (j.active && j.active.application_id));
-        if (id == null) return;
-        if (String(id) !== String(lastActive)) { lastActive = id; learnPrimary(id); }
-      })
-      .catch(function () {});
+    var id = tabRowId();
+    if (id == null) return;
+    if (id !== lastActive) { lastActive = id; learnPrimary(id); }
   }
 
   // ---- generation-complete: the new content IS the new canonical ----------
@@ -172,12 +185,13 @@
   function pollGen() {
     if (disabled()) return;
     var g = genInProgress();
-    if (wasGen && !g && lastActive != null) {
-      // a generation just finished -> stamp the active app's primary from the fresh content
+    var id = (wasGen && !g) ? tabRowId() : null;
+    if (id != null) {
+      // a generation just finished -> stamp this tab's row primary from the fresh content
       try {
         var b = safeParse(localStorage.getItem('sections')) || {};
         var sc = scriptOf(b.cv || [], b.cl || []);
-        if (sc != null) primaryByAppId[lastActive] = sc;
+        if (sc != null) { primaryByAppId[id] = sc; stampedAt[id] = (stampedAt[id] || 0) + 1; }
       } catch (_) {}
     }
     wasGen = g;

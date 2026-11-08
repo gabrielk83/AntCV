@@ -382,7 +382,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.6445-open-stale-tab';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.6525-analysis-once';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.6545-tab-row';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -424,7 +424,7 @@
           app.src = 'app.js?v=1.51.6445-open-stale-tab';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.6525-analysis-once';
+            vo.src = 'antcv-version-override.js?v=1.51.6545-tab-row';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -729,7 +729,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-section-align.js?v=1.51.1604-align-storm-001" defer></script>
 <script src="antcv-subsection-reorder.js?v=1.50.702" defer></script>
 <script src="antcv-disclosure-triangle.js?v=1.50.703" defer></script>
-<script src="antcv-recheck-fit.js?v=1.50.161-proxy-relay" defer></script>
+<script src="antcv-recheck-fit.js?v=1.51.6545-tab-row" defer></script>
 <script src="antcv-jd-watch.js?v=1.50.23-brand" defer></script>
 <!-- SHARE-TARGET-JD-URL-001 (1.50.375): consumes ?shared_url/?shared_text from
      the manifest share_target and drops the job link into the JD URL field. -->
@@ -1149,7 +1149,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      open and merges recruiter + red_flags into the rationale so the tab
      renders them; retires the JD-analysis FAB once the matching app.js
      release is detected live. Companion app.js render blocks ship via deploy. -->
-<script src="antcv-analysis-merge-344.js?v=1.51.4146-appload-fixes" defer></script>
+<script src="antcv-analysis-merge-344.js?v=1.51.6545-tab-row" defer></script>
 <script src="antcv-analysis-panel-jd-block-356.js?v=1.51.4146-appload-fixes" defer></script>
 <!-- v1.50.146: Analysis report — enhances the panel with assumptions /
      confidence review / recommendations, and exports the analysis as a
@@ -1198,7 +1198,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
        short wrong-language titles, so they stranded (the 3Shape Chinese-headings bug). -->
   <script src="antcv-title-lang-heal.js?v=1.51.2379-title-lang-heal" defer></script>
   <!-- PARALLEL-TRANSLATION-KEEP-001 (1.51.2106): a translated VIEW must never overwrite an app's canonical cv_sections in cloud — request-only PUT guard, strips sections on a non-primary wide-script flip (server preserves omitted fields); translations stay in langRenders. Loads after babel-relang for __antcvContentScript. Kill antcv:disable-parallel-translation-keep -->
-  <script src="antcv-parallel-translation-keep.js?v=1.51.2290-relay-auth-fix" defer></script>
+  <script src="antcv-parallel-translation-keep.js?v=1.51.6545-tab-row" defer></script>
   <script src="antcv-identity-lang-heal.js?v=1.51.397-matrix-rowspec" defer></script>
 <script src="antcv-cl-cloud-sync-extra.js?v=1.51.381-sig-backfill" defer></script>
 <script src="antcv-cl-prose-loss-guard-985.js?v=1.51.5242-app-integrity" defer></script>

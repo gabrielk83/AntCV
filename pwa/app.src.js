@@ -19051,8 +19051,16 @@ window.__antcvTxtSame =
                   // ever loaded the saved cv/cl_sections into `ro`. Skip when
                   // local sections already look like real content (don't
                   // clobber in-progress edits or the kernel cloud-restore).
+                  // BOOT-STALE-LOCAL-001 (2026-11-08, #3536 Elma): a REAL local copy used to win
+                  // unconditionally, so a reload of a tab holding an older document re-POSTed and
+                  // re-PUT it over a row another device or session had changed. Keep it only when
+                  // antcv-app-rev-guard says it is based on the row's current rev (antcv:docRev);
+                  // otherwise load the cloud row like a template boot. The guard holds the
+                  // document writes until bootDone() and drops the stale ones.
                   try {
                     if (__chosenId) {
+                      const __rg = window.AntcvAppRevGuard;
+                      let __bd = null;
                       const s = u.get("sections", null),
                         isTemplate =
                           !s ||
@@ -19065,8 +19073,14 @@ window.__antcvTxtSame =
                             /^\s*\[/.test(
                               String(s.cv[0].content).trim(),
                             ));
-                      if (isTemplate) {
-                        const detail = await oo.get(__chosenId);
+                      if (
+                        isTemplate ||
+                        (__rg &&
+                          __rg.bootCheck &&
+                          (__bd = await __rg.bootCheck(__chosenId, () => oo.get(__chosenId))) &&
+                          __bd.load)
+                      ) {
+                        const detail = (__bd && __bd.res) || (await oo.get(__chosenId));
                         if (detail && detail.application) {
                           const n = detail.application;
                           try {
@@ -19117,7 +19131,9 @@ window.__antcvTxtSame =
                             __chosenId,
                             "co=",
                             n.jd_company || "",
+                            __bd ? "(local copy predated the row: " + __bd.decision.reason + ")" : "",
                           );
+                          try { __rg && __rg.bootDone && __rg.bootDone(__chosenId, n); } catch (_) {}
                         }
                       }
                     }
@@ -19134,6 +19150,8 @@ window.__antcvTxtSame =
                     console.warn("[apps] load failed:", e));
                 } finally {
                   Ul("");
+                  // BOOT-STALE-LOCAL-001: no row loaded -> release the held writes.
+                  try { window.AntcvAppRevGuard && window.AntcvAppRevGuard.bootDone && window.AntcvAppRevGuard.bootDone(); } catch (_) {}
                 }
               })());
         }, [Y]),

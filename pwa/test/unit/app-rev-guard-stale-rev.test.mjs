@@ -45,6 +45,7 @@ function load(r) {
   const sb = { console: { info() {}, log() {}, warn() {} }, JSON, Object, String, Number, Promise, RegExp, localStorage: { getItem: () => null }, Response: class { constructor(b, o) { this.status = (o && o.status) || 200; this.ok = this.status < 300; this._b = b; } async json() { return JSON.parse(this._b); } clone() { return this; } } };
   sb.window = sb; sb.window.fetch = r.fetch;
   vm.createContext(sb); vm.runInContext(src, sb);
+  sb.window.AntcvAppRevGuard.bootDone(); // BOOT-STALE-LOCAL-001: mount-hydrate ended, no row loaded -> writes pass
   return sb;
 }
 const tick = () => new Promise((res) => setTimeout(res, 5));

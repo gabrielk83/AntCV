@@ -28,17 +28,21 @@
  *     Holder heartbeat 20 s, stale after 120 s, released on pagehide.
  *   - Reload keeps the tab's document: the shadow persists in sessionStorage.
  *
+ * 2.1.0 (BOOT-STALE-LOCAL-001, 2026-11-08): `antcv:docRev` (the row rev the document
+ * is based on, kept by antcv-app-rev-guard.js) is a document key, so the stamp a tab
+ * boots with is the stamp of the document it boots with, never a sibling tab's.
+ *
  * Kill via localStorage['antcv:disable-tab-doc-iso']='1' (reload): no shadow, no
  * lease, every tab reads and writes the shared keys as before 1.0.0.
  */
 (function () {
   'use strict';
-  var VERSION = '2.0.0-tab-doc-lease';
+  var VERSION = '2.1.0-doc-rev';
   if (window.__antcvTabDocIso) return;
   window.__antcvTabDocIso = VERSION;
 
   var LEASE = 'antcv:docWriterTab';
-  var DOC_KEYS = ['sections', 'meta', 'antcv:clSlogan'];
+  var DOC_KEYS = ['sections', 'meta', 'antcv:clSlogan', 'antcv:docRev'];
   var SNAP_V = 'antcv:tabDoc:v';           // '2' once this tab's shadow is in sessionStorage
   var SNAP_PRE = 'antcv:tabDoc:';          // + key -> value (absent = key not set)
   var LEGACY_SNAP = 'antcv:tabDocSnap';    // 1.0.0 snapshot {sections, meta, slogan}

@@ -27,7 +27,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.6385-role-line';
+  var VERSION = '1.51.6386-role-wrap';
 
   // ROLE-LOCATION-001 (EXEC-LINEAR step 2, 2026-09-27): a role carries an optional
   // `location` (4th segment). The role LINE has two formats, stored in
@@ -373,18 +373,6 @@
       ' | ',
       h(B, { path: ['items', i, 'location'], value: placeOf(locSeg.t || ''), placeholder: '[Location]' })
     ] : [];
-    var right = h('span', {
-      style: {
-        fontSize: exp, color: yearSeg.color || (k.mainYearColor || '#595959'),
-        fontStyle: yearSeg.italic ? 'italic' : 'normal', fontFamily: T, whiteSpace: 'nowrap',
-        fontWeight: meta && yearSeg.bold == null ? 700 : (yearSeg.bold ? 700 : 400)
-      }
-    },
-      meta ? '(' : '',
-      h(B, { path: ['items', i, 'years'], value: yearSeg.t || '', placeholder: '[Years]' }),
-      locNode[0] || null, locNode[1] || null,
-      meta ? ')' : ''
-    );
     var align = ['left', 'center', 'right', 'justify'].indexOf(ctx.align) >= 0 ? ctx.align : 'justify';
     // The role line is ALWAYS a flex row (role+company | years); a flex row ignores
     // textAlign, so the "Groups" control drives its justifyContent instead:
@@ -393,6 +381,24 @@
     // Keeping the structure stable (always flex) lets antcv-item-align toggle it live
     // via data-antcv-role-line WITHOUT waiting for a React re-render.
     var JC = { left: 'flex-start', center: 'center', right: 'flex-end', justify: 'space-between' }[align] || 'space-between';
+    // ROLE-LINE-ONE-001 (owner 2026-11-08): in the default (justify) line the years wrap like the export's right
+    // tab - the title keeps its natural width (one line while it fits the column) and the years move to the next
+    // line, still on the right, only when they do not fit beside it. The never-wrapping years used to squeeze the
+    // title into a narrow column of 2-5 lines. Grouped lines (left / center / right) keep the single flex row.
+    var wrap = JC === 'space-between';
+    var right = h('span', {
+      style: {
+        fontSize: exp, color: yearSeg.color || (k.mainYearColor || '#595959'),
+        fontStyle: yearSeg.italic ? 'italic' : 'normal', fontFamily: T, whiteSpace: 'nowrap',
+        fontWeight: meta && yearSeg.bold == null ? 700 : (yearSeg.bold ? 700 : 400),
+        marginLeft: wrap ? 'auto' : undefined
+      }
+    },
+      meta ? '(' : '',
+      h(B, { path: ['items', i, 'years'], value: yearSeg.t || '', placeholder: '[Years]' }),
+      locNode[0] || null, locNode[1] || null,
+      meta ? ')' : ''
+    );
     var hrNode = (row.hr !== false && !cphPkg()) ? h('div', { style: { borderBottom: '1px solid ' + subColor, margin: '2px 0 2px' } }) : null;
     return h('div', {
       'data-antcv-row-path': 'items.' + i, 'data-antcv-role-head': '1',
@@ -401,7 +407,7 @@
       'data-antcv-rowkey': row._key || ('items.' + i),
       style: { marginTop: 0 === i ? 0 : 6, marginBottom: 2 }
     },
-      h('div', { 'data-antcv-role-line': '1', style: { display: 'flex', justifyContent: JC, flexWrap: 'nowrap', gap: 4, alignItems: 'baseline' } }, left, right),
+      h('div', { 'data-antcv-role-line': '1', style: { display: 'flex', justifyContent: JC, flexWrap: wrap ? 'wrap' : 'nowrap', gap: wrap ? '0 4px' : 4, alignItems: 'baseline' } }, left, right),
       hrNode
     );
   }

@@ -65,8 +65,21 @@ test('preview: the margin CV shows the place beside the years; other layouts and
 
 test('index.html: the adapter moves in lockstep with app.js; the rules load after it', () => {
   const v = (name) => (index.match(new RegExp(name.replace(/\./g, '\\.') + '\\?v=([^"\']+)')) || [])[1];
-  assert.equal(v('antcv-roles-richblock-adapter.js'), '1.51.6385-role-line');
+  assert.equal(v('antcv-roles-richblock-adapter.js'), '1.51.6386-role-wrap');
   assert.equal(v('antcv-roles-richblock-adapter.js'), v('app.js'));
   assert.equal(v('antcv-academy-format.js'), '1.51.6385-role-line');
   assert.ok(index.indexOf('antcv-roles-richblock-adapter.js?v=') < index.indexOf('antcv-academy-format.js?v='), 'adapter reads the rules at render time');
+});
+
+test('preview: the default (justify) line wraps like the export tab - years move down, still right; grouped lines stay one row', () => {
+  const A = loadAdapter({}, true);
+  const ad = A.adapt(sec);
+  const line = A.renderRoleHead(React, ctx, ad.items[0], 0).children[0];
+  assert.equal(line.props.style.flexWrap, 'wrap');
+  assert.equal(line.props.style.justifyContent, 'space-between');
+  assert.equal(line.children[1].props.style.marginLeft, 'auto', 'a wrapped years line stays on the right');
+  assert.equal(line.children[1].props.style.whiteSpace, 'nowrap');
+  const grouped = A.renderRoleHead(React, Object.assign({}, ctx, { align: 'left' }), ad.items[0], 0).children[0];
+  assert.equal(grouped.props.style.flexWrap, 'nowrap');
+  assert.equal(grouped.children[1].props.style.marginLeft, undefined);
 });

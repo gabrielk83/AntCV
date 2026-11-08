@@ -40,6 +40,7 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mupev15f_bqmz","started":"2026-10-01T10:48:17.049Z","host":"vm","worktree":null,"branch":"claude/project-thread-cub2nb","range":"1.51.4786-1.51.4790","task":"impact types in result bullets (thread cub2nb)","beat":"2026-10-01T10:48:17.054Z"}
 {"id":"sh_mw3hijam_7jnk","started":"2026-11-05T11:51:01.722Z","host":"Gabo-PC","worktree":"ecstatic-heisenberg-9cfa6d","branch":"claude/ecstatic-heisenberg-9cfa6d","range":"1.51.5665-1.51.5684","task":"MARGIN-LAYOUT-001: header card inside the sidebar (house margin format), no band","beat":"2026-11-05T11:51:01.779Z"}
 {"id":"sh_mw7ss3as_brq3","started":"2026-11-08T12:17:28.142Z","host":"Gabo-PC","worktree":"gracious-goldwasser-ac89f6","branch":"claude/musing-euler-71ad39","range":"1.51.6245-1.51.6264","task":"NO-ORPHAN-005 bind cap: line above a bind stays >= 75% full, else reword","beat":"2026-11-08T12:17:28.216Z"}
+{"id":"sh_mw7trkzb_fvge","started":"2026-11-08T12:45:03.935Z","host":"Gabo-PC","worktree":"nervous-napier-68c925","branch":"ship-academy","range":"1.51.6265-1.51.6284","task":"ACADEMY-BALANCE-001: page 1 not left a role-height short; free height spread over section + role gaps (margin CV export); worker accepts style.roleGap","beat":"2026-11-08T12:45:04.008Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

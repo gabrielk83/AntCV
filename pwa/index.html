@@ -382,7 +382,7 @@
 <script type="module">
   import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.6445-open-stale-tab';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.6485-analysis-row';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.6505-stale-notice-pos';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -424,7 +424,7 @@
           app.src = 'app.js?v=1.51.6445-open-stale-tab';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.6485-analysis-row';
+            vo.src = 'antcv-version-override.js?v=1.51.6505-stale-notice-pos';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -1093,7 +1093,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      injects base_rev from the rev this tab last loaded/saved; a relay 409 (stale writer)
      becomes a logged silent skip so an open tab can never revert a fresher cloud write. -->
 <script src="antcv-app-rev-guard.js?v=1.51.6465-stale-notice" defer></script>
-<script src="antcv-doc-stale-notice.js?v=1.51.6465-stale-notice" defer></script>
+<script src="antcv-doc-stale-notice.js?v=1.51.6505-stale-notice-pos" defer></script>
 <script src="antcv-kernel-completeness-290.js?v=1.51.5033-cc-headers-plain" defer></script>
 <script src="antcv-app-history-zfix-291.js?v=1.40.291" defer></script>
 <script src="antcv-app-history-back-to-preview-341.js?v=1.40.341-p0e" defer></script>

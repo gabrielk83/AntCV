@@ -6,7 +6,7 @@
  *
  * antcv-app-rev-guard.js fires `antcv:doc-stale` when it skips a save for that reason (or the
  * boot load of the newer row did not happen) and `antcv:doc-fresh` once the tab saves again.
- * This sidecar shows a chip at the bottom of the screen while the tab is stale:
+ * This sidecar shows a chip above the bottom toolbar while the tab is stale:
  *   - what happened, in the UI language (en/da, English otherwise), naming the application;
  *   - Reload: a cold boot loads the newer row (BOOT-STALE-LOCAL-001) and keeps this tab's
  *     copy in localStorage `antcv:bootStaleLocal`;
@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.6465-stale-notice';
+  var VERSION = '1.51.6505-stale-notice-pos';
   if (window.__antcvDocStaleNotice) return;
   window.__antcvDocStaleNotice = VERSION;
 
@@ -78,7 +78,8 @@
       el.id = ID;
       el.setAttribute('role', 'alert');
       Object.assign(el.style, {
-        position: 'fixed', left: '50%', bottom: '24px', transform: 'translateX(-50%)', zIndex: '9991',
+        // 88 px: above the fixed bottom toolbar (Sections / CV-CL / Fuse), as the PDF toast sits
+        position: 'fixed', left: '50%', bottom: '88px', transform: 'translateX(-50%)', zIndex: '9991',
         width: 'max-content', maxWidth: 'min(460px, calc(100vw - 32px))', boxSizing: 'border-box',
         padding: '10px 12px 10px 14px', borderRadius: '8px', border: '1px solid #d97706',
         background: '#fef3c7', color: '#92400e', boxShadow: '0 4px 12px rgba(0,0,0,0.12)',

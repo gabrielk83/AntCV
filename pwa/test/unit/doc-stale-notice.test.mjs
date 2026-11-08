@@ -85,6 +85,7 @@ test('stale shows the chip; × hides it until the tab is fresh again; fresh hide
   p.fire('antcv:doc-stale', { id: '3536', reason: 'sections-changed', company: 'Elma Instruments' });
   assert.ok(p.shown());
   assert.equal(p.chip().getAttribute('role'), 'alert');
+  assert.equal(p.chip().style.bottom, '88px', 'above the fixed bottom toolbar (72 px)');
   assert.match(p.chip().textContent, /Denne fane gemmer ikke/);
   assert.match(p.chip().textContent, /Elma Instruments/);
   p.btn((b) => b.textContent === '×').click();

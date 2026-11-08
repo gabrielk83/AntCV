@@ -142,6 +142,32 @@ test('everything fits page 1: a stale experience break clears instead of stickin
   assert.equal(map.experience, undefined);
 });
 
+test('ELMA-PREVIEW-001: a hidden role head keeps its slot, so the next roles keep their own keys', () => {
+  // antcv-academy-preview hides the roles the academy export folds (display:none): role 1 here.
+  // Its head no longer counted, so role 3's head read role 2's index and the map said {"2":2}.
+  const gone = (e) => {
+    Object.defineProperty(e, 'offsetWidth', { get: () => 0 });
+    Object.defineProperty(e, 'offsetHeight', { get: () => 0 });
+    e.getClientRects = () => [];
+    e.rect = { top: 0, bottom: 0, height: 0, left: 0, right: 0, width: 0 };
+    return e;
+  };
+  const four = roles.concat([{ id: 'r3', title: 'System Architect', company: 'Innoviz', years: '2017', bullets: ['a', 'b', 'c', 'd', 'e', 'f', 'g'] }]);
+  const secs = Object.assign({}, sections, { cv: sections.cv.map((s) => (s.id === 'experience' ? Object.assign({}, s, { roles: four }) : s)) });
+  // role 0 170-426, role 1 hidden, role 2 cut to two short rows 431-500, role 3 505-900
+  const part = el('DIV', { 'data-sid': 'experience' }, 150, 900, [
+    head(0, 170, 205), row('P', 1, 209, 257), row('P', 2, 261, 342), row('P', 3, 346, 426),
+    gone(head(4, 0, 0)), gone(row('P', 5, 0, 0)), gone(row('P', 6, 0, 0)),
+    head(12, 431, 466), row('P', 13, 468, 500),
+    head(23, 505, 593), row('P', 24, 597, 700), row('P', 25, 704, 800), row('P', 26, 804, 900),
+  ]);
+  const root = el('DIV', {}, 0, 3000, [main(0, page1Before().concat([part]))]);
+  const { sandbox } = sandboxFor(root, { sections: JSON.stringify(secs), doc: '"cv"' });
+  const map = sandbox.window.AntcvAutoPagebreak._compute(1053 / 1.14, 'antcv:autoPages', false);
+  // 354 + role 0 (277) + role 2 (74) = 705 <= 772; + role 3 (400) > 772 -> role 3 opens page 2
+  assert.equal(JSON.stringify(map.experience), JSON.stringify({ 3: 2 }));
+});
+
 test('one-time re-plan + the role-key stamp, and the export client skips the item->role translation on it', () => {
   assert.ok(/var BUDGET_REV = '2026-11-05-role-keys';/.test(measurer));
   assert.ok(measurer.includes("localStorage.setItem(EXP_KEYS_KEY, __expKeysRole ? 'role' : 'item');"));

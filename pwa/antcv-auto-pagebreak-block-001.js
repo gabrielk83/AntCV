@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.51.5705-exp-role-key';
+  var VERSION = '1.51.6345-elma-preview';
   if (window.__antcvAutoPagebreakInstalled === VERSION) return;
   window.__antcvAutoPagebreakInstalled = VERSION;
 
@@ -1081,7 +1081,13 @@
               var __unit = null;
               for (var __xi = 0; __xi < __pRows.length; __xi++) {
                 var __xEl = __pRows[__xi];
-                if (!visible(__xEl)) continue;
+                // ELMA-PREVIEW-001: a hidden head (antcv-academy-preview hides the roles the export
+                // folds) still holds its place in the adapter's role list; count it before the
+                // visibility skip, or every later role takes the next role's index
+                if (!visible(__xEl)) {
+                  if (__xEl.hasAttribute('data-antcv-role-head')) { __expHeadOrd++; __unit = null; }
+                  continue;
+                }
                 var __xc = __xEl.getBoundingClientRect();
                 if (__xEl.hasAttribute('data-antcv-role-head')) {
                   var __ri2 = __expRoleRi[__expHeadOrd++];

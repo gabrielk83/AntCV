@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.6325-bind-cap';
+  const TARGET_VERSION = '1.51.6345-elma-preview';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.6325-bind-cap',
     '1.51.6305-links',
     '1.51.6265-academy-balance',
     '1.51.6225-upsert-dedupe',

@@ -418,7 +418,7 @@ test('app.js mount-hydrate asks the guard before keeping a real local copy (sour
   assert.equal(one(appMin, 'finally{as("");try{window.AntcvAppRevGuard&&window.AntcvAppRevGuard.bootDone&&window.AntcvAppRevGuard.bootDone()}catch(_){}}'), 1);
   assert.equal(one(appSrc, '(__bd = await __rg.bootCheck(__chosenId, () => oo.get(__chosenId)))'), 1);
   assert.equal(one(appSrc, '__rg && __rg.bootDone && __rg.bootDone(__chosenId, n);'), 1);
-  assert.match(ISO, /DOC_KEYS = \['sections', 'meta', 'antcv:clSlogan', 'antcv:docRev'\]/);
+  assert.match(ISO, /DOC_KEYS = \['sections', 'meta', 'antcv:clSlogan', 'antcv:docRev', 'rationale'\]/);
 });
 
 test('OPEN-STALE-TAB-001: every app.js path that puts a row into the editor stamps it (source + mirror)', () => {

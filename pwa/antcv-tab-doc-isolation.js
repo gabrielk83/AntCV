@@ -32,18 +32,25 @@
  * is based on, kept by antcv-app-rev-guard.js) is a document key, so the stamp a tab
  * boots with is the stamp of the document it boots with, never a sibling tab's.
  *
+ * 2.2.0 (TAB-DOC-RATIONALE-001, 2026-11-09): `rationale` (the Analysis object app.js
+ * keeps in `yo`) is a document key. It was shared: tab B on #3537 left its analysis in
+ * the key, merge-344 in tab A (#3536) merged into it and fired antcv:rationale-merge,
+ * app.js re-hydrated `yo` and A's auto-sync PUT #3537's analysis to #3536. Snapshot
+ * v3; a v2 snapshot (no rationale) takes rationale from the shared store once.
+ *
  * Kill via localStorage['antcv:disable-tab-doc-iso']='1' (reload): no shadow, no
  * lease, every tab reads and writes the shared keys as before 1.0.0.
  */
 (function () {
   'use strict';
-  var VERSION = '2.1.0-doc-rev';
+  var VERSION = '2.2.0-rationale';
   if (window.__antcvTabDocIso) return;
   window.__antcvTabDocIso = VERSION;
 
   var LEASE = 'antcv:docWriterTab';
-  var DOC_KEYS = ['sections', 'meta', 'antcv:clSlogan', 'antcv:docRev'];
-  var SNAP_V = 'antcv:tabDoc:v';           // '2' once this tab's shadow is in sessionStorage
+  var DOC_KEYS = ['sections', 'meta', 'antcv:clSlogan', 'antcv:docRev', 'rationale'];
+  var SNAP_V = 'antcv:tabDoc:v';           // '3' once this tab's shadow is in sessionStorage
+  var ADDED_V3 = { rationale: 1 };         // not in a v2 snapshot
   var SNAP_PRE = 'antcv:tabDoc:';          // + key -> value (absent = key not set)
   var LEGACY_SNAP = 'antcv:tabDocSnap';    // 1.0.0 snapshot {sections, meta, slogan}
   var BEAT_MS = 20000, STALE_MS = 120000;
@@ -98,7 +105,7 @@
       if (SHADOW[k] == null) sessionStorage.removeItem(SNAP_PRE + k); else sessionStorage.setItem(SNAP_PRE + k, SHADOW[k]);
       BAD[k] = 0;
     } catch (_) { BAD[k] = 1; setSs(SNAP_PRE + k, null); }
-    setSs(SNAP_V, DOC_KEYS.some(function (x) { return BAD[x]; }) ? null : '2');
+    setSs(SNAP_V, DOC_KEYS.some(function (x) { return BAD[x]; }) ? null : '3');
   }
 
   (function initShadow() {
@@ -106,11 +113,13 @@
     var legacy = null;
     try { legacy = JSON.parse(ss(LEGACY_SNAP) || 'null'); } catch (_) {}
     var src;
-    if (ss(SNAP_V) === '2') src = function (k) { return ss(SNAP_PRE + k); };
+    var v = ss(SNAP_V);
+    if (v === '3') src = function (k) { return ss(SNAP_PRE + k); };
+    else if (v === '2') src = function (k) { return ADDED_V3[k] ? rawGet(k) : ss(SNAP_PRE + k); };
     else if (legacy && legacy.sections && !(lease && lease.tab === MY)) {
       // 1.0.0 restored its snapshot only when another tab owned the shared doc.
       var lv = { sections: legacy.sections, meta: legacy.meta, 'antcv:clSlogan': legacy.slogan };
-      src = function (k) { return lv[k] == null ? null : String(lv[k]); };
+      src = function (k) { return ADDED_V3[k] ? rawGet(k) : lv[k] == null ? null : String(lv[k]); };
     }
     else src = rawGet;                                // fresh tab: start from the shared doc
     DOC_KEYS.forEach(function (k) { SHADOW[k] = src(k); persist(k); });

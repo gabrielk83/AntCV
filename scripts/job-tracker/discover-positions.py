@@ -270,18 +270,26 @@ _BUILDING_AUTOMATION_NEED = re.compile(
 # GATE-003 (owner 2026-11-01, STIL): a public-sector IT business-analyst seat with no hardware core.
 _BA_TITLE = re.compile(r"forretningsanalytiker|business analyst|it-analytiker", re.I)
 _PUBLIC = re.compile(r"styrelse|ministeri|kommune|\bregion\b|forvaltning|agency|\bSTIL\b", re.I)
-_BELOW_FLOOR = re.compile(r"below (?:the )?(?:\d+k )?floor|under (?:the )?(?:\d+k )?floor|below (?:the )?envelope(?:'s)?\s+(?:pay|salary|løn|floor|band|range|dkk)", re.I)
+# DISCOVERY-MED-MUST-EXAMPLE-002: a pay word before "below the envelope" counts too
+# ("salary likely below the envelope").
+_PAY_WORD = r"(?:pay|salary|salaries|løn\w*|dkk|compensation|wage\w*)"
+_BELOW_FLOOR = re.compile(r"below (?:the )?(?:\d+k )?floor|under (?:the )?(?:\d+k )?floor|below (?:the )?envelope(?:'s)?\s+(?:pay|salary|løn|floor|band|range|dkk)|"
+                          r"\b" + _PAY_WORD + r"\b[^.\n]{0,40}below (?:the )?envelope|"
+                          r"below (?:the )?envelope[^.\n]{0,25}\b" + _PAY_WORD + r"\b", re.I)
 JOBINDEX_MIN_JD = 600
 
 
 def _example_items(tail):
-    """Items of an example list, up to the first item that carries a must marker."""
-    n = 0
+    """Items of an example list, up to the first item that carries a must marker, and whether
+    one of them is non-medical (DISCOVERY-MED-MUST-EXAMPLE-002: an all-medical list is a must)."""
+    n, other = 0, False
     for item in _LIST_SEP.split(tail):
         if _MUST.search(item):
             break
-        n += 1 if item.strip() else 0
-    return n
+        if item.strip():
+            n += 1
+            other = other or not _MED_TERM.search(item)
+    return n, other
 
 
 def _medical_must(text):
@@ -290,8 +298,12 @@ def _medical_must(text):
         if _MED_TERM.search(sent) and _EXP_WORD.search(sent) and _MUST.search(sent) \
                 and not _SOFT.search(sent):
             ex = _EXAMPLE_LIST.search(sent)
-            if ex and _MED_TERM.search(ex.group(1)) and _example_items(ex.group(1)) >= 2:
-                continue
+            # -002: a medical term before the list ("medical device experience, such as ISO
+            # 13485 or IEC 62304 work, is required") keeps the sentence a must.
+            if ex and _MED_TERM.search(ex.group(1)) and not _MED_TERM.search(sent[:ex.start(1)]):
+                n, other = _example_items(ex.group(1))
+                if n >= 2 and other:
+                    continue
             return sent.strip()[:90]
     return None
 

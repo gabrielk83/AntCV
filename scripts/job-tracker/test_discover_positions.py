@@ -239,6 +239,18 @@ check("gate3: pay below the envelope floor is still rejected",
       bool(G(dict(PM, company="Some Co", fit="Salary likely below the envelope floor"))), True)
 check("gate3: pay below the envelope's salary band is rejected",
       bool(G(dict(PM, company="Some Co", fit="Public scale, below the envelope's salary band"))), True)
+# DISCOVERY-MED-MUST-EXAMPLE-002 (desktop nightly 2026-11-09): false negatives left by -001.
+check("gate2: a medical-device must with an ISO / IEC example list stays rejected",
+      bool(G(dict(PM, company="Medtech A/S", jd="At least 5 years of medical device experience, "
+                  "such as ISO 13485 or IEC 62304 work, is required."))), True)
+check("gate2: a must whose example list holds only medical items stays rejected",
+      bool(G(dict(PM, company="Medtech A/S",
+                  jd="Minimum 5 years of experience such as medical device or medtech development."))), True)
+check("gate3: 'salary likely below the envelope' is rejected",
+      bool(G(dict(PM, company="Some Co", why="Public scale; salary likely below the envelope"))), True)
+check("gate3: 'below the envelope on pay' is rejected",
+      bool(G(dict(PM, company="Some Co", fit="Band sits below the envelope on pay"))), True)
+
 import datetime as _dt
 _past = (_dt.date.today() - _dt.timedelta(days=3)).strftime("%d.%m.%Y")
 _today = _dt.date.today().strftime("%d.%m.%Y")

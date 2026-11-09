@@ -2637,7 +2637,9 @@ _2026-10-08 weekly tune: re-verified, not fixed. `C.claude` / `C.anthropic` stil
 
 ## Row 117 — CLUSTER-GLOBAL-SINGLE-JD-DOMINANCE-001
 
-_verified: 2026-11-02_
+_verified: 2026-11-09_
+
+**2026-11-09 (weekly demand-seed, cloud routine):** NOT re-measured. The Cloudflare-Developer-Platform connector is still not authorized in the cloud session, so the read-only split query did not run. The 2026-11-09 D1 push re-wrote identical research ranks (10 clusters, 247 rows), so the 10-25 split stands. Owner decision still owed.
 
 **2026-11-02 (weekly demand-seed, cloud routine):** NOT re-measured. The Cloudflare-Developer-Platform connector is not authorized in the cloud session, so the read-only split query did not run. The 11-02 D1 push re-wrote identical research ranks (10 clusters, 247 rows), so the 10-25 split stands. Owner decision still owed.
 
@@ -2720,7 +2722,9 @@ storage-layer cleanup, no user impact while the render mitigation holds.
 
 ## Row 125 — MEDSEC-CLUSTER-001
 
-_verified: 2026-11-02_
+_verified: 2026-11-09_
+
+**2026-11-09 (weekly demand-seed, cloud routine): cluster re-confirmed on a DK-only sample; leg (4) cloud egress allowlist still OPEN and now also blocks Jobnet.** Jobindex RSS `q=lægesekretær` + `q=sundhedsadministrativ`: 37 unique items, 23 secretary/SAK titles, 10 hosted ads followed to the full body (DK n=10, 5 in East Denmark: Hillerød, Vallensbæk Strand, Brøndby, Akutafdelingen Slagelse, SUH Patologi). Education item 6/10 bodies, both Region Sjælland hospital ads name "uddannede lægesekretærer eller sundhedsadministrative koordinatorer", r4 pin holds; clinic-assistant 4/10, all general practice, stays r20. n=10 too small to move a rank. Regional `region-hovedstaden` / `region-sjaelland` `.rss` returned 0 items. Blocked by the cloud egress proxy (403 CONNECT): `jobsearch.api.jobtechdev.se` (SE Skåne leg skipped), Jobnet (new leg d, `job_sources.py --source jobnet`), `sundhedsjobs.dk`, `antcv.pages.dev`, `seekerscore.com`. Owner: add these hosts to the routine environment's network allowlist.
 
 **2026-11-02 (weekly demand-seed, cloud routine): cluster re-confirmed on a DK-only sample; new OPEN leg (4) cloud egress allowlist.** Jobindex RSS `q=lægesekretær` + `q=sundhedsadministrativ`: 33 items, 22 secretary/SAK titles, 4 full jobannonce bodies (DK n=4, 2 in Region Hovedstaden). The cloud environment's egress proxy refuses `jobsearch.api.jobtechdev.se` (SE Skåne leg did not run) and `sundhedsjobs.dk` (where Region H / Sjælland hospital ads keep their bodies), so the cloud leg cannot reach requirement-level hospital or Skåne data. 13 of 16 hospital titles name the lægesekretær / SAK education (r4 pin holds). Owner: add `jobsearch.api.jobtechdev.se`, `sundhedsjobs.dk` and `antcv.pages.dev` to the routine environment's network allowlist. Regional `.rss` paths still 404 (leg from 10-25 carried).
 

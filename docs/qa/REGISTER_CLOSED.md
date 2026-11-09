@@ -4,6 +4,19 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 137 — DISCOVERY-MED-MUST-EXAMPLE-001 — CLOSED 2026-11-09 (job-tracker nightly, evidence: 6 new checks on the real `_evidence_gate`; 2 red on pre-fix HEAD; 3 line-index sabotages red)
+
+_verified: 2026-11-09_
+
+**FIXED 2026-11-09 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `scripts/job-tracker/discover-positions.py`, `test_discover_positions.py`; script-only, no `pwa/` asset, no version, no shift claim).** (a) `_medical_must` skips a sentence whose medical term sits in an example list (`_EXAMPLE_LIST`: such as / for example / for instance / including / eksempelvis / såsom / som fx) that holds at least two items before any must marker (`_example_items`). A must followed by a non-medical example, or a list whose only item is medical ("such as medical devices, is required"), stays rejected. (b) `_BELOW_FLOOR`'s envelope branch needs pay context after it (pay / salary / løn / floor / band / range / dkk); "below the envelope's specialist/manager framing" no longer trips it. Tests: 6 new checks (Subra sentence, Hamamatsu `why`, 4 negative controls); pre-fix 2 red (the two 11-01 false positives), controls green. Sabotage by line index: 294 (`continue` → `pass`) 1 red, 282 (`break` → `pass`) 1 red, 273 (`_BELOW_FLOOR` reverted) 1 red; restored byte-identical. Suite 98/98, all job-tracker python tests green.
+
+**Found by the position-discovery run 2026-11-01 (Sunday 22:00 fire, ran past midnight; Gabo-PC, Opus 5.5).** `discover-positions.py add` skipped two leads on evidence-gate false positives.
+
+1. **Subra / Technical Project Manager, New Factory** — skipped as `medical-device experience is a must`. The sentence: "5–10 years of experience with managing complex technical projects in a manufacturing setting, such as pharma, medtech, or electronics." `_medical_must` needs `_MED_TERM` (medtech) + `_EXP_WORD` (experience) + `_MUST` (the `\d+\+?\s*years` branch) and no `_SOFT` match. `_SOFT` has no example-list case ("such as", "e.g.", "for example", "or electronics"). The owner rule (GATE-002) is: skip only when medical-device experience is a must. Here medtech is one of three examples. Re-added with `override_gate` + `override_reason`, recorded on the row.
+2. **Hamamatsu Photonics / NPI Engineer** — skipped as `pay noted below the envelope floor`. `_BELOW_FLOOR` matched "below the envelope's specialist/manager framing" in the routine's own `why` text (a title remark, not pay). Re-added with the `why` reworded. Lower risk: the regex is wider than its name.
+
+**Owed:** (a) an example-list clause in `_SOFT`, or require the must-word to govern the medical term rather than a sibling "years", with a test on the Subra sentence and a negative control on a real must sentence; (b) narrow `_BELOW_FLOOR` to pay context (pay / salary / løn / DKK near the match). Script-only, no `pwa/` asset.
+
 ## Row 139 — JT-EARLIER-CAREER-RESULTS-DUP-001 — CLOSED 2026-11-05 (job-tracker nightly, evidence: negative-controlled test on the real `compact_jd_aware`; 4 red on pre-fix HEAD)
 
 _verified: 2026-11-05_

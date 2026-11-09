@@ -223,6 +223,22 @@ check("gate3: a business analyst at a hardware employer is not touched",
       G({"company": "Hamamatsu Photonics", "role": "BI Business Analyst", "why": "laser products, supplier data"}), None)
 check("gate3: pay noted below the floor is rejected",
       bool(G(dict(PM, company="Some Co", fit="State pay scale, likely below the 55k floor (salary risk)"))), True)
+# DISCOVERY-MED-MUST-EXAMPLE-001 (row 137): the two 2026-11-01 false positives + negative controls.
+check("gate2: Subra 'such as pharma, medtech, or electronics' is an example list, not a must",
+      G(dict(PM, company="Subra", jd="5–10 years of experience with managing complex technical projects "
+             "in a manufacturing setting, such as pharma, medtech, or electronics.")), None)
+check("gate2: a real must followed by a non-medical example stays rejected",
+      bool(G(dict(PM, company="Medtech A/S", jd="At least 5 years of medical device experience is required, "
+                  "such as Class II development."))), True)
+check("gate2: a must whose example list holds only one medical item stays rejected",
+      bool(G(dict(PM, company="Medtech A/S", jd="At least 5 years of experience in a regulated field, "
+                  "such as medical devices, is required."))), True)
+check("gate3: 'below the envelope's specialist framing' in why is a title remark, not pay",
+      G(dict(PM, company="Hamamatsu Photonics", why="NPI seat, below the envelope's specialist/manager framing")), None)
+check("gate3: pay below the envelope floor is still rejected",
+      bool(G(dict(PM, company="Some Co", fit="Salary likely below the envelope floor"))), True)
+check("gate3: pay below the envelope's salary band is rejected",
+      bool(G(dict(PM, company="Some Co", fit="Public scale, below the envelope's salary band"))), True)
 import datetime as _dt
 _past = (_dt.date.today() - _dt.timedelta(days=3)).strftime("%d.%m.%Y")
 _today = _dt.date.today().strftime("%d.%m.%Y")

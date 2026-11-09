@@ -2655,7 +2655,9 @@ _verified: 2026-11-09_
 
 ## Row 118 — JT-ARMED-ARTIFACT-NO-DRAIN-001
 
-_verified: 2026-10-27_
+_verified: 2026-11-09_
+
+**RE-VERIFIED 2026-11-09 (job-tracker nightly, Gabo-PC).** `list` on rev 371 still prints the ARMED block with `napatech` (app 2781, CLOSED row, flag stale). `health`: 60 pointers vs 94 cloud apps, 1 dead, `veo_technologies` → 3500. Still waits on the owner.
 
 **RE-VERIFIED 2026-10-26 (job-tracker nightly, Gabo-PC).** `list` on rev 321 still prints the ARMED block with `napatech` (app 2781, CLOSED row). `health`: 54 pointers vs 87 cloud apps, 1 dead, `veo_technologies` → 3500. Still waits on the owner.
 
@@ -2774,7 +2776,9 @@ is adoption, not pricing. Proposed: replace the three Mistral ids with `mistral-
 
 ## Row 127 — JT-OWNER-PACKAGED-DEFAULT-ON-001
 
-_verified: 2026-10-27_
+_verified: 2026-11-09_
+
+**RE-VERIFIED 2026-11-09 (job-tracker nightly, Gabo-PC).** Rev 371: the same five rows fill the OWNER-PACKAGED block (185 3Shape, 186 WD, 207 RED Global, 226 Hamamatsu BI Business Analyst I, 227 LEGO Senior TPM) and are the only eligible rows, so the nightly generated nothing for the second run in a row. Owner: clear the clock flags or answer (b).
 
 **RE-VERIFIED 2026-10-26 (job-tracker nightly, Gabo-PC). The class recurred.** Two more hand-packaged rows joined 185 and 186 in the OWNER-PACKAGED block on rev 321: `red_global` (207, "CV drafted") and `deloitte` (208, "CV/CL drafted"), both with a package line, no queue entry, no artifact. None generated. Four rows now wait on the owner's (b) answer.
 
@@ -2868,17 +2872,6 @@ The 10-30 desktop report saw the 10-29 failure as "cause not visible in the log"
 **Optional hardening (not done).** A post-step in `nightly.yml` that greps the execution artifact for `Credit balance` and prints it as `::error::` so the cause shows in the run summary.
 
 **Progress 2026-11-02 (position-discovery, Gabo-PC, Opus 5.5).** All three relay PUTs of this run landed first time on the body-scaled timeout (sweep rev 355 → 356, two `add` passes → rev 360); no transport error. Still open for the slow-uplink case; owner call unchanged.
-
-## Row 137 — DISCOVERY-MED-MUST-EXAMPLE-001
-
-_verified: 2026-11-02_
-
-**Found by the position-discovery run 2026-11-01 (Sunday 22:00 fire, ran past midnight; Gabo-PC, Opus 5.5).** `discover-positions.py add` skipped two leads on evidence-gate false positives.
-
-1. **Subra / Technical Project Manager, New Factory** — skipped as `medical-device experience is a must`. The sentence: "5–10 years of experience with managing complex technical projects in a manufacturing setting, such as pharma, medtech, or electronics." `_medical_must` needs `_MED_TERM` (medtech) + `_EXP_WORD` (experience) + `_MUST` (the `\d+\+?\s*years` branch) and no `_SOFT` match. `_SOFT` has no example-list case ("such as", "e.g.", "for example", "or electronics"). The owner rule (GATE-002) is: skip only when medical-device experience is a must. Here medtech is one of three examples. Re-added with `override_gate` + `override_reason`, recorded on the row.
-2. **Hamamatsu Photonics / NPI Engineer** — skipped as `pay noted below the envelope floor`. `_BELOW_FLOOR` matched "below the envelope's specialist/manager framing" in the routine's own `why` text (a title remark, not pay). Re-added with the `why` reworded. Lower risk: the regex is wider than its name.
-
-**Owed:** (a) an example-list clause in `_SOFT`, or require the must-word to govern the medical term rather than a sibling "years", with a test on the Subra sentence and a negative control on a real must sentence; (b) narrow `_BELOW_FLOOR` to pay context (pay / salary / løn / DKK near the match). Script-only, no `pwa/` asset.
 
 ## Row 141 — ACCOUNT-ERASE-COMPLETE-001
 

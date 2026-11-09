@@ -256,6 +256,10 @@ _MUST = re.compile(r"required|requirement|\bmust\b|essential|mandatory|minimum|a
 _SOFT = re.compile(r"or (?:an)?other regulated|or (?:a )?similar(?:ly)? regulated|regulated industr|"
                    r"nice[- ]to[- ]have|advantage|a plus|\bbonus\b|preferabl|ideally|desir|might|"
                    r"\bfordel\b|gerne|\bor\b[^.]{0,40}\b(?:automotive|aerospace|defen[cs]e)", re.I)
+# DISCOVERY-MED-MUST-EXAMPLE-001: medtech named as one item of an example list ("in a
+# manufacturing setting, such as pharma, medtech, or electronics") is not a medical must.
+_EXAMPLE_LIST = re.compile(r"\b(?:such as|for example|for instance|including|eksempelvis|såsom|som fx)\b([^\n]*)", re.I)
+_LIST_SEP = re.compile(r",|\bor\b|\beller\b|/", re.I)
 _JOBINDEX = re.compile(r"(?:^|//|\.)jobindex\.dk/", re.I)
 # GATE-003 (owner 2026-11-01, Lemvigh-Mueller): a background in building automation / installation is a
 # building-industry background too.
@@ -266,8 +270,18 @@ _BUILDING_AUTOMATION_NEED = re.compile(
 # GATE-003 (owner 2026-11-01, STIL): a public-sector IT business-analyst seat with no hardware core.
 _BA_TITLE = re.compile(r"forretningsanalytiker|business analyst|it-analytiker", re.I)
 _PUBLIC = re.compile(r"styrelse|ministeri|kommune|\bregion\b|forvaltning|agency|\bSTIL\b", re.I)
-_BELOW_FLOOR = re.compile(r"below (?:the )?(?:\d+k )?floor|under (?:the )?(?:\d+k )?floor|below (?:the )?envelope", re.I)
+_BELOW_FLOOR = re.compile(r"below (?:the )?(?:\d+k )?floor|under (?:the )?(?:\d+k )?floor|below (?:the )?envelope(?:'s)?\s+(?:pay|salary|løn|floor|band|range|dkk)", re.I)
 JOBINDEX_MIN_JD = 600
+
+
+def _example_items(tail):
+    """Items of an example list, up to the first item that carries a must marker."""
+    n = 0
+    for item in _LIST_SEP.split(tail):
+        if _MUST.search(item):
+            break
+        n += 1 if item.strip() else 0
+    return n
 
 
 def _medical_must(text):
@@ -275,6 +289,9 @@ def _medical_must(text):
     for sent in re.split(r"[.;\n•]+", text or ""):
         if _MED_TERM.search(sent) and _EXP_WORD.search(sent) and _MUST.search(sent) \
                 and not _SOFT.search(sent):
+            ex = _EXAMPLE_LIST.search(sent)
+            if ex and _MED_TERM.search(ex.group(1)) and _example_items(ex.group(1)) >= 2:
+                continue
             return sent.strip()[:90]
     return None
 

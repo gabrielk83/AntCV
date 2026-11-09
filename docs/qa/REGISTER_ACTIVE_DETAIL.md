@@ -601,7 +601,9 @@ _E1 sweep 2026-09-09 (CI nightly, Opus 4.8): shipped code INTACT against HEAD `3
 
 ## Row 27 — MAIN-RUNT-ORPHAN-SWEEP-001
 
-_verified: 2026-10-21_
+_verified: 2026-11-09_
+
+_E1 sweep 2026-11-09 (desktop nightly): re-confirmed. The four ORPHAN-PREFLIGHT-V3 sidecars are loaded once each in `index.html`; suite 2160/2160 on `be3462aa`. Residual gate unchanged (real render / regen)._
 
 _E1 sweep 2026-10-21 (CI nightly, Opus 4.8): re-confirmed — all four ORPHAN-PREFLIGHT-V3 sidecars still loaded by `index.html` (`antcv-orphan-export-preflight.js`, `antcv-orphan-measure-bind.js`, `antcv-package-orphan-apply.js`, `antcv-orphan-cloud-persist-385.js`, 1 ref each); full suite 1843/1843 GREEN on HEAD `7af144bf`. STILL OPEN (unchanged, all need a real render/regen CI lacks): (a) work-style tail truncation, (b) page-3 ghost, (c) ~1.5-page real-PDF verify on a FRESH NIL-targeted export._
 
@@ -631,7 +633,9 @@ _E1 sweep 2026-09-09 (CI nightly, Opus 4.8): ORPHAN-PREFLIGHT-V3 sidecars INTACT
 
 ## Row 28 — NIL-GEN-ADAPTATION-001
 
-_verified: 2026-10-21_
+_verified: 2026-11-09_
+
+_E1 sweep 2026-11-09 (desktop nightly): re-confirmed. `antcv-profile-access-scrub.js` + `antcv-sidebar-relevance-cut.js` loaded once each; suite 2160/2160. GEN-LEVEL target still regen-gated._
 
 _E1 sweep 2026-10-21 (CI nightly, Opus 4.8): re-confirmed — `antcv-profile-access-scrub.js` + `antcv-sidebar-relevance-cut.js` both still loaded in `index.html` (1 ref each); full suite 1843/1843 GREEN on HEAD `7af144bf`. REMAINING unchanged: the CV ~1.5pp GEN-LEVEL target (rides row 27's orphan work) is regen-gated — needs a fresh live NIL-targeted generation + real export, which CI cannot run._
 
@@ -661,7 +665,9 @@ _E1 sweep 2026-09-09 (CI nightly, Opus 4.8): belts INTACT + loaded — `antcv-pr
 
 ## Row 29 — NIL-TARGETED-STATE-STICK-001
 
-_verified: 2026-10-21_
+_verified: 2026-11-09_
+
+_E1 sweep 2026-11-09 (desktop nightly): re-confirmed. `META-DRIFT-GUARD-002` ×2 in `app.src.js`, `277-SEQUENCE-GUARD-001` ×5 in the loaded `antcv-generate-cloud-sync-277.js`, `CL-HYDRATE-EXPORT-GATE-001` ×3 in `antcv-docx-client.js`. Leg C (live writer-hunt) still OPEN._
 
 _E1 sweep 2026-10-21 (CI nightly, Opus 4.8): closed legs re-confirmed in current code — `META-DRIFT-GUARD-002` in `app.src.js` (2 refs); `277-SEQUENCE-GUARD-001` in the loaded sidecar `antcv-generate-cloud-sync-277.js` (5 refs); `CL-HYDRATE-EXPORT-GATE-001` in `antcv-docx-client.js` (3 refs). Full suite 1843/1843 GREEN on HEAD `7af144bf`. Leg C (live setItem writer-hunt + auto-save downgrade belt) unchanged OPEN — needs a signed-in session CI lacks._
 
@@ -1700,7 +1706,9 @@ INSERTs** (sonnet-5 [2,10] + gpt-5.5 [5,30]; SQL in the 09-06 report § B).
 
 ## Row 96 — CV-HEADER-BOX-001
 
-_verified: 2026-10-21_
+_verified: 2026-11-09_
+
+_E1 sweep 2026-11-09 (desktop nightly): re-confirmed. `id="AntCVHeadBox"` ×1 and `headerBox:` ×1 in `workers/docx-worker/src/index.js`; live docx-worker `/health` `1.14.176-slogan-case`. Live / owner legs unchanged._
 
 **2026-10-21 (CI cloud nightly, E1 staleness sweep — code re-check):** re-verified against CURRENT
 worker code. The ROUNDED HEADER BOX survives: `<v:roundrect id="AntCVHeadBox" …>` present in
@@ -2803,7 +2811,9 @@ _verified: 2026-11-09_
 
 ## Row 130 — ANALYTICS-EXPORT-SLOW-001
 
-_verified: 2026-10-20_
+_verified: 2026-11-09_
+
+_E1 sweep 2026-11-09 (desktop nightly): unchanged. `workers/proxy/src/analytics-export.js:75` still hydrates with a serial `await kv.get(k.name)`. Owner decision still owed._
 
 **Found by the desktop nightly 2026-10-20 (Gabo-PC, Opus 5.5) during the row 24 live click-through.** Settings → Admin → Analytics → "⬇ Export JSON" sends `GET /api/analytics/export?format=json&view=sessions` to the relay, which forwards to cv-proxy `/analytics/export`. In headless Chromium on antcv.pages.dev the request hung, then failed with `net::ERR_CONNECTION_RESET`; while it was in flight the three buttons stayed busy. curl with the same owner token: 200 in 36 s (07:24Z), then 200 in **383 s** (~07:40Z), 12 KB body, 779 events, 15 sessions. "View summary" (list only, no value reads) answers in under 1 s.
 
@@ -2847,7 +2857,9 @@ _SHIPPED 2026-11-05 (desktop nightly, `1.51.5322-ec-no-derive`, commit `9c8f1980
 
 ## Row 136 — CI-NIGHTLY-CREDIT-EXHAUSTED-001
 
-_verified: 2026-11-05_
+_verified: 2026-11-09_
+
+_re-verified 2026-11-09 (desktop nightly): still failing 11-05 (`42002739245`), 11-06 (`42194757703`), 11-07 (`42356948509`, artifact ends `Credit balance is too low`, `terminal_reason: api_error`), 11-08 (`42465207013`, `Unexpected HTTP response: 504`, exit 127). 11 days down (10-29..11-08). Owner: top up or rotate the key._
 
 _re-verified 2026-11-05 (desktop nightly): still failing 11-03 (`41611776624`) and 11-04 (`41805475423`); the 11-04 artifact ends `Credit balance is too low`, `terminal_reason: api_error`. 7 days down. Owner: top up or rotate the key._
 
@@ -2875,7 +2887,9 @@ The 10-30 desktop report saw the 10-29 failure as "cause not visible in the log"
 
 ## Row 141 — ACCOUNT-ERASE-COMPLETE-001
 
-_verified: 2026-11-05_
+_verified: 2026-11-09_
+
+_re-verified 2026-11-09 (desktop nightly): the erase code reached main via #388 (`USER_ERASE_STATEMENTS` / `eraseUserD1`, 10 refs in `workers/access-relay/src/index.js`); live relay `/health` reports `auth-40-application-snapshots`, equal to the repo, so the deployed relay carries it. No live erase was run (destructive). Owner close call._
 
 _FIXED IN PR 2026-11-05 (side session, Gabo-PC, Opus 5.5, worktree-isolated; `workers/access-relay/src/index.js`, new `workers/access-relay/tests/account-erase-complete.test.mjs`; relay `auth-39-erase-complete`; no `pwa/` asset, no cache-bust, no version consumed). Not deployed: the relay deploy is owed (owner-gated, deploy.yml workflow_dispatch), then live-verify that `/health` reports `auth-39-erase-complete`._
 
@@ -2891,7 +2905,9 @@ _FIXED IN PR 2026-11-05 (side session, Gabo-PC, Opus 5.5, worktree-isolated; `wo
 
 ## Row 142 — META-LEAK-GATE-001
 
-_verified: 2026-11-05_
+_verified: 2026-11-09_
+
+_re-verified 2026-11-09 (desktop nightly): merged as #402 (META-LEAK-GATE-001) and #403 (META-RESIDUE-001); `test_meta_guard.py` ALL PASS on `be3462aa`. Owner close call._
 
 _FIXED IN PR 2026-11-05 (side session, Gabo-PC, Opus 5.5, worktree-isolated; `scripts/job-tracker/gen-runner.py`, new `meta_guard.py`, `meta_sweep.py`, `test_meta_guard.py`; no `pwa/` asset, no cache-bust, no version consumed, no deploy)._
 
@@ -2904,3 +2920,15 @@ _FIXED IN PR 2026-11-05 (side session, Gabo-PC, Opus 5.5, worktree-isolated; `sc
 **Tests.** `test_meta_guard.py`: 42 detector cases (a fixture shaped like the found bullet trips 5 independent rules; 16 real-content negatives that share a word with a rule), strip and scrub on stored shapes, and `meta_gate` with a fake regen (clean regen kept, dirty regen dropped, regen failure stripped, clean run makes no call). `test_why_gate.py` and the whole job-tracker suite pass.
 
 **Owed.** (1) Owner decides, per application, what to do with the 9 stored ones. (2) Follow-up: widen the proxy's `stripRepairMeta` (or port `meta_guard`'s rules to JS) so the coherence repair stops emitting this at the source; needs a proxy deploy. (3) The PWA's in-app generation path does not run `meta_guard`.
+
+## Row 143 — DISCOVERY-MED-MUST-EXAMPLE-002
+
+_verified: 2026-11-09_
+
+_FIXED 2026-11-09 (desktop nightly, Gabo-PC, Opus 5.5, worktree-isolated; `scripts/job-tracker/discover-positions.py` + `test_discover_positions.py`; no `pwa/` asset, no version consumed)._
+
+**Found.** This run fixed row 137 in its own worktree, then the rebase met `5f96a813` (job-tracker nightly, same morning, same row). The duplicate commit was dropped. Its negative controls, run against `5f96a813`, gave 4 FAIL: (1) "At least 5 years of medical device experience, such as ISO 13485 or IEC 62304 work, is required." passed, because the example-list skip looked only at the list, not at the medical term before it; (2) "Minimum 5 years of experience such as medical device or medtech development." passed: every list item is medical; (3) "salary likely below the envelope" and (4) "below the envelope on pay" passed: the envelope branch accepted only a pay word right after "envelope('s)".
+
+**Fix (on top of `5f96a813`, its structure kept).** The skip needs no medical term in the sentence before the list and at least one non-medical item among the counted ones (`_example_items` returns `(n, other)`). `_BELOW_FLOOR` adds two branches: a pay word (pay, salary, løn, DKK, compensation, wage) up to 40 characters before "below the envelope", or up to 25 after. The Hamamatsu "below the envelope's specialist/manager framing" still passes.
+
+**Tests.** 4 new checks, red on `5f96a813` (4 FAIL), 102/102 PASS after. The row 137 checks (Subra, Hamamatsu, real must + example, single-item list, envelope floor, envelope's salary band) stay green. Close after the next position-discovery run shows no false skip and no missed medical must.

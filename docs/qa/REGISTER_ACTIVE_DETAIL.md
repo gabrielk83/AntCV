@@ -697,7 +697,9 @@ _E1 sweep 2026-09-09 (CI nightly, Opus 4.8): closed legs CONFIRMED in current co
 
 ## Row 2 — LINKIFY-EXPORT-001
 
-_verified: 2026-10-23_
+_verified: 2026-11-11_
+
+_re-verified 2026-11-11 (desktop nightly, E1 sweep, HEAD 42108afb): `sidebar_ratio` 2 refs in `workers/docx-worker/src/index.js`; `main-column-ratio-width.test.mjs` 1/1 PASS. Residual still folds into row 25 (real PDF). Kept ACTIVE._
 
 **2026-10-23 (CI nightly, E1 staleness sweep — HEAD 242f6635):** re-confirmed at current HEAD.
 `sidebar_ratio` derivation still present in `workers/docx-worker/src/index.js` [2 refs]; regression
@@ -924,7 +926,9 @@ _verified: 2026-10-05_
 
 ## Row 47 — MOBILE-TOPBAR-SAFEAREA-001
 
-_verified: 2026-10-23_
+_verified: 2026-11-11_
+
+_re-verified 2026-11-11 (desktop nightly, E1 sweep, HEAD 42108afb): safe-area padding 1 ref each in `app.src.js` + `app.js`; `antcv-topbar-tools-347.js` loaded once; `antcv-mobile-export-fab.js` absent. Blocked: real phone._
 
 **2026-10-23 (CI nightly, E1 staleness sweep — HEAD 242f6635):** fix still intact — `.antcv-topbar` top
 safe-area padding (`env(safe-area-inset-top)) 12px 8px 12px`) present in BOTH `pwa/app.src.js` and the
@@ -966,7 +970,9 @@ device (owner/desktop-gated — no device in CI). Kept ACTIVE.
 
 ## Row 49 — SIDEBAR-GROUP-PAGE-BREAK-001
 
-_verified: 2026-10-23_
+_verified: 2026-11-11_
+
+_re-verified 2026-11-11 (desktop nightly, E1 sweep, HEAD 42108afb): `CONT_SUFFIX` still section-level only (`workers/docx-worker/src/index.js:24705`), no group-level continuation. Three worker commits since 10-23 (NO-ORPHAN-004, ACADEMY-BALANCE-001, LINKEDIN-LINK-001) do not touch it. Still not started._
 
 **2026-10-23 (CI nightly, E1 staleness sweep — HEAD 242f6635):** still NOT-STARTED and still
 applicable. The docx-worker's `(CONT.)` continuation mechanism remains SECTION-level only
@@ -1000,7 +1006,9 @@ patch. Kept ACTIVE (scoped, not started).
 
 ## Row 50 — UPLOAD-SCREEN-TOP-CLIP-001
 
-_verified: 2026-10-23_
+_verified: 2026-11-11_
+
+_re-verified 2026-11-11 (desktop nightly, E1 sweep, HEAD 42108afb): `upload-screen-top-clip.test.mjs` 4/4 PASS. Blocked: owner live re-verify._
 
 **2026-10-23 (CI nightly, E1 staleness sweep — HEAD 242f6635):** fix still intact — the upload-screen
 `.fade` block still carries `justifyContent:"flex-start"` (the old centering value gone) in the
@@ -1034,7 +1042,9 @@ Kept ACTIVE.
 
 ## Row 51 — PREVIEW-SCROLL-JITTER-001
 
-_verified: 2026-10-23_
+_verified: 2026-11-11_
+
+_re-verified 2026-11-11 (desktop nightly, E1 sweep, HEAD 42108afb): `preview-scroll-jitter.test.mjs` 3/3 PASS. Blocked: owner live re-verify._
 
 **2026-10-23 (CI nightly, E1 staleness sweep — HEAD 242f6635):** fix still intact —
 `pwa/test/unit/preview-scroll-jitter.test.mjs` ran **green standalone (3/3)** and inside suite
@@ -2861,7 +2871,9 @@ _SHIPPED 2026-11-05 (desktop nightly, `1.51.5322-ec-no-derive`, commit `9c8f1980
 
 ## Row 136 — CI-NIGHTLY-CREDIT-EXHAUSTED-001
 
-_verified: 2026-11-09_
+_verified: 2026-11-11_
+
+_advanced 2026-11-11 (desktop nightly): 11-09 (`42596108759`) and 11-10 (`42793987453`) artifacts end `"result": "Credit balance is too low"`, `api_error_status: 400`, 1 turn. 13 days down (10-29..11-10). The "optional hardening" below is now done (CI-NIGHTLY-CAUSE-SURFACE-001): `nightly.yml` gains a `Surface agent error cause` step (`if: failure()`) that runs `scripts/ci-surface-agent-error.mjs` and prints the result text as `::error::` plus the step summary. Verified locally on both real artifacts and three negative inputs (missing file, bad JSON, no result entry). First live proof is the next failed scheduled run. Owner action unchanged: top up or rotate `ANTHROPIC_API_KEY`._
 
 _re-verified 2026-11-09 (desktop nightly): still failing 11-05 (`42002739245`), 11-06 (`42194757703`), 11-07 (`42356948509`, artifact ends `Credit balance is too low`, `terminal_reason: api_error`), 11-08 (`42465207013`, `Unexpected HTTP response: 504`, exit 127). 11 days down (10-29..11-08). Owner: top up or rotate the key._
 

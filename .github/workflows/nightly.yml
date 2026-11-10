@@ -116,3 +116,8 @@ jobs:
           path: /home/runner/work/_temp/claude-execution-output.json
           if-no-files-found: warn
           retention-days: 14
+      # CI-NIGHTLY-CAUSE-SURFACE-001: the action says only "is_error:true"; print the real
+      # cause from the artifact (row 136: "Credit balance is too low") in the run summary.
+      - name: Surface agent error cause
+        if: failure()
+        run: node scripts/ci-surface-agent-error.mjs

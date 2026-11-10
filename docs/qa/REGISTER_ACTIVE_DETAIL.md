@@ -2663,7 +2663,9 @@ _verified: 2026-11-09_
 
 ## Row 118 — JT-ARMED-ARTIFACT-NO-DRAIN-001
 
-_verified: 2026-11-09_
+_verified: 2026-11-11_
+
+**RE-VERIFIED 2026-11-11 (job-tracker nightly, Gabo-PC).** Rev 372: `list` still names `napatech` (app 2781, CLOSED row, flag stale) in the ARMED block. `health` on rev 373: 60 pointers vs 94 cloud apps, 1 dead, `veo_technologies` → 3500. Still waits on the owner.
 
 **RE-VERIFIED 2026-11-09 (job-tracker nightly, Gabo-PC).** `list` on rev 371 still prints the ARMED block with `napatech` (app 2781, CLOSED row, flag stale). `health`: 60 pointers vs 94 cloud apps, 1 dead, `veo_technologies` → 3500. Still waits on the owner.
 
@@ -2784,7 +2786,9 @@ is adoption, not pricing. Proposed: replace the three Mistral ids with `mistral-
 
 ## Row 127 — JT-OWNER-PACKAGED-DEFAULT-ON-001
 
-_verified: 2026-11-09_
+_verified: 2026-11-11_
+
+**RE-VERIFIED 2026-11-11 (job-tracker nightly, Gabo-PC).** Rev 372: the same five OWNER-PACKAGED rows (185, 186, 207, 226, 227) are the only eligible rows; third run in a row with no generation. Still waits on the owner's answer to (b).
 
 **RE-VERIFIED 2026-11-09 (job-tracker nightly, Gabo-PC).** Rev 371: the same five rows fill the OWNER-PACKAGED block (185 3Shape, 186 WD, 207 RED Global, 226 Hamamatsu BI Business Analyst I, 227 LEGO Senior TPM) and are the only eligible rows, so the nightly generated nothing for the second run in a row. Owner: clear the clock flags or answer (b).
 
@@ -2932,3 +2936,15 @@ _FIXED 2026-11-09 (desktop nightly, Gabo-PC, Opus 5.5, worktree-isolated; `scrip
 **Fix (on top of `5f96a813`, its structure kept).** The skip needs no medical term in the sentence before the list and at least one non-medical item among the counted ones (`_example_items` returns `(n, other)`). `_BELOW_FLOOR` adds two branches: a pay word (pay, salary, løn, DKK, compensation, wage) up to 40 characters before "below the envelope", or up to 25 after. The Hamamatsu "below the envelope's specialist/manager framing" still passes.
 
 **Tests.** 4 new checks, red on `5f96a813` (4 FAIL), 102/102 PASS after. The row 137 checks (Subra, Hamamatsu, real must + example, single-item list, envelope floor, envelope's salary band) stay green. Close after the next position-discovery run shows no false skip and no missed medical must.
+
+## Row 144 — DEADLINE-ROW-NOTE-001
+
+_verified: 2026-11-11_
+
+_FIXED 2026-11-11 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `scripts/job-tracker/check-postings.py` + `test_check_postings.py`; no `pwa/` asset, no version consumed)._
+
+**Found.** Step 1b archived FMI / Teknisk projektleder til Forsvarets data- og AI-projekter (row 184) on 11-11 because jobindex said "annoncen er udløbet". Its deadline was 2026-11-09, so the 11-09 sweep should have archived it (DEADLINE-RELEVANCE-001: today counts as passed). The stored posting text (`jd[forsvarsministeriets_2]`, 6000 chars) has no deadline line; the date lived only in the row note (col 6, written by discovery: "Deadline 2026-11-09, start 2027-01-01"). Three rows in the live doc carry a row-note deadline (163, 184 archived; 240 future, 2027-01-06).
+
+**Fix.** `probe_rows` reads the row note with the same `deadlines.find_deadline` only when the posting text states no deadline; the posting text wins when both have one. The engaged guard (`is_engaged`) still applies. The verdict detail names the source ("row note" / "posting text").
+
+**Tests.** 5 new checks in `test_check_postings.py` driving the real `probe_rows` with a fake probe: FMI-shaped row archived with no network probe; future row-note deadline left to the probe; posting-text future deadline beats a past row-note deadline; engaged row never archived. Pre-fix (HEAD `check-postings.py`): 2 FAIL. Sabotage line 523 (`jd_deadline = None`): red. Sabotage line 522 (`if True:`, row note always wins): red. Restored byte-identical, PASS. `test_deadlines.py` 14/14, `run-tests.mjs` ALL PASS. Tonight's live doc: no row changes verdict (the only open row-note deadline is in 2027). Close after a sweep archives a row on its row-note deadline.

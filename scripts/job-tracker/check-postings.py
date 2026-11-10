@@ -515,8 +515,15 @@ def probe_rows(doc, args, today):
         # DEADLINE-RELEVANCE-001: the stored posting text is the ad's own wording, so a stated deadline there is
         # trusted on any host (page HTML stays host-gated in classify). Today or earlier archives without a probe.
         jd_deadline = deadlines.find_deadline(str((doc.get("jd") or {}).get(uk) or ""), today)
+        dl_src = "posting text"
+        # DEADLINE-ROW-NOTE-001 (job-tracker nightly 2026-11-11): the stored posting text is often cut before the
+        # deadline line, while discovery copies it into the row note ("Deadline 2026-11-09, start 2027-01-01").
+        # FMI (row 184) stayed live two days past that date. The note is read only when the posting text has none.
+        if jd_deadline is None:
+            jd_deadline = deadlines.find_deadline(str(row[6] if len(row) > 6 else ""), today)
+            dl_src = "row note"
         if deadlines.is_past(jd_deadline, today) and not is_engaged(row):
-            verdict, detail = "EXPIRED", "stated deadline %s has passed (posting text)" % jd_deadline.isoformat()
+            verdict, detail = "EXPIRED", "stated deadline %s has passed (%s)" % (jd_deadline.isoformat(), dl_src)
             misses, will, did, es, ed = apply_verdict(doc, row, uk, verdict, detail, today, args.apply)
             results.append(_result(row, uk, url, verdict, detail, misses, will, did, es, ed))
             continue

@@ -558,6 +558,39 @@ for _st in ("No response", "Withdrawn", "Offer declined", "Hired", "Rejected"):
     check("deadline: outcome status %r counts as engaged" % _st,
           cp.is_engaged([1, "Acme", "PM", "", "", "", "", "", _st, "", "", "a", "E2EFDA"]), True)
 
+# ---- DEADLINE-ROW-NOTE-001 (job-tracker nightly 2026-11-11) ----------------------
+# FMI (row 184): stored posting text without a deadline line, the deadline only in the row note.
+NOV11 = datetime.date(2026, 11, 11)
+_calls.clear()
+cp.probe = _no_probe
+try:
+    _doc = {"rows": [
+        [184, "FMI", "Teknisk projektleder", "Ballerup, DK", "", "Proposed",
+         "Customer-side technical project lead. Deadline 2026-11-09, start 2027-01-01.", "OPEN",
+         "Identified (posting saved)", "", "🔎 proposed", "fmi", "E2EFDA"],
+        [240, "Jobnet Co", "PM", "", "", "Proposed", "Deadline per jobnet 2027-01-06", "OPEN",
+         "Identified", "", "", "jn", "E2EFDA"],
+        [3, "Both", "PM", "", "", "Proposed", "Deadline 2026-11-01", "OPEN",
+         "Identified", "", "", "both", "E2EFDA"],
+        [4, "Engaged", "PM", "", "", "Proposed", "Deadline 2026-11-09", "OPEN",
+         "CV/CL drafted", "", "", "eng", "E2EFDA"]],
+        "urls": {"fmi": "https://www.example.dk/job/184", "jn": "https://www.example.dk/job/240",
+                 "both": "https://www.example.dk/job/3", "eng": "https://www.example.dk/job/4"},
+        "jd": {"fmi": "Vi søger en teknisk projektleder. Tiltrædelse 1. januar 2027.",
+               "both": "Ansøgningsfrist: 30. november 2026."}}
+    _res = cp.probe_rows(_doc, type("A", (), {"only": "", "limit": 0, "timeout": 5, "apply": True})(), NOV11)
+finally:
+    cp.probe = _probe0
+_by = {r["uk"]: r for r in _res}
+check("row note: a past deadline in the row note archives when the posting text has none",
+      (_by["fmi"]["verdict"], _by["fmi"]["archived"], "row note" in _by["fmi"]["detail"]), ("EXPIRED", True, True))
+check("row note: a future row-note deadline leaves the row to the probe", _by["jn"]["verdict"], "LIVE")
+check("row note: a deadline in the posting text wins over the row note", _by["both"]["verdict"], "LIVE")
+check("row note: an engaged row is never archived by its row-note deadline", _by["eng"]["verdict"], "LIVE")
+check("row note: only the expired row skipped the network probe",
+      sorted(_calls), sorted(["https://www.example.dk/job/240", "https://www.example.dk/job/3",
+                              "https://www.example.dk/job/4"]))
+
 if fails:
     print("FAIL (%d):" % len(fails))
     for f in fails:

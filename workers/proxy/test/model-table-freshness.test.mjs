@@ -505,3 +505,32 @@ test('the 2026-11-05 ids are priced but stay OUT of the default cascades', () =>
     }
   }
 });
+
+// 2026-11-12 desktop tune (ANTHROPIC-52 / OPENAI-GPT6-CYBER / GEMINI4-CARBON-RATES-2026-11-001). Before this run:
+//   - "claude-fable-5-2"  -> 'claude-fable-5'  [10,50] (real [8,40]: 1.25x OVER)
+//   - "claude-mythos-5-2" -> 'claude-mythos-5' [10,50] (real [8,40]: 1.25x OVER)
+//   - "gpt-6-cyber"       -> FALLBACK [3,15]           (real [20,100]: 6.7x UNDER)
+//   - "gemini-4-carbon"   -> FALLBACK [3,15]           (real [2,10]: 1.5x OVER)
+
+const VENDOR_CATALOGUE_2026_11_12 = [
+  ['claude-fable-5-2', [8, 40]], ['claude-mythos-5-2', [8, 40]],
+  ['gpt-6-cyber', [20, 100]], ['gemini-4-carbon', [2, 10]],
+];
+
+test('the 2026-11-12 vendor additions resolve to their vendor rate', () => {
+  for (const [id, rate] of VENDOR_CATALOGUE_2026_11_12) assert.deepEqual(rateFor(id), rate, id);
+  // Neighbours undisturbed (longest-key-wins).
+  assert.deepEqual(rateFor('claude-fable-5-1'), [10, 50]);
+  assert.deepEqual(rateFor('claude-fable-5'), [10, 50]);
+  assert.deepEqual(rateFor('claude-mythos-5-1'), [10, 50]);
+  assert.deepEqual(rateFor('gemini-4-argon'), [2, 10]);
+  assert.deepEqual(rateFor('gpt-5.6-cyber'), [12.5, 75]);
+});
+
+test('the 2026-11-12 ids are priced but stay OUT of the default cascades', () => {
+  for (const [id] of VENDOR_CATALOGUE_2026_11_12) {
+    for (const [prov, list] of Object.entries(PROVIDER_MODELS)) {
+      assert.ok(!list.includes(id), `${id} entered the ${prov} cascade — adoption is an owner call`);
+    }
+  }
+});

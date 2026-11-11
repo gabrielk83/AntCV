@@ -243,3 +243,12 @@ test('the 2026-11-05 vendor additions have a strict rate (2026-11-001 tickets)',
   assert.deepEqual(rateForStrict('gemini-2.5-flash-native-audio-preview-12-2025'), [0.5, 2]); // was gemini-2.5-flash [0.3,2.5]
   assert.deepEqual(rateForStrict('gemini-2.5-flash'), [0.3, 2.5]);          // pin undisturbed
 });
+
+test('the 2026-11-12 vendor additions have a strict rate (2026-11-001 tickets)', async () => {
+  const { rateForStrict } = await import(pathToFileURL(MIRROR).href);
+  assert.deepEqual(rateForStrict('claude-fable-5-2'), [8, 40]);    // was claude-fable-5 [10,50]
+  assert.deepEqual(rateForStrict('claude-mythos-5-2'), [8, 40]);   // was claude-mythos-5 [10,50]
+  assert.deepEqual(rateForStrict('gpt-6-cyber'), [20, 100]);       // was null / fallback [3,15]
+  assert.deepEqual(rateForStrict('gemini-4-carbon'), [2, 10]);     // was null / fallback [3,15]
+  assert.deepEqual(rateForStrict('claude-fable-5-1'), [10, 50]);   // neighbour undisturbed
+});

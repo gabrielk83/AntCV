@@ -36,6 +36,11 @@ const RATES = {
   // Both MUST stay longer than 'claude-opus-5' / 'claude-sonnet-5'.
   'claude-opus-5-5':     [4.00, 20.00],   // 2026-09-29 not an AntCV pin — priced so a BYOK/override call meters correctly
   'claude-sonnet-5-5':   [2.00, 10.00],   // 2026-09-29 not an AntCV pin
+  // ANTHROPIC-52-RATES-2026-11-001 (2026-11-12): Fable 5.2 + Mythos 5.2 are new on platform.claude.com pricing at [8,40].
+  // Both matched the shorter 'claude-fable-5' / 'claude-mythos-5' keys -> [10,50] = 1.25x OVER in and out. Both MUST stay
+  // longer than those keys. Not AntCV pins; priced so a BYOK/override call meters correctly.
+  'claude-mythos-5-2':   [8.00, 40.00],   // 2026-11-12 limited availability
+  'claude-fable-5-2':    [8.00, 40.00],   // 2026-11-12 newest Fable release
   'claude-mythos-5-1':   [10.00, 50.00],  // 2026-09-10 limited availability; not an AntCV pin — priced so a BYOK/override call meters correctly
   'claude-mythos-5':     [10.00, 50.00],  // 2026-09-10 limited availability
   'claude-fable-5-1':    [10.00, 50.00],  // 2026-09-06 most capable widely released tier; not an AntCV pin — priced so a BYOK/override call meters correctly
@@ -147,6 +152,8 @@ const RATES = {
   // not contain 'gpt-rosalind', so both fell to FALLBACK [3,15] (3x OVER / 5x UNDER) and rateForStrict() answered null.
   'gpt-6.1-terra':       [1.00,  5.00],  // 2026-11-05
   'gpt-6-rosalind':      [15.00, 75.00], // 2026-11-05 restricted (trusted-access); prompts >272k bill [30,112.50]
+  // OPENAI-GPT6-CYBER-RATES-2026-11-001 (2026-11-12): 'gpt-6-cyber' contains no key -> FALLBACK [3,15] = 6.7x UNDER, strict null.
+  'gpt-6-cyber':         [20.00, 100.00], // 2026-11-12 restricted (trusted-access); prompts >272k bill [40,150]
   // Mistral
   'mistral-small':       [0.15,  0.60],   // Mistral Small 4, verified 2026-08-20 mistral.ai/pricing/api
   'mistral-medium':      [1.50,  7.50],   // Mistral Medium 3.5, verified 2026-08-20 mistral.ai/pricing/api
@@ -196,6 +203,8 @@ const RATES = {
   // GEMINI4-ARGON-RATES-2026-10-001 (2026-10-15): Gemini 4 Argon is the new flagship on ai.google.dev/gemini-api/docs/pricing.
   // The id contains no existing key, so it fell to FALLBACK_RATE [3,15] = 1.5x OVER in and out (real [2,10]) and
   // rateForStrict() answered null. Not an AntCV pin; priced so a BYOK/override call meters correctly (1a-bis(iv)).
+  // GEMINI4-CARBON-RATES-2026-11-001 (2026-11-12): 'gemini-4-carbon' is new, same rates as Argon; no key -> FALLBACK [3,15] = 1.5x OVER, strict null.
+  'gemini-4-carbon':     [2.00, 10.00],  // 2026-11-12 INTRODUCTORY price; DOUBLES to [4.00, 20.00] on 2026-12-01 with Argon
   'gemini-4-argon':      [2.00, 10.00],  // 2026-10-15 INTRODUCTORY price; DOUBLES to [4.00, 20.00] on 2026-12-01 — re-verify at the first tune after that date
   // GEMINI3-RATES-2026-09-001 (2026-09-10): the Gemini 3 line is on ai.google.dev/gemini-api/docs/pricing and
   // had no keys — neither id contains an existing key, so both fell to FALLBACK_RATE [3,15]: 4x OVER-price on

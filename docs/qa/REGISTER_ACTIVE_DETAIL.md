@@ -1645,7 +1645,9 @@ _verified: 2026-10-27_ — CI nightly E1 re-verify against HEAD 65ce36e0: leg (f
 
 ## Row 89 — MODEL-TABLE-FRESHNESS-001
 
-_verified: 2026-11-05_
+_verified: 2026-11-12_
+
+_2026-11-12 weekly tune (desktop, Opus 5.5, worktree-isolated): pins verify against all four vendor pages. Mechanical diff of 90 page ids found four errors, fixed in all three mirrors with dated comments: ANTHROPIC-52-RATES-2026-11-001 (`claude-fable-5-2` and `claude-mythos-5-2` are new at [8,40]; both matched the shorter `claude-fable-5` / `claude-mythos-5` keys at [10,50], 1.25x OVER), OPENAI-GPT6-CYBER-RATES-2026-11-001 (`gpt-6-cyber` [20,100], was FALLBACK [3,15] 6.7x UNDER, strict null), GEMINI4-CARBON-RATES-2026-11-001 (`gemini-4-carbon` [2,10], doubles 2026-12-01 with Argon; was FALLBACK 1.5x OVER). `VENDOR_CATALOGUE_2026_11_12` added to both freshness tests (48/48 each, byte-identical) + one mirror case (15/15). `mistral-large-4` holds [0.70,2.10]. None is a pin or in a cascade. Worker deploy ×3 owed/handled per the report `COST_QUALITY_WEEKLY_2026-11-12.md`._
 
 _2026-11-05 weekly tune (desktop, Opus 5.5, worktree-isolated): pins verify against all four vendor pages; Anthropic lists nothing unpriced. Mechanical diff of 87 page ids found five errors, fixed in all three mirrors with dated comments: MISTRAL-LARGE4-RATE-2026-11-001 (`mistral-large-4` / `-4-0` [1.36,4.18] → [0.70,2.10], was ~2x OVER; third price in four weeks), OPENAI-GPT6-TERRA-ROSALIND-RATES-2026-11-001 (`gpt-6.1-terra` [1,5] was FALLBACK 3x OVER; `gpt-6-rosalind` [15,75] was FALLBACK 5x UNDER), DEEPSEEK-V41-FLASH-RATES-2026-11-001 (Mistral-hosted `deepseek-v4-1-flash-1017` + page slug `deepseek-v4-flash-1017` [0.30,1.20], was FALLBACK 10x OVER), GEMINI-NATIVE-AUDIO-RATES-2026-11-001 (`gemini-2.5-flash-native-audio-preview-12-2025` text [0.50,2.00], was on the 2.5-flash key). Tests 46/46 ×2 + mirror 14/14; suite ALL PASS. `mistral-large-latest` still = Large 3 (/v1/models). Noted, not a table error today: from 2026-12-01 Google routes `gemini-2.5-flash` → `gemini-3.5-flash-lite` (same rate) and `gemini-2.5-pro` → `gemini-3.8-flash` ([0.75,3.75]); `gpt-5.6-sol` promo ends 2026-11-30. Report `docs/qa/COST_QUALITY_WEEKLY_2026-11-05.md`._
 
@@ -2019,7 +2021,9 @@ _CI nightly 2026-09-15 (E1 sweep): `shouldAdoptCloudPointer` present; test green
 
 > **Renumbered 2026-08-26: was row 38.** A document written before that date citing "row 38" may mean this row or GEN-BACKGROUND-001. The ID is the key.
 
-_verified: 2026-10-28_
+_verified: 2026-11-12_
+
+_2026-11-12 weekly tune: ADVANCED. D1 `llm_calls` now carries Worker-side rows: 11 `analysis` calls (mistral `mistral-large-latest`, 11/11 ok, $0.0078/call) tagged `client_version = "srv:cascade"` on 11-05..11-08 — the LLM-LOG-SERVER-001 proxy logger (fixed in code 2026-11-03) is deployed and writing. First week the tune scores Worker traffic for a MODEL_ROLES role. Still n=12 < 20 for analysis; supervisor / coherence / writer / kernel still show no rows (no such call in the window, or not yet logged — check again next week). New PWA task `long_context` (165 openai calls, $1.46, 86% of spend) is client-dispatch, outside MODEL_ROLES._
 
 **Re-verify 2026-10-28 (CI nightly — E1 stalest slot, code-presence on HEAD `60dcfca1`):** `workers/proxy/src/multi-llm.js` `ROLE_KEYS`/`roleHeadOrder` present (4 refs); `scripts/relay-cost-quality-tune.mjs` present. Both halves (compress client-lever + analysis addressability) remain owner-gated on real traffic + a same-prompt benchmark; no code owed. Full PWA suite 1850/1850 green.
 
@@ -2637,7 +2641,9 @@ unattended fix. Kept ACTIVE.
 
 ## Row 115 — PWA-COST-METER-OPUS55-001
 
-_verified: 2026-11-05_
+_verified: 2026-11-12_
+
+_2026-11-12 weekly tune: re-verified, not fixed. `C.claude` / `C.anthropic` still [2,10], `q()` still pins `claude-opus-5-5` [4,20]. 195 calls in 30 d, none on claude. Owner call unchanged._
 
 _2026-11-05 weekly tune: re-verified, not fixed. `C.claude` / `C.anthropic` still [2,10], `q()` still pins `claude-opus-5-5` [4,20]. The 11-03 session (6 calls) made no claude call; no claude row in 30 d. Owner call unchanged._
 
@@ -2762,7 +2768,9 @@ _verified: 2026-11-09_
 
 ## Row 124 — CASCADE-RETIRED-IDS-2026-10-001
 
-_verified: 2026-11-05_
+_verified: 2026-11-12_
+
+_2026-11-12 weekly tune: re-verified, tails unchanged (`mistral-large-2411`, `mistral-medium-2312`, `gemini-2.0-flash`, `gemini-1.5-pro` still in `workers/proxy/src/multi-llm.js`). The Gemini 2.5 routing switch on 2026-12-01 is one tune away. Owner call unchanged._
 
 _2026-11-05 weekly tune: re-verified, tails unchanged. Related vendor change: from 2026-12-01 Google routes every `gemini-2.5-pro` request to `gemini-3.8-flash` and every `gemini-2.5-flash` request to `gemini-3.5-flash-lite`, so `gemini-2.5-pro` in a tail stops being the model it names. Owner call unchanged._
 

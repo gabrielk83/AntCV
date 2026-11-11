@@ -135,9 +135,11 @@ consensus_reinforce openai $0.0073/call.
 **DEPLOY OWED (not run by this routine):** proxy, demo-proxy and access-relay carry today's rate-table
 change. No live traffic touches the four ids, so nothing is mis-metered today. Run one at a time:
 `gh workflow run deploy.yml -f target=proxy -f mode=deploy -f confirm=proxy`, then `demo-proxy`, then
-`access-relay`, and check each `/health`. Left owed because the shared clone carries owner WIP in
-`workers/access-relay/src/index.js`; a relay deploy from `main` is safe (WIP is local), but a deploy
-on a day with uncommitted relay work is the owner's call.
+`access-relay`, and check each `/health`. Left owed because a worker deploy from `main` today would
+also ship other sessions' merged worker changes that this routine cannot confirm are live:
+`91deec12` POSTING-GUARD-001 (proxy), `94dc9153` ACCOUNT-ERASE-COMPLETE-001 and `4973baa4` GDPR rights
+(relay). `c2da4988` LLM-LOG-SERVER-001 is evidently live on the proxy (the `srv:cascade` rows). Bundling
+someone else's feature into a rate-table deploy is the owner's call.
 
 ## 5. Owed / owner calls
 

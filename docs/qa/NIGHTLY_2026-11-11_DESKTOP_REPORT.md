@@ -82,3 +82,17 @@ No PWA push this run, so no post-push live check owed.
 - The new CI step is not proven on a live runner yet.
 - No signed-in click-through, no real generation, no worker deploy, no D1 read this run.
 - Bands A-D rows other than 136 were not re-tested beyond the E1 five.
+
+## Desktop cross-check (08:00 fire)
+
+Second fire today; the 00:19 run above owns the day. Cross-check only. Worktree `routine-antcv-nightly-mwbu2014`, base `be1e3389`. No code change, no claim, no version consumed.
+
+- TOKEN OK, 6.6 d left (expires 2026-11-17T23:14Z). Owner decision 2 above is done: the token was re-saved.
+- CI nightly: no 11-11 run yet at fire time; last two (11-09, 11-10) failed. Row 136 unchanged.
+- E2 Settings churn: `--selftest` PASS; diag PASS, 4/4 panels at rest.
+- E3 button audit: 207 buttons (209 at 00:19), 0 regressions, 0 recoveries, 0 page errors. Label swap "CJLR: cycle …" / "What I Bring row 0 alignment …" is the known state flap (10-27, 10-30, 11-05, 11-09). Saved as `PANEL_BUTTON_AUDIT_2026-11-11-crosscheck.{md,json}`; the 00:19 files are kept.
+- E4 parity: RESULTS-PREVIEW-EXPORT-PARITY OK.
+- Live attest: `sw.js` CACHE `antcv-1.51.6565-tab-rationale` and `app.js?v=1.51.6445-open-stale-tab` = repo. Sidecars 9/9 identical (three 401s, unauthenticated relay, expected). `browser-qa` 2/2 PASS.
+- `/health` 200: cv-proxy (`3.8.4-brand-ink-match`), antcv-demo-proxy, antcv-access-relay (`auth-40-application-snapshots`), docx-worker (`1.14.176-slogan-case`).
+
+Non-claims: E1 not re-swept; Bands A-D not re-run; no signed-in step, no D1 read, no deploy.

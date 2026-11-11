@@ -9,6 +9,8 @@ A run appends its summary to the TOP of the list below. Row status belongs in
 
 ---
 
+> **DESKTOP CROSS-CHECK 2026-11-11 (antcv-nightly 08:00 fire, Gabo-PC, Opus 5.5, worktree-isolated) — no change, no row touched.** The 00:19 desktop nightly owns the day. Re-ran E2 (PASS), E3 (207 buttons, 0 regressions, known CJLR/What-I-Bring label flap), E4 (OK), live attest (CACHE 1.51.6565-tab-rationale + app.js?v 1.51.6445 = repo, sidecars 9/9, browser-qa 2/2, four workers /health 200). Token re-saved, expires 11-17. Section appended to `NIGHTLY_2026-11-11_DESKTOP_REPORT.md`.
+
 > **POSITION-DISCOVERY 2026-11-10 (JOB-DISCOVERY-001, desktop Gabo-PC, Tuesday 22:00 fire, ran past midnight into 11-11, Opus 5.5, worktree-isolated) — 7 leads PROPOSED (0 T1, 6 T2, 1 T3), 0 archived, no register row touched.** No POSITION-DISCOVERY entry dated 11-10 or 11-11, so a full run. Preflight `start` exit 3 (WORKSPACE DIRTY, owner WIP in `package.json` + `workers/access-relay` + an untracked DAMC doc) → worktree `~/antcv-worktrees/routine-antcv-position-discovery-mwbayzms` on `origin/main` `42108afb`, rebased onto `9db29010` before the commit. Previous start 2026-11-08 (2.1 d). **Gates:** TOKEN OK, expires 2026-11-15T21:12:22Z (4.9 d; row 110 untouched); Python 3.12.10 OK; G: mounted.
 
 > **Step 1a sweep** (`check-postings.py check --apply`): 86 probed, 84 LIVE, 0 archived, 0 held at strike. Not counted: ERROR VML MAP (WPP) / Product Specialist HTTP 500 (11 sweep days since 10-20); WALLED Ibsen Photonics / Project Manager for SBC (ibsen.com HTTP 403). One 409 (rev moved to 372) re-applied without re-probing. Doc rev 371 → 373. **Step 1b context:** 747 lines (evidence / language / eligibility gates, 46 owner-closed roles); envelope read from the relay doc (7 dimensions).

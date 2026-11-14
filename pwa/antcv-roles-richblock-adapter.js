@@ -27,7 +27,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.6386-role-wrap';
+  var VERSION = '1.51.6571-role-line-one';
 
   // ROLE-LOCATION-001 (EXEC-LINEAR step 2, 2026-09-27): a role carries an optional
   // `location` (4th segment). The role LINE has two formats, stored in
@@ -351,6 +351,7 @@
     // ROLE-LOCATION-001: 'meta' = "title - company ... (years | location)" (hyphen, owner 2026-09-29); classic unchanged.
     var meta = roleLineFormat() === 'meta';
     var hasLoc = !!(locSeg.t && String(locSeg.t).trim());
+    var locLeft = !meta && hasLoc && !!(compSeg.t && String(compSeg.t).trim());
     var left = h('span', {
       style: {
         // Owner 2026-07-14: role line = seg0 BOLD (not italic), seg1 italic, seg2 normal.
@@ -367,9 +368,13 @@
           // meta: company upright (the v2 reference); classic keeps the italic default.
           fontStyle: compSeg.italic === false || (meta && compSeg.italic == null) ? 'normal' : 'italic'
         }
-      }, h(B, { path: ['items', i, 'company'], value: compSeg.t || '', placeholder: '[Company]' }))
+      }, h(B, { path: ['items', i, 'company'], value: compSeg.t || '', placeholder: '[Company]' })),
+      // ROLE-LOCATION-002 (owner 2026-11-14): classic puts the place WITH the company ("company · place"); the
+      // right side holds the years alone, so title, company, place and years read as ONE line.
+      locLeft ? ' \u00B7 ' : '',
+      locLeft ? h(B, { path: ['items', i, 'location'], value: placeOf(locSeg.t || ''), placeholder: '[Location]' }) : null
     );
-    var locNode = (meta || hasLoc) ? [
+    var locNode = (meta || (hasLoc && !locLeft)) ? [
       ' | ',
       h(B, { path: ['items', i, 'location'], value: placeOf(locSeg.t || ''), placeholder: '[Location]' })
     ] : [];

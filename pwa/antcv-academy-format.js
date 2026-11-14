@@ -48,7 +48,7 @@
  */
 (function (root) {
   'use strict';
-  var VERSION = '1.51.6385-role-line';
+  var VERSION = '1.51.6571-role-line-one';
 
   // Mirror of pwa/gold-rules.json academy_format (test: academy-format.test.mjs).
   var RULES = {
@@ -738,9 +738,20 @@
     zh: '项目管理实习生，硬件开发与供应',
   };
   var OLD_TRACKMAN_TITLE = /\bProject Manager, Hardware Development (?:&|and|og) Supply\b|\bProjektleder, hardwareudvikling og (?:leverandører|forsyning)\b/gi;
+  // TRACKMAN-TITLE-001b (owner 2026-11-14, ROLE-LINE-ONE-001): the ROLE LINE carries the short title so title,
+  // company, place and years fit one line ("Project Management Intern, HW & Supply | Trackman A/S · Hørsholm<TAB>
+  // 2026 - now"). Prose (letters, profile) keeps the full title. Same value as gold-rules roles.canon_titles.
+  var TRACKMAN_ROLE_LINE = { en: 'Project Management Intern, HW & Supply' };
+  var ROLE_LINE_FROM = /^\s*(?:Project Manager, Hardware Development (?:&|and) Supply|Project Management Intern, Hardware Development (?:&|and) Supply)\s*$/i;
   function retitle(sections, lang) {
     var want = TRACKMAN_TITLE[lang] || TRACKMAN_TITLE.en, n = 0;
+    var line = TRACKMAN_ROLE_LINE[lang] || (lang ? null : TRACKMAN_ROLE_LINE.en);
     var walk = function (x) {
+      if (line && x && typeof x === 'object' && !Array.isArray(x) && typeof x.title === 'string' && typeof x.company === 'string' && ROLE_LINE_FROM.test(x.title)) {
+        var r = walk(Object.assign({}, x, { title: '' }));   // a fresh copy: the stored role stays untouched
+        n++; r.title = line;
+        return r;
+      }
       if (typeof x === 'string') { OLD_TRACKMAN_TITLE.lastIndex = 0; if (!OLD_TRACKMAN_TITLE.test(x)) return x; n++; OLD_TRACKMAN_TITLE.lastIndex = 0; return x.replace(OLD_TRACKMAN_TITLE, want); }
       if (Array.isArray(x)) { var a = x.map(walk); return a.some(function (v, i) { return v !== x[i]; }) ? a : x; }
       if (x && typeof x === 'object') {
@@ -1020,7 +1031,7 @@
     return { ok: !issues.length, issues: issues };
   }
 
-  var api = { version: VERSION, RULES: RULES, langOf: langOf, wrongLang: wrongLang, audit: audit, apply: apply, plan: plan, balance: balance, BAL: BAL, repoLink: repoLink, aiOriented: aiOriented, ANTCV_URL: ANTCV_URL, retitle: retitle, TRACKMAN_TITLE: TRACKMAN_TITLE, labels: labels, isPlaceholder: isPlaceholder, ownerFact: ownerFact, place: place };
+  var api = { version: VERSION, RULES: RULES, langOf: langOf, wrongLang: wrongLang, audit: audit, apply: apply, plan: plan, balance: balance, BAL: BAL, repoLink: repoLink, aiOriented: aiOriented, ANTCV_URL: ANTCV_URL, retitle: retitle, TRACKMAN_TITLE: TRACKMAN_TITLE, TRACKMAN_ROLE_LINE: TRACKMAN_ROLE_LINE, labels: labels, isPlaceholder: isPlaceholder, ownerFact: ownerFact, place: place };
   root.AntcvAcademyFormat = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

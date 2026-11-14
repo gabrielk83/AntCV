@@ -85,14 +85,14 @@ test('linear CV: typography rules - 9.5 pt floor, no em dash, cells without a fi
   assert.ok(t.includes('owner and cadence.') === false, 'tile cell stop stripped');
 });
 
-test('linear CV: role line "Title - Company<TAB>years | location", open-ended years read "present"', async () => {
+test('linear CV: role line "Title - Company · place<TAB>years" (ROLE-LOCATION-002), open-ended years read "present"', async () => {
   const xml = unzipEntry(await gen(), 'word/document.xml').toString('utf8');
   const i = xml.indexOf('Project Manager, Hardware Development &amp; Supply');
   const para = xml.slice(xml.lastIndexOf('<w:p>', i) >= 0 ? xml.lastIndexOf('<w:p', i) : i, xml.indexOf('</w:p>', i));
   const runs = [...para.matchAll(/<w:t[^>]*>([^<]*)<\/w:t>/g)].map((m) => m[1]);
-  assert.deepEqual(runs.slice(0, 2), ['Project Manager, Hardware Development &amp; Supply', ' - Trackman A/S']);
+  assert.deepEqual(runs.slice(0, 2), ['Project Manager, Hardware Development &amp; Supply', ' - Trackman A/S · Hørsholm, Denmark']);
   // the right-tabbed segment is a literal TAB in the run text - the same convention as renderExperience
-  assert.ok(para.includes('\t2026 - present | Hørsholm, Denmark'), 'right-tabbed years | location');
+  assert.ok(para.includes('\t2026 - present<'), 'right-tabbed years alone');
   assert.ok(texts(xml).includes('Results: PMA template'), 'Results line kept');
 });
 

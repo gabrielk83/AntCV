@@ -53,14 +53,15 @@ test('adapt emits a 4th (location) segment and itemsToRoles carries it back', ()
   assert.equal(A.writeBack(ad, 0, 'location', 'Tel Aviv').roles[0].location, 'Tel Aviv');
 });
 
-test('classic format: no location -> pre-change role line; location -> appended after years', () => {
+test('classic format: no location -> pre-change role line; location -> "company · place", years alone (ROLE-LOCATION-002)', () => {
   const A = loadAdapter({});
   const ad = A.adapt(sec);
   const line0 = A.renderRoleHead(React, ctx, ad.items[0], 0).children[0];
   assert.equal(text(line0.children[0]), '<items.0.role=System Architect>, <items.0.company=Innoviz>');
   assert.equal(text(line0.children[1]), '<items.0.years=2017 – 2020>');
   const line2 = A.renderRoleHead(React, ctx, ad.items[2], 2).children[0];
-  assert.equal(text(line2.children[1]), '<items.2.years=2026 –> | <items.2.location=Hørsholm, Denmark>');
+  assert.equal(text(line2.children[0]), '<items.2.role=PM>, <items.2.company=Trackman> · <items.2.location=Hørsholm, Denmark>');
+  assert.equal(text(line2.children[1]), '<items.2.years=2026 –>');
 });
 
 test('meta format: "title - company" left, "(years | location)" right, company upright, years bold', () => {

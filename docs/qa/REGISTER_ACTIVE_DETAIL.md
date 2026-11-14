@@ -175,6 +175,10 @@ agent/code work is complete.
 
 ## Row 94 — CONTENT-LANG-STAMP-001
 
+_verified: 2026-11-14_
+
+_re-verified 2026-11-14 (desktop nightly, E1 code-presence on `208568c3`): `content_language` 4 refs in `pwa/app.js`, 6 in `workers/access-relay/src/index.js`. Code leg intact. REMAINING unchanged: live generate/translate-persist confirm. Blocked: real LLM gen._
+
 _verified: 2026-10-22_
 
 **Re-verify 2026-10-22 (CI nightly — E1 stalest slot, code-presence):** the `content_language` field
@@ -1760,6 +1764,10 @@ signed-in export / gold-docx diff here): photo-anchored-inside-header parity, CV
 
 ## Row 97 — DELIVERABLES-3CO-001
 
+_verified: 2026-11-14_
+
+_advanced 2026-11-14 (desktop nightly, wrangler SELECT on `application`): the "check before regenerating" leg is DONE. **Demant:** 2732 / 2771 / 2801 (Senior PM, Hearing Solution Quality, 5423 chars) and 2737 / 2776 (Service Excellence PM, 6915 chars) carry the real JD body; each starts with ~150 chars of careers-page chrome ("Select how often (in days) to receive an alert: Create Alert Apply now …"). Usable; strip the prefix on regen. Three rows share one JD, two share the other (duplicates). **Aimpoint:** 2783 (Engineering Manager, 6294 chars) is real. 2762 (labelled Optical Engineer, 5144 chars) is NOT an Aimpoint optics JD: it opens "Bring New Marine Technologies from Development to Reality", contains neither "Aimpoint" nor "optic" — a wrong JD under the Aimpoint label. 2812 (Optical Engineer, 573 chars) is the careers list page ("11 jobb Director Supply Chain … Industrial Lead …"), junk-scrape class. REMAINING: owner re-pastes the real Aimpoint Optical Engineer JD (or picks 2783 as the Aimpoint target); then the live regen + owner deliverable legs. Blocked: owner decision, real LLM gen._
+
 _verified: 2026-10-21_
 
 **2026-10-21 (CI cloud nightly, E1 staleness sweep):** unchanged — pure live-regen + D1 JD-data
@@ -1823,6 +1831,10 @@ five need a FRESH targeted regen to confirm — not runnable in cloud (no signed
 ---
 
 ## Row 92 — EXPORT-PREVIEW-PAGINATION-DIVERGENCE-001
+
+_verified: 2026-11-14_
+
+_re-verified 2026-11-14 (desktop nightly, E1 code-presence on `208568c3`): `sidebarPages` / `mainPages` / `__antcvPB` 31 refs in `workers/docx-worker/src/index.js`; live docx-worker `1.14.176-slogan-case`. Not reproducible on current content. Blocked: owner repro (original overflowing application)._
 
 _verified: 2026-10-22_
 
@@ -2615,6 +2627,10 @@ says so.
 
 ## Row 114 — TELEMETRY-BGJOB-GAP-001
 
+_verified: 2026-11-14_
+
+_advanced 2026-11-14 (desktop nightly, code + D1 read): the row is mis-stated since 2026-11-05. Commit `c2da4988` (#389, LLM-LOG-SERVER-001) added `loggedRunSection` in `workers/proxy/src/index.js:114`: gen-job re-enters `handleRequest` per section and each finished section writes an `llm_calls` row with `client_version = 'srv:gen-job'` (`multi-llm.js:550`). `serverCallSource` skips `/job/` envelope routes so nothing double-counts. Live cv-proxy `/health` 3.8.4-brand-ink-match = repo `VERSION`; D1 has 11 `srv:cascade` rows (11-05..11-08) from the same commit, so the deploy carries the logger. D1 has 0 `srv:gen-job` rows, and no `llm_calls` row at all after 2026-11-08 13:05 UTC: no job gen has run since (quiet window, not an outage). CLOSE when the first `srv:gen-job` row lands (next gen-runner or background-job gen). Blocked: a real background-job gen._
+
 _verified: 2026-10-22_
 
 **2026-10-22 (CI cloud nightly, E1 staleness sweep — code re-check):** gap CONFIRMED still open on HEAD
@@ -2711,6 +2727,10 @@ _verified: 2026-11-11_
 
 
 ## Row 123 — PKG-ID-PERSIST-MIGRATE-001
+
+_verified: 2026-11-14_
+
+_re-verified 2026-11-14 (desktop nightly, live): `browser-qa --only palette-mix` FAIL on prod `1.51.6565-tab-rationale`, same shape {stylePackage:"scandinavian", dataPackage:"copenhagen-modern", lsResolved:false, toneResolved:true}. Render correct. Unchanged; app.js init write-back stays owner-gated._
 
 _verified: 2026-11-02_
 
@@ -2878,6 +2898,10 @@ _SHIPPED 2026-11-05 (desktop nightly, `1.51.5322-ec-no-derive`, commit `9c8f1980
 **Severity.** LOW: one summary line is labelled "Results:" on every CV with an Earlier career block.
 
 ## Row 136 — CI-NIGHTLY-CREDIT-EXHAUSTED-001
+
+_verified: 2026-11-14_
+
+_re-verified 2026-11-14 (desktop nightly): CI nightly failed 11-11 (`42994980451`), 11-12 (`43194948471`), 11-13 (`43401958331`), 11-14 (`43578263482`), each ~30 s. The CI-NIGHTLY-CAUSE-SURFACE-001 step works live: run `43578263482` log shows `##[error]agent result: Credit balance is too low | is_error=true api_error_status=400 turns=1`. 17 days down (10-29..11-14). Owner: top up or rotate `ANTHROPIC_API_KEY`._
 
 _verified: 2026-11-11_
 

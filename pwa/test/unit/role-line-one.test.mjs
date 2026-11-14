@@ -37,6 +37,7 @@ const sec = { id: 'experience', type: 'experience', roles: [
   { id: 'kanzen', title: 'Produkt- og projektekspert', company: 'Kanzen Konsulenter ApS', years: '2022 - 2026',
     location: 'Copenhagen, Denmark (alongside Innoviz until 2025)', bullets: ['a'] },
 ] };
+const titleSide = (A) => text(A.renderRoleHead(React, ctx, A.adapt(sec).items[0], 0).children[0].children[0]);
 const yearsSide = (A) => text(A.renderRoleHead(React, ctx, A.adapt(sec).items[0], 0).children[0].children[1]);
 
 test('place(): the text before the first comma, without a bracketed note', () => {
@@ -57,17 +58,18 @@ test('export: the academy projection shortens each detailed role location and sa
   assert.equal(src[1].roles[0].location, 'Copenhagen, Denmark (alongside Innoviz until 2025)', 'stored data untouched');
 });
 
-test('preview: the margin CV shows the place beside the years; other layouts and the kill switch keep the stored text', () => {
-  assert.equal(yearsSide(loadAdapter({}, true)), '<2022 - 2026> | <Copenhagen>');
-  assert.equal(yearsSide(loadAdapter({}, false)), '<2022 - 2026> | <Copenhagen, Denmark (alongside Innoviz until 2025)>');
-  assert.equal(yearsSide(loadAdapter({ 'antcv:disable-academy-format': '1' }, true)), '<2022 - 2026> | <Copenhagen, Denmark (alongside Innoviz until 2025)>');
+test('preview: the margin CV shows the place beside the company (ROLE-LOCATION-002); other layouts and the kill switch keep the stored text', () => {
+  assert.equal(yearsSide(loadAdapter({}, true)), '<2022 - 2026>');
+  assert.equal(titleSide(loadAdapter({}, true)), '<Produkt- og projektekspert>, <Kanzen Konsulenter ApS> · <Copenhagen>');
+  assert.equal(titleSide(loadAdapter({}, false)), '<Produkt- og projektekspert>, <Kanzen Konsulenter ApS> · <Copenhagen, Denmark (alongside Innoviz until 2025)>');
+  assert.equal(titleSide(loadAdapter({ 'antcv:disable-academy-format': '1' }, true)), '<Produkt- og projektekspert>, <Kanzen Konsulenter ApS> · <Copenhagen, Denmark (alongside Innoviz until 2025)>');
 });
 
 test('index.html: the adapter moves in lockstep with app.js; the rules load after it', () => {
   const v = (name) => (index.match(new RegExp(name.replace(/\./g, '\\.') + '\\?v=([^"\']+)')) || [])[1];
-  assert.equal(v('antcv-roles-richblock-adapter.js'), '1.51.6445-open-stale-tab');
+  assert.equal(v('antcv-roles-richblock-adapter.js'), '1.51.6571-role-line-one');
   assert.equal(v('antcv-roles-richblock-adapter.js'), v('app.js'));
-  assert.equal(v('antcv-academy-format.js'), '1.51.6385-role-line');
+  assert.equal(v('antcv-academy-format.js'), '1.51.6571-role-line-one');
   assert.ok(index.indexOf('antcv-roles-richblock-adapter.js?v=') < index.indexOf('antcv-academy-format.js?v='), 'adapter reads the rules at render time');
 });
 

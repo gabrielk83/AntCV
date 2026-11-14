@@ -114,7 +114,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.6325-bind-cap';
+  var VERSION = '1.51.6571-role-line-one';
   if (window.__antcvOrphanExportPreflight === VERSION) return;
   window.__antcvOrphanExportPreflight = VERSION;
 
@@ -736,20 +736,29 @@
   function roleLineTarget(s, role, ri, met, payload) {
     var style = (payload && payload.style) || {};
     var meta = style.roleLineFormat === 'meta';
-    var years = String(role.years || '').replace(/\s*\(\s*(?:present|nuv[æa]rende|nutid|ongoing|current(?:ly)?|now|p[åa]g[åa]ende|actual)\s*\)/gi, '')
-      .replace(/\b(?:present|nuv[æa]rende|nutid|ongoing|currently|current|now|p[åa]g[åa]ende)\b/gi, String(new Date().getFullYear())).replace(/\s{2,}/g, ' ').trim();
+    var Y = String(new Date().getFullYear()), y0 = String(role.years || '').replace(/\s{2,}/g, ' ').trim();
+    var years = y0.replace(/\s*\(\s*(?:present|nuv[æa]rende|nutid|ongoing|current(?:ly)?|now|p[åa]g[åa]ende|actual)\s*\)/gi, '')
+      .replace(/\b(?:present|nuv[æa]rende|nutid|ongoing|currently|current|now|p[åa]g[åa]ende)\b/gi, Y).replace(/\s{2,}/g, ' ').trim();
+    // DATE-PRESENT-SAME-YEAR-001 parity with the worker: a role that started this year keeps its open end ("2026 - now")
+    var ys = years.match(/\b(?:19|20)\d{2}\b/g) || [];
+    if (ys.length >= 2 && ys[0] === Y && ys[ys.length - 1] === Y && years !== y0) years = y0;
     var a = alignAt(s, 'roles.' + ri + '.title') || alignAt(s, 'roles.' + ri) || alignAt(s, '__group__');
     var inline = a === 'left' || a === 'center' || a === 'right';
     var title = String(role.title || ''), company = String(role.company || '');
-    var left = (title ? '<b>' + esc(title) + '</b>' : '') +
-      (company ? (meta ? esc((title ? ' - ' : '') + company) : '<i>' + esc((title ? ' | ' : '') + company) + '</i>') : '');
+    // ROLE-LOCATION-002: classic carries the place with the company ("company · place"); the right tab holds the years.
+    var locLeft = !meta && !!company;
+    var left = function (loc) {
+      var l = locLeft ? String(loc || '').trim() : '';
+      return (title ? '<b>' + esc(title) + '</b>' : '') +
+        (company ? (meta ? esc((title ? ' - ' : '') + company) : '<i>' + esc((title ? ' | ' : '') + company + (l ? ' \u00B7 ' + l : '')) + '</i>') : '');
+    };
     return {
       kind: 'role_line', noRewrite: true, sid: s.id || 'experience', sec: s, role: role, roleIdx: ri, doc: payload && payload.doc,
       condensePath: 'roles.' + ri + '.title', fontPx: met.expSubPx, family: met.family, widthPx: met.cellWpx,
       fitWpx: inline ? met.cellWpx : met.roleTabWpx, gapPx: inline ? met.expSubPx * 0.5 : met.expSubPx * 0.6,
       leftHtml: left,
       rightHtml: function (loc) {
-        var parts = [years, String(loc || '').trim()].filter(Boolean);
+        var parts = [years, locLeft ? '' : String(loc || '').trim()].filter(Boolean);
         if (!parts.length) return '';
         return meta ? '<b>(' + esc(parts.join(' | ')) + ')</b>' : esc(parts.join(' | '));
       },
@@ -1149,7 +1158,7 @@
       return (l && l.length ? l[0] : 0) * k;
     };
     var right = tg.rightHtml(loc);
-    var need = natural(tg.leftHtml) + (right ? tg.gapPx + natural(right) : 0);
+    var need = natural(typeof tg.leftHtml === 'function' ? tg.leftHtml(loc) : tg.leftHtml) + (right ? tg.gapPx + natural(right) : 0);
     return need <= tg.fitWpx * (fit || 1);
   }
   function fixRoleLine(measure, tg, storage, summary) {

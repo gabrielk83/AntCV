@@ -51,10 +51,10 @@ const roles = [
 ];
 const sections = [{ id: 'exp', title: 'EXPERIENCE', loc: 'main', on: true, type: 'experience', roles }];
 
-test('classic: no location -> unchanged "title | company<TAB>years"; location -> "years | location"', async () => {
+test('classic: no location -> unchanged "title | company<TAB>years"; location -> "company · place" (ROLE-LOCATION-002)', async () => {
   const xml = await gen({ sections });
   assert.deepEqual(texts(paraSlice(xml, 'ROLEA')), ['ROLEA', ' | CoA', TAB + '2017 - 2020']);
-  assert.deepEqual(texts(paraSlice(xml, 'ROLEB')), ['ROLEB', ' | CoB', TAB + '2026 - | Hørsholm, Denmark']);
+  assert.deepEqual(texts(paraSlice(xml, 'ROLEB')), ['ROLEB', ' | CoB · Hørsholm, Denmark', TAB + '2026 -']);
 });
 
 test('meta: "title - company<TAB>(years | location)", company upright, years bold', async () => {

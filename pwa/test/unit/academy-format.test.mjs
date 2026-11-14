@@ -442,7 +442,7 @@ test('retitle: the exact old Trackman title becomes the LinkedIn title in the do
   ];
   const en = AF.retitle(secs, 'en');
   assert.equal(en.count, 2);
-  assert.equal(en.sections[0].roles[0].title, 'Project Management Intern, Hardware Development & Supply');
+  assert.equal(en.sections[0].roles[0].title, 'Project Management Intern, HW & Supply', 'TRACKMAN-TITLE-001b: the role line takes the short title');
   assert.equal(en.sections[1].content, 'As Project Management Intern, Hardware Development & Supply at Trackman I organise reviews. I want Project Manager roles.');
   assert.equal(secs[0].roles[0].title, 'Project Manager, Hardware Development & Supply', 'input untouched');
   const da = AF.retitle([{ id: 'experience', type: 'experience', roles: [{ id: 'trackman', title: 'Projektleder, hardwareudvikling og leverandører' }] }], 'da');
@@ -451,6 +451,18 @@ test('retitle: the exact old Trackman title becomes the LinkedIn title in the do
   assert.equal(fx.count, 1, 'the fixture Trackman role carries the old Danish title (#3491)');
   const other = fixture(); other[4].roles[0].title = 'Hardwarepraktik';
   assert.equal(AF.retitle(other, 'da').count, 0, 'any other title is left alone');
+});
+
+test('retitle (TRACKMAN-TITLE-001b): an English role line with the full title takes the short one; prose keeps the full title', () => {
+  const secs = [
+    { id: 'experience', type: 'experience', roles: [{ id: 'trackman', title: 'Project Management Intern, Hardware Development & Supply', company: 'Trackman A/S', bullets: ['As Project Management Intern, Hardware Development & Supply I organise reviews.'] }] },
+  ];
+  const en = AF.retitle(secs, 'en');
+  assert.equal(en.sections[0].roles[0].title, 'Project Management Intern, HW & Supply');
+  assert.equal(en.sections[0].roles[0].bullets[0], 'As Project Management Intern, Hardware Development & Supply I organise reviews.');
+  assert.equal(secs[0].roles[0].title, 'Project Management Intern, Hardware Development & Supply', 'input untouched');
+  const da = AF.retitle([{ id: 'experience', type: 'experience', roles: [{ id: 'trackman', title: 'Project Management Intern, Hardware Development & Supply', company: 'Trackman A/S' }] }], 'da');
+  assert.equal(da.count, 0, 'a Danish CV keeps its canon title');
 });
 
 test('buildPayload: a stored letter and CV with the old title export the new one', () => {

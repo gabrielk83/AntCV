@@ -26427,8 +26427,9 @@ function buildLinearCvDocument(ctx) {
     spacing: { before: lcPt(5), after: lcPt(1) }, keepNext: true, tabStops: [{ type: TabStopType.RIGHT, position: CONTENT_W }],
     children: [
       run(r.title, { bold: true, size: lcSz(10), color: INK }),
-      ...(r.company ? [run(` - ${r.company}`, { size: lcSz(10), color: SEC })] : []),
-      run(`\t${r.years}${r.location ? " | " + r.location : ""}`, { bold: true, size: lcSz(9.5), color: ACC }),
+      // ROLE-LOCATION-002: the place travels with the company ("company · place"); the right tab holds the years.
+      ...(r.company ? [run(` - ${r.company}${r.location ? " \u00B7 " + r.location : ""}`, { size: lcSz(10), color: SEC })] : []),
+      run(`\t${r.years}${!r.company && r.location ? " | " + r.location : ""}`, { bold: true, size: lcSz(9.5), color: ACC }),
     ],
   });
   const bullet = ([lead, text], keepNext) => new Paragraph({
@@ -28633,9 +28634,12 @@ function renderExperience(s, ctx) {
         ...__rlc
       }));
     }
+    // ROLE-LOCATION-002 (owner 2026-11-14): classic puts the place WITH the company ("company · place") and leaves
+    // the right tab to the years alone, so the line reads "title | company · place<TAB>years" on ONE line.
+    const __locLeft = !__meta && !!role.company && !!__loc;
     if (role.company) {
       left.push(new TextRun({
-        text: (left.length ? (__meta ? " - " : " | ") : "") + role.company,
+        text: (left.length ? (__meta ? " - " : " | ") : "") + role.company + (__locLeft ? " \u00B7 " + __loc : ""),
         italics: __cSeg && __cSeg.italic != null ? !!__cSeg.italic : !__meta,
         bold: __cSeg && __cSeg.bold != null ? !!__cSeg.bold : false,
         // Spec: role title in main head colour, COMPANY in BLACK, year in gray.
@@ -28671,7 +28675,7 @@ function renderExperience(s, ctx) {
     // ROLE-LOCATION-001: compose the right-hand meta text.
     const __yrs = __meta
       ? ((__yrsRaw || __loc) ? "(" + [__yrsRaw, __loc].filter(Boolean).join(" | ") + ")" : "")
-      : [__yrsRaw, __loc].filter(Boolean).join(" | ");
+      : [__yrsRaw, __locLeft ? "" : __loc].filter(Boolean).join(" | ");
     // GROUP-CJLR-ROLES-001 (owner 2026-07-14): the role line honours the group/per-role
     // align (roles.R.title / roles.R / __group__), mirroring the preview renderRoleHead
     // (antcv-roles-richblock-adapter.js) + antcv-item-align.js. The preview role line is

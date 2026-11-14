@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.6565-tab-rationale';
+const CACHE = 'antcv-1.51.6571-role-line-one';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

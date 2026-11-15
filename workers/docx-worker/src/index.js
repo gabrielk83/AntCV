@@ -29965,7 +29965,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.176-slogan-case";
+var VERSION = "1.14.177-role-line-one";
 // AI-ACT-MARK-001 (EU AI Act Art. 50(2), Art. 111 transition to 2 Dec 2026):
 // machine-readable marking of AI-generated text in every DOCX, as custom
 // document properties. Interim layer under the visible AI notice footer

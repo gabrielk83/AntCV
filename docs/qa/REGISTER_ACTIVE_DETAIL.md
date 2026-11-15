@@ -3022,3 +3022,15 @@ _FIXED 2026-11-15 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `s
 **Live.** Re-ran `pull --render` with the fix: `restored 41 support block(s)`; local vs cloud support now 0 differ, 131 local-only stubs (rows the cloud has no block for; harmless fill).
 
 **Close when** the next nightly's `pull --render` prints no restore line, or only keys the cloud changed since.
+
+## Row 146 — DISCOVERY-MED-MUST-NEGATION-001
+
+_verified: 2026-11-15_
+
+_OPEN (found by position-discovery 2026-11-15, Gabo-PC, Opus 5.5; script only, no `pwa/` asset)._
+
+**Found.** `discover-positions.py add` skipped Ambu / NPI Engineer (Process Development) with "evidence gate: medical-device experience is a must". The quoted sentence was the routine's own `fit` note ("Medical-device experience 'likely', not a must"). The posting says "you likely have experience within healthcare or the medical device industry", for which `_medical_must` correctly returns `None`. Probe on the worktree copy: "Medical-device experience is not a must." and "Medical-device experience is not required." both return the sentence: `_MUST` matches `must` / `required` with no negation check, and no soft marker covers "not".
+
+**Impact.** Low. One T3 lead lost this run; a real posting that says "medical device experience is not required" would be skipped the same way.
+
+**Fix.** Treat "not (a )?must", "not required", "not mandatory", "not essential" as soft in `_medical_must` (check `_LANG_MUST` for the same shape). Negative controls: the two probe sentences pass; "is required" and "must have" stay musts. Until then, discovery `fit` notes avoid the word "must".

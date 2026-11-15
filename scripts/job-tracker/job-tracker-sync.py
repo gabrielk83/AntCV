@@ -227,6 +227,14 @@ def cmd_pull(render=False, force=False):
         env = dict(os.environ, JOB_DOC=DOC)
         subprocess.run([sys.executable, BUILD], check=True, env=env)
         print("rebuilt .xlsx from pulled doc")
+        # RENDER-SUPPORT-CLOBBER-001: the build re-emits job_tracker_doc.json with
+        # `support` re-derived from the row fields alone (ROLE/FIT/FLAG lines).
+        # That stub replaced every richer block, and the next pull's 3-way merge
+        # read the stub as a LOCAL edit and kept it, so a `push` would overwrite
+        # the cloud's research blocks with stubs (2026-11-15: 6 rows, 2.0-2.9 KB
+        # cloud vs 75-577 chars local). Re-assert the real blocks after the build.
+        n = _reassert_support(DOC, merged, doc)
+        if n: print(f"render: restored {n} support block(s) the build re-derived from row fields")
         # PROPOSED-INBOX-TAB-001: append the focused discovery-inbox view. Runs
         # after build (which rewrites the whole file), guarded so it never breaks
         # a render. Needs JOB_XLSX to locate the built workbook.
@@ -254,6 +262,25 @@ UK_DICT_FIELDS = ("urls", "jd", "support", "signals", "notes", "webintel", "gen"
                   "park", "discovered", "status_history", "followups", "financials",
                   # SUBMITTED-VERSION-001 / INTERVIEW-PREP-001 / the clearance gate
                   "submitted", "interview", "interview_next", "eligibility")
+
+def _reassert_support(doc_path, merged, cloud):
+    """RENDER-SUPPORT-CLOBBER-001. After the build rewrote doc_path, put back the
+    real support blocks: the cloud's value wins, then the pre-render merged value
+    (local-only intel), and the build's derived stub only fills a key neither
+    side has. Returns the number of keys whose emitted value was replaced."""
+    emitted = _load(doc_path)
+    if not isinstance(emitted, dict): return 0
+    em = emitted.get("support") if isinstance(emitted.get("support"), dict) else {}
+    ms = (merged or {}).get("support") if isinstance((merged or {}).get("support"), dict) else {}
+    cs = (cloud or {}).get("support") if isinstance((cloud or {}).get("support"), dict) else {}
+    out = dict(em)
+    out.update(ms)
+    out.update(cs)
+    n = sum(1 for k, v in out.items() if em.get(k) != v)
+    if n:
+        emitted["support"] = out
+        _save(doc_path, emitted)
+    return n
 
 def _merge_uk_dict(base, local, remote, field):
     """Per-KEY 3-way for one uk-keyed dict. Union of both sides - a key present

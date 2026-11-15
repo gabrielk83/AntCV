@@ -125,6 +125,38 @@ def test_legacy_history_list_does_not_crash_the_merge():
     print("PASS: a list-valued doc key is kept whole, never crashes the merge.")
 
 
+def test_render_does_not_replace_cloud_support_with_a_stub():
+    # RENDER-SUPPORT-CLOBBER-001: the build re-emits the doc with support derived
+    # from the row alone. A cloud research block must survive the render, a
+    # local-only block must survive it, and only a key neither side has takes
+    # the derived stub. The stub must not look like a local edit to the next pull.
+    build = os.path.join(_D, "fake_build.py")
+    with open(build, "w", encoding="utf-8") as f:
+        f.write("import json, os\n"
+                "p = os.environ['JOB_DOC']\n"
+                "d = json.load(open(p, encoding='utf-8'))\n"
+                "d['support'] = {r[11]: 'ROLE: stub ' + r[11] for r in d['rows']}\n"
+                "json.dump(d, open(p, 'w', encoding='utf-8'))\n")
+    rich = "ROLE: Co - Role\n" + "research line\n" * 40
+    rows = [_row("a"), _row("b"), _row("c")]
+    base = {"rows": rows, "support": {"a": rich}}
+    local = {"rows": rows, "support": {"a": "ROLE: stub a", "b": "local intel b"}}
+    cloud = {"rows": rows, "support": {"a": rich}}
+    _write(S.DOC, local); _write(S.SNAP, {"rev": 7, "doc": base})
+    S._req = lambda method="GET", body=None: (200, {"rev": 7, "doc": cloud})
+    old_build, old_xlsx = S.BUILD, S.XLSX
+    S.BUILD, S.XLSX = build, None
+    try:
+        S.cmd_pull(render=True)
+    finally:
+        S.BUILD, S.XLSX = old_build, old_xlsx
+    got = json.load(open(S.DOC, encoding="utf-8"))["support"]
+    assert got["a"] == rich, "cloud research block replaced by the render stub: %r" % got["a"][:40]
+    assert got["b"] == "local intel b", got["b"]
+    assert got["c"] == "ROLE: stub c", got["c"]
+    print("PASS: render keeps cloud + local-only support blocks; the stub fills only empty keys.")
+
+
 if __name__ == "__main__":
     test_pull_keeps_local_only_entries()
     test_pull_conflict_prefers_local_and_reports()
@@ -132,5 +164,6 @@ if __name__ == "__main__":
     test_push_409_merge_keeps_cloud_only_entries()
     test_outcome_maps_survive_a_merge()
     test_legacy_history_list_does_not_crash_the_merge()
-    print("\nOK - 6/6")
+    test_render_does_not_replace_cloud_support_with_a_stub()
+    print("\nOK - 7/7")
     sys.exit(0)

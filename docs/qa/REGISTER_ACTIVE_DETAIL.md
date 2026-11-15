@@ -1125,7 +1125,9 @@ _verified: 2026-10-05_
 
 ## Row 53 — CROSS-APP-EXPORT-CONTAMINATION-001
 
-_verified: 2026-10-23_
+_verified: 2026-11-15_
+
+**2026-11-15 (desktop nightly, E1 — HEAD 1b6aa4de):** verified. MIRROR-LOAD-001 2× in `pwa/app.src.js`; retired scope guard 0 refs in `index.html`. Legs b-f blocked: real targeted export. Kept ACTIVE.
 
 **2026-10-23 (desktop nightly, E1 — HEAD d7495a2b):** verified. MIRROR-LOAD-001 marker 2× in `pwa/app.src.js`; retired `antcv-export-app-scope-guard` 0 refs in `pwa/index.html`. Legs b-f unchanged; a real targeted export is still the gate. Row 55's audit today shows leg (b)'s CL-language furniture partly overlaps FURNITURE-LANG-001. Kept ACTIVE.
 
@@ -1153,7 +1155,9 @@ _verified: 2026-10-23_
 
 ## Row 54 — GEN-JD-TAILOR-KERNEL-RECALL-001
 
-_verified: 2026-10-23_
+_verified: 2026-11-15_
+
+**2026-11-15 (desktop nightly, E1 — HEAD 1b6aa4de):** verified not started. 0 `KERNEL-RECALL` markers in `pwa/` + `workers/`. Blocked: real targeted LLM gen. Kept ACTIVE.
 
 **2026-10-23 (desktop nightly, E1 — HEAD d7495a2b):** verified not started — 0 `KERNEL-RECALL` markers in `pwa/` + `workers/`. Real targeted gen gated. Kept ACTIVE.
 
@@ -1795,7 +1799,9 @@ CV+CL or to verify the Aimpoint/Demant JDs in D1, so nothing was advanced. Kept 
 
 ## Row 95 — CV-POLISH-BATCH-001
 
-_verified: 2026-10-22_
+_verified: 2026-11-15_
+
+**2026-11-15 (desktop nightly, E1 — HEAD 1b6aa4de):** verified. Strategic Expertise cell cap still in the gen prompt (`pwa/app.src.js` ~3918 "max ~48 characters"; "never let that cell wrap" 1×). Legs b-e need a fresh targeted regen. Blocked: real LLM gen. Kept ACTIVE.
 
 **2026-10-22 (CI cloud nightly, E1 staleness sweep — code re-check):** leg (a) Strategic-Expertise
 cell caps STILL enforced in the gen prompt — `pwa/app.src.js` ~3834 (Nordic Minimal ONE-LINE RULE,
@@ -1872,7 +1878,9 @@ content (a full REGULATORY CONTEXT) reloaded, which cloud has no way to stage. T
 
 ## Row 93 — AUTO-ANALYSE-ON-JD-LOAD-ERROR-001
 
-_verified: 2026-10-22_
+_verified: 2026-11-15_
+
+**2026-11-15 (desktop nightly, E1 — HEAD 1b6aa4de):** verified. `antcv-analysis-panel-jd-block-356.js` 1 ref in `index.html`, 7 AUTO-ANALYSE / OPEN-ANALYSIS-AUTORUN markers, 0 `__errTrap`. Blocked: owner repro on a signed-in device. Kept ACTIVE.
 
 **2026-10-22 (CI cloud nightly, E1 staleness sweep — code re-check):** sidecar
 `pwa/antcv-analysis-panel-jd-block-356.js` still loaded (1 ref in `index.html`) and still carries the
@@ -2903,7 +2911,9 @@ _SHIPPED 2026-11-05 (desktop nightly, `1.51.5322-ec-no-derive`, commit `9c8f1980
 
 ## Row 136 — CI-NIGHTLY-CREDIT-EXHAUSTED-001
 
-_verified: 2026-11-14_
+_verified: 2026-11-15_
+
+**2026-11-15 (desktop nightly):** still down, day 18. Run `43699195823` (11-15) prints `agent result: Credit balance is too low | is_error=true api_error_status=400 turns=1`. Blocked: owner (key top-up). Kept ACTIVE.
 
 _re-verified 2026-11-14 (desktop nightly): CI nightly failed 11-11 (`42994980451`), 11-12 (`43194948471`), 11-13 (`43401958331`), 11-14 (`43578263482`), each ~30 s. The CI-NIGHTLY-CAUSE-SURFACE-001 step works live: run `43578263482` log shows `##[error]agent result: Credit balance is too low | is_error=true api_error_status=400 turns=1`. 17 days down (10-29..11-14). Owner: top up or rotate `ANTHROPIC_API_KEY`._
 

@@ -716,7 +716,9 @@
             // all append-only to the same system prompt.
             const widthMod = maybeInjectWidthHint(bodyText);
             const winMod = maybeInjectBulletWindows(widthMod || bodyText) || widthMod;
-            const modified = maybeInjectIntoBody(winMod || bodyText) || winMod;
+            const tgtMod = maybeInjectIntoBody(winMod || bodyText) || winMod;
+            // ASKAI-INSIGHT-001 last: saved contact insights, full generations only.
+            const modified = maybeInjectInsights(tgtMod || bodyText) || tgtMod;
             if (modified) {
               // Build a fresh opts object so we don't mutate the
               // caller's reference. Preserve everything else.
@@ -1166,6 +1168,39 @@
     return null;
   }
 
+  // ── ASKAI-INSIGHT-001: contact insights saved with this application ────
+  // antcv-doc-chatbot-440.js builds the block (and returns '' unless the JD in
+  // the body names the company the insights were saved for). Appended to the
+  // user turn that carries the generation marker, so the cached system prefix
+  // stays as it is; a body without that marker (compress, enrich, the draft
+  // pass) passes untouched.
+  const INSIGHT_MARKER = 'return adapted CV + cover letter';
+  const INSIGHT_TAG = 'CONTACT INSIGHTS (ASKAI-INSIGHT-001';
+  function maybeInjectInsights(bodyText) {
+    if (typeof bodyText !== 'string' || bodyText.indexOf(INSIGHT_MARKER) < 0 || bodyText.indexOf(INSIGHT_TAG) >= 0) return null;
+    const api = window.AntcvDocChatbot;
+    if (!api || typeof api.insightsPromptBlock !== 'function') return null;
+    let body;
+    try { body = JSON.parse(bodyText); } catch (_) { return null; }
+    if (!body || !Array.isArray(body.messages)) return null;
+    let block = '';
+    try { block = String(api.insightsPromptBlock(bodyText) || ''); } catch (_) { return null; }
+    if (!block) return null;
+    for (let i = body.messages.length - 1; i >= 0; i--) {
+      const m = body.messages[i];
+      if (!m || m.role !== 'user') continue;
+      if (typeof m.content === 'string' && m.content.indexOf(INSIGHT_MARKER) >= 0) {
+        body.messages[i] = { ...m, content: m.content + block };
+        return JSON.stringify(body);
+      }
+      if (Array.isArray(m.content) && m.content.some(c => c && typeof c.text === 'string' && c.text.indexOf(INSIGHT_MARKER) >= 0)) {
+        body.messages[i] = { ...m, content: m.content.concat([{ type: 'text', text: block.trim() }]) };
+        return JSON.stringify(body);
+      }
+    }
+    return null;
+  }
+
   function bootSidecar() {
     init();                  // styles + panel strip injection (SHIP 1)
     instrumentFetchOnce();   // fetch interceptor (SHIP 2 + SHIP 3 + SHIP 4)
@@ -1196,6 +1231,7 @@
     _targetsForRole: targetsForRole,
     _buildOverrideBlock: buildOverrideBlock,
     _maybeInjectIntoBody: maybeInjectIntoBody,
+    _maybeInjectInsights: maybeInjectInsights,
     _isLlmProxyUrl: isLlmProxyUrl,
     _instrumentFetchOnce: instrumentFetchOnce,
     // SHIP 3 internals exposed for tests

@@ -185,3 +185,44 @@ test('a row switch while the GET is in flight drops the old row\'s answer', asyn
   assert.equal(t.r.writes().length, 0, JSON.stringify(t.r.writes()));
   assert.equal(t.ctx.AntcvAnalysisPersist.target(), '3536');
 });
+
+// ASKAI-INSIGHT-001 (1.3): contact insights saved by the Ask AI panel ride analysis_extra too.
+// The relay replaces the whole column, so they must be collected with the other stores.
+const INS = JSON.stringify([{ id: 'ins_1', at: '2026-11-16', company: 'Elma Instruments', points: [{ point: 'Yield shows readiness', support: [] }] }]);
+
+test('insights are pushed with the other analysis stores, to the tab row', async () => {
+  const rows = rowsFixture();
+  const t = boot({ rows, globalActive: 3537, tabRow: 3536, local: { 'antcv:app:3536:insights': INS } });
+  await t.advance(2000);
+  t.settle(); await t.advance(9000);
+  const puts = t.r.writes();
+  assert.equal(puts.length, 1, JSON.stringify(puts));
+  assert.equal(puts[0].path, '/api/applications/3536');
+  assert.equal(puts[0].body.analysis_extra.insights, INS);
+  assert.equal(puts[0].body.analysis_extra.questions, '[]', 'the restored Q&A rides along');
+  assert.equal(rows[3537].analysis_extra.insights, undefined);
+});
+
+test('restore fills an empty insights slot; a later Q&A edit keeps the insights on the row', async () => {
+  const rows = rowsFixture();
+  rows[3536].analysis_extra = { gap_state: {}, questions: '[]', insights: INS };
+  const t = boot({ rows, globalActive: 3537, tabRow: 3536 });
+  await t.advance(2000);
+  assert.equal(t.shared.get('antcv:app:3536:insights'), INS);
+  t.settle(); await t.advance(9000);
+  assert.equal(t.r.writes().length, 0, 'no echo PUT');
+  t.shared.set('antcv:app:3536:questions', ELMA_Q);
+  t.settle(); await t.advance(9000);
+  assert.equal(t.r.writes().length, 1);
+  assert.equal(rows[3536].analysis_extra.questions, ELMA_Q);
+  assert.equal(rows[3536].analysis_extra.insights, INS, 'whole-column replace did not drop the insights');
+});
+
+test('a local insights list is never overwritten by the row copy', async () => {
+  const rows = rowsFixture();
+  rows[3536].analysis_extra = { gap_state: {}, insights: INS };
+  const mine = JSON.stringify([{ id: 'ins_2', points: [] }]);
+  const t = boot({ rows, globalActive: 3537, tabRow: 3536, local: { 'antcv:app:3536:insights': mine } });
+  await t.advance(2000);
+  assert.equal(t.shared.get('antcv:app:3536:insights'), mine);
+});

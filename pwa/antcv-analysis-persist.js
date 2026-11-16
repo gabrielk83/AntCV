@@ -36,12 +36,18 @@
  * 1.2: that signature is kept per row; 1.1 reset it on every id change, and a
  * boot blip of the scope id (3536 -> kernel -> 3536) re-sent the same stores.
  *
+ * 1.3 (ASKAI-INSIGHT-001, 2026-11-16): the row also carries the contact insights the Ask AI
+ * panel saves (antcv-doc-chatbot-440.js) at AntcvJdScope.nsKey('insights', <row id>), as
+ * analysis_extra.insights (a JSON string, like questions). Same rules: collected for the
+ * tab's own row, restored only into an empty local slot. The relay replaces the whole
+ * column, so every key the row holds must be in the collector, or the next PUT drops it.
+ *
  * Kill-switch: localStorage['antcv:disable-analysis-persist'] = '1'.
  */
 (function () {
   'use strict';
   if (window.__antcvAnalysisPersistInstalled) return;
-  var VERSION = '1.2';
+  var VERSION = '1.3';
   window.__antcvAnalysisPersistInstalled = VERSION;
 
   var KILL = 'antcv:disable-analysis-persist';
@@ -82,6 +88,10 @@
     try { if (window.AntcvJdScope && window.AntcvJdScope.nsKey) return window.AntcvJdScope.nsKey('questionsJd', id); } catch (_) {}
     return 'antcv:applicationQuestionsJd';
   }
+  function insightsKey(id) {
+    try { if (window.AntcvJdScope && window.AntcvJdScope.nsKey) return window.AntcvJdScope.nsKey('insights', id); } catch (_) {}
+    return 'antcv:app:' + (id || 'kernel') + ':insights';
+  }
 
   // ---- collect this app's analysis stores from localStorage -----------------
   function gapPrefix() {
@@ -104,8 +114,10 @@
     if (q && q !== 'null') out.questions = q;
     var qj = rawGet(questionsJdKey(id));
     if (qj && qj !== 'null') out.questionsJd = qj;
+    var ins = rawGet(insightsKey(id));
+    if (ins && ins !== 'null' && ins !== '[]') out.insights = ins;
     // Nothing worth persisting?
-    if (!Object.keys(out.gap_state).length && out.questions === undefined && out.questionsJd === undefined) return null;
+    if (!Object.keys(out.gap_state).length && out.questions === undefined && out.questionsJd === undefined && out.insights === undefined) return null;
     return out;
   }
 
@@ -162,6 +174,10 @@
         var qjk = questionsJdKey(id), cqj = rawGet(qjk);
         if (!cqj || cqj === 'null') { try { localStorage.setItem(qjk, extra.questionsJd); wrote++; } catch (_) {} }
       }
+      if (typeof extra.insights === 'string' && extra.insights) {
+        var ik = insightsKey(id), ci = rawGet(ik);
+        if (!ci || ci === 'null' || ci === '[]') { try { localStorage.setItem(ik, extra.insights); wrote++; } catch (_) {} }
+      }
       restoredFor = id;
       pushedSig[id] = JSON.stringify(extra);   // the row already holds this: no echo PUT
       if (wrote) {
@@ -193,7 +209,7 @@
   window.addEventListener('storage', function (e) {
     if (!e || !e.key) return;
     if (e.key.indexOf('gapState_') === 0 || e.key === questionsKey() || e.key === questionsJdKey() ||
-        e.key === 'antcv:applicationQuestions') {
+        e.key === insightsKey() || e.key === 'antcv:applicationQuestions') {
       clearTimeout(debounce); debounce = setTimeout(function () { persist('storage'); }, 1200);
     }
   });

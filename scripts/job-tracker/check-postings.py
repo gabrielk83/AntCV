@@ -132,6 +132,22 @@ _LI_VIEW_ID = re.compile(r"/jobs/view/(?:[^/]*?-)?(\d{8,})/?$")
 LI_GUEST = "https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/%s"
 LI_DELAY = 2.0                   # seconds between LinkedIn probes
 LI_BACKOFF = (5, 15, 45)         # waits before each retry on HTTP 429
+# POSTING-RATE-DOMAIN-001 (job-tracker nightly 2026-11-16): only LinkedIn was paced and retried.
+# Twelve Workday rows (NVIDIA, Hamamatsu, CIP: three tenants on *.myworkdayjobs.com) read
+# WALLED HTTP 429 in one sweep, and a probe of a bogus id answered 429 too: Workday throttles
+# the client across tenants. Every probe now waits HOST_DELAY after the previous probe to the
+# same rate domain (last two host labels) and retries 429 with the backoff. A domain whose 429
+# outlives the whole backoff is marked cold: its later rows get one probe and no backoff, so a
+# walled domain costs 65 s once, not per row.
+HOST_DELAY = 2.0                 # seconds between probes to the same rate domain
+
+
+def rate_domain(url):
+    """Rate-limit key for a URL: the last two host labels (nvidia.wd5.myworkdayjobs.com and
+    photonics.wd103.myworkdayjobs.com share myworkdayjobs.com)."""
+    host = urllib.parse.urlparse(url or "").netloc.split(":")[0].lower()
+    labels = [x for x in host.split(".") if x]
+    return ".".join(labels[-2:]) if labels else ""
 
 
 def linkedin_job_id(url):
@@ -314,11 +330,12 @@ def probe(url, timeout=25):
         return None, url, "__probe_error__ %s: %s" % (type(e).__name__, e)
 
 
-def probe_with_backoff(url, timeout=25, fetch=None, sleep=time.sleep,
+def probe_with_backoff(url, timeout=25, fetch=None, sleep=None,
                        backoff=LI_BACKOFF):
     """probe() that retries on HTTP 429. A 429 that survives every retry is
     returned as-is and classifies WALLED (no evidence), never a strike."""
     fetch = fetch or probe
+    sleep = sleep or time.sleep                          # resolved per call (patchable)
     res = fetch(url, timeout)
     for wait in backoff:
         if res[0] != 429:
@@ -498,7 +515,8 @@ def probe_rows(doc, args, today):
     rows, urls = doc["rows"], doc["urls"]
     results = []
     checked = 0
-    last_li = 0.0
+    last_hit = {}                                      # rate domain -> monotonic time of last probe
+    cold = set()                                       # rate domains whose 429 outlived the backoff
     for row in rows:
         uk = row_uk(row)
         url = (urls.get(uk) or "").strip()
@@ -529,16 +547,17 @@ def probe_rows(doc, args, today):
             continue
 
         target = probe_target(url)
-        if target != url:
-            # LinkedIn rate-limits bursts (429 on most rows when parallel):
-            # space the probes out and back off on 429.
-            gap = LI_DELAY - (time.monotonic() - last_li)
-            if gap > 0:
-                time.sleep(gap)
-            status, final_url, text = probe_with_backoff(target, args.timeout)
-            last_li = time.monotonic()
-        else:
-            status, final_url, text = probe(url, args.timeout)
+        # POSTING-RATE-DOMAIN-001: LinkedIn and Workday rate-limit bursts (429 on most rows when
+        # back to back). Space probes per rate domain and back off on 429, unless the domain is cold.
+        dom = rate_domain(target)
+        gap = max(HOST_DELAY, LI_DELAY) - (time.monotonic() - last_hit.get(dom, -1e9))
+        if gap > 0:
+            time.sleep(gap)
+        status, final_url, text = probe_with_backoff(target, args.timeout,
+                                                     backoff=() if dom in cold else LI_BACKOFF)
+        last_hit[dom] = time.monotonic()
+        if status == 429:
+            cold.add(dom)
         if isinstance(text, str) and text.startswith("__probe_error__"):
             verdict, detail = "ERROR", text.replace("__probe_error__ ", "")
         else:

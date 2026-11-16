@@ -591,6 +591,74 @@ check("row note: only the expired row skipped the network probe",
       sorted(_calls), sorted(["https://www.example.dk/job/240", "https://www.example.dk/job/3",
                               "https://www.example.dk/job/4"]))
 
+# ---- POSTING-RATE-DOMAIN-001 (job-tracker nightly 2026-11-16) --------------------
+# Twelve Workday rows on three tenants read WALLED HTTP 429 in one sweep: only LinkedIn was
+# paced and retried. Drives the REAL probe_rows with a fake network and a recorded sleep.
+check("rate domain: Workday tenants share one key",
+      (cp.rate_domain("https://nvidia.wd5.myworkdayjobs.com/en-US/X/job/1"),
+       cp.rate_domain("https://photonics.wd103.myworkdayjobs.com/Job_Index/job/2")),
+      ("myworkdayjobs.com", "myworkdayjobs.com"))
+check("rate domain: a LinkedIn guest URL keys on linkedin.com",
+      cp.rate_domain(cp.LI_GUEST % "4100000000"), "linkedin.com")
+WD1 = "https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite/job/Denmark-Roskilde/Test-Engineer_JR1"
+WD2 = "https://photonics.wd103.myworkdayjobs.com/en-US/Job_Index/job/Birkerd/BI-Business-Analyst-I_JR2"
+WD3 = "https://cip.wd103.myworkdayjobs.com/en-US/CIP_Careers/job/Product-Specialist_JR3"
+EX = "https://www.example.dk/job/9"
+
+
+def _rate_rows():
+    rows, urls = [], {}
+    for i, (uk, u) in enumerate((("wd1", WD1), ("wd2", WD2), ("ex", EX), ("wd3", WD3))):
+        rows.append([i + 1, "Co%d" % i, "PM", "", "", "Proposed", "", "OPEN",
+                     "Identified (posting saved)", "", "", uk, "E2EFDA"])
+        urls[uk] = u
+    return {"rows": rows, "urls": urls, "jd": {}}
+
+
+def _run_rate(answer):
+    calls, slept = [], []
+    probe0, sleep0 = cp.probe, cp.time.sleep
+
+    def fp(url, timeout=25):
+        calls.append(url)
+        return answer(url, calls)
+    cp.probe, cp.time.sleep = fp, slept.append
+    try:
+        doc = _rate_rows()
+        res = cp.probe_rows(doc, type("A", (), {"only": "", "limit": 0, "timeout": 5, "apply": True})(),
+                            datetime.date(2026, 11, 16))
+    finally:
+        cp.probe, cp.time.sleep = probe0, sleep0
+    return {r["uk"]: r for r in res}, calls, slept, doc
+
+
+# (a) Workday walled all night: first row retries the full backoff, later rows one probe each.
+by, calls, slept, doc = _run_rate(lambda u, c: (429, u, "") if "myworkdayjobs" in u else (200, u, JD))
+check("rate: a walled Workday row is WALLED, never a strike",
+      [(by[k]["verdict"], by[k]["misses"]) for k in ("wd1", "wd2", "wd3")], [("WALLED", 0)] * 3)
+check("rate: the first Workday row retries the whole backoff (1 + 3 fetches)", calls.count(WD1), 4)
+check("rate: later rows on the cold domain get one probe each (no 65 s per row)",
+      (calls.count(WD2), calls.count(WD3)), (1, 1))
+check("rate: the backoff runs once for the domain", [s for s in slept if s in cp.LI_BACKOFF],
+      list(cp.LI_BACKOFF))
+check("rate: the second Workday row waits HOST_DELAY after the first (same rate domain)",
+      any(abs(s - cp.HOST_DELAY) < 0.5 for s in slept), True)
+check("rate: an unrelated host is probed once and reads LIVE", (calls.count(EX), by["ex"]["verdict"]), (1, "LIVE"))
+check("rate: nothing archived", [r[12] for r in doc["rows"]], ["E2EFDA"] * 4)
+
+
+# (b) A burst 429 that clears on retry reads LIVE, on a non-LinkedIn host too, and does not cool the domain.
+def _once(u, c):
+    if "myworkdayjobs" in u and c.count(u) == 1:
+        return 429, u, ""
+    return 200, u, JD
+by, calls, slept, doc = _run_rate(_once)
+check("rate: a Workday 429 that clears on retry reads LIVE (was WALLED with no retry)",
+      [by[k]["verdict"] for k in ("wd1", "wd2", "wd3")], ["LIVE"] * 3)
+check("rate: a cleared 429 does not cool the domain (each row may retry)",
+      (calls.count(WD1), calls.count(WD2), calls.count(WD3)), (2, 2, 2))
+
+
 if fails:
     print("FAIL (%d):" % len(fails))
     for f in fails:

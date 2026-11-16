@@ -2715,7 +2715,9 @@ _verified: 2026-11-16_
 
 ## Row 118 — JT-ARMED-ARTIFACT-NO-DRAIN-001
 
-_verified: 2026-11-15_
+_verified: 2026-11-16_
+
+**RE-VERIFIED 2026-11-16 (job-tracker nightly).** Rev 378: ARMED-with-app still `napatech` (app 2781, CLOSED row, flag stale); `health`: 60 pointers vs 94 cloud apps, 1 dead, `veo_technologies` → app 3500. Owner clears both flags.
 
 **RE-VERIFIED 2026-11-15 (job-tracker nightly).** `gen-runner.py list`: ARMED-with-app still `napatech` (app 2781, CLOSED row, flag stale); `health`: 1 dead pointer, `veo_technologies` → app 3500. Owner clears both flags.
 
@@ -2848,7 +2850,9 @@ is adoption, not pricing. Proposed: replace the three Mistral ids with `mistral-
 
 ## Row 127 — JT-OWNER-PACKAGED-DEFAULT-ON-001
 
-_verified: 2026-11-15_
+_verified: 2026-11-16_
+
+**RE-VERIFIED 2026-11-16 (job-tracker nightly).** 4 OWNER-PACKAGED rows (186, 207, 226, 227) are the only eligible rows; 185 (3Shape) dropped out when the sweep archived it (HTTP 410, strike 2). Fifth run with no generation.
 
 **RE-VERIFIED 2026-11-15 (job-tracker nightly).** `gen-runner.py list`: the same 5 OWNER-PACKAGED rows (185, 186, 207, 226, 227) are the only eligible rows; fourth run with no generation. Owner clears the ⏰ flags or answers (b).
 
@@ -3025,7 +3029,9 @@ _FIXED 2026-11-11 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `s
 
 ## Row 145 — RENDER-SUPPORT-CLOBBER-001
 
-_verified: 2026-11-15_
+_verified: 2026-11-16_
+
+**RE-VERIFIED 2026-11-16 (job-tracker nightly).** `pull --render` on rev 378 printed `restored 42 support block(s)`; afterwards local vs cloud `support`: 116 cloud keys, 0 differ, 136 local-only stubs. The restore line prints on every render by design (the Drive build always re-derives), so the literal close test below is wrong; the substantive one (0 differ) held two runs. Owner close call.
 
 _FIXED 2026-11-15 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `scripts/job-tracker/job-tracker-sync.py` + `test_sync_merge.py`; no `pwa/` asset, no version consumed)._
 
@@ -3050,6 +3056,24 @@ _OPEN (found by position-discovery 2026-11-15, Gabo-PC, Opus 5.5; script only, n
 **Impact.** Low. One T3 lead lost this run; a real posting that says "medical device experience is not required" would be skipped the same way.
 
 **Fix.** Treat "not (a )?must", "not required", "not mandatory", "not essential" as soft in `_medical_must` (check `_LANG_MUST` for the same shape). Negative controls: the two probe sentences pass; "is required" and "must have" stay musts. Until then, discovery `fit` notes avoid the word "must".
+
+## Row 148 — POSTING-RATE-DOMAIN-001
+
+_verified: 2026-11-16_
+
+_FIXED 2026-11-16 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `scripts/job-tracker/check-postings.py` + `test_check_postings.py`; no `pwa/` asset, no version consumed)._
+
+**Found.** The step 1b sweep read 12 rows WALLED HTTP 429, all on `*.myworkdayjobs.com` (NVIDIA wd5, Hamamatsu wd103, CIP wd103); the same rows read LIVE on 11-15. `probe_rows` paced (2 s) and retried 429 (5/15/45 s) only when `probe_target` rewrote the URL (LinkedIn guest API, jobnet BFF); every other host got one bare `probe()`. Discovery adds Workday rows in clusters, so they sit back to back.
+
+**Diagnostic.** Burst of 6 Workday probes: 6 x 429. After 20 s, `probe_with_backoff`: Hamamatsu 200 LIVE, NVIDIA 429 after the full backoff. The CXS JSON endpoint and a bogus job id also answered 429 (an HTML throttle page), so the limit is per client across tenants, not per posting.
+
+**Fix.** `rate_domain(url)` = last two host labels. Every probe waits `HOST_DELAY` (2 s) after the previous probe to the same rate domain and retries 429 with `LI_BACKOFF`. A domain whose 429 outlives the backoff joins a per-run cold set: later rows on it get one probe, no backoff (65 s once per domain, not per row). `probe_with_backoff(sleep=None)` resolves `time.sleep` per call so tests can record it. A surviving 429 still classifies WALLED: never a strike.
+
+**Tests.** 9 checks in `test_check_postings.py` drive the real `probe_rows` (fake `probe`, recorded `time.sleep`): shared key for Workday tenants; walled night = WALLED x3, misses 0, first row 4 fetches, later rows 1 each, backoff once, `HOST_DELAY` gap, other host untouched, nothing archived; a 429 that clears reads LIVE and does not cool the domain. Pre-fix: red (`rate_domain` missing). Sabotage by line index: 552 (`dom = target`) 3 red; 557 (`backoff=()`) 4 red; 560 (`pass`) 2 red. Restored byte-identical; all 36 job-tracker python test files green.
+
+**Not live-proven.** The diagnostic probes kept the IP throttled; a dry-run `check --only` on two Hamamatsu rows after the fix still read 429.
+
+**Close when** a sweep reads the Workday rows LIVE (or CLOSED/GONE) instead of WALLED.
 
 ## Row 147 — PROXY-POSTING-GUARD-UNDEPLOYED-001
 

@@ -75,7 +75,9 @@ needs-live-env — carry forward.
 
 ## Row 76 — JOBTRACKER-LLM-REFIT-BUTTON-001
 
-_verified: 2026-10-24_
+_verified: 2026-11-16_
+
+**Verify sweep 2026-11-16 (desktop nightly, E1 stalest slot):** still a deferred optional enhancement. No re-judge / refit button code in `pwa/` or `workers/`; no edge-JD evidence that the deterministic tier is too coarse. Keep deferred.
 
 **Re-verify 2026-10-24 (CI nightly — E1 stalest slot):** unchanged on HEAD `b8a63c08` — still a
 deferred OPTIONAL enhancement, not a defect. Deterministic Top-5 fit ranking is by design; the
@@ -1185,7 +1187,9 @@ _verified: 2026-11-15_
 
 ## Row 55 — TARGETED-OUTPUT-FURNITURE-001
 
-_verified: 2026-10-23_
+_verified: 2026-11-16_
+
+**Verify sweep 2026-11-16 (desktop nightly, E1 stalest slot):** leg (f) is in code: `workers/docx-worker/src/index.js` carries the Danish notice ("AI-assisteret - forfatteren bevarer ansvaret for indholdet."). Legs a / d / e not re-proved; they need a real targeted export. Blocked: owner-verify on a real targeted export.
 
 **2026-10-23 (desktop nightly, E1 — HEAD d7495a2b) — RE-SCOPED:** the "all six legs hand-fixed only" status is wrong. Code + history: **(b) SHIPPED** — docx-worker application line `"Ansøgning til"` per language (e48dd55a, 2026-07-22); `EU-borger` via loaded `antcv-identity-lang-heal.js` (26a0379d, 2026-07-12). **(f) SHIPPED** — FURNITURE-LANG-001 `__AINOTICE` map da/es/zh/he/ar/am in `workers/docx-worker/src/index.js` (d32f50af, 2026-07-11). **(c) HALF** — `antcv-react-islands.js` tells the CL prompt to greet the hiring manager by name when the tracker row's `hm` field is filled (b31a8704, 2026-07-29); nothing extracts the contact from the JD when `hm` is empty (owner decision). **(a) CV header line type, (d) brand-fit, (e) merged-role title order:** open pending a real targeted export (owner-verify). Verified by code read, not a rendered export. Kept ACTIVE on a/c/d/e.
 
@@ -1213,7 +1217,9 @@ _verified: 2026-10-23_
 
 ## Row 56 — GEN-JD-RELEVANCE-TRIM-001
 
-_verified: 2026-10-23_
+_verified: 2026-11-16_
+
+**Verify sweep 2026-11-16 (desktop nightly, E1 stalest slot):** still not started. 0 `RELEVANCE-TRIM` markers in `pwa/` or `workers/`. Blocked: real LLM gen on a software/AI JD with an optics-heavy kernel.
 
 **2026-10-23 (desktop nightly, E1 — HEAD d7495a2b):** verified not started — 0 `RELEVANCE-TRIM` markers. Real targeted gen gated. Kept ACTIVE.
 
@@ -1653,7 +1659,9 @@ _verified: 2026-10-27_ — CI nightly E1 re-verify against HEAD 65ce36e0: leg (f
 
 ## Row 89 — MODEL-TABLE-FRESHNESS-001
 
-_verified: 2026-11-12_
+_verified: 2026-11-16_
+
+**Deploy leg 2026-11-16 (desktop nightly):** access-relay deployed. `git log` since its last deployment (11-05 11:04Z) on `workers/access-relay/src` showed only `c2c7bf0e` (rates), so the deploy carried nothing else. `deploy.yml target=access-relay` run `43843407282` green; new deployment 2026-11-16 09:51Z; `/health` 200 `auth-40-application-snapshots`; relay suite 152/152 before dispatch. **REMAINING:** proxy + demo-proxy still owed. Each would also ship `91deec12` POSTING-GUARD-001 (#390), merged 11-05 11:23 +01 after the last proxy deployment (11-05 10:07Z) and never live. demo-proxy would also ship `c2da4988` LLM-LOG-SERVER-001. Owner call, tracked as row 147.
 
 _2026-11-12 weekly tune (desktop, Opus 5.5, worktree-isolated): pins verify against all four vendor pages. Mechanical diff of 90 page ids found four errors, fixed in all three mirrors with dated comments: ANTHROPIC-52-RATES-2026-11-001 (`claude-fable-5-2` and `claude-mythos-5-2` are new at [8,40]; both matched the shorter `claude-fable-5` / `claude-mythos-5` keys at [10,50], 1.25x OVER), OPENAI-GPT6-CYBER-RATES-2026-11-001 (`gpt-6-cyber` [20,100], was FALLBACK [3,15] 6.7x UNDER, strict null), GEMINI4-CARBON-RATES-2026-11-001 (`gemini-4-carbon` [2,10], doubles 2026-12-01 with Argon; was FALLBACK 1.5x OVER). `VENDOR_CATALOGUE_2026_11_12` added to both freshness tests (48/48 each, byte-identical) + one mirror case (15/15). `mistral-large-4` holds [0.70,2.10]. None is a pin or in a cascade. Worker deploy ×3 owed/handled per the report `COST_QUALITY_WEEKLY_2026-11-12.md`._
 
@@ -2427,7 +2435,9 @@ _reconcile 2026-09-07 (CI nightly, E3): `diag-panel-button-audit.mjs` RE-RUN on 
 
 > **Renumbered 2026-08-26: was row 40.** A document written before that date citing "row 40" may mean this row or SO-003. The ID is the key.
 
-_verified: 2026-10-23_
+_verified: 2026-11-16_
+
+**Verify sweep 2026-11-16 (desktop nightly, E1 stalest slot):** `scripts/job-tracker/job_sources.py` present; `test_job_sources.py` PASS, 88 parser checks (Python 3.12). Live board behaviour is owned by the position-discovery routine (row 111 tracks the jobbank param). No code owed here.
 
 **2026-10-23 (position-discovery run, re-verified live):** jobindex 36 queries 671 rows, jobbank 36 queries 629 rows, 501 unique, readable. LinkedIn guest 57 queries x 3 pages, 624 unique cards, 0 bad pages, no 429. TheHub 12 queries, 58 unique, readable. Google Jobs (WebSearch, 2 queries) readable. No source dry or unreadable.
 
@@ -2915,7 +2925,9 @@ _SHIPPED 2026-11-05 (desktop nightly, `1.51.5322-ec-no-derive`, commit `9c8f1980
 
 ## Row 136 — CI-NIGHTLY-CREDIT-EXHAUSTED-001
 
-_verified: 2026-11-15_
+_verified: 2026-11-16_
+
+**Re-verified 2026-11-16 (desktop nightly):** CI run `43842237048` (11-16) failed in 33 s; "Surface agent error cause" prints "Credit balance is too low | is_error=true api_error_status=400 turns=1". Day 19 without CI band coverage. Blocked: owner (key top-up).
 
 **2026-11-15 (desktop nightly):** still down, day 18. Run `43699195823` (11-15) prints `agent result: Credit balance is too low | is_error=true api_error_status=400 turns=1`. Blocked: owner (key top-up). Kept ACTIVE.
 
@@ -3038,3 +3050,17 @@ _OPEN (found by position-discovery 2026-11-15, Gabo-PC, Opus 5.5; script only, n
 **Impact.** Low. One T3 lead lost this run; a real posting that says "medical device experience is not required" would be skipped the same way.
 
 **Fix.** Treat "not (a )?must", "not required", "not mandatory", "not essential" as soft in `_medical_must` (check `_LANG_MUST` for the same shape). Negative controls: the two probe sentences pass; "is required" and "must have" stay musts. Until then, discovery `fit` notes avoid the word "must".
+
+## Row 147 — PROXY-POSTING-GUARD-UNDEPLOYED-001
+
+_verified: 2026-11-16_
+
+_OPEN (found by desktop nightly 2026-11-16, Gabo-PC, Opus 5.5; no code change; owner call)._
+
+**Found.** `91deec12` POSTING-GUARD-001 (#390, posting integrity guard for JDs and user messages) merged to main 2026-11-05 11:23 +01. `wrangler deployments list`: last cv-proxy deployment 11-05 10:07Z, last antcv-demo-proxy deployment 11-05 08:38Z. Push deploys skip `deploy-worker`; no `deploy.yml` dispatch for either worker since. The guard is not live on either proxy. Same class as DOCX-ROLE-LINE-UNDEPLOYED-001 (11-15). VERSION stays `3.8.4-brand-ink-match` in both sources, so `/health` cannot show the gap.
+
+**Pending on these two workers:** proxy = `91deec12` + `c2c7bf0e` (rates); demo-proxy = `c2da4988` LLM-LOG-SERVER-001 + `91deec12` + `c2c7bf0e`.
+
+**Why not deployed by the nightly.** The guard can reject live JD / message traffic; a false positive blocks generation. Shipping a merged-but-never-live feature to the production proxy is the owner's call, same as the 11-12 tune left it.
+
+**To close.** Owner decides. If yes: bump VERSION in both `workers/{proxy,demo-proxy}/src/index.js` (so `/health` shows it), `gh workflow run deploy.yml -f target=proxy -f mode=deploy -f confirm=proxy`, watch, `/health`, then demo-proxy; one real JD analysis on antcv.pages.dev after. Closes the proxy legs of row 89 too.

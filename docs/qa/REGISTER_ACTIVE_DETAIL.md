@@ -15,6 +15,10 @@ When you finish it: move it to `REGISTER_CLOSED.md`.
 
 ## Row 38 — GEN-BACKGROUND-001
 
+_verified: 2026-11-17_
+
+**Re-verify 2026-11-17 (desktop nightly, E1 stalest slot; HEAD `6b92824c`):** engine intact. `antcv-gen-memo.js` + `antcv-gen-job-client.js` loaded in `index.html` (2 refs), unchanged since 10-24; `gen-memo.test.mjs` + `gen-job-client.test.mjs` green inside `run-tests pwa` 2175/2175. Remaining: owner A/B on a real phone with `antcv:gen-resume=1`. Kept ACTIVE; blocked: real device.
+
 _verified: 2026-10-25_
 
 **Re-verify 2026-10-25 (CI nightly — E1 stalest slot, code-presence; HEAD `255e56e3`):** engine INTACT — `antcv-gen-memo.js` + `antcv-gen-job-client.js` both still loaded in `pwa/index.html` (2 refs); `window.AntcvGenJob` / `window.AntcvGenMemo` / `window.__antcvGenTrigger` still exposed across the sidecars + `app.js` mirror (3 refs); `gen-memo.test.mjs` + `gen-job-client.test.mjs` green (part of the 35/35 targeted run; full suite 1850/1850). The only commit since the 2026-10-24 sweep is the register-doc commit `255e56e3`, no code touched. REMAINING unchanged + NOT verifiable in unattended CI: the owner A/B on a real mobile gen with `antcv:gen-resume=1` (background/lock → foreground auto-resume, mid-run reload resume, output parity vs a flag-off gen), then the owner-gated default flip. Kept ACTIVE; blocked: real device.
@@ -121,6 +125,10 @@ too coarse on real edge JDs — no such evidence has surfaced. No code owed; kee
 ---
 
 ## Row 82 — ROLE-CANON-AUDIT-LEG-001
+
+_verified: 2026-11-17_
+
+**Re-verify 2026-11-17 (desktop nightly, E1 stalest slot; HEAD `6b92824c`):** CODE LEG STILL DONE. `test_gold_residue.py` 18/18 (Python 3.12); `role_canon_issues` wired at `gold_audit.py:22,94-95`; no commit touched `gold_audit.py` since 10-24. Only the owner-gated es/zh canon eyeball remains. Kept ACTIVE; blocked: owner.
 
 _verified: 2026-10-24_
 
@@ -1247,6 +1255,10 @@ _verified: 2026-11-16_
 
 ## Row 60
 
+_verified: 2026-11-17_
+
+**2026-11-17 (desktop nightly, E1 staleness sweep; HEAD `6b92824c`):** unchanged. Both control sidecars wired in `index.html` (2 refs). Leg (d) `clClosingHidden`/`clSignNameHidden` still 0 reads in `app.src.js` and `antcv-docx-client.js`. The one commit on `antcv-cl-slogan-control.js` since 10-24 (`05246c4b` SLOGAN-CASE-001) is headline case only. Kept ACTIVE; blocked: live-DOM repro with the owner's session.
+
 _verified: 2026-10-24_
 
 **2026-10-24 (CI nightly, E1 staleness sweep — HEAD b8a63c08):** re-confirmed unchanged — both control sidecars still wired in `index.html` (`antcv-header-rule-control.js` leg a, `antcv-cl-slogan-control.js` legs c/d/e/f; 2 refs). Leg (d) `clClosingHidden`/`clSignNameHidden` still the genuine gap (0 reads in `app.src.js` + `antcv-docx-client.js`). The two commits since the last sweep (AI-ACT-MARK-001 `b8a63c08` docx-worker, proof-points rules `27344d48`) do not touch the panel-control layer. All six legs need live-DOM capture + patch and, being auto-deploy-to-prod app changes, a live repro before ship — not doable in unattended CI (any app.js edit would also require a PR per the CI safety override). Kept ACTIVE.
@@ -1268,6 +1280,10 @@ _verified: 2026-10-24_
 ---
 
 ## Row 61 — LINE-DISTRIBUTION-GUIDELINES-001
+
+_verified: 2026-11-17_
+
+**2026-11-17 (desktop nightly, E1 staleness sweep; HEAD `6b92824c`):** unchanged. `goldDensity()` 4 refs in `antcv-bullet-targets.js`, `__antcvRowFit` 8 refs in `app.src.js`. Commits on `antcv-bullet-targets.js` since 10-24 (ASKAI-INSIGHT-001 injection, lockstep ?v bumps) do not touch the density path. Kept ACTIVE as the guidelines anchor.
 
 _verified: 2026-10-24_
 
@@ -1293,6 +1309,10 @@ _verified: 2026-10-24_
 
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
+
+_verified: 2026-11-17_
+
+**2026-11-17 (desktop nightly, E1 staleness sweep; HEAD `6b92824c`):** unchanged. Polish rules still applied by hand; line-fill points still partly served by LINE-DISTRIBUTION-001 (`goldDensity()` 4, `__antcvRowFit` 8). Kept ACTIVE.
 
 _verified: 2026-10-24_
 
@@ -2929,6 +2949,10 @@ _SHIPPED 2026-11-05 (desktop nightly, `1.51.5322-ec-no-derive`, commit `9c8f1980
 
 ## Row 136 — CI-NIGHTLY-CREDIT-EXHAUSTED-001
 
+_verified: 2026-11-17_
+
+**Re-verified 2026-11-17 (desktop nightly):** CI run `44067429387` (11-17) failed in 40 s, "Credit balance is too low | is_error=true api_error_status=400 turns=1". Day 20 without CI band coverage. Blocked: owner (key top-up). Kept ACTIVE.
+
 _verified: 2026-11-16_
 
 **Re-verified 2026-11-16 (desktop nightly):** CI run `43842237048` (11-16) failed in 33 s; "Surface agent error cause" prints "Credit balance is too low | is_error=true api_error_status=400 turns=1". Day 19 without CI band coverage. Blocked: owner (key top-up).
@@ -3076,6 +3100,10 @@ _FIXED 2026-11-16 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `s
 **Close when** a sweep reads the Workday rows LIVE (or CLOSED/GONE) instead of WALLED.
 
 ## Row 147 — PROXY-POSTING-GUARD-UNDEPLOYED-001
+
+_verified: 2026-11-17_
+
+**Re-verified 2026-11-17 (desktop nightly):** still undeployed. `wrangler deployments list`: cv-proxy last 2026-11-05T10:07Z, antcv-demo-proxy 2026-11-05T08:38Z; live `/health` both `3.8.4-brand-ink-match`. Not deployed here (owner call). Kept OPEN.
 
 _verified: 2026-11-16_
 

@@ -604,6 +604,7 @@ WD1 = "https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite/job/D
 WD2 = "https://photonics.wd103.myworkdayjobs.com/en-US/Job_Index/job/Birkerd/BI-Business-Analyst-I_JR2"
 WD3 = "https://cip.wd103.myworkdayjobs.com/en-US/CIP_Careers/job/Product-Specialist_JR3"
 EX = "https://www.example.dk/job/9"
+T1, T2, T3 = (cp.probe_target(u) for u in (WD1, WD2, WD3))   # POSTING-WORKDAY-CXS-001: probes hit the CXS JSON
 
 
 def _rate_rows():
@@ -636,9 +637,9 @@ def _run_rate(answer):
 by, calls, slept, doc = _run_rate(lambda u, c: (429, u, "") if "myworkdayjobs" in u else (200, u, JD))
 check("rate: a walled Workday row is WALLED, never a strike",
       [(by[k]["verdict"], by[k]["misses"]) for k in ("wd1", "wd2", "wd3")], [("WALLED", 0)] * 3)
-check("rate: the first Workday row retries the whole backoff (1 + 3 fetches)", calls.count(WD1), 4)
+check("rate: the first Workday row retries the whole backoff (1 + 3 fetches)", calls.count(T1), 4)
 check("rate: later rows on the cold domain get one probe each (no 65 s per row)",
-      (calls.count(WD2), calls.count(WD3)), (1, 1))
+      (calls.count(T2), calls.count(T3)), (1, 1))
 check("rate: the backoff runs once for the domain", [s for s in slept if s in cp.LI_BACKOFF],
       list(cp.LI_BACKOFF))
 check("rate: the second Workday row waits HOST_DELAY after the first (same rate domain)",
@@ -656,8 +657,107 @@ by, calls, slept, doc = _run_rate(_once)
 check("rate: a Workday 429 that clears on retry reads LIVE (was WALLED with no retry)",
       [by[k]["verdict"] for k in ("wd1", "wd2", "wd3")], ["LIVE"] * 3)
 check("rate: a cleared 429 does not cool the domain (each row may retry)",
-      (calls.count(WD1), calls.count(WD2), calls.count(WD3)), (2, 2, 2))
+      (calls.count(T1), calls.count(T2), calls.count(T3)), (2, 2, 2))
 
+
+# ---- POSTING-CF-FINGERPRINT-001: Cloudflare challenge pages are a client fingerprint, not a rate limit.
+CF_PAGE = ("<!DOCTYPE html><html><head><style>body{margin:0}</style></head><body><h1>Security Check</h1>"
+           "<p>Enable JavaScript and cookies to continue</p><p>Support ID: x</p></body></html>")
+check("challenge: a 429 Security Check page is a bot challenge", cp.is_bot_challenge(429, CF_PAGE), True)
+check("challenge: a bare 429 (rate limit) is not", cp.is_bot_challenge(429, ""), False)
+check("challenge: a 200 JD is never a challenge", cp.is_bot_challenge(200, CF_PAGE), False)
+
+
+def _run_cf(urllib_answer, curl_answer):
+    alt0 = cp.probe_curl
+    curl_calls = []
+
+    def fc(url, timeout=25):
+        curl_calls.append(url)
+        return curl_answer(url)
+    cp.probe_curl = fc
+    try:
+        by, calls, slept, doc = _run_rate(urllib_answer)
+    finally:
+        cp.probe_curl = alt0
+    return by, calls, slept, doc, curl_calls
+
+
+# (c) urllib walled by the challenge, curl answers 200: rows read LIVE, no backoff, one urllib probe each.
+by, calls, slept, doc, cc = _run_cf(lambda u, c: (429, u, CF_PAGE) if "myworkdayjobs" in u else (200, u, JD),
+                                    lambda u: (200, u, JD))
+check("cf: challenged Workday rows read LIVE through curl (were WALLED HTTP 429)",
+      [by[k]["verdict"] for k in ("wd1", "wd2", "wd3")], ["LIVE"] * 3)
+check("cf: one urllib probe per Workday row, no 429 backoff", (calls.count(T1), calls.count(T2)), (1, 1))
+check("cf: no backoff sleep", [s for s in slept if s in cp.LI_BACKOFF], [])
+check("cf: curl used only for the challenged rows", sorted(cc), sorted([T1, T2, T3]))
+
+# (d) curl hits a closed posting: the curl body is classified (a real verdict, not WALLED).
+by, *_ = _run_cf(lambda u, c: (429, u, CF_PAGE) if "myworkdayjobs" in u else (200, u, JD),
+                 lambda u: (404, u, "not found") if u == T2 else (200, u, JD))
+check("cf: curl 404 reads GONE (strike 1, not archived)", (by["wd2"]["verdict"], by["wd2"]["misses"]), ("GONE", 1))
+
+# (e) curl challenged too, or curl missing: the old backoff path, still WALLED, never a strike.
+for name, ans in (("curl walled", lambda u: (429, u, CF_PAGE)), ("no curl", lambda u: None)):
+    by, calls, slept, doc, cc = _run_cf(lambda u, c: (429, u, CF_PAGE) if "myworkdayjobs" in u else (200, u, JD), ans)
+    check("cf (%s): rows stay WALLED with 0 strikes" % name,
+          [(by[k]["verdict"], by[k]["misses"]) for k in ("wd1", "wd2", "wd3")], [("WALLED", 0)] * 3)
+    check("cf (%s): the backoff runs once for the domain" % name,
+          [s for s in slept if s in cp.LI_BACKOFF], list(cp.LI_BACKOFF))
+
+# (f) probe_curl parses curl's -w trailer; missing curl or status 000 returns None.
+class _P:
+    def __init__(self, out):
+        self.stdout = out.encode("utf-8")
+which0, run0 = cp.shutil.which, cp.subprocess.run
+seen = []
+try:
+    cp.shutil.which = lambda n: "C:/curl.exe"
+    cp.subprocess.run = lambda cmd, **k: (seen.append(cmd), _P(JD + cp._CURL_META + "200 " + WD1 + "?x=1"))[1]
+    check("curl: status, final url and body parsed", cp.probe_curl(WD1), (200, WD1 + "?x=1", JD))
+    check("curl: sends the browser UA and follows redirects", ("-sL" in seen[0], cp._UA in seen[0]), (True, True))
+    cp.subprocess.run = lambda cmd, **k: _P(cp._CURL_META + "000 " + WD1)
+    check("curl: status 000 (connect fail) -> None", cp.probe_curl(WD1), None)
+    cp.shutil.which = lambda n: None
+    check("curl: no curl binary -> None", cp.probe_curl(WD1), None)
+finally:
+    cp.shutil.which, cp.subprocess.run = which0, run0
+
+
+# ---- POSTING-WORKDAY-CXS-001: Workday pages are JS shells (200 for any id); probe the CXS JSON instead.
+check("cxs: locale + location path maps to the CXS job URL",
+      cp.workday_cxs("https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite/job/Denmark-Roskilde/"
+                     "Interconnect-Engineer_JR2020852?source=jobboardlinkedin&locationHierarchy1=d21c"),
+      "https://nvidia.wd5.myworkdayjobs.com/wday/cxs/nvidia/NVIDIAExternalCareerSite/job/Denmark-Roskilde/"
+      "Interconnect-Engineer_JR2020852")
+check("cxs: no locale, no location segment",
+      cp.workday_cxs("https://photonics.wd103.myworkdayjobs.com/en-US/PhotonicsLinkedIn/job/Project-Manager_JR100530?source=LinkedIn"),
+      "https://photonics.wd103.myworkdayjobs.com/wday/cxs/photonics/PhotonicsLinkedIn/job/Project-Manager_JR100530")
+check("cxs: a /details/ URL maps to /job/",
+      cp.workday_cxs("https://novonesis.wd103.myworkdayjobs.com/en-US/Novonesis_Careers/details/Hrsholm/AI-Lead_JR113572"),
+      "https://novonesis.wd103.myworkdayjobs.com/wday/cxs/novonesis/Novonesis_Careers/job/Hrsholm/AI-Lead_JR113572")
+check("cxs: probe_target routes Workday to CXS", cp.probe_target(WD3),
+      "https://cip.wd103.myworkdayjobs.com/wday/cxs/cip/CIP_Careers/job/Product-Specialist_JR3")
+check("cxs: a non-Workday URL is untouched", (cp.workday_cxs(EX), cp.probe_target(EX)), (None, EX))
+check("cxs: a Workday site root (no job path) is untouched",
+      cp.workday_cxs("https://cip.wd103.myworkdayjobs.com/en-US/CIP_Careers"), None)
+
+S22 = '{"errorCode":"S22","errorCaseId":"9B07FCMWL0PPEY","httpStatus":403,"message":"permission denied","messageParams":{}}'
+CXS_OK = '{"jobPostingInfo":{"id":"c0ba","title":"Test Engineer - Photonic","jobDescription":"<p>You will own test.</p>","canApply":true}}'
+check("cxs: 403 S22 reads SUSPECT (soft, two strikes)", cp.classify(403, T3, T3, S22, TODAY)[0], "SUSPECT")
+check("cxs: 403 S22 on a non-CXS URL stays WALLED", cp.classify(403, U, U, S22, TODAY)[0], "WALLED")
+check("cxs: a 403 challenge page on CXS stays WALLED", cp.classify(403, T3, T3, CF_PAGE, TODAY)[0], "WALLED")
+check("cxs: 200 jobPostingInfo reads LIVE", cp.classify(200, T3, T3, CXS_OK, TODAY)[0], "LIVE")
+check("cxs: 404 (unknown id) reads GONE", cp.classify(404, T3, T3, '{"errorCode":"HTTP_404"}', TODAY)[0], "GONE")
+
+# Integrated: urllib challenged, curl gets the CXS answer: S22 strikes, live stays LIVE, nothing archived on day 1.
+by, calls, slept, doc, cc = _run_cf(lambda u, c: (429, u, CF_PAGE) if "myworkdayjobs" in u else (200, u, JD),
+                                    lambda u: (403, u, S22) if u == T3 else (200, u, CXS_OK))
+check("cxs: S22 row SUSPECT strike 1, live rows LIVE",
+      [(by[k]["verdict"], by[k]["misses"]) for k in ("wd1", "wd2", "wd3")],
+      [("LIVE", 0), ("LIVE", 0), ("SUSPECT", 1)])
+check("cxs: one S22 day archives nothing", [r[12] for r in doc["rows"]], ["E2EFDA"] * 4)
+check("cxs: curl fetched the CXS URLs, not the JS pages", sorted(cc), sorted([T1, T2, T3]))
 
 if fails:
     print("FAIL (%d):" % len(fails))

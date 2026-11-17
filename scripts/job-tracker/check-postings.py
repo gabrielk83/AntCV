@@ -54,6 +54,8 @@ import datetime
 import json
 import os
 import re
+import shutil
+import subprocess
 import sys
 import time
 import urllib.error
@@ -167,12 +169,35 @@ _JOBNET_FIND = re.compile(r"^https?://(?:www\.)?jobnet\.dk/find-job/([0-9a-f-]{3
 JOBNET_DETAILS = "https://jobnet.dk/bff/FindJob/JobAdDetails/%s"
 
 
+# POSTING-WORKDAY-CXS-001 (job-tracker nightly 2026-11-17): a Workday job page is a JS shell that
+# answers 200 for any id, a bogus one too, so the page read LIVE with no evidence. The career
+# site's own JSON endpoint (/wday/cxs/<tenant>/<site>/job/<path>) answers 200 + jobPostingInfo for
+# a listed job, 404 for an unknown id, and 403 errorCode S22 for a requisition that is no longer
+# public (checked 2026-11-17: every S22 id returned 0 hits in that site's own job search, every
+# 200 id returned 1). S22 is soft evidence: SUSPECT, two strikes on separate days.
+_WORKDAY_JOB = re.compile(r"^https?://([a-z0-9-]+)\.(wd\d+)\.myworkdayjobs\.com/(?:[a-z]{2}-[A-Za-z]{2}/)?"
+                          r"([^/?#]+)/(?:job|details)/([^?#]+)", re.I)
+WORKDAY_CXS = "https://%s.%s.myworkdayjobs.com/wday/cxs/%s/%s/job/%s"
+
+
+def workday_cxs(url):
+    """CXS JSON URL for a *.myworkdayjobs.com job page; else None."""
+    m = _WORKDAY_JOB.match(url or "")
+    if not m:
+        return None
+    tenant, wd, site, rest = m.groups()
+    return WORKDAY_CXS % (tenant.lower(), wd.lower(), tenant.lower(), site, rest.rstrip("/"))
+
+
 def probe_target(url):
     """The URL to actually fetch for a tracker URL (guest API for LinkedIn views,
-    the BFF detail endpoint for jobnet find-job pages)."""
+    the BFF detail endpoint for jobnet find-job pages, the CXS JSON for Workday jobs)."""
     jid = linkedin_job_id(url)
     if jid:
         return LI_GUEST % jid
+    cxs = workday_cxs(url)
+    if cxs:
+        return cxs
     m = _JOBNET_FIND.match(url or "")
     return JOBNET_DETAILS % m.group(1) if m else url
 
@@ -275,6 +300,9 @@ def classify(status, final_url, requested_url, text, today=None):
     today = today or datetime.date.today()
     if status in (404, 410):
         return "GONE", "HTTP %d" % status
+    if (status == 403 and "/wday/cxs/" in (requested_url or "")
+            and re.search(r'"errorCode"\s*:\s*"S22"', text or "")):            # POSTING-WORKDAY-CXS-001
+        return "SUSPECT", "Workday CXS 403 S22: requisition no longer public"
     if status in (401, 403, 429, 999) or status is None:
         return "WALLED", "HTTP %s" % status
     if status >= 500:
@@ -330,13 +358,54 @@ def probe(url, timeout=25):
         return None, url, "__probe_error__ %s: %s" % (type(e).__name__, e)
 
 
+# POSTING-CF-FINGERPRINT-001 (job-tracker nightly 2026-11-17): the Workday 429s were not a rate
+# limit. Cloudflare in front of *.myworkdayjobs.com answers Python urllib with HTTP 429 and a
+# "Security Check / Enable JavaScript and cookies to continue" page on every request, any
+# User-Agent, while curl (Schannel TLS) gets 200 for the same URL in the same minute. Backoff
+# cannot beat a client fingerprint. A 403/429 challenge page is re-fetched once with curl; the
+# curl answer is classified as usual. No curl, or curl walled too: the old backoff path.
+_BOT_CHALLENGE = re.compile(r"enable javascript and cookies|just a moment\.\.\.|challenge-platform|cf-chl", re.I)
+_CURL_META = "\n__ANTCV_CURL_META__ "
+
+
+def is_bot_challenge(status, text):
+    """A 403/429 whose body is a bot-challenge page (fingerprint wall, not a rate limit)."""
+    return status in (403, 429) and bool(_BOT_CHALLENGE.search((text or "")[:60000]))
+
+
+def probe_curl(url, timeout=25):
+    """probe() through the curl binary. Returns (status, final_url, text) or None when curl
+    is missing or produced no HTTP status."""
+    exe = shutil.which("curl")
+    if not exe:
+        return None
+    cmd = [exe, "-sL", "--compressed", "--max-time", str(int(timeout)), "-A", _UA,
+           "-H", "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+           "-H", "Accept-Language: en,da;q=0.8",
+           "-w", _CURL_META + "%{http_code} %{url_effective}", url]
+    try:
+        p = subprocess.run(cmd, capture_output=True, timeout=timeout + 10)
+    except Exception:                                            # noqa: BLE001
+        return None
+    body, sep, meta = p.stdout.decode("utf-8", "replace").rpartition(_CURL_META)
+    code, _, final = meta.strip().partition(" ")
+    if not sep or not code.isdigit() or int(code) == 0:
+        return None
+    return int(code), final or url, body[:400_000]
+
+
 def probe_with_backoff(url, timeout=25, fetch=None, sleep=None,
-                       backoff=LI_BACKOFF):
+                       backoff=LI_BACKOFF, alt_fetch=None):
     """probe() that retries on HTTP 429. A 429 that survives every retry is
-    returned as-is and classifies WALLED (no evidence), never a strike."""
+    returned as-is and classifies WALLED (no evidence), never a strike.
+    A bot-challenge page is re-fetched once with alt_fetch (curl) first."""
     fetch = fetch or probe
     sleep = sleep or time.sleep                          # resolved per call (patchable)
     res = fetch(url, timeout)
+    if is_bot_challenge(res[0], res[2]):                 # POSTING-CF-FINGERPRINT-001
+        alt = (alt_fetch or probe_curl)(url, timeout)
+        if alt and not is_bot_challenge(alt[0], alt[2]):
+            return alt
     for wait in backoff:
         if res[0] != 429:
             break

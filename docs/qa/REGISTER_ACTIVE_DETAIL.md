@@ -2755,7 +2755,9 @@ _verified: 2026-11-16_
 
 ## Row 118 — JT-ARMED-ARTIFACT-NO-DRAIN-001
 
-_verified: 2026-11-17_
+_verified: 2026-11-18_
+
+**RE-VERIFIED 2026-11-18 (job-tracker nightly).** `gen-runner.py list` still names `napatech` (app 2781, CLOSED row) as ARMED-with-app; `health` still reads 1 dead pointer, `veo_technologies` -> app 3500. Owner flag clear still owed.
 
 **RE-VERIFIED 2026-11-16 (job-tracker nightly).** Rev 378: ARMED-with-app still `napatech` (app 2781, CLOSED row, flag stale); `health`: 60 pointers vs 94 cloud apps, 1 dead, `veo_technologies` → app 3500. Owner clears both flags.
 
@@ -2890,7 +2892,9 @@ is adoption, not pricing. Proposed: replace the three Mistral ids with `mistral-
 
 ## Row 127 — JT-OWNER-PACKAGED-DEFAULT-ON-001
 
-_verified: 2026-11-17_
+_verified: 2026-11-18_
+
+**RE-VERIFIED 2026-11-18 (job-tracker nightly).** 3 OWNER-PACKAGED rows now (186 WD, 207 RED Global, 227 LEGO TPM); 226 Hamamatsu BI archived by the sweep (Workday CXS S22, strike 2/2). Seventh run with no generation.
 
 **RE-VERIFIED 2026-11-16 (job-tracker nightly).** 4 OWNER-PACKAGED rows (186, 207, 226, 227) are the only eligible rows; 185 (3Shape) dropped out when the sweep archived it (HTTP 410, strike 2). Fifth run with no generation.
 
@@ -3100,34 +3104,6 @@ _OPEN (found by position-discovery 2026-11-15, Gabo-PC, Opus 5.5; script only, n
 **Impact.** Low. One T3 lead lost this run; a real posting that says "medical device experience is not required" would be skipped the same way.
 
 **Fix.** Treat "not (a )?must", "not required", "not mandatory", "not essential" as soft in `_medical_must` (check `_LANG_MUST` for the same shape). Negative controls: the two probe sentences pass; "is required" and "must have" stay musts. Until then, discovery `fit` notes avoid the word "must".
-
-## Row 148 — POSTING-RATE-DOMAIN-001
-
-_verified: 2026-11-17_
-
-_FIXED 2026-11-16 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `scripts/job-tracker/check-postings.py` + `test_check_postings.py`; no `pwa/` asset, no version consumed)._
-
-**Found.** The step 1b sweep read 12 rows WALLED HTTP 429, all on `*.myworkdayjobs.com` (NVIDIA wd5, Hamamatsu wd103, CIP wd103); the same rows read LIVE on 11-15. `probe_rows` paced (2 s) and retried 429 (5/15/45 s) only when `probe_target` rewrote the URL (LinkedIn guest API, jobnet BFF); every other host got one bare `probe()`. Discovery adds Workday rows in clusters, so they sit back to back.
-
-**Diagnostic.** Burst of 6 Workday probes: 6 x 429. After 20 s, `probe_with_backoff`: Hamamatsu 200 LIVE, NVIDIA 429 after the full backoff. The CXS JSON endpoint and a bogus job id also answered 429 (an HTML throttle page), so the limit is per client across tenants, not per posting.
-
-**Fix.** `rate_domain(url)` = last two host labels. Every probe waits `HOST_DELAY` (2 s) after the previous probe to the same rate domain and retries 429 with `LI_BACKOFF`. A domain whose 429 outlives the backoff joins a per-run cold set: later rows on it get one probe, no backoff (65 s once per domain, not per row). `probe_with_backoff(sleep=None)` resolves `time.sleep` per call so tests can record it. A surviving 429 still classifies WALLED: never a strike.
-
-**Tests.** 9 checks in `test_check_postings.py` drive the real `probe_rows` (fake `probe`, recorded `time.sleep`): shared key for Workday tenants; walled night = WALLED x3, misses 0, first row 4 fetches, later rows 1 each, backoff once, `HOST_DELAY` gap, other host untouched, nothing archived; a 429 that clears reads LIVE and does not cool the domain. Pre-fix: red (`rate_domain` missing). Sabotage by line index: 552 (`dom = target`) 3 red; 557 (`backoff=()`) 4 red; 560 (`pass`) 2 red. Restored byte-identical; all 36 job-tracker python test files green.
-
-**Not live-proven.** The diagnostic probes kept the IP throttled; a dry-run `check --only` on two Hamamatsu rows after the fix still read 429.
-
-**ADVANCED 2026-11-17 (job-tracker nightly) — root cause corrected.** The 11-17 sweep still read 8 Workday rows WALLED 429. Diagnostic: `probe()` (urllib) got HTTP 429 with a Cloudflare "Security Check / Enable JavaScript and cookies to continue" page on three tries in a row, with the browser UA, `Mozilla/5.0` and `curl/8.4.0` as UA; curl (Schannel TLS, System32 and mingw builds) got 200 for the same URL in the same minute. So the wall is a client fingerprint, not a rate limit, and backoff cannot clear it (the 11-16 "throttle across tenants" reading was wrong). Second finding: the Workday job page is a JS shell; curl got 200 and `classify` LIVE for a bogus id (`Bogus_JR999999`).
-
-**Fix 2 (POSTING-CF-FINGERPRINT-001).** `is_bot_challenge(status, text)` = 403/429 with a challenge page. `probe_with_backoff` re-fetches such a page once with `probe_curl` (curl subprocess, browser UA, `-sL --compressed`, `-w` trailer for status + final URL). A curl answer that is not a challenge is classified as usual; no curl, status 000 or curl walled too → the old backoff path (WALLED, never a strike).
-
-**Fix 3 (POSTING-WORKDAY-CXS-001).** `workday_cxs(url)` maps `https://<tenant>.wdN.myworkdayjobs.com/[xx-XX/]<site>/(job|details)/<path>` to `/wday/cxs/<tenant>/<site>/job/<path>` (query dropped); `probe_target` uses it. CXS answers 200 + `jobPostingInfo` for a listed job, 404 for an unknown id, 403 `errorCode` S22 for a requisition no longer public. `classify`: CXS 403 S22 → SUSPECT (soft, two strikes on separate days); a CXS challenge page stays WALLED. Evidence for S22: CIP JR103198, NVIDIA JR2019709 / JR2020852 / JR2020858, Philips 587622 all 0 hits in their own site search; NVIDIA JR2012829 (200) 1 hit; Hamamatsu JR100470 absent from both the Job_Index (16) and PhotonicsLinkedIn (19) lists.
-
-**Tests.** 29 new checks in `test_check_postings.py`: challenge detection; curl path (LIVE through curl, one urllib probe, no backoff sleep, curl only for challenged rows; curl 404 → GONE strike 1; curl walled / no curl → WALLED, backoff once); `probe_curl` parsing with a fake `subprocess.run` / `shutil.which`; CXS mapping (locale, no location, `/details/`, non-Workday untouched, site root untouched); `classify` S22 / non-CXS 403 / CXS challenge / 200 / 404; integrated S22 strike 1 with nothing archived. The 11-16 rate checks now count probes by `probe_target`. Pre-fix red (AttributeError `is_bot_challenge`). Sabotage line 199 (`if cxs:`) 3 red, 305 (S22 branch) 2 red, 373 (`is_bot_challenge`) 8 red, 394 (`probe_curl` return) 1 red, 407 (curl accept) 5 red. Restored: PASS; all 36 job-tracker python test files green.
-
-**Live.** `check --apply --only` on the 13 open Workday rows: 5 LIVE (CXS 200), 8 SUSPECT strike 1/2, 0 archived; doc rev 379 → 380.
-
-**Close when** the 11-18 sweep archives the S22 rows on strike 2 (or the owner re-labels them) and reads no Workday row WALLED.
 
 ## Row 147 — PROXY-POSTING-GUARD-UNDEPLOYED-001
 

@@ -788,6 +788,10 @@ _verified: 2026-10-05_
 
 ## Row 41
 
+_verified: 2026-11-18_
+
+**2026-11-18 (desktop nightly, E1 staleness sweep, HEAD 9774bd3a):** guard sidecars 9/9 served, executed, content-identical on live (`diag-live-guard-sidecars.mjs`); E3 audit 212 buttons, 0 regressions, 0 page errors, no React #185 headlessly. Blocked: real device (Android #185 repro). Kept ACTIVE.
+
 _verified: 2026-10-25_
 
 **Re-verify 2026-10-25 (CI nightly — E1 stalest slot, code-presence; HEAD `255e56e3`):** the #185 capture PROBE is intact — `antcv-debug-logger.js` still loaded in `pwa/index.html` (1 ref), full suite 1850/1850 green. No code commit since the 2026-10-24 sweep (`255e56e3` is register-doc only). No headless repro is reproducible in CI: #185 in this React-18 prod bundle = "Maximum update depth exceeded", proven to need a real Android reflow oscillation the stable headless layout cannot produce. REMAINING unchanged: waiting on the next live Android crash to populate a capture — a desktop/owner-device leg. Kept ACTIVE (instrumented, no repro).
@@ -825,6 +829,10 @@ _verified: 2026-10-05_
 ---
 
 ## Row 42 — GEN-LANGFAB-001
+
+_verified: 2026-11-18_
+
+**2026-11-18 (desktop nightly, E1 staleness sweep, HEAD 9774bd3a):** D1 `llm_calls` (wrangler, SELECT only) newest day 2026-11-08 (13 calls); no generation since to check German-omitted / Danish-B1 against. Blocked: real LLM gen (fresh targeted gen + owner read). Kept ACTIVE.
 
 _verified: 2026-10-25_
 
@@ -864,6 +872,10 @@ _verified: 2026-10-05_
 
 ## Row 43
 
+_verified: 2026-11-18_
+
+**2026-11-18 (desktop nightly, E1 staleness sweep, HEAD 9774bd3a):** no commit on the guard sidecars since the last sweep; E4 results preview/export parity OK. Blocked: owner session (signed-in targeted gen preview). Kept ACTIVE.
+
 _verified: 2026-10-25_
 
 **Re-verify 2026-10-25 (CI nightly — E1 stalest slot, code-presence; HEAD `255e56e3`):** fix INTACT — `antcv-candidate-preview-editor-341.js` still loaded in `pwa/index.html` (1 ref), the Path-C header-whitelist marker `data-antcv-candidate-band` still present in the sidecar (2 refs); `ca006-pathc-header-guard.test.mjs` green (part of the 35/35 targeted run; full suite 1850/1850). Sidecar-only, no app.js edit; no code commit since the 2026-10-24 sweep. REMAINING: owner click-through eyeball on a targeted gen preview (live, needs owner session). Kept ACTIVE.
@@ -901,6 +913,10 @@ _verified: 2026-10-05_
 ---
 
 ## Row 44 — JD-ANALYSIS-PRINT-001
+
+_verified: 2026-11-18_
+
+**2026-11-18 (desktop nightly, E1 staleness sweep, HEAD 9774bd3a):** `antcv-analysis-report-pdf-360.js` loaded at `?v=1.51.2072-analysis-cloudconvert`, last touched 2026-07-22; E3 shows the button present (skipped-dangerous, not clicked). Blocked: owner session (click "Download analysis (PDF)" on a signed-in analysis). Kept ACTIVE.
 
 _verified: 2026-10-25_
 
@@ -1362,6 +1378,10 @@ _verified: 2026-10-15_
 ---
 
 ## Row 63 — ANALYSIS-STALE-ON-APP-LOAD-001
+
+_verified: 2026-11-18_
+
+**2026-11-18 (desktop nightly, E1 staleness sweep, HEAD 9774bd3a):** mount-hydrate unsol-guard intact: `u.set("rationale", t.rationale)` at `pwa/app.src.js:18892`, `__antcvUnsol` 37 refs. Blocked: owner session (targeted->targeted saved-app switch writes live app state). Kept ACTIVE.
 
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
@@ -3110,6 +3130,10 @@ _FIXED 2026-11-16 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `s
 **Close when** the 11-18 sweep archives the S22 rows on strike 2 (or the owner re-labels them) and reads no Workday row WALLED.
 
 ## Row 147 — PROXY-POSTING-GUARD-UNDEPLOYED-001
+
+_verified: 2026-11-18_
+
+**2026-11-18 (desktop nightly, E1 staleness sweep, HEAD 9774bd3a):** still undeployed. `wrangler deployments list`: cv-proxy last 2026-11-05T10:07Z, antcv-demo-proxy 2026-11-05T08:38Z. Blocked: owner call. Kept ACTIVE.
 
 _verified: 2026-11-17_
 

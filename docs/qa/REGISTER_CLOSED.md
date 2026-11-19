@@ -4,6 +4,26 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 145 — RENDER-SUPPORT-CLOBBER-001 — CLOSED 2026-11-19 (job-tracker nightly, evidence: local vs cloud `support` 0 differ after a fourth `pull --render`)
+
+_verified: 2026-11-19_
+
+**CLOSED 2026-11-19 (job-tracker nightly).** `pull --render` on rev 382 printed `restored 54 support block(s)`; afterwards local vs cloud `support` read 116 cloud keys, 116 shared, 0 differ, 0 cloud-only, 136 local-only stubs. The substantive test (0 differ) has now held on 11-16, 11-17, 11-18 and 11-19. The literal close test (no restore line) cannot be met: the Drive build re-derives `support` on every render, so the restore line always prints. Closed on the substantive test.
+
+**RE-VERIFIED 2026-11-16 (job-tracker nightly).** `pull --render` on rev 378 printed `restored 42 support block(s)`; afterwards local vs cloud `support`: 116 cloud keys, 0 differ, 136 local-only stubs. The restore line prints on every render by design (the Drive build always re-derives), so the literal close test below is wrong; the substantive one (0 differ) held two runs. Owner close call.
+
+_FIXED 2026-11-15 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `scripts/job-tracker/job-tracker-sync.py` + `test_sync_merge.py`; no `pwa/` asset, no version consumed)._
+
+**Found.** The "kept N local-only entries, run `push`" line grew 124 → 131 across runs. All 131 are `support` keys for real cloud rows. Cause: step 6 `pull --render` runs the Drive `build_workbook.py`, which re-emits `job_tracker_doc.json` with `support` rebuilt from the row tuple alone (ROLE / FIT / FLAG lines) and replaces the whole dict. On the next pull the base is the cloud, so the stub reads as a local edit and the per-key 3-way keeps it without a conflict. Measured 2026-11-15 at rev 375: 116 shared keys, 41 differ; 35 differ only in fresher derived lines; 6 are cloud research blocks of 2.0-2.9 KB held locally as 75-577-char stubs (`3shape-optics-engineer-s-4143`, `career-opportunities-exp-8337`, `hamamatsu-photonics-a-s--0014`, `hamamatsu-photonics-a-s--4229`, `the-lego-group-senior-te-0973`, `peak-wind-product-projec-9259`). A `push` (owner ask 3 in the last three nightlies) would have overwritten them; gen-runner reads `support`. The build also discarded local-only intel blocks.
+
+**Fix.** `_reassert_support(doc_path, merged, cloud)` runs right after the build in `cmd_pull(render=True)`: support = build stub, overlaid by the pre-render merged value, overlaid by the cloud value. Prints `render: restored N support block(s)`.
+
+**Tests.** `test_render_does_not_replace_cloud_support_with_a_stub` drives the real `cmd_pull(render=True)` with a stub build script: cloud block kept, local-only block kept, stub only on the empty key. Pre-fix (HEAD sync script): red. Sabotage line 236 (`n = 0`, call removed): red. Sabotage line 278 (`out.update(cs)` → `pass`): red. Restored byte-identical: 7/7 PASS.
+
+**Live.** Re-ran `pull --render` with the fix: `restored 41 support block(s)`; local vs cloud support now 0 differ, 131 local-only stubs (rows the cloud has no block for; harmless fill).
+
+**Close when** the next nightly's `pull --render` prints no restore line, or only keys the cloud changed since.
+
 ## Row 148 — POSTING-RATE-DOMAIN-001 — CLOSED 2026-11-18 (job-tracker nightly, evidence: live sweep archived the 8 Workday S22 rows on strike 2, 0 Workday rows WALLED)
 
 _verified: 2026-11-18_

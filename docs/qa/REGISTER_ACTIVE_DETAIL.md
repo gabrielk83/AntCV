@@ -2755,7 +2755,7 @@ _verified: 2026-11-16_
 
 ## Row 118 — JT-ARMED-ARTIFACT-NO-DRAIN-001
 
-_verified: 2026-11-18_
+_verified: 2026-11-19_
 
 **RE-VERIFIED 2026-11-18 (job-tracker nightly).** `gen-runner.py list` still names `napatech` (app 2781, CLOSED row) as ARMED-with-app; `health` still reads 1 dead pointer, `veo_technologies` -> app 3500. Owner flag clear still owed.
 
@@ -2892,7 +2892,7 @@ is adoption, not pricing. Proposed: replace the three Mistral ids with `mistral-
 
 ## Row 127 — JT-OWNER-PACKAGED-DEFAULT-ON-001
 
-_verified: 2026-11-18_
+_verified: 2026-11-19_
 
 **RE-VERIFIED 2026-11-18 (job-tracker nightly).** 3 OWNER-PACKAGED rows now (186 WD, 207 RED Global, 227 LEGO TPM); 226 Hamamatsu BI archived by the sweep (Workday CXS S22, strike 2/2). Seventh run with no generation.
 
@@ -3074,24 +3074,6 @@ _FIXED 2026-11-11 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `s
 **Fix.** `probe_rows` reads the row note with the same `deadlines.find_deadline` only when the posting text states no deadline; the posting text wins when both have one. The engaged guard (`is_engaged`) still applies. The verdict detail names the source ("row note" / "posting text").
 
 **Tests.** 5 new checks in `test_check_postings.py` driving the real `probe_rows` with a fake probe: FMI-shaped row archived with no network probe; future row-note deadline left to the probe; posting-text future deadline beats a past row-note deadline; engaged row never archived. Pre-fix (HEAD `check-postings.py`): 2 FAIL. Sabotage line 523 (`jd_deadline = None`): red. Sabotage line 522 (`if True:`, row note always wins): red. Restored byte-identical, PASS. `test_deadlines.py` 14/14, `run-tests.mjs` ALL PASS. Tonight's live doc: no row changes verdict (the only open row-note deadline is in 2027). Close after a sweep archives a row on its row-note deadline.
-
-## Row 145 — RENDER-SUPPORT-CLOBBER-001
-
-_verified: 2026-11-16_
-
-**RE-VERIFIED 2026-11-16 (job-tracker nightly).** `pull --render` on rev 378 printed `restored 42 support block(s)`; afterwards local vs cloud `support`: 116 cloud keys, 0 differ, 136 local-only stubs. The restore line prints on every render by design (the Drive build always re-derives), so the literal close test below is wrong; the substantive one (0 differ) held two runs. Owner close call.
-
-_FIXED 2026-11-15 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `scripts/job-tracker/job-tracker-sync.py` + `test_sync_merge.py`; no `pwa/` asset, no version consumed)._
-
-**Found.** The "kept N local-only entries, run `push`" line grew 124 → 131 across runs. All 131 are `support` keys for real cloud rows. Cause: step 6 `pull --render` runs the Drive `build_workbook.py`, which re-emits `job_tracker_doc.json` with `support` rebuilt from the row tuple alone (ROLE / FIT / FLAG lines) and replaces the whole dict. On the next pull the base is the cloud, so the stub reads as a local edit and the per-key 3-way keeps it without a conflict. Measured 2026-11-15 at rev 375: 116 shared keys, 41 differ; 35 differ only in fresher derived lines; 6 are cloud research blocks of 2.0-2.9 KB held locally as 75-577-char stubs (`3shape-optics-engineer-s-4143`, `career-opportunities-exp-8337`, `hamamatsu-photonics-a-s--0014`, `hamamatsu-photonics-a-s--4229`, `the-lego-group-senior-te-0973`, `peak-wind-product-projec-9259`). A `push` (owner ask 3 in the last three nightlies) would have overwritten them; gen-runner reads `support`. The build also discarded local-only intel blocks.
-
-**Fix.** `_reassert_support(doc_path, merged, cloud)` runs right after the build in `cmd_pull(render=True)`: support = build stub, overlaid by the pre-render merged value, overlaid by the cloud value. Prints `render: restored N support block(s)`.
-
-**Tests.** `test_render_does_not_replace_cloud_support_with_a_stub` drives the real `cmd_pull(render=True)` with a stub build script: cloud block kept, local-only block kept, stub only on the empty key. Pre-fix (HEAD sync script): red. Sabotage line 236 (`n = 0`, call removed): red. Sabotage line 278 (`out.update(cs)` → `pass`): red. Restored byte-identical: 7/7 PASS.
-
-**Live.** Re-ran `pull --render` with the fix: `restored 41 support block(s)`; local vs cloud support now 0 differ, 131 local-only stubs (rows the cloud has no block for; harmless fill).
-
-**Close when** the next nightly's `pull --render` prints no restore line, or only keys the cloud changed since.
 
 ## Row 146 — DISCOVERY-MED-MUST-NEGATION-001
 

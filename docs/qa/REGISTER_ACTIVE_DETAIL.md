@@ -573,6 +573,10 @@ _E1 sweep 2026-09-08 (CI nightly): confirmed in CURRENT code — `__platformRule
 
 ## Row 34 — ROLE-MERGE-STORED-001
 
+_verified: 2026-11-19_
+
+**2026-11-19 (desktop nightly, E1 staleness sweep, HEAD 0dacf961):** `antcv-role-merge-stored.js` loaded at `?v=1.51.5013-grab-zone-scroll-target`; `window.AntcvMergeSameCompanyRoles` exposed in the docx client (2 refs) and the sidecar (3); `role-merge-stored.test.mjs` green inside `run-tests pwa` 2168/2168; E4 parity OK. No regression. Kept as filed (DONE 1.51.154).
+
 _verified: 2026-10-26_
 
 **Re-verify 2026-10-26 (desktop nightly E1, Gabo-PC, Opus 5.5 — HEAD `3a1e15d2`):** role-merge stored-sections leg INTACT. `antcv-role-merge-stored.js` + `antcv-role-merge-dedup.js` loaded by `index.html` and the LIVE served bytes equal repo (CRLF-normalised sha1 46d293ec / 033718bd). `role-merge-stored.test.mjs` green; E4 `diag-results-preview-export-parity.mjs` OK. Kept ACTIVE as the parity-sweep anchor; no new parity gap found.
@@ -1352,6 +1356,10 @@ _verified: 2026-10-24_
 
 ## Row 59 — GENERATOR-BASELINE-001
 
+_verified: 2026-11-19_
+
+**2026-11-19 (desktop nightly, E1 staleness sweep, HEAD 0dacf961):** generator-owned. `scripts/orphan-audit.py` present; LibreOffice is installed on this host, so leg (C) "no renderer" no longer blocks. Pagination quality (A) still needs generator work and an owner-marked export. Blocked: owner session.
+
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
@@ -1410,6 +1418,10 @@ _verified: 2026-10-15_
 
 ## Row 64 — ANALYSIS-EXPORT-DROPS-FILLED-ANSWERS-001
 
+_verified: 2026-11-19_
+
+**2026-11-19 (desktop nightly, E1 staleness sweep, HEAD 0dacf961):** `diag-new2-gap-detail-export.mjs` NEW2-GAP-DETAIL-EXPORT OK (content-based match incl. the drift case). Blocked: owner session (real filled-gap export).
+
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
@@ -1436,6 +1448,10 @@ _verified: 2026-10-15_
 ---
 
 ## Row 58 — EXPORT-SETTLED-001
+
+_verified: 2026-11-19_
+
+**2026-11-19 (desktop nightly, E1 staleness sweep, HEAD 0dacf961):** `diag-mob009-autopages-device-parity.mjs` OK (paginated, mobileScaled, parity true); `diag-export-settled-gate.mjs` PASS (early export gated, auto-fires on settle, zero errors). Blocked: owner bad-split PDF / real device.
 
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
@@ -2419,6 +2435,10 @@ _reconcile 2026-09-07 (CI nightly, E2): `diag-settings-panels-probe.mjs` RE-RUN 
 
 ## Row 18 — ANITA-PERSONA-NO-PHOTO-001
 
+_verified: 2026-11-19_
+
+**2026-11-19 (desktop nightly, E1 staleness sweep, HEAD 0dacf961):** `import-rewrap-keeps-photo.test.mjs` 24/24. Photo legs hold. CL foundation/bring/interests leg still needs a fresh Anita gen. Blocked: real LLM gen.
+
 _verified: 2026-10-26_
 
 **2026-10-26 (CI nightly, E1 staleness sweep — HEAD 8144ec77):** photo legs re-confirmed locked. `docs/personas/anita/personalInfo.json` still carries the embedded `photo` data URL (`data:image/jpeg;base64,/9j/…`). The sibling-preserving rewrap (IMPORT-REWRAP-SIBLING-DROP-001, row 107) is intact: `pwa/app.src.js:37762` comment-marked with the preserved-sibling list `["photo","language","navyColor",…]`, mirrored in `pwa/app.js:165` (`"photo","language","navyColor"`), so `photo` survives the unwrapped-blob rewrap. `pwa/test/unit/import-rewrap-keeps-photo.test.mjs` green within the full PWA suite (1849/1849). REMAINING unchanged: the CL foundation/bring/interests leg on a fresh Anita gen needs live models — not doable in CI. Kept ACTIVE.
@@ -2981,6 +3001,10 @@ _SHIPPED 2026-11-05 (desktop nightly, `1.51.5322-ec-no-derive`, commit `9c8f1980
 
 ## Row 136 — CI-NIGHTLY-CREDIT-EXHAUSTED-001
 
+_verified: 2026-11-19_
+
+**2026-11-19 (desktop nightly):** `nightly.yml` run `44504715335` (2026-11-19 10:20Z) failed in 34 s, `is_error:true` right after init, same signature. Day 22. Blocked: owner (key top-up).
+
 _verified: 2026-11-17_
 
 **Re-verified 2026-11-17 (desktop nightly):** CI run `44067429387` (11-17) failed in 40 s, "Credit balance is too low | is_error=true api_error_status=400 turns=1". Day 20 without CI band coverage. Blocked: owner (key top-up). Kept ACTIVE.
@@ -3096,6 +3120,10 @@ _OPEN (found by position-discovery 2026-11-15, Gabo-PC, Opus 5.5; script only, n
 **Fix.** Treat "not (a )?must", "not required", "not mandatory", "not essential" as soft in `_medical_must` (check `_LANG_MUST` for the same shape). Negative controls: the two probe sentences pass; "is required" and "must have" stay musts. Until then, discovery `fit` notes avoid the word "must".
 
 ## Row 147 — PROXY-POSTING-GUARD-UNDEPLOYED-001
+
+_verified: 2026-11-19_
+
+**2026-11-19 (desktop nightly):** `wrangler deployments list`: cv-proxy last 2026-11-05T10:07Z, antcv-demo-proxy 2026-11-05T08:38Z. Still undeployed. `/health` both `3.8.4-brand-ink-match`. Blocked: owner call.
 
 _verified: 2026-11-18_
 

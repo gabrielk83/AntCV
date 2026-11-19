@@ -237,7 +237,7 @@ test('the 2026-10-23 vendor additions have a strict rate (ZAI-GLM53-FLASH / GPT-
 test('the 2026-11-05 vendor additions have a strict rate (2026-11-001 tickets)', async () => {
   const { rateForStrict } = await import(pathToFileURL(MIRROR).href);
   assert.deepEqual(rateForStrict('gpt-6.1-terra'), [1, 5]);                 // was null / fallback [3,15]
-  assert.deepEqual(rateForStrict('gpt-6-rosalind'), [15, 75]);              // was null / fallback [3,15]
+  assert.deepEqual(rateForStrict('gpt-6-rosalind'), [10, 50]);              // was null / fallback [3,15]; [15,75] -> [10,50] promo 2026-11-19
   assert.deepEqual(rateForStrict('deepseek-v4-1-flash-1017'), [0.3, 1.2]);  // was null / fallback [3,15]
   assert.deepEqual(rateForStrict('deepseek-v4-flash-1017'), [0.3, 1.2]);
   assert.deepEqual(rateForStrict('gemini-2.5-flash-native-audio-preview-12-2025'), [0.5, 2]); // was gemini-2.5-flash [0.3,2.5]
@@ -251,4 +251,14 @@ test('the 2026-11-12 vendor additions have a strict rate (2026-11-001 tickets)',
   assert.deepEqual(rateForStrict('gpt-6-cyber'), [20, 100]);       // was null / fallback [3,15]
   assert.deepEqual(rateForStrict('gemini-4-carbon'), [2, 10]);     // was null / fallback [3,15]
   assert.deepEqual(rateForStrict('claude-fable-5-1'), [10, 50]);   // neighbour undisturbed
+});
+
+test('the 2026-11-19 vendor additions have a strict rate (OPENAI-RATES-2026-11-19-001 / GEMINI4-NEON-HYDROGEN-RATES-2026-11-001)', async () => {
+  const { rateForStrict } = await import(pathToFileURL(MIRROR).href);
+  assert.deepEqual(rateForStrict('gpt-6.2-astra'), [8, 40]);       // was null / fallback [3,15]
+  assert.deepEqual(rateForStrict('gpt-6.2-astra-law'), [8, 40]);   // was null / fallback [3,15]
+  assert.deepEqual(rateForStrict('gpt-6.2-sol'), [2, 10]);         // was null / fallback [3,15]
+  assert.deepEqual(rateForStrict('gemini-4-neon'), [3, 15]);       // was null / fallback [3,15]
+  assert.deepEqual(rateForStrict('gemini-4-hydrogen'), [1.5, 7.5]); // was null / fallback [3,15]
+  assert.deepEqual(rateForStrict('gpt-6-astra'), [10, 50]);        // neighbour undisturbed
 });

@@ -151,9 +151,16 @@ const RATES = {
   // 'gpt-6.1-terra' contains no key ('gpt-6.1-sol' / 'gpt-6-sol' are siblings, not substrings) and 'gpt-6-rosalind' does
   // not contain 'gpt-rosalind', so both fell to FALLBACK [3,15] (3x OVER / 5x UNDER) and rateForStrict() answered null.
   'gpt-6.1-terra':       [1.00,  5.00],  // 2026-11-05
-  'gpt-6-rosalind':      [15.00, 75.00], // 2026-11-05 restricted (trusted-access); prompts >272k bill [30,112.50]
+  // OPENAI-RATES-2026-11-19-001 (2026-11-19): the page now bills gpt-6-rosalind [10,50] (prompts >272k [20,75]) under the
+  // 'promotional pricing ... at least through December 31, 2026' note; the 11-05 key [15,75] was 1.5x OVER. Re-verify in January.
+  'gpt-6-rosalind':      [10.00, 50.00], // 2026-11-19 PROMO price (was [15,75] on 11-05); prompts >272k bill [20,75]
   // OPENAI-GPT6-CYBER-RATES-2026-11-001 (2026-11-12): 'gpt-6-cyber' contains no key -> FALLBACK [3,15] = 6.7x UNDER, strict null.
   'gpt-6-cyber':         [20.00, 100.00], // 2026-11-12 restricted (trusted-access); prompts >272k bill [40,150]
+  // OPENAI-RATES-2026-11-19-001 (2026-11-19): GPT-6.2 Astra / Sol are new. 'gpt-6.2-astra' contains no key ('gpt-6-astra' is not a
+  // substring) and 'gpt-6.2-sol' neither -> FALLBACK [3,15], strict null (2.7x UNDER on Astra, 1.5x OVER on Sol). 'gpt-6.2-astra-law'
+  // bills the same [8,40] and resolves through the 'gpt-6.2-astra' key (longest-key-wins).
+  'gpt-6.2-astra':       [8.00, 40.00],  // 2026-11-19 prompts >272k bill [16,60]; also covers gpt-6.2-astra-law
+  'gpt-6.2-sol':         [2.00, 10.00],  // 2026-11-19 prompts >272k bill [4,15]
   // Mistral
   'mistral-small':       [0.15,  0.60],   // Mistral Small 4, verified 2026-08-20 mistral.ai/pricing/api
   'mistral-medium':      [1.50,  7.50],   // Mistral Medium 3.5, verified 2026-08-20 mistral.ai/pricing/api
@@ -206,6 +213,10 @@ const RATES = {
   // GEMINI4-CARBON-RATES-2026-11-001 (2026-11-12): 'gemini-4-carbon' is new, same rates as Argon; no key -> FALLBACK [3,15] = 1.5x OVER, strict null.
   'gemini-4-carbon':     [2.00, 10.00],  // 2026-11-12 INTRODUCTORY price; DOUBLES to [4.00, 20.00] on 2026-12-01 with Argon
   'gemini-4-argon':      [2.00, 10.00],  // 2026-10-15 INTRODUCTORY price; DOUBLES to [4.00, 20.00] on 2026-12-01 — re-verify at the first tune after that date
+  // GEMINI4-NEON-HYDROGEN-RATES-2026-11-001 (2026-11-19): two new Gemini 4 ids, no key -> FALLBACK [3,15], strict null
+  // (Neon matched the fallback by coincidence; Hydrogen 2x OVER). No dated change on the page for either.
+  'gemini-4-neon':       [3.00, 15.00],  // 2026-11-19
+  'gemini-4-hydrogen':   [1.50,  7.50],  // 2026-11-19
   // GEMINI3-RATES-2026-09-001 (2026-09-10): the Gemini 3 line is on ai.google.dev/gemini-api/docs/pricing and
   // had no keys — neither id contains an existing key, so both fell to FALLBACK_RATE [3,15]: 4x OVER-price on
   // 3.8-flash and 2x OVER on 3.5-flash. An OVER-price demotes the provider in the weekly tune, so a missing

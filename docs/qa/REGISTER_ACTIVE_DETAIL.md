@@ -1699,7 +1699,9 @@ _verified: 2026-10-27_ — CI nightly E1 re-verify against HEAD 65ce36e0: leg (f
 
 ## Row 89 — MODEL-TABLE-FRESHNESS-001
 
-_verified: 2026-11-16_
+_verified: 2026-11-19_
+
+_2026-11-19 weekly tune (desktop, Opus 5.5, worktree-isolated): pins verify against all four vendor pages. Mechanical diff of 87 page ids found six errors, fixed in all three mirrors with dated comments: OPENAI-RATES-2026-11-19-001 (`gpt-6.2-astra` [8,40] and `gpt-6.2-sol` [2,10] are new, both fell to FALLBACK [3,15] with strict null; `gpt-6.2-astra-law` resolves through the astra key; `gpt-6-rosalind` now bills [10,50] under a promo through at least 2026-12-31, the 11-05 key [15,75] was 1.5x OVER) and GEMINI4-NEON-HYDROGEN-RATES-2026-11-001 (`gemini-4-neon` [3,15], `gemini-4-hydrogen` [1.5,7.5], both new, FALLBACK / strict null). Freshness 50/50 ×2, mirror 16/16. access-relay deploy: see run log; proxy + demo-proxy owed (row 147)._
 
 **Deploy leg 2026-11-16 (desktop nightly):** access-relay deployed. `git log` since its last deployment (11-05 11:04Z) on `workers/access-relay/src` showed only `c2c7bf0e` (rates), so the deploy carried nothing else. `deploy.yml target=access-relay` run `43843407282` green; new deployment 2026-11-16 09:51Z; `/health` 200 `auth-40-application-snapshots`; relay suite 152/152 before dispatch. **REMAINING:** proxy + demo-proxy still owed. Each would also ship `91deec12` POSTING-GUARD-001 (#390), merged 11-05 11:23 +01 after the last proxy deployment (11-05 10:07Z) and never live. demo-proxy would also ship `c2da4988` LLM-LOG-SERVER-001. Owner call, tracked as row 147.
 
@@ -2089,7 +2091,9 @@ _CI nightly 2026-09-15 (E1 sweep): `shouldAdoptCloudPointer` present; test green
 
 > **Renumbered 2026-08-26: was row 38.** A document written before that date citing "row 38" may mean this row or GEN-BACKGROUND-001. The ID is the key.
 
-_verified: 2026-11-12_
+_verified: 2026-11-19_
+
+_2026-11-19 weekly tune: 0 `llm_calls` in the trailing 7 d (last row 2026-11-08). 30 d fallback: 188 calls, 11 of them `srv:cascade` analysis on mistral; analysis n=13 < 20, no flip. The blind week is the coverage gap this row describes (gen-runner / gen-job / Claude packages do not log)._
 
 _2026-11-12 weekly tune: ADVANCED. D1 `llm_calls` now carries Worker-side rows: 11 `analysis` calls (mistral `mistral-large-latest`, 11/11 ok, $0.0078/call) tagged `client_version = "srv:cascade"` on 11-05..11-08 — the LLM-LOG-SERVER-001 proxy logger (fixed in code 2026-11-03) is deployed and writing. First week the tune scores Worker traffic for a MODEL_ROLES role. Still n=12 < 20 for analysis; supervisor / coherence / writer / kernel still show no rows (no such call in the window, or not yet logged — check again next week). New PWA task `long_context` (165 openai calls, $1.46, 86% of spend) is client-dispatch, outside MODEL_ROLES._
 
@@ -2715,7 +2719,9 @@ unattended fix. Kept ACTIVE.
 
 ## Row 115 — PWA-COST-METER-OPUS55-001
 
-_verified: 2026-11-12_
+_verified: 2026-11-19_
+
+_2026-11-19 weekly tune: re-verified, not fixed. `C.claude` / `C.anthropic` still [2,10], `q()` still pins `claude-opus-5-5` [4,20]. 188 calls in 30 d, none on claude. Owner call unchanged._
 
 _2026-11-12 weekly tune: re-verified, not fixed. `C.claude` / `C.anthropic` still [2,10], `q()` still pins `claude-opus-5-5` [4,20]. 195 calls in 30 d, none on claude. Owner call unchanged._
 
@@ -2856,7 +2862,9 @@ _verified: 2026-11-16_
 
 ## Row 124 — CASCADE-RETIRED-IDS-2026-10-001
 
-_verified: 2026-11-12_
+_verified: 2026-11-19_
+
+_2026-11-19 weekly tune: re-verified, tails unchanged. Google routes `gemini-2.5-flash` → `gemini-3.5-flash-lite` (same billed rate) and `gemini-2.5-pro` → `gemini-3.8-flash` on 2026-12-01; the 11-26 tune is the last before it. Owner call._
 
 _2026-11-12 weekly tune: re-verified, tails unchanged (`mistral-large-2411`, `mistral-medium-2312`, `gemini-2.0-flash`, `gemini-1.5-pro` still in `workers/proxy/src/multi-llm.js`). The Gemini 2.5 routing switch on 2026-12-01 is one tune away. Owner call unchanged._
 

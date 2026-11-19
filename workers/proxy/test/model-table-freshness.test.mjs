@@ -483,7 +483,7 @@ test('the 2026-10-23 ids are priced but stay OUT of the default cascades', () =>
 //   - "gemini-2.5-flash-native-audio-preview-12-2025" -> 'gemini-2.5-flash' [0.30,2.50] (real text [0.50,2.00])
 
 const VENDOR_CATALOGUE_2026_11_05 = [
-  ['gpt-6.1-terra', [1, 5]], ['gpt-6-rosalind', [15, 75]], ['mistral-large-4', [0.70, 2.10]], ['mistral-large-4-0', [0.70, 2.10]],
+  ['gpt-6.1-terra', [1, 5]], ['gpt-6-rosalind', [10, 50]] /* 2026-11-19 promo price, was [15,75] */, ['mistral-large-4', [0.70, 2.10]], ['mistral-large-4-0', [0.70, 2.10]],
   ['deepseek-v4-1-flash-1017', [0.30, 1.20]], ['deepseek-v4-flash-1017', [0.30, 1.20]],
   ['gemini-2.5-flash-native-audio-preview-12-2025', [0.50, 2.00]],
 ];
@@ -529,6 +529,39 @@ test('the 2026-11-12 vendor additions resolve to their vendor rate', () => {
 
 test('the 2026-11-12 ids are priced but stay OUT of the default cascades', () => {
   for (const [id] of VENDOR_CATALOGUE_2026_11_12) {
+    for (const [prov, list] of Object.entries(PROVIDER_MODELS)) {
+      assert.ok(!list.includes(id), `${id} entered the ${prov} cascade — adoption is an owner call`);
+    }
+  }
+});
+
+// 2026-11-19 desktop tune (OPENAI-RATES-2026-11-19-001 / GEMINI4-NEON-HYDROGEN-RATES-2026-11-001). Before this run:
+//   - "gpt-6.2-astra"     -> FALLBACK [3,15]  (real [8,40]: 2.7x UNDER)
+//   - "gpt-6.2-sol"       -> FALLBACK [3,15]  (real [2,10]: 1.5x OVER)
+//   - "gpt-6.2-astra-law" -> FALLBACK [3,15]  (real [8,40]: 2.7x UNDER)
+//   - "gemini-4-neon"     -> FALLBACK [3,15]  (real [3,15]: right by coincidence, strict null)
+//   - "gemini-4-hydrogen" -> FALLBACK [3,15]  (real [1.5,7.5]: 2x OVER)
+//   - "gpt-6-rosalind"    -> [15,75] keyed 11-05; the page now bills [10,50] under a promo through at least 2026-12-31 (1.5x OVER).
+//     The 11-05 catalogue entry was moved to [10,50]: a vendor price change, not a trim.
+
+const VENDOR_CATALOGUE_2026_11_19 = [
+  ['gpt-6.2-astra', [8, 40]], ['gpt-6.2-sol', [2, 10]], ['gpt-6.2-astra-law', [8, 40]],
+  ['gemini-4-neon', [3, 15]], ['gemini-4-hydrogen', [1.5, 7.5]], ['gpt-6-rosalind', [10, 50]],
+];
+
+test('the 2026-11-19 vendor additions resolve to their vendor rate', () => {
+  for (const [id, rate] of VENDOR_CATALOGUE_2026_11_19) assert.deepEqual(rateFor(id), rate, id);
+  // Neighbours undisturbed (longest-key-wins).
+  assert.deepEqual(rateFor('gpt-6-astra'), [10, 50]);
+  assert.deepEqual(rateFor('gpt-6-astra-law'), [10, 50]);
+  assert.deepEqual(rateFor('gpt-6-sol'), [2, 10]);
+  assert.deepEqual(rateFor('gpt-6.1-sol'), [2, 10]);
+  assert.deepEqual(rateFor('gemini-4-argon'), [2, 10]);
+  assert.deepEqual(rateFor('gemini-4-carbon'), [2, 10]);
+});
+
+test('the 2026-11-19 ids are priced but stay OUT of the default cascades', () => {
+  for (const [id] of VENDOR_CATALOGUE_2026_11_19) {
     for (const [prov, list] of Object.entries(PROVIDER_MODELS)) {
       assert.ok(!list.includes(id), `${id} entered the ${prov} cascade — adoption is an owner call`);
     }

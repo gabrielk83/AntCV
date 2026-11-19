@@ -131,7 +131,7 @@ compress openai $0.0068/call; consensus_poll leads openai $0.0043/call; consensu
 ## 4. Deploy
 
 - **access-relay:** no commit on `workers/access-relay/src` since the 11-16 rates-only deploy other than this
-  run's rate table, so a deploy from `main` carries only this change. Outcome recorded in the run log entry.
+  run's rate table, so a deploy from `main` carried only this change. **DEPLOYED** after the push-triggered PWA run (44567418739) finished: `deploy.yml target=access-relay` run **44567597500** from `3a73dcd4`, success; `/health` 200 `auth-40-application-snapshots`. Not verified beyond `/health`: no endpoint exposes the rate table.
 - **proxy + demo-proxy: OWED, owner call (row 147).** A deploy from `main` also ships POSTING-GUARD-001
   (`91deec12`), which row 147 holds for the owner. Unchanged by this run.
 

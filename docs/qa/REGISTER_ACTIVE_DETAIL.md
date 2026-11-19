@@ -3109,7 +3109,7 @@ _FIXED 2026-11-11 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `s
 
 ## Row 146 — DISCOVERY-MED-MUST-NEGATION-001
 
-_verified: 2026-11-15_
+_verified: 2026-11-19_
 
 _OPEN (found by position-discovery 2026-11-15, Gabo-PC, Opus 5.5; script only, no `pwa/` asset)._
 
@@ -3118,6 +3118,8 @@ _OPEN (found by position-discovery 2026-11-15, Gabo-PC, Opus 5.5; script only, n
 **Impact.** Low. One T3 lead lost this run; a real posting that says "medical device experience is not required" would be skipped the same way.
 
 **Fix.** Treat "not (a )?must", "not required", "not mandatory", "not essential" as soft in `_medical_must` (check `_LANG_MUST` for the same shape). Negative controls: the two probe sentences pass; "is required" and "must have" stay musts. Until then, discovery `fit` notes avoid the word "must".
+
+**2026-11-19 (position-discovery, Gabo-PC).** Second occurrence: `add` skipped CellaVision / Test Leader - Scanner Solutions & Hardware on the routine's `fit` text "Medtech / regulated experience 'preferred', not a must". The posting reads "... MedTech, or another regulated industry is preferred." Re-added with `override_gate` + reason. Still open; same fix.
 
 ## Row 147 — PROXY-POSTING-GUARD-UNDEPLOYED-001
 

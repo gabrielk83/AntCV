@@ -754,7 +754,9 @@ row 25 (real-PDF-gated — a render CI cannot do). No regression. Kept ACTIVE.
 
 ## Row 39a — AUTOSAVE-NO-DOWNGRADE-001
 
-_verified: 2026-10-26_
+_verified: 2026-11-20_
+
+**Re-verify 2026-11-20 (desktop nightly E1, Gabo-PC, Opus 5.5):** relay guard present (`__blockDowngrade` x3 in `workers/access-relay/src/index.js`); `antcv-pointer-stale-guard.js?v=1.51.334-unsol-pillar` loaded in `index.html`. `diag-jd-scope-runtime.mjs` was FAILING: it asserted the `kernel` staging slot survives an app switch, which JD-SCOPE-COLDSTART-001 (1.51.3762) consumes by design. Diag updated to assert the consume + a two-real-app isolation check (998 write leaves 999 intact); OK, and FAILED with `consumeStaging` disabled (negative control). Test-only, no `pwa/` asset. Blocked: real second device (row 19 leg).
 
 **Re-verify 2026-10-26 (desktop nightly E1, Gabo-PC, Opus 5.5 — HEAD `3a1e15d2`):** relay leg: `workers/access-relay/test/diag-app-autosave-downgrade-guard.mjs` 5/5 OK at origin code; live relay `/health` `auth-38-subtitle-guard-qual-put` = repo `RELAY_VERSION`. Client leg: `antcv-pointer-stale-guard.js` live bytes = repo (sha1 521f8dc3), `pointer-stale-guard.test.mjs` green. Remaining unchanged: row 19 two-real-device test (owner, real device).
 
@@ -1111,7 +1113,9 @@ REMAINING: owner live re-verify (no device in CI). Kept ACTIVE.
 
 ## Row 39 — GEN-MODELROLE-001
 
-_verified: 2026-10-26_
+_verified: 2026-11-20_
+
+**Re-verify 2026-11-20 (desktop nightly E1, Gabo-PC, Opus 5.5):** `MODEL_ROLES` still set in both proxy `wrangler.toml:54`; both proxies `/health` 200 at `3.8.4-brand-ink-match`. D1 `llm_calls` (wrangler, SELECT only, 30 d): newest day 2026-11-08; `analysis` rows go to mistral (matches `analysis:mistral`); no writer `generate` row in the window. Blocked: real LLM gen.
 
 **Re-verify 2026-10-26 (desktop nightly E1, Gabo-PC, Opus 5.5 — production D1 via wrangler, SELECT only):** `llm_calls` last 14 d = 7 calls, all 2026-10-20 (openai analyze_fit / consensus_poll / consensus_reinforce, mistral parse_jd / consensus_poll, gemini compress / consensus_poll), all success. Multi-provider routing still live; no `generate` writer call in the window, so the writer-role split could not be re-observed (traffic-gated, not code-gated). Proxies `/health` 3.8.4-brand-ink-match = repo.
 
@@ -1485,7 +1489,9 @@ _verified: 2026-10-05_
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-10-26_
+_verified: 2026-11-20_
+
+**Re-verify 2026-11-20 (desktop nightly E1, Gabo-PC, Opus 5.5):** docx-worker `diag-contact-icons` OK, `diag-contact-fullwidth` OK, `diag-photo-bridge-export` OK; live docx-worker `1.14.177-role-line-one`. Generator rules hold. Blocked: owner session (Track-C follow-ups (i)/(ii)).
 
 **2026-10-26 (CI nightly, E1 staleness sweep — HEAD 8144ec77):** re-confirmed intact. `bodyTopBorder` 3 refs and `✉` 2 refs in `workers/docx-worker/src/index.js`. Remaining = the render-measure loop vs the KOMBIT gold + the two Track-C follow-ups (CL `meta.subtitle` double-render, row 61 column balance) — all need a real docx-worker render the owner eyeballs; CI has no browser/render path and ALLOW_DEPLOY=false this run. Kept ACTIVE.
 
@@ -1510,7 +1516,9 @@ _verified: 2026-10-05_ — CI E1 re-verify against HEAD 735f6d8f (all cited mark
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-10-26_
+_verified: 2026-11-20_
+
+**Re-verify 2026-11-20 (desktop nightly E1, Gabo-PC, Opus 5.5):** both clear sites present in `app.src.js` (16837 url-fetch, 21526 file-upload). Leg (C) background-stall unchanged. Blocked: owner foreground gen (B validation), real device (C).
 
 **2026-10-26 (CI nightly, E1 staleness sweep — HEAD 8144ec77):** re-confirmed intact. Markers `JD-SWAP-STALE-RATIONALE` 2 + `CL-GHOST-COMPANY` 5 = 7 in `pwa/app.src.js` (the minified `pwa/app.js` carries no comments, 0 there expected); `pwa/test/unit/cl-ghost-hunt.test.mjs` in the green suite (1849/1849). (C) BACKGROUND-STALL still OPEN — the SSE-stream throttle on a backgrounded tab needs a live foreground generation CI cannot drive. Kept ACTIVE.
 
@@ -1558,7 +1566,9 @@ _verified: 2026-10-06_ — CI E1 re-verify against HEAD de7fec6e (all cited mark
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-10-26_
+_verified: 2026-11-20_
+
+**Re-verify 2026-11-20 (desktop nightly E1, Gabo-PC, Opus 5.5):** slogan sidecars loaded (`antcv-cl-slogan-control.js` + `-element.js` at `?v=1.51.5322-ec-no-derive`, `-fresh.js` at `1.51.1504`). Other legs unchanged. Blocked: real LLM gen (A/D/E), live desktop owner session (C).
 
 **2026-10-26 (CI nightly, E1 staleness sweep — HEAD 8144ec77):** re-confirmed. (B) editable CL slogan SHIPPED: `antcv-cl-slogan-control.js` and `antcv-cl-slogan-element.js` both loaded by `index.html` (1 ref each). (A) convergence verify, (C) preview-dance/perf, (D) regen-gated content, (E) unsolicited-gen quality all still need a signed-in regen / live desktop session with a real LLM — not drivable in CI. Kept ACTIVE.
 
@@ -1597,7 +1607,9 @@ _verified: 2026-10-16_ — CI nightly E1 re-verify against HEAD 451fc004 (preven
 
 ## Row 65 — PTR-STALE-GUARD-001
 
-_verified: 2026-10-26_
+_verified: 2026-11-20_
+
+**Re-verify 2026-11-20 (desktop nightly E1, Gabo-PC, Opus 5.5):** `diag-cross-device-gen-leak-guard.mjs` OK (6 `__foreignActiveHijack` sites in `app.src.js`, 2 `app.js` mirrors). B/C/D unchanged. Blocked: owner device info.
 
 **Re-verify 2026-10-26 (desktop nightly E1, Gabo-PC, Opus 5.5 — HEAD `3a1e15d2`):** (E) `diag-cross-device-gen-leak-guard.mjs` OK (6 `__foreignActiveHijack` sites, 2 app.js mirrors); `CROSS-DEVICE-GEN-LEAK` 4 markers in `app.src.js`. (A) mobile language switch, (B) unsolicited export gate, (C) market-fit/salary JD wiring, (D) panel-upload OCR still need a real phone / live repro. Kept ACTIVE.
 

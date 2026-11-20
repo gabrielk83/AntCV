@@ -44,15 +44,27 @@ try {
     out.nsWritten = raw.getItem('antcv:app:' + S.getCurrentAppId() + ':jdText');
     out.globalUntouched = raw.getItem('antcv:lastJdText'); // should be null
     out.readback = localStorage.getItem('antcv:lastJdText'); // should be SMOKE_JD
-    // switch this tab to a different app and confirm isolation of the slot
+    // switch this tab to a real app. JD-SCOPE-COLDSTART-001 (1.51.3762): adopting a
+    // real app id CONSUMES the 'kernel' staging slot — it moves into the app's empty
+    // slot and the staging slot is emptied (it used to be asserted "unaffected").
     S.setCurrentAppId('999');
+    out.migrated999 = raw.getItem('antcv:app:999:jdText');        // SMOKE_JD, moved in
+    out.kernelConsumed = raw.getItem('antcv:app:kernel:jdText');  // null, staging emptied
     localStorage.setItem('antcv:lastJdText', 'JD_999');
     out.app999 = raw.getItem('antcv:app:999:jdText');
-    out.kernelStillHas = raw.getItem('antcv:app:kernel:jdText'); // the SMOKE_JD, unaffected
+    // isolation between two REAL apps: a write under 998 must not touch 999's slot
+    S.setCurrentAppId('998');
+    localStorage.setItem('antcv:lastJdText', 'JD_998');
+    out.app998 = raw.getItem('antcv:app:998:jdText');
+    out.app999After = raw.getItem('antcv:app:999:jdText');
+    S.setCurrentAppId('999');
+    out.readback999 = localStorage.getItem('antcv:lastJdText');
     return out;
   });
   const pass = r.installed && r.hasApi && r.nsWritten === 'SMOKE_JD' && r.globalUntouched == null &&
-    r.readback === 'SMOKE_JD' && r.app999 === 'JD_999' && r.kernelStillHas === 'SMOKE_JD';
+    r.readback === 'SMOKE_JD' && r.migrated999 === 'SMOKE_JD' && r.kernelConsumed == null &&
+    r.app999 === 'JD_999' && r.app998 === 'JD_998' && r.app999After === 'JD_999' &&
+    r.readback999 === 'JD_999';
   console.log('jd-scope-runtime:', JSON.stringify(r));
   console.log(pass ? 'JD-SCOPE-RUNTIME OK' : 'JD-SCOPE-RUNTIME FAILED');
   await browser.close();

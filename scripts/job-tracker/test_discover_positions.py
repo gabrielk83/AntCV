@@ -347,6 +347,35 @@ check("eligibility: a FLAG lands on the row and in doc.eligibility",
       ("⚠ eligibility flag (clearance to obtain)" in flag9,
        list(state["doc"]["eligibility"].values())[0]["verdict"]), (True, "FLAG"))
 
+# ---- DISCOVERY-MED-MUST-NEGATION-001 (2026-11-20): a negated must is not a must ----------
+MM = dp._medical_must
+check("negation: 'is not a must' (Ambu fit note, 2026-11-15) is not a medical must",
+      MM("Medical-device experience is not a must."), None)
+check("negation: 'is not required' is not a medical must", MM("Medical-device experience is not required."), None)
+check("negation: CellaVision fit note (2026-11-19) is not a medical must",
+      MM("Medtech / regulated experience 'preferred', not a must"), None)
+check("negation: Danish 'er ikke et krav' is not a medical must",
+      MM("Erfaring med medicinsk udstyr er ikke et krav."), None)
+check("negation control: 'is required' stays a must",
+      MM("Medical device experience is required."), "Medical device experience is required")
+check("negation control: 'must have' stays a must",
+      MM("You must have medical device experience."), "You must have medical device experience")
+check("negation control: a second, real must in the same sentence still counts",
+      bool(MM("Medical device experience is not required, but ISO 13485 knowledge is a must.")), True)
+check("negation: the evidence gate lets the Ambu row through on its own fit note",
+      G(dict(PM, company="Ambu", role="NPI Engineer (Process Development)",
+             jd="You likely have experience within healthcare or the medical device industry.",
+             fit="Medical-device experience 'likely', not a must.")), None)
+check("negation: language - 'fluent Danish is not a requirement' passes",
+      _lang("Fluent Danish is not a requirement."), "PASS")
+check("negation: language - 'flydende dansk er ikke et krav' passes",
+      _lang("Flydende dansk er ikke et krav."), "PASS")
+check("negation: language - 'flytande svenska krävs inte' passes",
+      _lang("Flytande svenska i tal och skrift krävs inte."), "PASS")
+check("negation control: language - Swedish requirement still FAILs",
+      _lang("Flytande svenska i tal och skrift krävs."), "FAIL")
+check("negation control: language - fluent Danish still FLAGs", _lang("Du taler og skriver flydende dansk."), "FLAG")
+
 if fails:
     print("FAIL (%d):" % len(fails))
     for f in fails:

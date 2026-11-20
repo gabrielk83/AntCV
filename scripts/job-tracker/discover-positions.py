@@ -277,6 +277,13 @@ _BELOW_FLOOR = re.compile(r"below (?:the )?(?:\d+k )?floor|under (?:the )?(?:\d+
                           r"\b" + _PAY_WORD + r"\b[^.\n]{0,40}below (?:the )?envelope|"
                           r"below (?:the )?envelope[^.\n]{0,25}\b" + _PAY_WORD + r"\b", re.I)
 JOBINDEX_MIN_JD = 600
+# DISCOVERY-MED-MUST-NEGATION-001: a negated must ("not a must", "not required", "ikke et krav",
+# "krävs inte") is not a must. Medical: stripped before the must test, so a second, real must in
+# the same sentence still counts. Language: a negated requirement makes the sentence soft.
+_NEG_MUST = re.compile(r"\b(?:not|no|never)\s+(?:an?\s+)?(?:must|required|requirement|mandatory|essential|"
+                       r"necessary|needed|prerequisite)\b|\bikke\s+(?:et\s+|en\s+)?(?:krav|must|nødvendig\w*|"
+                       r"påkrævet|obligatorisk|forudsætning)\b|\b(?:krævet|påkrævet|nødvendig\w*)\s+ikke\b|"
+                       r"\bkrävs\s+inte\b|\binte\s+(?:ett\s+)?krav\b", re.I)
 
 
 def _example_items(tail):
@@ -295,7 +302,7 @@ def _example_items(tail):
 def _medical_must(text):
     """The first sentence that makes medical-device experience a must, else None."""
     for sent in re.split(r"[.;\n•]+", text or ""):
-        if _MED_TERM.search(sent) and _EXP_WORD.search(sent) and _MUST.search(sent) \
+        if _MED_TERM.search(sent) and _EXP_WORD.search(sent) and _MUST.search(_NEG_MUST.sub(" ", sent)) \
                 and not _SOFT.search(sent):
             ex = _EXAMPLE_LIST.search(sent)
             # -002: a medical term before the list ("medical device experience, such as ISO
@@ -357,7 +364,7 @@ def _language_gate(text):
     verdict, quote = "PASS", ""
     for sent in re.split(r"[.;\n•]+", text or ""):
         named = [k for k, rx in _LANG_NEAR.items() if rx.search(sent)]
-        if not named or not _LANG_MUST.search(sent) or _LANG_SOFT.search(sent):
+        if not named or not _LANG_MUST.search(sent) or _LANG_SOFT.search(sent) or _NEG_MUST.search(sent):
             continue
         declared = [k for k in named if k in DECLARED_LANGUAGES]
         if not declared:

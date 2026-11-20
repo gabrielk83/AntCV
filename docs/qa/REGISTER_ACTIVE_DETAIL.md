@@ -2793,7 +2793,9 @@ _verified: 2026-11-16_
 
 ## Row 118 — JT-ARMED-ARTIFACT-NO-DRAIN-001
 
-_verified: 2026-11-19_
+_verified: 2026-11-20_
+
+**RE-VERIFIED 2026-11-20 (job-tracker nightly).** Rev 386: ARMED-with-app still `napatech` (app 2781, CLOSED row, flag stale); `health`: 60 pointers vs 94 cloud apps, 1 dead, `veo_technologies` → app 3500. Owner clears both flags.
 
 **RE-VERIFIED 2026-11-18 (job-tracker nightly).** `gen-runner.py list` still names `napatech` (app 2781, CLOSED row) as ARMED-with-app; `health` still reads 1 dead pointer, `veo_technologies` -> app 3500. Owner flag clear still owed.
 
@@ -2932,7 +2934,9 @@ is adoption, not pricing. Proposed: replace the three Mistral ids with `mistral-
 
 ## Row 127 — JT-OWNER-PACKAGED-DEFAULT-ON-001
 
-_verified: 2026-11-19_
+_verified: 2026-11-20_
+
+**RE-VERIFIED 2026-11-20 (job-tracker nightly).** Same 3 OWNER-PACKAGED rows (186 WD, 207 RED Global, 227 LEGO TPM) are the only eligible rows. Ninth run with no generation.
 
 **RE-VERIFIED 2026-11-18 (job-tracker nightly).** 3 OWNER-PACKAGED rows now (186 WD, 207 RED Global, 227 LEGO TPM); 226 Hamamatsu BI archived by the sweep (Workday CXS S22, strike 2/2). Seventh run with no generation.
 
@@ -3121,7 +3125,9 @@ _FIXED 2026-11-11 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `s
 
 ## Row 146 — DISCOVERY-MED-MUST-NEGATION-001
 
-_verified: 2026-11-19_
+_verified: 2026-11-20_
+
+**FIXED 2026-11-20 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; script only, no version consumed).** Probe on `origin/main` `baa2f874`: "Medical-device experience is not a must.", "... is not required.", the CellaVision fit note and "Erfaring med medicinsk udstyr er ikke et krav." all returned a must; `_language_gate("Fluent Danish is not a requirement.")` returned FLAG. Fix: `_NEG_MUST` (not / no / never + must / required / requirement / mandatory / essential / necessary / needed / prerequisite; Danish ikke (et) krav / nødvendig / påkrævet / obligatorisk / forudsætning, krævet ikke; Swedish krävs inte, inte (ett) krav). `_medical_must` tests `_MUST` on the sentence with negated phrases removed, so a second, real must still gates; `_language_gate` skips a sentence carrying a negated requirement. 13 checks in `test_discover_positions.py` (real `_medical_must`, `_evidence_gate` with the Ambu fit note, `_language_gate`), musts kept as controls. Red: 8 pre-fix; sabotage line 305 → 5; sabotage line 367 → 3. Restored: 115/115 PASS. **Pending (next run):** the next position-discovery run skips no row on a negated must, then CLOSE.
 
 _OPEN (found by position-discovery 2026-11-15, Gabo-PC, Opus 5.5; script only, no `pwa/` asset)._
 

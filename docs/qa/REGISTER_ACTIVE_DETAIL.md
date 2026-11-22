@@ -1540,6 +1540,10 @@ _verified: 2026-09-23_ — CI E1 re-verify against HEAD 38630d58 (all cited mark
 
 ## Row 69
 
+_verified: 2026-11-22_
+
+**2026-11-22 (desktop nightly E1, Gabo-PC, Opus 5.5 — HEAD `e5602975`):** `__AINOTICE` map present (2 refs); `AI-assisted - author` hyphen footer (4 refs). Standing-rule anchor. Kept ACTIVE.
+
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
@@ -1587,6 +1591,10 @@ _verified: 2026-10-06_ — CI E1 re-verify against HEAD de7fec6e (`antcv-cl-slog
 ---
 
 ## Row 66 — LINKEDIN-CLICK-001
+
+_verified: 2026-11-22_
+
+**2026-11-22 (desktop nightly E1, Gabo-PC, Opus 5.5 — HEAD `e5602975`):** prevention doc present; live docx-worker `/health` `1.14.177-role-line-one`. Items a–o stay regen-gated (real LLM gen + owner eyeball). Kept ACTIVE.
 
 _verified: 2026-10-26_
 
@@ -2056,6 +2064,10 @@ _CI nightly 2026-09-15 (E1 sweep): `NAMED_FOLD` present; test green._
 
 ## Row 100 — GRAB-ZONE-DISMISS-THRESHOLD-001
 
+_verified: 2026-11-22_
+
+_Desktop nightly 2026-11-22 (Gabo-PC, Opus 5.5, HEAD `e5602975`): `diag-mobile-grab-zone-touch.mjs` OK — A1/A2 40 px graze scroll forward, grab zone kept; B 120 px dismisses; 0 page errors. Real Android confirm still owner-owed._
+
 _verified: 2026-10-27_
 
 _Desktop nightly 2026-10-27 (Gabo-PC, Opus 5.5, HEAD 37fbb40f): `diag-mobile-grab-zone-touch.mjs` GRAB-ZONE-TOUCH-HEADLESS OK — A1 Sections + A2 Analysis 40 px graze scroll forward, grab zone kept; B 120 px swipe dismisses; 0 page errors. Real Android confirm still owner-owed._
@@ -2074,6 +2086,10 @@ _CI nightly 2026-09-15 (E1 sweep): both legs test-locked and green; grab-zone pr
 ---
 
 ## Row 101 — ZOOM-FLOOR-001
+
+_verified: 2026-11-22_
+
+_Desktop nightly 2026-11-22 (Gabo-PC, Opus 5.5, HEAD `e5602975`): diag leg C — minus 46 % to 10 % floor, plus to 20 %; `Math.max(.1,Math.min(5.2` in both bundles. Real-device pinch owner-owed._
 
 _verified: 2026-10-27_
 
@@ -2172,6 +2188,10 @@ _verified: 2026-10-28_
 ---
 
 ## Row 40
+
+_verified: 2026-11-22_
+
+**2026-11-22 (desktop nightly E1, Gabo-PC, Opus 5.5 — HEAD `e5602975`):** loss-guard sidecar on disk + loaded; `core-comp-format-preserves-outcomes.test.mjs` 10/10; live sidecar diag 9/9 identical. Blocked: owner session (cloud-persisted repro). Kept ACTIVE.
 
 _verified: 2026-10-26_
 
@@ -3019,6 +3039,10 @@ _SHIPPED 2026-11-05 (desktop nightly, `1.51.5322-ec-no-derive`, commit `9c8f1980
 
 ## Row 136 — CI-NIGHTLY-CREDIT-EXHAUSTED-001
 
+_verified: 2026-11-22_
+
+**2026-11-22 (desktop nightly):** CI runs `44891389898` (11-21) and `45009140371` (11-22) failed in ~35 s: `Credit balance is too low | is_error=true api_error_status=400`. Day 25. Blocked: owner key top-up.
+
 _verified: 2026-11-19_
 
 **2026-11-19 (desktop nightly):** `nightly.yml` run `44504715335` (2026-11-19 10:20Z) failed in 34 s, `is_error:true` right after init, same signature. Day 22. Blocked: owner (key top-up).
@@ -3142,6 +3166,10 @@ _OPEN (found by position-discovery 2026-11-15, Gabo-PC, Opus 5.5; script only, n
 **2026-11-19 (position-discovery, Gabo-PC).** Second occurrence: `add` skipped CellaVision / Test Leader - Scanner Solutions & Hardware on the routine's `fit` text "Medtech / regulated experience 'preferred', not a must". The posting reads "... MedTech, or another regulated industry is preferred." Re-added with `override_gate` + reason. Still open; same fix.
 
 ## Row 147 — PROXY-POSTING-GUARD-UNDEPLOYED-001
+
+_verified: 2026-11-22_
+
+**2026-11-22 (desktop nightly):** both proxies `/health` still `3.8.4-brand-ink-match`. Still undeployed. Blocked: owner call.
 
 _verified: 2026-11-19_
 

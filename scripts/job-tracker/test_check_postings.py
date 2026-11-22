@@ -759,6 +759,25 @@ check("cxs: S22 row SUSPECT strike 1, live rows LIVE",
 check("cxs: one S22 day archives nothing", [r[12] for r in doc["rows"]], ["E2EFDA"] * 4)
 check("cxs: curl fetched the CXS URLs, not the JS pages", sorted(cc), sorted([T1, T2, T3]))
 
+# ---- POSTING-5XX-SOFT404-001: a 5xx that serves the site's own 404 page ------------
+# wt-map.com (VML MAP) answers a removed position with HTTP 500 and a page titled "404"
+# (its Greenhouse board returns 404 for the same id; a live position answers 200). That
+# is an absence, so it reads GONE (soft, two strikes), never ERROR forever. A plain 5xx
+# outage page, or a 5xx page that only MENTIONS 404 in the body, stays ERROR.
+P404 = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">\n<title>404</title>\n</head><body>x</body></html>'
+check("soft404: 500 titled 404 reads GONE", verdict(500, text=P404), "GONE")
+check("soft404: 503 titled Page Not Found reads GONE", verdict(503, text="<title> Page not found | VML MAP</title>"), "GONE")
+check("soft404: 500 titled 404 Not Found reads GONE", verdict(500, text="<TITLE>404 - Not Found</TITLE>"), "GONE")
+check("soft404: detail names the status and the 404 page", cp.classify(500, U, U, P404, TODAY)[1],
+      "HTTP 500 serving a 404 page (title '404')")
+check("soft404: 500 outage page stays ERROR", verdict(500, text="<title>Internal Server Error</title>"), "ERROR")
+check("soft404: 502 with 404 only in the body stays ERROR",
+      verdict(502, text="<title>Bad Gateway</title><p>error 404 upstream</p>"), "ERROR")
+check("soft404: 500 titled with a job id containing 404 stays ERROR",
+      verdict(500, text="<title>Job 40412 Optical PM</title>"), "ERROR")
+check("soft404: 500 with no body stays ERROR", verdict(500, text=""), "ERROR")
+check("soft404: 200 titled 404 is left to the body rules (LIVE here)", verdict(200, text=P404), "LIVE")
+
 if fails:
     print("FAIL (%d):" % len(fails))
     for f in fails:

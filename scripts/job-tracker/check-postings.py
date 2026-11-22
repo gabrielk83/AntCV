@@ -28,7 +28,7 @@ ABSENT (which a CDN edge, a redirect race or a routing blip also produces):
            has moved the ad to its own archive.
 
   soft evidence -> needs TWO strikes on separate DAYS
-  GONE     HTTP 404/410. Absence, not a statement.
+  GONE     HTTP 404/410, or a 5xx serving a 404-titled page. Absence, not a statement.
   SUSPECT  redirected off the posting onto something with no job identity.
 
   no evidence -> NEVER counts, ever
@@ -102,6 +102,13 @@ DEAD_PHRASES = [
 # this is SOFT evidence: GONE, two strikes on separate days, same as a real 404.
 # The apostrophes arrive as ', a typographic quote or an HTML entity.
 _APOS = r"(?:'|’|&#39;|&#x27;|&apos;|&rsquo;)"
+# POSTING-5XX-SOFT404-001 (job-tracker nightly 2026-11-22): wt-map.com (VML MAP) answers a
+# removed position with HTTP 500 and its own 404 page (<title>404</title>); its Greenhouse
+# board 404s the same id and a live position answers 200. The row sat at ERROR for 18 sweep
+# days. A 5xx whose <title> IS a not-found title is an absence: GONE, soft, two strikes.
+# Only the title counts; a 404 mentioned in an outage body stays ERROR.
+_SOFT404_TITLE = re.compile(r"<title[^>]*>\s*(404\b[^<]*|(page\s+)?not\s+found\b[^<]*)</title>", re.I)
+
 SOFT_GONE_RE = re.compile(
     r"can" + _APOS + r"t view this job because it" + _APOS + r"s not available at this time",
     re.I)
@@ -306,6 +313,9 @@ def classify(status, final_url, requested_url, text, today=None):
     if status in (401, 403, 429, 999) or status is None:
         return "WALLED", "HTTP %s" % status
     if status >= 500:
+        m = _SOFT404_TITLE.search(text or "")                             # POSTING-5XX-SOFT404-001
+        if m:
+            return "GONE", "HTTP %d serving a 404 page (title %r)" % (status, m.group(1).strip()[:40])
         return "ERROR", "HTTP %d" % status
     body = re.sub(r"<[^>]+>", " ", text or "")
     body = re.sub(r"\s+", " ", body).lower()

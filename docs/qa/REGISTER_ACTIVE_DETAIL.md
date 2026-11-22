@@ -2815,7 +2815,9 @@ _verified: 2026-11-22_
 
 ## Row 118 — JT-ARMED-ARTIFACT-NO-DRAIN-001
 
-_verified: 2026-11-20_
+_verified: 2026-11-22_
+
+**RE-VERIFIED 2026-11-22 (job-tracker nightly).** Rev 387: ARMED-with-app still `napatech` (app 2781, CLOSED row, flag stale); `health`: 60 pointers vs 94 cloud apps, 1 dead, `veo_technologies` → app 3500. Owner clears both flags.
 
 **RE-VERIFIED 2026-11-20 (job-tracker nightly).** Rev 386: ARMED-with-app still `napatech` (app 2781, CLOSED row, flag stale); `health`: 60 pointers vs 94 cloud apps, 1 dead, `veo_technologies` → app 3500. Owner clears both flags.
 
@@ -2956,7 +2958,9 @@ is adoption, not pricing. Proposed: replace the three Mistral ids with `mistral-
 
 ## Row 127 — JT-OWNER-PACKAGED-DEFAULT-ON-001
 
-_verified: 2026-11-20_
+_verified: 2026-11-22_
+
+**RE-VERIFIED 2026-11-22 (job-tracker nightly).** Same 3 OWNER-PACKAGED rows elected (186 WD, 207 RED Global, 227 LEGO Senior TPM); not generated. Tenth run with no generation.
 
 **RE-VERIFIED 2026-11-20 (job-tracker nightly).** Same 3 OWNER-PACKAGED rows (186 WD, 207 RED Global, 227 LEGO TPM) are the only eligible rows. Ninth run with no generation.
 
@@ -3164,6 +3168,24 @@ _OPEN (found by position-discovery 2026-11-15, Gabo-PC, Opus 5.5; script only, n
 **Fix.** Treat "not (a )?must", "not required", "not mandatory", "not essential" as soft in `_medical_must` (check `_LANG_MUST` for the same shape). Negative controls: the two probe sentences pass; "is required" and "must have" stay musts. Until then, discovery `fit` notes avoid the word "must".
 
 **2026-11-19 (position-discovery, Gabo-PC).** Second occurrence: `add` skipped CellaVision / Test Leader - Scanner Solutions & Hardware on the routine's `fit` text "Medtech / regulated experience 'preferred', not a must". The posting reads "... MedTech, or another regulated industry is preferred." Re-added with `override_gate` + reason. Still open; same fix.
+
+## Row 149 — POSTING-5XX-SOFT404-001
+
+_verified: 2026-11-22_
+
+**FIXED 2026-11-22 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; script only, no version consumed).** `scripts/job-tracker/check-postings.py` + `test_check_postings.py`.
+
+**Symptom.** VML MAP (WPP) / Product Specialist (Catalyst Adoption) read ERROR HTTP 500 for 18 sweep days (since 2026-10-20). ERROR never counts, so the row could never archive and the owner was asked to drop the URL by hand on every run.
+
+**Diagnostic.** curl with a browser UA: the position URL answers HTTP 500 with the site's 404 page (`<title>404</title>`, `metadata-keywords` "404, page not found"). A bogus position id on the same path answers the same 500. A live position taken from `wt-map.com/careers` answers 200 with a real title. The careers index does not list 8600453002. The Greenhouse board API for the `map` board returns 404 for 8600453002 and 200 for the live id. The posting is gone; the server mis-codes its not-found page as 500.
+
+**Fix.** `_SOFT404_TITLE` + a branch in `classify`: a 5xx whose `<title>` is a not-found title (`404…`, `Page not found…`, `Not found…`) reads GONE, soft evidence, two strikes on separate days. Any other 5xx stays ERROR. Only the title counts; a 404 mentioned in an outage body does not.
+
+**Tests.** 9 checks drive the real `classify`: three GONE cases (500 `404`, 503 `Page not found | …`, 500 `404 - Not Found`), the detail string, four ERROR controls (outage title, 404 only in the body, a title with job id 40412, empty body), and a 200 control. 4 red pre-fix; sabotage line 317 (`if m:` → `if False:`) → 4 red; sabotage line 110 (regex on `<body`) → 4 red; restored PASS. 36/36 job-tracker python files green; `run-tests.mjs` ALL PASS. The real saved VML page classifies GONE; the live VML position page fed as a 500 stays ERROR.
+
+**Live.** `check --apply --only vml_map_wpp` → GONE strike 1/2, doc rev 387 → 388.
+
+**To close (pending, next run).** The 2026-11-23 sweep archives VML MAP on strike 2 (GONE again on a second day).
 
 ## Row 147 — PROXY-POSTING-GUARD-UNDEPLOYED-001
 

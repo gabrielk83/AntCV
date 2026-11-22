@@ -2773,7 +2773,9 @@ _2026-10-08 weekly tune: re-verified, not fixed. `C.claude` / `C.anthropic` stil
 
 ## Row 117 — CLUSTER-GLOBAL-SINGLE-JD-DOMINANCE-001
 
-_verified: 2026-11-16_
+_verified: 2026-11-22_
+
+**2026-11-22 (weekly demand-seed, desktop Gabo-PC, duplicate-run cross-check, read-only wrangler SELECT):** split re-measured, first time since 10-25. Rows with weight_sum ≥ 1: `photonics_eng` 20/20 (max jd_count 11, was 8), `pm_process` 20/20 (max 7, was 2), `executive` 15/20 (max 1), `research_phd` 14/20 (max 2), **`consulting` 11/20 (max 1) — new, was 100% research on 10-25**. The other five clusters 0/20. One JD now holds 11 consulting rows as well as 15 executive rows. Owner design decision still owed (jd_count threshold or blend).
 
 **2026-11-16 (weekly demand-seed, cloud routine):** NOT re-measured. The Cloudflare-Developer-Platform connector is still not authorized in the cloud session (third week), so the read-only split query did not run. The 2026-11-16 D1 push re-wrote identical research ranks (10 clusters, 247 rows), so the 10-25 split stands. Owner decision still owed.
 

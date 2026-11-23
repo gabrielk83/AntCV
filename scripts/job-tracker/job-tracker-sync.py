@@ -261,7 +261,9 @@ UK_DICT_FIELDS = ("urls", "jd", "support", "signals", "notes", "webintel", "gen"
                   "queue", "brandfit", "brand", "artifacts", "sigfiles", "pin",
                   "park", "discovered", "status_history", "followups", "financials",
                   # SUBMITTED-VERSION-001 / INTERVIEW-PREP-001 / the clearance gate
-                  "submitted", "interview", "interview_next", "eligibility")
+                  "submitted", "interview", "interview_next", "eligibility",
+                  # SYNC-ENVELOPE-STALE-001: check-postings.py writes the strikes here
+                  "postingcheck")
 
 def _reassert_support(doc_path, merged, cloud):
     """RENDER-SUPPORT-CLOBBER-001. After the build rewrote doc_path, put back the
@@ -308,6 +310,32 @@ def _merge_uk_dict(base, local, remote, field):
         else: out[k] = lv; conflicts.append(f"{field}[{k}](local-wins)")
     return out, conflicts
 
+def _merge_envelope(base, local, remote):
+    """SYNC-ENVELOPE-STALE-001. Per-dimension 3-way for the Dream Envelope (a list
+    of [dimension, target, range, notes]). It was whole-block local-wins with no
+    base, so the first dimension the owner edited in the app (a reject reason or a
+    ruling appended to its notes) never reached the local doc or the Excel tab, and
+    a `push` would have reverted it. A local cell that is only a prefix of the
+    cloud's is the stale copy an earlier pull left behind, not an edit: the app
+    appends. Returns (merged, conflict_labels)."""
+    if not isinstance(remote, list) or not remote: return local, []
+    if not isinstance(local, list) or not local: return remote, []
+    key = lambda e: str(e[0]) if isinstance(e, (list, tuple)) and e else repr(e)
+    by = lambda env: {key(e): e for e in env} if isinstance(env, list) else {}
+    b, l, r = by(base), by(local), by(remote)
+    stale = lambda lv, rv: (isinstance(lv, (list, tuple)) and isinstance(rv, (list, tuple))
+                            and len(lv) <= len(rv)
+                            and all(str(y or "").startswith(str(x or "")) for x, y in zip(lv, rv)))
+    out, conflicts = [], []
+    for k in dict.fromkeys(list(r) + list(l)):
+        lv, rv, bv = l.get(k), r.get(k), b.get(k)
+        if rv is None:
+            if lv != bv: out.append(lv)          # new local dimension; an unedited one the app removed goes
+        elif lv is None or lv == rv or lv == bv or stale(lv, rv): out.append(rv)
+        elif rv == bv: out.append(lv)
+        else: out.append(lv); conflicts.append(f"envelope[{k}](local-wins)")
+    return out, conflicts
+
 def _merge(base, local, remote):
     # Row-level 3-way by id. For each id: if only one side changed vs base, take
     # that side; if both changed the same row differently, LOCAL wins and the id
@@ -326,8 +354,12 @@ def _merge(base, local, remote):
         else: merged.append(ll); conflicts.append(i)        # both changed -> local wins, flag
     out = dict(local)
     out["rows"] = merged
-    # envelope: last-writer (local) wins whole-block; report if it differs from remote
-    if remote.get("envelope") != local.get("envelope"): conflicts.append("envelope(local-wins)")
+    # A top-level key only the cloud holds is kept, never dropped (SYNC-ENVELOPE-STALE-001).
+    for k, v in (remote or {}).items(): out.setdefault(k, v)
+    if "envelope" in local or "envelope" in remote:
+        env, cf = _merge_envelope((base or {}).get("envelope"), local.get("envelope"), remote.get("envelope"))
+        out["envelope"] = env
+        conflicts.extend(cf)
     for _f in UK_DICT_FIELDS:
         if _f in local or _f in remote or _f in (base or {}):
             merged_f, cf = _merge_uk_dict(base, local, remote, _f)

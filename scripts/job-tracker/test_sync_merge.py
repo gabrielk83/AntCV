@@ -157,6 +157,64 @@ def test_render_does_not_replace_cloud_support_with_a_stub():
     print("PASS: render keeps cloud + local-only support blocks; the stub fills only empty keys.")
 
 
+# SYNC-ENVELOPE-STALE-001 ------------------------------------------------------
+_SAL = ["Salary", "60k", "55-75k", "Below 55k needs an offset."]
+_SAL_APP = ["Salary", "60k", "55-75k", "Below 55k needs an offset.  -  [2026-11-01] rejected X"]
+_TTL = ["Title", "TPM", "Specialist", "No junior title."]
+
+
+def _pull(base, local, cloud):
+    _write(S.DOC, local); _write(S.SNAP, {"rev": 1, "doc": base})
+    S._req = lambda method="GET", body=None: (200, {"rev": 2, "doc": cloud})
+    S.cmd_pull()
+    return json.load(open(S.DOC, encoding="utf-8"))
+
+
+def test_pull_takes_the_cloud_envelope_edit():
+    d = lambda env: {"rows": [_row("a")], "envelope": env}
+    # the owner edited one dimension in the app, local untouched since base
+    other = ["Salary", "62k", "58-78k", "Reworded in the app."]
+    got = _pull(d([_SAL, _TTL]), d([_SAL, _TTL]), d([other, _TTL]))
+    assert got["envelope"] == [other, _TTL], got["envelope"]
+    # an earlier pull already recorded the cloud as base and kept the stale local copy
+    got = _pull(d([_SAL_APP, _TTL]), d([_SAL, _TTL]), d([_SAL_APP, _TTL]))
+    assert got["envelope"] == [_SAL_APP, _TTL], got["envelope"]
+    # no local envelope at all
+    got = _pull(d([_SAL]), {"rows": [_row("a")]}, d([_SAL]))
+    assert got["envelope"] == [_SAL], got
+    print("PASS: an app-side envelope edit reaches the local doc, stuck stale copy included.")
+
+
+def test_envelope_local_edits_survive():
+    d = lambda env: {"rows": [_row("a")], "envelope": env}
+    mine = ["Title", "TPM", "Specialist or lead", "No junior title."]
+    merged, cf = S._merge(d([_SAL, _TTL]), d([_SAL, mine]), d([_SAL_APP, _TTL]))
+    assert merged["envelope"] == [_SAL_APP, mine] and not cf, (merged["envelope"], cf)
+    theirs = ["Title", "TPM", "Manager", "No junior title."]
+    merged, cf = S._merge(d([_TTL]), d([mine]), d([theirs]))
+    assert merged["envelope"] == [mine] and cf == ["envelope[Title](local-wins)"], (merged["envelope"], cf)
+    extra = ["Pets", "yes", "", ""]
+    merged, cf = S._merge(d([_SAL]), d([_SAL, extra]), d([_SAL]))
+    assert merged["envelope"] == [_SAL, extra] and not cf, merged["envelope"]
+    merged, cf = S._merge(d([_SAL, extra]), d([_SAL, extra]), d([_SAL]))
+    assert merged["envelope"] == [_SAL] and not cf, merged["envelope"]
+    merged, cf = S._merge(d([_SAL]), d([_SAL]), {"rows": [_row("a")]})
+    assert merged["envelope"] == [_SAL] and not cf, merged["envelope"]
+    print("PASS: a local envelope edit survives; a real both-changed dimension is reported.")
+
+
+def test_cloud_only_top_level_keys_survive():
+    cloud = {"rows": [_row("a")], "postingcheck": {"a": {"misses": 1}}, "newmap": {"a": 1}}
+    got = _pull({"rows": [_row("a")]}, {"rows": [_row("a")]}, cloud)
+    assert got.get("postingcheck") == cloud["postingcheck"], got
+    assert got.get("newmap") == {"a": 1}, got
+    # a stale local strike count takes the cloud's
+    cloud2 = {"rows": [_row("a")], "postingcheck": {"a": {"misses": 0}}}
+    got = _pull(cloud, {"rows": [_row("a")], "postingcheck": {"a": {"misses": 1}}}, cloud2)
+    assert got["postingcheck"] == {"a": {"misses": 0}}, got
+    print("PASS: cloud-only top-level keys (postingcheck strikes) survive a merge.")
+
+
 if __name__ == "__main__":
     test_pull_keeps_local_only_entries()
     test_pull_conflict_prefers_local_and_reports()
@@ -165,5 +223,8 @@ if __name__ == "__main__":
     test_outcome_maps_survive_a_merge()
     test_legacy_history_list_does_not_crash_the_merge()
     test_render_does_not_replace_cloud_support_with_a_stub()
-    print("\nOK - 7/7")
+    test_pull_takes_the_cloud_envelope_edit()
+    test_envelope_local_edits_survive()
+    test_cloud_only_top_level_keys_survive()
+    print("\nOK - 10/10")
     sys.exit(0)

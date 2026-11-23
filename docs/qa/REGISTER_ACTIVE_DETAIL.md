@@ -2817,7 +2817,9 @@ _2026-11-23 weekly demand-seed (cloud): split NOT re-measured; the Cloudflare-De
 
 ## Row 118 — JT-ARMED-ARTIFACT-NO-DRAIN-001
 
-_verified: 2026-11-22_
+_verified: 2026-11-23_
+
+**RE-VERIFIED 2026-11-23 (job-tracker nightly).** Rev 392: ARMED-with-app still `napatech` (app 2781, CLOSED row, flag stale); `health`: 61 pointers vs 95 cloud apps, 1 dead, `veo_technologies` → app 3500. Owner clears both flags.
 
 **RE-VERIFIED 2026-11-22 (job-tracker nightly).** Rev 387: ARMED-with-app still `napatech` (app 2781, CLOSED row, flag stale); `health`: 60 pointers vs 94 cloud apps, 1 dead, `veo_technologies` → app 3500. Owner clears both flags.
 
@@ -2962,7 +2964,9 @@ is adoption, not pricing. Proposed: replace the three Mistral ids with `mistral-
 
 ## Row 127 — JT-OWNER-PACKAGED-DEFAULT-ON-001
 
-_verified: 2026-11-22_
+_verified: 2026-11-23_
+
+**RE-VERIFIED 2026-11-23 (job-tracker nightly).** Same 3 OWNER-PACKAGED rows elected (186 WD, 207 RED Global, 227 LEGO Senior TPM); not generated. Eleventh run with no generation.
 
 **RE-VERIFIED 2026-11-22 (job-tracker nightly).** Same 3 OWNER-PACKAGED rows elected (186 WD, 207 RED Global, 227 LEGO Senior TPM); not generated. Tenth run with no generation.
 
@@ -3204,3 +3208,15 @@ _OPEN (found by desktop nightly 2026-11-16, Gabo-PC, Opus 5.5; no code change; o
 **Why not deployed by the nightly.** The guard can reject live JD / message traffic; a false positive blocks generation. Shipping a merged-but-never-live feature to the production proxy is the owner's call, same as the 11-12 tune left it.
 
 **To close.** Owner decides. If yes: bump VERSION in both `workers/{proxy,demo-proxy}/src/index.js` (so `/health` shows it), `gh workflow run deploy.yml -f target=proxy -f mode=deploy -f confirm=proxy`, watch, `/health`, then demo-proxy; one real JD analysis on antcv.pages.dev after. Closes the proxy legs of row 89 too.
+
+## Row 150 — SYNC-ENVELOPE-STALE-001
+
+_verified: 2026-11-23_
+
+_FIXED 2026-11-23 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `scripts/job-tracker/job-tracker-sync.py` + `test_sync_merge.py`; no `pwa/` asset, no version consumed)._
+
+**Found.** `pull --render` printed `conflicts (local kept): envelope(local-wins)` on every run. Cloud vs local vs snapshot on rev 392: snapshot = cloud, local differs in two cells, both shorter prefixes of the cloud text (Salary and Work tasks notes, the 2026-11-01 additions missing). The island appends reject reasons and rulings to the notes cell; nothing edits the envelope locally (`import-xlsx` reads only Weekly Tracker, the build re-emits what it read). `_merge` started from `dict(local)` and never took the cloud envelope, so the Excel Dream Envelope tab was stale since 2026-11-01 and a `push` would have reverted the owner’s ruling. Same cause: cloud-only top-level keys never reached the local doc; `postingcheck` (209 records) was missing, so a `push` would have wiped the strikes. Generation and discovery read the relay doc, so neither was affected.
+
+**Fix.** `_merge_envelope`: per-dimension 3-way; local unchanged since base or a pure prefix of the cloud cell takes the cloud; a real local edit stays; a real both-changed dimension keeps local and is named in the conflict line. `_merge` keeps cloud-only top-level keys. `postingcheck` added to `UK_DICT_FIELDS`.
+
+**Tests.** 3 new tests drive the real `cmd_pull` / `_merge`; 3 red pre-fix; sabotage lines 266, 321, 333, 334 (two ways), 335, 358, 361 each red; restored 10/10 PASS. **Live:** `pull --render` twice on rev 392 → no envelope conflict, local envelope = cloud, `postingcheck` 209 = 209, both 2026-11-01 notes in the Excel tab. Close after the next job-tracker or discovery run prints no `envelope` conflict.

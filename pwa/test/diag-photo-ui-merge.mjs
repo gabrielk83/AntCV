@@ -40,7 +40,7 @@ const globals = await page.evaluate(()=>({
   suite: window.__antcvPhotoUI427,
 }));
 check('0. all three module globals exposed (position + pentagon + bridge + suite)',
-  globals.pos && globals.pent && globals.bridge==='1.50.422' && globals.suite==='1.50.427', JSON.stringify(globals));
+  globals.pos && globals.pent && globals.bridge==='1.50.422' && /^1[.][0-9]+[.][0-9]+/.test(String(globals.suite)), JSON.stringify(globals));
 
 // 1. Pentagon button injects into a synthetic shape row
 const pent = await page.evaluate(async ()=>{

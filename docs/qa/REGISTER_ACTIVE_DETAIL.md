@@ -3159,7 +3159,9 @@ _FIXED 2026-11-11 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `s
 
 ## Row 146 — DISCOVERY-MED-MUST-NEGATION-001
 
-_verified: 2026-11-20_
+_verified: 2026-11-23_
+
+**2026-11-23 (position-discovery, Gabo-PC).** 5 added, 0 skipped, but no candidate carried a negated must: the pre-fix `_evidence_gate` (`e5602975~1`) also passes all five. Close test not exercised; row stays open.
 
 **FIXED 2026-11-20 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; script only, no version consumed).** Probe on `origin/main` `baa2f874`: "Medical-device experience is not a must.", "... is not required.", the CellaVision fit note and "Erfaring med medicinsk udstyr er ikke et krav." all returned a must; `_language_gate("Fluent Danish is not a requirement.")` returned FLAG. Fix: `_NEG_MUST` (not / no / never + must / required / requirement / mandatory / essential / necessary / needed / prerequisite; Danish ikke (et) krav / nødvendig / påkrævet / obligatorisk / forudsætning, krævet ikke; Swedish krävs inte, inte (ett) krav). `_medical_must` tests `_MUST` on the sentence with negated phrases removed, so a second, real must still gates; `_language_gate` skips a sentence carrying a negated requirement. 13 checks in `test_discover_positions.py` (real `_medical_must`, `_evidence_gate` with the Ambu fit note, `_language_gate`), musts kept as controls. Red: 8 pre-fix; sabotage line 305 → 5; sabotage line 367 → 3. Restored: 115/115 PASS. **Pending (next run):** the next position-discovery run skips no row on a negated must, then CLOSE.
 
@@ -3172,24 +3174,6 @@ _OPEN (found by position-discovery 2026-11-15, Gabo-PC, Opus 5.5; script only, n
 **Fix.** Treat "not (a )?must", "not required", "not mandatory", "not essential" as soft in `_medical_must` (check `_LANG_MUST` for the same shape). Negative controls: the two probe sentences pass; "is required" and "must have" stay musts. Until then, discovery `fit` notes avoid the word "must".
 
 **2026-11-19 (position-discovery, Gabo-PC).** Second occurrence: `add` skipped CellaVision / Test Leader - Scanner Solutions & Hardware on the routine's `fit` text "Medtech / regulated experience 'preferred', not a must". The posting reads "... MedTech, or another regulated industry is preferred." Re-added with `override_gate` + reason. Still open; same fix.
-
-## Row 149 — POSTING-5XX-SOFT404-001
-
-_verified: 2026-11-22_
-
-**FIXED 2026-11-22 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; script only, no version consumed).** `scripts/job-tracker/check-postings.py` + `test_check_postings.py`.
-
-**Symptom.** VML MAP (WPP) / Product Specialist (Catalyst Adoption) read ERROR HTTP 500 for 18 sweep days (since 2026-10-20). ERROR never counts, so the row could never archive and the owner was asked to drop the URL by hand on every run.
-
-**Diagnostic.** curl with a browser UA: the position URL answers HTTP 500 with the site's 404 page (`<title>404</title>`, `metadata-keywords` "404, page not found"). A bogus position id on the same path answers the same 500. A live position taken from `wt-map.com/careers` answers 200 with a real title. The careers index does not list 8600453002. The Greenhouse board API for the `map` board returns 404 for 8600453002 and 200 for the live id. The posting is gone; the server mis-codes its not-found page as 500.
-
-**Fix.** `_SOFT404_TITLE` + a branch in `classify`: a 5xx whose `<title>` is a not-found title (`404…`, `Page not found…`, `Not found…`) reads GONE, soft evidence, two strikes on separate days. Any other 5xx stays ERROR. Only the title counts; a 404 mentioned in an outage body does not.
-
-**Tests.** 9 checks drive the real `classify`: three GONE cases (500 `404`, 503 `Page not found | …`, 500 `404 - Not Found`), the detail string, four ERROR controls (outage title, 404 only in the body, a title with job id 40412, empty body), and a 200 control. 4 red pre-fix; sabotage line 317 (`if m:` → `if False:`) → 4 red; sabotage line 110 (regex on `<body`) → 4 red; restored PASS. 36/36 job-tracker python files green; `run-tests.mjs` ALL PASS. The real saved VML page classifies GONE; the live VML position page fed as a 500 stays ERROR.
-
-**Live.** `check --apply --only vml_map_wpp` → GONE strike 1/2, doc rev 387 → 388.
-
-**To close (pending, next run).** The 2026-11-23 sweep archives VML MAP on strike 2 (GONE again on a second day).
 
 ## Row 147 — PROXY-POSTING-GUARD-UNDEPLOYED-001
 

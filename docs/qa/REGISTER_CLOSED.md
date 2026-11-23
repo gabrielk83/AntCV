@@ -4,6 +4,26 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 149 — POSTING-5XX-SOFT404-001 — CLOSED 2026-11-23 (position-discovery, evidence: live sweep archived VML MAP on strike 2)
+
+_verified: 2026-11-23_
+
+**CLOSED 2026-11-23 (position-discovery).** `check-postings.py check --apply`: 76 probed, 75 LIVE, VML MAP (WPP) / Product Specialist GONE (HTTP 500 serving a 404 page), second day → archived, doc rev 389 → 390. 0 ERROR rows in the sweep.
+
+**FIXED 2026-11-22 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; script only, no version consumed).** `scripts/job-tracker/check-postings.py` + `test_check_postings.py`.
+
+**Symptom.** VML MAP (WPP) / Product Specialist (Catalyst Adoption) read ERROR HTTP 500 for 18 sweep days (since 2026-10-20). ERROR never counts, so the row could never archive and the owner was asked to drop the URL by hand on every run.
+
+**Diagnostic.** curl with a browser UA: the position URL answers HTTP 500 with the site's 404 page (`<title>404</title>`, `metadata-keywords` "404, page not found"). A bogus position id on the same path answers the same 500. A live position taken from `wt-map.com/careers` answers 200 with a real title. The careers index does not list 8600453002. The Greenhouse board API for the `map` board returns 404 for 8600453002 and 200 for the live id. The posting is gone; the server mis-codes its not-found page as 500.
+
+**Fix.** `_SOFT404_TITLE` + a branch in `classify`: a 5xx whose `<title>` is a not-found title (`404…`, `Page not found…`, `Not found…`) reads GONE, soft evidence, two strikes on separate days. Any other 5xx stays ERROR. Only the title counts; a 404 mentioned in an outage body does not.
+
+**Tests.** 9 checks drive the real `classify`: three GONE cases (500 `404`, 503 `Page not found | …`, 500 `404 - Not Found`), the detail string, four ERROR controls (outage title, 404 only in the body, a title with job id 40412, empty body), and a 200 control. 4 red pre-fix; sabotage line 317 (`if m:` → `if False:`) → 4 red; sabotage line 110 (regex on `<body`) → 4 red; restored PASS. 36/36 job-tracker python files green; `run-tests.mjs` ALL PASS. The real saved VML page classifies GONE; the live VML position page fed as a 500 stays ERROR.
+
+**Live.** `check --apply --only vml_map_wpp` → GONE strike 1/2, doc rev 387 → 388.
+
+**To close (pending, next run).** The 2026-11-23 sweep archives VML MAP on strike 2 (GONE again on a second day).
+
 ## Row 145 — RENDER-SUPPORT-CLOBBER-001 — CLOSED 2026-11-19 (job-tracker nightly, evidence: local vs cloud `support` 0 differ after a fourth `pull --render`)
 
 _verified: 2026-11-19_

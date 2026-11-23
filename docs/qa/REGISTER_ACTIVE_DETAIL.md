@@ -754,7 +754,11 @@ row 25 (real-PDF-gated — a render CI cannot do). No regression. Kept ACTIVE.
 
 ## Row 39a — AUTOSAVE-NO-DOWNGRADE-001
 
-_verified: 2026-11-20_
+_verified: 2026-11-23_
+
+**2026-11-23 (desktop nightly, Gabo-PC, Opus 5.5, HEAD `140e00bb`):** E1 side finding: the per-tab claim the cold-start chooser relies on is wiped before it is read (new row 151 `TAB-CLAIM-WIPE-001`). `diag-jd-scope-runtime.mjs` OK.
+
+_previous:_ verified: 2026-11-20
 
 **Re-verify 2026-11-20 (desktop nightly E1, Gabo-PC, Opus 5.5):** relay guard present (`__blockDowngrade` x3 in `workers/access-relay/src/index.js`); `antcv-pointer-stale-guard.js?v=1.51.334-unsol-pillar` loaded in `index.html`. `diag-jd-scope-runtime.mjs` was FAILING: it asserted the `kernel` staging slot survives an app switch, which JD-SCOPE-COLDSTART-001 (1.51.3762) consumes by design. Diag updated to assert the consume + a two-real-app isolation check (998 write leaves 999 intact); OK, and FAILED with `consumeStaging` disabled (negative control). Test-only, no `pwa/` asset. Blocked: real second device (row 19 leg).
 
@@ -1639,7 +1643,11 @@ _verified: 2026-10-16_ — CI nightly E1 re-verify against HEAD 451fc004 (prior 
 > Lived ONLY in the TO-DO SUMMARY table before the split — it never had an OPEN-queue
 > row, which is part of why it was easy to miss.
 
-_verified: 2026-10-27_ — CI nightly E1 re-verify against HEAD 65ce36e0: `git ls-remote origin brandfit-per-app-scope` still `fc2477c` (durable backup intact, NOT merged); legs B–F still owner/desktop/regen-gated; suite 1850/1850 green. Kept ACTIVE. · 2026-10-16 @451fc004 (prior CI E1 2026-10-06 @de7fec6e): verify-first against HEAD. (A) brandfit WIP PRESERVED re-confirmed (`git ls-remote origin brandfit-per-app-scope`): still exists at `fc2477c` (durable backup survives worktree prune) — NOT merged (behind main, needs rebase+review), live D1 `ALTER TABLE` NOT run (owner fresh-confirm required). (B) content-gen missing fields [regen-gated], (C) coordinator sidebar-inflate watermark, (D) PackagePicker→Layout merge, (E) cluster-demand worker pipeline, (F) cloud/mobile live-verify backlog — all owner/desktop/regen-gated. Kept ACTIVE.
+_verified: 2026-11-23_
+
+**2026-11-23 (desktop nightly, Gabo-PC, Opus 5.5, HEAD `140e00bb`):** `git ls-remote origin brandfit-per-app-scope` still `fc2477c` (durable backup intact, not merged, about 1,981 commits behind main). Legs B-F unchanged. Blocked: owner session / regen.
+
+_previous:_ verified: 2026-10-27 — CI nightly E1 re-verify against HEAD 65ce36e0: `git ls-remote origin brandfit-per-app-scope` still `fc2477c` (durable backup intact, NOT merged); legs B–F still owner/desktop/regen-gated; suite 1850/1850 green. Kept ACTIVE. · 2026-10-16 @451fc004 (prior CI E1 2026-10-06 @de7fec6e): verify-first against HEAD. (A) brandfit WIP PRESERVED re-confirmed (`git ls-remote origin brandfit-per-app-scope`): still exists at `fc2477c` (durable backup survives worktree prune) — NOT merged (behind main, needs rebase+review), live D1 `ALTER TABLE` NOT run (owner fresh-confirm required). (B) content-gen missing fields [regen-gated], (C) coordinator sidebar-inflate watermark, (D) PackagePicker→Layout merge, (E) cluster-demand worker pipeline, (F) cloud/mobile live-verify backlog — all owner/desktop/regen-gated. Kept ACTIVE.
 
 **TO-DO SUMMARY row (verbatim):**
 
@@ -1651,7 +1659,11 @@ _verified: 2026-10-27_ — CI nightly E1 re-verify against HEAD 65ce36e0: `git l
 
 ## Row 75 — JOBTRACKER-AUTOFILL-ADDFLOW-VERIFY-001
 
-_verified: 2026-10-27_ — CI nightly E1 re-verify against HEAD 65ce36e0: island source `src/islands/JobTracker/JobTracker.tsx` still matches autofill|enrich (6 refs), `api.ts` + `rank.ts` present; jobtracker unit set green in suite 1850/1850. REMAINING = one real URL/PDF add-test end-to-end (CI cannot drive a live LLM add without writing a junk row). Kept ACTIVE, owner-gated. · 2026-10-16 @451fc004 (prior CI E1 2026-10-06 @de7fec6e): verify-first, unchanged. The deterministic-tier + async-enrich autofill flow lives in the island SOURCE (`src/islands/JobTracker/JobTracker.tsx` matches `autofill|enrich`; `api.ts`, `rank.ts` present), NOT as readable tokens in the built `pwa/antcv-react-islands.js` (that bundle was last rebuilt 2026-09-06 @ce05d602 and strips the comment markers; the 2026-09-24 note's "7 refs in antcv-react-islands.js" was imprecise about the file). Flow present + the jobtracker unit set (`jobtracker-top5-rescore`, `jobtracker-top5-controls`, etc.) is green in the suite (1824/1824). REMAINING = one real URL/PDF add-test end-to-end (reject after) with the owner or a throwaway account — CI cannot drive a live LLM add without writing a junk row to the owner's live tracker. Kept ACTIVE, owner-gated.
+_verified: 2026-11-23_
+
+**2026-11-23 (desktop nightly, Gabo-PC, Opus 5.5, HEAD `140e00bb`):** `src/islands/JobTracker/JobTracker.tsx` autofill/enrich present, `api.ts` + `rank.ts` present; top5 unit tests 11/11 + 9/9. Blocked: one real add-test (writes a junk row to the live tracker), owner session.
+
+_previous:_ verified: 2026-10-27 — CI nightly E1 re-verify against HEAD 65ce36e0: island source `src/islands/JobTracker/JobTracker.tsx` still matches autofill|enrich (6 refs), `api.ts` + `rank.ts` present; jobtracker unit set green in suite 1850/1850. REMAINING = one real URL/PDF add-test end-to-end (CI cannot drive a live LLM add without writing a junk row). Kept ACTIVE, owner-gated. · 2026-10-16 @451fc004 (prior CI E1 2026-10-06 @de7fec6e): verify-first, unchanged. The deterministic-tier + async-enrich autofill flow lives in the island SOURCE (`src/islands/JobTracker/JobTracker.tsx` matches `autofill|enrich`; `api.ts`, `rank.ts` present), NOT as readable tokens in the built `pwa/antcv-react-islands.js` (that bundle was last rebuilt 2026-09-06 @ce05d602 and strips the comment markers; the 2026-09-24 note's "7 refs in antcv-react-islands.js" was imprecise about the file). Flow present + the jobtracker unit set (`jobtracker-top5-rescore`, `jobtracker-top5-controls`, etc.) is green in the suite (1824/1824). REMAINING = one real URL/PDF add-test end-to-end (reject after) with the owner or a throwaway account — CI cannot drive a live LLM add without writing a junk row to the owner's live tracker. Kept ACTIVE, owner-gated.
 
 **OPEN-queue row (verbatim):**
 
@@ -1663,7 +1675,11 @@ _verified: 2026-10-27_ — CI nightly E1 re-verify against HEAD 65ce36e0: island
 
 ## Row 77 — JOBTRACKER-TOP5-PERIODIC-RESCORE-001
 
-_verified: 2026-10-27_ — CI nightly E1 re-verify against HEAD 65ce36e0: on-add/on-change fit-ranked Top-5 re-rank present + `pwa/test/unit/jobtracker-top5-rescore.test.mjs` green in suite 1850/1850. PERIODIC recompute deliberately NOT built — OWNER-DECISION gate, not code owed. Kept ACTIVE awaiting owner confirm. · 2026-10-16 @451fc004 (prior CI E1 2026-10-06 @de7fec6e): the on-add/on-change fit-ranked Top-5 re-rank is present and covered by `pwa/test/unit/jobtracker-top5-rescore.test.mjs` (suite 1824/1824 green). The PERIODIC recompute (drift Top-5 with cluster-demand refreshes, not just on add) is deliberately NOT built — it is an OWNER-DECISION gate, not code owed. Kept ACTIVE awaiting owner confirm.
+_verified: 2026-11-23_
+
+**2026-11-23 (desktop nightly, Gabo-PC, Opus 5.5, HEAD `140e00bb`):** `jobtracker-top5-rescore` 11/11. Periodic recompute still not built. Blocked: owner decision.
+
+_previous:_ verified: 2026-10-27 — CI nightly E1 re-verify against HEAD 65ce36e0: on-add/on-change fit-ranked Top-5 re-rank present + `pwa/test/unit/jobtracker-top5-rescore.test.mjs` green in suite 1850/1850. PERIODIC recompute deliberately NOT built — OWNER-DECISION gate, not code owed. Kept ACTIVE awaiting owner confirm. · 2026-10-16 @451fc004 (prior CI E1 2026-10-06 @de7fec6e): the on-add/on-change fit-ranked Top-5 re-rank is present and covered by `pwa/test/unit/jobtracker-top5-rescore.test.mjs` (suite 1824/1824 green). The PERIODIC recompute (drift Top-5 with cluster-demand refreshes, not just on add) is deliberately NOT built — it is an OWNER-DECISION gate, not code owed. Kept ACTIVE awaiting owner confirm.
 
 **OPEN-queue row (verbatim):**
 
@@ -1675,7 +1691,11 @@ _verified: 2026-10-27_ — CI nightly E1 re-verify against HEAD 65ce36e0: on-add
 
 ## Row 81 — PHOTO-FUSE-OWNER-VERIFY-001
 
-_verified: 2026-10-27_ — CI nightly E1 re-verify against HEAD 65ce36e0: markers intact — `pwa/antcv-photo-library.js` (2 "Add photos" refs) + `pwa/antcv-profile-workstyle-cjlr-238.js` (8 PW-CJLR-PHOTO-LEAK refs) + `pwa/test/diag-pw-cjlr-photo-leak.mjs`; suite 1850/1850 green. REMAINING = one on-device visual pass after a hard refresh (needs signed-in browser CI lacks). Kept ACTIVE, owner-gated. · 2026-10-16 @451fc004 (cited markers intact; prior CI E1 2026-10-06 @de7fec6e): the 1.51.390-393 photo-panel rework is present — PHOTO-BTN-FUSE-001 + the single "＋ Add photos…" upload control in `pwa/antcv-photo-library.js` (2 "Add photos" refs) and the PW-CJLR-PHOTO-LEAK guard in `pwa/antcv-profile-workstyle-cjlr-238.js` (8 refs) + `pwa/test/diag-pw-cjlr-photo-leak.mjs`; suite 1824/1824 green. REMAINING = one on-device visual pass after a hard refresh (legs a–e of the row) — needs a signed-in browser CI lacks. Kept ACTIVE, owner-gated visual check.
+_verified: 2026-11-23_
+
+**2026-11-23 (desktop nightly, Gabo-PC, Opus 5.5, HEAD `140e00bb`):** leg (a) `diag-pw-cjlr-photo-leak.mjs` OK; leg (d) `diag-photo-remove-last-reset.mjs` GREEN 9/9 (strip empties, native Reset clicked once, default ant back). `diag-photo-ui-merge.mjs` was red on a stale suite pin (`1.50.427`, live suite `1.51.942-photo-flip-vision`): pin fixed, OK. Legs (b) (c) (e): owner eyeball.
+
+_previous:_ verified: 2026-10-27 — CI nightly E1 re-verify against HEAD 65ce36e0: markers intact — `pwa/antcv-photo-library.js` (2 "Add photos" refs) + `pwa/antcv-profile-workstyle-cjlr-238.js` (8 PW-CJLR-PHOTO-LEAK refs) + `pwa/test/diag-pw-cjlr-photo-leak.mjs`; suite 1850/1850 green. REMAINING = one on-device visual pass after a hard refresh (needs signed-in browser CI lacks). Kept ACTIVE, owner-gated. · 2026-10-16 @451fc004 (cited markers intact; prior CI E1 2026-10-06 @de7fec6e): the 1.51.390-393 photo-panel rework is present — PHOTO-BTN-FUSE-001 + the single "＋ Add photos…" upload control in `pwa/antcv-photo-library.js` (2 "Add photos" refs) and the PW-CJLR-PHOTO-LEAK guard in `pwa/antcv-profile-workstyle-cjlr-238.js` (8 refs) + `pwa/test/diag-pw-cjlr-photo-leak.mjs`; suite 1824/1824 green. REMAINING = one on-device visual pass after a hard refresh (legs a–e of the row) — needs a signed-in browser CI lacks. Kept ACTIVE, owner-gated visual check.
 
 **OPEN-queue row (verbatim):**
 
@@ -1687,7 +1707,11 @@ _verified: 2026-10-27_ — CI nightly E1 re-verify against HEAD 65ce36e0: marker
 
 ## Row 83 — JD-REMOVE-OWNER-VERIFY-001
 
-_verified: 2026-10-27_ — CI nightly E1 re-verify against HEAD 65ce36e0: JD-REMOVE-STICKY-001 (1.51.395) present — `pwa/app.src.js` 3 JD-REMOVE-STICKY + 3 tombstone refs + `pwa/test/unit/jd-remove-tombstone.test.mjs` green in suite 1850/1850. REMAINING = one live 4-step pass (needs live app + relay CI cannot drive). Kept ACTIVE, owner live-verify owed. · 2026-10-16 @451fc004 (cited markers intact, suite 1824/1824): JD-REMOVE-STICKY-001 (1.51.395) present — JD-REMOVE-STICKY/tombstone markers in `pwa/app.src.js` (6 refs) + `pwa/test/unit/jd-remove-tombstone.test.mjs` green in the suite. (prev CI E1 2026-10-07 @dbcaf31c, unchanged.) REMAINING = one live 4-step pass (remove→refresh stays removed / reopen re-stages the tombstone / read-from-cloud returns JD / a different JD seeds normally) — needs the live app + relay CI cannot drive. Kept ACTIVE, owner live-verify owed.
+_verified: 2026-11-23_
+
+**2026-11-23 (desktop nightly, Gabo-PC, Opus 5.5, HEAD `140e00bb`):** ADVANCED, the owed live pass found the bug still there. New `pwa/test/diag-jd-remove-sticky.mjs` boots the real bundle on a mocked relay and drives the four steps in both boot orders. Pre-fix: red in both. (1) Remove left the JD in `Un.current`; the next edit's auto-sync re-mirrored it into `antcv:lastJdText`, which the boot guard reads as a deliberate re-open, so the JD came back on refresh (the owner's original report). (2) The boot application-list effect cleared the JD the cloud restore had just seeded whenever `/api/prefs` answered first. (3) AUTO-COMMIT sent `jd_text: ""` after a Remove (D1: 0 of 95 targeted rows have a blank jd_text, so no row was lost). (4) Tracker Open was missed while the tab scope was still `kernel`. SHIPPED JD-REMOVE-STICKY-002 `1.51.6605-jd-remove`, live bytes verified; diag green both orders. Remaining: one signed-in pass by the owner, then CLOSE.
+
+_previous:_ verified: 2026-10-27 — CI nightly E1 re-verify against HEAD 65ce36e0: JD-REMOVE-STICKY-001 (1.51.395) present — `pwa/app.src.js` 3 JD-REMOVE-STICKY + 3 tombstone refs + `pwa/test/unit/jd-remove-tombstone.test.mjs` green in suite 1850/1850. REMAINING = one live 4-step pass (needs live app + relay CI cannot drive). Kept ACTIVE, owner live-verify owed. · 2026-10-16 @451fc004 (cited markers intact, suite 1824/1824): JD-REMOVE-STICKY-001 (1.51.395) present — JD-REMOVE-STICKY/tombstone markers in `pwa/app.src.js` (6 refs) + `pwa/test/unit/jd-remove-tombstone.test.mjs` green in the suite. (prev CI E1 2026-10-07 @dbcaf31c, unchanged.) REMAINING = one live 4-step pass (remove→refresh stays removed / reopen re-stages the tombstone / read-from-cloud returns JD / a different JD seeds normally) — needs the live app + relay CI cannot drive. Kept ACTIVE, owner live-verify owed.
 
 **OPEN-queue row (verbatim):**
 
@@ -3181,7 +3205,11 @@ _OPEN (found by position-discovery 2026-11-15, Gabo-PC, Opus 5.5; script only, n
 
 ## Row 147 — PROXY-POSTING-GUARD-UNDEPLOYED-001
 
-_verified: 2026-11-22_
+_verified: 2026-11-23_
+
+**2026-11-23 (desktop nightly, Gabo-PC, Opus 5.5, HEAD `140e00bb`):** `wrangler deployments list`: cv-proxy 2026-11-05T10:07Z, antcv-demo-proxy 2026-11-05T08:38Z. Both `/health` `3.8.4-brand-ink-match`. Still undeployed. Blocked: owner call.
+
+_previous:_ verified: 2026-11-22
 
 **2026-11-22 (desktop nightly):** both proxies `/health` still `3.8.4-brand-ink-match`. Still undeployed. Blocked: owner call.
 
@@ -3220,3 +3248,31 @@ _FIXED 2026-11-23 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `s
 **Fix.** `_merge_envelope`: per-dimension 3-way; local unchanged since base or a pure prefix of the cloud cell takes the cloud; a real local edit stays; a real both-changed dimension keeps local and is named in the conflict line. `_merge` keeps cloud-only top-level keys. `postingcheck` added to `UK_DICT_FIELDS`.
 
 **Tests.** 3 new tests drive the real `cmd_pull` / `_merge`; 3 red pre-fix; sabotage lines 266, 321, 333, 334 (two ways), 335, 358, 361 each red; restored 10/10 PASS. **Live:** `pull --render` twice on rev 392 → no envelope conflict, local envelope = cloud, `postingcheck` 209 = 209, both 2026-11-01 notes in the Excel tab. Close after the next job-tracker or discovery run prints no `envelope` conflict.
+
+## Row 151 — TAB-CLAIM-WIPE-001
+
+_verified: 2026-11-23_
+
+_OPEN (found by the desktop nightly, Gabo-PC, Opus 5.5, 2026-11-23; Band A tab isolation; no code change; owner call on the fix)._
+
+**Found.** ACTIVE-PTR-HONOR-001 (1.51.4146) lets a tab's own claim (`sessionStorage antcv:currentAppId`) outrank the device's active pointer at cold start. The claim never survives to be read: the mount effect `setCurrentAppId(Fl == null ? "kernel" : ...)` (app.src.js, `[Fl]`) runs with `Fl = null` and overwrites it with `kernel` before the application-list effect reads it.
+
+**Evidence (headless, mocked relay, pristine `25ef2ea2`, both boot orders).** Claim 4242, device pointer 4343: writes to the claim key are `["kernel", "4343"]`; the tab lands on scope 4343, meta "Beta Lasers". So with two tabs on one device, reloading tab A moves it to tab B's application. It also explains the known boot blip 3536 → kernel → 3536.
+
+**Not data loss today.** The whole tab moves consistently and antcv-app-rev-guard holds boot writes until the row is loaded.
+
+**Why not fixed here.** Keeping the claim alone is unsafe: with scope = claim and pointer = another row, the cold-restore JD block sits OUTSIDE the `__foreignAppId2` guard and would write the pointer row's JD into the claimed row's slot and into `Un.current` (auto-sync would then PUT it). Fix needs both halves in one patch: (1) skip the mount-time `kernel` write while a numeric claim exists, reset it when the list resolves without that id; (2) gate the JD block, `Un.current` and `antcv:lastJdText` on the same drift flag as sections/meta. Then a two-tab test on the mocked relay and a live two-tab pass.
+
+## Row 152 — DIAG-FLEET-ROT-001
+
+_verified: 2026-11-23_
+
+_OPEN (found by the desktop nightly, Gabo-PC, Opus 5.5, 2026-11-23; test tooling; no production impact shown)._
+
+**Found.** First full sweep of the headless diags: 217 local `pwa/test/diag-*.mjs` run at pristine `25ef2ea2`, 74 exit non-zero (75 on the patched tree; the one extra, `foundation-controls`, fails 3 of 4 runs on pristine too, so it is flaky, not a regression). The nightly runs only a handful of them. Most failing ones date from June 2026 and assert labels, defaults or version pins that were changed on purpose later (the 11-20 JD-SCOPE-DIAG-STALE-001 and today's photo-ui-merge pin are two proven cases). Not triaged: a red diag here may also be a real regression.
+
+**Failing set (74):** `additional-partition`, `analysis-panel-fit`, `application-qa`, `candidate-header-edit`, `cjlr-experience`, `cjlr-table`, `cl-format-panel`, `cl-ratio-drag-persist`, `cl-table-dims-export`, `cl-template-struct`, `contribute-edit-coalesce`, `copenhagen-blue-preview`, `core-comp-compress`, `cw-canon`, `data-import`, `demo-toggle`, `doc-chatbot`, `exp-order`, `experience-npage`, `export-analysis-button`, `export-preview-inline-sheets`, `export-preview-pages`, `foundation-controls`, `foundation-to-rich-block`, `full-doc-health`, `ghost-placeholder-roles`, `group-name`, `group-name-sidecar`, `hwic-to-rich-block`, `kernel-import`, `language-ui-merge`, `languages-card-personal`, `languages-concise`, `login-clean-reload`, `mobile-ui-merge`, `orphan-preflight-parity`, `orphan-preflight-real`, `orphan-preflight-sidebar`, `outcomes-metric-guard`, `outcomes-mode`, `outcomes-results`, `owner-batch-0612`, `owner-evening-0612`, `pageflow-options`, `personal-merge6-e2e`, `photo-bridge`, `photo-positions`, `preview-chatbot`, `preview-edit-persist`, `preview-refresh`, `pub-preview`, `react185-regulatory`, `rerender-storm`, `results-kernel-match`, `results-laminate-preview`, `results-preview-lamination`, `richblock-section-controls`, `role-decomp`, `salmon-empty-region`, `section-loc-default`, `section-rule-ink-preview`, `sections-normalize`, `settings-front`, `sidebar-preview-break`, `sidebar-promote-margin`, `sidebar-ratio-forward`, `sidecar-perf-944-verify`, `slogan-placeholder-language`, `subsection-reorder`, `tense-control`, `unsolicited-opener`, `visual-pkg-relabel`, `wizard-lang-two-table`, `wm-move-on-length`.
+
+**Look at first (user data or user editing):** `data-import` (backup round-trip "lossless" FAIL, items restored 7), `kernel-import`, `preview-edit-persist` (committed:false), `orphan-preflight-parity` / `-real` / `-sidebar`, `login-clean-reload`, `sidebar-ratio-forward` (unset sends 0.32, expected omitted).
+
+**To close.** Per diag: prove stale (fix or delete the assertion) or file the regression. 3-5 per nightly under E1. `subsection-reorder` needs a server on :8799 (harness, not a bug).

@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.6585-askai-insight';
+const CACHE = 'antcv-1.51.6605-jd-remove';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

@@ -18168,11 +18168,15 @@ window.__antcvTxtSame =
                             // antcv:lastJdText=jd just before its reload — that match
                             // is a deliberate re-stage: clear the tombstone and seed
                             // normally. Signals seeding below stays either way.
+                            // JD-REMOVE-STICKY-002: which row this restore seeded (the boot list
+                            // effect must not wipe it) + the row's own jd-scope slot, because the
+                            // tab scope is still 'kernel' when this runs before the list effect.
+                            try { window.__antcvJdRestoredFor = String(e.id || e.application_id || ""); } catch (e) {}
                             var __jdTomb = function (jt) {
                               try {
                                 var t = localStorage.getItem("antcv:jdRemoved") || "";
                                 if (!t || t !== jt.length + ":" + jt.slice(0, 48)) return !1;
-                                if ((localStorage.getItem("antcv:lastJdText") || "") === jt) return localStorage.removeItem("antcv:jdRemoved"), !1;
+                                if ((localStorage.getItem("antcv:lastJdText") || "") === jt || (window.AntcvJdScope && window.__antcvJdRestoredFor && window.AntcvJdScope.getJd(window.__antcvJdRestoredFor) === jt)) return localStorage.removeItem("antcv:jdRemoved"), !1;
                                 return !0;
                               } catch (e) { return !1; }
                             }(e.jd_text);
@@ -19033,6 +19037,10 @@ window.__antcvTxtSame =
                   // Bt (file meta), Ut (JD URL / pasted text), Yt (signal
                   // files). The user can re-attach a JD when they're ready
                   // to tailor.
+                  // JD-REMOVE-STICKY-002: keep the JD the cloud restore just seeded for
+                  // THIS row (OPEN-JD-VISIBLE-001); the two boot effects race, and the
+                  // unconditional clear emptied the drop-zone whenever /api/prefs won.
+                  if (!(__chosenId && window.__antcvJdRestoredFor && String(__chosenId) === window.__antcvJdRestoredFor)) {
                   try {
                     Ft(null);
                   } catch (e) {}
@@ -19042,6 +19050,7 @@ window.__antcvTxtSame =
                   try {
                     Vt("");
                   } catch (e) {}
+                  }
                   try {
                     Jt([]);
                   } catch (e) {}
@@ -19308,7 +19317,7 @@ window.__antcvTxtSame =
                         rationale: yo,
                         // JD-PERSIST-001 (2026-06-22): persist the JD text on the targeted row so
                         // antcv:lastJdText is populated on reload (gates WHY-heading flip + cluster logic).
-                        jd_text: (function () { var t = String(Un.current || Ut || "").trim(); return /^GENERAL CV/i.test(t) || /^Manual save/i.test(t) ? String(Ut || "").trim() : t; })(),
+                        jd_text: (function () { var t = String(Un.current || Ut || "").trim(); return (/^GENERAL CV/i.test(t) || /^Manual save/i.test(t) ? String(Ut || "").trim() : t) || void 0; /* JD-REMOVE-STICKY-002: never PUT a blank jd_text over the row */ })(),
                       });
                       try { Ml(__id); } catch (e) {}
                       try { localStorage.setItem("antcv:activeAppCompany", (io && io.company) || ""); } catch (e) {}
@@ -44340,6 +44349,13 @@ window.__antcvTxtSame =
                           var __rj = String((zt && zt.text) || "");
                           if (__rj) localStorage.setItem("antcv:jdRemoved", __rj.length + ":" + __rj.slice(0, 48));
                           localStorage.setItem("antcv:lastJdText", "");
+                        } catch (e) {}
+                        // JD-REMOVE-STICKY-002 (2026-11-23): the restore also parked the JD in
+                        // Un.current (the cloud-write fallback). Left there, the next auto-sync
+                        // re-mirrored the removed JD and generation could still read it.
+                        try {
+                          if (__rj && Un && String(Un.current || "").trim() === __rj.trim()) Un.current = null;
+                          window.__antcvJdRestoredFor && window.AntcvJdScope && window.AntcvJdScope.getJd(window.__antcvJdRestoredFor) === __rj && window.AntcvJdScope.setJd("", window.__antcvJdRestoredFor);
                         } catch (e) {}
                         (Dt(null), Ft(null));
                       },

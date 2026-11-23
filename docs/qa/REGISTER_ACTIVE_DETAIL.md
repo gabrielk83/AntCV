@@ -2793,7 +2793,9 @@ _2026-10-08 weekly tune: re-verified, not fixed. `C.claude` / `C.anthropic` stil
 
 ## Row 117 — CLUSTER-GLOBAL-SINGLE-JD-DOMINANCE-001
 
-_verified: 2026-11-22_
+_verified: 2026-11-23_
+
+_2026-11-23 weekly demand-seed (cloud): split NOT re-measured; the Cloudflare-Developer-Platform connector refused its sign-in in the cloud session. Last measure is the desktop 2026-11-22 cross-check. Relay push 10 clusters / 247 inserted, every cluster recomputed._
 
 **2026-11-22 (weekly demand-seed, desktop Gabo-PC, duplicate-run cross-check, read-only wrangler SELECT):** split re-measured, first time since 10-25. Rows with weight_sum ≥ 1: `photonics_eng` 20/20 (max jd_count 11, was 8), `pm_process` 20/20 (max 7, was 2), `executive` 15/20 (max 1), `research_phd` 14/20 (max 2), **`consulting` 11/20 (max 1) — new, was 100% research on 10-25**. The other five clusters 0/20. One JD now holds 11 consulting rows as well as 15 executive rows. Owner design decision still owed (jd_count threshold or blend).
 
@@ -2900,7 +2902,9 @@ storage-layer cleanup, no user impact while the render mitigation holds.
 
 ## Row 125 — MEDSEC-CLUSTER-001
 
-_verified: 2026-11-16_
+_verified: 2026-11-23_
+
+**2026-11-23 (weekly demand-seed, cloud routine): cluster re-confirmed on a DK-only sample; leg (4) cloud egress allowlist still OPEN (fifth week for JobTech).** Jobindex RSS `q=lægesekretær` + `q=sundhedsadministrativ`: 37 unique items, 24 secretary/SAK titles (10 hosted, 14 hospital r* external). 8 hosted ads read in full via `/jobannonce/<id>`; 2 Aleris ads redirect to `candidate.hr-manager.net` (blocked). DK n=8, all general practice / private clinic (East Denmark 3: Line Clausen Vesterbro, Lægerne i Vallensbæk Strand, Lægerne Algade Roskilde); 6 of 8 carried over from 11-16. No rank moves; education r4 pin holds (14 hospital titles name lægesekretær / SAK, 8 in Region H / Sjælland); clinic-assistant stays r20. SE n=0: `jobsearch.api.jobtechdev.se` and Jobnet (leg d) refused by the egress proxy (403). Regional `.rss` still 404.
 
 **2026-11-16 (weekly demand-seed, cloud routine): cluster re-confirmed on a DK-only sample; leg (4) cloud egress allowlist still OPEN (fourth week for JobTech).** Jobindex RSS `q=lægesekretær` + `q=sundhedsadministrativ`: 37 unique items, 19 secretary/SAK titles, 6 hosted ads followed to the full jobannonce body (DK n=6, all general practice / private clinic; East Denmark 2: Lægerne Algade Roskilde, Lægerne i Vallensbæk Strand). 13 hospital ads (r* external) teaser-only; their titles name lægesekretær / SAK, so the r4 education pin holds. Clinic-assistant 4/6, GP-only sample, stays r20. n=6 too small to move a rank. Regional `region-hovedstaden` / `region-sjaelland` `.rss` returned 404. Blocked by the cloud egress proxy (403 CONNECT): `jobsearch.api.jobtechdev.se` (SE Skåne leg skipped, SE n=0), Jobnet (leg d), `sundhedsjobs.dk`, `antcv.pages.dev`, `seekerscore.com`. Owner: add these hosts to the routine environment's network allowlist; until then the cloud leg cannot reach hospital bodies or Skåne.
 

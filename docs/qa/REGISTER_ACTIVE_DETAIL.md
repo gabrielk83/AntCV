@@ -2861,7 +2861,9 @@ _2026-11-23 weekly demand-seed (cloud): split NOT re-measured; the Cloudflare-De
 
 ## Row 118 — JT-ARMED-ARTIFACT-NO-DRAIN-001
 
-_verified: 2026-11-23_
+_verified: 2026-11-24_
+
+**RE-VERIFIED 2026-11-24 (job-tracker nightly).** Rev 394: ARMED-with-app still `napatech` (app 2781, CLOSED row, flag stale); `health`: 61 pointers vs 95 cloud apps, 1 dead, `veo_technologies` → app 3500. Owner clears both flags.
 
 **RE-VERIFIED 2026-11-23 (job-tracker nightly).** Rev 392: ARMED-with-app still `napatech` (app 2781, CLOSED row, flag stale); `health`: 61 pointers vs 95 cloud apps, 1 dead, `veo_technologies` → app 3500. Owner clears both flags.
 
@@ -3008,7 +3010,9 @@ is adoption, not pricing. Proposed: replace the three Mistral ids with `mistral-
 
 ## Row 127 — JT-OWNER-PACKAGED-DEFAULT-ON-001
 
-_verified: 2026-11-23_
+_verified: 2026-11-24_
+
+**RE-VERIFIED 2026-11-24 (job-tracker nightly).** Same 3 OWNER-PACKAGED rows elected (186 WD, 207 RED Global, 227 LEGO Senior TPM); not generated. Twelfth run with no generation.
 
 **RE-VERIFIED 2026-11-23 (job-tracker nightly).** Same 3 OWNER-PACKAGED rows elected (186 WD, 207 RED Global, 227 LEGO Senior TPM); not generated. Eleventh run with no generation.
 
@@ -3257,18 +3261,6 @@ _OPEN (found by desktop nightly 2026-11-16, Gabo-PC, Opus 5.5; no code change; o
 
 **To close.** Owner decides. If yes: bump VERSION in both `workers/{proxy,demo-proxy}/src/index.js` (so `/health` shows it), `gh workflow run deploy.yml -f target=proxy -f mode=deploy -f confirm=proxy`, watch, `/health`, then demo-proxy; one real JD analysis on antcv.pages.dev after. Closes the proxy legs of row 89 too.
 
-## Row 150 — SYNC-ENVELOPE-STALE-001
-
-_verified: 2026-11-23_
-
-_FIXED 2026-11-23 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `scripts/job-tracker/job-tracker-sync.py` + `test_sync_merge.py`; no `pwa/` asset, no version consumed)._
-
-**Found.** `pull --render` printed `conflicts (local kept): envelope(local-wins)` on every run. Cloud vs local vs snapshot on rev 392: snapshot = cloud, local differs in two cells, both shorter prefixes of the cloud text (Salary and Work tasks notes, the 2026-11-01 additions missing). The island appends reject reasons and rulings to the notes cell; nothing edits the envelope locally (`import-xlsx` reads only Weekly Tracker, the build re-emits what it read). `_merge` started from `dict(local)` and never took the cloud envelope, so the Excel Dream Envelope tab was stale since 2026-11-01 and a `push` would have reverted the owner’s ruling. Same cause: cloud-only top-level keys never reached the local doc; `postingcheck` (209 records) was missing, so a `push` would have wiped the strikes. Generation and discovery read the relay doc, so neither was affected.
-
-**Fix.** `_merge_envelope`: per-dimension 3-way; local unchanged since base or a pure prefix of the cloud cell takes the cloud; a real local edit stays; a real both-changed dimension keeps local and is named in the conflict line. `_merge` keeps cloud-only top-level keys. `postingcheck` added to `UK_DICT_FIELDS`.
-
-**Tests.** 3 new tests drive the real `cmd_pull` / `_merge`; 3 red pre-fix; sabotage lines 266, 321, 333, 334 (two ways), 335, 358, 361 each red; restored 10/10 PASS. **Live:** `pull --render` twice on rev 392 → no envelope conflict, local envelope = cloud, `postingcheck` 209 = 209, both 2026-11-01 notes in the Excel tab. Close after the next job-tracker or discovery run prints no `envelope` conflict.
-
 ## Row 151 — TAB-CLAIM-WIPE-001
 
 _verified: 2026-11-23_
@@ -3324,3 +3316,15 @@ _OPEN (found by the desktop nightly, Gabo-PC, Opus 5.5, 2026-11-24; owner call; 
 **Why not fixed here.** Replacing a list is also how a curated list is put back; the diff row reads as a replace. Owner decides: append (as in the restore) or keep.
 
 **Also seen, same area, not fixed.** (1) The editor reads `semanticConstraintsV2` only when it is non-empty, so a legacy account with flat `bannedContextual` rules and no V2 list loses them at the next edit after importing V2 rules. (2) `readSemRules` (islands) drops a rule with no id that shares trigger + avoid with another but has a different role scope. (3) A kernel fragment's top-level `semanticConstraintsV2` lands at `personalInfo.semanticConstraintsV2`, which the editor does not read. Code reading only.
+
+## Row 155 — SYNC-SUPPORT-STUB-001
+
+_verified: 2026-11-24_
+
+_FIXED 2026-11-24 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `scripts/job-tracker/job-tracker-sync.py` + `test_sync_merge.py`; no `pwa/` asset, no version consumed)._
+
+**Found.** `pull --render` printed `conflicts (local kept): support[academic_work_client](local-wins)`, a first. The 11-23 render had left the derived stub (ROLE / FIT / FLAG) in the local doc; on 11-23 the cloud gained a real block for that row (WHY BEST FIT, SALARY EXPECTATION); both differ from the base, so the stub won the merge. `_reassert_support` put the cloud block back because the run rendered; a plain `pull` or a 409 `push` would have kept the stub and overwritten the cloud. The "149 local-only entries" every run reports (runlog: "do not push") are the same thing: on rev 394, 149 of 149 restate their own row line by line, 0 hold anything else. Measured: local doc 1,898,004 bytes vs cloud 1,805,180, so one `push` would have added 92,824 bytes toward the 2,000,000-byte D1 limit (JT-DOC-SIZE-001).
+
+**Fix.** `_is_row_stub(text, row)`: header equals the one the build derives, and every other line is found in the row’s fit or flag cell (a flag the sweep later prepended "posting closed" to still matches). `_merge_uk_dict` skips such a local `support` block (checked against the local and the cloud row): never local-only intel, never beats a cloud block. `_reassert_support` drops it after the build instead of letting it fill an empty key. A block with one extra line (NEED, WHY BEST FIT, an edited FIT) is real and keeps the old rules. The local-only count now reads the merged doc.
+
+**Tests.** 3 new tests drive the real `cmd_pull` / `_merge` / render; 3 red pre-fix; 9 sabotages by line (278, 280 x3, 294 x2, 323 x3) each red; restored 13/13 PASS; 37/37 job-tracker python files green. **Live (rev 394, three `pull --render`).** No conflict, no local-only count, local `support` 273 → 124 = cloud, local doc = cloud doc key for key, `status`: "local edited since last sync: False". Excel rebuilt (273 rows, 218 inbox leads). No `push` was run. Close after the next job-tracker or discovery run prints no `support` conflict and no "kept N local-only" line.

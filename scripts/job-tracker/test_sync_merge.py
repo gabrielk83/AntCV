@@ -215,6 +215,83 @@ def test_cloud_only_top_level_keys_survive():
     print("PASS: cloud-only top-level keys (postingcheck strikes) survive a merge.")
 
 
+# SYNC-SUPPORT-STUB-001 --------------------------------------------------------
+def _frow(uk, fit="Fit text.", flag="Flag line"):
+    return [1, "Co", "Role", "", "", "Proposed", fit, "", "", "", flag, uk, ""]
+
+
+def _stub(row):
+    # byte for byte what build_workbook.py _support_for() derives from a row
+    parts = ["ROLE: %s \u2014 %s (%s)" % (row[1], row[2], row[4])]
+    if row[6]: parts.append("FIT: " + row[6])
+    if row[10]: parts.append("FLAG/RISK: " + row[10])
+    return "\n".join(parts)
+
+
+def test_row_stub_never_counts_as_local_intel():
+    plain, grown = _frow("a"), _frow("b", flag="closed 2026-11-22\nOld flag")
+    # b's stub was derived before the sweep prepended the closure line
+    old_b = _stub(_frow("b", flag="Old flag"))
+    real = _stub(_frow("c")) + "\nWHY BEST FIT: typed by hand"
+    other = _stub(_frow("d")).replace("Fit text.", "A different fit, edited locally.")
+    rows = [plain, grown, _frow("c"), _frow("d")]
+    local = {"rows": rows, "support": {"a": _stub(plain), "b": old_b, "c": real, "d": other}}
+    cloud = {"rows": rows, "support": {}}
+    got = _pull(cloud, local, cloud)["support"]
+    assert got == {"c": real, "d": other}, got
+    print("PASS: a block that only restates its row is not local intel; real blocks stay.")
+
+
+def test_row_stub_never_beats_a_cloud_block():
+    row = _frow("a")
+    rich = _stub(row) + "\nWHY BEST FIT: research\nSALARY EXPECTATION: 60k"
+    d = lambda sup, r=row: {"rows": [r], "support": sup}
+    # the cloud gained a real block for a row the last render had stubbed
+    merged, cf = S._merge(d({}), d({"a": _stub(row)}), d({"a": rich}))
+    assert merged["support"] == {"a": rich} and not cf, (merged["support"], cf)
+    # the stub replaced a block the snapshot already knew
+    merged, cf = S._merge(d({"a": rich}), d({"a": _stub(row)}), d({"a": rich}))
+    assert merged["support"] == {"a": rich} and not cf, (merged["support"], cf)
+    # the row's fit cell was rewritten in the cloud after the stub was made
+    merged, cf = S._merge(d({}), d({"a": _stub(row)}), d({"a": rich}, _frow("a", fit="New fit.")))
+    assert merged["support"] == {"a": rich} and not cf, (merged["support"], cf)
+    # an import-xlsx edit changed the local row; the stub still matches the cloud row
+    merged, cf = S._merge(d({}), d({"a": _stub(row)}, _frow("a", fit="Xlsx fit.")), d({"a": rich}))
+    assert merged["support"] == {"a": rich} and not cf, (merged["support"], cf)
+    # a real local edit still wins and is reported
+    mine = _stub(row) + "\nNEED: my note"
+    merged, cf = S._merge(d({}), d({"a": mine}), d({"a": rich}))
+    assert merged["support"] == {"a": mine} and cf == ["support[a](local-wins)"], (merged["support"], cf)
+    print("PASS: a row stub never beats a cloud block; a real local edit still does.")
+
+
+def test_render_leaves_no_row_stub_behind():
+    build = os.path.join(_D, "fake_build2.py")
+    with open(build, "w", encoding="utf-8") as f:
+        f.write("import json, os\n"
+                "p = os.environ['JOB_DOC']\n"
+                "d = json.load(open(p, encoding='utf-8'))\n"
+                "d['support'] = {r[11]: 'ROLE: %s \u2014 %s (%s)\\nFIT: %s\\nFLAG/RISK: %s'"
+                " % (r[1], r[2], r[4], r[6], r[10]) for r in d['rows']}\n"
+                "d['support']['t5'] += '\\nNEED: hard-coded Top-5 detail'\n"
+                "json.dump(d, open(p, 'w', encoding='utf-8'))\n")
+    rows = [_frow("a"), _frow("b"), _frow("c"), _frow("t5")]
+    local = {"rows": rows, "support": {"b": "local intel b"}}
+    cloud = {"rows": rows, "support": {"a": "cloud research a"}}
+    _write(S.DOC, local); _write(S.SNAP, {"rev": 7, "doc": cloud})
+    S._req = lambda method="GET", body=None: (200, {"rev": 7, "doc": cloud})
+    old = S.BUILD, S.XLSX
+    S.BUILD, S.XLSX = build, None
+    try:
+        S.cmd_pull(render=True)
+    finally:
+        S.BUILD, S.XLSX = old
+    got = json.load(open(S.DOC, encoding="utf-8"))["support"]
+    assert got == {"a": "cloud research a", "b": "local intel b",
+                   "t5": _stub(_frow("t5")) + "\nNEED: hard-coded Top-5 detail"}, got
+    print("PASS: a render leaves no row stub in the local doc; a non-derived build block stays.")
+
+
 if __name__ == "__main__":
     test_pull_keeps_local_only_entries()
     test_pull_conflict_prefers_local_and_reports()
@@ -226,5 +303,8 @@ if __name__ == "__main__":
     test_pull_takes_the_cloud_envelope_edit()
     test_envelope_local_edits_survive()
     test_cloud_only_top_level_keys_survive()
-    print("\nOK - 10/10")
+    test_row_stub_never_counts_as_local_intel()
+    test_row_stub_never_beats_a_cloud_block()
+    test_render_leaves_no_row_stub_behind()
+    print("\nOK - 13/13")
     sys.exit(0)

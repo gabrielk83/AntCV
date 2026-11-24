@@ -4,6 +4,20 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 150 — SYNC-ENVELOPE-STALE-001 — CLOSED 2026-11-24 (job-tracker nightly, evidence: next run printed no `envelope` conflict)
+
+_verified: 2026-11-24_
+
+**CLOSED 2026-11-24 (job-tracker nightly).** First `pull --render` of the run (rev 394, before any code change) printed no `envelope` conflict; local envelope = cloud; `postingcheck` merged. The one conflict it did print is a `support` stub: row 155.
+
+_FIXED 2026-11-23 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `scripts/job-tracker/job-tracker-sync.py` + `test_sync_merge.py`; no `pwa/` asset, no version consumed)._
+
+**Found.** `pull --render` printed `conflicts (local kept): envelope(local-wins)` on every run. Cloud vs local vs snapshot on rev 392: snapshot = cloud, local differs in two cells, both shorter prefixes of the cloud text (Salary and Work tasks notes, the 2026-11-01 additions missing). The island appends reject reasons and rulings to the notes cell; nothing edits the envelope locally (`import-xlsx` reads only Weekly Tracker, the build re-emits what it read). `_merge` started from `dict(local)` and never took the cloud envelope, so the Excel Dream Envelope tab was stale since 2026-11-01 and a `push` would have reverted the owner’s ruling. Same cause: cloud-only top-level keys never reached the local doc; `postingcheck` (209 records) was missing, so a `push` would have wiped the strikes. Generation and discovery read the relay doc, so neither was affected.
+
+**Fix.** `_merge_envelope`: per-dimension 3-way; local unchanged since base or a pure prefix of the cloud cell takes the cloud; a real local edit stays; a real both-changed dimension keeps local and is named in the conflict line. `_merge` keeps cloud-only top-level keys. `postingcheck` added to `UK_DICT_FIELDS`.
+
+**Tests.** 3 new tests drive the real `cmd_pull` / `_merge`; 3 red pre-fix; sabotage lines 266, 321, 333, 334 (two ways), 335, 358, 361 each red; restored 10/10 PASS. **Live:** `pull --render` twice on rev 392 → no envelope conflict, local envelope = cloud, `postingcheck` 209 = 209, both 2026-11-01 notes in the Excel tab. Close after the next job-tracker or discovery run prints no `envelope` conflict.
+
 ## Row 149 — POSTING-5XX-SOFT404-001 — CLOSED 2026-11-23 (position-discovery, evidence: live sweep archived VML MAP on strike 2)
 
 _verified: 2026-11-23_

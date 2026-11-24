@@ -28,7 +28,7 @@
 #   JOB_DOC       path to job_tracker_doc.json (canonical)
 #   JOB_BUILD     path to the local doc-driven Excel build script (for --render)
 #   JOB_XLSX      path to the .xlsx (for import-xlsx)
-import os, sys, json, hashlib, subprocess, urllib.request, urllib.error
+import os, re, sys, json, hashlib, subprocess, urllib.request, urllib.error
 
 if os.path.dirname(os.path.abspath(__file__)) not in sys.path:
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -224,7 +224,7 @@ def cmd_pull(render=False, force=False):
     for line in JA.size_lines(doc)[1:]: print(line)
     if not forced:
         kept = sum(1 for f in UK_DICT_FIELDS
-                   for k in ((local or {}).get(f) or {})
+                   for k in (merged.get(f) or {})
                    if k not in ((doc or {}).get(f) or {}))
         extra_rows = len(merged.get("rows") or []) - len(doc.get("rows") or [])
         if kept or extra_rows > 0:
@@ -246,7 +246,7 @@ def cmd_pull(render=False, force=False):
         # the cloud's research blocks with stubs (2026-11-15: 6 rows, 2.0-2.9 KB
         # cloud vs 75-577 chars local). Re-assert the real blocks after the build.
         n = _reassert_support(DOC, merged, doc)
-        if n: print(f"render: restored {n} support block(s) the build re-derived from row fields")
+        if n: print(f"render: restored or dropped {n} support block(s) the build re-derived from row fields")
         # PROPOSED-INBOX-TAB-001: append the focused discovery-inbox view. Runs
         # after build (which rewrites the whole file), guarded so it never breaks
         # a render. Needs JOB_XLSX to locate the built workbook.
@@ -277,20 +277,36 @@ UK_DICT_FIELDS = ("urls", "jd", "support", "signals", "notes", "webintel", "gen"
                   # SYNC-ENVELOPE-STALE-001: check-postings.py writes the strikes here
                   "postingcheck")
 
+_STUB_LABEL = re.compile(r"(ROLE|FIT|FLAG/RISK):\s*")
+
+def _is_row_stub(text, row):
+    """SYNC-SUPPORT-STUB-001. True when a support block says nothing its own row does
+    not: the ROLE / FIT / FLAG lines build_workbook.py derives, every line found in
+    the row's fit or flag cell. A flag the row has since grown around (the sweep
+    prepends "posting closed") still matches. Any other line makes it real intel."""
+    if not isinstance(text, str) or not isinstance(row, (list, tuple)) or len(row) < 11: return False
+    norm = lambda s: " ".join(str(s or "").split())
+    lines = text.strip().split("\n")
+    if norm(lines[0]) != norm("ROLE: %s — %s (%s)" % (row[1], row[2], row[4])): return False
+    cells = (norm(row[6]), norm(row[10]))
+    return all(any(norm(_STUB_LABEL.sub("", ln, count=1)) in c for c in cells) for ln in lines[1:])
+
 def _reassert_support(doc_path, merged, cloud):
     """RENDER-SUPPORT-CLOBBER-001. After the build rewrote doc_path, put back the
     real support blocks: the cloud's value wins, then the pre-render merged value
-    (local-only intel), and the build's derived stub only fills a key neither
-    side has. Returns the number of keys whose emitted value was replaced."""
+    (local-only intel). A row-derived stub for a key neither side has is dropped
+    (SYNC-SUPPORT-STUB-001): kept, it reads as local-only intel from the next pull
+    on. Returns the number of keys whose emitted value was replaced or dropped."""
     emitted = _load(doc_path)
     if not isinstance(emitted, dict): return 0
     em = emitted.get("support") if isinstance(emitted.get("support"), dict) else {}
     ms = (merged or {}).get("support") if isinstance((merged or {}).get("support"), dict) else {}
     cs = (cloud or {}).get("support") if isinstance((cloud or {}).get("support"), dict) else {}
-    out = dict(em)
+    rows = _rows_by_id(emitted)
+    out = {k: v for k, v in em.items() if not _is_row_stub(v, rows.get(k))}
     out.update(ms)
     out.update(cs)
-    n = sum(1 for k, v in out.items() if em.get(k) != v)
+    n = sum(1 for k in set(out) | set(em) if em.get(k) != out.get(k))
     if n:
         emitted["support"] = out
         _save(doc_path, emitted)
@@ -310,7 +326,14 @@ def _merge_uk_dict(base, local, remote, field):
         # (local when local has the field) instead of crashing pull / push.
         return (l if field in (local or {}) else r), []
     out, conflicts = dict(r), []
+    # SYNC-SUPPORT-STUB-001: a local support block that only restates its row is the
+    # render's stub, not an edit. It never counts as local-only intel and never beats
+    # a cloud block.
+    lrows = _rows_by_id(local or {}) if field == "support" else {}
+    rrows = _rows_by_id(remote or {}) if field == "support" else {}
     for k, lv in l.items():
+        if field == "support" and (_is_row_stub(lv, lrows.get(k)) or _is_row_stub(lv, rrows.get(k))):
+            continue
         if k not in r:
             out[k] = lv                                     # local-only -> keep
             continue

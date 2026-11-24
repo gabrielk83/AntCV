@@ -593,6 +593,18 @@ ${text}`;
   // append-merge is what produced ASPICE×2 / ISO 26262×2 / MIL-STD-810G×3 and the
   // two near-identical group taxonomies in the live editor.
   const _ndk = (s) => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  // IMPORT-SEMRULE-KEY-001 (2026-11-24): identity of a style constraint. The stored list
+  // lives at stylePrefs.semanticConstraintsV2 (avoid[] + scope); bannedContextual is its
+  // flat copy ({avoid, use_instead, note, when}). The old key sat on a path nothing writes,
+  // and read neither `when` nor non-Latin text, so an import replaced the V2 list and
+  // folded rules that differ only by role into one.
+  const _semTxt = (v) => (Array.isArray(v) ? v : [v]).map((x) => String(x == null ? '' : x).toLowerCase().replace(/\s+/g, ' ').trim()).filter(Boolean).join(',');
+  const _semRuleKey = (c) => {
+    if (!c || typeof c !== 'object') return 's:' + _semTxt(c);
+    if (c.id) return 'id:' + _semTxt(c.id);
+    const w = c.scope || c.when || c.context || {};
+    return [c.trigger, c.avoid != null ? c.avoid : c.pattern, w.role_company || w.companyContains, w.role_title || w.titleContains].map(_semTxt).join('|');
+  };
   const DEDUP_KEYS = {
     // DEDUP-KEY-COLLAPSE-002 (owner 2026-06-18, follow-up to the tools bug):
     // robust against a legacy string entry / empty fields. A bare string item or
@@ -622,8 +634,10 @@ ${text}`;
     // (a small/empty imported set wiped a large stored set, which then synced the
     // shrunk set to cloud — "the limited were imported from cloud"). Key them so an
     // import UNIONS (merges) like every other list, identity = the avoid/prefer pair.
-    'personalInfo.semanticConstraintsV2':        c => [c && c.trigger, c && c.avoid, c && c.prefer, c && c.pattern].map((x) => _ndk(x)).join('|'),
-    'personalInfo.stylePrefs.bannedContextual':  c => [c && c.trigger, c && c.avoid, c && c.prefer, c && c.pattern].map((x) => _ndk(x)).join('|'),
+    // IMPORT-SEMRULE-KEY-001: identity = _semRuleKey (id, else trigger + avoid + role scope).
+    'personalInfo.semanticConstraintsV2':             _semRuleKey,
+    'personalInfo.stylePrefs.semanticConstraintsV2':  _semRuleKey,
+    'personalInfo.stylePrefs.bannedContextual':       _semRuleKey,
   };
   // Grouped sidebar sections whose freshly-ingested items must default VISIBLE —
   // the dedupe below removes the legacy flat duplicates, so a stale hidden flag on

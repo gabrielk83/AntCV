@@ -22,7 +22,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.568-admin-decrypt';
+  var VERSION = '1.51.6625-semrule-union';
   if (window.__antcvDataImport331 === VERSION) return;
   window.__antcvDataImport331 = VERSION;
 
@@ -139,6 +139,7 @@
   // blind overwrite. All banned data lives under personalInfo:
   //   stylePrefs.banned_words / banned_phrases  (comma-strings)
   //   stylePrefs.bannedContextual               (array of rules)
+  //   stylePrefs.semanticConstraintsV2          (the list bannedContextual is built from)
   //   writingPrefs.extraBannedWords/Phrases     ({ lang: [..] } buckets)
   function unionCsv(a, b) {
     var seen = {}, out = [];
@@ -175,6 +176,16 @@
     });
     return out;
   }
+  // IMPORT-SEMRULE-KEY-001 (2026-11-24): same identity as antcv-data-importer.js _semRuleKey.
+  function semTxt(v) {
+    return (Array.isArray(v) ? v : [v]).map(function (x) { return String(x == null ? '' : x).toLowerCase().replace(/\s+/g, ' ').trim(); }).filter(Boolean).join(',');
+  }
+  function semRuleKey(c) {
+    if (!c || typeof c !== 'object') return null;
+    if (c.id) return 'id:' + semTxt(c.id);
+    var w = c.scope || c.when || c.context || {};
+    return [c.trigger, c.avoid != null ? c.avoid : c.pattern, w.role_company || w.companyContains, w.role_title || w.titleContains].map(semTxt).join('|');
+  }
   // Given an incoming personalInfo (object), union the CURRENT account's banned
   // lists into it so import appends rather than discards them.
   function mergeBannedIntoPI(incomingPI) {
@@ -187,6 +198,11 @@
     is.bannedContextual = unionArr(cs.bannedContextual, is.bannedContextual, function (r) {
       return r && typeof r === 'object' ? ((r.avoid || r.pattern || '') + '|' + JSON.stringify(r.when || r.context || '')) : null;
     });
+    // The editor reads V2 first and rebuilds bannedContextual from it, so a V2 rule lost
+    // here is lost for generation at the next edit.
+    if (Array.isArray(cs.semanticConstraintsV2) || Array.isArray(is.semanticConstraintsV2)) {
+      is.semanticConstraintsV2 = unionArr(cs.semanticConstraintsV2, is.semanticConstraintsV2, semRuleKey);
+    }
     var cw = cur.writingPrefs || {}, iw = pi.writingPrefs = pi.writingPrefs || {};
     iw.extraBannedWords = unionBucket(cw.extraBannedWords, iw.extraBannedWords);
     iw.extraBannedPhrases = unionBucket(cw.extraBannedPhrases, iw.extraBannedPhrases);

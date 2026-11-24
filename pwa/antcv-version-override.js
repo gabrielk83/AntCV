@@ -58,11 +58,12 @@
   if (window.__antcvVersionOverrideInstalled) return;
   window.__antcvVersionOverrideInstalled = '1.40.288';
 
-  const TARGET_VERSION = '1.51.6605-jd-remove';
+  const TARGET_VERSION = '1.51.6625-semrule-union';
 
   // The set of stale version tokens we'll rewrite in DOM text and
   // console output. Add older versions here as needed.
   const STALE_VERSIONS = [
+    '1.51.6605-jd-remove',
     '1.51.6585-askai-insight',
     '1.51.6571-role-line-one',
     '1.51.6565-tab-rationale',

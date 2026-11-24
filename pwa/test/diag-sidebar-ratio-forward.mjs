@@ -1,7 +1,7 @@
 /* DIAGNOSTIC — PB-WORKER-SIDEBAR-RATIO-001 follow-up. Sets a user-adjusted
  * cvSidebarRatio in localStorage, calls window.exportDocxViaWorker, intercepts
  * the /generate POST and asserts the payload forwards sidebar_ratio (clamped to
- * the worker's [0.2,0.55] band). Also confirms an UNSET ratio omits the field. */
+ * the worker's [0.2,0.55] band). Also confirms an UNSET ratio sends the 0.32 default. */
 import { chromium } from 'playwright';
 import http from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
@@ -42,7 +42,7 @@ async function runOnce(ratioRaw) {
 
 const setVal = await runOnce(JSON.stringify(0.42));   // in-band adjusted ratio
 const clamp  = await runOnce(JSON.stringify(0.62));    // above worker band → clamp to 0.55
-const unset  = await runOnce(null);                    // not set → field omitted
+const unset  = await runOnce(null);                    // not set → 0.32 (SIDEBAR-DEFAULT-32-001, 1.51.109)
 await new Promise(r=>server.close(r));
 
 console.log('set 0.42  -> sidebar_ratio =', setVal && setVal.sidebar_ratio);
@@ -50,9 +50,9 @@ console.log('set 0.62  -> sidebar_ratio =', clamp && clamp.sidebar_ratio);
 console.log('unset     -> sidebar_ratio =', unset && unset.sidebar_ratio);
 const A = setVal && setVal.sidebar_ratio === 0.42;
 const B = clamp && clamp.sidebar_ratio === 0.55;
-const C = unset && !('sidebar_ratio' in unset);
+const C = unset && unset.sidebar_ratio === 0.32;
 console.log('CHECK A (adjusted 0.42 forwarded):', A?'PASS':'FAIL');
 console.log('CHECK B (0.62 clamped to 0.55):', B?'PASS':'FAIL');
-console.log('CHECK C (unset omits field → worker default 0.33):', C?'PASS':'FAIL');
+console.log('CHECK C (unset sends the 32% default, SIDEBAR-DEFAULT-32-001):', C?'PASS':'FAIL');
 console.log(A&&B&&C ? 'SIDEBAR-RATIO-FORWARD OK' : 'SIDEBAR-RATIO-FORWARD FAIL');
 process.exit(A&&B&&C ? 0 : 1);

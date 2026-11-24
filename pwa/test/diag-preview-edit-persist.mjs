@@ -35,13 +35,14 @@ const sections = {cv:[
 // [label, locate the span by current text, replacement, verify fn(storedCv)]
 const EDITS = [
   ['text content (profile)', 'Original profile text.', 'EDITED profile persists.',
-    (cv)=>cv.find(s=>s.id==='profile').content==='EDITED profile persists.'],
+    // profile + tools migrate to rich_block on load; read either shape
+    (cv)=>{const s=cv.find(s=>s.id==='profile');return (s.type==='rich_block'?s.items[0].t:s.content)==='EDITED profile persists.';}],
   ['bullets item (outcomes)', 'cycle time markedly.', 'EDITED outcome persists.',
     (cv)=>cv.find(s=>s.id==='outcomes').items[0].t==='EDITED outcome persists.'],
   ['labeled_list GROUP name', 'GroupOriginal', 'GroupEdited',
-    (cv)=>cv.find(s=>s.id==='tools').items[0].group==='GroupEdited'],
+    (cv)=>['group','t'].some(k=>cv.find(s=>s.id==='tools').items[0][k]==='GroupEdited')],
   ['labeled_list item value', 'Jira, Confluence', 'Jira, EDITED',
-    (cv)=>cv.find(s=>s.id==='tools').items[1].v==='Jira, EDITED'],
+    (cv)=>['v','t'].some(k=>cv.find(s=>s.id==='tools').items[1][k]==='Jira, EDITED')],
   ['plain list item (certs)', 'CertOriginal (2020)', 'CertEdited (2021)',
     (cv)=>{const it=cv.find(s=>s.id==='certs').items[0];return (typeof it==='string'?it:it&&it.v||it.text)==='CertEdited (2021)'||JSON.stringify(it).includes('CertEdited');}],
   ['experience role title', 'RoleAlpha', 'RoleEdited',
@@ -67,6 +68,10 @@ await page.addInitScript(({secs})=>{
   localStorage.setItem('step',JSON.stringify('editor'));localStorage.setItem('doc',JSON.stringify('cv'));
   localStorage.setItem('sections',JSON.stringify(secs));
   localStorage.setItem('personalInfo',JSON.stringify({name:'Anita'}));
+  // show every type: outcomes as a section (default 'results' folds it under the roles), and
+  // no academy projection (it hides single-group headings in the margin preview)
+  localStorage.setItem('outcomesMode',JSON.stringify('section'));
+  localStorage.setItem('antcv:disable-academy-format','1');
 },{secs:sections});
 const errs=[];
 page.on('pageerror',e=>errs.push(String(e&&e.message)));

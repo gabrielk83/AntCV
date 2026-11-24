@@ -62,7 +62,7 @@ const c = await page.evaluate(async ()=>{
   return captured;
 });
 
-// D) the kernel-import button merges next to existing import anchors (Settings + wizard)
+// D) no standalone kernel button (removed 1.50.540, owner 2026-06-17); the importer opens the picker
 const d = await page.evaluate(async ()=>{
   // simulate a Settings import (data-importer replacement) + a wizard CV file input
   const host = document.createElement('div');
@@ -83,7 +83,7 @@ const d = await page.evaluate(async ()=>{
   // clicking opens the hidden picker input
   var clicked=false; var fi=document.getElementById('antcv-kimport-input'); if(fi){ fi.click = ()=>{clicked=true}; }
   var sBtn = host.querySelector('[data-antcv-kimport-btn]') || (hasBtn(rep.nextElementSibling) ? rep.nextElementSibling : null);
-  if (sBtn) sBtn.click();
+  if (sBtn) sBtn.click(); else window.AntcvKernelImport.openPicker();
   return { total: btns.length, nearSettings:!!nearSettings, nearWizard:!!nearWizard, opensPicker:clicked };
 });
 
@@ -111,7 +111,7 @@ const f = await page.evaluate(async (cv)=>{
   var inc = ov.querySelector('input[value="incoming"]'); if (inc) inc.checked = true;
   // tick a second language (Danish)
   var da = ov.querySelector('input[data-antcv-lang="da"]'); if (da) da.checked = true;
-  ov.querySelector('#antcv-kimport-apply').click();
+  ov.querySelector('#antcv-kimport-save').click();   // single Apply since 1.50.532
   const staged = JSON.parse(localStorage.getItem('antcv:ingestedKernel')||'{}');
   const pm = (staged.experience||[]).find(r=>r.id==='pm');
   return { dateApplied: pm && pm.start, langs: staged.language && staged.language.activeDefaults };
@@ -152,8 +152,8 @@ const checks = [
   ['re-import against staged kernel = merge with a conflict', b.mode==='merge' && b.conflicts>=1 && b.hasConflictText],
   ['existing metric preserved (keep-both, not overwritten)', b.metricPreserved],
   ['saveToAccount POSTs the kernel to /api/profile/kernel-v2 (credentials included)', !!c && /\/api\/profile\/kernel-v2$/.test(c.url) && c.method==='POST' && c.cred==='include' && /"experience"/.test(c.body||'')],
-  ['button merges next to BOTH the Settings + wizard import anchors (no duplicates)', d.nearSettings && d.nearWizard && d.total===2],
-  ['the merged button opens the import picker', d.opensPicker],
+  ['no standalone kernel button is injected (1.50.540)', d.total===0],
+  ['openPicker opens the import picker', d.opensPicker],
   ['applyToCV writes the imported roles into personalInfo.workHistory', e.ok && e.whRole==='Imported PM' && e.whCurrent===true],
   ['the prior workHistory is backed up (reversible)', e.backupRole==='OLD ROLE'],
   ['GABRIEL_BG (generation source) now reflects the imported current role', e.bgHasImported],

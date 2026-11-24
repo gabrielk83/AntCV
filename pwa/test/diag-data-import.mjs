@@ -32,7 +32,7 @@ await page.addInitScript(() => {
   // realistic app keys (all JSON-encoded, as the app's localStorage wrapper stores them)
   localStorage.setItem('doc', JSON.stringify('cv'));
   localStorage.setItem('sections', JSON.stringify({ cv: [{ id: 'profile', type: 'text', content: 'Hi' }], cl: [] }));
-  localStorage.setItem('personalInfo', JSON.stringify({ name: 'G K', headline: 'Engineer' }));
+  localStorage.setItem('personalInfo', JSON.stringify({ name: 'G K', headline: 'Engineer', stylePrefs: { banned_words: 'alpha', semanticConstraintsV2: [{ id: 'bk', trigger: 't', avoid: ['led'], prefer: ['ran'] }] } }));
   localStorage.setItem('meta', JSON.stringify({ company: 'Unsolicited', subtitle: 'A • B' }));
   localStorage.setItem('antcv:itemPages', JSON.stringify({ foundation: { '1': 2 } }));
   localStorage.setItem('cvSidebarRatio', JSON.stringify(0.42));
@@ -56,10 +56,20 @@ const r = await page.evaluate(async () => {
   const plainEnv = JSON.parse(plainText);
   const secretInBackup = !!(plainEnv.dataRaw && plainEnv.dataRaw['antcv:auth:token']);
   // wipe + restore
+  // SETTINGS-EXPORT-001 (1.50.566): a restore APPENDS banned lists, so personalInfo is not
+  // byte-identical (empty banned buckets are added). Compare it without those containers,
+  // and check the lists themselves below.
+  const core = (raw) => { const o = JSON.parse(raw || '{}'); const sp = o.stylePrefs || {}; delete o.stylePrefs; delete o.writingPrefs; return JSON.stringify([o, sp.banned_words || '', sp.semanticConstraintsV2 || []]); };
+  const same = (after) => NONSECRET.every(k => k === 'personalInfo' ? core(after[k]) === core(before[k]) : after[k] === before[k]);
   localStorage.clear();
   const ipPlain = await window.AntcvDataImport(plainText, { confirm: false, reload: false });
   const afterPlain = snapshot();
-  const plainMatch = NONSECRET.every(k => afterPlain[k] === before[k]);
+  const plainMatch = same(afterPlain);
+  // IMPORT-SEMRULE-KEY-001: restoring over an account that has its own rules keeps both.
+  localStorage.setItem('personalInfo', JSON.stringify({ name: 'Now', stylePrefs: { banned_words: 'beta', semanticConstraintsV2: [{ id: 'cur', trigger: 'u', avoid: ['headed'], prefer: [] }] } }));
+  await window.AntcvDataImport(plainText, { confirm: false, reload: false });
+  const un = JSON.parse(localStorage.getItem('personalInfo')).stylePrefs;
+  const union = { words: un.banned_words, ids: (un.semanticConstraintsV2 || []).map(r => r.id).sort().join() };
 
   // ---- (2) ENCRYPTED round-trip ----
   localStorage.clear();
@@ -72,13 +82,13 @@ const r = await page.evaluate(async () => {
   localStorage.clear();
   const ipEnc = await window.AntcvDataImport(encText, { passphrase: 'hunter2', confirm: false, reload: false });
   const afterEnc = snapshot();
-  const encMatch = NONSECRET.every(k => afterEnc[k] === before[k]);
+  const encMatch = same(afterEnc);
   // wrong passphrase must fail cleanly
   localStorage.clear();
   const ipBad = await window.AntcvDataImport(encText, { passphrase: 'wrong', confirm: false, reload: false });
 
   return {
-    secretInBackup, plainMatch, plainRestored: ipPlain.restored, plainOk: ipPlain.ok,
+    union, secretInBackup, plainMatch, plainRestored: ipPlain.restored, plainOk: ipPlain.ok,
     isEncrypted, encMatch, encOk: ipEnc.ok, badOk: ipBad.ok, badErr: ipBad.error,
     sampleDoc: afterPlain['doc'], sampleSections: afterPlain['sections'],
   };
@@ -98,6 +108,8 @@ console.log(`CHECK A (secrets excluded from plain backup): ${A ? 'PASS' : 'FAIL'
 console.log(`CHECK B (plain round-trip lossless incl. doc="cv"): ${B ? 'PASS' : 'FAIL'}`);
 console.log(`CHECK C (encrypted round-trip lossless): ${C ? 'PASS' : 'FAIL'}`);
 console.log(`CHECK D (wrong passphrase rejected): ${D ? 'PASS' : 'FAIL'}`);
-const ok = A && B && C && D && errs.length === 0;
+const E = r.union.ids === 'bk,cur' && /alpha/.test(r.union.words) && /beta/.test(r.union.words);
+console.log(`CHECK E (restore keeps the current account's banned words + style constraints): ${E ? 'PASS' : 'FAIL ' + JSON.stringify(r.union)}`);
+const ok = A && B && C && D && E && errs.length === 0;
 console.log(ok ? 'DATA-IMPORT OK' : 'DATA-IMPORT FAIL');
 process.exit(ok ? 0 : 1);

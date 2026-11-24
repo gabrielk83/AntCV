@@ -3,10 +3,11 @@
  * persisted until manual refresh because sign-IN doesn't reload. This sidecar
  * does a single guarded reload on a real login/user-switch. Asserts:
  *   A. the already-logged-in baseline at load does NOT reload
- *   B. a fresh login (new email) reloads exactly once
+ *   B. a login after a sign-out (email '') reloads exactly once
  *   C. a repeat notification for the same email does NOT reload again
- *   D. a user switch (different email) reloads once more
- *   E. sign-out (email '') then re-login reloads again (baseline reset)
+ *   D. an A→B email change with no sign-out between does NOT reload
+ *      (RELOAD-SPURIOUS-GUARD-001, 1.50.413: auth re-emits, not user switches)
+ *   E. sign-out (antcv-auth also clears sessionStorage) then re-login reloads again
  *   F. disable hatch suppresses everything
  * Run: node test/diag-login-clean-reload.mjs */
 import { chromium } from 'playwright';
@@ -51,10 +52,12 @@ async function run(disable) {
     const snap = () => window.__reloads;
     const out = {};
     out.afterBaseline = snap();             // A: baseline already emitted at subscribe
+    A._emit('');              // sign out
     A._emit('newuser@x.com'); out.afterLogin = snap();        // B
     A._emit('newuser@x.com'); out.afterRepeat = snap();       // C
     A._emit('other@y.com');   out.afterSwitch = snap();       // D
     A._emit('');              // sign out
+    sessionStorage.clear();   // as antcv-auth signOut does
     A._emit('newuser@x.com'); out.afterReLogin = snap();      // E
     return out;
   });
@@ -72,14 +75,14 @@ console.log('OFF:', JSON.stringify(off.steps));
 const A = on.steps.afterBaseline === 0;
 const B = on.steps.afterLogin === 1;
 const C = on.steps.afterRepeat === 1;
-const D = on.steps.afterSwitch === 2;
-const E = on.steps.afterReLogin === 3;
+const D = on.steps.afterSwitch === 1;
+const E = on.steps.afterReLogin === 2;
 const F = off.steps.afterLogin === 0 && off.steps.afterSwitch === 0 && off.steps.afterReLogin === 0;
 
 console.log(`CHECK A (baseline logged-in does NOT reload): ${A ? 'PASS' : 'FAIL'}`);
-console.log(`CHECK B (fresh login reloads once): ${B ? 'PASS' : 'FAIL'}`);
+console.log(`CHECK B (login after sign-out reloads once): ${B ? 'PASS' : 'FAIL'}`);
 console.log(`CHECK C (repeat same email: no extra reload): ${C ? 'PASS' : 'FAIL'}`);
-console.log(`CHECK D (user switch reloads once more): ${D ? 'PASS' : 'FAIL'}`);
+console.log(`CHECK D (email change without sign-out does not reload): ${D ? 'PASS' : 'FAIL'}`);
 console.log(`CHECK E (sign-out then re-login reloads again): ${E ? 'PASS' : 'FAIL'}`);
 console.log(`CHECK F (disable hatch makes it inert): ${F ? 'PASS' : 'FAIL'}`);
 const ok = A && B && C && D && E && F && on.errs.length === 0 && off.errs.length === 0;

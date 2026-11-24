@@ -1723,7 +1723,11 @@ _previous:_ verified: 2026-10-27 — CI nightly E1 re-verify against HEAD 65ce36
 
 ## Row 88
 
-_verified: 2026-10-27_ — CI nightly E1 re-verify against HEAD 65ce36e0: round-3 markers still present — docx-worker `VERSION = "1.14.175-ai-mark-props"` (past the 1.14.154 ship), ROLE-SPLIT-CONT-001 in `workers/docx-worker/src/index.js`, `fit_page_flow` wired in both `scripts/job-tracker/gen-runner.py` + `scripts/job-tracker/density_fit.py`; suite 1850/1850 green. All owner-deferred legs (a)–(f) unchanged (owner-gated / regen / real-render). Kept ACTIVE. · 2026-10-16 @451fc004 (round-3 ship intact, owner-deferred legs unchanged; suite 1824/1824): the round-3 worker/gen markers are present — docx-worker `VERSION = "1.14.174-appline-edit"` (past the 1.14.154 of the ship), ROLE-SPLIT-CONT-001 in `workers/docx-worker/src/index.js`, and `fit_page_flow` wired in both `scripts/job-tracker/gen-runner.py` and `scripts/job-tracker/density_fit.py`. (prev CI E1 2026-10-07 @dbcaf31c, unchanged.) OWNER-DEFERRED / OPEN (all owner-gated / regen / real-render): (a) 19-app rollout, (b) fit-page-flow y-alignment (backlog #49), (c) table-geometry 6630→7689 (backlog #1), (d) client-half bullet_pages forwarding (backlog #2), (e) orphan misdetection + density grow, (f) rows 54/56/59A/62/22. Kept ACTIVE.
+_verified: 2026-11-24_
+
+_Desktop nightly 2026-11-24 (Gabo-PC, Opus 5.5, base 471ff03f): docx-worker `1.14.177-role-line-one` live = repo; ROLE-SPLIT-CONT-001 in `workers/docx-worker/src/index.js`; `fit_page_flow` in `gen-runner.py` and `density_fit.py`. Legs (a)-(f) unchanged, blocked: owner decision / real gen / real render._
+
+_prev verified 2026-10-27_ — CI nightly E1 re-verify against HEAD 65ce36e0: round-3 markers still present — docx-worker `VERSION = "1.14.175-ai-mark-props"` (past the 1.14.154 ship), ROLE-SPLIT-CONT-001 in `workers/docx-worker/src/index.js`, `fit_page_flow` wired in both `scripts/job-tracker/gen-runner.py` + `scripts/job-tracker/density_fit.py`; suite 1850/1850 green. All owner-deferred legs (a)–(f) unchanged (owner-gated / regen / real-render). Kept ACTIVE. · 2026-10-16 @451fc004 (round-3 ship intact, owner-deferred legs unchanged; suite 1824/1824): the round-3 worker/gen markers are present — docx-worker `VERSION = "1.14.174-appline-edit"` (past the 1.14.154 of the ship), ROLE-SPLIT-CONT-001 in `workers/docx-worker/src/index.js`, and `fit_page_flow` wired in both `scripts/job-tracker/gen-runner.py` and `scripts/job-tracker/density_fit.py`. (prev CI E1 2026-10-07 @dbcaf31c, unchanged.) OWNER-DEFERRED / OPEN (all owner-gated / regen / real-render): (a) 19-app rollout, (b) fit-page-flow y-alignment (backlog #49), (c) table-geometry 6630→7689 (backlog #1), (d) client-half bullet_pages forwarding (backlog #2), (e) orphan misdetection + density grow, (f) rows 54/56/59A/62/22. Kept ACTIVE.
 
 **OPEN-queue row (verbatim):**
 
@@ -1735,7 +1739,11 @@ _verified: 2026-10-27_ — CI nightly E1 re-verify against HEAD 65ce36e0: round-
 
 ## Row 87 — OWNER-ROUND-2-RESIDUE-001
 
-_verified: 2026-10-27_ — CI nightly E1 re-verify against HEAD 65ce36e0: all 5 legs remain diagnosed-not-fixed; `origin/brandfit-per-app-scope` still `fc2477c` (NOT merged, git ls-remote re-confirmed), ROLE-SPLIT-CONT-001 present in docx-worker index.js (deploy + CloudConvert test still owed); suite 1850/1850 green. Each needs live/regen/deploy CI lacks. Kept ACTIVE. · 2026-10-16 @451fc004 (all 5 legs remain diagnosed-not-fixed, gates unchanged; suite 1824/1824): (a) CORE-COMP 3-4 ROWS — grounded per-app table regen, owner-gated, no fabrication; (b) BRAND COLORS — `origin/brandfit-per-app-scope` branch still at `fc2477c`, NOT merged (git ls-remote re-confirmed this run); (c) SIGNATURE — needs an actual signature upload (signatureB64 empty); (d) ROLE-SPLIT "(cont.)" — worker ROLE-SPLIT-CONT-001 present (docx-worker index.js) but the LibreOffice natural-flow cont. header still needs a deploy + CloudConvert test; (e) RUNT LINES — density frontier. Each needs live/regen/deploy CI lacks. (prev CI E1 2026-10-07 @dbcaf31c, unchanged.) Kept ACTIVE.
+_verified: 2026-11-24_
+
+_Desktop nightly 2026-11-24 (Gabo-PC, Opus 5.5, base 471ff03f): `origin/brandfit-per-app-scope` still `fc2477cc`, not merged; ROLE-SPLIT-CONT-001 present. All 5 legs unchanged, blocked: owner session / regen._
+
+_prev verified 2026-10-27_ — CI nightly E1 re-verify against HEAD 65ce36e0: all 5 legs remain diagnosed-not-fixed; `origin/brandfit-per-app-scope` still `fc2477c` (NOT merged, git ls-remote re-confirmed), ROLE-SPLIT-CONT-001 present in docx-worker index.js (deploy + CloudConvert test still owed); suite 1850/1850 green. Each needs live/regen/deploy CI lacks. Kept ACTIVE. · 2026-10-16 @451fc004 (all 5 legs remain diagnosed-not-fixed, gates unchanged; suite 1824/1824): (a) CORE-COMP 3-4 ROWS — grounded per-app table regen, owner-gated, no fabrication; (b) BRAND COLORS — `origin/brandfit-per-app-scope` branch still at `fc2477c`, NOT merged (git ls-remote re-confirmed this run); (c) SIGNATURE — needs an actual signature upload (signatureB64 empty); (d) ROLE-SPLIT "(cont.)" — worker ROLE-SPLIT-CONT-001 present (docx-worker index.js) but the LibreOffice natural-flow cont. header still needs a deploy + CloudConvert test; (e) RUNT LINES — density frontier. Each needs live/regen/deploy CI lacks. (prev CI E1 2026-10-07 @dbcaf31c, unchanged.) Kept ACTIVE.
 
 **OPEN-queue row (verbatim):**
 
@@ -1747,7 +1755,11 @@ _verified: 2026-10-27_ — CI nightly E1 re-verify against HEAD 65ce36e0: all 5 
 
 ## Row 86 — GOLD-SESSION-FOLLOWUPS-001
 
-_verified: 2026-10-27_ — CI nightly E1 re-verify against HEAD 65ce36e0: leg (f) ROW-82 UNBLOCKED still confirmed — role-canon export audit wired in `scripts/job-tracker/gold_audit.py` (`role_canon`, 3 refs); suite 1850/1850 green. Legs (a)–(e) content/regen/owner-gated — CI cannot regen. Kept ACTIVE. · 2026-10-16 @451fc004 (suite 1824/1824): leg (f) ROW-82 UNBLOCKED confirmed — the role-canon export audit is wired in `scripts/job-tracker/gold_audit.py` (`role_canon`, 3 refs). (prev CI E1 2026-10-07 @dbcaf31c, unchanged.) Remaining legs are gated: (a) PUBS-AUTHORS-FIRST cosmetic (deterministic sub-rule or hand-edit), (b) RESULTS-NEEDS-TRANSLATION app 792 (translated swaps), (c) PROXY-GOLD-RULES-FETCH (fetch served /gold-rules.json), (d) CORE-COMP-FLOOR backfill (per-app content regen, owner call), (e) STALE-LOCKED-PDFS (owner deletes at leisure). Content/regen/owner-gated — CI cannot regen. Kept ACTIVE.
+_verified: 2026-11-24_
+
+_Desktop nightly 2026-11-24 (Gabo-PC, Opus 5.5, base 471ff03f): leg (f) `role_canon` still wired in `gold_audit.py` (3 refs). Legs (a)-(e) unchanged, blocked: owner call / regen._
+
+_prev verified 2026-10-27_ — CI nightly E1 re-verify against HEAD 65ce36e0: leg (f) ROW-82 UNBLOCKED still confirmed — role-canon export audit wired in `scripts/job-tracker/gold_audit.py` (`role_canon`, 3 refs); suite 1850/1850 green. Legs (a)–(e) content/regen/owner-gated — CI cannot regen. Kept ACTIVE. · 2026-10-16 @451fc004 (suite 1824/1824): leg (f) ROW-82 UNBLOCKED confirmed — the role-canon export audit is wired in `scripts/job-tracker/gold_audit.py` (`role_canon`, 3 refs). (prev CI E1 2026-10-07 @dbcaf31c, unchanged.) Remaining legs are gated: (a) PUBS-AUTHORS-FIRST cosmetic (deterministic sub-rule or hand-edit), (b) RESULTS-NEEDS-TRANSLATION app 792 (translated swaps), (c) PROXY-GOLD-RULES-FETCH (fetch served /gold-rules.json), (d) CORE-COMP-FLOOR backfill (per-app content regen, owner call), (e) STALE-LOCKED-PDFS (owner deletes at leisure). Content/regen/owner-gated — CI cannot regen. Kept ACTIVE.
 
 **OPEN-queue row (verbatim):**
 
@@ -2024,7 +2036,11 @@ re-armed trap on a signed-in device — not stageable in cloud. Kept ACTIVE — 
 
 ## Row 31 — META-STATE-CORRUPTION-002
 
-_verified: 2026-10-27_
+_verified: 2026-11-24_
+
+_Desktop nightly 2026-11-24 (Gabo-PC, Opus 5.5, base 471ff03f): `META-DRIFT-GUARD-002` and `META-DOWNGRADE-GUARD-003` each x2 in `app.src.js`, present in `app.js`; both guard tests green. Served `app.js` sha1 = repo. Row-repair leg blocked: owner session (live poisoned row)._
+
+_prev verified 2026-10-27_
 
 _Desktop nightly 2026-10-27 (Gabo-PC, Opus 5.5, HEAD 37fbb40f): `META-DRIFT-GUARD-002` ×2 and `META-DOWNGRADE-GUARD-003` ×2 in `app.src.js`; both guard tests green in the 1850/1850 suite; served `app.js?v=1.51.5094-brand-ink-fit` = repo. Repair-from-display-name leg still needs a live poisoned row — owner-gated._
 
@@ -2050,7 +2066,11 @@ _CI nightly 2026-09-15 (E1 sweep): both shipped guards confirmed present on `mai
 
 ## Row 98 — BYOK-COST-AUDIT-001
 
-_verified: 2026-10-27_
+_verified: 2026-11-24_
+
+_Desktop nightly 2026-11-24 (Gabo-PC, Opus 5.5, base 471ff03f): `total_cost_usd_est` x7 in both `byok-qualify.js` copies, byte-identical; `byok-cost-audit.test.mjs` green. Unreverted._
+
+_prev verified 2026-10-27_
 
 _Desktop nightly 2026-10-27 (Gabo-PC, Opus 5.5, HEAD 37fbb40f): `total_cost_usd_est` ×7 in `workers/proxy/src/byok-qualify.js`, proxy and demo-proxy copies byte-identical (`diff -q` clean); cv-proxy + demo-proxy `/health` 200 at `3.8.4-brand-ink-match` = repo. Unreverted._
 
@@ -3265,7 +3285,11 @@ _OPEN (found by the desktop nightly, Gabo-PC, Opus 5.5, 2026-11-23; Band A tab i
 
 ## Row 152 — DIAG-FLEET-ROT-001
 
-_verified: 2026-11-23_
+_verified: 2026-11-24_
+
+_Desktop nightly 2026-11-24 (Gabo-PC, Opus 5.5, base 471ff03f): five diags triaged, all stale assertions, all green now: `data-import` (a restore appends banned lists since 1.50.566), `sidebar-ratio-forward` (unset sends 0.32 since 1.51.109), `login-clean-reload` (no reload without a sign-out since 1.50.413; the file IS loaded, by `antcv-357-loader.js`, so the 2026-06 "dead file" note is wrong), `kernel-import` (no standalone button since 1.50.540, one Apply since 1.50.532; one load-contention flake, then 3/3), `preview-edit-persist` (profile/tools are rich_block; outcomes fold under roles; academy hides single-group heads; all 9 edits persist). 69 left. Reading the `data-import` code found a real bug: IMPORT-SEMRULE-KEY-001 (ACTIVE_BUGS), shipped `1.51.6625-semrule-union`. Read but NOT fixed: `orphan-preflight-parity` / `-real` / `-sidebar` assert the pre-NO-ORPHAN pass (`bound` / `residue` counts); today the pass condenses, caps the bind and falls back (`condensed`, `capped`, `fallbackBound`), so they look stale, not proven._
+
+_prev verified 2026-11-23_
 
 _OPEN (found by the desktop nightly, Gabo-PC, Opus 5.5, 2026-11-23; test tooling; no production impact shown)._
 
@@ -3276,3 +3300,27 @@ _OPEN (found by the desktop nightly, Gabo-PC, Opus 5.5, 2026-11-23; test tooling
 **Look at first (user data or user editing):** `data-import` (backup round-trip "lossless" FAIL, items restored 7), `kernel-import`, `preview-edit-persist` (committed:false), `orphan-preflight-parity` / `-real` / `-sidebar`, `login-clean-reload`, `sidebar-ratio-forward` (unset sends 0.32, expected omitted).
 
 **To close.** Per diag: prove stale (fix or delete the assertion) or file the regression. 3-5 per nightly under E1. `subsection-reorder` needs a server on :8799 (harness, not a bug).
+
+## Row 153 — SEC-AUDIT-DEV-DEPS-001
+
+_verified: 2026-11-24_
+
+_OPEN (weekly security audit run 45255364657, 2026-11-23, success; transcribed by the desktop nightly 2026-11-24 per rule 5)._
+
+**Found.** Production: critical 0, high 0, moderate 0, low 0. Full tree: 5 high, 2 moderate, all dev-only. Local `npm audit` agrees: high `browserslist`, `nanoid`, `postcss`, `source-map-js`, `vite`; moderate `baseline-browser-mapping`, `esbuild`. Nothing ships to the browser or a Worker.
+
+**Exposure.** The vite / launch-editor / esbuild advisories need a running vite dev server. This repo uses `vite build --watch` only (`package.json` `dev`), no dev server.
+
+**To close.** `npm audit fix` clears five without a major bump; vite + esbuild need vite 8 (from 5.4.21), which rebuilds the islands bundle. Owner WIP is in `package.json` in the shared clone, so not touched here.
+
+## Row 154 — IMPORT-BANNED-APPEND-001
+
+_verified: 2026-11-24_
+
+_OPEN (found by the desktop nightly, Gabo-PC, Opus 5.5, 2026-11-24; owner call; no code change)._
+
+**Found.** Owner 2026-06-17: imports append to the banned lists. The backup restore (`antcv-data-import-331.js`) does. The settings-JSON / personalInfo-fragment path (`antcv-data-importer.js` `mergePath`) does not: `stylePrefs.banned_words` / `banned_phrases` are strings and `writingPrefs.extraBannedWords.<lang>` has no dedup key, so the imported value replaces the stored one. Probe: stored `alpha, beta` + imported `gamma` gives `gamma`. The diff table shows the change and Undo exists, so it is visible, but the result is cloud-pushed.
+
+**Why not fixed here.** Replacing a list is also how a curated list is put back; the diff row reads as a replace. Owner decides: append (as in the restore) or keep.
+
+**Also seen, same area, not fixed.** (1) The editor reads `semanticConstraintsV2` only when it is non-empty, so a legacy account with flat `bannedContextual` rules and no V2 list loses them at the next edit after importing V2 rules. (2) `readSemRules` (islands) drops a rule with no id that shares trigger + avoid with another but has a different role scope. (3) A kernel fragment's top-level `semanticConstraintsV2` lands at `personalInfo.semanticConstraintsV2`, which the editor does not read. Code reading only.

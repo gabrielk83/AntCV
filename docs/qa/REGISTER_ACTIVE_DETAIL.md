@@ -3328,3 +3328,21 @@ _FIXED 2026-11-24 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `s
 **Fix.** `_is_row_stub(text, row)`: header equals the one the build derives, and every other line is found in the row’s fit or flag cell (a flag the sweep later prepended "posting closed" to still matches). `_merge_uk_dict` skips such a local `support` block (checked against the local and the cloud row): never local-only intel, never beats a cloud block. `_reassert_support` drops it after the build instead of letting it fill an empty key. A block with one extra line (NEED, WHY BEST FIT, an edited FIT) is real and keeps the old rules. The local-only count now reads the merged doc.
 
 **Tests.** 3 new tests drive the real `cmd_pull` / `_merge` / render; 3 red pre-fix; 9 sabotages by line (278, 280 x3, 294 x2, 323 x3) each red; restored 13/13 PASS; 37/37 job-tracker python files green. **Live (rev 394, three `pull --render`).** No conflict, no local-only count, local `support` 273 → 124 = cloud, local doc = cloud doc key for key, `status`: "local edited since last sync: False". Excel rebuilt (273 rows, 218 inbox leads). No `push` was run. Close after the next job-tracker or discovery run prints no `support` conflict and no "kept N local-only" line.
+
+## Row 156 — JT-DOC-SIZE-001
+
+_verified: 2026-11-24_
+
+_FIXED 2026-11-24 (owner-approved, desktop session, Gabo-PC, Opus 5.5, worktree-isolated; PR #407 `005b4be1`; `workers/access-relay` + `scripts/job-tracker`; no `pwa/` asset, no version consumed)._
+
+**Found.** `job_tracker.doc` is one string per user. Cloudflare's D1 limits page (modified 2026-11-20): maximum string, BLOB or table row size 2,000,000 bytes. Live: 1,374,012 bytes on 10-30, 1,744,525 on 11-23, 1,803,683 at rev 393, 1,805,180 at rev 394. `jd` alone was 1,241,810 bytes: 194 closed rows 918,348, 61 open rows 318,631.
+
+**Readers of `doc.jd`.** Island (JD icon and filter, Open, "Save submitted version", Top-5 score, Ask-AI list), `gen-runner.py` (eligible / ready / owner-packaged), `check-postings.py` (deadline), `discover-positions.py` (eligibility sweep), `interview_prep.py`, `job-tracker-sync.py` (merge). No other worker. They disagree on "closed": the sweep reads the band, the eligibility sweep the status, gen-runner and the island either. Open on a row with an application sends `doc.jd` to that application, so a marker there could overwrite its ad text.
+
+**Fix.** (1) Relay PUT: `doc_bytes`, `size_warning` past 1.8 MB, size on a failed write; it never refuses a write. (2) `job-tracker-sync.py`: `status` size + warning; `pull` (nightly) and `push` the warning. (3) `jd_archive.py plan / apply / show / restore`: a row moves only when every reader skips it (Archive band AND Archive status), closed 14+ days ago, no application, package, submitted version, interview, follow-up, pin or armed flag. Stored in `application_snapshot` kind `jd_archive` (insert-only, already in the account copy and delete). The key keeps a ~100-character marker: both mergers union keys, so a removed key comes back from a stale copy.
+
+**Live, 2026-11-24.** Backup `~/.antcv/job_tracker_backups/job_tracker_rev394_20261124-102858.json` (read back). 97 texts archived and read back word for word; doc rev 394 → 395, 1,805,180 → 1,336,094 bytes. D1: 273 rows, 255 jd keys, 97 markers; `application_snapshot` 97 rows, 503,380 bytes. Against the backup: only `jd.*` changed, rows identical, nine nightly reads identical. `pull` on a copy of the Drive files converged to the cloud byte count.
+
+**Stays in the doc (closed rows with ad text at rev 393).** 38 with an application (164 KB), 29 closed for some readers only (136 KB), 20 closed under 14 days ago (102 KB), 6 packaged by hand (32 KB), 4 short or undated (5 KB).
+
+**To close.** The next job-tracker or discovery run's `pull --render` prints no JT-DOC-SIZE-001 line and no `jd[...]` conflict. At 17 KB a day the warning returns in about 27 days. When it does: report `jd_archive.py plan` to the owner; `apply` only on the owner's word.

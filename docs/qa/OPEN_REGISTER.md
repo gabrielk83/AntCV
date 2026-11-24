@@ -152,6 +152,7 @@ citing an old number may mean either row — the ID disambiguates.
 | 153 | `SEC-AUDIT-DEV-DEPS-001` | 2026-11-24 | OPEN (weekly security audit 2026-11-23, transcribed): production 0; 7 dev-only packages (5 high, 2 moderate); 5 have a non-breaking fix, vite + esbuild need vite 8 (major) |
 | 154 | `IMPORT-BANNED-APPEND-001` | 2026-11-24 | OPEN (desktop nightly 2026-11-24; owner call): importing a settings JSON replaces the banned words/phrases lists; the backup restore appends (owner 2026-06-17) |
 | 155 | `SYNC-SUPPORT-STUB-001` | 2026-11-24 | FIXED 2026-11-24 (job-tracker nightly; script only; 3 tests red pre-fix, 9 sabotages red, 13/13 PASS, live-verified; CLOSE after the next run prints no `support` conflict and no local-only count) · the render left 149 row-derived `support` stubs (93 KB) in the local doc, read as local intel |
+| 156 | `JT-DOC-SIZE-001` | 2026-11-24 | FIXED 2026-11-24 (desktop session; relay `auth-41` deployed; 97 ad texts archived, doc 1,805,180 → 1,336,094 bytes; CLOSE after the next `pull --render` prints no size warning) · job-tracker doc near D1's 2,000,000-byte row limit; guard warns past 1.8 MB, `jd_archive.py` moves closed rows' ad texts out. When the warning prints: report `jd_archive.py plan` to the owner, `apply` only on the owner's word |
 
 ---
 

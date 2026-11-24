@@ -18,7 +18,8 @@
 #                   --render also rebuilds the .xlsx
 #   push            PUT the local doc with the snapshot's base_rev; on 409 do a row-level 3-way merge and retry
 #   import-xlsx      read the (edited) Weekly Tracker sheet back into the local doc, then run `push`
-#   status           show local rev vs cloud rev and whether they diverge
+#   status           show local rev vs cloud rev and whether they diverge, and the doc size (JT-DOC-SIZE-001:
+#                    warns past 1.8 MB; `pull` prints the same warning, `push` prints the relay's)
 #
 # Config via env (all optional):
 #   ANTCV_RELAY   default https://antcv-access-relay.karp-gabriel-a.workers.dev
@@ -28,6 +29,10 @@
 #   JOB_BUILD     path to the local doc-driven Excel build script (for --render)
 #   JOB_XLSX      path to the .xlsx (for import-xlsx)
 import os, sys, json, hashlib, subprocess, urllib.request, urllib.error
+
+if os.path.dirname(os.path.abspath(__file__)) not in sys.path:
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import jd_archive as JA  # noqa: E402  JT-DOC-SIZE-001: doc size against D1's row limit
 
 RELAY = os.environ.get("ANTCV_RELAY", "https://antcv-access-relay.karp-gabriel-a.workers.dev").rstrip("/")
 DOC   = os.environ.get("JOB_DOC",  os.path.expanduser("~/job_tracker_doc.json"))
@@ -121,6 +126,11 @@ def cmd_status():
     print(f"cloud rev: {remote.get('rev') if code==200 else 'ERR '+str(code)}")
     print(f"snapshot rev: {snap.get('rev', 0)}")
     print(f"local doc: {'present' if local else 'MISSING'} ({DOC})")
+    # JT-DOC-SIZE-001: the cloud doc is what D1 caps; the local one is what `push` would send.
+    if code == 200 and isinstance(remote.get("doc"), dict):
+        for line in JA.size_lines(remote["doc"]): print(line)
+    if isinstance(local, dict) and JA.doc_bytes(local) > JA.WARN_BYTES:
+        print(f"local doc size: {JA.doc_bytes(local):,} bytes; a push sends all of it")
     if code == 200 and local:
         diverged = remote.get("rev") != snap.get("rev")
         localdirty = _load(SNAP, {}).get("doc") != local
@@ -210,6 +220,8 @@ def cmd_pull(render=False, force=False):
     # so a later push sends the right base_rev and diffs against the right base.
     _save(SNAP, {"rev": remote.get("rev", 0), "doc": doc})
     print(f"pulled rev {remote.get('rev')} -> {DOC}" + (" (--force: local overwritten)" if forced else ""))
+    # JT-DOC-SIZE-001: no routine runs `status`; the nightly runs `pull --render` and reads this.
+    for line in JA.size_lines(doc)[1:]: print(line)
     if not forced:
         kept = sum(1 for f in UK_DICT_FIELDS
                    for k in ((local or {}).get(f) or {})
@@ -375,6 +387,7 @@ def cmd_push():
     if code == 200:
         _save(SNAP, {"rev": resp["rev"], "doc": local})
         print(f"pushed -> rev {resp['rev']}")
+        if resp.get("size_warning"): print("WARNING JT-DOC-SIZE-001: " + resp["size_warning"])
         return
     if code == 409:
         remote = resp.get("doc")
@@ -384,6 +397,7 @@ def cmd_push():
         if code2 != 200: sys.exit(f"merge push failed: {code2} {resp2}")
         _save(DOC, merged); _save(SNAP, {"rev": resp2["rev"], "doc": merged})
         print(f"merged & pushed -> rev {resp2['rev']}")
+        if resp2.get("size_warning"): print("WARNING JT-DOC-SIZE-001: " + resp2["size_warning"])
         if conflicts: print("CONFLICTS (local kept, review these ids):", ", ".join(conflicts))
         return
     sys.exit(f"push failed: {code} {resp}")

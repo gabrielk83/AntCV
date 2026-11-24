@@ -125,6 +125,21 @@ test('no handler updates or deletes a snapshot', async () => {
   assert.ok(!/UPDATE application_snapshot|DELETE FROM application_snapshot/.test(code), 'no UPDATE/DELETE in the handler');
 });
 
+test('JT-DOC-SIZE-001: kind jd_archive keeps a closed row\'s ad text word for word', async () => {
+  const { call } = harness();
+  const jd = 'Optikingeniør (m/k) – 75 %\r\n\t"Krav": …\n' + 'lorem '.repeat(2000);
+  const r = await call('POST', '/api/application-snapshots', { body: {
+    uk: 'acme', kind: 'jd_archive', posting: { url: 'https://jobs.example/1', jd_text: jd, company: 'Acme', role: 'PM' } } });
+  assert.equal(r.status, 201);
+  assert.equal(r.data.snapshot.kind, 'jd_archive');
+  assert.equal(r.data.snapshot.application_id, null);
+  const sid = String(r.data.snapshot.id);
+  const one = await call('GET', '/api/application-snapshots/' + sid, { id: sid });
+  assert.equal(one.data.snapshot.data.posting.jd_text, jd);
+  const list = await call('GET', '/api/application-snapshots?uk=acme');
+  assert.deepEqual(list.data.snapshots.map((s) => s.kind), ['jd_archive'], 'the list tells the kinds apart');
+});
+
 test('input checks: uk, kind, application id, empty and oversize snapshots', async () => {
   const { call } = harness();
   const post = (body) => call('POST', '/api/application-snapshots', { body });

@@ -55,6 +55,35 @@ Typical loops:
 - **Edited in the AntCV web UI** (Phase 3) or on another device → `pull --render`.
 - First time: `push` seeds the cloud from your current workbook.
 
+## Doc size (JT-DOC-SIZE-001, 2026-11-24)
+
+The doc is one string in D1, and D1 caps a string and a table row at **2,000,000 bytes**. Above it every
+`PUT /api/job-tracker` fails with `d1_write_failed`. The guard warns past **1,800,000 bytes** and never
+refuses a write:
+- the relay's PUT answer carries `doc_bytes` and, past 1.8 MB, `size_warning` (also one log line, no user data);
+- `job-tracker-sync.py status` prints the size and the warning. `pull` prints the warning too, because the
+  nightly runs `pull --render` and no routine runs `status`. `push` prints the relay's warning.
+
+Two thirds of the doc was ad text (`doc.jd`). `jd_archive.py` moves the ad text of closed rows into
+`application_snapshot` (kind `jd_archive`, insert-only, per user, in the account copy and delete):
+
+```
+python jd_archive.py plan                      # read-only: which rows, sizes before / after
+python jd_archive.py apply --expect-rev N      # backup -> archive -> read back -> one rev-guarded PUT
+python jd_archive.py show --uk UK              # print an archived ad text
+python jd_archive.py restore --uk UK           # put it back, word for word
+python test_jd_archive.py                      # network-free
+```
+
+- **What moves:** only rows every reader skips: Archive band AND an "Archive ..." status, closed 14+ days ago,
+  no application, package, submitted version, interview, follow-up, pin or armed clock flag.
+- **What stays in the doc:** the row and every other map. The ad text becomes a marker of about 100 characters,
+  which every reader takes as "no ad text" (they all test for more than 200). The key is kept on purpose: both
+  mergers union keys, so a removed key comes back from the first stale copy.
+- **Rows with an application stay.** The app sends `doc.jd` to the application when the owner reopens one.
+- **Reopening a trimmed row:** run `restore`. `status` and `pull` name any open row that still holds a marker.
+- **Backup:** the whole doc goes to `~/.antcv/job_tracker_backups/` and is read back before the first write.
+
 ## Phase status
 
 - **Phase 1 (this)** — schema, endpoint, sync CLI, doc-driven Excel. ✅ built + tested.

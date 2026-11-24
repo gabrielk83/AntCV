@@ -37,7 +37,7 @@ const VERSION='1.3.14';
 // Required binding (declare in wrangler.toml):
 //   KV_BINDING        KV namespace (stores OTPs, rate counters, prefs, signals)
 
-const RELAY_VERSION = 'auth-40-application-snapshots';
+const RELAY_VERSION = 'auth-41-jt-doc-size';
 const SESSION_TTL_SECONDS    = 7 * 24 * 60 * 60;       // 7 days
 // Refresh whenever the token has < 6 days left (i.e. it's more than 1 day old),
 // so ANY request past the first day rotates it to a fresh 7-day token via the
@@ -3967,9 +3967,31 @@ async function handleApiApplicationById(request, env, idStr) {
 // (sync CLI or UI) can 3-way merge and retry — never a silent clobber.
 // Passing base_rev = null/absent forces the write (first-writer / reset).
 //
-// Single-blob (not per-row tables) because the whole workbook is small,
+// Single-blob (not per-row tables) because the whole workbook is
 // always read/written together, and this keeps sync trivial. Per-row
 // generation (Phase 2) addresses rows by their `id` INSIDE the doc.
+//
+// JT-DOC-SIZE-001 (2026-11-24): the blob is not small any more. D1 caps a
+// string and a table row at 2,000,000 bytes; the owner's doc was 1,803,683
+// bytes at rev 393 and above the cap every PUT fails with d1_write_failed.
+// A PUT reports doc_bytes, adds size_warning past JT_DOC_WARN_BYTES, and a
+// failed write says how large the doc was. Nothing is refused here: D1 stays
+// the authority. scripts/job-tracker/jd_archive.py moves the ad texts of
+// closed rows out; keep its two numbers in step with these.
+const JT_DOC_LIMIT_BYTES = 2000000;
+const JT_DOC_WARN_BYTES = 1800000;
+
+function jobTrackerSize(docStr) {
+  const bytes = new TextEncoder().encode(docStr).length;   // D1 counts UTF-8 bytes, not characters
+  const size = { doc_bytes: bytes, doc_limit_bytes: JT_DOC_LIMIT_BYTES };
+  if (bytes > JT_DOC_WARN_BYTES) {
+    size.size_warning = 'job-tracker doc is ' + bytes + ' bytes, ' + Math.round(bytes / JT_DOC_LIMIT_BYTES * 100) +
+      '% of the ' + JT_DOC_LIMIT_BYTES + '-byte D1 row limit; a write above the limit fails. ' +
+      'Run scripts/job-tracker/jd_archive.py plan.';
+  }
+  return size;
+}
+
 async function handleApiJobTracker(request, env) {
   const id = await identityFromRequest(request, env);
   if (!id) return jsonResponse({ error: 'unauthenticated' }, 401, request, env);
@@ -4049,14 +4071,16 @@ async function handleApiJobTracker(request, env) {
     const nextRev = curRev + 1;
     const now = Date.now();
     const docStr = JSON.stringify(body.doc);
+    const size = jobTrackerSize(docStr);
+    if (size.size_warning) console.warn('[job-tracker] ' + size.size_warning);
     try {
       await env.DB.prepare(
         'INSERT INTO job_tracker (user_hash, doc, rev, updated_at) VALUES (?, ?, ?, ?) ' +
         'ON CONFLICT(user_hash) DO UPDATE SET doc = excluded.doc, rev = excluded.rev, updated_at = excluded.updated_at'
       ).bind(userHash, docStr, nextRev, now).run();
-      return jsonResponse({ ok: true, rev: nextRev, updated_at: now }, 200, request, env, refresh);
+      return jsonResponse({ ok: true, rev: nextRev, updated_at: now, ...size }, 200, request, env, refresh);
     } catch (e) {
-      return jsonResponse({ error: 'd1_write_failed', message: String(e && e.message || e) }, 500, request, env, refresh);
+      return jsonResponse({ error: 'd1_write_failed', message: String(e && e.message || e), ...size }, 500, request, env, refresh);
     }
   }
 
@@ -4077,7 +4101,10 @@ async function handleApiJobTracker(request, env) {
 //   GET  /api/application-snapshots/:id  one, with its payload
 // created_at is epoch ms (as job_tracker.updated_at).
 const SNAPSHOT_MAX_BYTES = 1500000;   // D1 caps a row at 2 MB
-const SNAPSHOT_KINDS = ['submitted'];
+// 'jd_archive' (JT-DOC-SIZE-001): the ad text of a closed tracker row, moved out of
+// job_tracker.doc by scripts/job-tracker/jd_archive.py. Same table on purpose: it is
+// insert-only and already in the account copy and the account delete.
+const SNAPSHOT_KINDS = ['submitted', 'jd_archive'];
 
 async function ensureSnapshotTable(env) {
   await env.DB.prepare(

@@ -145,7 +145,7 @@ CREATE TABLE IF NOT EXISTS application_snapshot (
   user_hash      TEXT NOT NULL,
   application_id INTEGER,                    -- NULL when the row had no AntCV application (hand-made package)
   uk             TEXT NOT NULL,              -- tracker row key (doc.rows[i][11])
-  kind           TEXT NOT NULL,              -- 'submitted'
+  kind           TEXT NOT NULL,              -- 'submitted' | 'jd_archive' (JT-DOC-SIZE-001: a closed row's ad text, posting only)
   json           TEXT NOT NULL,
   created_at     INTEGER NOT NULL
 );

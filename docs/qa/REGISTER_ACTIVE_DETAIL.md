@@ -798,7 +798,9 @@ _verified: 2026-10-05_
 
 ## Row 41
 
-_verified: 2026-11-18_
+_verified: 2026-11-25_
+
+_Desktop nightly 2026-11-25 (Gabo-PC, Opus 5.5, base `fc12d446`): the row's own stress diag `diag-react185-regulatory.mjs` could not run (it set a value on a file input, which the browser refuses). Fixed the harness; run: 17 fields typed, 106 clicks, 0 page errors, 0 React #185 / update-depth / removeChild. Blocked: real device (Android)._
 
 **2026-11-18 (desktop nightly, E1 staleness sweep, HEAD 9774bd3a):** guard sidecars 9/9 served, executed, content-identical on live (`diag-live-guard-sidecars.mjs`); E3 audit 212 buttons, 0 regressions, 0 page errors, no React #185 headlessly. Blocked: real device (Android #185 repro). Kept ACTIVE.
 
@@ -2089,7 +2091,9 @@ _CI nightly 2026-09-15 (E1 sweep): same, confirmed present + byte-identical._
 
 ## Row 99 — REG-GROUP-FOLD-NAMED-001
 
-_verified: 2026-10-27_
+_verified: 2026-11-25_
+
+_Desktop nightly 2026-11-25 (Gabo-PC, Opus 5.5, base `fc12d446`): `diag-reg-fold-dance.mjs` exit 0: 0 post-boot section writes in 15 s, one group ("Environmental & Durability"), 10 standards kept, 0 page errors. `NAMED_FOLD` ×2, loaded `?v=1.51.173`, `dup-group-merge.test.mjs` green in the 2204 suite. The idle overlay flicker fixed today (row 45) is a separate symptom; whether it was part of the reported "dancing" is not known. Owner check still owed._
 
 _Desktop nightly 2026-10-27 (Gabo-PC, Opus 5.5, HEAD 37fbb40f): `diag-reg-fold-dance.mjs` DIAG PASS — converges to one group, bounded writes, 0 page errors; `NAMED_FOLD` ×2, loaded `?v=1.51.173`. Owner "sidebar dancing" confirm still owner-check._
 
@@ -2154,7 +2158,9 @@ _CI nightly 2026-09-15 (E1 sweep): `0.1` floor present in both bundles; test gre
 
 ## Row 19 — JD-SCOPE-OCC2-GUARD-001
 
-_verified: 2026-10-28_
+_verified: 2026-11-25_
+
+_Desktop nightly 2026-11-25 (Gabo-PC, Opus 5.5, base `fc12d446`): `shouldAdoptCloudPointer` in `antcv-jd-scope.js` and `app.src.js`; the `app.js` mirror carries the minified form (0 literal hits, as expected); `jd-scope-isolation.test.mjs` green in the 2204 suite. Blocked: two real devices._
 
 _CI nightly 2026-10-28 (E1 stalest slot, HEAD `60dcfca1`): `shouldAdoptCloudPointer` present (`pwa/antcv-jd-scope.js` ×2 + `pwa/app.src.js` ×1; the `app.js` mirror carries the minified equivalent); `jd-scope-isolation.test.mjs` green in the 1850/1850 suite. Two-real-device leg still owner-gated (physical devices, not fakeable headlessly)._
 _CI nightly 2026-10-17 (E1 stalest slot, HEAD `954cce5a`): `shouldAdoptCloudPointer` present (`pwa/antcv-jd-scope.js` ×2 + `pwa/app.src.js` ×1; the `app.js` mirror carries the minified equivalent); `jd-scope-isolation.test.mjs` green in the 1830/1830 suite. Two-real-device leg still owner-gated (physical devices, not fakeable headlessly)._
@@ -2205,7 +2211,9 @@ _2026-11-12 weekly tune: ADVANCED. D1 `llm_calls` now carries Worker-side rows: 
 
 ## Row 45
 
-_verified: 2026-10-28_
+_verified: 2026-11-25_
+
+_Desktop nightly 2026-11-25 (Gabo-PC, Opus 5.5, base `fc12d446`): the idle half of PERF-001 is fixed and live, `1.51.6645-idle-churn` (EDITOR-IDLE-CHURN, ACTIVE_BUGS). `diag-rerender-storm.mjs` was red on pristine main: 34.4 DOM mutations/s and 92 rAF/s in an idle editor, the same at 8, 25 and 50 s. After: 1.2/s and 10/s. Four writers: the metric-guard chip loop, the overlay / shell-sticky hide-unhide fight (which also drove the island and mobile-ui FAB fight), the owner-guard body class, the alt-circle attributes. Left: `data-antcv-page-fit-applied` 1.2/s. Still open: the multi-second stall on a real export / preview toggle (needs an owner document and a real gen). Also left: when the document really is empty in the editor after the overlay was visible once, shell-sticky still un-hides it every 1.5 s; its back-off needs 3 hits in 2 s, the poll is 1.5 s._
 
 **Re-verify 2026-10-28 (CI nightly — E1 stalest slot, code-presence on HEAD `60dcfca1`):** `pwa/antcv-pdf-preview-gate.js` openModal loading-shell leg present; `pwa/test/diag-generate-click-profile.mjs` present. PARTIAL 1.51.158 intact; setTimeout leg still needs a live-model CPU profile (BLOCKED in CI). Full PWA suite 1850/1850 green.
 
@@ -2275,7 +2283,9 @@ _verified: 2026-10-05_
 
 ## Row 35 — OVERLAY-EARLY-HALT-001
 
-_verified: 2026-10-28_
+_verified: 2026-11-25_
+
+_Desktop nightly 2026-11-25 (Gabo-PC, Opus 5.5, base `fc12d446`): `__antcvGenCost` app.src.js ×11 + app.js ×9, `KERNEL-STUCK` ×2 + ×1; `overlay-watchdog-heartbeat.test.mjs` green in the suite. Blocked: one real 3-6 min generation._
 
 **Re-verify 2026-10-28 (CI nightly — E1 stalest slot, code-presence on HEAD `60dcfca1`):** `__antcvGenCost` heartbeat gate present in both bundles (`pwa/app.src.js` ×10, `pwa/app.js` ×4). Shipped 1.51.41 intact; one real 3–6 min regen-confirm stays owner-gated (real generation on the owner's key), BLOCKED in CI. Full PWA suite 1850/1850 green.
 
@@ -2665,7 +2675,9 @@ confirmed landed, 3 checks go red. All 14 job-tracker python tests green. Live-v
 
 ## Row 110 — ANTCV-TOKEN-EXPIRED-2026-09-02-001
 
-_verified: 2026-10-27_
+_verified: 2026-11-25_
+
+_Desktop nightly 2026-11-25 (Gabo-PC, Opus 5.5, base `fc12d446`): preflight TOKEN OK, expires 2026-12-02T19:10:06Z (7.0 d left), `token` exit 0; authed `GET /api/job-tracker` 200 (rev 399). Dispatch gap 1.5 d. Leg (a) (long-lived machine token) still the only structural fix owed._
 
 _Desktop nightly 2026-10-27 (Gabo-PC): preflight TOKEN OK, expires 2026-11-01T19:31:42Z (5.5 d left), `token` exit 0; authed `GET /api/job-tracker` 200. No DISPATCH GAP line (previous start 1.0 d ago). Leg (a) (long-lived machine token / longer TTL) still the only structural fix owed._
 
@@ -3105,7 +3117,9 @@ _SHIPPED 2026-11-05 (desktop nightly, `1.51.5322-ec-no-derive`, commit `9c8f1980
 
 ## Row 136 — CI-NIGHTLY-CREDIT-EXHAUSTED-001
 
-_verified: 2026-11-22_
+_verified: 2026-11-25_
+
+_Desktop nightly 2026-11-25 (Gabo-PC, Opus 5.5, base `fc12d446`): CI run `45602955404` (11-25) failed in 37 s: `Credit balance is too low | is_error=true api_error_status=400`. Day 28. Blocked: owner key top-up._
 
 **2026-11-22 (desktop nightly):** CI runs `44891389898` (11-21) and `45009140371` (11-22) failed in ~35 s: `Credit balance is too low | is_error=true api_error_status=400`. Day 25. Blocked: owner key top-up.
 
@@ -3285,7 +3299,9 @@ _OPEN (found by the desktop nightly, Gabo-PC, Opus 5.5, 2026-11-23; Band A tab i
 
 ## Row 152 — DIAG-FLEET-ROT-001
 
-_verified: 2026-11-24_
+_verified: 2026-11-25_
+
+_Desktop nightly 2026-11-25 (Gabo-PC, Opus 5.5, base `fc12d446`): 11 more green, 58 left of 74. Ten stale, fixed: `results-kernel-match` (RESULTS-COMPRESS-001 wording; no-JD coverage rule), `outcomes-metric-guard` (default mode folds the section; now also asserts no chip loop), `sections-normalize` (work_style is rich_block since 1.50.759), `react185-regulatory` (file input), `ghost-placeholder-roles` (PREVIEW-002, owner 06-30), `languages-concise` (native / fluent, owner 06-23), `core-comp-compress` (caps 125 / 89 since 06-25, CL section is rich_block), `exp-order` (ROLE-ORDER-CANON-001, owner 06-19), `cjlr-experience` (rowkey markers; role key moves the head only, owner 07-14, same in the worker), `mobile-ui-merge` (version pin). One real: `rerender-storm`, fixed in the product (row 45). Read, not fixed: `contribute-edit-coalesce` (synthetic text_bullets panel; the section is rich_block, so the sidecar has nothing to write, looks stale), `wm-move-on-length`, `candidate-header-edit`, `additional-partition`, `tense-control` (red, cause not read). **Owner question:** a role dragged to another place goes back to reverse-chronological at the next normalize pass. The 06-16 rule let a manual order stand ("do not flip on purpose"); the 06-19 canonical rule overrides it in code. Which holds?_
 
 _Desktop nightly 2026-11-24 (Gabo-PC, Opus 5.5, base 471ff03f): five diags triaged, all stale assertions, all green now: `data-import` (a restore appends banned lists since 1.50.566), `sidebar-ratio-forward` (unset sends 0.32 since 1.51.109), `login-clean-reload` (no reload without a sign-out since 1.50.413; the file IS loaded, by `antcv-357-loader.js`, so the 2026-06 "dead file" note is wrong), `kernel-import` (no standalone button since 1.50.540, one Apply since 1.50.532; one load-contention flake, then 3/3), `preview-edit-persist` (profile/tools are rich_block; outcomes fold under roles; academy hides single-group heads; all 9 edits persist). 69 left. Reading the `data-import` code found a real bug: IMPORT-SEMRULE-KEY-001 (ACTIVE_BUGS), shipped `1.51.6625-semrule-union`. Read but NOT fixed: `orphan-preflight-parity` / `-real` / `-sidebar` assert the pre-NO-ORPHAN pass (`bound` / `residue` counts); today the pass condenses, caps the bind and falls back (`condensed`, `capped`, `fallbackBound`), so they look stale, not proven._
 

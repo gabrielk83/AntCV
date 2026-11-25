@@ -4,7 +4,7 @@ The canonical structure for AntCV cover letters. Used by every writing style; th
 
 The cover letter is **complementary** to the CV — it tells the story the CV cannot. The CV lists what the candidate has done; the cover letter explains why the candidate is applying to this specific role and what they would do in it. The two documents share visual treatment (same header, same package) but carry different content.
 
-**Length budget.** 1.5 pages maximum. Tighter than the CV — readers spend less time on a cover letter than on a CV, so density must be higher and ornament must be lower. Honour `target_pages_cl` if set separately; otherwise default to `target_pages` rounded down to 1.5 max.
+**Length budget.** One page; two pages for a real academic position or PhD (LETTER-LENGTH-002, owner 2026-11-25). Tighter than the CV — readers spend less time on a cover letter than on a CV, so density must be higher and ornament must be lower. Honour `target_pages_cl` if set separately; otherwise default to `target_pages` rounded down to 1.5 max.
 
 ---
 

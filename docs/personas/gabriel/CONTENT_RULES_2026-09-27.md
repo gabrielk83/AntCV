@@ -240,3 +240,13 @@ Owner, 2026-11-25: "in all future cover letters ... always add some impressive w
 | Off | `antcv:disable-letter-diagram` = `1`: no control, the row prints as text in the preview and the export. |
 
 House packages (manual letters) follow the same rule with their own generator.
+
+## 2026-11-25 - Cover-letter length (LETTER-LENGTH-002)
+
+Owner, 2026-11-25: "keep it 2 pages when it is a real academic position/phd. if it is not keep it one page and very relevant to the job. the academic work ad in sweden is not a real academic work."
+
+| Rule | Content |
+|---|---|
+| Academic | A PhD, a postdoc, or a research or teaching post at a university or research institute: 750-900 words on two pages. Research need, own research with methods, numbers and result, the plan for the project step by step, where it could fail and what is tested first, why this group, what is new, two questions. |
+| Everything else | One page, 350-450 words, every paragraph relevant to the job. Academic Work is a staffing company. An industry ad that asks for a PhD is not academic. |
+| In the app | `antcv-cl-length-560.js`: the default length follows the job title and the employer (and the Research Formal style); a length the user picked wins. The generation prompt reads `AntcvClLength.get()`. `gold-rules.json` 1.10.7, `cl.academic`. |

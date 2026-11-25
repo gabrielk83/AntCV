@@ -4,6 +4,20 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 155 — SYNC-SUPPORT-STUB-001 — CLOSED 2026-11-25 (job-tracker nightly, evidence: next run printed no `support` conflict and no local-only count)
+
+_verified: 2026-11-25_
+
+**CLOSED 2026-11-25 (job-tracker nightly).** First `pull --render` of the run (rev 399, no code change in `job-tracker-sync.py`): no conflict line, no local-only `support` count; the render dropped or restored the blocks the build re-derives.
+
+_FIXED 2026-11-24 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `scripts/job-tracker/job-tracker-sync.py` + `test_sync_merge.py`; no `pwa/` asset, no version consumed)._
+
+**Found.** `pull --render` printed `conflicts (local kept): support[academic_work_client](local-wins)`, a first. The 11-23 render had left the derived stub (ROLE / FIT / FLAG) in the local doc; on 11-23 the cloud gained a real block for that row (WHY BEST FIT, SALARY EXPECTATION); both differ from the base, so the stub won the merge. `_reassert_support` put the cloud block back because the run rendered; a plain `pull` or a 409 `push` would have kept the stub and overwritten the cloud. The "149 local-only entries" every run reports (runlog: "do not push") are the same thing: on rev 394, 149 of 149 restate their own row line by line, 0 hold anything else. Measured: local doc 1,898,004 bytes vs cloud 1,805,180, so one `push` would have added 92,824 bytes toward the 2,000,000-byte D1 limit (JT-DOC-SIZE-001).
+
+**Fix.** `_is_row_stub(text, row)`: header equals the one the build derives, and every other line is found in the row’s fit or flag cell (a flag the sweep later prepended "posting closed" to still matches). `_merge_uk_dict` skips such a local `support` block (checked against the local and the cloud row): never local-only intel, never beats a cloud block. `_reassert_support` drops it after the build instead of letting it fill an empty key. A block with one extra line (NEED, WHY BEST FIT, an edited FIT) is real and keeps the old rules. The local-only count now reads the merged doc.
+
+**Tests.** 3 new tests drive the real `cmd_pull` / `_merge` / render; 3 red pre-fix; 9 sabotages by line (278, 280 x3, 294 x2, 323 x3) each red; restored 13/13 PASS; 37/37 job-tracker python files green. **Live (rev 394, three `pull --render`).** No conflict, no local-only count, local `support` 273 → 124 = cloud, local doc = cloud doc key for key, `status`: "local edited since last sync: False". Excel rebuilt (273 rows, 218 inbox leads). No `push` was run. Close after the next job-tracker or discovery run prints no `support` conflict and no "kept N local-only" line.
+
 ## Row 150 — SYNC-ENVELOPE-STALE-001 — CLOSED 2026-11-24 (job-tracker nightly, evidence: next run printed no `envelope` conflict)
 
 _verified: 2026-11-24_

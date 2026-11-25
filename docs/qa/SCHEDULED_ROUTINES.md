@@ -286,7 +286,9 @@ It probes each row's posting URL and archives the obsolete ones by reusing the m
 island already has — band → `D9D9D9` (Archive), tracked status → `Archive / closed`,
 `queue[uk]=false`. `defaultJLFilters()` in `JobTracker.tsx` leaves Archive unchecked, so an
 archived row disappears from the Job List on the next doc load and the owner can tick the
-Archive swatch to see it again. **Nothing is deleted** (hide over delete), and **no PWA asset is
+Archive swatch to see it again. A row whose application is sent or decided (Submitted, Interview, Offer, or a
+recorded outcome) is never archived by any verdict: the report prints `KEPT` (POSTING-SUBMITTED-KEEP-001,
+2026-11-25). **Nothing is deleted** (hide over delete), and **no PWA asset is
 touched**, so this needs no cache-bust and no shift claim.
 
 Evidence is **graded**, because archiving a live role is worse than carrying a dead one for two

@@ -203,12 +203,14 @@
     var d = root.document; if (!d || !d.body) return;
     var b = d.getElementById(BANNER_ID);
     if (!v) {
-      d.body.classList.remove('antcv-content-stale');
+      // OWNER-GUARD-CLASS-WRITE-001 (2026-11-25): classList.remove/add write the attribute even
+      // when nothing changes, and this runs every 1.5 s. Every class observer in the app woke.
+      if (d.body.classList.contains('antcv-content-stale')) d.body.classList.remove('antcv-content-stale');
       if (b) b.remove();
       return;
     }
     ensureStyle();
-    d.body.classList.add('antcv-content-stale');
+    if (!d.body.classList.contains('antcv-content-stale')) d.body.classList.add('antcv-content-stale');
     if (!b) { b = d.createElement('div'); b.id = BANNER_ID; b.setAttribute('role', 'alert'); d.body.appendChild(b); }
     var docs = v.foreign.some(function (f) { return f.indexOf('cv.') === 0; }) && v.foreign.some(function (f) { return f.indexOf('cl.') === 0; })
       ? 'CV and cover letter were' : (v.foreign[0].indexOf('cv.') === 0 ? 'CV was' : 'cover letter was');

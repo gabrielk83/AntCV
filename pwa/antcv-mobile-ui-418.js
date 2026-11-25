@@ -179,8 +179,10 @@
     // ALT-CIRCLES-ALL-WIDTHS-001 (owner 2026-07-23 "open vertically instead of
     // horizontally"): collapse + vertical dropdown at EVERY width (was mobile-only).
     c354_groups().forEach(function (g) {
-      g.host.setAttribute('data-antcv-altdrop', '1');
-      if (g.host.getAttribute('data-antcv-altdrop-open') !== '1') g.host.setAttribute('data-antcv-altdrop-open', '0');
+      // ALT-CIRCLES-WRITE-001 (2026-11-25): write only what differs. The sweep runs on every
+      // class/style mutation, and an unchanged setAttribute is still a mutation for other observers.
+      if (g.host.getAttribute('data-antcv-altdrop') !== '1') g.host.setAttribute('data-antcv-altdrop', '1');
+      if (!/^[01]$/.test(g.host.getAttribute('data-antcv-altdrop-open') || '')) g.host.setAttribute('data-antcv-altdrop-open', '0');
       var open = g.host.getAttribute('data-antcv-altdrop-open') === '1';
       var trigger = null;
       for (var i = 0; i < g.circles.length; i++) { if (c354_isActive(g.circles[i])) { trigger = g.circles[i]; break; } }
@@ -188,8 +190,8 @@
       var tr = null; if (open) { try { tr = trigger.getBoundingClientRect(); } catch (_) { tr = null; } }
       var below = 0;
       g.circles.forEach(function (c) {
-        c.setAttribute('data-antcv-altcircle', '1');
-        if (c === trigger) { c.setAttribute('data-antcv-alttrigger', '1'); c.style.removeProperty('left'); c.style.removeProperty('top'); }
+        if (c.getAttribute('data-antcv-altcircle') !== '1') c.setAttribute('data-antcv-altcircle', '1');
+        if (c === trigger) { if (c.getAttribute('data-antcv-alttrigger') !== '1') c.setAttribute('data-antcv-alttrigger', '1'); c.style.removeProperty('left'); c.style.removeProperty('top'); }
         else {
           c.removeAttribute('data-antcv-alttrigger');
           if (open && tr) { below++; c.style.setProperty('left', Math.round(tr.left) + 'px', 'important'); c.style.setProperty('top', Math.round(tr.bottom + 4 + (below - 1) * 20) + 'px', 'important'); }

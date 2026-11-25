@@ -1773,7 +1773,9 @@ _prev verified 2026-10-27_ — CI nightly E1 re-verify against HEAD 65ce36e0: le
 
 ## Row 89 — MODEL-TABLE-FRESHNESS-001
 
-_verified: 2026-11-19_
+_verified: 2026-11-25_
+
+_2026-11-25 weekly tune (desktop, Opus 5.5, worktree-isolated, lane 1.51.6685): 114 ids diffed mechanically against raw vendor text plus Mistral `/v1/models`. Two errors, fixed in all three mirrors: `mistral-large-latest` (LIVE pin; alias moved from `mistral-large-2512` to `mistral-large-4` between 11-05 and 11-25; metered [0.5,1.5], real [0.70,2.10]; see row 157) and GLM5-LATEST-RATE-2026-11-001 (`glm-5-latest` [1.4,4.4], was FALLBACK / strict null). The four OpenAI -healthcare configurations resolve through their base keys and are pinned by test. Freshness 52/52 ×2, mirror 17/17, run-tests ALL PASS, boot smoke clean. PWA deployed run 45702487888; access-relay DEPLOYED run 45702656865, `/health` 200 `auth-41-jt-doc-size`. proxy + demo-proxy still owed (row 147). Report `COST_QUALITY_WEEKLY_2026-11-25.md`._
 
 _2026-11-19 weekly tune (desktop, Opus 5.5, worktree-isolated): pins verify against all four vendor pages. Mechanical diff of 87 page ids found six errors, fixed in all three mirrors with dated comments: OPENAI-RATES-2026-11-19-001 (`gpt-6.2-astra` [8,40] and `gpt-6.2-sol` [2,10] are new, both fell to FALLBACK [3,15] with strict null; `gpt-6.2-astra-law` resolves through the astra key; `gpt-6-rosalind` now bills [10,50] under a promo through at least 2026-12-31, the 11-05 key [15,75] was 1.5x OVER) and GEMINI4-NEON-HYDROGEN-RATES-2026-11-001 (`gemini-4-neon` [3,15], `gemini-4-hydrogen` [1.5,7.5], both new, FALLBACK / strict null). Freshness 50/50 ×2, mirror 16/16. access-relay DEPLOYED (rates only, run 44567597500 from 3a73dcd4, /health 200); proxy + demo-proxy owed (row 147)._
 
@@ -2185,7 +2187,9 @@ _CI nightly 2026-09-15 (E1 sweep): `shouldAdoptCloudPointer` present; test green
 
 > **Renumbered 2026-08-26: was row 38.** A document written before that date citing "row 38" may mean this row or GEN-BACKGROUND-001. The ID is the key.
 
-_verified: 2026-11-19_
+_verified: 2026-11-25_
+
+_2026-11-25 weekly tune: 0 `llm_calls` in the trailing 7 d (last row 2026-11-08, 17 days). 30 d fallback: the same 188 calls as 11-19; analysis mistral n=13 < 20, no flip. All mistral rows describe Large 3 or an undetermined model; none is known to be Large 4._
 
 _2026-11-19 weekly tune: 0 `llm_calls` in the trailing 7 d (last row 2026-11-08). 30 d fallback: 188 calls, 11 of them `srv:cascade` analysis on mistral; analysis n=13 < 20, no flip. The blind week is the coverage gap this row describes (gen-runner / gen-job / Claude packages do not log)._
 
@@ -2829,7 +2833,9 @@ unattended fix. Kept ACTIVE.
 
 ## Row 115 — PWA-COST-METER-OPUS55-001
 
-_verified: 2026-11-19_
+_verified: 2026-11-25_
+
+_2026-11-25 weekly tune: re-verified, not fixed. `C.claude` / `C.anthropic` still [2,10], `q()` still pins `claude-opus-5-5` [4,20]. 188 calls in 30 d, none on claude. Owner call unchanged._
 
 _2026-11-19 weekly tune: re-verified, not fixed. `C.claude` / `C.anthropic` still [2,10], `q()` still pins `claude-opus-5-5` [4,20]. 188 calls in 30 d, none on claude. Owner call unchanged._
 
@@ -2988,7 +2994,9 @@ _verified: 2026-11-23_
 
 ## Row 124 — CASCADE-RETIRED-IDS-2026-10-001
 
-_verified: 2026-11-19_
+_verified: 2026-11-25_
+
+_2026-11-25 weekly tune: re-verified, tails unchanged. `/v1/models` lists none of `mistral-large-2411` / `-2407` / `mistral-medium-2312`. The Gemini 2.5 routing switch is 2026-12-01 (read verbatim); this was the last tune before it. Owner call._
 
 _2026-11-19 weekly tune: re-verified, tails unchanged. Google routes `gemini-2.5-flash` → `gemini-3.5-flash-lite` (same billed rate) and `gemini-2.5-pro` → `gemini-3.8-flash` on 2026-12-01; the 11-26 tune is the last before it. Owner call._
 
@@ -3251,7 +3259,9 @@ _OPEN (found by position-discovery 2026-11-15, Gabo-PC, Opus 5.5; script only, n
 
 ## Row 147 — PROXY-POSTING-GUARD-UNDEPLOYED-001
 
-_verified: 2026-11-23_
+_verified: 2026-11-25_
+
+**2026-11-25 (weekly tune, Gabo-PC, Opus 5.5):** `wrangler deployments list`: cv-proxy 2026-11-05T10:07Z, antcv-demo-proxy 2026-11-05T08:38Z. Still undeployed; cv-proxy `/health` `3.8.4-brand-ink-match`. A deploy would now carry the 11-12, 11-19 and 11-25 rate tables. Until then the demo cap meters `mistral-large-latest` at Large 3 [0.5,1.5], 1.4x under (row 157). Blocked: owner call.
 
 **2026-11-23 (desktop nightly, Gabo-PC, Opus 5.5, HEAD `140e00bb`):** `wrangler deployments list`: cv-proxy 2026-11-05T10:07Z, antcv-demo-proxy 2026-11-05T08:38Z. Both `/health` `3.8.4-brand-ink-match`. Still undeployed. Blocked: owner call.
 
@@ -3358,3 +3368,15 @@ _FIXED 2026-11-25 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `s
 **Not done.** Row 135 Elma was not restored: a data write outside this routine's task. **OWNER:** set Elma back to Submitted, or leave it archived.
 
 **To close.** A sweep with `--apply` prints KEPT for a sent row and leaves its status and band alone (expected next run, row 6).
+
+## Row 157 — MISTRAL-LATEST-LARGE4-001
+
+_verified: 2026-11-25_
+
+_CODE SHIPPED 2026-11-25 (weekly cost-quality tune, Gabo-PC, Opus 5.5, worktree-isolated; commit `09d14274`, PWA `1.51.6685-mistral-large4`); two owner calls open._
+
+**Found.** `GET /v1/models` 2026-11-25 lists `mistral-large-latest` under `mistral-large-4`. The 11-05 probe had it on `mistral-large-2512` (Large 3). The 11-12 and 11-19 tunes skipped the probe, so the switch date is 11-05 < date ≤ 11-25. The id is the mistral cascade head and leads `supervisor` and `analysis`. Price [0.5,1.5] → [0.70,2.10], +40%.
+
+**Fixed.** Explicit key in all three `RATES` mirrors, PWA `C.mistral` [0.7,2.1] in `app.js` + `app.src.js`, tests. PWA and access-relay live. `SCHEDULED_ROUTINES.md` step 1a-quinquies makes the probe unconditional.
+
+**Open, owner.** (1) D1 `llm_provider_costs` still holds `('mistral','mistral-large-latest',0.5,1.5)`, which wins over the table; the superseding INSERT is in `COST_QUALITY_WEEKLY_2026-11-25.md` §2. (2) Keep Large 4, or pin `mistral-large-2512` (Large 3; retires 2027-03-05 by the models page, day-first dates inferred). No quality evidence for Large 4 on our prompts. (3) proxy + demo-proxy carry the old rate until row 147 deploys.

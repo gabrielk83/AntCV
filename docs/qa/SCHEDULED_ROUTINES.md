@@ -474,6 +474,12 @@ this routine changes the *starting* choice based on the week's evidence.
    (vi) a retired id sitting in a `PROVIDER_MODELS` cascade tail (2026-10-15: `mistral-large-2411`/`-2407`,
    `mistral-medium-2312`, `gemini-2.0-flash`, `gemini-1.5-pro`) is an OWNER call per 1a-bis(ii) — report it,
    do not edit the cascade.
+1a-quinquies. **CORRECTION from the 2026-11-25 pass (MISTRAL-LATEST-LARGE4-001) — probe the ALIASES every run.**
+   The live mistral pin is a rolling alias (`mistral-large-latest`). It moved from Large 3 to Large 4 with no change
+   on the pricing page, after two runs skipped `GET /v1/models` because "no new Mistral model" was listed. The probe
+   is unconditional. Pin to verify: `mistral-large-latest` [0.70,2.10] (Large 4); `mistral-large-2512` stays [0.5,1.5].
+   A moved alias is a model change as well as a price change: report it as an owner call, and check the D1 row (1b(i)).
+   Fetch vendor pages as raw text (`curl` on the `.md` forms), not through a summarizer, so nothing is truncated.
 1b. **COST-SOURCE AUDIT (added 2026-08-20 — COST-SOURCE-AUDIT-GAP-001).** Step 1a audits the
    `demo-enforcement.js` `RATES` tables, which govern the **demo budget cap**. They do NOT produce
    `llm_calls.estimated_cost_usd` — the number every score in step 3 divides by. That number comes

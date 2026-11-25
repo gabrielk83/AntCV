@@ -43,8 +43,10 @@ const r = await page.evaluate(()=>{
   const secs = JSON.parse(localStorage.getItem('sections')||'{}');
   const cc = (secs.cv||[]).find(s=>s.id==='core_comp')||{};
   const br = (secs.cl||[]).find(s=>s.id==='bring')||{};
+  // The CL section is a rich_block now ({b: focus, t: cell}); the first item is its lead-in.
+  const cl = br.rows ? br.rows[1] : [(br.items||[])[1].b, (br.items||[])[1].t];
   return { cvFocus: cc.rows[1][0], cvCell: cc.rows[1][1], cvLen: cc.rows[1][1].length,
-    clFocus: br.rows[1][0], clCell: br.rows[1][1], clLen: br.rows[1][1].length,
+    clFocus: cl[0], clCell: cl[1], clLen: cl[1].length,
     header: cc.rows[0][1] };
 });
 await browser.close(); await new Promise(rr=>server.close(rr));
@@ -57,11 +59,13 @@ let pass=true; const fails=[];
 if (errs.length) { pass=false; fails.push('app errors: '+errs.slice(0,2).join(' | ')); }
 if (r.cvFocus !== 'Docs & traceability') { pass=false; fails.push('CV Focus Area not abbreviated: '+r.cvFocus); }
 if (r.clFocus !== 'Docs & traceability') { pass=false; fails.push('CL Focus Area not abbreviated: '+r.clFocus); }
-if (r.cvLen > 60) { pass=false; fails.push('CV cell not capped to 60: len '+r.cvLen); }
-if (r.clLen > 105) { pass=false; fails.push('CL cell not capped to 105: len '+r.clLen); }
-if (r.clLen <= 60) { pass=false; fails.push('CL cell over-trimmed (should be ~105, not CV-tight): len '+r.clLen); }
+// Caps since 2026-06-25: CV <=125, CL <90.
+if (r.cvLen > 125) { pass=false; fails.push('CV cell not capped to 125: len '+r.cvLen); }
+if (r.clLen > 89) { pass=false; fails.push('CL cell not capped to 89: len '+r.clLen); }
+if (r.clLen <= 60) { pass=false; fails.push('CL cell over-trimmed: len '+r.clLen); }
 if (/\s$/.test(r.cvCell) || /[,;]$/.test(r.cvCell)) { pass=false; fails.push('CV cell has trailing separator'); }
-if (r.header !== 'Strategic Expertise') { pass=false; fails.push('header row was modified'); }
+// VALUE-FOR-ROLE-001 names the CV columns by need and proof.
+if (r.header !== 'What I bring, with proof') { pass=false; fails.push('header row: '+r.header); }
 console.log('\n'+(pass?'PASS':'FAIL')+' — CORE-COMP-COMPRESS-001');
 if (!pass) { fails.forEach(f=>console.log('  ✗ '+f)); process.exitCode=1; }
-else console.log('  CL bring capped 105, CV core_comp capped 60 (much tighter), Focus Area abbreviated, header untouched; zero errors.');
+else console.log('  CL bring capped 89, CV core_comp capped 125, Focus Area abbreviated; zero errors.');

@@ -47,23 +47,24 @@ await page.waitForTimeout(7000);
 
 const r=await page.evaluate(()=>{
   const paper=document.querySelector('.antcv-preview-paper');
-  const rows=Array.from(paper.querySelectorAll('[data-antcv-row-path^="roles."]')).map(e=>({
-    p:e.getAttribute('data-antcv-row-path'),
-    role:e.getAttribute('data-antcv-role-path'),
-    ta:getComputedStyle(e).textAlign,
-  }));
+  // Bullet rows carry their storage key as data-antcv-rowkey (PER-ROW-CJLR-ROWKEY-001).
+  const rows=Array.from(paper.querySelectorAll('[data-antcv-rowkey^="roles."]')).map(e=>{
+    const line=e.querySelector('[data-antcv-role-line]');
+    return { k:e.getAttribute('data-antcv-rowkey'), ta:getComputedStyle(e).textAlign, jc:line?getComputedStyle(line).justifyContent:'' };
+  });
   return { rows };
 });
 await browser.close();await new Promise(r2=>server.close(r2));
 
-const r0=r.rows.filter(x=>x.role==='roles.0');
-const r1b0=r.rows.find(x=>x.p==='roles.1.bullets.0');
-const r1b1=r.rows.find(x=>x.p==='roles.1.bullets.1');
+const at=(k)=>r.rows.find(x=>x.k===k)||{};
+// GROUP-CJLR-SCOPE-001 (owner 2026-07-14): the role key moves the role HEAD only, in the
+// preview and in the worker; bullets follow their own key or the default.
 const checks=[
-  ['bullet rows carry markers (4)', r.rows.length===4],
-  ['role-0 bullets centered (role key)', r0.length===2 && r0.every(x=>x.ta==='center')],
-  ['role-1 bullet-0 right (per-bullet beats role default)', !!r1b0 && r1b0.ta==='right'],
-  ['role-1 bullet-1 keeps default justify', !!r1b1 && r1b1.ta==='justify'],
+  ['bullet rows carry markers (4)', r.rows.filter(x=>/.bullets./.test(x.k)).length===4],
+  ['role-0 head centered (role key)', at('roles.0').jc==='center'],
+  ['role-0 bullets keep the default', at('roles.0.bullets.0').ta==='left' && at('roles.0.bullets.1').ta==='left'],
+  ['role-1 bullet-0 right (per-bullet key)', at('roles.1.bullets.0').ta==='right'],
+  ['role-1 bullet-1 keeps the default', at('roles.1.bullets.1').ta==='left'],
 ];
 for(const [n,ok] of checks)console.log(`${n}: ${ok?'OK':'FAIL'}`);
 if(!checks.every(c=>c[1]))console.log('rows:',JSON.stringify(r.rows));

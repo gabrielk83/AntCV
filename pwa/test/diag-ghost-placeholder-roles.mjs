@@ -65,8 +65,9 @@ if(r.noPaper){ console.log('FAIL: no .antcv-preview-paper rendered (sign-in gate
 const checks=[
   ['ghost "<unused slot>" role DROPPED (not in preview)', r.hasUnusedSlot===false],
   ['real roles still render', r.hasRealRole===true],
-  ['fresh-skeleton bracketed role still renders (no over-hide)', r.hasSkeletonRole===true],
-  ['exactly 3 visible role wrappers (2 real + 1 skeleton, ghost gone)', r.visibleRoleWrappers===3],
+  // CV-GHOST-PLACEHOLDER-ROLES-PREVIEW-002 (owner 2026-06-30): next to a real role, a fully
+  // bracketed role is an unfilled slot and is dropped too. Page 1 has no role wrappers.
+  ['bracketed role dropped next to real roles', r.hasSkeletonRole===false],
 ];
 for(const [n,ok] of checks)console.log(`${n}: ${ok?'OK':'FAIL'}`);
 console.log('detail:',JSON.stringify(r));

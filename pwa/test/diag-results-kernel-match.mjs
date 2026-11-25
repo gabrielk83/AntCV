@@ -20,6 +20,9 @@ const store = {
   outcomesMode: JSON.stringify('results'),
   personalInfo: JSON.stringify(KERNEL),
   stylePackage: JSON.stringify('nordic-minimal'),
+  // RESULTS-UNSOLICITED-COVERAGE-001: with no JD every role carries a line, so the
+  // no-duty-restatement check needs a targeted application.
+  'antcv:lastJdText': 'We look for a change manager for hardware programmes in Copenhagen.',
 };
 globalThis.localStorage = { getItem: (k) => (k in store ? store[k] : null), setItem: () => {}, removeItem: () => {} };
 globalThis.window = {};
@@ -49,7 +52,8 @@ const roles = out.find((s) => s.type === 'experience').roles;
 let pass = 0; const ok = (n, c) => { assert.ok(c, n); console.log('PASS ' + n); pass++; };
 
 ok('Kanzen role adopts its kernel numeric outcome (150 users)', /150 users/.test(roles[0].results || ''));
-ok('Innoviz role adopts its kernel numeric outcome (250 days -> 10)', /250 days/.test(roles[1].results || '') && /10/.test(roles[1].results || ''));
+// RESULTS-COMPRESS-001 (2026-07) writes the same fact as "cut the change cycle from ~250 to ~10 days".
+ok('Innoviz role adopts its kernel numeric outcome (250 days -> 10)', /~?250 (?:days )?to ~?10 days/.test(roles[1].results || ''));
 ok('no-outcome non-numeric role gets NO Results (no duty restatement)', !roles[2].results);
 ok('non-numeric role keeps its bullets as content', (roles[2].bullets || []).length >= 1);
 

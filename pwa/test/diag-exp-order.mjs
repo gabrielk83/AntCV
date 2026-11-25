@@ -42,7 +42,8 @@ const titles = async ()=> page.evaluate(()=>{
   const b=JSON.parse(localStorage.getItem('sections')||'{}'); const e=(b.cv||[]).find(s=>s&&s.type==='experience');
   return (e&&e.roles||[]).map(r=>r.id);
 });
-const firstRun = await titles(); // first run must NOT reorder
+await page.waitForTimeout(4000); // boot normalize settles later under load
+const firstRun = await titles();
 
 // 1) ADD a role (new id) → must trigger a reverse-chron sort, volunteer last.
 await page.evaluate(()=>{
@@ -63,7 +64,6 @@ await page.evaluate(()=>{
 });
 await page.waitForTimeout(2000);
 const afterReorder = await titles();
-const reorderExpected = [...afterAdd].reverse();
 
 await browser.close(); await new Promise(r=>server.close(r));
 console.log('--- EXP-ORDER-ON-ADD-001 ---');
@@ -73,9 +73,11 @@ console.log('after manual reorder:', JSON.stringify(afterReorder));
 console.log('app errors:', errs.length, errs.slice(0,3).join(' | '));
 const order = ['kanzen','sirin','mepro','idf','cw']; // reverse-chron, volunteer LAST
 const checks = [
-  ['first run leaves order untouched', JSON.stringify(firstRun)===JSON.stringify(['idf','cw','kanzen','sirin'])],
+  // ROLE-ORDER-CANON-001 (owner 2026-06-19, sections-normalize) supersedes the 06-16 rule that
+  // left an existing or dragged order alone: roles are always reverse-chron, volunteer last.
+  ['boot puts the roles in canonical order', JSON.stringify(firstRun)===JSON.stringify(['kanzen','sirin','idf','cw'])],
   ['adding a role re-sorts reverse-chron with volunteer (cw) LAST', JSON.stringify(afterAdd)===JSON.stringify(order)],
-  ['a pure manual reorder is RESPECTED (not re-sorted)', JSON.stringify(afterReorder)===JSON.stringify(reorderExpected)],
+  ['a manual reorder returns to canonical order', JSON.stringify(afterReorder)===JSON.stringify(order)],
   ['no app errors', errs.length === 0],
 ];
 for (const [n,ok] of checks) console.log(`${n}: ${ok?'OK':'FAIL'}`);

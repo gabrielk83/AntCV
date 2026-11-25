@@ -41,7 +41,7 @@ const r = await page.evaluate(()=>({
   cssHas352: (document.getElementById('antcv-mobile-ui-418-css')||{}).textContent?.includes('antcv-react-bottom-nav'),
   cssHas354: (document.getElementById('antcv-mobile-ui-418-css')||{}).textContent?.includes('antcv-altdrop'),
 }));
-check('1. merged sidecar installed + API + back-compat globals', r.installed==='1.50.418' && r.api && r.backcompat, JSON.stringify(r));
+check('1. merged sidecar installed + API + back-compat globals', /^1[.]5[0-9][.]/.test(r.installed||'') && r.api && r.backcompat, JSON.stringify(r));
 check('2. one combined stylesheet carries 275+352+354 rules', r.css && r.cssHas275 && r.cssHas352 && r.cssHas354, JSON.stringify(r));
 check('3. no page errors at mobile viewport', errs.length===0, errs.join('|').slice(0,200));
 

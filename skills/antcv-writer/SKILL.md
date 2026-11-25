@@ -70,7 +70,7 @@ Execute in this order for every request:
 
 1. **Identify the role and seniority.** Infer canonical `role_slug` from the JD plus the relevant seniority dimension. For commercial use cases, also infer `commercial_seniority` (intern / junior / mid / senior / lead / director / vp / c-level). For academic use cases, also infer `career_stage` (phd_applicant / phd_candidate / postdoc / early_faculty / senior_faculty). Rules: role_slug is lowercase, hyphenated, role-only (no seniority qualifier, no company name), one or two words. See `references/role-inference.md` for full inference rules, examples, and the user-override flow.
 
-2. **Load the skeleton.** For CV → `references/cv-skeleton.md`. For cover letter → `references/cl-skeleton.md`. The skeleton is style-independent at the section-set level; the style controls section ordering and naming.
+2. **Load the skeleton.** For CV → `references/cv-skeleton.md`. For cover letter → `references/cl-skeleton.md`. The skeleton is style-independent at the section-set level; the style controls section ordering and naming. Every cover letter that answers a job description ends `what_i_bring` with ONE diagram row (LETTER-DIAGRAM-001, owner 2026-11-25): a workflow, architecture or improvement loop for the work the candidate would do at that employer, as plain text (`Workflow: <name>` / `Step (detail) → Step (detail) → Step (detail)`, 3 to 5 steps). Rules in `references/cl-skeleton.md`.
 
 3. **Load the writing style.** Read the style row from `references/style-matrix.md` and the style-specific notes in `references/styles/{style-name}.md`. Each style defines `primaryConstraint`, `constraintAvoid`, `constraintPrefer`, default tone chips, section ordering, density defaults, ATS behavior, content rule, avoid rule.
 

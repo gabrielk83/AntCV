@@ -16,7 +16,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.6205-academy-pages';
+  var VERSION = '1.51.6706-letter-diagram';
   if (window.__antcvCoreCompCompress === VERSION) return;
   window.__antcvCoreCompCompress = VERSION;
 
@@ -147,6 +147,8 @@
           if (!isTbl(s)) return;
           s.rows.forEach(function (row, i) {
             if (i === 0 || !Array.isArray(row)) return;     // skip header row
+            // LETTER-DIAGRAM-001: the letter's "Workflow: …" row (arrow-separated steps) keeps its full text
+            if (s.id === 'bring' && (String(row[1] == null ? '' : row[1]).match(/→|->/g) || []).length >= 2) return;
             // Focus Area: abbreviate (Docs/Reqs/Mgmt), tighten ("X team Coordination" → "X Coordination"),
             // expand any banned "Coord." → full word, cap to CAP_FOCUS.
             if (typeof row[0] === 'string') { var fa = trimDangling(capWords(expand(tighten(abbreviate(gab ? canon(row[0]) : row[0]))), CAP_FOCUS)); if (fa !== row[0]) { row[0] = fa; changed = true; } }

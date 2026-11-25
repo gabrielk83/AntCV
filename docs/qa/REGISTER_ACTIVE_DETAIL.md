@@ -798,7 +798,9 @@ _verified: 2026-10-05_
 
 ## Row 41
 
-_verified: 2026-11-18_
+_verified: 2026-11-25_
+
+_Desktop nightly 2026-11-25 (Gabo-PC, Opus 5.5, base `fc12d446`): the row's own stress diag `diag-react185-regulatory.mjs` could not run (it set a value on a file input, which the browser refuses). Fixed the harness; run: 17 fields typed, 106 clicks, 0 page errors, 0 React #185 / update-depth / removeChild. Blocked: real device (Android)._
 
 **2026-11-18 (desktop nightly, E1 staleness sweep, HEAD 9774bd3a):** guard sidecars 9/9 served, executed, content-identical on live (`diag-live-guard-sidecars.mjs`); E3 audit 212 buttons, 0 regressions, 0 page errors, no React #185 headlessly. Blocked: real device (Android #185 repro). Kept ACTIVE.
 
@@ -1771,7 +1773,9 @@ _prev verified 2026-10-27_ — CI nightly E1 re-verify against HEAD 65ce36e0: le
 
 ## Row 89 — MODEL-TABLE-FRESHNESS-001
 
-_verified: 2026-11-19_
+_verified: 2026-11-25_
+
+_2026-11-25 weekly tune (desktop, Opus 5.5, worktree-isolated, lane 1.51.6685): 114 ids diffed mechanically against raw vendor text plus Mistral `/v1/models`. Two errors, fixed in all three mirrors: `mistral-large-latest` (LIVE pin; alias moved from `mistral-large-2512` to `mistral-large-4` between 11-05 and 11-25; metered [0.5,1.5], real [0.70,2.10]; see row 157) and GLM5-LATEST-RATE-2026-11-001 (`glm-5-latest` [1.4,4.4], was FALLBACK / strict null). The four OpenAI -healthcare configurations resolve through their base keys and are pinned by test. Freshness 52/52 ×2, mirror 17/17, run-tests ALL PASS, boot smoke clean. PWA deployed run 45702487888; access-relay DEPLOYED run 45702656865, `/health` 200 `auth-41-jt-doc-size`. proxy + demo-proxy still owed (row 147). Report `COST_QUALITY_WEEKLY_2026-11-25.md`._
 
 _2026-11-19 weekly tune (desktop, Opus 5.5, worktree-isolated): pins verify against all four vendor pages. Mechanical diff of 87 page ids found six errors, fixed in all three mirrors with dated comments: OPENAI-RATES-2026-11-19-001 (`gpt-6.2-astra` [8,40] and `gpt-6.2-sol` [2,10] are new, both fell to FALLBACK [3,15] with strict null; `gpt-6.2-astra-law` resolves through the astra key; `gpt-6-rosalind` now bills [10,50] under a promo through at least 2026-12-31, the 11-05 key [15,75] was 1.5x OVER) and GEMINI4-NEON-HYDROGEN-RATES-2026-11-001 (`gemini-4-neon` [3,15], `gemini-4-hydrogen` [1.5,7.5], both new, FALLBACK / strict null). Freshness 50/50 ×2, mirror 16/16. access-relay DEPLOYED (rates only, run 44567597500 from 3a73dcd4, /health 200); proxy + demo-proxy owed (row 147)._
 
@@ -2089,7 +2093,9 @@ _CI nightly 2026-09-15 (E1 sweep): same, confirmed present + byte-identical._
 
 ## Row 99 — REG-GROUP-FOLD-NAMED-001
 
-_verified: 2026-10-27_
+_verified: 2026-11-25_
+
+_Desktop nightly 2026-11-25 (Gabo-PC, Opus 5.5, base `fc12d446`): `diag-reg-fold-dance.mjs` exit 0: 0 post-boot section writes in 15 s, one group ("Environmental & Durability"), 10 standards kept, 0 page errors. `NAMED_FOLD` ×2, loaded `?v=1.51.173`, `dup-group-merge.test.mjs` green in the 2204 suite. The idle overlay flicker fixed today (row 45) is a separate symptom; whether it was part of the reported "dancing" is not known. Owner check still owed._
 
 _Desktop nightly 2026-10-27 (Gabo-PC, Opus 5.5, HEAD 37fbb40f): `diag-reg-fold-dance.mjs` DIAG PASS — converges to one group, bounded writes, 0 page errors; `NAMED_FOLD` ×2, loaded `?v=1.51.173`. Owner "sidebar dancing" confirm still owner-check._
 
@@ -2154,7 +2160,9 @@ _CI nightly 2026-09-15 (E1 sweep): `0.1` floor present in both bundles; test gre
 
 ## Row 19 — JD-SCOPE-OCC2-GUARD-001
 
-_verified: 2026-10-28_
+_verified: 2026-11-25_
+
+_Desktop nightly 2026-11-25 (Gabo-PC, Opus 5.5, base `fc12d446`): `shouldAdoptCloudPointer` in `antcv-jd-scope.js` and `app.src.js`; the `app.js` mirror carries the minified form (0 literal hits, as expected); `jd-scope-isolation.test.mjs` green in the 2204 suite. Blocked: two real devices._
 
 _CI nightly 2026-10-28 (E1 stalest slot, HEAD `60dcfca1`): `shouldAdoptCloudPointer` present (`pwa/antcv-jd-scope.js` ×2 + `pwa/app.src.js` ×1; the `app.js` mirror carries the minified equivalent); `jd-scope-isolation.test.mjs` green in the 1850/1850 suite. Two-real-device leg still owner-gated (physical devices, not fakeable headlessly)._
 _CI nightly 2026-10-17 (E1 stalest slot, HEAD `954cce5a`): `shouldAdoptCloudPointer` present (`pwa/antcv-jd-scope.js` ×2 + `pwa/app.src.js` ×1; the `app.js` mirror carries the minified equivalent); `jd-scope-isolation.test.mjs` green in the 1830/1830 suite. Two-real-device leg still owner-gated (physical devices, not fakeable headlessly)._
@@ -2179,7 +2187,9 @@ _CI nightly 2026-09-15 (E1 sweep): `shouldAdoptCloudPointer` present; test green
 
 > **Renumbered 2026-08-26: was row 38.** A document written before that date citing "row 38" may mean this row or GEN-BACKGROUND-001. The ID is the key.
 
-_verified: 2026-11-19_
+_verified: 2026-11-25_
+
+_2026-11-25 weekly tune: 0 `llm_calls` in the trailing 7 d (last row 2026-11-08, 17 days). 30 d fallback: the same 188 calls as 11-19; analysis mistral n=13 < 20, no flip. All mistral rows describe Large 3 or an undetermined model; none is known to be Large 4._
 
 _2026-11-19 weekly tune: 0 `llm_calls` in the trailing 7 d (last row 2026-11-08). 30 d fallback: 188 calls, 11 of them `srv:cascade` analysis on mistral; analysis n=13 < 20, no flip. The blind week is the coverage gap this row describes (gen-runner / gen-job / Claude packages do not log)._
 
@@ -2205,7 +2215,9 @@ _2026-11-12 weekly tune: ADVANCED. D1 `llm_calls` now carries Worker-side rows: 
 
 ## Row 45
 
-_verified: 2026-10-28_
+_verified: 2026-11-25_
+
+_Desktop nightly 2026-11-25 (Gabo-PC, Opus 5.5, base `fc12d446`): the idle half of PERF-001 is fixed and live, `1.51.6645-idle-churn` (EDITOR-IDLE-CHURN, ACTIVE_BUGS). `diag-rerender-storm.mjs` was red on pristine main: 34.4 DOM mutations/s and 92 rAF/s in an idle editor, the same at 8, 25 and 50 s. After: 1.2/s and 10/s. Four writers: the metric-guard chip loop, the overlay / shell-sticky hide-unhide fight (which also drove the island and mobile-ui FAB fight), the owner-guard body class, the alt-circle attributes. Left: `data-antcv-page-fit-applied` 1.2/s. Still open: the multi-second stall on a real export / preview toggle (needs an owner document and a real gen). Also left: when the document really is empty in the editor after the overlay was visible once, shell-sticky still un-hides it every 1.5 s; its back-off needs 3 hits in 2 s, the poll is 1.5 s._
 
 **Re-verify 2026-10-28 (CI nightly — E1 stalest slot, code-presence on HEAD `60dcfca1`):** `pwa/antcv-pdf-preview-gate.js` openModal loading-shell leg present; `pwa/test/diag-generate-click-profile.mjs` present. PARTIAL 1.51.158 intact; setTimeout leg still needs a live-model CPU profile (BLOCKED in CI). Full PWA suite 1850/1850 green.
 
@@ -2275,7 +2287,9 @@ _verified: 2026-10-05_
 
 ## Row 35 — OVERLAY-EARLY-HALT-001
 
-_verified: 2026-10-28_
+_verified: 2026-11-25_
+
+_Desktop nightly 2026-11-25 (Gabo-PC, Opus 5.5, base `fc12d446`): `__antcvGenCost` app.src.js ×11 + app.js ×9, `KERNEL-STUCK` ×2 + ×1; `overlay-watchdog-heartbeat.test.mjs` green in the suite. Blocked: one real 3-6 min generation._
 
 **Re-verify 2026-10-28 (CI nightly — E1 stalest slot, code-presence on HEAD `60dcfca1`):** `__antcvGenCost` heartbeat gate present in both bundles (`pwa/app.src.js` ×10, `pwa/app.js` ×4). Shipped 1.51.41 intact; one real 3–6 min regen-confirm stays owner-gated (real generation on the owner's key), BLOCKED in CI. Full PWA suite 1850/1850 green.
 
@@ -2665,7 +2679,9 @@ confirmed landed, 3 checks go red. All 14 job-tracker python tests green. Live-v
 
 ## Row 110 — ANTCV-TOKEN-EXPIRED-2026-09-02-001
 
-_verified: 2026-10-27_
+_verified: 2026-11-25_
+
+_Desktop nightly 2026-11-25 (Gabo-PC, Opus 5.5, base `fc12d446`): preflight TOKEN OK, expires 2026-12-02T19:10:06Z (7.0 d left), `token` exit 0; authed `GET /api/job-tracker` 200 (rev 399). Dispatch gap 1.5 d. Leg (a) (long-lived machine token) still the only structural fix owed._
 
 _Desktop nightly 2026-10-27 (Gabo-PC): preflight TOKEN OK, expires 2026-11-01T19:31:42Z (5.5 d left), `token` exit 0; authed `GET /api/job-tracker` 200. No DISPATCH GAP line (previous start 1.0 d ago). Leg (a) (long-lived machine token / longer TTL) still the only structural fix owed._
 
@@ -2817,7 +2833,9 @@ unattended fix. Kept ACTIVE.
 
 ## Row 115 — PWA-COST-METER-OPUS55-001
 
-_verified: 2026-11-19_
+_verified: 2026-11-25_
+
+_2026-11-25 weekly tune: re-verified, not fixed. `C.claude` / `C.anthropic` still [2,10], `q()` still pins `claude-opus-5-5` [4,20]. 188 calls in 30 d, none on claude. Owner call unchanged._
 
 _2026-11-19 weekly tune: re-verified, not fixed. `C.claude` / `C.anthropic` still [2,10], `q()` still pins `claude-opus-5-5` [4,20]. 188 calls in 30 d, none on claude. Owner call unchanged._
 
@@ -2976,7 +2994,9 @@ _verified: 2026-11-23_
 
 ## Row 124 — CASCADE-RETIRED-IDS-2026-10-001
 
-_verified: 2026-11-19_
+_verified: 2026-11-25_
+
+_2026-11-25 weekly tune: re-verified, tails unchanged. `/v1/models` lists none of `mistral-large-2411` / `-2407` / `mistral-medium-2312`. The Gemini 2.5 routing switch is 2026-12-01 (read verbatim); this was the last tune before it. Owner call._
 
 _2026-11-19 weekly tune: re-verified, tails unchanged. Google routes `gemini-2.5-flash` → `gemini-3.5-flash-lite` (same billed rate) and `gemini-2.5-pro` → `gemini-3.8-flash` on 2026-12-01; the 11-26 tune is the last before it. Owner call._
 
@@ -3105,7 +3125,9 @@ _SHIPPED 2026-11-05 (desktop nightly, `1.51.5322-ec-no-derive`, commit `9c8f1980
 
 ## Row 136 — CI-NIGHTLY-CREDIT-EXHAUSTED-001
 
-_verified: 2026-11-22_
+_verified: 2026-11-25_
+
+_Desktop nightly 2026-11-25 (Gabo-PC, Opus 5.5, base `fc12d446`): CI run `45602955404` (11-25) failed in 37 s: `Credit balance is too low | is_error=true api_error_status=400`. Day 28. Blocked: owner key top-up._
 
 **2026-11-22 (desktop nightly):** CI runs `44891389898` (11-21) and `45009140371` (11-22) failed in ~35 s: `Credit balance is too low | is_error=true api_error_status=400`. Day 25. Blocked: owner key top-up.
 
@@ -3217,7 +3239,9 @@ _FIXED 2026-11-11 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `s
 
 ## Row 146 — DISCOVERY-MED-MUST-NEGATION-001
 
-_verified: 2026-11-23_
+_verified: 2026-11-25_
+
+**2026-11-25 (position-discovery, Gabo-PC).** 7 added, 0 skipped. First negated must in a live ad: TICRA "English is the working language, and Danish is not required". Pre-fix script (`e5602975^`): `_language_gate` FLAG on that sentence; current script: PASS. Language leg proven live. No candidate carried a negated medical must, so the medical leg rests on its unit tests; row stays open.
 
 **2026-11-23 (position-discovery, Gabo-PC).** 5 added, 0 skipped, but no candidate carried a negated must: the pre-fix `_evidence_gate` (`e5602975~1`) also passes all five. Close test not exercised; row stays open.
 
@@ -3235,7 +3259,9 @@ _OPEN (found by position-discovery 2026-11-15, Gabo-PC, Opus 5.5; script only, n
 
 ## Row 147 — PROXY-POSTING-GUARD-UNDEPLOYED-001
 
-_verified: 2026-11-23_
+_verified: 2026-11-25_
+
+**2026-11-25 (weekly tune, Gabo-PC, Opus 5.5):** `wrangler deployments list`: cv-proxy 2026-11-05T10:07Z, antcv-demo-proxy 2026-11-05T08:38Z. Still undeployed; cv-proxy `/health` `3.8.4-brand-ink-match`. A deploy would now carry the 11-12, 11-19 and 11-25 rate tables. Until then the demo cap meters `mistral-large-latest` at Large 3 [0.5,1.5], 1.4x under (row 157). Blocked: owner call.
 
 **2026-11-23 (desktop nightly, Gabo-PC, Opus 5.5, HEAD `140e00bb`):** `wrangler deployments list`: cv-proxy 2026-11-05T10:07Z, antcv-demo-proxy 2026-11-05T08:38Z. Both `/health` `3.8.4-brand-ink-match`. Still undeployed. Blocked: owner call.
 
@@ -3283,7 +3309,9 @@ _OPEN (found by the desktop nightly, Gabo-PC, Opus 5.5, 2026-11-23; Band A tab i
 
 ## Row 152 — DIAG-FLEET-ROT-001
 
-_verified: 2026-11-24_
+_verified: 2026-11-25_
+
+_Desktop nightly 2026-11-25 (Gabo-PC, Opus 5.5, base `fc12d446`): 11 more green, 58 left of 74. Ten stale, fixed: `results-kernel-match` (RESULTS-COMPRESS-001 wording; no-JD coverage rule), `outcomes-metric-guard` (default mode folds the section; now also asserts no chip loop), `sections-normalize` (work_style is rich_block since 1.50.759), `react185-regulatory` (file input), `ghost-placeholder-roles` (PREVIEW-002, owner 06-30), `languages-concise` (native / fluent, owner 06-23), `core-comp-compress` (caps 125 / 89 since 06-25, CL section is rich_block), `exp-order` (ROLE-ORDER-CANON-001, owner 06-19), `cjlr-experience` (rowkey markers; role key moves the head only, owner 07-14, same in the worker), `mobile-ui-merge` (version pin). One real: `rerender-storm`, fixed in the product (row 45). Read, not fixed: `contribute-edit-coalesce` (synthetic text_bullets panel; the section is rich_block, so the sidecar has nothing to write, looks stale), `wm-move-on-length`, `candidate-header-edit`, `additional-partition`, `tense-control` (red, cause not read). **Owner question:** a role dragged to another place goes back to reverse-chronological at the next normalize pass. The 06-16 rule let a manual order stand ("do not flip on purpose"); the 06-19 canonical rule overrides it in code. Which holds?_
 
 _Desktop nightly 2026-11-24 (Gabo-PC, Opus 5.5, base 471ff03f): five diags triaged, all stale assertions, all green now: `data-import` (a restore appends banned lists since 1.50.566), `sidebar-ratio-forward` (unset sends 0.32 since 1.51.109), `login-clean-reload` (no reload without a sign-out since 1.50.413; the file IS loaded, by `antcv-357-loader.js`, so the 2026-06 "dead file" note is wrong), `kernel-import` (no standalone button since 1.50.540, one Apply since 1.50.532; one load-contention flake, then 3/3), `preview-edit-persist` (profile/tools are rich_block; outcomes fold under roles; academy hides single-group heads; all 9 edits persist). 69 left. Reading the `data-import` code found a real bug: IMPORT-SEMRULE-KEY-001 (ACTIVE_BUGS), shipped `1.51.6625-semrule-union`. Read but NOT fixed: `orphan-preflight-parity` / `-real` / `-sidebar` assert the pre-NO-ORPHAN pass (`bound` / `residue` counts); today the pass condenses, caps the bind and falls back (`condensed`, `capped`, `fallbackBound`), so they look stale, not proven._
 
@@ -3341,22 +3369,14 @@ _FIXED 2026-11-25 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `s
 
 **To close.** A sweep with `--apply` prints KEPT for a sent row and leaves its status and band alone (expected next run, row 6).
 
-## Row 157 — JT-DOC-SIZE-001
+## Row 157 — MISTRAL-LATEST-LARGE4-001
 
 _verified: 2026-11-25_
 
-_FIXED 2026-11-24 (owner-approved, desktop session, Gabo-PC, Opus 5.5, worktree-isolated; PR #407 `005b4be1`; `workers/access-relay` + `scripts/job-tracker`; no `pwa/` asset, no version consumed)._
+_CODE SHIPPED 2026-11-25 (weekly cost-quality tune, Gabo-PC, Opus 5.5, worktree-isolated; commit `09d14274`, PWA `1.51.6685-mistral-large4`); two owner calls open._
 
-**Found.** `job_tracker.doc` is one string per user. Cloudflare's D1 limits page (modified 2026-11-20): maximum string, BLOB or table row size 2,000,000 bytes. Live: 1,374,012 bytes on 10-30, 1,744,525 on 11-23, 1,803,683 at rev 393, 1,805,180 at rev 394. `jd` alone was 1,241,810 bytes: 194 closed rows 918,348, 61 open rows 318,631.
+**Found.** `GET /v1/models` 2026-11-25 lists `mistral-large-latest` under `mistral-large-4`. The 11-05 probe had it on `mistral-large-2512` (Large 3). The 11-12 and 11-19 tunes skipped the probe, so the switch date is 11-05 < date ≤ 11-25. The id is the mistral cascade head and leads `supervisor` and `analysis`. Price [0.5,1.5] → [0.70,2.10], +40%.
 
-**Readers of `doc.jd`.** Island (JD icon and filter, Open, "Save submitted version", Top-5 score, Ask-AI list), `gen-runner.py` (eligible / ready / owner-packaged), `check-postings.py` (deadline), `discover-positions.py` (eligibility sweep), `interview_prep.py`, `job-tracker-sync.py` (merge). No other worker. They disagree on "closed": the sweep reads the band, the eligibility sweep the status, gen-runner and the island either. Open on a row with an application sends `doc.jd` to that application, so a marker there could overwrite its ad text.
+**Fixed.** Explicit key in all three `RATES` mirrors, PWA `C.mistral` [0.7,2.1] in `app.js` + `app.src.js`, tests. PWA and access-relay live. `SCHEDULED_ROUTINES.md` step 1a-quinquies makes the probe unconditional.
 
-**Fix.** (1) Relay PUT: `doc_bytes`, `size_warning` past 1.8 MB, size on a failed write; it never refuses a write. (2) `job-tracker-sync.py`: `status` size + warning; `pull` (nightly) and `push` the warning. (3) `jd_archive.py plan / apply / show / restore`: a row moves only when every reader skips it (Archive band AND Archive status), closed 14+ days ago, no application, package, submitted version, interview, follow-up, pin or armed flag. Stored in `application_snapshot` kind `jd_archive` (insert-only, already in the account copy and delete). The key keeps a ~100-character marker: both mergers union keys, so a removed key comes back from a stale copy.
-
-**Live, 2026-11-24.** Backup `~/.antcv/job_tracker_backups/job_tracker_rev394_20261124-102858.json` (read back). 97 texts archived and read back word for word; doc rev 394 → 395, 1,805,180 → 1,336,094 bytes. D1: 273 rows, 255 jd keys, 97 markers; `application_snapshot` 97 rows, 503,380 bytes. Against the backup: only `jd.*` changed, rows identical, nine nightly reads identical. `pull` on a copy of the Drive files converged to the cloud byte count.
-
-**Stays in the doc (closed rows with ad text at rev 393).** 38 with an application (164 KB), 29 closed for some readers only (136 KB), 20 closed under 14 days ago (102 KB), 6 packaged by hand (32 KB), 4 short or undated (5 KB).
-
-**Live, 2026-11-25.** The job-tracker nightly read the doc at 1,352,735 bytes (67.6%), pulled rev 399 and 400 and rebuilt the Excel. Its POSTING-SUBMITTED-KEEP-001 (row 156) showed the sweep could write an Archive status over Submitted, so the 97 rows were re-checked: of the 9 already present in the 2026-08-20 copy none was sent or drafted, none of the 97 matches any of the 96 stored applications by company and role, no flag says sent. Elma (135) was never in the set: its `status_history` holds Submitted and it closed 9 days before.
-
-**To close.** The next job-tracker or discovery run's `pull --render` prints no JT-DOC-SIZE-001 line and no `jd[...]` conflict. At 17 KB a day the warning returns in about 27 days. When it does: report `jd_archive.py plan` to the owner; `apply` only on the owner's word.
+**Open, owner.** (1) D1 `llm_provider_costs` still holds `('mistral','mistral-large-latest',0.5,1.5)`, which wins over the table; the superseding INSERT is in `COST_QUALITY_WEEKLY_2026-11-25.md` §2. (2) Keep Large 4, or pin `mistral-large-2512` (Large 3; retires 2027-03-05 by the models page, day-first dates inferred). No quality evidence for Large 4 on our prompts. (3) proxy + demo-proxy carry the old rate until row 147 deploys.

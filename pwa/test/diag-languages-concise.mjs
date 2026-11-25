@@ -53,8 +53,9 @@ const get = (l)=> (r.vals.find(x=>x.l===l)||{}).v;
 
 let pass=true; const fails=[];
 if (errs.length) { pass=false; fails.push('app errors: '+errs.slice(0,2).join(' | ')); }
-if (get('English') !== 'native') { pass=false; fails.push('English should stay native, got '+get('English')); }
-if (get('Hebrew') !== 'native') { pass=false; fails.push('Hebrew should stay native, got '+get('Hebrew')); }
+// LANG-NATIVE-FLUENT-001 (owner 2026-06-23): native reads "native / fluent".
+if (get('English') !== 'native / fluent') { pass=false; fails.push('English should read native / fluent, got '+get('English')); }
+if (get('Hebrew') !== 'native / fluent') { pass=false; fails.push('Hebrew should read native / fluent, got '+get('Hebrew')); }
 if (get('Spanish') !== 'professional') { pass=false; fails.push('Spanish should be professional, got '+get('Spanish')); }
 if (get('Danish') !== 'intermediate (B1)') { pass=false; fails.push('Danish should keep B1 → "intermediate (B1)", got '+get('Danish')); }
 if (get('German') !== 'intermediate (B2)') { pass=false; fails.push('German bare value should restore CEFR from source → "intermediate (B2)", got '+get('German')); }

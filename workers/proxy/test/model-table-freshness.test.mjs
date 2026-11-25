@@ -96,11 +96,13 @@ test('mistral-large prices at Large 3 [0.5,1.5], not the Large 2 era [2,6]', () 
   assert.deepEqual(rateFor('mistral-large'), [0.50, 1.50]);
 });
 
-test('the LIVE model id mistral-large-latest resolves to the mistral-large rate', () => {
-  // The id actually dispatched is `mistral-large-latest`; substring matching is
-  // what makes the shorter key cover it. D1 llm_provider_costs uses EXACT
-  // matching and therefore does NOT — that asymmetry is COST-SOURCE-AUDIT-GAP-001.
-  assert.deepEqual(rateFor('mistral-large-latest'), [0.50, 1.50]);
+test('the LIVE model id mistral-large-latest prices at Large 4 [0.70,2.10] (MISTRAL-LATEST-LARGE4-001)', () => {
+  // The id actually dispatched is `mistral-large-latest`. Until 2026-11 it aliased
+  // Large 3 and the shorter key covered it; /v1/models 2026-11-25 aliases it to
+  // mistral-large-4. D1 llm_provider_costs uses EXACT matching, so its row is a
+  // separate correction — that asymmetry is COST-SOURCE-AUDIT-GAP-001.
+  assert.ok(RATES_KEYS()['mistral-large-latest'], 'explicit key missing');
+  assert.deepEqual(rateFor('mistral-large-latest'), [0.70, 2.10]);
 });
 
 test('gemini-2.5-flash prices at Flash [0.3,2.5], not Flash-Lite [0.1,0.4]', () => {
@@ -310,7 +312,7 @@ test('the 2026-10-01 Gemini ids are priced but stay OUT of the default gemini ca
 // 2026-10-08 (weekly tune) — ANTHROPIC-HAIKU55-RATES-2026-10-001 + MISTRAL-LARGE4-RATES-2026-10-001.
 //   - "claude-haiku-5-5" -> no key          -> FALLBACK_RATE [3,15] (real [0.10,0.50] at <=100k tokens: 30x OVER on input)
 //   - "mistral-large-4"  -> 'mistral-large' -> [0.5,1.5]            (real SALE [0.68,2.09], list [1.36,4.18]: UNDER-priced)
-// The live mistral pin is unaffected: 'mistral-large-latest' aliases 'mistral-large-2512' (Large 3) per /v1/models 2026-10-08.
+// On 2026-10-08 'mistral-large-latest' still aliased Large 3; it moved to Large 4 by 2026-11-25 (MISTRAL-LATEST-LARGE4-001).
 
 test('claude-haiku-5-5 is priced at its <=100k tier instead of inheriting the [3,15] fallback', () => {
   assert.deepEqual(rateFor('claude-haiku-5-5'), [0.10, 0.50]);
@@ -320,10 +322,10 @@ test('claude-haiku-5-5 is priced at its <=100k tier instead of inheriting the [3
   assert.deepEqual(rateFor('claude-3-5-haiku'), [0.80, 4.00]);
 });
 
-test('mistral-large-4 lifts off the Large 3 key; the live -latest alias still prices as Large 3', () => {
+test('mistral-large-4 and the live -latest alias lift off the Large 3 key', () => {
   assert.deepEqual(rateFor('mistral-large-4'), [0.70, 2.10]);   // 2026-11-05 vendor rate (10-23 [1.36,4.18])
   assert.deepEqual(rateFor('mistral-large-4-0'), [0.70, 2.10]);
-  assert.deepEqual(rateFor('mistral-large-latest'), [0.50, 1.50]);
+  assert.deepEqual(rateFor('mistral-large-latest'), [0.70, 2.10]);
   assert.deepEqual(rateFor('mistral-large-2512'), [0.50, 1.50]);
   assert.deepEqual(rateFor('mistral-large-2411'), [0.50, 1.50]);
 });
@@ -401,7 +403,7 @@ const VENDOR_CATALOGUE_2026_10_15 = [
   ['chat-latest', [5, 30]], ['gpt-5.3-codex', [1.75, 14]], ['gpt-5-search-api', [1.25, 10]],
   ['gpt-5.6-cyber', [12.50, 75]], ['gpt-5.5-cyber', [12.50, 75]],
   // Mistral — docs.mistral.ai/inference/pricing, ids from GET /v1/models 2026-10-15
-  ['mistral-large-4', [0.70, 2.10]], ['mistral-large-4-0', [0.70, 2.10]], ['mistral-large-latest', [0.50, 1.50]], ['mistral-large-2512', [0.50, 1.50]],
+  ['mistral-large-4', [0.70, 2.10]], ['mistral-large-4-0', [0.70, 2.10]], ['mistral-large-latest', [0.70, 2.10]] /* 2026-11-25 alias moved to Large 4 */, ['mistral-large-2512', [0.50, 1.50]],
   ['mistral-medium-latest', [1.50, 7.50]], ['mistral-medium-2604', [1.50, 7.50]], ['magistral-medium-latest', [1.50, 7.50]],
   ['mistral-vibe-cli-latest', [1.50, 7.50]], ['mistral-vibe-cli-with-tools', [1.50, 7.50]], ['mistral-vibe-cli-fast', [0.15, 0.60]],
   ['mistral-small-latest', [0.15, 0.60]], ['mistral-small-2603', [0.15, 0.60]], ['magistral-small-latest', [0.15, 0.60]],
@@ -463,7 +465,7 @@ test('the 2026-10-23 vendor additions resolve to their vendor rate', () => {
   for (const [id, rate] of VENDOR_CATALOGUE_2026_10_23) assert.deepEqual(rateFor(id), rate, id);
   // Neighbours undisturbed.
   assert.deepEqual(rateFor('zai-glm-5-3'), [1.40, 4.40]);
-  assert.deepEqual(rateFor('mistral-large-latest'), [0.50, 1.50]);
+  assert.deepEqual(rateFor('mistral-large-latest'), [0.70, 2.10]);
 });
 
 test('the 2026-10-23 ids are priced but stay OUT of the default cascades', () => {
@@ -495,7 +497,7 @@ test('the 2026-11-05 vendor additions resolve to their vendor rate', () => {
   assert.deepEqual(rateFor('gemini-2.5-flash-lite'), [0.10, 0.40]);
   assert.deepEqual(rateFor('gpt-rosalind-research'), [5, 25]);
   assert.deepEqual(rateFor('gpt-6.1-sol'), [2, 10]);
-  assert.deepEqual(rateFor('mistral-large-latest'), [0.50, 1.50]);
+  assert.deepEqual(rateFor('mistral-large-latest'), [0.70, 2.10]);
 });
 
 test('the 2026-11-05 ids are priced but stay OUT of the default cascades', () => {
@@ -562,6 +564,37 @@ test('the 2026-11-19 vendor additions resolve to their vendor rate', () => {
 
 test('the 2026-11-19 ids are priced but stay OUT of the default cascades', () => {
   for (const [id] of VENDOR_CATALOGUE_2026_11_19) {
+    for (const [prov, list] of Object.entries(PROVIDER_MODELS)) {
+      assert.ok(!list.includes(id), `${id} entered the ${prov} cascade — adoption is an owner call`);
+    }
+  }
+});
+
+// 2026-11-25 desktop tune (MISTRAL-LATEST-LARGE4-001 / GLM5-LATEST-RATE-2026-11-001). Before this run:
+//   - "mistral-large-latest" -> 'mistral-large' [0.5,1.5] (real [0.70,2.10]: 1.4x UNDER on the LIVE mistral pin; alias moved to Large 4)
+//   - "glm-5-latest"         -> FALLBACK [3,15]           (real [1.4,4.4]: 2.1x OVER in, 3.4x OVER out)
+//   - the four -healthcare configurations already resolve through their base model's key; pinned here so a split cannot drift.
+
+const VENDOR_CATALOGUE_2026_11_25 = [
+  ['mistral-large-latest', [0.70, 2.10]], ['mistral-large-2512', [0.50, 1.50]], ['glm-5-latest', [1.40, 4.40]],
+  ['gpt-6.2-astra-healthcare', [8, 40]], ['gpt-6.2-sol-healthcare', [2, 10]],
+  ['gpt-6-astra-healthcare', [10, 50]], ['gpt-6.1-sol-healthcare', [2, 10]], ['gemini-omni-1.2-flash', [1.50, 9]],
+];
+
+test('the 2026-11-25 vendor changes resolve to their vendor rate', () => {
+  for (const [id, rate] of VENDOR_CATALOGUE_2026_11_25) assert.deepEqual(rateFor(id), rate, id);
+  // Neighbours undisturbed (longest-key-wins).
+  assert.deepEqual(rateFor('mistral-large'), [0.50, 1.50]);
+  assert.deepEqual(rateFor('mistral-large-4'), [0.70, 2.10]);
+  assert.deepEqual(rateFor('zai-glm-5-3-flash'), [0.15, 0.50]);
+  assert.deepEqual(rateFor('glm-5-2'), [1.40, 4.40]);
+});
+
+test('the 2026-11-25 new ids are priced but stay OUT of the default cascades', () => {
+  // mistral-large-latest is the cascade head and has been throughout: only its price moved.
+  assert.equal(PROVIDER_MODELS.mistral[0], 'mistral-large-latest');
+  for (const [id] of VENDOR_CATALOGUE_2026_11_25) {
+    if (id === 'mistral-large-latest') continue;
     for (const [prov, list] of Object.entries(PROVIDER_MODELS)) {
       assert.ok(!list.includes(id), `${id} entered the ${prov} cascade — adoption is an owner call`);
     }

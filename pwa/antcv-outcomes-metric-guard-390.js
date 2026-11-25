@@ -66,8 +66,15 @@
     return blob.trim();
   }
 
-  function clearChips() {
-    document.querySelectorAll('.' + CHIP_CLASS).forEach(function (c) { c.remove(); });
+  // METRIC-GUARD-LOOP-001 (2026-11-25): the observer below watches the whole body, so
+  // removing and re-adding an unchanged chip on every check re-triggered the check itself
+  // (a permanent 700 ms loop). Chips whose section is still in `keep` are left alone.
+  function clearChips(keep) {
+    document.querySelectorAll('.' + CHIP_CLASS).forEach(function (c) {
+      var host = c.closest ? c.closest('[data-sid]') : null;
+      if (keep && host && keep.indexOf(host.getAttribute('data-sid')) !== -1) return;
+      c.remove();
+    });
   }
 
   function pinChip(sid) {
@@ -94,6 +101,7 @@
     host.appendChild(chip);
   }
 
+  var lastSig = '';
   function check() {
     if (off()) { clearChips(); return []; }
     var missing = [];
@@ -101,11 +109,13 @@
       var text = sectionText(s);
       if (text && !hasMetric(text)) missing.push(s.id);
     });
-    clearChips();
+    clearChips(missing);
     missing.forEach(pinChip);
-    if (missing.length) {
-      try { console.warn('[metric-guard] SELECTED OUTCOMES without a numeric metric:', missing.join(',')); } catch (_) {}
+    var sig = missing.join(',');
+    if (missing.length && sig !== lastSig) {
+      try { console.warn('[metric-guard] SELECTED OUTCOMES without a numeric metric:', sig); } catch (_) {}
     }
+    lastSig = sig;
     return missing;
   }
 

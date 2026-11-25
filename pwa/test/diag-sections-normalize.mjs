@@ -57,8 +57,9 @@ const read = ()=>page.evaluate(()=>{
 let s = await read();
 check('1. boot: rec after experience + founder stripped',
   s.order.indexOf('recommendations')>s.order.indexOf('experience') && !/founder/i.test(s.title), JSON.stringify(s));
-check('1b. SECTION-TYPE-NORMALIZE: work_style + who_i_am → text_inline, greeting stays text',
-  s.workStyleType==='text_inline' && s.whoType==='text_inline' && s.greetingType==='text', JSON.stringify(s));
+// work_style is promoted on to rich_block by antcv-text-sections-to-rich-block-759 (1.50.759).
+check('1b. SECTION-TYPE-NORMALIZE: work_style → rich_block, who_i_am → text_inline, greeting stays text',
+  s.workStyleType==='rich_block' && s.whoType==='text_inline' && s.greetingType==='text', JSON.stringify(s));
 
 // 2 — simulate the cloud-restore reapplying the stale slot AFTER load
 await page.evaluate((STALE)=>{

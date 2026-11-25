@@ -81,7 +81,8 @@ const stress = await page.evaluate(async () => {
   // then click the section's add/compress/enrich/+ buttons (the owner's submit
   // taps) — all while re-reading the live DOM each pass.
   for (let pass = 0; pass < 4; pass++) {
-    const inputs = Array.from(document.querySelectorAll('input, textarea')).filter(vis);
+    // File inputs refuse a scripted value (InvalidStateError), which is the browser, not the app.
+    const inputs = Array.from(document.querySelectorAll('input, textarea')).filter((el) => vis(el) && !/^(file|button|submit|reset|image|hidden)$/i.test(el.type || ''));
     maxInputs = Math.max(maxInputs, inputs.length);
     for (const el of inputs.slice(0, 16)) {
       el.focus();

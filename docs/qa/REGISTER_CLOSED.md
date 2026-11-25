@@ -4,6 +4,28 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 158 — JT-DOC-SIZE-001 — CLOSED 2026-11-25 (evidence: two routine runs after the trim, no conflict line, doc under the 1.8 MB warning)
+
+_verified: 2026-11-25_
+
+**CLOSED 2026-11-25.** Close condition met by two runs logged in `REGISTER_RUNLOG.md`, both on a checkout that holds `005b4be1`: the job-tracker nightly (doc 1,352,735 bytes, no conflict line on its first `pull --render`, rev 399: row 155 below) and position-discovery (doc 1,396,567 bytes at rev 402, "no conflict line"). Neither log names the JT-DOC-SIZE-001 line; it prints only past 1,800,000 bytes. Growth since the trim: 1,336,094 → 1,396,567 bytes with 10 new rows, about 60 KB in a day and a half, against a mean of 17 KB a day from 10-30 to 11-23.
+
+_FIXED 2026-11-24 (owner-approved, desktop session, Gabo-PC, Opus 5.5, worktree-isolated; PR #407 `005b4be1`; `workers/access-relay` + `scripts/job-tracker`; no `pwa/` asset, no version consumed)._
+
+**Found.** `job_tracker.doc` is one string per user. Cloudflare's D1 limits page (modified 2026-11-20): maximum string, BLOB or table row size 2,000,000 bytes. Live: 1,374,012 bytes on 10-30, 1,744,525 on 11-23, 1,803,683 at rev 393, 1,805,180 at rev 394. `jd` alone was 1,241,810 bytes: 194 closed rows 918,348, 61 open rows 318,631.
+
+**Readers of `doc.jd`.** Island (JD icon and filter, Open, "Save submitted version", Top-5 score, Ask-AI list), `gen-runner.py` (eligible / ready / owner-packaged), `check-postings.py` (deadline), `discover-positions.py` (eligibility sweep), `interview_prep.py`, `job-tracker-sync.py` (merge). No other worker. They disagree on "closed": the sweep reads the band, the eligibility sweep the status, gen-runner and the island either. Open on a row with an application sends `doc.jd` to that application, so a marker there could overwrite its ad text.
+
+**Fix.** (1) Relay PUT: `doc_bytes`, `size_warning` past 1.8 MB, size on a failed write; it never refuses a write. (2) `job-tracker-sync.py`: `status` size + warning; `pull` (nightly) and `push` the warning. (3) `jd_archive.py plan / apply / show / restore`: a row moves only when every reader skips it (Archive band AND Archive status), closed 14+ days ago, no application, package, submitted version, interview, follow-up, pin or armed flag. Stored in `application_snapshot` kind `jd_archive` (insert-only, already in the account copy and delete). The key keeps a ~100-character marker: both mergers union keys, so a removed key comes back from a stale copy.
+
+**Live, 2026-11-24.** Backup `~/.antcv/job_tracker_backups/job_tracker_rev394_20261124-102858.json` (read back). 97 texts archived and read back word for word; doc rev 394 → 395, 1,805,180 → 1,336,094 bytes. D1: 273 rows, 255 jd keys, 97 markers; `application_snapshot` 97 rows, 503,380 bytes. Against the backup: only `jd.*` changed, rows identical, nine nightly reads identical. `pull` on a copy of the Drive files converged to the cloud byte count.
+
+**Stays in the doc (closed rows with ad text at rev 393).** 38 with an application (164 KB), 29 closed for some readers only (136 KB), 20 closed under 14 days ago (102 KB), 6 packaged by hand (32 KB), 4 short or undated (5 KB).
+
+**Live, 2026-11-25.** The job-tracker nightly read the doc at 1,352,735 bytes (67.6%), pulled rev 399 and 400 and rebuilt the Excel. Its POSTING-SUBMITTED-KEEP-001 (row 156) showed the sweep could write an Archive status over Submitted, so the 97 rows were re-checked: of the 9 already present in the 2026-08-20 copy none was sent or drafted, none of the 97 matches any of the 96 stored applications by company and role, no flag says sent. Elma (135) was never in the set: its `status_history` holds Submitted and it closed 9 days before.
+
+**When the warning returns.** 403 KB of room at 1,396,567 bytes: about 24 days at 17 KB a day, about 10 at the pace since the trim. Report `jd_archive.py plan` to the owner; `apply` only on the owner's word.
+
 ## Row 155 — SYNC-SUPPORT-STUB-001 — CLOSED 2026-11-25 (job-tracker nightly, evidence: next run printed no `support` conflict and no local-only count)
 
 _verified: 2026-11-25_

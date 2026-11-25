@@ -1,4 +1,4 @@
-const CACHE = 'antcv-1.51.6625-semrule-union';
+const CACHE = 'antcv-1.51.6685-mistral-large4';
 const SHELL = [
   './manifest.json',
   './antcv-debug-logger.js',

@@ -368,8 +368,24 @@
     // Check if any section has non-placeholder content. Placeholder
     // text in the PWA is bracketed: "[Profile text — 2-3 sentences…]".
     // Real content is text without surrounding brackets.
+    // OVERLAY-READY-RICHBLOCK-001 (2026-11-25): most sections are stored as rich_block
+    // ({b, t, bullets}) now, and experience keeps its text in roles. Neither was read, so a
+    // document with text only there counted as empty: the overlay hid itself every 1.5 s and
+    // antcv-preview-shell-sticky-341 un-hid it again, for as long as the editor was open.
+    const realText = v => {
+      if (typeof v !== 'string') return false;
+      const t = v.trim();
+      return !!t && !(t.startsWith('[') && t.endsWith(']'));
+    };
+    const realBullets = arr => Array.isArray(arr) && arr.some(x =>
+      realText(x) || (x && typeof x === 'object' && realText(x.t)));
     const hasReal = sec => {
       if (!sec || sec.on === false) return false;
+      if (realBullets(sec.bullets)) return true;
+      if (sec.type === 'rich_block' && Array.isArray(sec.items) &&
+          sec.items.some(it => it && typeof it === 'object' && (realText(it.t) || realBullets(it.bullets)))) return true;
+      if (Array.isArray(sec.roles) && sec.roles.some(r => r && r.on !== false &&
+          (realText(r.title) || realText(r.company) || realBullets(r.bullets)))) return true;
       // text / text_inline sections
       if (typeof sec.content === 'string') {
         const t = sec.content.trim();

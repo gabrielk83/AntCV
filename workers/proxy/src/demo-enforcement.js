@@ -198,6 +198,8 @@ const RATES = {
   // bills the same [8,40] and resolves through the 'gpt-6.2-astra' key (longest-key-wins).
   'gpt-6.2-astra':       [8.00, 40.00],  // 2026-11-19 prompts >272k bill [16,60]; also covers gpt-6.2-astra-law
   'gpt-6.2-sol':         [2.00, 10.00],  // 2026-11-19 prompts >272k bill [4,15]
+  // 2026-11-25: the four -healthcare configurations (gpt-6.2-astra / gpt-6.2-sol / gpt-6-astra / gpt-6.1-sol) bill their base
+  // model's rate and resolve through its key; no key of their own. Promo "at least through December 31, 2026".
   // Mistral
   'mistral-small':       [0.15,  0.60],   // Mistral Small 4, verified 2026-08-20 mistral.ai/pricing/api
   'mistral-medium':      [1.50,  7.50],   // Mistral Medium 3.5, verified 2026-08-20 mistral.ai/pricing/api
@@ -215,7 +217,11 @@ const RATES = {
   // sale or promo note; the 10-23 list key [1.36,4.18] was 1.94x / 1.99x OVER. Third price in four weeks — re-verify every tune.
   // /v1/models 2026-11-05: 'mistral-large-latest' still aliases 'mistral-large-2512' (Large 3); the live pin is unaffected.
   'mistral-large-4':     [0.70,  2.10],   // 2026-11-05 vendor page (10-23 [1.36,4.18], 10-08 sale [0.68,2.09]). MUST stay longer than 'mistral-large'. Not an AntCV pin.
-  'mistral-large':       [0.50,  1.50],   // Mistral Large 3, verified 2026-08-20 mistral.ai/pricing/api. Was [2,6] (Large 2 era) - 4x over. Substring-matches the live `mistral-large-latest`. LLM-COST-MISTRAL-RATE-001.
+  // MISTRAL-LATEST-LARGE4-001 (2026-11-25): the alias moved. GET /v1/models 2026-11-25 lists 'mistral-large-latest' under
+  // 'mistral-large-4' (11-05 it was still 'mistral-large-2512'; not probed 11-12 or 11-19). It is the AntCV mistral pin, and
+  // the 'mistral-large' key handed it Large 3's [0.5,1.5] = 1.4x UNDER in and out. MUST stay longer than 'mistral-large'.
+  'mistral-large-latest': [0.70, 2.10],   // 2026-11-25 alias of Mistral Large 4. LIVE PIN: re-probe /v1/models every tune.
+  'mistral-large':       [0.50,  1.50],   // Mistral Large 3, verified 2026-08-20 mistral.ai/pricing/api. Was [2,6] (Large 2 era) - 4x over. Still prices mistral-large-2512; the live `mistral-large-latest` has its own key since 2026-11-25. LLM-COST-MISTRAL-RATE-001.
   // MODEL-TABLE-SWEEP-2026-10-001 (2026-10-15): the rest of docs.mistral.ai/inference/pricing, with the id forms taken from
   // a read-only GET /v1/models on 2026-10-15 (54 ids). Findings: 'ministral-*' contains no 'mistral' key (FALLBACK, 20-30x OVER);
   // 'magistral-medium-latest' / 'magistral-small-latest' are now aliases of mistral-medium / mistral-small but contain
@@ -235,6 +241,7 @@ const RATES = {
   'zai-glm-5-3-flash':   [0.15,  0.50],  // 2026-10-23 Z.ai GLM 5.3 Flash (ZAI-GLM53-FLASH-RATES-2026-10-001); matched 'zai-glm' [1.4,4.4] = 9x OVER. MUST stay longer than 'zai-glm'.
   'zai-glm':             [1.40,  4.40],  // 2026-10-15 Z.ai GLM 5.3 hosted by Mistral (zai-glm-5-3 / zai-glm-5 / zai-glm-latest; 5-2 at the same rate, see above)
   'glm-5-2':             [1.40,  4.40],  // 2026-10-15 the bare 'glm-5-2' id /v1/models also lists
+  'glm-5-latest':        [1.40,  4.40],  // GLM5-LATEST-RATE-2026-11-001 (2026-11-25) /v1/models alias of zai-glm-5-3; contains no key -> FALLBACK [3,15], strict null
   // DEEPSEEK-V41-FLASH-RATES-2026-11-001 (2026-11-05): DeepSeek V4.1 Flash hosted by Mistral. Pricing-page slug
   // 'deepseek-v4-flash-1017'; /v1/models id 'deepseek-v4-1-flash-1017'. Neither form matched a key -> FALLBACK [3,15]
   // (10x OVER in, 12.5x OVER out) and strict null. Both forms keyed.

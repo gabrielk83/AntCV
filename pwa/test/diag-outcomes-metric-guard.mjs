@@ -23,6 +23,9 @@ async function boot(items) {
     localStorage.setItem('session', JSON.stringify({ email:'d@e.com', ts:1717000000000 }));
     localStorage.setItem('step', JSON.stringify('editor'));
     localStorage.setItem('doc', JSON.stringify('cv'));
+    // The default outcomes mode ('results') folds the section under the roles, so there is no
+    // section to pin the chip to. The guard only has a target in 'section' / 'both'.
+    localStorage.setItem('outcomesMode', JSON.stringify('section'));
     localStorage.setItem('sections', JSON.stringify({ cv:[
       { id:'profile', title:'PROFILE', loc:'main', on:true, type:'text', content:'Profile.' },
       { id:'outcomes', title:'SELECTED OUTCOMES', loc:'main', on:true, type:'bullets', items },
@@ -41,16 +44,22 @@ async function boot(items) {
   const { browser, page, errs } = await boot([{ b:'Delivered', t:'requirements into executable scope.' }]);
   const r = await page.evaluate(async ()=>{
     const chip1 = document.querySelectorAll('.antcv-metric-guard-chip').length;
+    // METRIC-GUARD-LOOP-001: an unchanged chip is not removed and re-added.
+    let loop = 0;
+    const mo = new MutationObserver((recs)=>recs.forEach((m)=>[...m.addedNodes, ...m.removedNodes].forEach((x)=>{ if (x.classList && x.classList.contains('antcv-metric-guard-chip')) loop++; })));
+    mo.observe(document.body, { childList:true, subtree:true });
+    await new Promise(r2=>setTimeout(r2,4000));
+    mo.disconnect();
     // fix the data: add a number, re-check
     const root = JSON.parse(localStorage.getItem('sections'));
     root.cv[1].items[0].t = 'change cycle from 250 to 10 days.';
     localStorage.setItem('sections', JSON.stringify(root));
     window.AntcvMetricGuard.check();
     await new Promise(r2=>setTimeout(r2,400));
-    return { chip1, chip2: document.querySelectorAll('.antcv-metric-guard-chip').length };
+    return { chip1, loop, chip2: document.querySelectorAll('.antcv-metric-guard-chip').length };
   });
   await browser.close();
-  const ok = r.chip1 === 1 && r.chip2 === 0 && errs.length === 0;
+  const ok = r.chip1 === 1 && r.loop === 0 && r.chip2 === 0 && errs.length === 0;
   console.log(`metric-free flags, fix clears: ${ok?'OK':'FAIL'} ${ok?'':JSON.stringify({...r, errs: errs.slice(0,2)})}`);
   if (!ok) { await new Promise(r2=>server.close(r2)); console.log('METRIC-GUARD FAILED'); process.exit(1); }
 }

@@ -591,6 +591,79 @@ check("row note: only the expired row skipped the network probe",
       sorted(_calls), sorted(["https://www.example.dk/job/240", "https://www.example.dk/job/3",
                               "https://www.example.dk/job/4"]))
 
+# ---- POSTING-SUBMITTED-KEEP-001 (job-tracker nightly 2026-11-25) -----------------
+# Elma (row 135): Submitted 11-08, ad closed 11-15, the sweep wrote "Archive / closed" and the row left the
+# follow-up list. Drives the REAL probe_rows, reapply_results and cmd_check with a fake network.
+NOV25 = datetime.date(2026, 11, 25)
+CLOSED_PAGE = "<html><body>" + "Role text. " * 60 + "No longer accepting applications</body></html>"
+
+
+def _sent_doc(status, uk="r", strikes=0):
+    ent = {"misses": strikes, "last": "2026-11-24", "last_strike": "2026-11-24", "status": "GONE"} if strikes else None
+    return {"rows": [[1, "Elma", "Produktchef", "", "", "Proposed", "", "OPEN", status, "Review",
+                      "📦 package 1054", uk, "E2EFDA"]],
+            "urls": {uk: "https://www.example.dk/job/" + uk}, "jd": {},
+            "postingcheck": {uk: ent} if ent else {}}
+
+
+def _sent_run(doc, answer, apply=True):
+    probe0, sleep0 = cp.probe, cp.time.sleep
+    cp.probe, cp.time.sleep = (lambda u, timeout=25: answer(u)), (lambda s: None)
+    try:
+        return cp.probe_rows(doc, type("A", (), {"only": "", "limit": 0, "timeout": 5, "apply": apply})(), NOV25)[0]
+    finally:
+        cp.probe, cp.time.sleep = probe0, sleep0
+
+
+for _st in ("Submitted", "Interview", "Offer", "Hired", "Offer declined", "Rejected", "No response", "Withdrawn",
+            " submitted "):
+    _d = _sent_doc(_st)
+    _r = _sent_run(_d, lambda u: (200, u, CLOSED_PAGE))
+    check("sent: a CLOSED ad never archives a %r row" % _st,
+          (_r["verdict"], _r["archived"], _r["would_archive"], _d["rows"][0][8], _d["rows"][0][12],
+           _d["rows"][0][10], _d["queue"], "archived_on" in _d["postingcheck"]["r"], _r.get("kept")),
+          ("CLOSED", False, False, _st, "E2EFDA", "📦 package 1054", {}, False, _st.strip()))
+_d = _sent_doc("Submitted", strikes=1)
+_r = _sent_run(_d, lambda u: (404, u, ""))
+check("sent: the second GONE strike is recorded and archives nothing (Hamamatsu Optical Engineer II)",
+      (_r["verdict"], _r["misses"], _r["archived"], _d["rows"][0][8], _d["postingcheck"]["r"]["status"]),
+      ("GONE", 2, False, "Submitted", "GONE"))
+for _st in ("CV/CL drafted", "CV drafted", "Identified (posting saved)", "", "Offer letter expected later"):
+    _d = _sent_doc(_st)
+    _r = _sent_run(_d, lambda u: (200, u, CLOSED_PAGE))
+    check("sent: a CLOSED ad still archives a %r row" % _st,
+          (_r["archived"], _d["rows"][0][8], _d["rows"][0][12], _d["queue"].get("r"), _r.get("kept")),
+          (True, cp.ARCHIVE_STATUS, cp.ARCHIVE_BAND, False, ""))
+# 409 replay: the owner pressed Submitted while the sweep was probing.
+_r = _sent_run(_sent_doc("CV/CL drafted"), lambda u: (200, u, CLOSED_PAGE))
+_fresh = _sent_doc("Submitted")
+_rr = cp.reapply_results(_fresh, [_r], NOV25, True)
+check("sent: the 409 replay honours a row submitted in between",
+      (_rr[0]["archived"], _rr[0].get("kept"), _fresh["rows"][0][8]), (False, "Submitted", "Submitted"))
+
+
+def _sent_print(doc, answer):
+    import contextlib
+    import io as _io
+    g0, p0, b0, s0 = cp.get_doc, cp.put_doc, cp.probe, cp.time.sleep
+    cp.get_doc, cp.put_doc = (lambda: (5, doc)), (lambda d, rev: (200, {"ok": True, "rev": rev + 1}))
+    cp.probe, cp.time.sleep = (lambda u, timeout=25: answer(u)), (lambda s: None)
+    buf = _io.StringIO()
+    try:
+        with contextlib.redirect_stdout(buf):
+            cp.cmd_check(type("A", (), {"only": "", "limit": 0, "timeout": 5, "apply": True, "json": False})())
+    finally:
+        cp.get_doc, cp.put_doc, cp.probe, cp.time.sleep = g0, p0, b0, s0
+    return buf.getvalue()
+
+
+_o = _sent_print(_sent_doc("Submitted"), lambda u: (200, u, CLOSED_PAGE))
+check("sent: the report says KEPT with the status, and counts no archive",
+      ("KEPT (Submitted: the application outlives the ad)" in _o, "ARCHIVED" in _o, "0 live, 0 archived" in _o),
+      (True, False, True))
+_o = _sent_print(_sent_doc("Submitted"), lambda u: (403, u, ""))
+check("sent: a WALLED probe of a sent row is not reported as KEPT", ("KEPT" in _o, "WALLED" in _o), (False, True))
+
 # ---- POSTING-RATE-DOMAIN-001 (job-tracker nightly 2026-11-16) --------------------
 # Twelve Workday rows on three tenants read WALLED HTTP 429 in one sweep: only LinkedIn was
 # paced and retried. Drives the REAL probe_rows with a fake network and a recorded sleep.

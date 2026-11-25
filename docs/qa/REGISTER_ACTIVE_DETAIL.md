@@ -2603,7 +2603,9 @@ _reconcile 2026-10-18 (CI nightly, E1 stalest slot, HEAD `fe67552f`): CODE-PRESE
 
 > **Renumbered 2026-08-26: was row 41.** A document written before that date citing "row 41" may mean this row or SO-004. The ID is the key.
 
-_verified: 2026-10-27_
+_verified: 2026-11-25_
+
+**RE-VERIFIED 2026-11-25 (job-tracker nightly, Gabo-PC).** `check --apply`: 79 probed, 74 LIVE, 3 archived (59 Quantum Machines CLOSED; 242 Teknologisk Institut EXPIRED, deadline 2026-11-25; 8 NVIDIA Test Engineer Photonic SUSPECT, strike 2/2), 2 GONE held at strike 1 (6 and 91 Hamamatsu, LinkedIn 404), 0 WALLED, 0 ERROR. Doc rev 396 → 397. Defect found in the same sweep: row 156.
 
 **RE-VERIFIED 2026-10-26 (job-tracker nightly, Gabo-PC).** `check --apply`: 141 probed, 136 LIVE, 3 archived on first sight (Weibel Scientific System Engineer, System Architect, Customer Project Manager (radar systems), all LinkedIn "no longer accepting applications"). 0 at strike. 2 ERROR not counted, both at 4 sweep days since 10-20 (VML MAP HTTP 500, ABH Optics timeout). Rev 320 → 321.
 
@@ -2861,7 +2863,9 @@ _2026-11-23 weekly demand-seed (cloud): split NOT re-measured; the Cloudflare-De
 
 ## Row 118 — JT-ARMED-ARTIFACT-NO-DRAIN-001
 
-_verified: 2026-11-24_
+_verified: 2026-11-25_
+
+**RE-VERIFIED 2026-11-25 (job-tracker nightly).** Rev 398: ARMED-with-app still `napatech` (app 2781, CLOSED row, flag stale); `health`: 61 pointers vs 95 cloud apps, 1 dead, `veo_technologies` → app 3500. Owner clears both flags.
 
 **RE-VERIFIED 2026-11-24 (job-tracker nightly).** Rev 394: ARMED-with-app still `napatech` (app 2781, CLOSED row, flag stale); `health`: 61 pointers vs 95 cloud apps, 1 dead, `veo_technologies` → app 3500. Owner clears both flags.
 
@@ -3010,7 +3014,9 @@ is adoption, not pricing. Proposed: replace the three Mistral ids with `mistral-
 
 ## Row 127 — JT-OWNER-PACKAGED-DEFAULT-ON-001
 
-_verified: 2026-11-24_
+_verified: 2026-11-25_
+
+**RE-VERIFIED 2026-11-25 (job-tracker nightly).** Same 3 OWNER-PACKAGED rows elected (186 WD, 207 RED Global, 227 LEGO Senior TPM); not generated. Thirteenth run with no generation.
 
 **RE-VERIFIED 2026-11-24 (job-tracker nightly).** Same 3 OWNER-PACKAGED rows elected (186 WD, 207 RED Global, 227 LEGO Senior TPM); not generated. Twelfth run with no generation.
 
@@ -3317,14 +3323,20 @@ _OPEN (found by the desktop nightly, Gabo-PC, Opus 5.5, 2026-11-24; owner call; 
 
 **Also seen, same area, not fixed.** (1) The editor reads `semanticConstraintsV2` only when it is non-empty, so a legacy account with flat `bannedContextual` rules and no V2 list loses them at the next edit after importing V2 rules. (2) `readSemRules` (islands) drops a rule with no id that shares trigger + avoid with another but has a different role scope. (3) A kernel fragment's top-level `semanticConstraintsV2` lands at `personalInfo.semanticConstraintsV2`, which the editor does not read. Code reading only.
 
-## Row 155 — SYNC-SUPPORT-STUB-001
+## Row 156 — POSTING-SUBMITTED-KEEP-001
 
-_verified: 2026-11-24_
+_verified: 2026-11-25_
 
-_FIXED 2026-11-24 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `scripts/job-tracker/job-tracker-sync.py` + `test_sync_merge.py`; no `pwa/` asset, no version consumed)._
+_FIXED 2026-11-25 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `scripts/job-tracker/check-postings.py` + `test_check_postings.py`; no `pwa/` asset, no version consumed)._
 
-**Found.** `pull --render` printed `conflicts (local kept): support[academic_work_client](local-wins)`, a first. The 11-23 render had left the derived stub (ROLE / FIT / FLAG) in the local doc; on 11-23 the cloud gained a real block for that row (WHY BEST FIT, SALARY EXPECTATION); both differ from the base, so the stub won the merge. `_reassert_support` put the cloud block back because the run rendered; a plain `pull` or a 409 `push` would have kept the stub and overwritten the cloud. The "149 local-only entries" every run reports (runlog: "do not push") are the same thing: on rev 394, 149 of 149 restate their own row line by line, 0 hold anything else. Measured: local doc 1,898,004 bytes vs cloud 1,805,180, so one `push` would have added 92,824 bytes toward the 2,000,000-byte D1 limit (JT-DOC-SIZE-001).
+**Found.** Tonight's sweep put row 6 (Hamamatsu Optical Engineer II, status Submitted) at GONE strike 1; the next sweep would have written "Archive / closed" over Submitted. It has happened before: row 135 Elma, Submitted 2026-11-08, archived 2026-11-15 on "annoncen er udløbet". Of the rows with a `status_history`, Elma is the only casualty; older rows have no history to check. An archived row also leaves `followups.py due` (status must be Submitted).
 
-**Fix.** `_is_row_stub(text, row)`: header equals the one the build derives, and every other line is found in the row’s fit or flag cell (a flag the sweep later prepended "posting closed" to still matches). `_merge_uk_dict` skips such a local `support` block (checked against the local and the cloud row): never local-only intel, never beats a cloud block. `_reassert_support` drops it after the build instead of letting it fill an empty key. A block with one extra line (NEED, WHY BEST FIT, an edited FIT) is real and keeps the old rules. The local-only count now reads the merged doc.
+**Cause.** `is_engaged` guards only the stored-deadline path (`probe_rows`). `apply_verdict`, which every probe verdict goes through, had no status check, so CLOSED / EXPIRED / GONE / SUSPECT archived a sent row.
 
-**Tests.** 3 new tests drive the real `cmd_pull` / `_merge` / render; 3 red pre-fix; 9 sabotages by line (278, 280 x3, 294 x2, 323 x3) each red; restored 13/13 PASS; 37/37 job-tracker python files green. **Live (rev 394, three `pull --render`).** No conflict, no local-only count, local `support` 273 → 124 = cloud, local doc = cloud doc key for key, `status`: "local edited since last sync: False". Excel rebuilt (273 rows, 218 inbox leads). No `push` was run. Close after the next job-tracker or discovery run prints no `support` conflict and no "kept N local-only" line.
+**Fix.** `is_sent(row)`: exact tracked status in Submitted, Applied, Interview, Offer, Hired, Offer declined, Rejected, No response, Withdrawn. `apply_verdict` never archives such a row (first pass and 409 replay); the verdict and strike count are still recorded, and the report prints `KEPT (<status>: the application outlives the ad)`. Drafted and proposed rows archive as before: a closed ad can no longer be answered.
+
+**Tests.** 18 new checks drive the real `probe_rows`, `reapply_results` and `cmd_check` with a fake network, 17 red pre-fix (12 on behaviour, 5 only because the `kept` field did not exist; the 18th is the WALLED control); 12 sabotages by line red (455 x2, 456, 461 x4, 562, 574, 734 x2, 735); restored PASS. **Live (dry run, `--only`):** row 6 prints KEPT, row 91 (CV/CL drafted) strike 1/2.
+
+**Not done.** Row 135 Elma was not restored: a data write outside this routine's task. **OWNER:** set Elma back to Submitted, or leave it archived.
+
+**To close.** A sweep with `--apply` prints KEPT for a sent row and leaves its status and band alone (expected next run, row 6).

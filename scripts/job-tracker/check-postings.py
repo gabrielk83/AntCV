@@ -36,6 +36,10 @@ ABSENT (which a CDN edge, a redirect race or a routing blip also produces):
            the job is open.
   ERROR    timeout/DNS/TLS/5xx.
   LIVE     resets the strike count to zero.
+  A row whose application is SENT or decided (Submitted, Interview, Offer, or a
+  recorded outcome) is NEVER archived by any verdict (is_sent): the ad closing is
+  what normally happens after one applies. The verdict is recorded and printed.
+
 Strikes live per-row in doc["postingcheck"][uk] (substructure-keyed, so parallel
 routines cannot clobber each other's counts through one shared blob), and a soft
 verdict may strike AT MOST ONCE PER CALENDAR DAY — two routines sweeping the same
@@ -445,6 +449,18 @@ def is_engaged(row):
     return bool(_ENGAGED.search(status)) or "📦" in flag or "📨" in flag
 
 
+# POSTING-SUBMITTED-KEEP-001 (job-tracker nightly 2026-11-25): is_engaged guards the stored-deadline path only.
+# The probe path archived Elma (Submitted 11-08, ad closed 11-15): the status became "Archive / closed" and the row
+# left the follow-up list. Exact tracked statuses; a drafted row still archives, its ad can no longer be answered.
+SENT_STATUSES = frozenset(("submitted", "applied", "interview", "offer", "hired", "offer declined",
+                           "rejected", "no response", "withdrawn"))
+
+
+def is_sent(row):
+    """True once the application is with the employer or its outcome is recorded: the ad no longer decides."""
+    return str(row[8] if len(row) > 8 else "").strip().lower() in SENT_STATUSES
+
+
 def is_archived(row):
     return str(row[12] if len(row) > 12 else "").upper() == ARCHIVE_BAND
 
@@ -542,6 +558,8 @@ def apply_verdict(doc, row, uk, verdict, detail, today, apply):
 
     will_archive = (verdict in HARD_VERDICTS) or (
         verdict in SOFT_VERDICTS and misses >= STRIKES_TO_ARCHIVE)
+    if is_sent(row):
+        will_archive = False                         # POSTING-SUBMITTED-KEEP-001, on the 409 replay too
     archived = False
     if will_archive and apply:
         archive_row(row, verdict, detail, today)
@@ -553,11 +571,12 @@ def apply_verdict(doc, row, uk, verdict, detail, today, apply):
 
 def _result(row, uk, url, verdict, detail, misses, will_archive, archived,
             err_since="", err_days=0):
+    kept = str(row[8]).strip() if is_sent(row) else ""
     return {"uk": uk, "company": row[1] if len(row) > 1 else "",
             "role": row[2] if len(row) > 2 else "", "url": url,
             "verdict": verdict, "detail": detail[:200],
             "misses": misses, "archived": archived, "would_archive": will_archive,
-            "err_since": err_since, "err_days": err_days}
+            "err_since": err_since, "err_days": err_days, "kept": kept}
 
 
 def reapply_results(doc, results, today, apply):
@@ -712,6 +731,8 @@ def cmd_check(args):
             continue
         mark = "ARCHIVED" if r["archived"] else ("would archive" if r["would_archive"]
                                                  else "strike %d/%d" % (r["misses"], STRIKES_TO_ARCHIVE))
+        if r.get("kept") and (r["verdict"] in HARD_VERDICTS or r["verdict"] in SOFT_VERDICTS):
+            mark = "KEPT (%s: the application outlives the ad)" % r["kept"]
         if r.get("err_days", 0) > 1:
             mark += ", ERROR %d sweep days since %s" % (r["err_days"], r["err_since"])
         print("  [%-7s] %s / %s  -> %s" % (r["verdict"], r["company"], r["role"], mark))

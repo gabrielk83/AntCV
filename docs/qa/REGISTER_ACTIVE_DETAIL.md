@@ -3217,7 +3217,9 @@ _FIXED 2026-11-11 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `s
 
 ## Row 146 — DISCOVERY-MED-MUST-NEGATION-001
 
-_verified: 2026-11-23_
+_verified: 2026-11-25_
+
+**2026-11-25 (position-discovery, Gabo-PC).** 7 added, 0 skipped. First negated must in a live ad: TICRA "English is the working language, and Danish is not required". Pre-fix script (`e5602975^`): `_language_gate` FLAG on that sentence; current script: PASS. Language leg proven live. No candidate carried a negated medical must, so the medical leg rests on its unit tests; row stays open.
 
 **2026-11-23 (position-discovery, Gabo-PC).** 5 added, 0 skipped, but no candidate carried a negated must: the pre-fix `_evidence_gate` (`e5602975~1`) also passes all five. Close test not exercised; row stays open.
 

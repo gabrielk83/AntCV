@@ -14,7 +14,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.6705-letter-length';
+  var VERSION = '1.51.6706-letter-length';
   if (window.__antcvClLength560 === VERSION) return;
   window.__antcvClLength560 = VERSION;
 

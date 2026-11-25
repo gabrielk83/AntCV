@@ -67,7 +67,7 @@ test('preview: the margin CV shows the place beside the company (ROLE-LOCATION-0
 
 test('index.html: the adapter moves in lockstep with app.js; the rules load after it', () => {
   const v = (name) => (index.match(new RegExp(name.replace(/\./g, '\\.') + '\\?v=([^"\']+)')) || [])[1];
-  assert.equal(v('antcv-roles-richblock-adapter.js'), '1.51.6705-letter-diagram');
+  assert.equal(v('antcv-roles-richblock-adapter.js'), '1.51.6706-letter-diagram');
   assert.equal(v('antcv-roles-richblock-adapter.js'), v('app.js'));
   assert.equal(v('antcv-academy-format.js'), '1.51.6571-role-line-one');
   assert.ok(index.indexOf('antcv-roles-richblock-adapter.js?v=') < index.indexOf('antcv-academy-format.js?v='), 'adapter reads the rules at render time');

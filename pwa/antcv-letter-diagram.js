@@ -29,7 +29,7 @@
  */
 (function (root) {
   'use strict';
-  var VERSION = '1.51.6705-letter-diagram';
+  var VERSION = '1.51.6706-letter-diagram';
 
   var LEADS = {
     flow: { en: 'Workflow', da: 'Arbejdsgang', es: 'Flujo', zh: '工作流程' },

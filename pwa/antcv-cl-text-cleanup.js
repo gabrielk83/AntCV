@@ -25,7 +25,7 @@
  */
 (function () {
   'use strict';
-  var VERSION = '1.51.26';
+  var VERSION = '1.51.6705-letter-diagram';
   if (window.__antcvClTextCleanup === VERSION) return;
   window.__antcvClTextCleanup = VERSION;
 
@@ -164,6 +164,8 @@
         if (!c4Sec && !c3Sec) return;
         sec.items.forEach(function (it) {
           if (!it || typeof it !== 'object' || it.grp) return;
+          // LETTER-DIAGRAM-001: "Workflow: A → B → C" is a diagram row, not prose
+          if (it.dg || (String(it.t == null ? '' : it.t).match(/→|->/g) || []).length >= 2) return;
           // C6: give a leadless contribute action bullet a bold lead-in (split the first clause).
           if (sec.id === 'contribute' && it.mk && !it.b) {
             var sp = splitLead(it.t);

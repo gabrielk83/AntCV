@@ -216,3 +216,27 @@ Owner: "linkedin.com/in/gabriel-karp need to be active link (but keep the docume
 | AntCV link on AI jobs (AI-REPO-LINK-001) | AI-oriented = the target title names AI / ML / LLM / generative / agentic work, or the ad has 3 different AI terms at least 5 times (the stored category does not tell). The first AntCV mention in a bullet or text row links to https://github.com/gabrielk83/AntCV in the CV (every layout) and the letter; on an AI job the CV keeps the AntCV bullet when it caps a role at 3. Never on other jobs. Kill switch `antcv:disable-ai-repo-link=1`. |
 | Open end date (DATE-PRESENT-SAME-YEAR-001) | A role that started this year keeps "present" ("Nov 2026 - present"); older open roles still end on the current year (DATE-NO-PRESENT-001, 2026-07-09). docx-worker. |
 | Trackman (kernel v13r) | Bullets and public wording = the owner's LinkedIn entry (organise the review baseline; group standards and supplier tests; reusable checklists and trackers; route questions to owners; evaluate AI-assisted workflows with a dummy-data check), employer line "Radar and camera-based tracking for golf and other sports", note "These tools support decisions. Technical, commercial and project decisions stay with the responsible owners.", on-site. The earlier internal bullets and the dated outcome (clause counts, pilot plan) moved to internal fields that are never printed. Title (owner 2026-11-08): "Project Management Intern, Hardware Development & Supply", the LinkedIn title, in the kernel (experience, workHistory, the trackman block; old title in `titlePrevious`), in gold-rules `roles.canon_titles.trackman` (da "Praktikant i projektledelse, hardwareudvikling og forsyning") and in every export: TRACKMAN-TITLE-001 swaps the exact old phrases in stored role lines and prose. D1 user_kernel and the local kernel file v13r, 2026-11-08. |
+
+## 2026-11-25 - One workflow diagram in every cover letter (LETTER-DIAGRAM-001)
+
+Owner, 2026-11-25: "in all future cover letters ... always add some impressive workflow / architecture idea related to something I will do for the company. embed it to the default cover letters we generate also in AntCV and add in the control in preview a diagram adder."
+
+| Rule | Content |
+|---|---|
+| One per letter | Every letter that answers a job ad shows ONE idea for the work I would do at that employer: a workflow, an architecture or an improvement loop. An unsolicited letter without a job ad has none. |
+| Shape | 3 to 5 steps in order. Step = 1-3 words, detail = 2-5 words, name = 2-5 words. Workflow by default; architecture (stacked layers) when the job is about systems, platforms or products; loop when it is about improvement or control, with one line on what each round returns. |
+| Truth | Steps come from the job ad and from methods that stand in the kernel. It is a plan, not a claim: no invented numbers, tools, results or facts about how the employer works today. |
+| Place | Last row of WHAT I BRING, or before the Goal row of HOW I WILL CONTRIBUTE. It is not prose: it does not count in the 350-450 words and no other row uses arrows. It takes about three lines, so a one-page letter gives up one evidence row before it spills. |
+| Access | Real text, not an image: steps read in order for a screen reader and an ATS, and the label and detail carry the meaning without colour. |
+| Language | The lead word and the steps are in the letter's language (Workflow / Arbejdsgang / Flujo, Architecture / Arkitektur / Arquitectura, Loop / Kredsløb / Ciclo). |
+
+| In the app | Where |
+|---|---|
+| Data | One rich_block row: `b` = "Workflow: name", `t` = "Step (detail) → Step (detail)", optional `dg` = flow / loop / layers. Plain text, so every sidecar, the cloud copy and a translation keep it. Prose with arrows ("250 → 10 days") never counts: the lead word and at least three steps are both needed. |
+| Generation | `pwa/gold-rules.json` 1.10.6 prompt line (after CL-ACADEMY-001) and `cl.diagram`; the same text in the `antcv-bullet-targets.js` fallback. The row is the last `bring_rows` entry. `antcv-core-comp-compress.js` and `antcv-cl-text-cleanup.js` leave a row with two or more arrows alone (they used to cut it at 89 characters and lower-case its first step). |
+| Preview | `pwa/antcv-letter-diagram.js` draws the row through a small hook in app.js (boxes and arrows, or stacked bands). Click on it to edit. |
+| Adder | Preview bar of the cover letter ("＋ Diagram", "✎ Diagram" when there is one; a dot and a hint while a filled letter has none) and the COVER LETTER FORMAT panel. "Suggest from the job ad" uses the connected AI provider, and falls back to a template to edit. One write and one event per action, nothing on the passive path. |
+| Export | docx-worker 1.14.178 `renderLetterDiagram`: a native Word table (tinted cells, accent rule, arrow cells, row that cannot split). The parser is a copy of the app's; `pwa/test/unit/letter-diagram.test.mjs` holds the two to the same results. An older worker prints the text row. |
+| Off | `antcv:disable-letter-diagram` = `1`: no control, the row prints as text in the preview and the export. |
+
+House packages (manual letters) follow the same rule with their own generator.

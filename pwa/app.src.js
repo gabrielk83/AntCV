@@ -6990,6 +6990,13 @@ window.__antcvTxtSame =
               // worker renderRichBlock; a real edit / bracketed citation won't match (full-bracket
               // only). A headlineOff section (work_style) then renders cleanly to nothing.
               if (!row.grp && (/^\s*\[[\s\S]*\]\s*$/.test(String(row.t || "")) || (!String(row.t || "").trim() && e.headlineOff && row.b))) return null;
+              // LETTER-DIAGRAM-001 (owner 2026-11-25): a "Workflow: … " / "Architecture: …" / "Loop: …" row with
+              // three or more arrow-separated steps renders as a diagram (antcv-letter-diagram.js); the worker
+              // draws the same row as a Word table. No sidecar, killed or unparseable -> the text row below.
+              if (!row.grp && window.AntcvLetterDiagram && window.AntcvLetterDiagram.isDiagramRow(row)) {
+                const __ld = window.AntcvLetterDiagram.render(React, { sid: __sid, font: T, size: __fs, accent: __headColor, ink: __txtColor, sidebar: !!S }, row, i);
+                if (__ld) return { key: String(i), node: __ld };
+              }
               // RICH-BLOCK-GROUP-001: a row flagged grp is a bold sub-heading (like labeled_list).
               if (row.grp) {
                 // ROLES-AS-RICHBLOCK-001: a role-line heading (3 styled segments

@@ -1270,7 +1270,9 @@ window.__antcvTxtSame =
       // ai.google.dev/gemini-api/docs/pricing. Keep in sync with the worker
       // RATES tables + D1 llm_provider_costs (COST-SOURCE-AUDIT-GAP-001);
       // pwa/test/llm-cost-provider-rates.test.mjs now pins them to each other.
-      mistral: { inputPer1M: 0.5, outputPer1M: 1.5 },
+      // MISTRAL-LATEST-LARGE4-001 (2026-11-25): mistral-large-latest aliases Mistral
+      // Large 4 per /v1/models (Large 3 until 2026-11), $0.70/$2.10. Was 0.5/1.5 = 1.4x under.
+      mistral: { inputPer1M: 0.7, outputPer1M: 2.1 },
       gemini: { inputPer1M: 0.3, outputPer1M: 2.5 },
     };
   let A = 0,

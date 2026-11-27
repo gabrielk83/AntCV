@@ -40,7 +40,6 @@ range. A claim older than its heartbeat + 6h with no activity may be reaped by a
 {"id":"sh_mupev15f_bqmz","started":"2026-10-01T10:48:17.049Z","host":"vm","worktree":null,"branch":"claude/project-thread-cub2nb","range":"1.51.4786-1.51.4790","task":"impact types in result bullets (thread cub2nb)","beat":"2026-10-01T10:48:17.054Z"}
 {"id":"sh_mw3hijam_7jnk","started":"2026-11-05T11:51:01.722Z","host":"Gabo-PC","worktree":"ecstatic-heisenberg-9cfa6d","branch":"claude/ecstatic-heisenberg-9cfa6d","range":"1.51.5665-1.51.5684","task":"MARGIN-LAYOUT-001: header card inside the sidebar (house margin format), no band","beat":"2026-11-05T11:51:01.779Z"}
 {"id":"sh_mwj5osyd_cd5f","started":"2026-11-16T11:04:17.591Z","host":"Gabo-PC","worktree":"amazing-montalcini-00f35e","branch":"claude/amazing-montalcini-00f35e","range":"1.51.6585-1.51.6604","task":"ASKAI-INSIGHT-001","beat":"2026-11-16T11:04:17.632Z"}
-{"id":"sh_mwyuqj81_6nru","started":"2026-11-27T10:42:01.396Z","host":"Gabo-PC","worktree":"routine-antcv-nightly-mwyuphqk","branch":"HEAD","range":"1.51.6707-1.51.6726","task":"antcv-nightly 2026-11-27: row 152 diag fleet + Band E","beat":"2026-11-27T10:42:01.495Z"}
 <!-- SHIFT:END -->
 
 _No active claims when the block above is empty. Each line is

@@ -4,6 +4,29 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 146 — DISCOVERY-MED-MUST-NEGATION-001 — CLOSED 2026-11-27 (position-discovery, evidence: the 11-15 repro ad, Ambu NPI Engineer, passed live with a negated medical must in its fit note; pre-fix gate skips it)
+
+_verified: 2026-11-27_
+
+**2026-11-27 (position-discovery, Gabo-PC). CLOSED.** 4 added, 1 skipped (pay gate, DTU Nanolab). Ambu / NPI Engineer (Process Development), the ad that found this row on 11-15, came back; its `fit` note read "medical-device experience 'likely' (not a must)". Pre-fix `_evidence_gate` (`e5602975^`): skip, "medical-device experience is a must"; current: `None`; `add` wrote row `ambu_10`. Both legs now proven on live data (language 11-25, medical 11-27).
+
+**2026-11-25 (position-discovery, Gabo-PC).** 7 added, 0 skipped. First negated must in a live ad: TICRA "English is the working language, and Danish is not required". Pre-fix script (`e5602975^`): `_language_gate` FLAG on that sentence; current script: PASS. Language leg proven live. No candidate carried a negated medical must, so the medical leg rests on its unit tests; row stays open.
+
+**2026-11-23 (position-discovery, Gabo-PC).** 5 added, 0 skipped, but no candidate carried a negated must: the pre-fix `_evidence_gate` (`e5602975~1`) also passes all five. Close test not exercised; row stays open.
+
+**FIXED 2026-11-20 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; script only, no version consumed).** Probe on `origin/main` `baa2f874`: "Medical-device experience is not a must.", "... is not required.", the CellaVision fit note and "Erfaring med medicinsk udstyr er ikke et krav." all returned a must; `_language_gate("Fluent Danish is not a requirement.")` returned FLAG. Fix: `_NEG_MUST` (not / no / never + must / required / requirement / mandatory / essential / necessary / needed / prerequisite; Danish ikke (et) krav / nødvendig / påkrævet / obligatorisk / forudsætning, krævet ikke; Swedish krävs inte, inte (ett) krav). `_medical_must` tests `_MUST` on the sentence with negated phrases removed, so a second, real must still gates; `_language_gate` skips a sentence carrying a negated requirement. 13 checks in `test_discover_positions.py` (real `_medical_must`, `_evidence_gate` with the Ambu fit note, `_language_gate`), musts kept as controls. Red: 8 pre-fix; sabotage line 305 → 5; sabotage line 367 → 3. Restored: 115/115 PASS. **Pending (next run):** the next position-discovery run skips no row on a negated must, then CLOSE.
+
+_OPEN (found by position-discovery 2026-11-15, Gabo-PC, Opus 5.5; script only, no `pwa/` asset)._
+
+**Found.** `discover-positions.py add` skipped Ambu / NPI Engineer (Process Development) with "evidence gate: medical-device experience is a must". The quoted sentence was the routine's own `fit` note ("Medical-device experience 'likely', not a must"). The posting says "you likely have experience within healthcare or the medical device industry", for which `_medical_must` correctly returns `None`. Probe on the worktree copy: "Medical-device experience is not a must." and "Medical-device experience is not required." both return the sentence: `_MUST` matches `must` / `required` with no negation check, and no soft marker covers "not".
+
+**Impact.** Low. One T3 lead lost this run; a real posting that says "medical device experience is not required" would be skipped the same way.
+
+**Fix.** Treat "not (a )?must", "not required", "not mandatory", "not essential" as soft in `_medical_must` (check `_LANG_MUST` for the same shape). Negative controls: the two probe sentences pass; "is required" and "must have" stay musts. Until then, discovery `fit` notes avoid the word "must".
+
+**2026-11-19 (position-discovery, Gabo-PC).** Second occurrence: `add` skipped CellaVision / Test Leader - Scanner Solutions & Hardware on the routine's `fit` text "Medtech / regulated experience 'preferred', not a must". The posting reads "... MedTech, or another regulated industry is preferred." Re-added with `override_gate` + reason. Still open; same fix.
+
+
 ## Row 156 — POSTING-SUBMITTED-KEEP-001 — CLOSED 2026-11-27 (job-tracker nightly, evidence: the sweep printed KEPT for rows 6 and 91 and left their status and band alone)
 
 _verified: 2026-11-27_

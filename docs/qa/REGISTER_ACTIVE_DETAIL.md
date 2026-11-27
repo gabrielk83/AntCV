@@ -2619,6 +2619,8 @@ _reconcile 2026-10-18 (CI nightly, E1 stalest slot, HEAD `fe67552f`): CODE-PRESE
 
 _verified: 2026-11-27_
 
+**2026-11-27 (position-discovery, Gabo-PC).** 86 probed, 83 LIVE, 1 CLOSED archived on first sight (Ibsen Photonics / Spectrometer Production Engineer), 2 GONE KEPT (both Hamamatsu rows Rejected). 0 WALLED, 0 ERROR. Rev 415 → 416.
+
 **RE-VERIFIED 2026-11-27 (job-tracker nightly, Gabo-PC).** `check --apply`: 85 probed, 83 LIVE, 0 archived, 2 GONE strike 2/2 on sent rows, both printed `KEPT (Rejected: the application outlives the ad)` (6 Hamamatsu Optical Engineer II, 91 Hamamatsu Optical Engineer for R&D Projects; status, band DDEBF7 and queue untouched). One 409 (rev moved to 416), verdicts replayed without re-probing. Doc rev 415 → 417. Row 158 (POSTING-FINAL-SKIP-001) stops probing final-outcome rows from the next sweep.
 
 **RE-VERIFIED 2026-11-25 (job-tracker nightly, Gabo-PC).** `check --apply`: 79 probed, 74 LIVE, 3 archived (59 Quantum Machines CLOSED; 242 Teknologisk Institut EXPIRED, deadline 2026-11-25; 8 NVIDIA Test Engineer Photonic SUSPECT, strike 2/2), 2 GONE held at strike 1 (6 and 91 Hamamatsu, LinkedIn 404), 0 WALLED, 0 ERROR. Doc rev 396 → 397. Defect found in the same sweep: row 156.
@@ -3242,26 +3244,6 @@ _FIXED 2026-11-11 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `s
 **Fix.** `probe_rows` reads the row note with the same `deadlines.find_deadline` only when the posting text states no deadline; the posting text wins when both have one. The engaged guard (`is_engaged`) still applies. The verdict detail names the source ("row note" / "posting text").
 
 **Tests.** 5 new checks in `test_check_postings.py` driving the real `probe_rows` with a fake probe: FMI-shaped row archived with no network probe; future row-note deadline left to the probe; posting-text future deadline beats a past row-note deadline; engaged row never archived. Pre-fix (HEAD `check-postings.py`): 2 FAIL. Sabotage line 523 (`jd_deadline = None`): red. Sabotage line 522 (`if True:`, row note always wins): red. Restored byte-identical, PASS. `test_deadlines.py` 14/14, `run-tests.mjs` ALL PASS. Tonight's live doc: no row changes verdict (the only open row-note deadline is in 2027). Close after a sweep archives a row on its row-note deadline.
-
-## Row 146 — DISCOVERY-MED-MUST-NEGATION-001
-
-_verified: 2026-11-25_
-
-**2026-11-25 (position-discovery, Gabo-PC).** 7 added, 0 skipped. First negated must in a live ad: TICRA "English is the working language, and Danish is not required". Pre-fix script (`e5602975^`): `_language_gate` FLAG on that sentence; current script: PASS. Language leg proven live. No candidate carried a negated medical must, so the medical leg rests on its unit tests; row stays open.
-
-**2026-11-23 (position-discovery, Gabo-PC).** 5 added, 0 skipped, but no candidate carried a negated must: the pre-fix `_evidence_gate` (`e5602975~1`) also passes all five. Close test not exercised; row stays open.
-
-**FIXED 2026-11-20 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; script only, no version consumed).** Probe on `origin/main` `baa2f874`: "Medical-device experience is not a must.", "... is not required.", the CellaVision fit note and "Erfaring med medicinsk udstyr er ikke et krav." all returned a must; `_language_gate("Fluent Danish is not a requirement.")` returned FLAG. Fix: `_NEG_MUST` (not / no / never + must / required / requirement / mandatory / essential / necessary / needed / prerequisite; Danish ikke (et) krav / nødvendig / påkrævet / obligatorisk / forudsætning, krævet ikke; Swedish krävs inte, inte (ett) krav). `_medical_must` tests `_MUST` on the sentence with negated phrases removed, so a second, real must still gates; `_language_gate` skips a sentence carrying a negated requirement. 13 checks in `test_discover_positions.py` (real `_medical_must`, `_evidence_gate` with the Ambu fit note, `_language_gate`), musts kept as controls. Red: 8 pre-fix; sabotage line 305 → 5; sabotage line 367 → 3. Restored: 115/115 PASS. **Pending (next run):** the next position-discovery run skips no row on a negated must, then CLOSE.
-
-_OPEN (found by position-discovery 2026-11-15, Gabo-PC, Opus 5.5; script only, no `pwa/` asset)._
-
-**Found.** `discover-positions.py add` skipped Ambu / NPI Engineer (Process Development) with "evidence gate: medical-device experience is a must". The quoted sentence was the routine's own `fit` note ("Medical-device experience 'likely', not a must"). The posting says "you likely have experience within healthcare or the medical device industry", for which `_medical_must` correctly returns `None`. Probe on the worktree copy: "Medical-device experience is not a must." and "Medical-device experience is not required." both return the sentence: `_MUST` matches `must` / `required` with no negation check, and no soft marker covers "not".
-
-**Impact.** Low. One T3 lead lost this run; a real posting that says "medical device experience is not required" would be skipped the same way.
-
-**Fix.** Treat "not (a )?must", "not required", "not mandatory", "not essential" as soft in `_medical_must` (check `_LANG_MUST` for the same shape). Negative controls: the two probe sentences pass; "is required" and "must have" stay musts. Until then, discovery `fit` notes avoid the word "must".
-
-**2026-11-19 (position-discovery, Gabo-PC).** Second occurrence: `add` skipped CellaVision / Test Leader - Scanner Solutions & Hardware on the routine's `fit` text "Medtech / regulated experience 'preferred', not a must". The posting reads "... MedTech, or another regulated industry is preferred." Re-added with `override_gate` + reason. Still open; same fix.
 
 ## Row 147 — PROXY-POSTING-GUARD-UNDEPLOYED-001
 

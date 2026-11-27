@@ -461,6 +461,17 @@ def is_sent(row):
     return str(row[8] if len(row) > 8 else "").strip().lower() in SENT_STATUSES
 
 
+# POSTING-FINAL-SKIP-001 (job-tracker nightly 2026-11-27): a row whose outcome is final can no longer be archived
+# (is_sent) and nothing waits on its ad, yet every sweep probed it: 14 of 85 probes on 11-27 (Rejected 12, Offer
+# declined 2), each a LinkedIn request toward the 429 limit, and rows 6 + 91 printed GONE -> KEPT every night.
+# Skipped unless named with --only. "No response" and "Offer" stay probed: the process is still open.
+FINAL_STATUSES = frozenset(("rejected", "offer declined", "withdrawn", "hired"))
+
+
+def is_final(row):
+    return str(row[8] if len(row) > 8 else "").strip().lower() in FINAL_STATUSES
+
+
 def is_archived(row):
     return str(row[12] if len(row) > 12 else "").upper() == ARCHIVE_BAND
 
@@ -615,6 +626,7 @@ def probe_rows(doc, args, today):
     checked = 0
     last_hit = {}                                      # rate domain -> monotonic time of last probe
     cold = set()                                       # rate domains whose 429 outlived the backoff
+    skipped_final = 0
     for row in rows:
         uk = row_uk(row)
         url = (urls.get(uk) or "").strip()
@@ -623,6 +635,9 @@ def probe_rows(doc, args, today):
         if is_archived(row):
             continue
         if args.only and uk not in args.only.split(","):
+            continue
+        if is_final(row) and not args.only:
+            skipped_final += 1                         # POSTING-FINAL-SKIP-001
             continue
         if args.limit and checked >= args.limit:
             break
@@ -663,6 +678,7 @@ def probe_rows(doc, args, today):
 
         misses, will, did, es, ed = apply_verdict(doc, row, uk, verdict, detail, today, args.apply)
         results.append(_result(row, uk, url, verdict, detail, misses, will, did, es, ed))
+    args.skipped_final = skipped_final
     return results
 
 
@@ -715,6 +731,7 @@ def cmd_check(args):
 
     if args.json:
         print(json.dumps({"checked": len(results), "counts": counts,
+                          "skipped_final": getattr(args, "skipped_final", 0),
                           "applied": bool(args.apply) and put_error is None,
                           "put_error": put_error,
                           "rev_before": rev_before, "rev_after": rev_after,
@@ -726,6 +743,9 @@ def cmd_check(args):
 
     print("checked %d row(s) — %s" % (
         len(results), ", ".join("%s %d" % (k, v) for k, v in sorted(counts.items())) or "nothing"))
+    if getattr(args, "skipped_final", 0):
+        print("skipped %d row(s) with a final outcome (Rejected / Offer declined / Withdrawn / Hired)"
+              % args.skipped_final)
     for r in sorted(results, key=lambda x: x["verdict"]):
         if r["verdict"] == "LIVE":
             continue

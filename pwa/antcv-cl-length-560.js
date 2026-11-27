@@ -5,23 +5,25 @@
  * (JSON-stringified, like pageBudget) which the CV/CL generation prompt reads
  * via u.get("pageBudgetCl", 1). Cover letters are ≤ 1.5 pages (cl-skeleton.md).
  *
- * Per-style DEFAULT when unset: Nordic Minimal + Cold Outreach = 1 page;
- * Mediterranean / Context-Rich / Prestige-Structured = 1.5; else 1.
- * (Owner: "for nordic minimal a length of = 1.")
+ * DEFAULT when unset (LETTER-LENGTH-002, owner 2026-11-25: "keep it 2 pages when it is a
+ * real academic position/phd. if it is not keep it one page and very relevant to the job"):
+ * 2 pages for an academic position or PhD (job title / university, or the Research Formal
+ * style), 1 page for everything else. Academic Work is a staffing company, not academic.
+ * A length the user picked always wins. The generation prompt reads AntcvClLength.get().
  * ============================================================================
  */
 (function () {
   'use strict';
-  var VERSION = '1.50.568-cl-length';
+  var VERSION = '1.51.6706-letter-length';
   if (window.__antcvClLength560 === VERSION) return;
   window.__antcvClLength560 = VERSION;
 
   var STORAGE_KEY = 'pageBudgetCl';
   var OPTIONS = [
     { v: 0.5, label: '½ page', hint: 'Half a page — a short note. Good for a brief speculative / cold-outreach opener.' },
-    { v: 1.0, label: '1 page', hint: 'One page — tight. Default for Nordic Minimal and Cold Outreach.' },
-    { v: 1.5, label: '1.5 pages', hint: 'Up to 1.5 pages — for the more expansive styles (Mediterranean, Context-Rich, Prestige).' },
-    { v: 2.0, label: '2 pages', hint: 'Two pages — a fuller letter when the role warrants more detail.' },
+    { v: 1.0, label: '1 page', hint: 'One page — tight. The default for every job that is not academic.' },
+    { v: 1.5, label: '1.5 pages', hint: 'Up to 1.5 pages — when a letter needs a little more room.' },
+    { v: 2.0, label: '2 pages', hint: 'Two pages — the default for an academic position or PhD.' },
     { v: 2.5, label: '2.5 pages', hint: 'Up to 2.5 pages — the maximum, for senior / heavily-tailored applications.' },
   ];
 
@@ -32,10 +34,20 @@
     try { var tr = localStorage.getItem('toneRegister'); if (tr) { var v = JSON.parse(tr); if (typeof v === 'string' && v) return v; } } catch (_) {}
     try { var pi = JSON.parse(localStorage.getItem('personalInfo') || '{}') || {}; return (pi.writingPrefs && pi.writingPrefs.style) || ''; } catch (_) { return ''; }
   }
+  // Pure: is this a real academic position? Judged on the job TITLE and the EMPLOYER, never on the ad text
+  // (an industry ad that asks for a PhD is not an academic position).
+  var ACAD_TITLE = /\b(ph\.?\s?d\.?|doctoral|doctorate|post-?\s?doc\w*|professor|lecturer|research (assistant|associate|fellow)|ph\.?d\.?-stipendiat\w*|doktorand\w*|adjunkt|lektor|videnskabelig assistent|forskningsassistent)\b/i;
+  var ACAD_ORG = /universit|\bdtu\b|\bku\b|\baau\b|\bsdu\b|\bitu\b|\beth\b|\bkth\b|institute of technology|h[øo]j?skole|hochschule|max[- ]planck|niels bohr/i;
+  function jobIsAcademic(m) {
+    var title = String((m && (m.role || m.title || m.jobTitle)) || ''), org = String((m && m.company) || '');
+    if (/academic work/i.test(org)) return false;
+    if (/recruit|talent|coordinator|administrat/i.test(title)) return false;   // runs the programme, is not the position
+    if (/\b(ph\.?\s?d\.?|doctoral|doktorand\w*)\b/i.test(title)) return true;
+    return ACAD_TITLE.test(title) && ACAD_ORG.test(org);
+  }
+  function jobMeta() { try { return JSON.parse(localStorage.getItem('meta') || '{}') || {}; } catch (_) { return {}; } }
   function styleDefault() {
-    var s = activeStyle();
-    if (s === 'mediterranean-formal' || s === 'context-rich' || s === 'prestige-structured') return 1.5;
-    return 1; // nordic-minimal, cold-outreach, and everything else default to 1 page
+    return (activeStyle() === 'research-formal' || jobIsAcademic(jobMeta())) ? 2 : 1;
   }
   function read() {
     try {
@@ -48,7 +60,7 @@
   function write(v) {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); window.dispatchEvent(new CustomEvent('antcv:cl-budget-changed', { detail: { value: v } })); } catch (_) {}
   }
-  window.AntcvClLength = { get: read, set: write, OPTIONS: OPTIONS, STORAGE_KEY: STORAGE_KEY };
+  window.AntcvClLength = { get: read, set: write, OPTIONS: OPTIONS, STORAGE_KEY: STORAGE_KEY, jobIsAcademic: jobIsAcademic };
 
   function buildRow() {
     var wrap = document.createElement('div');
@@ -79,7 +91,7 @@
     select.addEventListener('change', function () { var v = parseFloat(select.value); if (isNaN(v)) return; write(v); refreshHint(v); });
     var note = document.createElement('div');
     note.style.cssText = 'font-size:9px;color:rgba(255,255,255,0.4);margin-top:8px;line-height:1.4;';
-    note.textContent = 'Aims the cover letter at this length during generation. Defaults to 1 page for Nordic Minimal.';
+    note.textContent = 'Aims the cover letter at this length during generation. Defaults to 1 page, and to 2 pages for an academic position or PhD.';
     wrap.appendChild(note);
     return wrap;
   }

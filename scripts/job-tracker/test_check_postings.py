@@ -606,19 +606,20 @@ def _sent_doc(status, uk="r", strikes=0):
             "postingcheck": {uk: ent} if ent else {}}
 
 
-def _sent_run(doc, answer, apply=True):
+def _sent_run(doc, answer, apply=True, only=""):
     probe0, sleep0 = cp.probe, cp.time.sleep
     cp.probe, cp.time.sleep = (lambda u, timeout=25: answer(u)), (lambda s: None)
     try:
-        return cp.probe_rows(doc, type("A", (), {"only": "", "limit": 0, "timeout": 5, "apply": apply})(), NOV25)[0]
+        return cp.probe_rows(doc, type("A", (), {"only": only, "limit": 0, "timeout": 5, "apply": apply})(), NOV25)[0]
     finally:
         cp.probe, cp.time.sleep = probe0, sleep0
 
 
+# A final-outcome row is probed only when named with --only (POSTING-FINAL-SKIP-001), so name it here.
 for _st in ("Submitted", "Interview", "Offer", "Hired", "Offer declined", "Rejected", "No response", "Withdrawn",
             " submitted "):
     _d = _sent_doc(_st)
-    _r = _sent_run(_d, lambda u: (200, u, CLOSED_PAGE))
+    _r = _sent_run(_d, lambda u: (200, u, CLOSED_PAGE), only="r" if cp.is_final(_d["rows"][0]) else "")
     check("sent: a CLOSED ad never archives a %r row" % _st,
           (_r["verdict"], _r["archived"], _r["would_archive"], _d["rows"][0][8], _d["rows"][0][12],
            _d["rows"][0][10], _d["queue"], "archived_on" in _d["postingcheck"]["r"], _r.get("kept")),
@@ -663,6 +664,74 @@ check("sent: the report says KEPT with the status, and counts no archive",
       (True, False, True))
 _o = _sent_print(_sent_doc("Submitted"), lambda u: (403, u, ""))
 check("sent: a WALLED probe of a sent row is not reported as KEPT", ("KEPT" in _o, "WALLED" in _o), (False, True))
+
+# ---- POSTING-FINAL-SKIP-001 (job-tracker nightly 2026-11-27) ---------------------
+# 14 of 85 probes on 11-27 hit rows with a final outcome (Rejected 12, Offer declined 2): nothing can change for
+# them, each spent a LinkedIn request. Drives the REAL probe_rows and cmd_check with a counting fake network.
+
+
+def _final_run(statuses, only=""):
+    calls = []
+    rows, urls = [], {}
+    for i, st in enumerate(statuses):
+        uk = "f%d" % i
+        rows.append([i, "Co", "Role", "", "", "Proposed", "", "OPEN", st, "Review", "", uk, "DDEBF7"])
+        urls[uk] = "https://www.example.dk/job/" + uk
+    doc = {"rows": rows, "urls": urls, "jd": {}, "postingcheck": {}}
+    args = type("A", (), {"only": only, "limit": 0, "timeout": 5, "apply": True})()
+    probe0, sleep0 = cp.probe, cp.time.sleep
+    cp.probe, cp.time.sleep = (lambda u, timeout=25: (calls.append(u), (404, u, ""))[1]), (lambda s: None)
+    try:
+        res = cp.probe_rows(doc, args, NOV25)
+    finally:
+        cp.probe, cp.time.sleep = probe0, sleep0
+    return res, calls, doc, getattr(args, "skipped_final", None)
+
+
+for _st in ("Rejected", "Offer declined", "Withdrawn", "Hired", " rejected "):
+    _res, _calls, _d, _sk = _final_run([_st])
+    check("final: a %r row is not probed and its postingcheck is not touched" % _st,
+          (len(_res), len(_calls), _d["postingcheck"], _sk, _d["rows"][0][8], _d["rows"][0][12]),
+          (0, 0, {}, 1, _st, "DDEBF7"))
+for _st in ("Submitted", "Interview", "Offer", "No response", "CV/CL drafted", "Identified (posting saved)", ""):
+    _res, _calls, _d, _sk = _final_run([_st])
+    check("final: a %r row is still probed" % _st, (len(_res), len(_calls), _sk), (1, 1, 0))
+_res, _calls, _d, _sk = _final_run(["Rejected", "Submitted", "Offer declined", "Identified (posting saved)"])
+check("final: a mixed sweep probes the two open rows and counts two skips",
+      (sorted(r["uk"] for r in _res), len(_calls), _sk), (["f1", "f3"], 2, 2))
+_res, _calls, _d, _sk = _final_run(["Rejected", "Submitted"], only="f0")
+check("final: --only still probes a named final row (owner asked for it)",
+      ([r["uk"] for r in _res], len(_calls), _d["postingcheck"]["f0"]["status"], _res[0]["archived"]),
+      (["f0"], 1, "GONE", False))
+
+
+def _final_print(statuses, as_json=False):
+    import contextlib
+    import io as _io
+    rows = [[i, "Co", "Role", "", "", "Proposed", "", "OPEN", st, "Review", "", "f%d" % i, "DDEBF7"]
+            for i, st in enumerate(statuses)]
+    doc = {"rows": rows, "urls": {"f%d" % i: "https://www.example.dk/job/f%d" % i for i in range(len(rows))},
+           "jd": {}, "postingcheck": {}}
+    g0, p0, b0, s0 = cp.get_doc, cp.put_doc, cp.probe, cp.time.sleep
+    cp.get_doc, cp.put_doc = (lambda: (5, doc)), (lambda d, rev: (200, {"ok": True, "rev": rev + 1}))
+    cp.probe, cp.time.sleep = (lambda u, timeout=25: (200, u, JD)), (lambda s: None)
+    buf = _io.StringIO()
+    try:
+        with contextlib.redirect_stdout(buf):
+            cp.cmd_check(type("A", (), {"only": "", "limit": 0, "timeout": 5, "apply": True, "json": as_json})())
+    finally:
+        cp.get_doc, cp.put_doc, cp.probe, cp.time.sleep = g0, p0, b0, s0
+    return buf.getvalue()
+
+
+_o = _final_print(["Rejected", "Rejected", "Offer declined", "Submitted"])
+check("final: the report counts the skipped rows and the one probe",
+      ("checked 1 row(s)" in _o, "skipped 3 row(s) with a final outcome" in _o), (True, True))
+_o = _final_print(["Submitted"])
+check("final: no skip line when nothing was skipped", "skipped" in _o, False)
+import json as _json
+_j = _json.loads(_final_print(["Hired", "Interview"], as_json=True))
+check("final: --json carries skipped_final", (_j["checked"], _j["skipped_final"]), (1, 1))
 
 # ---- POSTING-RATE-DOMAIN-001 (job-tracker nightly 2026-11-16) --------------------
 # Twelve Workday rows on three tenants read WALLED HTTP 429 in one sweep: only LinkedIn was

@@ -4,7 +4,7 @@ The canonical structure for AntCV cover letters. Used by every writing style; th
 
 The cover letter is **complementary** to the CV — it tells the story the CV cannot. The CV lists what the candidate has done; the cover letter explains why the candidate is applying to this specific role and what they would do in it. The two documents share visual treatment (same header, same package) but carry different content.
 
-**Length budget.** 1.5 pages maximum. Tighter than the CV — readers spend less time on a cover letter than on a CV, so density must be higher and ornament must be lower. Honour `target_pages_cl` if set separately; otherwise default to `target_pages` rounded down to 1.5 max.
+**Length budget.** One page; two pages for a real academic position or PhD (LETTER-LENGTH-002, owner 2026-11-25). Tighter than the CV — readers spend less time on a cover letter than on a CV, so density must be higher and ornament must be lower. Honour `target_pages_cl` if set separately; otherwise default to `target_pages` rounded down to 1.5 max.
 
 ---
 
@@ -108,6 +108,13 @@ Two-column table. Focus area + strategic expertise. 4 – 6 rows. The same struc
 | Process discipline | Six Sigma Black Belt, ISO 26262 assessor, ASPICE governance |
 
 **Avoid:** rows duplicated from the CV's core_competencies without JD-specific tuning.
+
+**Diagram row (LETTER-DIAGRAM-001, owner 2026-11-25).** The last row of this section is one workflow, architecture or improvement-loop idea for the work the candidate would do at this employer. Leave it out only when there is no job description.
+
+- Left cell: `Workflow: <name>` (default), `Architecture: <name>` (systems, platforms, products) or `Loop: <name>` (improvement, control). Danish `Arbejdsgang` / `Arkitektur` / `Kredsløb`, Spanish `Flujo` / `Arquitectura` / `Ciclo`, Chinese `工作流程` / `架构` / `循环`. Name 2-5 words.
+- Right cell: 3 to 5 steps in order, `Step (detail) → Step (detail) → Step (detail)`. Step 1-3 words, detail 2-5 words, no parentheses inside a detail. An optional closing note after ` | ` (for a loop: what each round returns).
+- Steps come from the job description and from methods in the candidate source. No invented numbers, tools, results or facts about the employer.
+- The row is not prose: it is outside the word count, needs no full stop, and no other row uses arrows. The app and the DOCX export draw it; as text it still reads as one line.
 
 ### `why_this_position`
 

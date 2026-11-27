@@ -2923,8 +2923,12 @@ function normalizeSections(raw) {
           const t = row.tOff ? '' : (row.mk ? (clean(row.t) || '') : _glueOrphan(clean(row.t) || ''));
           if (!b && !t) return null;
           // mk: true (default bullet) or a custom emoji string — pass through as-is.
-          return row.mk ? { b, t, mk: (typeof row.mk === 'string' ? row.mk : true) } : { b, t };
+          // LETTER-DIAGRAM-001: the explicit diagram kind travels with the row (the lead alone also marks it)
+          const dg = (row.dg === 'flow' || row.dg === 'loop' || row.dg === 'layers') ? { dg: row.dg } : {};
+          return row.mk ? { b, t, mk: (typeof row.mk === 'string' ? row.mk : true), ...dg } : { b, t, ...dg };
         }).filter(Boolean);
+        let noDiagram = false;
+        try { noDiagram = localStorage.getItem('antcv:disable-letter-diagram') === '1'; } catch (_) {}
         // RICH-BLOCK-AUTO-PAGE-001 (owner 2026-06-25 "certificates is still a tail to page 1"):
         // merge the MANUAL itemPages with the coordinator's AUTO autoPages — the table case
         // already does this, but the rich_block case used itemPagesMap ALONE, so a rich_block
@@ -2971,6 +2975,7 @@ function normalizeSections(raw) {
         return {
           ...base,
           items,
+          ...(noDiagram ? { noDiagram: true } : {}),
           ...(s.headlineOff ? { headlineOff: true } : {}),
           // WHY-RULE-EXPORT-PARITY-001 (owner 2026-07-03): antcv-cl-text-cleanup sets
           // headlineRule on the WHY section (the standalone accent line the preview

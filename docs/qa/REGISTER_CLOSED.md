@@ -4,7 +4,27 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
-## Row 158 — JT-DOC-SIZE-001 — CLOSED 2026-11-25 (evidence: two routine runs after the trim, no conflict line, doc under the 1.8 MB warning)
+## Row 156 — POSTING-SUBMITTED-KEEP-001 — CLOSED 2026-11-27 (job-tracker nightly, evidence: the sweep printed KEPT for rows 6 and 91 and left their status and band alone)
+
+_verified: 2026-11-27_
+
+**CLOSED 2026-11-27 (job-tracker nightly).** `check --apply` (no code change in `apply_verdict`): GONE strike 2/2 on row 6 (Hamamatsu Optical Engineer II) and row 91 (Hamamatsu Optical Engineer for R&D Projects), both now Rejected; the report printed `KEPT (Rejected: the application outlives the ad)` for both, `0 archived`. Pulled rev 417: both rows OPEN, status Rejected, band DDEBF7, queue false; `postingcheck` holds the strike, no `archived_on`. Also survived a 409 replay (rev 415 → 416 → 417).
+
+_FIXED 2026-11-25 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `scripts/job-tracker/check-postings.py` + `test_check_postings.py`; no `pwa/` asset, no version consumed)._
+
+**Found.** Tonight's sweep put row 6 (Hamamatsu Optical Engineer II, status Submitted) at GONE strike 1; the next sweep would have written "Archive / closed" over Submitted. It has happened before: row 135 Elma, Submitted 2026-11-08, archived 2026-11-15 on "annoncen er udløbet". Of the rows with a `status_history`, Elma is the only casualty; older rows have no history to check. An archived row also leaves `followups.py due` (status must be Submitted).
+
+**Cause.** `is_engaged` guards only the stored-deadline path (`probe_rows`). `apply_verdict`, which every probe verdict goes through, had no status check, so CLOSED / EXPIRED / GONE / SUSPECT archived a sent row.
+
+**Fix.** `is_sent(row)`: exact tracked status in Submitted, Applied, Interview, Offer, Hired, Offer declined, Rejected, No response, Withdrawn. `apply_verdict` never archives such a row (first pass and 409 replay); the verdict and strike count are still recorded, and the report prints `KEPT (<status>: the application outlives the ad)`. Drafted and proposed rows archive as before: a closed ad can no longer be answered.
+
+**Tests.** 18 new checks drive the real `probe_rows`, `reapply_results` and `cmd_check` with a fake network, 17 red pre-fix (12 on behaviour, 5 only because the `kept` field did not exist; the 18th is the WALLED control); 12 sabotages by line red (455 x2, 456, 461 x4, 562, 574, 734 x2, 735); restored PASS. **Live (dry run, `--only`):** row 6 prints KEPT, row 91 (CV/CL drafted) strike 1/2.
+
+**Not done.** Row 135 Elma was not restored: a data write outside this routine's task. **OWNER:** set Elma back to Submitted, or leave it archived.
+
+**To close.** A sweep with `--apply` prints KEPT for a sent row and leaves its status and band alone (expected next run, row 6).
+
+## Row 159 — JT-DOC-SIZE-001 — CLOSED 2026-11-25 (evidence: two routine runs after the trim, no conflict line, doc under the 1.8 MB warning)
 
 _verified: 2026-11-25_
 

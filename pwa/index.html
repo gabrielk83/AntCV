@@ -380,9 +380,9 @@
   })();
 </script>
 <script type="module">
-  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.6685-mistral-large4';
+  import { exportDocxViaWorker } from './antcv-docx-client.js?v=1.51.6706-letter-diagram';
   window.exportDocxViaWorker = exportDocxViaWorker;
-  window.ANTCV_VERSION = '1.51.6685-mistral-large4';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
+  window.ANTCV_VERSION = '1.51.6706-letter-diagram';  /* CACHE-BUST: keep current — early seed read by the login gate before version-override pins TARGET */
   if (!window.ANTCV_DOCX_WORKER) window.ANTCV_DOCX_WORKER = '';
 </script>
 <!-- v1.40.354: anti-thinning guard (narrowed). MUST load before app.js restore
@@ -421,10 +421,10 @@
         auth.src = 'antcv-auth.js?v=1.51.92-analytics-401-scope';
         auth.onload = function(){
           var app = document.createElement('script');
-          app.src = 'app.js?v=1.51.6685-mistral-large4';
+          app.src = 'app.js?v=1.51.6706-letter-diagram';
           app.onload = function(){
             var vo = document.createElement('script');
-            vo.src = 'antcv-version-override.js?v=1.51.6685-mistral-large4';
+            vo.src = 'antcv-version-override.js?v=1.51.6706-letter-diagram';
             document.head.appendChild(vo);
           };
           document.head.appendChild(app);
@@ -715,7 +715,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-i18n.js?v=1.40.341-p0b" defer></script>
 <script src="antcv-format-prefs.js?v=1.50.472" defer></script>
 <script src="antcv-page-budget.js?v=1.40.349" defer></script>
-<script src="antcv-cl-length-560.js?v=1.50.568" defer></script>
+<script src="antcv-cl-length-560.js?v=1.51.6706-letter-length" defer></script>
 <!-- STYLE-PAGE-BUDGET-001 (owner 2026-07-10): writing style drives CV Target-length
      (pageBudget) + commercial-section order; loads after the budget cards it complements. -->
 <script src="antcv-style-page-budget.js?v=1.51.4167-evidence-qa" defer></script>
@@ -770,7 +770,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-preview-paper-memo.js?v=1.51.59" defer></script>
 <script src="antcv-sections-normalize-415.js?v=1.51.6571-role-line-one" defer></script>
 <script src="antcv-demo-watermark.js?v=1.50.340-live-keystate" defer></script>
-<script src="antcv-bullet-targets.js?v=1.51.6585-askai-insight" defer></script>
+<script src="antcv-bullet-targets.js?v=1.51.6706-letter-diagram" defer></script>
 <!-- SIDECAR-CONSOLIDATE G10 (1.50.427): photo-position + photo-pentagon-shape +
      photo-bridge-button merged into ONE file behind a single shared rAF
      scheduler + ONE MutationObserver. The three old files stay on disk,
@@ -792,6 +792,8 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-cl-slogan-fresh.js?v=1.51.1504-slogan-lang-gate" defer></script>
 <!-- CL-FORMAT-PANEL-001 (F3): distinct "COVER LETTER FORMAT" panel in Settings→Layout wrapping the CL signature + slogan/sign-off controls. Kill antcv:disable-cl-format-panel. -->
 <script src="antcv-cl-format-panel.js?v=1.51.82" defer></script>
+<!-- LETTER-DIAGRAM-001 (owner 2026-11-25): one workflow / architecture diagram per cover letter (text row -> drawn in preview + docx) and the "+ Diagram" adder in the CL preview bar. Kill antcv:disable-letter-diagram. -->
+<script src="antcv-letter-diagram.js?v=1.51.6706-letter-diagram" defer></script>
 <!-- HEADER-ITEM-RULE-001 UI + preview parity: per-field header rule lines (on/off + pt + colour) writing headerItemRule; helpers __antcvHdrRuleDiv/Html/Style feed the live preview + HTML export. Kill antcv:disable-header-rule-control (UI only). -->
 <script src="antcv-header-rule-control.js?v=1.51.3181-rules-sig-brand" defer></script>
 <!-- SETTINGS-ROLLER-RESET-001: sentinel history state while Settings is open — a mouse side/tilt-button Back closes the panel like ✕ instead of navigating away (the "mini-reset"). Kill antcv:no-settings-history-guard. -->
@@ -802,7 +804,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      Sidecar-owned DOM. Kill: antcv:disable-style-kernels-table. -->
 <script src="antcv-app-history-style-kernels.js?v=1.51.349-kernel-table-time" defer></script>
 <script src="antcv-preview-header-tokens.js?v=1.50.41" defer></script>
-<script src="antcv-copenhagen-v2-001.js?v=1.51.6685-mistral-large4" defer></script>
+<script src="antcv-copenhagen-v2-001.js?v=1.51.6706-letter-diagram" defer></script>
 <!-- CL-NO-PHOTO-001 (preview): hide the candidate headshot inside the band on the cover letter (export already suppresses it) -->
 <script src="antcv-cl-no-photo-001.js?v=1.51.2561-cl-spec-center" defer></script>
 <!-- HEADER-ELEM-COLORS-001: per-element BRAND colours (name/spec/contact/slogan/application) from brandV2 -->
@@ -819,7 +821,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      style (var(--package-base) cascade), matching the DOCX. Companion to
      preview-header-tokens (which deliberately skips the sidebar). -->
 <script src="antcv-sidebar-bg-token.js?v=1.51.883-editable-marks" defer></script>
-<script src="antcv-pdf-preview-gate.js?v=1.51.6685-mistral-large4" defer></script>
+<script src="antcv-pdf-preview-gate.js?v=1.51.6706-letter-diagram" defer></script>
 <!-- EXPORT-SETTLED-001: defer the FIRST export until the doc is settled (cloud-restore + migrations
      converged) so it isn't stale — the real fix for "refresh twice for a good PDF". -->
 <script src="antcv-export-settled-gate.js?v=1.51.14" defer></script>
@@ -948,13 +950,13 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
      intervals). Verified: 211's CSS replicates each 206/207/208 rule; no
      external consumer of their APIs/attrs. Review: docs/refactor/SIDECAR_CONSOLIDATION_REVIEW.md -->
 <script src="antcv-section-panel-211.js?v=1.51.1224-headline-cjlr2" defer></script>
-<script src="antcv-roles-richblock-adapter.js?v=1.51.6685-mistral-large4" defer></script>
+<script src="antcv-roles-richblock-adapter.js?v=1.51.6706-letter-diagram" defer></script>
 <!-- ROLE-LOCATION-001 (1.51.4566): role.location + role-line format control (classic | meta) in PAGE FLOW; store antcv:roleLineFormat read by the roles adapter + docx-client. Kill antcv:disable-role-line-format -->
-<script src="antcv-role-line-format.js?v=1.51.6685-mistral-large4" defer></script>
+<script src="antcv-role-line-format.js?v=1.51.6706-letter-diagram" defer></script>
 <script src="antcv-references-mode.js?v=1.51.5445-sections-storm" defer></script>
 <script src="antcv-cv-layout-linear.js?v=1.51.4913-demand-seed-refresh" defer></script>
 <!-- MARGIN-LAYOUT-001 (1.51.5865, docs/design/MARGIN_LAYOUT_SPEC.md): CV layout "margin" (DEFAULT) - header card inside the sidebar panel, no band; store antcv:cvLayout absent|margin, control in antcv-role-line-format.js, export layout "margin". Kill antcv:disable-cv-layout-margin=1 -->
-<script src="antcv-cv-layout-margin.js?v=1.51.6685-mistral-large4" defer></script>
+<script src="antcv-cv-layout-margin.js?v=1.51.6706-letter-diagram" defer></script>
 <script src="antcv-cl-close-space.js?v=1.51.5013-grab-zone-scroll-target" defer></script>
 <script src="antcv-experience-role-cjlr-230.js?v=1.51.1126-cjlr-persist" defer></script>
 <script src="antcv-core-competencies-row-controls-234.js?v=1.51.5033-cc-headers-plain" defer></script>
@@ -977,7 +979,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <!-- RICH-BLOCK-001 (2026-06-22): editor surface for the universal composite section
      type:"rich_block" (headline/rule toggles + section CJLR + {lead-in, body} rows with
      per-row CJLR/Page/Enhance/Fit/Delete). app.js delegates to window.AntcvRichBlockEditor. -->
-<script src="antcv-rich-block-editor.js?v=1.51.6685-mistral-large4" defer></script>
+<script src="antcv-rich-block-editor.js?v=1.51.6706-letter-diagram" defer></script>
 <!-- TABLE-TYPE-001 (2026-06-23): editor surface for the universal `table` type (CORE COMPETENCIES /
      WHAT I BRING + any 2-col table): whole-table CJLR/enhance/fit, heading/rule toggles, header-row
      CJLR (fixes the missing-header-CJLR + alignment-drift report) + header B/I, column-ratio,
@@ -1016,7 +1018,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <script src="antcv-sidebar-group-merge-stored.js?v=1.51.159" defer></script>
 <script src="antcv-final-role-condense.js?v=1.50.924" defer></script>
 <!-- CORE-COMP-COMPRESS-001: cap Strategic Expertise cells at 105 chars + abbreviate Focus Area labels. -->
-<script src="antcv-core-comp-compress.js?v=1.51.6205-academy-pages" defer></script>
+<script src="antcv-core-comp-compress.js?v=1.51.6706-letter-diagram" defer></script>
 <script src="antcv-orphan-measure-bind.js?v=1.51.52" defer></script>
 <!-- ORPHANS v2 (owner 2026-07-03): export-metric measurer + export preflight (EXPORT-METRIC-MEASURE-001 / EXPORT-PREFLIGHT-ORPHANS-001). Awaited from antcv-docx-client before the POST; kill antcv:disable-orphan-preflight. -->
 <script src="antcv-orphan-export-preflight.js?v=1.51.6571-role-line-one" defer></script>
@@ -1232,7 +1234,7 @@ const PHOTO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAIqklEQVR4nO3dw
 <!-- SELECTED OUTCOMES last-good snapshot guard: heals an outcomes items:[] wipe (e.g. a core_comp row-count change) back to the last real bullets (SO-003, owner row 40, DATA LOSS). Kill antcv:disable-outcomes-guard -->
 <script src="antcv-outcomes-loss-guard.js?v=1.51.2200-lang-guard-key" defer></script>
 <!-- CL render-side text heals: C4 lead-continuation case (Professionally that) + C3 bring/contribute dangling-truncation cleanup (owner 2026-07). -->
-<script src="antcv-cl-text-cleanup.js?v=1.51.3983-cl-opening-seed" defer></script>
+<script src="antcv-cl-text-cleanup.js?v=1.51.6706-letter-diagram" defer></script>
 <script src="antcv-cl-prose-richblock-fill-987.js?v=1.51.60" defer></script>
 <script src="antcv-showcase-banner-persist.js?v=1.50.696" defer></script>
 <script src="antcv-data-import-331.js?v=1.51.6625-semrule-union" defer></script>

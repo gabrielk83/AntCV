@@ -28105,6 +28105,124 @@ function renderFoundation(s, ctx, isSidebar) {
   return out;
 }
 __name(renderFoundation, "renderFoundation");
+// LETTER-DIAGRAM-001 (owner 2026-11-25: "always add some impressive workflow / architecture idea related to something
+// I will do for the company"). A rich_block row whose lead is "Workflow: <name>" / "Architecture: <name>" / "Loop: <name>"
+// (da / es / zh leads too, or an explicit row.dg) and whose body is 3-6 arrow-separated steps "Step (detail) → Step (detail)"
+// is drawn as a native Word table: tinted boxes with an accent top rule and arrow cells (flow, loop) or stacked bands
+// (layers). Editable, readable by a screen reader and an ATS. Parser = a copy of pwa/antcv-letter-diagram.js parse();
+// pwa/test/unit/letter-diagram.test.mjs holds the two to the same results. Anything that does not parse prints as the text row.
+const LD_LEADS = {
+  "workflow": "flow", "arbejdsgang": "flow", "flujo": "flow", "flujo de trabajo": "flow", "工作流程": "flow", "工作流": "flow",
+  "architecture": "layers", "arkitektur": "layers", "arquitectura": "layers", "架构": "layers",
+  "loop": "loop", "feedback loop": "loop", "kredsløb": "loop", "ciclo": "loop", "循环": "loop"
+};
+const LD_KINDS = ["flow", "loop", "layers"];
+const LD_ARROW = /\s*(?:→|➔|➜|⟶|⇒|(?:-{1,2}|=)(?:>|&gt;))\s*/;
+const LD_ARROW_G = /(?:→|➔|➜|⟶|⇒|(?:-{1,2}|=)(?:>|&gt;))/g;
+const LD_LEAD_RE = new RegExp("^\\s*(" + Object.keys(LD_LEADS).sort((a, b) => b.length - a.length).join("|") +
+  ")\\s*(?:\\(([^)]{1,60})\\))?\\s*(?:[:：]\\s*([\\s\\S]*))?$", "i");
+function ldNorm(v) {
+  return String(v == null ? "" : v).replace(/[\u00a0\u202f\u2007]/g, " ").replace(/\u2011/g, "-").replace(/\*\*/g, "").replace(/\s+/g, " ").trim();
+}
+__name(ldNorm, "ldNorm");
+function ldArrows(v) { const m = ldNorm(v).match(LD_ARROW_G); return m ? m.length : 0; }
+__name(ldArrows, "ldArrows");
+function ldStep(raw) {
+  const v = ldNorm(raw).replace(/^[,;.\s]+|[;,.\s]+$/g, "");
+  if (!v) return null;
+  const m = /^([^()]{1,60}?)\s*\(([^()]*)\)\s*$/.exec(v);
+  if (m) return { label: m[1].trim(), detail: m[2].trim() };
+  const c = v.indexOf(": ");
+  if (c > 1 && c <= 32) return { label: v.slice(0, c).trim(), detail: v.slice(c + 2).trim() };
+  return { label: v, detail: "" };
+}
+__name(ldStep, "ldStep");
+function parseLetterDiagram(row) {
+  try {
+    if (!row || typeof row !== "object" || row.grp) return null;
+    const b = ldNorm(row.b), t = ldNorm(row.t);
+    let kind = LD_KINDS.indexOf(row.dg) >= 0 ? row.dg : null, name = "", body = t;
+    const lb = b ? LD_LEAD_RE.exec(b) : null;
+    if (lb) {
+      kind = kind || LD_LEADS[lb[1].toLowerCase()];
+      name = ldNorm(lb[3] || lb[2] || "");
+    } else if (!b) {
+      const lt = LD_LEAD_RE.exec(t);
+      if (lt && lt[3]) { kind = kind || LD_LEADS[lt[1].toLowerCase()]; name = ldNorm(lt[2] || ""); body = ldNorm(lt[3]); }
+    } else if (kind) {
+      name = b.replace(/[:：]\s*$/, "");
+    }
+    if (!kind || ldArrows(body) < 2) return null;
+    let note = "";
+    const bar = /\s*(?:\||↺|⟲)\s*([^|↺⟲]*)$/.exec(body);
+    if (bar && ldArrows(bar[1]) === 0) { note = ldNorm(bar[1]); body = ldNorm(body.slice(0, bar.index)); }
+    const steps = body.split(LD_ARROW).map(ldStep).filter(Boolean);
+    if (steps.length < 3 || steps.length > 6) return null;
+    steps.forEach((x) => { x.label = x.label.charAt(0).toUpperCase() + x.label.slice(1); });
+    return { kind, name: name.replace(/[:：.]\s*$/, ""), steps, note: note.replace(/\.\s*$/, "") };
+  } catch (_) { return null; }
+}
+__name(parseLetterDiagram, "parseLetterDiagram");
+function ldTint(hex, k) {
+  const h = /^[0-9a-f]{6}$/i.test(String(hex || "")) ? String(hex) : "00746E";
+  let o = "";
+  for (let i = 0; i < 6; i += 2) o += ("0" + Math.round(parseInt(h.slice(i, i + 2), 16) * (1 - k) + 255 * k).toString(16)).slice(-2);
+  return o.toUpperCase();
+}
+__name(ldTint, "ldTint");
+function renderLetterDiagram(m, ctx, isSidebar, accentHex) {
+  const { style, fs } = ctx;
+  const acc = (/^[0-9a-f]{6}$/i.test(String(accentHex || "")) ? String(accentHex) : "00746E").toUpperCase();
+  const bg = ldTint(acc, 0.9), ink = isSidebar ? style.sidebarTextColor : style.mainTextColor;
+  const font = isSidebar ? style.sidebarBodyFont || style.sidebarFont : style.mainBodyFont;
+  const base = Number(isSidebar ? fs.sbBody : fs.mainBody) || 10.5;
+  const W = isSidebar ? ctx.sidebarW - 288 : ctx.doc === "cl" ? PAGE_W - 700 : ctx.mainW - 288;
+  const nil = { style: BorderStyle.NIL, size: 0, color: "auto" };
+  const run = (text, o) => new TextRun({ text, font, ...o });
+  const para = (text, o, p) => new Paragraph({ keepNext: true, keepLines: true, spacing: { before: 0, after: 0, line: 240, lineRule: "auto" }, ...p, children: [run(text, o)] });
+  const label = { bold: true, color: acc, size: pt2hp(base * 0.92) };
+  const detail = { color: isSidebar ? ink : "404040", size: pt2hp(base * 0.8) };
+  const out = [];
+  if (m.name) out.push(para(m.name, { bold: true, color: acc, size: pt2hp(base) }, { spacing: { before: 100, after: 50, line: 252, lineRule: "auto" } }));
+  const stacked = m.kind === "layers" || isSidebar;
+  const top = { style: BorderStyle.SINGLE, size: 18, color: acc };
+  if (stacked) {
+    const c1 = Math.round(W * 0.3), c2 = W - c1;
+    out.push(new Table({
+      layout: "fixed", alignment: AlignmentType.CENTER, width: { size: W, type: WidthType.DXA }, columnWidths: [c1, c2], borders: noBorders(),
+      rows: m.steps.map((st) => new TableRow({ cantSplit: true, children: [
+        new TableCell({ width: { size: c1, type: WidthType.DXA }, shading: { type: ShadingType.CLEAR, fill: bg, color: "auto" }, verticalAlign: VerticalAlign.CENTER,
+          borders: { top: { style: BorderStyle.SINGLE, size: 8, color: "FFFFFF" }, bottom: nil, right: nil, left: { style: BorderStyle.SINGLE, size: 24, color: acc } },
+          margins: { top: 50, bottom: 50, left: 120, right: 80 }, children: [para(st.label, label)] }),
+        new TableCell({ width: { size: c2, type: WidthType.DXA }, shading: { type: ShadingType.CLEAR, fill: bg, color: "auto" }, verticalAlign: VerticalAlign.CENTER,
+          borders: { top: { style: BorderStyle.SINGLE, size: 8, color: "FFFFFF" }, bottom: nil, right: nil, left: nil },
+          margins: { top: 50, bottom: 50, left: 80, right: 80 }, children: [para(st.detail, { ...detail, size: pt2hp(base * 0.88) })] })
+      ] }))
+    }));
+  } else {
+    const n = m.steps.length, aw = 340, bw = Math.floor((W - aw * (n - 1)) / n), widths = [];
+    const cells = [];
+    m.steps.forEach((st, i) => {
+      if (i) {
+        widths.push(aw);
+        cells.push(new TableCell({ width: { size: aw, type: WidthType.DXA }, verticalAlign: VerticalAlign.CENTER, borders: { top: nil, bottom: nil, left: nil, right: nil },
+          margins: { top: 0, bottom: 0, left: 0, right: 0 }, children: [para("→", { bold: true, color: acc, size: pt2hp(base * 1.1) }, { alignment: AlignmentType.CENTER })] }));
+      }
+      widths.push(bw);
+      cells.push(new TableCell({ width: { size: bw, type: WidthType.DXA }, shading: { type: ShadingType.CLEAR, fill: bg, color: "auto" }, verticalAlign: VerticalAlign.CENTER,
+        borders: { top, bottom: nil, left: nil, right: nil }, margins: { top: 60, bottom: 70, left: 60, right: 60 },
+        children: [para(st.label, label, { alignment: AlignmentType.CENTER }), ...st.detail ? [para(st.detail, detail, { alignment: AlignmentType.CENTER })] : []] }));
+    });
+    out.push(new Table({ layout: "fixed", alignment: AlignmentType.CENTER, width: { size: widths.reduce((a, b) => a + b, 0), type: WidthType.DXA }, columnWidths: widths, borders: noBorders(),
+      rows: [new TableRow({ cantSplit: true, children: cells })] }));
+  }
+  const note = (m.kind === "loop" ? "↺ " : "") + (m.note || "");
+  out.push(note.trim()
+    ? new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 40, after: 100, line: 240, lineRule: "auto" }, children: [run(note.trim(), { italics: true, color: isSidebar ? ink : "595959", size: pt2hp(base * 0.84) })] })
+    : new Paragraph({ spacing: { before: 0, after: 80, line: 40, lineRule: "exact" }, children: [run("", {})] }));
+  return out;
+}
+__name(renderLetterDiagram, "renderLetterDiagram");
 function renderRichBlock(s, ctx, isSidebar) {
   const out = [];
   const { style, fs } = ctx;
@@ -28294,6 +28412,9 @@ function renderRichBlock(s, ctx, isSidebar) {
         if (!s.headlineOff && s.title && !(ctx.style && ctx.style.contHeadlines === false)) out.push(headingParagraph(String(s.title || "").toUpperCase() + " " + (ctx.contSuffix || "(CONT.)"), ctx, isSidebar, s.ruleOff));
       }
     }
+    // LETTER-DIAGRAM-001: a workflow / architecture / loop row is drawn, not typed (s.noDiagram = the user's kill switch)
+    const __ld = s.noDiagram ? null : parseLetterDiagram(row);
+    if (__ld) { out.push(...renderLetterDiagram(__ld, ctx, isSidebar, leadHex)); return; }
     const __cs = paraCondenseOpts(s, "items." + I);   // EXPORT-CONDENSE-001 / NO-ORPHAN-002/003 (spacing + width)
     if (row.mk === true) out.push(bulletParagraphRich(lead, body, ctx, isSidebar, align, void 0, void 0, leadUnderline, leadUlHex, __cs));
     else if (typeof row.mk === "string" && row.mk) out.push(make(lead, body, align, row.mk, __cs));
@@ -29965,7 +30086,7 @@ __name(convertPdfToDocx, "convertPdfToDocx");
 //   sidebarW − 420 (= −28px), matching the preview. Verified in document.xml:
 //   3389 + 8517 = 11906, text left 120, origin 3509 = sidebarW(3929) − 420. The
 //   page-anchored bridge medallion is unaffected (sidebar-column, page-relative).
-var VERSION = "1.14.177-role-line-one";
+var VERSION = "1.14.178-letter-diagram";
 // AI-ACT-MARK-001 (EU AI Act Art. 50(2), Art. 111 transition to 2 Dec 2026):
 // machine-readable marking of AI-generated text in every DOCX, as custom
 // document properties. Interim layer under the visible AI notice footer

@@ -2881,7 +2881,9 @@ _2026-10-08 weekly tune: re-verified, not fixed. `C.claude` / `C.anthropic` stil
 
 ## Row 117 — CLUSTER-GLOBAL-SINGLE-JD-DOMINANCE-001
 
-_verified: 2026-11-23_
+_verified: 2026-11-27_
+
+**2026-11-27 (weekly demand-seed, desktop Gabo-PC, duplicate-run cross-check, read-only wrangler SELECT after the 11-23 push):** split re-measured, unchanged from 11-22: `photonics_eng` 20/20 (max jd_count 11), `pm_process` 20/20 (max 7), `executive` 15/20 (max 1), `research_phd` 14/20 (max 2), `consulting` 11/20 (max 1); other five 0/20. Owner design decision still owed.
 
 _2026-11-23 weekly demand-seed (cloud): split NOT re-measured; the Cloudflare-Developer-Platform connector refused its sign-in in the cloud session. Last measure is the desktop 2026-11-22 cross-check. Relay push 10 clusters / 247 inserted, every cluster recomputed._
 
@@ -2998,7 +3000,9 @@ storage-layer cleanup, no user impact while the render mitigation holds.
 
 ## Row 125 — MEDSEC-CLUSTER-001
 
-_verified: 2026-11-23_
+_verified: 2026-11-27_
+
+**2026-11-27 (weekly demand-seed, desktop Gabo-PC): no research pass (duplicate-run hit on the 11-23 cloud artefact).** D1 `medical_secretary` 20 rows, ranks 1..20, 0 JD rows. Leg (4) unchanged. Cadence gap: the desktop Friday fire always lands inside the cloud run's 6-day window, so the SE Skåne leg (blocked in the cloud, open on the desktop) has not run since 10-25. Owner option: move the desktop fire before the cloud fire, or run the SE leg on a duplicate hit.
 
 **2026-11-23 (weekly demand-seed, cloud routine): cluster re-confirmed on a DK-only sample; leg (4) cloud egress allowlist still OPEN (fifth week for JobTech).** Jobindex RSS `q=lægesekretær` + `q=sundhedsadministrativ`: 37 unique items, 24 secretary/SAK titles (10 hosted, 14 hospital r* external). 8 hosted ads read in full via `/jobannonce/<id>`; 2 Aleris ads redirect to `candidate.hr-manager.net` (blocked). DK n=8, all general practice / private clinic (East Denmark 3: Line Clausen Vesterbro, Lægerne i Vallensbæk Strand, Lægerne Algade Roskilde); 6 of 8 carried over from 11-16. No rank moves; education r4 pin holds (14 hospital titles name lægesekretær / SAK, 8 in Region H / Sjælland); clinic-assistant stays r20. SE n=0: `jobsearch.api.jobtechdev.se` and Jobnet (leg d) refused by the egress proxy (403). Regional `.rss` still 404.
 

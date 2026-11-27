@@ -1,7 +1,12 @@
 /* DIAGNOSTIC — GROUP-NAME-VISIBILITY-001 (owner 2026-06-16).
  * The labeled_list PREVIEW render must honor a per-row `labelHidden` flag: a flagged
  * row shows its VALUE only (the bold group name + leading space dropped), a normal
- * row shows "label: value". Verifies the minified app.js render change. */
+ * row shows "label: value". Verifies the minified app.js render change.
+ * Updated 2026-11-27 (DIAG-FLEET-ROT-001): TOOLS-METHODS-LABELS-SHOW-001 (owner
+ * 2026-06-18) shows EVERY tools/methods label and strips labelHidden there;
+ * RULE 1 (a lone labeled row in a sub-group hides its name) still holds for the
+ * other labeled_list sections. labeled_list is folded into rich_block since
+ * 1.50.763 (labelHidden -> bOff), and the bold label is a font-weight span, not <b>. */
 import { chromium } from 'playwright';
 import http from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
@@ -17,7 +22,11 @@ const sections = { cv: [
   { id:'profile', title:'PROFILE', loc:'main', on:true, type:'text', content:'A product professional.' },
   { id:'tools', title:'TOOLS & METHODS', loc:'main', on:true, type:'labeled_list', items:[
     { l:'VisibleCat', v:'ALPHAVALUE' },
-    { l:'HiddenCat', v:'BETAVALUE', labelHidden:true },
+    { l:'ToolsCat', v:'BETAVALUE', labelHidden:true },
+  ] },
+  { id:'additional', title:'ADDITIONAL INFORMATION', loc:'main', on:true, type:'labeled_list', items:[
+    { group:'GroupOne' }, { l:'LoneCat', v:'GAMMAVALUE' },
+    { group:'GroupTwo' }, { l:'PairA', v:'DELTAVALUE' }, { l:'PairB', v:'EPSVALUE' },
   ] },
 ], cl: [] };
 
@@ -37,19 +46,21 @@ await page.waitForTimeout(4000);
 const r = await page.evaluate(()=>{
   // PREVIEW labeled_list rows carry data-antcv-row-path; inspect their <b> label.
   const rows = Array.from(document.querySelectorAll('[data-antcv-row-path]'));
-  const info = rows.map(el=>({ text:(el.textContent||'').replace(/\s+/g,' ').trim(), hasB: !!el.querySelector('b') }));
-  const visible = info.find(x=>/ALPHAVALUE/.test(x.text));
-  const hidden = info.find(x=>/BETAVALUE/.test(x.text));
-  return { count: rows.length, visible, hidden };
+  const bold = (el)=>Array.from(el.querySelectorAll('b,strong,span')).some(n=>parseInt(getComputedStyle(n).fontWeight,10)>=600 && /Cat|Pair/.test(n.textContent||''));
+  const info = rows.map(el=>({ text:(el.textContent||'').replace(/\s+/g,' ').trim(), hasB: bold(el) }));
+  const f = (re)=>info.find(x=>re.test(x.text));
+  return { count: rows.length, visible: f(/ALPHAVALUE/), tools2: f(/BETAVALUE/), lone: f(/GAMMAVALUE/), pair: f(/DELTAVALUE/) };
 });
 await browser.close(); await new Promise(r=>server.close(r));
 console.log('--- GROUP-NAME-VISIBILITY-001 ---');
-console.log('rows:', r.count, '| visible:', JSON.stringify(r.visible), '| hidden:', JSON.stringify(r.hidden));
+console.log('rows:', r.count, JSON.stringify({ visible: r.visible, tools2: r.tools2, lone: r.lone, pair: r.pair }));
 console.log('app errors:', errs.length, errs.slice(0,3).join(' | '));
 const checks = [
-  ['preview rendered the labeled_list rows', r.count >= 2 && r.visible && r.hidden],
-  ['normal row shows the bold label + value', !!r.visible && r.visible.hasB && /VisibleCat/.test(r.visible.text)],
-  ['labelHidden row shows VALUE only (no bold label)', !!r.hidden && !r.hidden.hasB && /BETAVALUE/.test(r.hidden.text) && !/HiddenCat/.test(r.hidden.text)],
+  ['preview rendered the rows', r.count >= 4 && r.visible && r.tools2 && r.lone && r.pair],
+  ['tools row shows the bold label + value', !!r.visible && r.visible.hasB && /VisibleCat: ALPHAVALUE/.test(r.visible.text)],
+  ['tools row flagged labelHidden still shows its label (owner 06-18)', !!r.tools2 && r.tools2.hasB && /ToolsCat: BETAVALUE/.test(r.tools2.text)],
+  ['RULE 1: lone row in a sub-group shows VALUE only', !!r.lone && !/LoneCat/.test(r.lone.text) && /GAMMAVALUE/.test(r.lone.text)],
+  ['RULE 1: rows in a two-row sub-group keep their label', !!r.pair && r.pair.hasB && /PairA: DELTAVALUE/.test(r.pair.text)],
   ['no app errors', errs.length === 0],
 ];
 for (const [n,ok] of checks) console.log(`${n}: ${ok?'OK':'FAIL'}`);

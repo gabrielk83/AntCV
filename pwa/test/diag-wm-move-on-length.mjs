@@ -4,7 +4,14 @@
  *   (1) the notice anchors to the column with MORE empty space (taller gap),
  *   (2) after the column heights SWAP + an antcv:auto-pages-changed pulse (the
  *       re-pagination signal a length change fires), the notice MOVES to the
- *       other column. */
+ *       other column.
+ * Updated 2026-11-27 (DIAG-FLEET-ROT-001): AI-NOTICE-PREVIEW-AUTO-SIDEBAR-001
+ * (owner 2026-07-02) made the PREVIEW auto corner follow the SIDEBAR side, to
+ * match the docx-worker export; the geometric emptier-column measure is no longer
+ * called. Asserted now: (A) auto = sidebar side (left) on load; (B) a length swap
+ * does NOT move it (no preview/export split); (C) the auto-pages-changed re-anchor
+ * still runs: sidebar moved right + pulse -> notice right; (D) a manual corner
+ * (antcv:aiNoticePos, AI-NOTICE-POSITION-CONTROL-001) wins over the sidebar side. */
 import { chromium } from 'playwright';
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -44,18 +51,37 @@ await page.evaluate(() => {
   window.dispatchEvent(new CustomEvent('antcv:auto-pages-changed', { detail: { source: 'diag' } }));
 });
 await page.waitForTimeout(1200);
-const corner2 = await page.evaluate(() => {
+const readCorner = () => page.evaluate(() => {
   const w = document.querySelector('.antcv-ai-document-watermark');
   return { corner: w && w.getAttribute('data-antcv-watermark-corner'), side: localStorage.getItem('antcv:aiWmSide') };
 });
+const corner2 = await readCorner();
+await page.evaluate(() => {
+  localStorage.setItem('sidebarPosition', JSON.stringify('right'));
+  window.dispatchEvent(new CustomEvent('antcv:auto-pages-changed', { detail: { source: 'diag' } }));
+});
+await page.waitForTimeout(1200);
+const corner3 = await readCorner();
+await page.evaluate(() => {
+  localStorage.setItem('antcv:aiNoticePos', 'left');
+  window.dispatchEvent(new CustomEvent('antcv:auto-pages-changed', { detail: { source: 'diag' } }));
+});
+await page.waitForTimeout(1200);
+const corner4 = await readCorner();
 await browser.close(); await new Promise(r => server.close(r));
 console.log('initial (left short → more space left):', JSON.stringify(corner1));
 console.log('after swap + auto-pages-changed (more space right):', JSON.stringify(corner2));
+console.log('sidebar moved right + pulse:', JSON.stringify(corner3));
+console.log('manual corner left + pulse:', JSON.stringify(corner4));
 console.log('app errors:', errs.length, errs.slice(0, 2).join(' | '));
 const A = corner1.corner === 'left' && corner1.side === 'left';
-const B = corner2.corner === 'right' && corner2.side === 'right';
-const ok = A && B && errs.length === 0;
-console.log(`CHECK A (initial notice on the emptier column): ${A ? 'PASS' : 'FAIL'}`);
-console.log(`CHECK B (notice MOVED after length change): ${B ? 'PASS' : 'FAIL'}`);
+const B = corner2.corner === 'left' && corner2.side === 'left';
+const C = corner3.corner === 'right' && corner3.side === 'right';
+const D = corner4.corner === 'left';
+const ok = A && B && C && D && errs.length === 0;
+console.log(`CHECK A (auto notice on the sidebar side): ${A ? 'PASS' : 'FAIL'}`);
+console.log(`CHECK B (length change does not split preview from export): ${B ? 'PASS' : 'FAIL'}`);
+console.log(`CHECK C (re-anchors on auto-pages-changed: sidebar right -> right): ${C ? 'PASS' : 'FAIL'}`);
+console.log(`CHECK D (manual corner wins): ${D ? 'PASS' : 'FAIL'}`);
 console.log(ok ? 'WM-MOVE-ON-LENGTH OK' : 'WM-MOVE-ON-LENGTH FAIL');
 process.exit(ok ? 0 : 1);

@@ -36,39 +36,30 @@ const check=(n,ok,d)=>{checks.push(ok);console.log(`${n}: ${ok?'OK':'FAIL'}${ok?
 const hook = await page.evaluate(()=>typeof window._antcvSetExpTense);
 check('0. live hook _antcvSetExpTense exists', hook==='function', hook);
 
-// inject a synthetic Personal flex column with the language-card anchor,
-// then let the sidecar observer place the tense control beside it.
+// TENSE-POPIN-002 (1.50.626, owner): the tense control lives INSIDE the
+// LanguageCard island and renders only when Languages is expanded. While the
+// islands bundle is loaded, the standalone sidecar card is NEVER built, not even
+// beside a languages anchor. (The 1.50.4xx standalone placement this diag first
+// asserted was retired on purpose; DIAG-FLEET-ROT-001, 2026-11-27.)
 const placed = await page.evaluate(async ()=>{
   const col = document.createElement('div');
   col.style.display='flex'; col.style.flexDirection='column';
   const lang = document.createElement('div'); lang.id='antcv-react-personal-languages'; lang.style.order='27';
   col.appendChild(lang); document.body.appendChild(col);
-  await new Promise(r=>setTimeout(r,400));
-  const t=document.getElementById('antcv-tense-control-422');
-  return { present: !!t, sameCol: !!(t && t.parentElement===col), order: t&&t.style.order, buttons: t? [...t.querySelectorAll('button[data-antcv-tense]')].map(b=>b.getAttribute('data-antcv-tense')) : [] };
+  await new Promise(r=>setTimeout(r,3200)); // past the 2800 ms grace timer
+  return { islandsScript: !!document.querySelector('script[src*="antcv-react-islands"]'), standalone: !!document.getElementById('antcv-tense-control-422') };
 });
-check('1. tense control placed beside languages (order 22)', placed.present && placed.sameCol && placed.order==='22' && placed.buttons.join(',')==='auto,present,past', JSON.stringify(placed));
+check('1. no standalone tense card while the islands bundle is loaded', placed.islandsScript && !placed.standalone, JSON.stringify(placed));
 
-// click "Past" -> styleConfig.expTense persists, package NOT flipped to custom
+// the live hook persists styleConfig.expTense WITHOUT flipping the package to custom
 const after = await page.evaluate(async ()=>{
-  const t=document.getElementById('antcv-tense-control-422');
-  [...t.querySelectorAll('button[data-antcv-tense]')].find(b=>b.getAttribute('data-antcv-tense')==='past').click();
+  window._antcvSetExpTense('past');
   await new Promise(r=>setTimeout(r,300));
   let sc={}; try{ sc=JSON.parse(localStorage.getItem('styleConfig')||'{}'); }catch(_){}
   let pkg=null; try{ pkg=JSON.parse(localStorage.getItem('stylePackage')||'null'); }catch(_){}
   return { expTense: sc.expTense, pkg };
 });
-check('2. clicking Past persists styleConfig.expTense=past, package unchanged', after.expTense==='past' && after.pkg==='copenhagen-modern', JSON.stringify(after));
-
-// TENSE-STICKY-FIX-001: remove the languages anchor (simulate switching to
-// another subtab) -> the tense control must be removed (not sticky).
-const sticky = await page.evaluate(async ()=>{
-  const lang=document.getElementById('antcv-react-personal-languages');
-  if(lang) lang.remove();
-  await new Promise(r=>setTimeout(r,700)); // let the sidecar observer re-run
-  return { stillThere: !!document.getElementById('antcv-tense-control-422') };
-});
-check('3. tense control removed when languages anchor gone (not sticky)', sticky.stillThere===false, JSON.stringify(sticky));
+check('2. _antcvSetExpTense(past) persists styleConfig.expTense=past, package unchanged', after.expTense==='past' && after.pkg==='copenhagen-modern', JSON.stringify(after));
 check('no page errors', errs.length===0, errs.join('|').slice(0,200));
 
 await browser.close(); server.close();

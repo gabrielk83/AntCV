@@ -58,6 +58,12 @@ await page.addInitScript((secs)=>{
   localStorage.setItem('sections', JSON.stringify(secs));
   // personalInfo with NO tableWidthPct — mirrors a fresh React mount.
   localStorage.setItem('personalInfo', JSON.stringify({ name:'Gabriel Tester', stylePrefs:{} }));
+  // BRING-RICH-BLOCK-001 (owner 2026-06-29) + TONE-DEFAULT-SCANDINAVIAN-001 (07-03):
+  // under the default Nordic style WHAT I BRING is folded into a rich_block, so it
+  // carries no table width. The 2-column table stays for the other styles; seed one
+  // so this diag still exercises the table-width export path (DIAG-FLEET-ROT-001,
+  // 2026-11-27).
+  localStorage.setItem('toneRegister', JSON.stringify("mediterranean-formal"));
   // Point export at a fake worker URL so the client builds + POSTs a payload.
   window.ANTCV_DOCX_WORKER = 'https://docx-worker.example.test';
 }, sections);
@@ -106,7 +112,9 @@ await browser.close(); await new Promise(r2=>server.close(r2));
 
 const bringSec = captured && Array.isArray(captured.body.sections)
   ? captured.body.sections.find(s=>s.id==='bring') : null;
-const expectedDxa = Math.round(9602 * 1.10); // 10562
+// CL-TABLE-WIDTH-PAGE-REF-001 (owner 2026-06-18, 1.50.671): the CL base is the usable body
+// width PAGE_W - 400 = 11506 dxa (was 9602), the same reference as the preview and the worker.
+const expectedDxa = Math.round(11506 * 1.10); // 12657
 
 console.log('--- CL TABLE DIMS EXPORT DIAG ---');
 console.log('pdf button clicked:', clicked);

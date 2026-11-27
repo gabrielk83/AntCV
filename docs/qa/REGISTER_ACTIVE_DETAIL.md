@@ -2617,7 +2617,9 @@ _reconcile 2026-10-18 (CI nightly, E1 stalest slot, HEAD `fe67552f`): CODE-PRESE
 
 > **Renumbered 2026-08-26: was row 41.** A document written before that date citing "row 41" may mean this row or SO-004. The ID is the key.
 
-_verified: 2026-11-25_
+_verified: 2026-11-27_
+
+**RE-VERIFIED 2026-11-27 (job-tracker nightly, Gabo-PC).** `check --apply`: 85 probed, 83 LIVE, 0 archived, 2 GONE strike 2/2 on sent rows, both printed `KEPT (Rejected: the application outlives the ad)` (6 Hamamatsu Optical Engineer II, 91 Hamamatsu Optical Engineer for R&D Projects; status, band DDEBF7 and queue untouched). One 409 (rev moved to 416), verdicts replayed without re-probing. Doc rev 415 → 417. Row 158 (POSTING-FINAL-SKIP-001) stops probing final-outcome rows from the next sweep.
 
 **RE-VERIFIED 2026-11-25 (job-tracker nightly, Gabo-PC).** `check --apply`: 79 probed, 74 LIVE, 3 archived (59 Quantum Machines CLOSED; 242 Teknologisk Institut EXPIRED, deadline 2026-11-25; 8 NVIDIA Test Engineer Photonic SUSPECT, strike 2/2), 2 GONE held at strike 1 (6 and 91 Hamamatsu, LinkedIn 404), 0 WALLED, 0 ERROR. Doc rev 396 → 397. Defect found in the same sweep: row 156.
 
@@ -2881,7 +2883,9 @@ _2026-11-23 weekly demand-seed (cloud): split NOT re-measured; the Cloudflare-De
 
 ## Row 118 — JT-ARMED-ARTIFACT-NO-DRAIN-001
 
-_verified: 2026-11-25_
+_verified: 2026-11-27_
+
+**RE-VERIFIED 2026-11-27 (job-tracker nightly).** Rev 417: ARMED-with-app still `napatech` (app 2781, CLOSED row, flag stale); `health`: 61 pointers vs 95 cloud apps, 1 dead, `veo_technologies` → app 3500. Owner clears both flags.
 
 **RE-VERIFIED 2026-11-25 (job-tracker nightly).** Rev 398: ARMED-with-app still `napatech` (app 2781, CLOSED row, flag stale); `health`: 61 pointers vs 95 cloud apps, 1 dead, `veo_technologies` → app 3500. Owner clears both flags.
 
@@ -3034,7 +3038,9 @@ is adoption, not pricing. Proposed: replace the three Mistral ids with `mistral-
 
 ## Row 127 — JT-OWNER-PACKAGED-DEFAULT-ON-001
 
-_verified: 2026-11-25_
+_verified: 2026-11-27_
+
+**RE-VERIFIED 2026-11-27 (job-tracker nightly).** Same 3 OWNER-PACKAGED rows elected (186 WD, 207 RED Global, 227 LEGO Senior TPM); not generated. Fourteenth run with no generation.
 
 **RE-VERIFIED 2026-11-25 (job-tracker nightly).** Same 3 OWNER-PACKAGED rows elected (186 WD, 207 RED Global, 227 LEGO Senior TPM); not generated. Thirteenth run with no generation.
 
@@ -3351,24 +3357,6 @@ _OPEN (found by the desktop nightly, Gabo-PC, Opus 5.5, 2026-11-24; owner call; 
 
 **Also seen, same area, not fixed.** (1) The editor reads `semanticConstraintsV2` only when it is non-empty, so a legacy account with flat `bannedContextual` rules and no V2 list loses them at the next edit after importing V2 rules. (2) `readSemRules` (islands) drops a rule with no id that shares trigger + avoid with another but has a different role scope. (3) A kernel fragment's top-level `semanticConstraintsV2` lands at `personalInfo.semanticConstraintsV2`, which the editor does not read. Code reading only.
 
-## Row 156 — POSTING-SUBMITTED-KEEP-001
-
-_verified: 2026-11-25_
-
-_FIXED 2026-11-25 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `scripts/job-tracker/check-postings.py` + `test_check_postings.py`; no `pwa/` asset, no version consumed)._
-
-**Found.** Tonight's sweep put row 6 (Hamamatsu Optical Engineer II, status Submitted) at GONE strike 1; the next sweep would have written "Archive / closed" over Submitted. It has happened before: row 135 Elma, Submitted 2026-11-08, archived 2026-11-15 on "annoncen er udløbet". Of the rows with a `status_history`, Elma is the only casualty; older rows have no history to check. An archived row also leaves `followups.py due` (status must be Submitted).
-
-**Cause.** `is_engaged` guards only the stored-deadline path (`probe_rows`). `apply_verdict`, which every probe verdict goes through, had no status check, so CLOSED / EXPIRED / GONE / SUSPECT archived a sent row.
-
-**Fix.** `is_sent(row)`: exact tracked status in Submitted, Applied, Interview, Offer, Hired, Offer declined, Rejected, No response, Withdrawn. `apply_verdict` never archives such a row (first pass and 409 replay); the verdict and strike count are still recorded, and the report prints `KEPT (<status>: the application outlives the ad)`. Drafted and proposed rows archive as before: a closed ad can no longer be answered.
-
-**Tests.** 18 new checks drive the real `probe_rows`, `reapply_results` and `cmd_check` with a fake network, 17 red pre-fix (12 on behaviour, 5 only because the `kept` field did not exist; the 18th is the WALLED control); 12 sabotages by line red (455 x2, 456, 461 x4, 562, 574, 734 x2, 735); restored PASS. **Live (dry run, `--only`):** row 6 prints KEPT, row 91 (CV/CL drafted) strike 1/2.
-
-**Not done.** Row 135 Elma was not restored: a data write outside this routine's task. **OWNER:** set Elma back to Submitted, or leave it archived.
-
-**To close.** A sweep with `--apply` prints KEPT for a sent row and leaves its status and band alone (expected next run, row 6).
-
 ## Row 157 — MISTRAL-LATEST-LARGE4-001
 
 _verified: 2026-11-25_
@@ -3380,3 +3368,19 @@ _CODE SHIPPED 2026-11-25 (weekly cost-quality tune, Gabo-PC, Opus 5.5, worktree-
 **Fixed.** Explicit key in all three `RATES` mirrors, PWA `C.mistral` [0.7,2.1] in `app.js` + `app.src.js`, tests. PWA and access-relay live. `SCHEDULED_ROUTINES.md` step 1a-quinquies makes the probe unconditional.
 
 **Open, owner.** (1) D1 `llm_provider_costs` still holds `('mistral','mistral-large-latest',0.5,1.5)`, which wins over the table; the superseding INSERT is in `COST_QUALITY_WEEKLY_2026-11-25.md` §2. (2) Keep Large 4, or pin `mistral-large-2512` (Large 3; retires 2027-03-05 by the models page, day-first dates inferred). No quality evidence for Large 4 on our prompts. (3) proxy + demo-proxy carry the old rate until row 147 deploys.
+
+## Row 158 — POSTING-FINAL-SKIP-001
+
+_verified: 2026-11-27_
+
+_FIXED 2026-11-27 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `scripts/job-tracker/check-postings.py` + `test_check_postings.py`; no `pwa/` asset, no version consumed)._
+
+**Found.** Tonight's sweep probed 85 rows. 14 had a final outcome (Rejected 12, Offer declined 2). Since row 156 a sent row can never be archived, so their probes decide nothing, yet each is a LinkedIn guest-API request toward the 429 limit that has cut sweeps short before (POSTING-RATE-DOMAIN-001). Rows 6 and 91 printed `GONE -> KEPT` and would every night.
+
+**Fix.** `FINAL_STATUSES` = Rejected, Offer declined, Withdrawn, Hired (exact, case- and space-insensitive). `probe_rows` skips such a row before any probe or `postingcheck` write and counts it; `--only` still probes a named row. The report prints `skipped N row(s) with a final outcome`; `--json` carries `skipped_final`. "No response", "Offer", Submitted and Interview stay probed: the process is open and the ad state is information.
+
+**Tests.** 17 new checks drive the real `probe_rows` and `cmd_check` with a counting fake network (no probe call, `postingcheck` untouched, band unchanged; 7 open statuses still probed; a mixed sweep; the `--only` override; report and JSON lines). The row 156 loop now names its final-status rows with `--only`, so the KEPT path stays covered. Pre-fix source: red (`cp.is_final` missing). 8 sabotages by line (468, 472, 639 x2, 641, 681, 734, 746) each red; restored PASS; 37/37 job-tracker python files green; `run-tests.mjs` ALL PASS.
+
+**Live.** Offline on the rev 417 mirror: 85 probe-eligible rows, 14 final. Dry run `check --limit 3`: 3 LIVE, `skipped 4 row(s) with a final outcome`, nothing written.
+
+**To close.** The next `check --apply` sweep prints `skipped 14 row(s)` (or the current count) and probes about 71.

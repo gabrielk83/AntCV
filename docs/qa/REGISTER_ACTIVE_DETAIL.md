@@ -273,7 +273,11 @@ in CI) + a live translate-persist cycle to verify — carry forward.
 
 ## Row 25 — TABLE-GEOMETRY-PARITY-001
 
-_verified: 2026-10-30_
+_verified: 2026-11-27_
+
+_reconcile 2026-11-27 (desktop nightly, E1, HEAD `5c99cdfe`): forwarding markers unchanged at all five sites (11 / 1 / 7 / 1 / 9). `diag-cl-table-dims-export.mjs` was red on 11-23 (row 152); fixed today, stale on two owner rules: BRING-RICH-BLOCK-001 folds the bring table under the Nordic default (diag now seeds a non-Nordic style) and CL-TABLE-WIDTH-PAGE-REF-001 moved the CL base 9602 → 11506 dxa; payload width 12657 = expected. Live docx-worker `1.14.177-role-line-one`, repo `1.14.178-letter-diagram` (row 159). Blocked on: owner real-PDF pass (CloudConvert credits)._
+
+_prev verified 2026-10-30_
 
 _reconcile 2026-10-30 (desktop nightly, E1, HEAD `608e7059`): forwarding pipeline STILL INTACT — `renderCompetencyTable`/`tableWidthPct`/`tableRatio` lines unchanged at all five sites (`antcv-docx-client.js` 11, `antcv-table-headers-editable-341.js` 1, `antcv-section-align.js` 7, `antcv-auto-pagebreak-block-001.js` 1, `workers/docx-worker/src/index.js` 9); `pwa/test/diag-cl-table-dims-export.mjs` GREEN; docx-worker diag baseline 51/51 GREEN; live docx-worker `1.14.175-ai-mark-props` = repo, `pdf_via: cloudconvert`. The FIDELITY gap still needs a real CloudConvert PDF diffed against the preview; this unattended run spent no CloudConvert credits. Blocked on: owner session (real export + eyeball)._
 
@@ -303,7 +307,11 @@ _reconcile 2026-09-07 (CI nightly, E1): WIB-TABLE-DIMS-001 forwarding pipeline I
 
 ## Row 6 — BANNED-WORDS-MERGE-001
 
-_verified: 2026-10-30_
+_verified: 2026-11-27_
+
+_reconcile 2026-11-27 (desktop nightly, E1, HEAD `5c99cdfe`): `antcv:keep-native-banned` ×1 in `antcv-react-islands.js`, `antcv:no-kernel-chain` ×2 in `antcv-data-importer.js`. No code delta. Blocked on: owner eyeball + the 6 loader types._
+
+_prev verified 2026-10-30_
 
 _reconcile 2026-10-30 (desktop nightly, E1, HEAD `608e7059`): code-complete state STILL HOLDS. ANCHOR CORRECTION: the `antcv:keep-native-banned` kill-switch lives in `pwa/antcv-react-islands.js` (native-summary collapse `ji()`, since 1.51.86 `26459f91`), NOT in `antcv-data-importer.js` — the "2 hits" there that the 09-07..10-18 reconciles counted are both `antcv:no-kernel-chain`. Both switches present; islands bundle loaded by `index.html`. No code delta since 10-09. Unchanged: OWNER eyeball of the merged banned-words UI + one file of each of the 6 loader types._
 
@@ -333,7 +341,11 @@ _reconcile 2026-09-07 (CI nightly, E1): code-complete state CONFIRMED against HE
 
 ## Row 8 — KERNEL-V2-READER-001
 
-_verified: 2026-10-30_
+_verified: 2026-11-27_
+
+_reconcile 2026-11-27 (desktop nightly, E1, HEAD `5c99cdfe`): `kernel-v2-reader.test.mjs` 5/5 green; `antcv:ingestedKernel` ×2 in `antcv-kernel-import.js`. No code delta. Blocked on: (a) migration, (c) real models, (d) owner docx parity._
+
+_prev verified 2026-10-30_
 
 _reconcile 2026-10-30 (desktop nightly, E1, HEAD `608e7059`): `pwa/test/unit/kernel-v2-reader.test.mjs` RE-RUN GREEN (5/5); `antcv:ingestedKernel` reader intact in `antcv-kernel-import.js` (2 hits). No code delta. Unchanged: (a) bullets-path v2-direct migration, (c) es/zh + lazy language_view tier (real models), (d) §6 P/DOCX/PDF regression parity on an uploaded docx (owner-gated)._
 
@@ -2317,7 +2329,11 @@ _Desktop nightly 2026-11-25 (Gabo-PC, Opus 5.5, base `fc12d446`): `__antcvGenCos
 
 ## Row 36 — GEN-CORECOMP-BROAD-001
 
-_verified: 2026-10-28_
+_verified: 2026-11-27_
+
+_reconcile 2026-11-27 (desktop nightly, E1, HEAD `5c99cdfe`): `__neutralCo` ×5 in `app.src.js`; `unsolicited-corecomp-broad.test.mjs` 7/7 green. No code delta. Blocked on: real LLM gen (regen-confirm)._
+
+_prev verified 2026-10-28_
 
 **Re-verify 2026-10-28 (CI nightly — E1 stalest slot, code-presence on HEAD `60dcfca1`):** broad core_comp rule inside `__neutralCo` present (`pwa/app.src.js` ×5); `pwa/test/unsolicited-corecomp-broad.test.mjs` green in the full suite (both-bundle guard validates the app.js minified name). Shipped 1.51.41 intact; live regen-confirm still owed, BLOCKED in CI. Full PWA suite 1850/1850 green.
 
@@ -2345,7 +2361,11 @@ _verified: 2026-10-28_
 
 ## Row 37 — FOCUS-LABEL-EO-001
 
-_verified: 2026-10-28_
+_verified: 2026-11-27_
+
+_reconcile 2026-11-27 (desktop nightly, E1, HEAD `5c99cdfe`): `FOCUS-LABEL` ×2 in `app.src.js`; `antcv-core-comp-compress.js` loaded; `core-comp-compress-eo.test.mjs` 15/15 green. Blocked on: real LLM gen (regen-confirm)._
+
+_prev verified 2026-10-28_
 
 **Re-verify 2026-10-28 (CI nightly — E1 stalest slot, code-presence on HEAD `60dcfca1`):** `FOCUS-LABEL` prompt rule present (`pwa/app.src.js` ×2); `pwa/antcv-core-comp-compress.js` present + loaded by `index.html` + `pwa/test/unit/core-comp-compress-eo.test.mjs` green in the full suite. Shipped 1.51.42/43 intact; live regen-confirm still owed, BLOCKED in CI. Full PWA suite 1850/1850 green.
 
@@ -3297,7 +3317,11 @@ _OPEN (found by the desktop nightly, Gabo-PC, Opus 5.5, 2026-11-23; Band A tab i
 
 ## Row 152 — DIAG-FLEET-ROT-001
 
-_verified: 2026-11-25_
+_verified: 2026-11-27_
+
+_Desktop nightly 2026-11-27 (Gabo-PC, Opus 5.5, base `5c99cdfe`): 5 more green, all stale, 53 of 74 left. `tense-control` (TENSE-POPIN-002, 1.50.626: no standalone card while the islands bundle loads; now asserts that + the live hook), `group-name` (TOOLS-METHODS-LABELS-SHOW-001, owner 06-18: tools labels always shown; RULE 1 lone-row hide asserted on a non-tools list; label is a font-weight span since the rich_block fold), `candidate-header-edit` (UNSOLICITED-SHOWS-NVIDIA-001 resets a meta seeded without a JD; HEADER-APP-LINE-001 replaced "Application: role - company" with one native "Application for … at …" line; specialisation is the sidebar card's own editor, writes `personalInfo.specialization`), `wm-move-on-length` (AI-NOTICE-PREVIEW-AUTO-SIDEBAR-001, owner 07-02: auto corner follows the sidebar side, geometry path no longer called; re-anchor on `auto-pages-changed` and manual corner asserted), `cl-table-dims-export` (see row 25). Read, not fixed: `additional-partition` (stored groups empty, cause not read)._
+
+_prev verified 2026-11-25_
 
 _Desktop nightly 2026-11-25 (Gabo-PC, Opus 5.5, base `fc12d446`): 11 more green, 58 left of 74. Ten stale, fixed: `results-kernel-match` (RESULTS-COMPRESS-001 wording; no-JD coverage rule), `outcomes-metric-guard` (default mode folds the section; now also asserts no chip loop), `sections-normalize` (work_style is rich_block since 1.50.759), `react185-regulatory` (file input), `ghost-placeholder-roles` (PREVIEW-002, owner 06-30), `languages-concise` (native / fluent, owner 06-23), `core-comp-compress` (caps 125 / 89 since 06-25, CL section is rich_block), `exp-order` (ROLE-ORDER-CANON-001, owner 06-19), `cjlr-experience` (rowkey markers; role key moves the head only, owner 07-14, same in the worker), `mobile-ui-merge` (version pin). One real: `rerender-storm`, fixed in the product (row 45). Read, not fixed: `contribute-edit-coalesce` (synthetic text_bullets panel; the section is rich_block, so the sidecar has nothing to write, looks stale), `wm-move-on-length`, `candidate-header-edit`, `additional-partition`, `tense-control` (red, cause not read). **Owner question:** a role dragged to another place goes back to reverse-chronological at the next normalize pass. The 06-16 rule let a manual order stand ("do not flip on purpose"); the 06-19 canonical rule overrides it in code. Which holds?_
 
@@ -3366,3 +3390,15 @@ _FIXED 2026-11-27 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `s
 **Live.** Offline on the rev 417 mirror: 85 probe-eligible rows, 14 final. Dry run `check --limit 3`: 3 LIVE, `skipped 4 row(s) with a final outcome`, nothing written.
 
 **To close.** The next `check --apply` sweep prints `skipped 14 row(s)` (or the current count) and probes about 71.
+
+## Row 159 — DOCX-LETTER-DIAGRAM-UNDEPLOYED-001
+
+_verified: 2026-11-27_
+
+_OPEN (found by the desktop nightly, Gabo-PC, Opus 5.5, 2026-11-27, live attest); owner call._
+
+**Found.** `workers/docx-worker/src/index.js` on main reads `1.14.178-letter-diagram`; live `/health` reads `1.14.177-role-line-one`. The #409 commit (LETTER-DIAGRAM-001, 2026-11-25) says the worker change is "NOT deployed by this commit". No register row tracked it.
+
+**Effect.** The PWA (`1.51.6706-letter-diagram`, live) adds the workflow row to every targeted letter and draws it in the preview. A DOCX/PDF export through the live worker gets the row without the 1.14.178 native table, so it renders as a text row ("Step (detail) -> …"). Not measured on a real export.
+
+**To close.** Owner: deploy (`gh workflow run deploy.yml -f target=docx-worker -f mode=deploy -f confirm=docx-worker`), then `/health` reads 1.14.178 and one real CL export shows the table. Left owed by this run: a worker deploy changes every export and the commit held it on purpose.

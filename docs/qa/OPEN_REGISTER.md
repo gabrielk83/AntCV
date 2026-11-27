@@ -50,9 +50,9 @@ citing an old number may mean either row — the ID disambiguates.
 | 76 | `JOBTRACKER-LLM-REFIT-BUTTON-001` | 2026-11-16 | (deferred enhancement) — the fit SCORE that orders the Top-5 is deterministic by design (ranking stability). O |
 | 82 | `ROLE-CANON-AUDIT-LEG-001` | 2026-11-17 | (follow-up) — export-audit leg NOW WIRED + green (gold_audit.py role_canon_issues, test_gold_residue 18/18); only es/zh eyeball owner-gated |
 | 94 | `CONTENT-LANG-STAMP-001` | 2026-11-14 | CODE SHIPPED 1.51.4446-content-lang-stamp (D1 content_language column + relay whitelist + both app.js legs). R |
-| 25 | `TABLE-GEOMETRY-PARITY-001` | 2026-10-30 | Table geometry parity — diagnose real CloudConvert PDF vs preview measurement |
-| 6 | `BANNED-WORDS-MERGE-001` | 2026-10-30 | Wizard/Settings UX — owner eyeball gate on merged banned-words UI + 6-file loader test |
-| 8 | `KERNEL-V2-READER-001` | 2026-10-30 | Kernel v2 — bullets-path v2 migration, es/zh tier, §6 regression pass on uploaded docx |
+| 25 | `TABLE-GEOMETRY-PARITY-001` | 2026-11-27 | Table geometry parity — diagnose real CloudConvert PDF vs preview measurement |
+| 6 | `BANNED-WORDS-MERGE-001` | 2026-11-27 | Wizard/Settings UX — owner eyeball gate on merged banned-words UI + 6-file loader test |
+| 8 | `KERNEL-V2-READER-001` | 2026-11-27 | Kernel v2 — bullets-path v2 migration, es/zh tier, §6 regression pass on uploaded docx |
 | 21 | `SETTINGS-ROLLER-RESET-001` | 2026-11-02 | FIXED (1.51.90): mechanism CONFIRMED live — history.back() with Settings open was a REAL navigation (side/tilt |
 | 22 | `CL-SLOGAN-RICHCONTENT-001` | 2026-11-02 | CL slogan rich-content phase 2 — real sections.cl rich_block object, dedupe render sites |
 | 33 | `WHY-RULE-EXPORT-PARITY-001` | 2026-11-05 | Export align parity — name-line + section-headline alignment lost on PDF/DOCX export |
@@ -116,8 +116,8 @@ citing an old number may mean either row — the ID disambiguates.
 | 45 | — | 2026-11-25 | ADVANCED 2026-11-25: idle churn fixed, `1.51.6645-idle-churn` live (34.4 → 1.2 mutations/s); export / preview stall open · PERF-001 — multi-second main-thread stalls on export/preview; profile → debounce/memoize. |
 | 40 | — | 2026-11-22 | SO-003 DATA LOSS — core-comp row-count change wipes Selected Outcomes (cloud-persisted). |
 | 35 | `OVERLAY-EARLY-HALT-001` | 2026-11-25 | NEW — OVERLAY-EARLY-HALT-001 regen-confirm. Shipped 1.51.41 (heartbeat-gated watchdog replacing the fixed 2-mi |
-| 36 | `GEN-CORECOMP-BROAD-001` | 2026-10-28 | NEW — GEN-CORECOMP-BROAD-001 regen-confirm. Shipped 1.51.41 (unsolicited CORE COMPETENCIES broadened to PdM/BA |
-| 37 | `FOCUS-LABEL-EO-001` | 2026-10-28 | NEW — FOCUS-LABEL-EO-001 regen-confirm. Shipped 1.51.42/43 (canonicalised EO focus-area label post-process). N |
+| 36 | `GEN-CORECOMP-BROAD-001` | 2026-11-27 | NEW — GEN-CORECOMP-BROAD-001 regen-confirm. Shipped 1.51.41 (unsolicited CORE COMPETENCIES broadened to PdM/BA |
+| 37 | `FOCUS-LABEL-EO-001` | 2026-11-27 | NEW — FOCUS-LABEL-EO-001 regen-confirm. Shipped 1.51.42/43 (canonicalised EO focus-area label post-process). N |
 | 3 | `FLOAT-SPINE-001` | 2026-11-02 | Floating spine: byte-diff flag-on doc vs reference, add grid equalization + spacer anchor |
 | 20 | `CONTACT-TRACK-TIGHT-001` | 2026-11-02 | Owner verify list — 6 sub-items (alignment, sidebar runts, CL spacing, Sirin result, abbreviation, contact tra |
 | 1 | — | 2026-08-26 _(STANDING)_ | Quick-gen page convergence + CV 3-page convergence, export-only pagination parity |
@@ -147,11 +147,12 @@ citing an old number may mean either row — the ID disambiguates.
 | 144 | `DEADLINE-ROW-NOTE-001` | 2026-11-11 | FIXED 2026-11-11 (job-tracker nightly; script only; 2 checks red pre-fix, 2 sabotages red, PASS after; CLOSE after a sweep archives a row on its row-note deadline) · (found by the job-tracker nightly 2026-11-11) — the step 1b deadline sweep read only the stored posting text; FMI (row 184) carried "Deadline 2026-11-09" only in its row note (posting text cut before the deadline line), so it stayed live two days past the date and was archived 11-11 by the page text instead. `check-postings.py` now falls back to the row note when the posting text states no deadline. |
 | 147 | `PROXY-POSTING-GUARD-UNDEPLOYED-001` | 2026-11-25 | RE-VERIFIED 2026-11-25 (weekly tune: cv-proxy 11-05T10:07Z, demo-proxy 11-05T08:38Z still live; deploy would now also carry the 11-19 + 11-25 rate tables, demo cap meters mistral 1.4x under until then) · OPEN (desktop nightly 2026-11-16; owner call) — POSTING-GUARD-001 (#390, `91deec12`) merged 11-05 but never deployed: last cv-proxy deployment 11-05 10:07Z, demo-proxy 08:38Z. The guard is not live. Deploying ships it plus the 11-12 rate tables (demo-proxy also LLM-LOG-SERVER-001). Bump VERSION in both workers when deploying so `/health` shows it. |
 | 151 | `TAB-CLAIM-WIPE-001` | 2026-11-23 | OPEN (desktop nightly 2026-11-23; Band A): the per-tab app claim is overwritten with 'kernel' at mount, so reloading a tab moves it to the device pointer's application; fix needs two halves, owner call |
-| 152 | `DIAG-FLEET-ROT-001` | 2026-11-25 | ADVANCED 2026-11-25 (desktop nightly): 11 more green, 58 of 74 left; 1 real (idle churn, shipped, row 45) · ADVANCED 2026-11-24 (desktop nightly): 5 of 74 fixed (all stale assertions), 69 left; 1 real bug found on the way (IMPORT-SEMRULE-KEY-001, shipped) · 74 of 217 headless diags red on pristine main 2026-11-23 |
+| 152 | `DIAG-FLEET-ROT-001` | 2026-11-27 | ADVANCED 2026-11-27 (desktop nightly): 5 more green, all stale, 53 of 74 left · ADVANCED 2026-11-25 (desktop nightly): 11 more green, 58 of 74 left; 1 real (idle churn, shipped, row 45) · ADVANCED 2026-11-24 (desktop nightly): 5 of 74 fixed (all stale assertions), 69 left; 1 real bug found on the way (IMPORT-SEMRULE-KEY-001, shipped) · 74 of 217 headless diags red on pristine main 2026-11-23 |
 | 153 | `SEC-AUDIT-DEV-DEPS-001` | 2026-11-24 | OPEN (weekly security audit 2026-11-23, transcribed): production 0; 7 dev-only packages (5 high, 2 moderate); 5 have a non-breaking fix, vite + esbuild need vite 8 (major) |
 | 154 | `IMPORT-BANNED-APPEND-001` | 2026-11-24 | OPEN (desktop nightly 2026-11-24; owner call): importing a settings JSON replaces the banned words/phrases lists; the backup restore appends (owner 2026-06-17) |
 | 157 | `MISTRAL-LATEST-LARGE4-001` | 2026-11-25 | CODE SHIPPED 2026-11-25 (weekly tune, `1.51.6685-mistral-large4`): alias moved Large 3 → Large 4, rates fixed. OPEN owner calls: D1 `llm_provider_costs` INSERT (SQL in `COST_QUALITY_WEEKLY_2026-11-25.md` §2); keep Large 4 or pin `mistral-large-2512` |
 | 158 | `POSTING-FINAL-SKIP-001` | 2026-11-27 | FIXED 2026-11-27 (job-tracker nightly; script only; 8 sabotages red, 17 new checks; CLOSE after a sweep prints "skipped N row(s) with a final outcome" and probes none of them) · the obsolescence sweep probed rows whose outcome is final (Rejected / Offer declined / Withdrawn / Hired): 14 of 85 probes on 11-27, each a LinkedIn request toward the 429 limit, with nothing to decide. |
+| 159 | `DOCX-LETTER-DIAGRAM-UNDEPLOYED-001` | 2026-11-27 | NEW 2026-11-27 (desktop nightly): repo docx-worker `1.14.178-letter-diagram` (LETTER-DIAGRAM-001, #409, "NOT deployed by this commit"), live `1.14.177-role-line-one`; PWA letters already carry the diagram row, the DOCX/PDF export renders it as plain text until deployed. Owner call: deploy docx-worker. |
 
 ---
 

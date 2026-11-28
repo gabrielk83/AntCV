@@ -47,6 +47,7 @@ async function placeholderFor(state) {
     if (st.personalInfo) localStorage.setItem('personalInfo', JSON.stringify(st.personalInfo));
     if (st.kernelShowcase) localStorage.setItem('kernelShowcase', JSON.stringify(st.kernelShowcase));
     if (st.meta) localStorage.setItem('meta', JSON.stringify(st.meta));
+    if (st.caseMode) localStorage.setItem('antcv:clSloganCase', st.caseMode);
   }, state);
   await page.addScriptTag({ content: sidecar });
   await page.waitForTimeout(400);
@@ -61,13 +62,13 @@ async function placeholderFor(state) {
 
 // 1 — the reported bug: EN app, personalInfo current (English), kernel stale (Danish).
 var r1 = await placeholderFor({ language: 'en', personalInfo: { specialization: EN }, kernelShowcase: { subtitle: DA } });
-check(/PRODUCT STRATEGY/.test(r1.ph) && !/PRODUKTSTRATEGI/.test(r1.ph),
+check(/PRODUCT STRATEGY/i.test(r1.ph) && !/PRODUKTSTRATEGI/i.test(r1.ph),
   'EN app: placeholder is the English specialization, not the stale Danish kernel', r1.ph);
 
 // 2 — Spanish app, personalInfo Spanish, kernel Danish → Spanish, not Danish.
 var ES = 'Estrategia de Producto | Gestión del Cambio | Colaboración Transversal';
 var r2 = await placeholderFor({ language: 'es', personalInfo: { specialization: ES }, kernelShowcase: { subtitle: DA } });
-check(/ESTRATEGIA DE PRODUCTO/.test(r2.ph) && !/PRODUKTSTRATEGI/.test(r2.ph),
+check(/ESTRATEGIA DE PRODUCTO/i.test(r2.ph) && !/PRODUKTSTRATEGI/i.test(r2.ph),
   'ES app: placeholder is the Spanish specialization, not the stale Danish kernel', r2.ph);
 
 // 3 — Chinese app, personalInfo Chinese → Chinese shown.
@@ -77,18 +78,24 @@ check(/产品战略/.test(r3.ph), 'ZH app: placeholder is the Chinese specializa
 // 4 — Chinese app but personalInfo EMPTY, only a stale Danish kernel: script guard
 //     must blank a Latin candidate on a CJK ribbon -> generic hint (empty fallback).
 var r4 = await placeholderFor({ language: 'zh', personalInfo: {}, kernelShowcase: { subtitle: DA } });
-check(!/PRODUKTSTRATEGI/.test(r4.ph), 'ZH app: stale Latin/Danish kernel is NOT forced (script guard)', r4.ph);
+check(!/PRODUKTSTRATEGI/i.test(r4.ph), 'ZH app: stale Latin/Danish kernel is NOT forced (script guard)', r4.ph);
 
 // 5 — Danish app, Danish personalInfo → Danish is correct here.
 var r5 = await placeholderFor({ language: 'da', personalInfo: { specialization: DA } });
-check(/PRODUKTSTRATEGI/.test(r5.ph), 'DA app: Danish specialization shows (correct for a Danish app)', r5.ph);
+check(/PRODUKTSTRATEGI/i.test(r5.ph), 'DA app: Danish specialization shows (correct for a Danish app)', r5.ph);
 
 // 6 — targeted app (company present) still uses meta.cl_slogan, not the triad.
 var r6 = await placeholderFor({ language: 'en', meta: { company: 'Acme Corp', cl_slogan: 'Bridging optics and product' }, personalInfo: { specialization: EN } });
-check(/BRIDGING OPTICS/.test(r6.ph) && !/PRODUCT STRATEGY/.test(r6.ph),
+check(/BRIDGING OPTICS/i.test(r6.ph) && !/PRODUCT STRATEGY/i.test(r6.ph),
   'targeted app: placeholder is the smart cl_slogan, not the specialization triad', r6.ph);
 
-const allErrs = [].concat(r1.errs, r2.errs, r3.errs, r4.errs, r5.errs, r6.errs);
+// 7 — SLOGAN-CASE-001 (owner 2026-11-03, CL-ACADEMY-001): sentence case is the default;
+//     the placeholder keeps the stored case. CAPS mode (antcv:clSloganCase='caps') upper-cases.
+check(r1.ph.indexOf('Product Strategy') >= 0, 'default case: sentence case kept (SLOGAN-CASE-001)', r1.ph);
+var r7 = await placeholderFor({ language: 'en', personalInfo: { specialization: EN }, caseMode: 'caps' });
+check(/PRODUCT STRATEGY/.test(r7.ph), 'caps mode: placeholder upper-cased', r7.ph);
+
+const allErrs = [].concat(r1.errs, r2.errs, r3.errs, r4.errs, r5.errs, r6.errs, r7.errs);
 check(allErrs.length === 0, 'no page errors', allErrs.slice(0, 3));
 
 await browser.close(); server.close();

@@ -920,6 +920,30 @@ check("soft404: 500 titled with a job id containing 404 stays ERROR",
 check("soft404: 500 with no body stays ERROR", verdict(500, text=""), "ERROR")
 check("soft404: 200 titled 404 is left to the body rules (LIVE here)", verdict(200, text=P404), "LIVE")
 
+# ---- POSTING-MAINTENANCE-001: a redirect onto the ATS maintenance page -----------
+# 2026-11-28 sweep: NVIDIA's Workday req 302'd to static.community.workday.com/
+# maintenance-page.html and read SUSPECT (strike 1/2). A site outage says nothing
+# about the ad, so it is ERROR (never strikes). A plain off-posting redirect stays
+# SUSPECT; a redirect onto another POSTING whose slug says "maintenance" stays LIVE.
+WDM = "https://static.community.workday.com/maintenance-page.html"
+check("maint: Workday maintenance-page redirect is ERROR", verdict(200, final=WDM), "ERROR")
+check("maint: ERROR is in neither grade, so it can never archive",
+      cp.classify(200, WDM, U, JD, TODAY)[0] in cp.HARD_VERDICTS + cp.SOFT_VERDICTS, False)
+check("maint: detail names the maintenance page", cp.classify(200, WDM, U, JD, TODAY)[1].startswith(
+      "redirected to a maintenance page https://static.community.workday.com"), True)
+check("maint: maintenance host is caught too",
+      verdict(200, final="https://maintenance.example.com/"), "ERROR")
+check("maint: landing page that SAYS scheduled maintenance is ERROR",
+      verdict(200, final="https://careers.example.com/", text="<h1>We are down for maintenance</h1>"), "ERROR")
+check("maint: 'we're performing scheduled maintenance' is ERROR",
+      verdict(200, final="https://careers.example.com/", text="We're currently performing scheduled maintenance."), "ERROR")
+check("maint: plain off-posting redirect stays SUSPECT",
+      verdict(200, final="https://careers.example.com/jobs"), "SUSPECT")
+check("maint: redirect to a maintenance-technician POSTING stays LIVE",
+      verdict(200, final="https://careers.example.com/job/maintenance-technician-123/"), "LIVE")
+check("maint: un-redirected JD mentioning scheduled maintenance stays LIVE",
+      verdict(200, text=JD + " You will plan scheduled maintenance of the line."), "LIVE")
+
 if fails:
     print("FAIL (%d):" % len(fails))
     for f in fails:

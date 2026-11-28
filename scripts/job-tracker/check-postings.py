@@ -125,6 +125,16 @@ DEADLINE_RE = re.compile(
     r"(\d{1,2}[.\-/]\d{1,2}[.\-/]\d{4})", re.I)
 
 # A final URL with none of these looks like a careers INDEX, not a posting.
+# POSTING-MAINTENANCE-001 (2026-11-28): a redirect onto the ATS's own maintenance page
+# (Workday sends every req to static.community.workday.com/maintenance-page.html during
+# an outage) says the SITE is down, not that the ad is gone. That is no evidence, so it
+# reads ERROR and never strikes. Matched only on a redirect: the final URL names a
+# maintenance page, or the landing page says so in words. A posting body that merely
+# contains "maintenance" (a maintenance-engineer role) is never redirected, so it is safe.
+_MAINT_URL = re.compile(r"maintenance|/outage|/unavailable\.html", re.I)
+_MAINT_TEXT = re.compile(r"(down for|under(going)?|scheduled|planned) (system )?maintenance|"
+                         r"we('| a)re (currently )?performing (scheduled )?maintenance", re.I)
+
 _JOB_PATH_HINT = re.compile(r"/(job|jobs|vis-job|stilling|career|vacanc|position|opening|o)/|"
                             r"[?&](jobid|job_id|reqid|req_id|gh_jid|career_job_req_id)=", re.I)
 
@@ -339,6 +349,9 @@ def classify(status, final_url, requested_url, text, today=None):
     # Redirected off the posting onto something with no job identity at all.
     if final_url and requested_url and final_url.rstrip("/") != requested_url.rstrip("/"):
         if not _JOB_PATH_HINT.search(final_url):
+            fu = urllib.parse.urlparse(final_url)
+            if _MAINT_URL.search(fu.netloc + fu.path) or _MAINT_TEXT.search(body[:3000]):
+                return "ERROR", "redirected to a maintenance page %s" % final_url[:80]   # POSTING-MAINTENANCE-001
             return "SUSPECT", "redirected to non-posting page %s" % final_url[:80]
     return "LIVE", "HTTP %d" % status
 

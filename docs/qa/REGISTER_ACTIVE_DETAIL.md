@@ -2653,7 +2653,9 @@ _reconcile 2026-10-18 (CI nightly, E1 stalest slot, HEAD `fe67552f`): CODE-PRESE
 
 > **Renumbered 2026-08-26: was row 41.** A document written before that date citing "row 41" may mean this row or SO-004. The ID is the key.
 
-_verified: 2026-11-27_
+_verified: 2026-11-28_
+
+**RE-VERIFIED 2026-11-28 (job-tracker nightly, Gabo-PC).** `check --apply`: 75 probed, `skipped 14 row(s) with a final outcome` (row 158 live), 71 LIVE, 2 CLOSED archived on first sight (AXON Networks / Product Manager (Agile Delivery), ams OSRAM / Systems Engineer - Integrated Products; LinkedIn "no longer accepting applications"), Black Swans Exist GONE strike 1/2 (jobbank 410), NVIDIA SUSPECT strike 1/2 on a Workday maintenance redirect, now ERROR (row 161). Doc rev 418 → 419.
 
 **2026-11-27 (position-discovery, Gabo-PC).** 86 probed, 83 LIVE, 1 CLOSED archived on first sight (Ibsen Photonics / Spectrometer Production Engineer), 2 GONE KEPT (both Hamamatsu rows Rejected). 0 WALLED, 0 ERROR. Rev 415 → 416.
 
@@ -2923,7 +2925,9 @@ _2026-11-23 weekly demand-seed (cloud): split NOT re-measured; the Cloudflare-De
 
 ## Row 118 — JT-ARMED-ARTIFACT-NO-DRAIN-001
 
-_verified: 2026-11-27_
+_verified: 2026-11-28_
+
+**RE-VERIFIED 2026-11-28 (job-tracker nightly, Gabo-PC).** Rev 419: ARMED-with-app still `napatech` (app 2781, CLOSED row, flag stale); `health`: 61 pointers vs 95 cloud apps, 1 dead, `veo_technologies` → app 3500. Owner clears both flags.
 
 **RE-VERIFIED 2026-11-27 (job-tracker nightly).** Rev 417: ARMED-with-app still `napatech` (app 2781, CLOSED row, flag stale); `health`: 61 pointers vs 95 cloud apps, 1 dead, `veo_technologies` → app 3500. Owner clears both flags.
 
@@ -3080,7 +3084,9 @@ is adoption, not pricing. Proposed: replace the three Mistral ids with `mistral-
 
 ## Row 127 — JT-OWNER-PACKAGED-DEFAULT-ON-001
 
-_verified: 2026-11-27_
+_verified: 2026-11-28_
+
+**RE-VERIFIED 2026-11-28 (job-tracker nightly, Gabo-PC).** Same 3 OWNER-PACKAGED rows elected (186 WD, 207 RED Global, 227 LEGO Senior TPM); not generated. Fifteenth run with no generation.
 
 **RE-VERIFIED 2026-11-27 (job-tracker nightly).** Same 3 OWNER-PACKAGED rows elected (186 WD, 207 RED Global, 227 LEGO Senior TPM); not generated. Fourteenth run with no generation.
 
@@ -3403,22 +3409,6 @@ _CODE SHIPPED 2026-11-25 (weekly cost-quality tune, Gabo-PC, Opus 5.5, worktree-
 
 **Open, owner.** (1) D1 `llm_provider_costs` still holds `('mistral','mistral-large-latest',0.5,1.5)`, which wins over the table; the superseding INSERT is in `COST_QUALITY_WEEKLY_2026-11-25.md` §2. (2) Keep Large 4, or pin `mistral-large-2512` (Large 3; retires 2027-03-05 by the models page, day-first dates inferred). No quality evidence for Large 4 on our prompts. (3) proxy + demo-proxy carry the old rate until row 147 deploys.
 
-## Row 158 — POSTING-FINAL-SKIP-001
-
-_verified: 2026-11-27_
-
-_FIXED 2026-11-27 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `scripts/job-tracker/check-postings.py` + `test_check_postings.py`; no `pwa/` asset, no version consumed)._
-
-**Found.** Tonight's sweep probed 85 rows. 14 had a final outcome (Rejected 12, Offer declined 2). Since row 156 a sent row can never be archived, so their probes decide nothing, yet each is a LinkedIn guest-API request toward the 429 limit that has cut sweeps short before (POSTING-RATE-DOMAIN-001). Rows 6 and 91 printed `GONE -> KEPT` and would every night.
-
-**Fix.** `FINAL_STATUSES` = Rejected, Offer declined, Withdrawn, Hired (exact, case- and space-insensitive). `probe_rows` skips such a row before any probe or `postingcheck` write and counts it; `--only` still probes a named row. The report prints `skipped N row(s) with a final outcome`; `--json` carries `skipped_final`. "No response", "Offer", Submitted and Interview stay probed: the process is open and the ad state is information.
-
-**Tests.** 17 new checks drive the real `probe_rows` and `cmd_check` with a counting fake network (no probe call, `postingcheck` untouched, band unchanged; 7 open statuses still probed; a mixed sweep; the `--only` override; report and JSON lines). The row 156 loop now names its final-status rows with `--only`, so the KEPT path stays covered. Pre-fix source: red (`cp.is_final` missing). 8 sabotages by line (468, 472, 639 x2, 641, 681, 734, 746) each red; restored PASS; 37/37 job-tracker python files green; `run-tests.mjs` ALL PASS.
-
-**Live.** Offline on the rev 417 mirror: 85 probe-eligible rows, 14 final. Dry run `check --limit 3`: 3 LIVE, `skipped 4 row(s) with a final outcome`, nothing written.
-
-**To close.** The next `check --apply` sweep prints `skipped 14 row(s)` (or the current count) and probes about 71.
-
 ## Row 159 — DOCX-LETTER-DIAGRAM-UNDEPLOYED-001
 
 _verified: 2026-11-27_
@@ -3444,3 +3434,19 @@ _OPEN (found by the desktop nightly, Gabo-PC, Opus 5.5, 2026-11-28, while triagi
 **Why not fixed unattended.** A preview-only Results row would duplicate the bullet the export promotes and hides (RESULTS-LAMINATION-003), and the copycat / pinned-result rules pick the text. It changes every Copenhagen Modern and margin preview.
 
 **To close.** Owner picks: (A) the adapter, preview only (not `forEditor`), takes each role's Results from `AntcvApplyOutcomesMode` on the full CV (memoised like `__antcvRR`) and hides the promoted bullet, so preview = export; `diag-outcomes-mode` and a DOM-reading E4 check go green; or (B) accept the gap and document it. Then fix E4 to read the rendered DOM either way.
+
+## Row 161 — POSTING-MAINTENANCE-001
+
+_verified: 2026-11-28_
+
+_FIXED 2026-11-28 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `scripts/job-tracker/check-postings.py` + `test_check_postings.py`; no `pwa/` asset, no version consumed)._
+
+**Found.** Tonight's sweep: NVIDIA / Interconnect Hardware Engineer (nvidia_2, Workday) read `SUSPECT -> strike 1/2`, "redirected to non-posting page https://static.community.workday.com/maintenance-page.html". Workday was in maintenance; the ad says nothing either way. SUSPECT is soft evidence, so a second maintenance night on a later day would have archived a live posting. Workday hosts many tracked rows (NVIDIA, Ambu, Demant, Danaher), so one long outage could hit several.
+
+**Fix.** `classify`: inside the existing "redirected, final URL has no job path" branch, a final URL whose host or path names maintenance (`_MAINT_URL`: maintenance, /outage, /unavailable.html) or a landing page that says "down for / under / scheduled / planned maintenance" or "we're performing (scheduled) maintenance" (`_MAINT_TEXT`, first 3000 chars) returns ERROR "redirected to a maintenance page". ERROR is in neither grade and never strikes; the strike count holds. A redirect onto another POSTING whose slug says maintenance never reaches the branch (stays LIVE); an un-redirected JD that mentions scheduled maintenance is untouched.
+
+**Tests.** 9 new checks on the real `classify` (Workday URL, maintenance host, two landing-page wordings, ERROR not in HARD/SOFT, detail text, plain off-posting redirect stays SUSPECT, maintenance-technician posting stays LIVE, un-redirected JD stays LIVE). Pre-fix source: 6 red. Sabotages by line: drop URL arm (4 red), drop text arm (2), disable branch (6), break regex (4), move the check ahead of the job-path test (2). Restored: PASS; 37/37 job-tracker python files green.
+
+**Live.** `check --only nvidia_2` (dry run) after the fix: `ERROR -> strike 1/2`, "redirected to a maintenance page https://static.community.workday.com/maintenance-page.html", nothing written. Tonight's applied strike 1 stays; it cannot advance while Workday is in maintenance, and the next LIVE resets it.
+
+**To close.** A sweep prints ERROR "redirected to a maintenance page" for a row and leaves its strike alone, or 14 days pass with no SUSPECT on a maintenance URL.

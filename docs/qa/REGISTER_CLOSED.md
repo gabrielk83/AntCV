@@ -4,6 +4,24 @@ Finished rows and their evidence. Split out of `OPEN_REGISTER.md` on 2026-08-26.
 Nothing here needs a nightly slot; it is kept so a back-reference to an old row number still
 resolves. Row text is verbatim.
 
+## Row 158 — POSTING-FINAL-SKIP-001 — CLOSED 2026-11-28 (job-tracker nightly, evidence: the sweep printed "skipped 14 row(s) with a final outcome" and probed 75)
+
+_verified: 2026-11-28_
+
+**CLOSED 2026-11-28 (job-tracker nightly).** `check --apply` on rev 418: `checked 75 row(s)`, `skipped 14 row(s) with a final outcome (Rejected / Offer declined / Withdrawn / Hired)`. Rows 6 and 91 no longer print `GONE -> KEPT`; 14 fewer LinkedIn requests per sweep. No code change since the fix.
+
+_FIXED 2026-11-27 (job-tracker nightly, Gabo-PC, Opus 5.5, worktree-isolated; `scripts/job-tracker/check-postings.py` + `test_check_postings.py`; no `pwa/` asset, no version consumed)._
+
+**Found.** Tonight's sweep probed 85 rows. 14 had a final outcome (Rejected 12, Offer declined 2). Since row 156 a sent row can never be archived, so their probes decide nothing, yet each is a LinkedIn guest-API request toward the 429 limit that has cut sweeps short before (POSTING-RATE-DOMAIN-001). Rows 6 and 91 printed `GONE -> KEPT` and would every night.
+
+**Fix.** `FINAL_STATUSES` = Rejected, Offer declined, Withdrawn, Hired (exact, case- and space-insensitive). `probe_rows` skips such a row before any probe or `postingcheck` write and counts it; `--only` still probes a named row. The report prints `skipped N row(s) with a final outcome`; `--json` carries `skipped_final`. "No response", "Offer", Submitted and Interview stay probed: the process is open and the ad state is information.
+
+**Tests.** 17 new checks drive the real `probe_rows` and `cmd_check` with a counting fake network (no probe call, `postingcheck` untouched, band unchanged; 7 open statuses still probed; a mixed sweep; the `--only` override; report and JSON lines). The row 156 loop now names its final-status rows with `--only`, so the KEPT path stays covered. Pre-fix source: red (`cp.is_final` missing). 8 sabotages by line (468, 472, 639 x2, 641, 681, 734, 746) each red; restored PASS; 37/37 job-tracker python files green; `run-tests.mjs` ALL PASS.
+
+**Live.** Offline on the rev 417 mirror: 85 probe-eligible rows, 14 final. Dry run `check --limit 3`: 3 LIVE, `skipped 4 row(s) with a final outcome`, nothing written.
+
+**To close.** The next `check --apply` sweep prints `skipped 14 row(s)` (or the current count) and probes about 71.
+
 ## Row 146 — DISCOVERY-MED-MUST-NEGATION-001 — CLOSED 2026-11-27 (position-discovery, evidence: the 11-15 repro ad, Ambu NPI Engineer, passed live with a negated medical must in its fit note; pre-fix gate skips it)
 
 _verified: 2026-11-27_

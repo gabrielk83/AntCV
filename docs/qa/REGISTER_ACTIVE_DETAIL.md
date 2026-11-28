@@ -375,7 +375,11 @@ _reconcile 2026-09-07 (CI nightly, E1): `pwa/test/unit/kernel-v2-reader.test.mjs
 
 ## Row 21 — SETTINGS-ROLLER-RESET-001
 
-_verified: 2026-11-02_
+_verified: 2026-11-28_
+
+_Desktop nightly 2026-11-28 (Gabo-PC, Opus 5.5, E1, base `5ac72dc1`): `diag-settings-history-guard.mjs` OK: guarded openBefore {open:true,sentinel:true} → after {marker:"alive", open:false, sentinel:true}; kill-switch control marker GONE. Guard loaded once in index.html. Blocked: owner live verify on a real device._
+
+_prev verified 2026-11-02_
 
 _reconcile 2026-11-02 (desktop nightly, E1, HEAD `19584eb9`): `diag-settings-history-guard.mjs` RE-RUN GREEN (real headless Chromium): guarded openBefore {open:true,sentinel:true} → after {marker:"alive", open:false, sentinel:true}; kill-switch control marker GONE. Guard + kill-switch `antcv:no-settings-history-guard` present, loaded once in index.html. Blocked: owner live verify on a real device._
 
@@ -401,7 +405,11 @@ _reconcile 2026-09-07 (CI nightly, E1): `diag-settings-history-guard.mjs` GREEN 
 
 ## Row 22 — CL-SLOGAN-RICHCONTENT-001
 
-_verified: 2026-11-02_
+_verified: 2026-11-28_
+
+_Desktop nightly 2026-11-28 (Gabo-PC, Opus 5.5, E1): `antcv-cl-slogan-element.js` loaded 1× in index.html, kill-switch `antcv:disable-cl-slogan-element` 2 hits; suite 2224/2224. Phase 2 owner-gated._
+
+_prev verified 2026-11-02_
 
 _reconcile 2026-11-02 (desktop nightly, E1, HEAD `19584eb9`): phase-1 sidecar `antcv-cl-slogan-element.js` loaded in index.html (1 ref), kill-switch `antcv:disable-cl-slogan-element` 2 hits; suite 1860/1860. Phase 2 (real sections.cl rich_block) still GENUINE OPEN WORK, spec-before-splice, owner-gated._
 
@@ -2393,7 +2401,11 @@ _prev verified 2026-10-28_
 
 ## Row 3 — FLOAT-SPINE-001
 
-_verified: 2026-11-02_
+_verified: 2026-11-28_
+
+_Desktop nightly 2026-11-28 (Gabo-PC, Opus 5.5, E1): `floatSpine`/`float_spine` ×6 in `workers/docx-worker/src/index.js`, `antcv:float-spine` ×2 in `antcv-docx-client.js`, default OFF. Blocked: owner visual re-export._
+
+_prev verified 2026-11-02_
 
 _reconcile 2026-11-02 (desktop nightly, E1, HEAD `19584eb9`): `floatSpine`/`float_spine` on 6 lines of `workers/docx-worker/src/index.js` (default-OFF line 24685 unchanged) + `antcv-docx-client.js` opt-in `antcv:float-spine` (line 1261); live docx-worker `1.14.175-ai-mark-props` /health 200. Blocked: owner visual re-export (no reference docx)._
 
@@ -2421,7 +2433,11 @@ _reconcile 2026-11-02 (desktop nightly, E1, HEAD `19584eb9`): `floatSpine`/`floa
 
 ## Row 20 — CONTACT-TRACK-TIGHT-001
 
-_verified: 2026-11-02_
+_verified: 2026-11-28_
+
+_Desktop nightly 2026-11-28 (Gabo-PC, Opus 5.5, E1): `headlineAlign` + `CONTACT-TRACK-TIGHT-001` = 4 refs in the docx-worker; live docx-worker `1.14.177-role-line-one` /health 200. Blocked: owner Hard Refresh + CL regen + real PDF eyeball._
+
+_prev verified 2026-11-02_
 
 _reconcile 2026-11-02 (desktop nightly, E1, HEAD `19584eb9`): docx-worker anchors present (`headlineAlign` ×3 + `CONTACT-TRACK-TIGHT-001` ×1 = the same 4 refs); live docx-worker `1.14.175-ai-mark-props`, no docx-worker commit since 10-29. Blocked: owner Hard Refresh + CL regen + real CloudConvert PDF eyeball._
 
@@ -3125,7 +3141,11 @@ _E1 sweep 2026-11-09 (desktop nightly): unchanged. `workers/proxy/src/analytics-
 
 ## Row 135 — JT-PUT-SLOW-UPLINK-001
 
-_verified: 2026-11-02_
+_verified: 2026-11-28_
+
+_Desktop nightly 2026-11-28 (Gabo-PC, Opus 5.5, E1): `scripts/job-tracker/test_put_timeout.py` PASS (16 checks, PUT body 1,375,514 bytes) on Python 3.12. Code fix intact; closing needs a sweep on a slow uplink._
+
+_prev verified 2026-11-02_
 
 **Found by the position-discovery run 2026-10-30 (Gabo-PC, Opus 5.5).** Two `check-postings.py check --apply` sweeps finished probing and then lost every verdict: the doc PUT failed with `599 {'error': 'transport_failed: URLError: <urlopen error The write operation timed out>'}`. The no-retry PUT path (row 134) worked as designed and printed the 4 verdicts as "would archive", so nothing was corrupted, but ~10 minutes of probing per sweep were thrown away.
 
@@ -3321,7 +3341,11 @@ _OPEN (found by the desktop nightly, Gabo-PC, Opus 5.5, 2026-11-23; Band A tab i
 
 ## Row 152 — DIAG-FLEET-ROT-001
 
-_verified: 2026-11-27_
+_verified: 2026-11-28_
+
+_Desktop nightly 2026-11-28 (Gabo-PC, Opus 5.5, base `5ac72dc1`): 2 stale fixed, 1 green on re-run, 1 real, 50 of 74 left. `slogan-placeholder-language` (SLOGAN-CASE-001, owner 11-03: sentence-case headline; regexes case-insensitive + default-case and CAPS-mode checks), `section-loc-default` (RICH-BLOCK-001 Phase C 759 upgrades work_style text_inline → rich_block lead "Work style"; accepts either). `settings-front` passes today with no edit. `outcomes-mode` is REAL: the preview drops derived Results lines, filed as row 160; diag left red on purpose. Run, not triaged: `demo-toggle` (TimeoutError), `photo-positions` (5/5 positions fail)._
+
+_prev verified 2026-11-27_
 
 _Desktop nightly 2026-11-27 (Gabo-PC, Opus 5.5, base `5c99cdfe`): 5 more green, all stale, 53 of 74 left. `tense-control` (TENSE-POPIN-002, 1.50.626: no standalone card while the islands bundle loads; now asserts that + the live hook), `group-name` (TOOLS-METHODS-LABELS-SHOW-001, owner 06-18: tools labels always shown; RULE 1 lone-row hide asserted on a non-tools list; label is a font-weight span since the rich_block fold), `candidate-header-edit` (UNSOLICITED-SHOWS-NVIDIA-001 resets a meta seeded without a JD; HEADER-APP-LINE-001 replaced "Application: role - company" with one native "Application for … at …" line; specialisation is the sidebar card's own editor, writes `personalInfo.specialization`), `wm-move-on-length` (AI-NOTICE-PREVIEW-AUTO-SIDEBAR-001, owner 07-02: auto corner follows the sidebar side, geometry path no longer called; re-anchor on `auto-pages-changed` and manual corner asserted), `cl-table-dims-export` (see row 25). Read, not fixed: `additional-partition` (stored groups empty, cause not read)._
 
@@ -3406,3 +3430,17 @@ _OPEN (found by the desktop nightly, Gabo-PC, Opus 5.5, 2026-11-27, live attest)
 **Effect.** The PWA (`1.51.6706-letter-diagram`, live) adds the workflow row to every targeted letter and draws it in the preview. A DOCX/PDF export through the live worker gets the row without the 1.14.178 native table, so it renders as a text row ("Step (detail) -> …"). Not measured on a real export.
 
 **To close.** Owner: deploy (`gh workflow run deploy.yml -f target=docx-worker -f mode=deploy -f confirm=docx-worker`), then `/health` reads 1.14.178 and one real CL export shows the table. Left owed by this run: a worker deploy changes every export and the commit held it on purpose.
+
+## Row 160 — PREVIEW-RESULTS-DERIVED-MISSING-001
+
+_verified: 2026-11-28_
+
+_OPEN (found by the desktop nightly, Gabo-PC, Opus 5.5, 2026-11-28, while triaging row 152 `diag-outcomes-mode`); owner call._
+
+**Found.** Since the ROLES-AS-RICHBLOCK cutover (`3c776053`, 2026-07-14, flag `antcv:roles-richblock` default ON) the CV preview draws experience through `antcv-roles-richblock-adapter.js`. `adapt()` adds a "Results:" row only when `role.results` is a stored non-empty string. The export runs `applyOutcomesMode` (`antcv-docx-client.js:726`, wrapped by `applyAcademyFormat`): in results mode (Copenhagen Modern default; forced for the margin/academy CV) it fills `role.results` from role outcomes, proof points, the SELECTED OUTCOMES pool or the role's own bullets. The old `app.js` Results block (single source = `AntcvApplyOutcomesMode`, `__antcvRR` memo) only runs on the legacy chimera render.
+
+**Evidence.** Headless, `diag-outcomes-mode.mjs` fixture (2 roles, no stored results, SELECTED OUTCOMES 4 items): `AntcvApplyOutcomesMode` returns Results for both roles; the preview paper has no Results text, a MutationObserver sees 0 `[data-antcv-role-results]` adds, and `AntcvApplyOutcomesMode` is never called during render. Production D1 (SELECT, 25 newest `application` rows): #3538 and #3537 11 visible roles, 0 with stored `results`; #3536 5/11; #3527 3/9. E4 `diag-results-preview-export-parity.mjs` stays green because it compares `applyOutcomesMode` with itself and never reads the DOM.
+
+**Why not fixed unattended.** A preview-only Results row would duplicate the bullet the export promotes and hides (RESULTS-LAMINATION-003), and the copycat / pinned-result rules pick the text. It changes every Copenhagen Modern and margin preview.
+
+**To close.** Owner picks: (A) the adapter, preview only (not `forEditor`), takes each role's Results from `AntcvApplyOutcomesMode` on the full CV (memoised like `__antcvRR`) and hides the promoted bullet, so preview = export; `diag-outcomes-mode` and a DOM-reading E4 check go green; or (B) accept the gap and document it. Then fix E4 to read the rendered DOM either way.
